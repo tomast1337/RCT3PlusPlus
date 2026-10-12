@@ -331,8 +331,9 @@ namespace rct3::ui
 
     void EditBox::draw(DrawContext& context) const
     {
-        if (!skin.empty())
-            draw_skin(context.list, context.skins.find(skin), rect());
+        const std::string& back = has_keyboard_focus() && !focused_skin.empty() ? focused_skin : skin;
+        if (!back.empty())
+            draw_skin(context.list, context.skins.find(back), rect());
         const Font* f = context.fonts.get(font);
         if (f == nullptr)
             return;

@@ -6,6 +6,7 @@
 
 #include "ui/font_set.hpp"
 #include "ui/tooltip.hpp"
+#include "ui/widgets/list_box.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -27,6 +28,8 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
+    inline constexpr std::string_view kListBoxFocused = "EditBox_Focus";
+    inline constexpr std::string_view kSelectedRow = "GUI2SolidBlueBackground";
     inline constexpr std::string_view kTooltip = "GUI2Swatch_Background";
     inline constexpr std::string_view kScrollUp = "ScrollBar_UpArrow";
     inline constexpr std::string_view kScrollDown = "ScrollBar_DownArrow";
@@ -75,6 +78,19 @@ namespace rct3::ui::game_skins
         s.rider = vertical ? kVerticalRider : kHorizontalRider;
         s.thickness = 15;
         s.step = 20;
+        return s;
+    }
+
+    /// A list in the edit box frame, which turns blue with the keyboard focus, the selected row on the
+    /// rounded blue patch. The row height is ours, to fit the small font.
+    [[nodiscard]] inline ListBoxStyle list_box_style()
+    {
+        ListBoxStyle s;
+        s.background = kListBox;
+        s.focused = kListBoxFocused;
+        s.selection_skin = kSelectedRow;
+        s.font = FontRole::Small;
+        s.row_height = 18;
         return s;
     }
 

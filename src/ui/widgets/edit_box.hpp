@@ -35,7 +35,8 @@ namespace rct3::ui
         explicit EditBox(std::string name, std::u16string text = { });
 
         std::u16string text;
-        std::string skin; ///< Stretched behind the text; none when empty
+        std::string skin;         ///< Stretched behind the text; none when empty
+        std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
         FontRole font = FontRole::Small;
         Color text_colour { 0, 0, 0, 255 };
         Color disabled_text_colour { 127, 127, 127, 255 };

@@ -43,7 +43,7 @@ namespace rct3::ovl
             {
                 item.stall = Stall { detail::read_attraction(*record, at, version) };
             }
-            items.push_back(std::move(item));
+            items.push_back(item);
         }
         return items;
     }

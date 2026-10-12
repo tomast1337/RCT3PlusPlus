@@ -28,6 +28,8 @@ namespace rct3::platform
         ImGui::StyleColorsDark();
         // "Other" fits every backend that does not need GLFW to manage an OpenGL context.
         ImGui_ImplGlfw_InitForOther(window, true);
+        // The game reads the button state once a frame; a click shorter than a frame must still show up.
+        glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
         return Window(window);
     }
 
@@ -59,6 +61,29 @@ namespace rct3::platform
     double Window::time() const
     {
         return glfwGetTime();
+    }
+
+    Window::Pointer Window::pointer() const
+    {
+        // GLFW reports the cursor in screen coordinates, which differ from framebuffer pixels on scaled
+        // displays.
+        double cx = 0;
+        double cy = 0;
+        glfwGetCursorPos(window_, &cx, &cy);
+        int ww = 0;
+        int wh = 0;
+        int fw = 0;
+        int fh = 0;
+        glfwGetWindowSize(window_, &ww, &wh);
+        glfwGetFramebufferSize(window_, &fw, &fh);
+        Pointer p;
+        if (ww > 0 && wh > 0)
+        {
+            p.x = static_cast<float>(cx * fw / ww);
+            p.y = static_cast<float>(cy * fh / wh);
+        }
+        p.left = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        return p;
     }
 
     void Window::ui_new_frame()

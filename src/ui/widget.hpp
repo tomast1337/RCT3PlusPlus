@@ -1,0 +1,164 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The game interface is a tree of widgets that lives as long as the screens it makes up. Each widget has a
+// name, a placement in its parent, flags and children, and draws itself into a DrawList every frame in tree
+// order, so later children cover earlier ones. Windows are widget classes that build their children in
+// their constructor and react to them in update(): a button records a click, the window asks for it. There
+// are no listeners or callbacks.
+//
+// Rectangles are in logical units (see DrawList) and absolute: layout turns each placement into a rectangle
+// on the desktop before input and drawing use them.
+#pragma once
+
+#include "ui/draw_list.hpp"
+#include "ui/placement.hpp"
+#include "ui/skin_library.hpp"
+
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace rct3::ui
+{
+
+    struct Point
+    {
+        float x = 0;
+        float y = 0;
+    };
+
+    [[nodiscard]] inline bool contains(const Rect& rect, Point p)
+    {
+        return p.x >= rect.x0 && p.x < rect.x1 && p.y >= rect.y0 && p.y < rect.y1;
+    }
+
+    /// What widgets draw with.
+    struct DrawContext
+    {
+        DrawList& list;
+        const SkinLibrary& skins;
+    };
+
+    class Widget
+    {
+    public:
+        explicit Widget(std::string name = { });
+        virtual ~Widget() = default;
+        Widget(const Widget&) = delete;
+        Widget& operator=(const Widget&) = delete;
+        Widget(Widget&&) = delete;
+        Widget& operator=(Widget&&) = delete;
+
+        Placement placement = fill();
+        bool visible = true;
+        bool enabled = true;
+        bool clip_children = false; ///< Children are cut to this widget's rectangle
+        bool keep_inside = false;   ///< Layout moves the widget back inside its parent, e.g. a dragged window
+
+        [[nodiscard]] std::string_view name() const
+        {
+            return name_;
+        }
+        /// On the desktop, as of the last layout.
+        [[nodiscard]] const Rect& rect() const
+        {
+            return rect_;
+        }
+        [[nodiscard]] Widget* parent() const
+        {
+            return parent_;
+        }
+        [[nodiscard]] std::span<const std::unique_ptr<Widget>> children() const
+        {
+            return children_;
+        }
+
+        /// Appends a child, drawn over the children before it, and returns it.
+        template<class T, class... Args> T& add(Args&&... args)
+        {
+            auto child = std::make_unique<T>(std::forward<Args>(args)...);
+            T& ref = *child;
+            adopt(std::move(child));
+            return ref;
+        }
+        /// Detaches `child`; nothing when it is not a direct child.
+        std::unique_ptr<Widget> remove(const Widget& child);
+        /// Moves `child` to the end, above its siblings.
+        void raise(const Widget& child);
+
+        /// Follows a path of names separated by '/' down from this widget, e.g. "options/ok".
+        [[nodiscard]] Widget* find(std::string_view path) const;
+
+        /// Asks the desktop to detach this widget after the current update.
+        void close()
+        {
+            closing_ = true;
+        }
+        [[nodiscard]] bool closing() const
+        {
+            return closing_;
+        }
+
+        // Interaction state the desktop sets each update.
+        [[nodiscard]] bool hovered() const
+        {
+            return hovered_;
+        }
+        /// Held by the pointer and the pointer is still over it.
+        [[nodiscard]] bool pressed() const
+        {
+            return pressed_;
+        }
+        /// Inside the top-most window, the one keyboard and highlight go to.
+        [[nodiscard]] bool focused() const
+        {
+            return focused_;
+        }
+
+        /// Whether the pointer stops at this widget. Widgets that return false let it through to whatever is
+        /// below, ending at the 3D view when nothing takes it.
+        [[nodiscard]] virtual bool takes_pointer() const
+        {
+            return false;
+        }
+        virtual void on_press(Point)
+        {
+        }
+        /// The pointer moved while this widget holds it, wherever the pointer is.
+        virtual void on_drag(Point)
+        {
+        }
+        /// `inside`: the pointer was released over this widget.
+        virtual void on_release(Point, bool /*inside*/)
+        {
+        }
+
+        /// Once per frame after input, parents before children. May add widgets anywhere in the tree;
+        /// removing goes through close().
+        virtual void update()
+        {
+        }
+        /// Draws this widget, not its children.
+        virtual void draw(DrawContext&) const
+        {
+        }
+
+    private:
+        friend struct DesktopAccess; // Layout and interaction state are written by the desktop only
+
+        void adopt(std::unique_ptr<Widget> child);
+
+        std::string name_;
+        Rect rect_;
+        Widget* parent_ = nullptr;
+        std::vector<std::unique_ptr<Widget>> children_;
+        bool closing_ = false;
+        bool hovered_ = false;
+        bool pressed_ = false;
+        bool focused_ = false;
+    };
+
+} // namespace rct3::ui

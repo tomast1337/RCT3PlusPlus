@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/ui_textures.hpp"
 
+#include "ui/ui_renderer.hpp"
+
 #include <span>
 
 namespace rct3::ui
@@ -21,6 +23,18 @@ namespace rct3::ui
             textures.emplace(name, UiTexture { *texture, static_cast<float>(image.width), static_cast<float>(image.height) });
         }
         return textures;
+    }
+
+    SkinLibrary skin_library(const std::map<std::string, NamedSkin, std::less<>>& skins, const UiTextures& textures)
+    {
+        SkinLibrary library;
+        for (const auto& [name, skin] : skins)
+        {
+            const auto texture = textures.find(skin.texture);
+            if (texture != textures.end())
+                library.add(name, { skin.layout, texture_id(texture->second.handle), texture->second.width, texture->second.height });
+        }
+        return library;
     }
 
     void destroy_textures(render::Device& device, UiTextures& textures)

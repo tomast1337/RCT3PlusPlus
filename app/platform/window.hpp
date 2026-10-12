@@ -42,6 +42,14 @@ namespace rct3::platform
         /// Seconds since GLFW was initialised.
         [[nodiscard]] double time() const;
 
+        struct Pointer
+        {
+            float x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
+            float y = 0;
+            bool left = false;
+        };
+        [[nodiscard]] Pointer pointer() const;
+
         /// The platform half of starting an ImGui frame; call after the device's `ui_new_frame`.
         void ui_new_frame();
 

@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "ovl/overlay.hpp"
+#include "ovl/text.hpp"
 
 namespace {
 
@@ -21,9 +22,10 @@ using rct3::ovl::Part;
 struct Options {
   bool symbols = false;
   bool loaders = false;
+  bool text = false;
 };
 
-void print_part(const char* title, const Part& part, const Options& opt) {
+void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
   const auto& file = part.file;
   const auto& header = file.header;
   std::printf("== %s\n", title);
@@ -115,6 +117,19 @@ void print_part(const char* title, const Part& part, const Options& opt) {
                   sym.name.empty() ? "<unresolved>" : std::string(sym.name).c_str());
     }
   }
+  if (opt.text) {
+    const auto texts = rct3::ovl::read_texts(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : texts) {
+      if (!item.value) ++bad;
+    }
+    std::printf("texts          %zu (%zu unreadable)\n", texts.size(), bad);
+    for (const auto& item : texts) {
+      const std::string name(item.name);
+      if (item.value) std::printf("  %s = %s\n", name.c_str(), rct3::ovl::to_utf8(*item.value).c_str());
+      else std::printf("  %s = <unreadable>\n", name.c_str());
+    }
+  }
   if (opt.loaders) {
     for (std::size_t i = 0; i < part.loaders.entries.size(); ++i) {
       const auto& e = part.loaders.entries[i];
@@ -132,11 +147,12 @@ int main(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--symbols") == 0) opt.symbols = true;
     else if (std::strcmp(argv[i], "--loaders") == 0) opt.loaders = true;
+    else if (std::strcmp(argv[i], "--text") == 0) opt.text = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] PATH\n", argv[0]);
     return 2;
   }
 
@@ -146,8 +162,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  print_part("common", overlay->common(), opt);
-  if (const auto* unique = overlay->unique()) print_part("unique", *unique, opt);
+  print_part("common", *overlay, overlay->common(), opt);
+  if (const auto* unique = overlay->unique()) print_part("unique", *overlay, *unique, opt);
   else std::printf("== unique\n(none)\n");
   return 0;
 }

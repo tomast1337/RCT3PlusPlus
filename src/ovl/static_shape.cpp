@@ -2,7 +2,8 @@
 #include "ovl/static_shape.hpp"
 
 #include <cstring>
-#include <unordered_map>
+
+#include "ovl/reference_names.hpp"
 
 namespace rct3::ovl {
 
@@ -28,23 +29,14 @@ float f32_at(std::span<const std::byte> b, std::size_t at) {
   return v;
 }
 
-// Location of a reference field -> name of the item it names, without the tag.
-using ReferenceMap = std::unordered_map<std::uint32_t, SymbolName>;
-
-std::string_view lookup(const ReferenceMap& refs, std::uint32_t location, std::string_view tag) {
-  const auto it = refs.find(location);
-  if (it == refs.end() || it->second.tag != tag) return {};
-  return it->second.name;
-}
-
-std::optional<ShapeMesh> read_mesh(const AddressSpace& space, const ReferenceMap& refs, std::uint32_t address) {
+std::optional<ShapeMesh> read_mesh(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address) {
   const auto raw = space.bytes_at(address, kMeshSize);
   if (!raw) return std::nullopt;
 
   ShapeMesh mesh;
   mesh.support_type = u32_at(*raw, 0);
-  mesh.texture = lookup(refs, address + 4, kFlexiTag);
-  mesh.style = lookup(refs, address + 8, kStyleTag);
+  mesh.texture = refs.find(address + 4, kFlexiTag);
+  mesh.style = refs.find(address + 8, kStyleTag);
   mesh.transparency = u32_at(*raw, 12);
   mesh.texture_flags = u32_at(*raw, 16);
   mesh.sides = u32_at(*raw, 20);
@@ -61,7 +53,7 @@ std::optional<ShapeMesh> read_mesh(const AddressSpace& space, const ReferenceMap
   return mesh;
 }
 
-std::optional<StaticShape> read_shape(const AddressSpace& space, const ReferenceMap& refs, std::uint32_t address) {
+std::optional<StaticShape> read_shape(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address) {
   const auto header = space.bytes_at(address, kHeaderSize);
   if (!header) return std::nullopt;
 
@@ -126,12 +118,7 @@ std::uint32_t ShapeMesh::index(std::size_t i) const { return u32_at(indices, i *
 std::vector<StaticShapeItem> read_static_shapes(const Overlay& overlay, const Part& part) {
   const AddressSpace space = overlay.space();
 
-  ReferenceMap refs;
-  if (auto table = read_references(part.file, part.bytes, space)) {
-    for (const Reference& r : *table) {
-      if (!r.name.empty()) refs.emplace(r.location, split_symbol_name(r.name));
-    }
-  }
+  const ReferenceNames refs(part, space);
 
   std::vector<StaticShapeItem> items;
   for (const auto& symbol : part.symbols) {

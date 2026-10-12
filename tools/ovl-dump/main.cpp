@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "ovl/flexi_texture.hpp"
+#include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
@@ -29,6 +30,7 @@ struct Options {
   bool sound = false;
   bool ftx = false;
   bool shs = false;
+  bool svd = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -163,6 +165,30 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   sh.meshes.size(), sh.vertex_total, sh.index_total, sh.effects.size(), untextured);
     }
   }
+  if (opt.svd) {
+    const auto visuals = rct3::ovl::read_scenery_visuals(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : visuals) {
+      if (!item.visual) ++bad;
+    }
+    std::printf("scenery visuals %zu (%zu unreadable)\n", visuals.size(), bad);
+    for (const auto& item : visuals) {
+      const std::string name(item.name);
+      if (!item.visual) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& v = *item.visual;
+      std::printf("  %-32s flags %08x sway %g lods %zu\n", name.c_str(), v.flags, v.sway, v.lods.size());
+      for (const auto& lod : v.lods) {
+        const std::string_view target = lod.mesh_type == 0   ? lod.static_shape
+                                        : lod.mesh_type == 3 ? lod.bone_shape
+                                                             : lod.texture;
+        std::printf("    type %u %-24s distance %g animations %zu\n", lod.mesh_type,
+                    std::string(target).c_str(), lod.distance, lod.animations.size());
+      }
+    }
+  }
   if (opt.sound) {
     const auto sounds = rct3::ovl::read_sounds(overlay, part);
     std::size_t bad = 0;
@@ -217,11 +243,12 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--sound") == 0) opt.sound = true;
     else if (std::strcmp(argv[i], "--ftx") == 0) opt.ftx = true;
     else if (std::strcmp(argv[i], "--shs") == 0) opt.shs = true;
+    else if (std::strcmp(argv[i], "--svd") == 0) opt.svd = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] PATH\n", argv[0]);
     return 2;
   }
 

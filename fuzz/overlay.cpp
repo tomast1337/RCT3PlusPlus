@@ -8,6 +8,7 @@
 
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
+#include "ovl/scenery_visual.hpp"
 #include "ovl/sound.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/text.hpp"
@@ -28,6 +29,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
       for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += static_cast<std::size_t>(mesh.vertex(i).extra);
       for (std::size_t i = 0; i < mesh.index_count; ++i) sink += mesh.index(i);
     }
+  }
+  for (const auto& item : rct3::ovl::read_scenery_visuals(*overlay, part)) {
+    if (item.visual) sink += item.visual->lods.size();
   }
   return 0;
 }

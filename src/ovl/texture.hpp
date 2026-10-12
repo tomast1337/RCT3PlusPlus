@@ -18,6 +18,9 @@ namespace rct3::ovl
     /// A three-word record some textures point at.
     struct TextureNode
     {
+        /// Where the node lives. A flic item has the same address: the node is the start of that flic's
+        /// record, which is how a texture finds its pixels.
+        std::uint32_t address = 0;
         std::uint32_t first = 0;  ///< 0 in all files seen
         std::uint32_t second = 0; ///< 1 for nearly all textures, up to 32 for a few
         float scale = 0;          ///< 1 for nearly all textures, 30 for one

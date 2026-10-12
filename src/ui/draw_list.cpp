@@ -16,9 +16,9 @@ namespace rct3::ui
             return std::floor(v + 0.5f);
         }
 
-        Rect snapped(const Rect& r)
+        Rect snapped(const Rect& r, float scale)
         {
-            return { snap(r.x0), snap(r.y0), snap(r.x1), snap(r.y1) };
+            return { snap(r.x0 * scale), snap(r.y0 * scale), snap(r.x1 * scale), snap(r.y1 * scale) };
         }
 
         float lerp(float a, float b, float t)
@@ -75,7 +75,7 @@ namespace rct3::ui
 
     void DrawList::quad(const Rect& rect, TextureId texture, const Rect& uv, const CornerColors& colors)
     {
-        const Rect full = snapped(rect);
+        const Rect full = snapped(rect, scale_);
         if (full.empty())
             return;
         const Rect visible = clips_.empty() ? full : intersect(full, clips_.back());
@@ -108,7 +108,7 @@ namespace rct3::ui
 
     bool DrawList::push_clip(const Rect& rect)
     {
-        const Rect r = snapped(rect);
+        const Rect r = snapped(rect, scale_);
         clips_.push_back(clips_.empty() ? r : intersect(r, clips_.back()));
         return !clips_.back().empty();
     }

@@ -107,9 +107,9 @@ ShapeVertex ShapeMesh::vertex(std::size_t i) const {
     v.position[k] = f32_at(raw, k * 4);
     v.normal[k] = f32_at(raw, 12 + k * 4);
   }
-  v.texcoord[0] = f32_at(raw, 24);
-  v.texcoord[1] = f32_at(raw, 28);
-  v.extra = f32_at(raw, 32);
+  for (std::size_t k = 0; k < 4; ++k) v.colour[k] = static_cast<std::uint8_t>(raw[24 + k]);
+  v.texcoord[0] = f32_at(raw, 28);
+  v.texcoord[1] = f32_at(raw, 32);
   return v;
 }
 

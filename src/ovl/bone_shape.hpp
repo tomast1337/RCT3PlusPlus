@@ -35,9 +35,9 @@ struct BoneMesh {
   std::uint32_t support_type = 0;
   std::string_view texture;  ///< Flexi texture name without the tag. Empty when not referenced.
   std::string_view style;    ///< Texture style name without the tag. Empty when not referenced.
-  std::uint32_t transparency = 0;   ///< 0, 1 or 2 in files seen. Meaning not confirmed.
-  std::uint32_t texture_flags = 0;  ///< Bit mask. Meaning not confirmed.
-  std::uint32_t sides = 0;          ///< 1 or 3 in files seen. Meaning not confirmed.
+  std::uint32_t transparency = 0;   ///< 0 opaque, 1 alpha tested, 2 alpha blended, as for static shapes
+  std::uint32_t texture_flags = 0;  ///< Bit mask, same meaning as for static shapes
+  std::uint32_t sides = 0;          ///< Cull mode: 1 both sides, 3 front only, as for static shapes
   std::uint32_t vertex_count = 0;
   std::uint32_t index_count = 0;
 

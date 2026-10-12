@@ -74,7 +74,10 @@ std::vector<std::byte> structure(std::uint32_t mesh_count = 2, std::uint32_t ind
   for (std::size_t i = 0; i < 16; ++i) real(out, i % 5 == 0 ? 1.0f : 0.0f);       // identity matrix
   const auto vertices = [&out](std::size_t first) {
     for (std::size_t v = first; v < first + 3; ++v) {
-      for (std::size_t k = 0; k < 9; ++k) real(out, static_cast<float>(v * 10 + k));
+      for (std::size_t k = 0; k < 6; ++k) real(out, static_cast<float>(v * 10 + k));
+      words(out, {0xFF030201u});  // colour bytes 01 02 03 FF
+      real(out, static_cast<float>(v * 10 + 7));
+      real(out, static_cast<float>(v * 10 + 8));
     }
   };
   vertices(0);
@@ -122,8 +125,9 @@ TEST_CASE("static shapes expose meshes, references and effects") {
   const auto v = m0.vertex(1);
   CHECK(v.position[0] == 10.0f);
   CHECK(v.normal[2] == 15.0f);
-  CHECK(v.texcoord[1] == 17.0f);
-  CHECK(v.extra == 18.0f);
+  CHECK(v.colour == std::array<std::uint8_t, 4>{0x01, 0x02, 0x03, 0xFF});
+  CHECK(v.texcoord[0] == 17.0f);
+  CHECK(v.texcoord[1] == 18.0f);
   CHECK(m0.index(2) == 2);
 
   const auto& m1 = s.meshes[1];

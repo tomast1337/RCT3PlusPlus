@@ -371,7 +371,7 @@ int main(int argc, char** argv)
                     {
                         // The developer windows come first: where they want the pointer, the game does not get it.
                         const auto p = window->pointer();
-                        const rct3::ui::PointerState pointer { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, p.wheel };
+                        const rct3::ui::PointerState pointer { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
                         rct3::scene::update_widget_demo(*device, *widgets, pointer, static_cast<float>(delta));
                     }
                 });

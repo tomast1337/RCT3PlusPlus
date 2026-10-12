@@ -133,11 +133,12 @@ namespace rct3::ui
         held_ = Part::None;
     }
 
-    bool ScrollBar::on_wheel(float notches)
+    bool ScrollBar::on_wheel(Point notches)
     {
-        if (range() <= 0)
+        const float along = orientation_ == Orientation::Vertical ? notches.y : notches.x;
+        if (range() <= 0 || along == 0)
             return false;
-        scroll_by(-notches * style_.wheel_step);
+        scroll_by(-along * style_.wheel_step);
         return true;
     }
 

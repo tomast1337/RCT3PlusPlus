@@ -22,7 +22,7 @@ namespace rct3::ui
         Point position;      ///< Logical units
         bool down = false;   ///< The primary button
         bool present = true; ///< False when something else, such as a developer tool, has the pointer
-        float wheel = 0;     ///< Wheel notches turned since the last update, positive away from the user
+        Point wheel { };     ///< Wheel notches turned since the last update; see Widget::on_wheel
     };
 
     class Desktop

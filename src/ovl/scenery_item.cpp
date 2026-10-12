@@ -91,10 +91,15 @@ bool read_squares(const AddressSpace& space, const PointerFields& pointers, std:
     // A square without collision has a count but no array: the pointer is null, not relocated.
     const bool null_pointer = pointer == 0 && !pointers.contains(address + static_cast<std::uint32_t>(at) + 12);
     if (mask_count != 0 && !null_pointer) {
-      const auto masks = space.bytes_at(pointer, std::size_t{mask_count} * 4);
-      if (!masks) return false;
+      // Each word is looked up on its own: a short array at the very end of the common file's data
+      // continues into the first block of the unique file, which follows it in the address space.
       sq.height_masks.reserve(mask_count);
-      for (std::uint32_t k = 0; k < mask_count; ++k) sq.height_masks.push_back(u32_at(*masks, std::size_t{k} * 4));
+      for (std::uint32_t k = 0; k < mask_count; ++k) {
+        if (k > UINT32_MAX / 4 || pointer > UINT32_MAX - k * 4) return false;
+        const auto word = space.bytes_at(pointer + k * 4, 4);
+        if (!word) return false;
+        sq.height_masks.push_back(u32_at(*word, 0));
+      }
     }
     out.push_back(std::move(sq));
   }
@@ -104,7 +109,7 @@ bool read_squares(const AddressSpace& space, const PointerFields& pointers, std:
 }  // namespace
 
 SceneryItemReader::SceneryItemReader(const Overlay& overlay, const Part& part)
-    : space_(overlay.space()), refs_(part, space_), pointers_(overlay) {}
+    : part_(&part), space_(overlay.space()), refs_(part, space_), pointers_(overlay) {}
 
 std::optional<SceneryItem> SceneryItemReader::read(std::uint32_t address, bool allow_compact) const {
   const AddressSpace& space = space_;
@@ -268,15 +273,24 @@ std::size_t SceneryItemReader::stride_of(const SceneryItem& item) noexcept {
   return size;
 }
 
+std::optional<std::uint32_t> SceneryItemReader::block_end(std::uint32_t address) const noexcept {
+  const auto where = part_->file.locate(address, part_->base);
+  if (!where) return std::nullopt;
+  const auto& block = part_->file.block_types[where->type].blocks[where->index];
+  return address - where->offset + block.size;
+}
+
 std::optional<std::vector<SceneryItem>> SceneryItemReader::read_run(std::uint32_t address) const {
+  const auto end = block_end(address);
+  if (!end) return std::nullopt;
   std::vector<SceneryItem> items;
-  while (space_.bytes_at(address, 12)) {
+  while (address < *end) {
     if (items.size() >= kMaxRun) return std::nullopt;
     auto item = read(address, /*allow_compact=*/false);
     if (!item) return std::nullopt;
     const std::size_t stride = stride_of(*item);
     items.push_back(std::move(*item));
-    if (stride > UINT32_MAX - address) return std::nullopt;
+    if (stride > *end - address) return std::nullopt;  // the data does not end with the block
     address += static_cast<std::uint32_t>(stride);
   }
   return items;

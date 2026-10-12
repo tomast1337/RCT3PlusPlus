@@ -325,10 +325,11 @@ TEST_CASE("scenery item edge cases") {
     CHECK_FALSE(items[0].item.has_value());
   }
 
-  SUBCASE("a mask array that leaves its block makes the item unreadable") {
+  SUBCASE("a mask array that leaves the address space makes the item unreadable") {
     auto block = structure();
-    // First square's mask pointer (offset 240 + 12) points at the last word of the block.
-    const std::uint32_t at = kBase + kEnd - 4;
+    // First square's mask pointer (offset 240 + 12) points at the last word of all data, count 2.
+    const auto refs = all_references();
+    const std::uint32_t at = kBase + kEnd + static_cast<std::uint32_t>(symbol_row().size() + refs.size()) - 4;
     for (std::size_t i = 0; i < 4; ++i) block[kSquares + 12 + i] = static_cast<std::byte>((at >> (8 * i)) & 0xFF);
     const auto overlay = make(block);
     const auto items = read_scenery_items(overlay, overlay.common());
@@ -353,6 +354,25 @@ TEST_CASE("scenery item edge cases") {
     REQUIRE(items[0].item.has_value());
     REQUIRE(items[0].item->squares[1].height_masks.size() == 1);
     CHECK(items[0].item->squares[1].height_masks[0] == 0x6d657449u);  // "Item", the first bytes of the data
+  }
+
+  SUBCASE("a mask array may continue into the unique file") {
+    auto block = structure();
+    const auto refs = all_references();
+    // The array starts at the last word of the common file's data and has two words.
+    const std::uint32_t at = kBase + kEnd + static_cast<std::uint32_t>(symbol_row().size() + refs.size()) - 4;
+    for (std::size_t i = 0; i < 4; ++i) block[kSquares + 20 + 12 + i] = static_cast<std::byte>((at >> (8 * i)) & 0xFF);
+    block[kSquares + 20 + 16] = std::byte{2};
+    std::vector<std::byte> unique;
+    append_u32(unique, 6);
+    auto overlay = Overlay::from_bytes(
+        build_file(5, {{names()}, {block}, {symbol_row(), {}, refs}}, {}),
+        build_file(5, {{unique}}, {}));
+    REQUIRE(overlay.has_value());
+    const auto items = read_scenery_items(*overlay, overlay->common());
+    REQUIRE(items[0].item.has_value());
+    REQUIRE(items[0].item->squares[1].height_masks.size() == 2);
+    CHECK(items[0].item->squares[1].height_masks[1] == 6);
   }
 
   SUBCASE("an enormous node count is refused") {

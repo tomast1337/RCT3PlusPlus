@@ -12,6 +12,9 @@
 #include <string>
 #include <vector>
 
+// --- scenery and placement item types (feat/ovl-scenery-types) ---
+#include "ovl/scenery_item.hpp"
+// --- end scenery and placement item types ---
 #include "ovl/bone_anim.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/gui_skin.hpp"
@@ -494,6 +497,42 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
   }
 }
 
+// --- scenery and placement item types (feat/ovl-scenery-types) ---
+struct SceneryOptions {
+  bool sid = false;
+};
+SceneryOptions g_scenery;
+
+// Accepts the options of this block. Returns false for any other argument.
+bool parse_scenery_option(const char* arg) {
+  if (std::strcmp(arg, "--sid") == 0) g_scenery.sid = true;
+  else return false;
+  return true;
+}
+
+void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  if (g_scenery.sid) {
+    const auto items = rct3::ovl::read_scenery_items(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) {
+      if (!item.item) ++bad;
+    }
+    std::printf("scenery items (%s) %zu (%zu unreadable)\n", title, items.size(), bad);
+    for (const auto& entry : items) {
+      const std::string name(entry.name);
+      if (!entry.item) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& it = *entry.item;
+      std::printf("  %-32s v%u%s type %u flags %08x squares %ux%u cost %d visuals %zu sounds %zu params %zu nodes %zu\n",
+                  name.c_str(), it.version, it.compact ? " compact" : "", it.type, it.flags, it.x_squares,
+                  it.z_squares, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
+    }
+  }
+}
+// --- end scenery and placement item types ---
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -521,11 +560,13 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
     else if (std::strcmp(argv[i], "--btbl") == 0) opt.btbl = true;
     else if (std::strcmp(argv[i], "--flt") == 0) opt.flt = true;
+    else if (parse_scenery_option(argv[i])) {}
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
     std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
+    std::fprintf(stderr, "scenery types: [--sid]\n");
     return 2;
   }
 
@@ -538,5 +579,7 @@ int main(int argc, char** argv) {
   print_part("common", *overlay, overlay->common(), opt);
   if (const auto* unique = overlay->unique()) print_part("unique", *overlay, *unique, opt);
   else std::printf("== unique\n(none)\n");
+  print_scenery_types("common", *overlay, overlay->common());
+  if (const auto* unique = overlay->unique()) print_scenery_types("unique", *overlay, *unique);
   return 0;
 }

@@ -4,9 +4,12 @@
 // go with them. The measurements are ours, chosen to fit the skins.
 #pragma once
 
+#include "ui/font_set.hpp"
 #include "ui/widgets/window.hpp"
 
+#include <array>
 #include <string_view>
+#include <utility>
 
 namespace rct3::ui::game_skins
 {
@@ -23,6 +26,14 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
 
+    /// The fixed-size interface fonts, by role.
+    inline constexpr std::array<std::pair<FontRole, std::string_view>, kFontRoleCount> kFonts = { {
+        { FontRole::Tiny, "GUIFontTiny" },
+        { FontRole::Small, "GUIFontSmall" },
+        { FontRole::Medium, "GUIFontMedium" },
+        { FontRole::Large, "GUIFontLarge" },
+    } };
+
     [[nodiscard]] inline WindowStyle window_style()
     {
         WindowStyle s;
@@ -33,6 +44,7 @@ namespace rct3::ui::game_skins
         s.close_icon = kCloseIcon;
         // The frame's top-left corner holds the window's icon and the title rule; content goes below it.
         s.content_inset = { 12, 70, 12, 12 };
+        s.title_box = { 62, 20, 30, 40 }; // Right of the icon, on the title rule
         return s;
     }
 

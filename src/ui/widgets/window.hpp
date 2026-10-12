@@ -9,6 +9,7 @@
 // update() override that calls Window::update() first.
 #pragma once
 
+#include "ui/font_set.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -30,6 +31,9 @@ namespace rct3::ui
         Rect content_inset { 12, 28, 12, 12 }; ///< Content area in from the left, top, right and bottom edges
         float title_button_size = 14;
         Point title_button_margin { 10, 6 }; ///< From the top-right corner
+        FontRole title_font = FontRole::Medium;
+        Rect title_box { 12, 2, 40, 20 }; ///< Title text: left inset, top, right inset, bottom; tops and bottoms from the top edge
+        Color title_colour { 0, 0, 0, 255 };
     };
 
     class Window : public Widget
@@ -37,6 +41,8 @@ namespace rct3::ui
     public:
         /// Centred on the desktop at `width` x `height`.
         Window(std::string name, const WindowStyle& style, float width, float height);
+
+        std::u16string title;
 
         [[nodiscard]] Widget& content()
         {

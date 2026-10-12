@@ -208,7 +208,8 @@ TEST_CASE("clipped parents hide children outside them")
 
     DrawList list;
     SkinLibrary skins;
-    DrawContext context { list, skins };
+    const FontSet fonts;
+    DrawContext context { list, skins, fonts };
     desktop.draw(context);
     CHECK(list.clip() == nullptr); // Balanced
 }

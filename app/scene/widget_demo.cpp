@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/widget_demo.hpp"
 
+#include "ui/font_images.hpp"
 #include "ui/game_style.hpp"
 #include "ui/scale.hpp"
 #include "ui/skin_set.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/label.hpp"
 #include "ui/widgets/panel.hpp"
 #include "ui/widgets/tickbox.hpp"
 #include "ui/widgets/window.hpp"
 
+#include <algorithm>
+#include <map>
 #include <string>
+#include <vector>
 
 namespace rct3::scene
 {
@@ -20,32 +25,47 @@ namespace rct3::scene
         namespace skins = ui::game_skins;
 
         constexpr std::string_view kToggleFamily = "Staff_TaskButtonBins";
-        constexpr float kWidth = 320;
-        constexpr float kHeight = 270;
+        constexpr float kWidth = 340;
+        constexpr float kHeight = 300;
         constexpr float kCascade = 28; ///< How far each new window opens from the last
+
+        // Game string keys the demo shows.
+        constexpr std::string_view kTitleKey = "GameOptionsDialog_Title";
+        constexpr std::string_view kHelpKey = "GameOptionsDialog_WaterReflect_EnabledHelp";
+        constexpr std::array<std::string_view, 3> kOptionKeys = { "GameOptionsDialog_AutoScrollAtEdge", "GameOptionsDialog_BackgroundMusic", "GameOptionsDialog_Bloom" };
 
         class DemoWindow : public ui::Window
         {
         public:
-            DemoWindow(std::string name, float cascade)
+            DemoWindow(std::string name, float cascade, const ui::StringTable& strings)
                 : ui::Window(std::move(name), skins::window_style(), kWidth, kHeight)
+                , strings_(strings)
             {
                 placement = ui::centred(kWidth, kHeight, cascade, cascade);
+                title = strings.get(kTitleKey);
                 ui::Widget& body = content();
 
-                // The list area stretches with the window; the row below it stays on the bottom edge.
+                // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
-                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -44 } };
+                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -86 } };
+                auto& help = list.add<ui::Label>("help", std::u16string(strings.get(kHelpKey)), ui::FontRole::Small);
+                help.placement = ui::fill(6);
+                help.style.wrap = true;
+                list.clip_children = true;
 
-                for (int i = 0; i < 3; ++i)
+                for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
                 {
+                    const float bottom = 62 - static_cast<float>(i) * 18;
                     auto& tick = body.add<ui::Tickbox>("option" + std::to_string(i), std::string(skins::kTickbox), std::string(skins::kTick));
-                    tick.placement = ui::bottom_left(static_cast<float>(i) * 20, 22, 12, 12);
+                    tick.placement = ui::bottom_left(0, bottom, 12, 12);
                     tick.ticked = i == 0;
+                    auto& label = body.add<ui::Label>("label" + std::to_string(i), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
+                    label.placement = { { 0, 1, 1, 1 }, { 18, -bottom - 15, -80, -bottom + 3 } };
+                    label.style.vertical = ui::Align::Centre;
                 }
                 auto& toggle = body.add<ui::Button>("toggle", std::string(kToggleFamily));
                 toggle.toggle = true;
-                toggle.placement = ui::bottom_left(70, 18, 20, 20);
+                toggle.placement = ui::bottom_right(0, 48, 20, 20);
 
                 cancel_ = &body.add<ui::Button>("cancel", std::string(skins::kButton), std::string(skins::kCancelIcon));
                 cancel_->placement = ui::bottom_right(0, 4, 30, 30);
@@ -61,11 +81,12 @@ namespace rct3::scene
                 if (confirm_->take_click() && parent() != nullptr)
                 {
                     const auto n = static_cast<float>(parent()->children().size());
-                    parent()->add<DemoWindow>("window" + std::to_string(parent()->children().size()), n * kCascade);
+                    parent()->add<DemoWindow>("window" + std::to_string(parent()->children().size()), n * kCascade, strings_);
                 }
             }
 
         private:
+            const ui::StringTable& strings_;
             ui::Button* confirm_ = nullptr;
             ui::Button* cancel_ = nullptr;
         };
@@ -77,11 +98,17 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const std::filesystem::path& path)
+    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install)
     {
-        auto set = ui::load_skin_set(path);
+        const auto main_ovl = install.find("Main.common.ovl");
+        if (!main_ovl)
+            return std::unexpected("Main.common.ovl not found");
+        auto set = ui::load_skin_set(*main_ovl);
         if (!set)
             return std::unexpected(set.error());
+        auto fonts = ui::load_font_images(*main_ovl);
+        if (!fonts)
+            return std::unexpected("fonts: " + fonts.error());
 
         WidgetDemo demo;
         auto renderer = ui::create_ui_renderer(device);
@@ -97,7 +124,38 @@ namespace rct3::scene
         }
         demo.textures = std::move(*textures);
         demo.skins = ui::skin_library(set->skins, demo.textures);
-        demo.desktop.root().add<DemoWindow>("window0", 0.0f);
+
+        // Font pages go up under the font's name and page number; each role gets the font of its name.
+        for (const ui::FontImages& f : *fonts)
+        {
+            const auto role = std::ranges::find(skins::kFonts, std::string_view(f.name), &std::pair<ui::FontRole, std::string_view>::second);
+            if (role == skins::kFonts.end())
+                continue;
+            std::map<std::string, ovl::RgbaImage, std::less<>> images;
+            for (std::size_t i = 0; i < f.pages.size(); ++i)
+                images.emplace(f.name + "#" + std::to_string(i), f.pages[i]);
+            auto pages = ui::upload_textures(device, images);
+            if (!pages)
+            {
+                destroy_widget_demo(device, demo);
+                return std::unexpected(pages.error());
+            }
+            std::vector<ui::Font::Page> refs;
+            for (std::size_t i = 0; i < f.pages.size(); ++i)
+            {
+                const ui::UiTexture& t = pages->at(f.name + "#" + std::to_string(i));
+                refs.push_back({ ui::texture_id(t.handle), t.width, t.height });
+            }
+            demo.textures.merge(*pages);
+            demo.fonts.set(role->first, ui::Font::from(f.font, refs));
+        }
+
+        if (const auto english = install.find("gui/English.common.ovl"))
+        {
+            if (auto strings = ui::StringTable::load(*english))
+                *demo.strings = std::move(*strings);
+        }
+        demo.desktop.root().add<DemoWindow>("window0", 0.0f, *demo.strings);
         return demo;
     }
 
@@ -109,7 +167,7 @@ namespace rct3::scene
 
         // Something to show again once every window is closed.
         if (demo.desktop.root().children().empty())
-            demo.desktop.root().add<DemoWindow>("window0", 0.0f);
+            demo.desktop.root().add<DemoWindow>("window0", 0.0f, *demo.strings);
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
@@ -120,7 +178,7 @@ namespace rct3::scene
     {
         demo.list.clear();
         demo.list.set_scale(scale_for(device));
-        ui::DrawContext context { demo.list, demo.skins };
+        ui::DrawContext context { demo.list, demo.skins, demo.fonts };
         demo.desktop.draw(context);
         ui::render_draw_list(device, demo.renderer, demo.list);
     }

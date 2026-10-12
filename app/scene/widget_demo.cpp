@@ -10,6 +10,7 @@
 #include "ui/skin_set.hpp"
 #include "ui/truetype_font.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/list_box.hpp"
@@ -52,6 +53,17 @@ namespace rct3::scene
         constexpr std::size_t kNameLength = 40;
         constexpr float kButtonRow = 36; ///< Below the tabs
         constexpr float kRowHeight = 18; ///< Of the controls page
+        constexpr std::array<std::u16string_view, 3> kDetailLevels = { u"Low detail", u"Medium detail", u"High detail" };
+        constexpr float kMenuBarHeight = 20;
+        constexpr std::array<std::string_view, 4> kToolIcons = { "File_GameOptions_Game", "File_GameOptions_Graphics", "File_GameOptions_Camera", "File_GameOptions_Keyboard" };
+        constexpr std::array<std::u16string_view, 4> kToolTips = { u"Open a window", u"Graphics", u"Camera", u"Keyboard" };
+        // The menus, by index in the bar.
+        constexpr std::size_t kWindowMenu = 0;
+        constexpr std::size_t kScaleMenu = 1;
+        constexpr std::size_t kNewWindowItem = 0;
+        constexpr std::size_t kCloseWindowItem = 1;
+        constexpr std::size_t kAutoScaleItem = 0; ///< Then one item for each whole scale from 1
+        constexpr int kScaleChoices = 4;
         constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.
@@ -164,6 +176,11 @@ namespace rct3::scene
                 guests_label_ = &page.add<ui::Label>("guests_label", u"guests", ui::FontRole::Small);
                 guests_label_->placement = ui::top_left(96, y + kRowHeight + 8, 120, 16);
                 guests_label_->style.vertical = ui::Align::Centre;
+
+                auto& detail = page.add<ui::Dropdown>("detail", skins::dropdown_style());
+                detail.items.assign(kDetailLevels.begin(), kDetailLevels.end());
+                detail.select(1);
+                detail.placement = ui::top_left(0, y + 2 * (kRowHeight + 8), 120, 18);
             }
 
             void update(const ui::UpdateContext& context) override
@@ -203,6 +220,69 @@ namespace rct3::scene
             ui::Spinner* guests_ = nullptr;
             ui::Label* guests_label_ = nullptr;
         };
+
+        bool is_demo_window(const ui::Widget& w)
+        {
+            return dynamic_cast<const DemoWindow*>(&w) != nullptr;
+        }
+
+        void open_window(WidgetDemo& demo)
+        {
+            ui::Widget& root = demo.desktop.root();
+            const auto n = std::ranges::count_if(root.children(), [](const auto& c) { return is_demo_window(*c); });
+            root.add<DemoWindow>("window" + std::to_string(root.children().size()), static_cast<float>(n) * kCascade, *demo.strings);
+        }
+
+        std::vector<ui::MenuItem> scale_items(std::optional<float> chosen)
+        {
+            std::vector<ui::MenuItem> items;
+            items.push_back({ .text = u"Automatic", .checked = !chosen });
+            for (int s = 1; s <= kScaleChoices; ++s)
+                items.push_back({ .text = strings::to_utf16(std::to_string(s) + "x"), .checked = chosen == static_cast<float>(s) });
+            return items;
+        }
+
+        void add_bars(WidgetDemo& demo)
+        {
+            ui::Widget& root = demo.desktop.root();
+            demo.menu_bar = &root.add<ui::MenuBar>("menu_bar", skins::menu_bar_style());
+            demo.menu_bar->placement = { { 0, 0, 1, 0 }, { 0, 0, 0, kMenuBarHeight } };
+            std::vector<ui::MenuItem> window_items(4);
+            window_items[kNewWindowItem].text = u"New window";
+            window_items[kCloseWindowItem].text = u"Close window";
+            window_items[2].separator = true;
+            window_items[3].text = u"Quit";
+            window_items[3].enabled = false;
+            demo.menu_bar->menus = { { u"Window", std::move(window_items) }, { u"Scale", scale_items(demo.scale) } };
+
+            demo.toolbar = &root.add<ui::Toolbar>("toolbar", skins::toolbar_style(), ui::Orientation::Vertical);
+            for (std::size_t i = 0; i < kToolIcons.size(); ++i)
+                demo.toolbar->add_button("tool" + std::to_string(i), std::string(kToolIcons[i]), std::u16string(kToolTips[i]));
+            demo.toolbar->placement = ui::top_left(0, kMenuBarHeight + 4, 38, demo.toolbar->length());
+        }
+
+        void follow_bars(WidgetDemo& demo)
+        {
+            if (const auto choice = demo.menu_bar->take_choice())
+            {
+                if (choice->menu == kWindowMenu && choice->item == kNewWindowItem)
+                    open_window(demo);
+                if (choice->menu == kWindowMenu && choice->item == kCloseWindowItem)
+                {
+                    const auto& tops = demo.desktop.root().children();
+                    const auto top = std::ranges::find_if(tops.rbegin(), tops.rend(), [](const auto& c) { return is_demo_window(*c); });
+                    if (top != tops.rend())
+                        (*top)->close();
+                }
+                if (choice->menu == kScaleMenu)
+                {
+                    demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<float>(choice->item));
+                    demo.menu_bar->menus[kScaleMenu].items = scale_items(demo.scale);
+                }
+            }
+            if (demo.toolbar->children().front()->visible && static_cast<ui::Button&>(*demo.toolbar->children().front()).take_click())
+                open_window(demo);
+        }
 
         // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure
         // the font is returned as it was.
@@ -306,7 +386,8 @@ namespace rct3::scene
                 *demo.strings = std::move(*strings);
         }
         demo.desktop.tooltip_style = skins::tooltip_style();
-        demo.desktop.root().add<DemoWindow>("window0", 0.0f, *demo.strings);
+        add_bars(demo);
+        open_window(demo);
         return demo;
     }
 
@@ -317,12 +398,14 @@ namespace rct3::scene
         demo.desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
         // Something to show again once every window is closed.
-        if (demo.desktop.root().children().empty())
-            demo.desktop.root().add<DemoWindow>("window0", 0.0f, *demo.strings);
+        if (std::ranges::none_of(demo.desktop.root().children(), [](const auto& c) { return is_demo_window(*c); }))
+            open_window(demo);
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        return demo.desktop.update(pointer, keyboard, { elapsed, &demo.fonts });
+        const bool over = demo.desktop.update(pointer, keyboard, { elapsed, &demo.fonts });
+        follow_bars(demo);
+        return over;
     }
 
     void draw_widget_demo(render::Device& device, WidgetDemo& demo)

@@ -22,6 +22,7 @@ namespace rct3::ui
         Point position;      ///< Logical units
         bool down = false;   ///< The primary button
         bool present = true; ///< False when something else, such as a developer tool, has the pointer
+        float wheel = 0;     ///< Wheel notches turned since the last update, positive away from the user
     };
 
     class Desktop
@@ -42,8 +43,8 @@ namespace rct3::ui
 
         /// Routes the pointer, runs every widget's update, detaches widgets that asked to close and lays the
         /// tree out again. Returns whether the pointer is over the interface; when false it belongs to the 3D
-        /// view. `elapsed` is the time since the last update in seconds; tooltips wait on it.
-        bool update(const PointerState& pointer, float elapsed = 0);
+        /// view. The context's time drives tooltips and anything else that waits.
+        bool update(const PointerState& pointer, const UpdateContext& context = { });
 
         /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
@@ -56,6 +57,9 @@ namespace rct3::ui
 
         /// The widget under `p` that takes the pointer, if any.
         [[nodiscard]] Widget* hit(Point p) const;
+        /// The deepest visible widget under `p`, whether it takes the pointer or not; the root when nothing
+        /// else is there.
+        [[nodiscard]] Widget* deepest(Point p) const;
 
     private:
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links

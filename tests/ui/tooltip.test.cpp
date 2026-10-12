@@ -155,10 +155,10 @@ TEST_CASE("the desktop draws the tooltip over the tree")
     target.tooltip = u"ab";
     desktop.layout({ 0, 0, 200, 200 });
 
-    desktop.update({ { 10, 10 }, false, true }, 0.2f);
-    desktop.update({ { 10, 10 }, false, true }, 0.2f);
+    desktop.update({ { 10, 10 }, false, true }, { 0.2f });
+    desktop.update({ { 10, 10 }, false, true }, { 0.2f });
     CHECK_FALSE(desktop.tooltip().shown());
-    desktop.update({ { 10, 10 }, false, true }, 0.4f);
+    desktop.update({ { 10, 10 }, false, true }, { 0.4f });
     REQUIRE(desktop.tooltip().shown());
 
     DrawList list;
@@ -169,6 +169,6 @@ TEST_CASE("the desktop draws the tooltip over the tree")
     CHECK(list.batches()[1].texture == 4);
 
     // The pointer leaving the widget takes the tooltip away.
-    desktop.update({ { 100, 100 }, false, true }, 0.1f);
+    desktop.update({ { 100, 100 }, false, true }, { 0.1f });
     CHECK_FALSE(desktop.tooltip().shown());
 }

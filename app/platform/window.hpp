@@ -7,7 +7,9 @@
 #include "render/device.hpp"
 
 #include <expected>
+#include <memory>
 #include <string>
+#include <utility>
 
 struct GLFWwindow;
 
@@ -47,6 +49,7 @@ namespace rct3::platform
             float x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
             float y = 0;
             bool left = false;
+            float wheel = 0; ///< Notches turned since the last poll_events, positive away from the user
         };
         [[nodiscard]] Pointer pointer() const;
 
@@ -54,12 +57,21 @@ namespace rct3::platform
         void ui_new_frame();
 
     private:
-        explicit Window(GLFWwindow* window)
+        // Input GLFW only reports through callbacks, gathered between polls. On the heap so the window's
+        // user pointer stays valid when the Window moves.
+        struct Collected
+        {
+            double wheel = 0;
+        };
+
+        Window(GLFWwindow* window, std::unique_ptr<Collected> collected)
             : window_(window)
+            , collected_(std::move(collected))
         {
         }
 
         GLFWwindow* window_ = nullptr;
+        std::unique_ptr<Collected> collected_;
     };
 
 } // namespace rct3::platform

@@ -23,6 +23,11 @@ namespace rct3::platform
             return std::unexpected("cannot create window");
         }
 
+        // Installed before ImGui's own callbacks, which call it in turn.
+        auto collected = std::make_unique<Collected>();
+        glfwSetWindowUserPointer(window, collected.get());
+        glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) { static_cast<Collected*>(glfwGetWindowUserPointer(w))->wheel += y; });
+
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGui::StyleColorsDark();
@@ -30,11 +35,12 @@ namespace rct3::platform
         ImGui_ImplGlfw_InitForOther(window, true);
         // The game reads the button state once a frame; a click shorter than a frame must still show up.
         glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
-        return Window(window);
+        return Window(window, std::move(collected));
     }
 
     Window::Window(Window&& other) noexcept
         : window_(std::exchange(other.window_, nullptr))
+        , collected_(std::move(other.collected_))
     {
     }
 
@@ -55,6 +61,7 @@ namespace rct3::platform
 
     void Window::poll_events()
     {
+        collected_->wheel = 0;
         glfwPollEvents();
     }
 
@@ -83,6 +90,7 @@ namespace rct3::platform
             p.y = static_cast<float>(cy * fh / wh);
         }
         p.left = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        p.wheel = static_cast<float>(collected_->wheel);
         return p;
     }
 

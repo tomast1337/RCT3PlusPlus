@@ -36,6 +36,13 @@ namespace rct3::ui
         return p.x >= rect.x0 && p.x < rect.x1 && p.y >= rect.y0 && p.y < rect.y1;
     }
 
+    /// What widgets update with.
+    struct UpdateContext
+    {
+        float elapsed = 0;              ///< Seconds since the last update
+        const FontSet* fonts = nullptr; ///< For widgets that measure text; null when there are none
+    };
+
     /// What widgets draw with.
     struct DrawContext
     {
@@ -139,10 +146,23 @@ namespace rct3::ui
         virtual void on_release(Point, bool /*inside*/)
         {
         }
+        /// The wheel turned with the pointer over this widget or a child that did not take it. `notches` is
+        /// positive away from the user. Returns whether the widget used it; if not, its parent is asked.
+        virtual bool on_wheel(float /*notches*/)
+        {
+            return false;
+        }
+
+        /// What the widget covers when laid out in its rectangle: the rectangle, unless its content runs
+        /// further, as wrapped text can. Scroll areas size their content by it.
+        [[nodiscard]] virtual Rect extent() const
+        {
+            return rect_;
+        }
 
         /// Once per frame after input, parents before children. May add widgets anywhere in the tree;
         /// removing goes through close().
-        virtual void update()
+        virtual void update(const UpdateContext&)
         {
         }
         /// Draws this widget, not its children.

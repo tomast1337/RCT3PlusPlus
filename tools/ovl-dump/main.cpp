@@ -13,6 +13,7 @@
 #include <vector>
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
+#include "ovl/carried_item.hpp"
 #include "ovl/scenery_item.hpp"
 // --- end scenery and placement item types ---
 #include "ovl/bone_anim.hpp"
@@ -500,17 +501,57 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 struct SceneryOptions {
   bool sid = false;
+  bool cid = false;
+  bool ced = false;
 };
 SceneryOptions g_scenery;
 
 // Accepts the options of this block. Returns false for any other argument.
 bool parse_scenery_option(const char* arg) {
   if (std::strcmp(arg, "--sid") == 0) g_scenery.sid = true;
+  else if (std::strcmp(arg, "--cid") == 0) g_scenery.cid = true;
+  else if (std::strcmp(arg, "--ced") == 0) g_scenery.ced = true;
   else return false;
   return true;
 }
 
+void print_carried_items(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  if (g_scenery.cid) {
+    const auto items = rct3::ovl::read_carried_items(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : items) bad += entry.item ? 0 : 1;
+    std::printf("carried items (%s) %zu (%zu unreadable)\n", title, items.size(), bad);
+    for (const auto& entry : items) {
+      const std::string name(entry.name);
+      if (!entry.item) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& it = *entry.item;
+      const std::string text(it.name_text), remains(it.remains);
+      std::printf("  %-28s flags %08x extras %zu text %s remains '%s'\n", name.c_str(), it.flags, it.extras.size(),
+                  text.c_str(), remains.c_str());
+    }
+  }
+  if (g_scenery.ced) {
+    const auto extras = rct3::ovl::read_carried_item_extras(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : extras) bad += entry.extra ? 0 : 1;
+    std::printf("carried item extras (%s) %zu (%zu unreadable)\n", title, extras.size(), bad);
+    for (const auto& entry : extras) {
+      const std::string name(entry.name);
+      if (!entry.extra) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.extra->name_text), icon(entry.extra->icon);
+      std::printf("  %-28s text %s icon %s\n", name.c_str(), text.c_str(), icon.c_str());
+    }
+  }
+}
+
 void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  print_carried_items(title, overlay, part);
   if (g_scenery.sid) {
     const auto items = rct3::ovl::read_scenery_items(overlay, part);
     std::size_t bad = 0;
@@ -573,7 +614,7 @@ int main(int argc, char** argv) {
   }
   if (!path) {
     std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
-    std::fprintf(stderr, "scenery types: [--sid]\n");
+    std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced]\n");
     return 2;
   }
 

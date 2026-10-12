@@ -1,0 +1,11 @@
+OpenGL Mathematics (GLM), header-only.
+
+Version:  1.0.3 (tag 1.0.3, published 2025-12-31)
+Source:   https://github.com/g-truc/glm
+Licence:  The Happy Bunny License or MIT License, see LICENSE. The MIT option applies to this project.
+
+Only the library headers are included (the glm/ directory of the release): no tests, docs, CMake files or
+the module and static-library sources. The files are unmodified.
+
+Include it through src/math/glm.hpp, never directly. That header fixes the configuration macros (left-handed
+coordinates, zero-to-one depth) so every translation unit sees the same definitions.

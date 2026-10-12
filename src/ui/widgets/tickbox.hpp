@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// A box that is ticked or not; a click flips it. The tick skin is drawn over the box skin, both stretched
+// A box that is ticked or not; a click, or Space or Enter while it has the keyboard focus, flips it. The tick skin is drawn over the box skin, both stretched
 // over the widget.
 #pragma once
 
@@ -27,10 +27,18 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] bool takes_focus() const override
+        {
+            return true;
+        }
         void on_release(Point p, bool inside) override;
+        /// Space and Enter work like a click.
+        bool on_key(const KeyPress& key) override;
         void draw(DrawContext& context) const override;
 
     private:
+        void flip();
+
         int changes_ = 0;
     };
 

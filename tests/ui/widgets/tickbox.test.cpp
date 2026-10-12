@@ -25,3 +25,15 @@ TEST_CASE("a click flips the tick")
     CHECK(t.ticked);
     CHECK_FALSE(t.take_change());
 }
+
+TEST_CASE("space and enter flip a focused tickbox")
+{
+    Tickbox t("t", "Box", "Tick");
+    CHECK(t.takes_focus());
+    CHECK(t.on_key({ Key::Space }));
+    CHECK(t.ticked);
+    CHECK(t.take_change());
+    CHECK(t.on_key({ Key::Enter }));
+    CHECK_FALSE(t.ticked);
+    CHECK_FALSE(t.on_key({ Key::Down }));
+}

@@ -376,6 +376,8 @@ int main(int argc, char** argv)
                         const rct3::ui::KeyboardState no_keys;
                         const auto& keyboard = ImGui::GetIO().WantCaptureKeyboard ? no_keys : window->keyboard();
                         rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));
+                        if (const auto copied = widgets->desktop.take_clipboard())
+                            window->set_clipboard(*copied);
                     }
                 });
                 prof::section("Draw", [&] {

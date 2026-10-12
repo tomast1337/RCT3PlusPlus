@@ -3,9 +3,13 @@
 // Keyboard input for the interface, read once per frame like the pointer: what was pressed and typed since
 // the last update, in the order it happened, with the system's key repeat already applied. Keys go to the
 // widget with the keyboard focus first, then up through its parents until one uses them (see Desktop).
+//
+// The clipboard keys arrive as their own presses, whatever keys made them, and a paste carries the
+// clipboard's text with it. Text copied the other way comes out of Desktop::take_clipboard().
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace rct3::ui
@@ -29,6 +33,9 @@ namespace rct3::ui
         Space,     ///< Also arrives as a typed ' '
         Character, ///< Typed text: `character` holds it
         Shortcut,  ///< A letter or digit key with Control held: `character` holds it, lower case
+        Copy,      ///< Control+C or Control+Insert
+        Cut,       ///< Control+X or Shift+Delete
+        Paste,     ///< Control+V or Shift+Insert: `text` holds what the clipboard had
     };
 
     struct KeyPress
@@ -36,7 +43,8 @@ namespace rct3::ui
         Key key = Key::Escape;
         bool shift = false;
         bool control = false;
-        char32_t character = 0; ///< For Character and Shortcut
+        char32_t character = 0;  ///< For Character and Shortcut
+        std::u16string text { }; ///< For Paste
     };
 
     struct KeyboardState

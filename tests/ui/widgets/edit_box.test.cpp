@@ -216,3 +216,71 @@ TEST_CASE("long text scrolls to keep the caret in view")
     desktop.update({ }, home, context);
     CHECK(caret_x() == doctest::Approx(3 + 1));
 }
+
+TEST_CASE("copy and cut hand the selection to the clipboard")
+{
+    EditBox box("box", u"big wheel");
+    box.on_key(key(Key::Copy));
+    CHECK_FALSE(box.take_copied()); // Nothing selected
+
+    box.on_key(key(Key::Left, true, true));
+    box.on_key(key(Key::Copy));
+    CHECK(box.take_copied() == u"wheel");
+    CHECK_FALSE(box.take_copied());
+    CHECK(box.text == u"big wheel");
+
+    box.on_key(key(Key::Cut));
+    CHECK(box.take_copied() == u"wheel");
+    CHECK(box.text == u"big ");
+    CHECK(box.take_change());
+}
+
+TEST_CASE("paste goes in like typing")
+{
+    const auto paste = [](EditBox& box, std::u16string text) {
+        KeyPress p { Key::Paste };
+        p.text = std::move(text);
+        return box.on_key(p);
+    };
+    EditBox box("box", u"ride");
+    box.select_all();
+    CHECK(paste(box, u"log\r\nflume"));
+    CHECK(box.text == u"log flume");
+    CHECK(box.caret() == 9);
+
+    SUBCASE("cut to the length, by whole characters")
+    {
+        EditBox short_box("short", u"ab");
+        short_box.max_length = 4;
+        paste(short_box, u"c\U0001F3A2d");
+        CHECK(short_box.text == u"abc\U0001F3A2");
+    }
+    SUBCASE("only allowed characters")
+    {
+        EditBox digits("digits");
+        digits.allowed = u"0123456789";
+        paste(digits, u"$1,250");
+        CHECK(digits.text == u"1250");
+    }
+    SUBCASE("an empty paste over a selection deletes it")
+    {
+        box.select_all();
+        paste(box, u"");
+        CHECK(box.text.empty());
+    }
+}
+
+TEST_CASE("the desktop collects what a focused widget copied")
+{
+    Desktop desktop;
+    EditBox& box = desktop.root().add<EditBox>("box", u"coaster");
+    desktop.layout({ 0, 0, 300, 100 });
+    desktop.set_keyboard_focus(&box);
+    box.select_all();
+
+    KeyboardState keys;
+    keys.presses.push_back({ Key::Copy, false, true });
+    desktop.update({ }, keys);
+    CHECK(desktop.take_clipboard() == u"coaster");
+    CHECK_FALSE(desktop.take_clipboard());
+}

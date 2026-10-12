@@ -17,6 +17,7 @@
 #include "ui/skin_library.hpp"
 
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -171,6 +172,12 @@ namespace rct3::ui
         virtual bool on_key(const KeyPress&)
         {
             return false;
+        }
+        /// Text for the clipboard, taken by the desktop right after this widget used a key: what Copy or Cut
+        /// gave. Nothing by default.
+        [[nodiscard]] virtual std::optional<std::u16string> take_copied()
+        {
+            return std::nullopt;
         }
 
         /// What the widget covers when laid out in its rectangle: the rectangle, unless its content runs

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/edit_box.hpp"
 
+#include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -12,18 +14,11 @@ namespace rct3::ui
     namespace
     {
 
+        using strings::is_high_surrogate;
+        using strings::is_low_surrogate;
+
         constexpr float kBlinkPeriod = 1.0f; ///< Seconds; the caret shows for the first half
         constexpr float kCaretHalfWidth = 1.0f;
-
-        bool is_high_surrogate(char16_t c)
-        {
-            return c >= 0xD800 && c <= 0xDBFF;
-        }
-
-        bool is_low_surrogate(char16_t c)
-        {
-            return c >= 0xDC00 && c <= 0xDFFF;
-        }
 
         // The position `at` moved back to the start of the character it falls in.
         std::size_t boundary(const std::u16string& s, std::size_t at)
@@ -76,18 +71,6 @@ namespace rct3::ui
             for (std::size_t i = 0; i < s.size(); i = next_char(s, i))
                 ++n;
             return n;
-        }
-
-        void append(std::u16string& out, char32_t c)
-        {
-            if (c < 0x10000)
-            {
-                out += static_cast<char16_t>(c);
-                return;
-            }
-            c -= 0x10000;
-            out += static_cast<char16_t>(0xD800 + (c >> 10));
-            out += static_cast<char16_t>(0xDC00 + (c & 0x3FF));
         }
 
         // The character position nearest to `x` units from the start of the text.
@@ -175,28 +158,61 @@ namespace rct3::ui
         blink_time_ = 0;
     }
 
-    void EditBox::insert(char32_t c)
+    std::u16string EditBox::accepted(std::u16string_view typed) const
     {
-        if (c < 0x20 || c == 0x7F || c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF))
-            return;
-        if (upper_case && c >= U'a' && c <= U'z')
-            c = c - U'a' + U'A';
-        std::u16string piece;
-        append(piece, c);
-        if (!allowed.empty() && allowed.find(piece) == std::u16string::npos)
-            return;
+        std::u16string out;
+        for (std::size_t i = 0; i < typed.size(); ++i)
+        {
+            char32_t c = typed[i];
+            if (is_high_surrogate(c) && i + 1 < typed.size() && is_low_surrogate(typed[i + 1]))
+                c = 0x10000 + ((c - 0xD800) << 10) + (typed[++i] - 0xDC00);
+            if (c < 0x20 || c == 0x7F || c > 0x10FFFF || is_high_surrogate(c) || is_low_surrogate(c))
+                continue;
+            if (upper_case && c >= U'a' && c <= U'z')
+                c = c - U'a' + U'A';
+            std::u16string piece;
+            strings::append_utf16(piece, c);
+            if (allowed.empty() || allowed.find(piece) != std::u16string::npos)
+                out += piece;
+        }
+        return out;
+    }
+
+    void EditBox::insert(std::u16string_view typed)
+    {
+        std::u16string piece = accepted(typed);
         const bool replacing = has_selection();
+        if (piece.empty() && !replacing)
+            return;
         if (replacing)
             erase_selection();
-        if (max_length != 0 && count_chars(text) >= max_length)
+        if (max_length != 0)
         {
-            if (replacing)
-                changed();
-            return;
+            // Keep as many whole characters as there is room for.
+            std::size_t room = max_length - std::min(max_length, count_chars(text));
+            std::size_t end = 0;
+            while (end < piece.size() && room > 0)
+            {
+                end = next_char(piece, end);
+                --room;
+            }
+            piece.resize(end);
         }
         text.insert(caret_, piece);
         caret_ = anchor_ = caret_ + piece.size();
-        changed();
+        if (replacing || !piece.empty())
+            changed();
+    }
+
+    std::u16string EditBox::selected_text() const
+    {
+        const std::size_t from = std::min(caret_, anchor_);
+        return text.substr(from, std::max(caret_, anchor_) - from);
+    }
+
+    std::optional<std::u16string> EditBox::take_copied()
+    {
+        return std::exchange(copied_, std::nullopt);
     }
 
     bool EditBox::on_key(const KeyPress& key)
@@ -206,7 +222,33 @@ namespace rct3::ui
         switch (key.key)
         {
             case Key::Character:
-                insert(key.character);
+            {
+                std::u16string typed;
+                if (key.character <= 0x10FFFF)
+                    strings::append_utf16(typed, key.character);
+                insert(typed);
+                return true;
+            }
+            case Key::Paste:
+                // Lines are joined with spaces: this box holds one.
+                {
+                    std::u16string pasted = key.text;
+                    std::ranges::replace(pasted, u'\n', u' ');
+                    std::erase(pasted, u'\r');
+                    insert(pasted);
+                }
+                return true;
+            case Key::Copy:
+            case Key::Cut:
+                if (has_selection())
+                {
+                    copied_ = selected_text();
+                    if (key.key == Key::Cut)
+                    {
+                        erase_selection();
+                        changed();
+                    }
+                }
                 return true;
             case Key::Space:
                 return true; // Typed as a character too

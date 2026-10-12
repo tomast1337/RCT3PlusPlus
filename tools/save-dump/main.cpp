@@ -2,12 +2,16 @@
 //
 // save-dump: print the container structure of a park or scenario save file.
 //
-//   save-dump [--classes] [--objects] PATH
+//   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //
 // Prints the section table, header words, the class table summary and per-class object counts.
+// --values CLASS and --object ID print decoded attribute values of the matching objects. --check decodes
+// every object and reports how many values were produced, left raw or failed to fit their layout, and how
+// many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iterator>
@@ -15,18 +19,102 @@
 #include <vector>
 
 #include "save/save_file.hpp"
+#include "save/value.hpp"
+
+namespace {
+
+using rct3::save::Value;
+using rct3::save::ValueKind;
+
+void print_value(const Value& v, int indent, const char* name) {
+  std::printf("%*s", indent, "");
+  if (name) std::printf("%s = ", name);
+  switch (v.kind()) {
+    case ValueKind::Raw: {
+      const auto raw = v.raw();
+      std::printf("raw[%zu]", raw.size());
+      for (std::size_t i = 0; i < raw.size() && i < 16; ++i) std::printf(" %02x", static_cast<unsigned>(raw[i]));
+      if (raw.size() > 16) std::printf(" ...");
+      std::printf("\n");
+      return;
+    }
+    case ValueKind::Bool: std::printf("%s\n", v.as_bool() ? "true" : "false"); return;
+    case ValueKind::Integer: std::printf("%lld\n", static_cast<long long>(v.as_integer())); return;
+    case ValueKind::Float: std::printf("%g\n", static_cast<double>(v.as_float())); return;
+    case ValueKind::String: std::printf("\"%.*s\"\n", static_cast<int>(v.text().size()), v.text().data()); return;
+    case ValueKind::Reference:
+      if (v.as_reference() == 0) std::printf("null\n");
+      else std::printf("ref %llu\n", static_cast<unsigned long long>(v.as_reference()));
+      return;
+    case ValueKind::Vector3:
+    case ValueKind::Orientation:
+    case ValueKind::Matrix44:
+    case ValueKind::FloatArray: {
+      std::printf("%s[", rct3::save::to_string(v.kind()));
+      const auto f = v.floats();
+      for (std::size_t i = 0; i < f.size() && i < 24; ++i) std::printf("%s%g", i ? " " : "", static_cast<double>(f[i]));
+      if (f.size() > 24) std::printf(" ... (%zu)", f.size());
+      std::printf("]\n");
+      return;
+    }
+    case ValueKind::List: {
+      std::printf("list[%zu]\n", v.items().size());
+      std::size_t shown = 0;
+      for (const auto& item : v.items()) {
+        if (++shown > 8) {
+          std::printf("%*s...\n", indent + 2, "");
+          break;
+        }
+        print_value(item, indent + 2, nullptr);
+      }
+      return;
+    }
+    case ValueKind::Struct: {
+      std::printf("{\n");
+      for (std::size_t i = 0; i < v.items().size(); ++i) {
+        const auto n = std::string(v.names()[i]);
+        print_value(v.items()[i], indent + 2, n.c_str());
+      }
+      std::printf("%*s}\n", indent, "");
+      return;
+    }
+  }
+}
+
+struct RefCount {
+  std::size_t total = 0;
+  std::size_t null = 0;
+  std::size_t resolved = 0;
+};
+
+void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& rc) {
+  if (v.kind() == ValueKind::Reference) {
+    ++rc.total;
+    if (v.as_reference() == 0) ++rc.null;
+    else if (index.find(v.as_reference())) ++rc.resolved;
+  }
+  for (const auto& item : v.items()) count_refs(item, index, rc);
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   bool classes = false;
   bool objects = false;
+  bool check = false;
+  const char* value_class = nullptr;
+  const char* object_id = nullptr;
   const char* path = nullptr;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--classes") == 0) classes = true;
     else if (std::strcmp(argv[i], "--objects") == 0) objects = true;
+    else if (std::strcmp(argv[i], "--check") == 0) check = true;
+    else if (std::strcmp(argv[i], "--values") == 0 && i + 1 < argc) value_class = argv[++i];
+    else if (std::strcmp(argv[i], "--object") == 0 && i + 1 < argc) object_id = argv[++i];
     else path = argv[i];
   }
   if (!path) {
-    std::fprintf(stderr, "usage: save-dump [--classes] [--objects] PATH\n");
+    std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH\n");
     return 2;
   }
 
@@ -87,6 +175,54 @@ int main(int argc, char** argv) {
       std::printf("  id %-10llu class %-4u %-30.*s offset %-9zu size %zu\n", static_cast<unsigned long long>(o.id),
                   o.class_index, static_cast<int>(name.size()), name.data(), o.offset, o.bytes.size());
     }
+  }
+
+  const auto print_object = [&](const rct3::save::Object& o) {
+    const auto decoded = rct3::save::decode_object(*file, o);
+    if (!decoded) {
+      std::printf("object %llu: %s\n", static_cast<unsigned long long>(o.id), rct3::save::to_string(decoded.error()));
+      return;
+    }
+    std::printf("object %llu class %.*s (%zu values, %zu opaque, %zu fallbacks)\n",
+                static_cast<unsigned long long>(decoded->id), static_cast<int>(decoded->class_name.size()),
+                decoded->class_name.data(), decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
+    print_value(decoded->fields, 2, nullptr);
+  };
+  if (value_class) {
+    for (const auto& o : file->objects) {
+      if (file->classes[o.class_index].name == value_class) print_object(o);
+    }
+  }
+  if (object_id) {
+    const rct3::save::ObjectIndex index(*file);
+    if (const auto* o = index.find(std::strtoull(object_id, nullptr, 10))) print_object(*o);
+    else std::printf("no object with id %s\n", object_id);
+  }
+  if (check) {
+    const rct3::save::ObjectIndex index(*file);
+    rct3::save::DecodeStats total;
+    RefCount refs;
+    std::size_t failed = 0;
+    for (const auto& o : file->objects) {
+      const auto decoded = rct3::save::decode_object(*file, o);
+      if (!decoded) {
+        ++failed;
+        continue;
+      }
+      total.values += decoded->stats.values;
+      total.opaque += decoded->stats.opaque;
+      total.fallbacks += decoded->stats.fallbacks;
+      if (decoded->stats.fallbacks)
+        std::printf("fallbacks in %.*s id %llu: %zu\n", static_cast<int>(decoded->class_name.size()),
+                    decoded->class_name.data(), static_cast<unsigned long long>(decoded->id),
+                    decoded->stats.fallbacks);
+      count_refs(decoded->fields, index, refs);
+    }
+    std::printf("check          objects %zu failed %zu values %zu opaque %zu fallbacks %zu\n", file->objects.size(),
+                failed, total.values, total.opaque, total.fallbacks);
+    std::printf("references     total %zu null %zu resolved %zu unresolved %zu\n", refs.total, refs.null,
+                refs.resolved, refs.total - refs.null - refs.resolved);
+    if (failed || total.fallbacks) ok = false;
   }
   return ok ? 0 : 1;
 }

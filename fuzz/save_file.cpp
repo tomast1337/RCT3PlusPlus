@@ -7,6 +7,7 @@
 #include <span>
 
 #include "save/save_file.hpp"
+#include "save/value.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
   const auto bytes = std::as_bytes(std::span(data, size));
@@ -33,6 +34,17 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (c.name.empty()) continue;
     const auto* p = reinterpret_cast<const std::byte*>(c.name.data());
     if (p < begin || p + c.name.size() > begin + size) __builtin_trap();
+  }
+
+  // The value decoder must accept every object the container reader accepted, and never produce more values
+  // than there are payload bytes.
+  const rct3::save::ObjectIndex index(*file);
+  for (const auto& o : file->objects) {
+    const auto decoded = rct3::save::decode_object(*file, o);
+    if (!decoded) __builtin_trap();
+    if (decoded->stats.values > 2 * o.bytes.size() + file->classes[o.class_index].attributes.size()) __builtin_trap();
+    if (decoded->fields.items().size() != file->classes[o.class_index].attributes.size()) __builtin_trap();
+    if (index.find(o.id) == nullptr) __builtin_trap();
   }
   return 0;
 }

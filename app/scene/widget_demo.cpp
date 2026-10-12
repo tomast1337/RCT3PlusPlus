@@ -11,6 +11,7 @@
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/list_box.hpp"
 #include "ui/widgets/panel.hpp"
 #include "ui/widgets/scroll_area.hpp"
 #include "ui/widgets/tickbox.hpp"
@@ -45,6 +46,7 @@ namespace rct3::scene
         constexpr float kTextButtonWidth = 70;
         constexpr float kTextButtonHeight = 26;
         constexpr std::size_t kNameLength = 40;
+        constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.
         constexpr std::u16string_view kFallbackSample = u"\n\n\u0393\u03B5\u03B9\u03AC \u03C3\u03BF\u03C5 \u03BA\u03CC\u03C3\u03BC\u03B5 \u00B7 \u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440 \u00B7 \u2190 \u2191 \u2192 \u2193 \u00B7 \u00BD \u00BE \u2122 \u25A0";
@@ -65,7 +67,7 @@ namespace rct3::scene
 
                 // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
-                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -130 } };
+                list.placement = { { 0, 0, 0.6f, 1 }, { 0, 0, -3, -130 } };
                 // The help text runs on with the options' help, more than fits, to show scrolling.
                 std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
                 for (const std::string_view key : kOptionTips)
@@ -88,9 +90,15 @@ namespace rct3::scene
                     label.placement = { { 0, 1, 1, 1 }, { 18, -bottom - 15, -80, -bottom + 3 } };
                     label.style.vertical = ui::Align::Centre;
                 }
+                // Beside it, rides to pick a window name from: a double click or Enter takes one.
+                rides_ = &body.add<ui::ListBox>("rides", skins::list_box_style(), skins::scroll_bar_style(ui::Orientation::Vertical));
+                rides_->placement = { { 0.6f, 0, 1, 1 }, { 3, 0, 0, -130 } };
+                rides_->items.assign(kRideNames.begin(), kRideNames.end());
+
                 // Typing here renames the window.
                 name_ = &body.add<ui::EditBox>("name", title);
                 name_->skin = std::string(skins::kListBox);
+                name_->focused_skin = std::string(skins::kListBoxFocused);
                 name_->placement = { { 0, 1, 1, 1 }, { 0, -124, 0, -104 } };
                 name_->max_length = kNameLength;
 
@@ -123,6 +131,12 @@ namespace rct3::scene
                 ui::Window::update(context);
                 if (name_->take_change())
                     title = name_->text;
+                if (rides_->take_activate() && rides_->selected())
+                {
+                    name_->text = rides_->items[*rides_->selected()];
+                    name_->select_all();
+                    title = name_->text;
+                }
                 if (cancel_->take_click() || text_cancel_->take_click())
                     close();
                 const bool open = confirm_->take_click() || ok_->take_click();
@@ -140,6 +154,7 @@ namespace rct3::scene
             ui::Button* ok_ = nullptr;
             ui::Button* text_cancel_ = nullptr;
             ui::EditBox* name_ = nullptr;
+            ui::ListBox* rides_ = nullptr;
         };
 
         // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure

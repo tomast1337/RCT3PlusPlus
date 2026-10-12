@@ -8,6 +8,8 @@
 //   of them extends the selection, and Control+A selects everything;
 // - Backspace and Delete remove the selection, or a character (with Control, a word) before or after the
 //   caret;
+// - Control+C and Control+X copy and cut the selection, Control+V pastes, with line breaks turned to spaces
+//   and the same limits as typing (also Control+Insert, Shift+Delete and Shift+Insert);
 // - Enter commits: the owner asks with take_commit(). Escape, Tab, Up and Down are left to the parents.
 //
 // The caret blinks, half a second on and half off, and shows again at once after each change. Text wider
@@ -20,7 +22,9 @@
 #include "ui/widget.hpp"
 
 #include <cstddef>
+#include <optional>
 #include <string>
+#include <string_view>
 
 namespace rct3::ui
 {
@@ -78,8 +82,14 @@ namespace rct3::ui
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
+        /// The text between the caret and the anchor.
+        [[nodiscard]] std::u16string selected_text() const;
+        [[nodiscard]] std::optional<std::u16string> take_copied() override;
+
     private:
-        void insert(char32_t c);
+        /// `typed` without what the box does not take, with upper_case applied.
+        [[nodiscard]] std::u16string accepted(std::u16string_view typed) const;
+        void insert(std::u16string_view typed);
         void erase_selection();
         void changed();
         [[nodiscard]] Rect text_box() const;
@@ -93,6 +103,7 @@ namespace rct3::ui
         Point pointer_;                // Placed at the next update, which has the font
         int commits_ = 0;
         int changes_ = 0;
+        std::optional<std::u16string> copied_;
     };
 
 } // namespace rct3::ui

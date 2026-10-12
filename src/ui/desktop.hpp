@@ -20,6 +20,9 @@
 #include "ui/widget.hpp"
 
 #include <memory>
+#include <optional>
+#include <string>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -73,6 +76,12 @@ namespace rct3::ui
         }
         FocusMarkStyle focus_mark_style;
 
+        /// Text a widget copied or cut since the last call, for the platform to put on the system clipboard.
+        [[nodiscard]] std::optional<std::u16string> take_clipboard()
+        {
+            return std::exchange(clipboard_, std::nullopt);
+        }
+
         /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
 
@@ -94,6 +103,7 @@ namespace rct3::ui
         Widget* held_ = nullptr;
         Widget* focus_ = nullptr;
         bool focus_shown_ = false;
+        std::optional<std::u16string> clipboard_;
         bool was_down_ = false;
         Tooltip tooltip_;
     };

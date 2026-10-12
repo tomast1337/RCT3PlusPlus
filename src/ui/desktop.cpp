@@ -223,7 +223,14 @@ namespace rct3::ui
             Widget* start = focus_ != nullptr ? focus_ : top;
             bool used = false;
             for (Widget* w = start; w != nullptr && !used; w = w->parent())
+            {
                 used = w->enabled && w->on_key(key);
+                if (used)
+                {
+                    if (auto copied = w->take_copied())
+                        clipboard_ = std::move(copied);
+                }
+            }
             // Tab nobody used moves the focus within its window.
             if (!used && key.key == Key::Tab && !key.control)
             {

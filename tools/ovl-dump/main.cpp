@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -16,6 +16,7 @@
 #include "ovl/texture.hpp"
 #include "ovl/gui_skin.hpp"
 #include "ovl/integer_value.hpp"
+#include "ovl/spline.hpp"
 #include "ovl/font.hpp"
 #include "ovl/float_value.hpp"
 #include "ovl/flic.hpp"
@@ -44,6 +45,7 @@ struct Options {
   bool bsh = false;
   bool flic = false;
   bool int_values = false;
+  bool spl = false;
   bool fct = false;
   bool tex = false;
   bool gsi = false;
@@ -260,6 +262,23 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
       std::printf("  %-32s %d\n", std::string(item.name).c_str(), item.value);
     }
   }
+  if (opt.spl) {
+    const auto splines = rct3::ovl::read_splines(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : splines) {
+      if (!item.spline) ++bad;
+    }
+    std::printf("splines        %zu (%zu unreadable)\n", splines.size(), bad);
+    for (const auto& item : splines) {
+      const std::string name(item.name);
+      if (!item.spline) {
+        std::printf("  %-32s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::printf("  %-32s nodes %zu length %g%s\n", name.c_str(), item.spline->nodes.size(), item.spline->length,
+                  item.spline->closed ? " closed" : "");
+    }
+  }
   if (opt.btbl) {
     const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
     std::size_t bad = 0;
@@ -413,6 +432,7 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--bsh") == 0) opt.bsh = true;
     else if (std::strcmp(argv[i], "--flic") == 0) opt.flic = true;
     else if (std::strcmp(argv[i], "--int") == 0) opt.int_values = true;
+    else if (std::strcmp(argv[i], "--spl") == 0) opt.spl = true;
     else if (std::strcmp(argv[i], "--fct") == 0) opt.fct = true;
     else if (std::strcmp(argv[i], "--tex") == 0) opt.tex = true;
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
@@ -422,7 +442,7 @@ int main(int argc, char** argv) {
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] PATH\n", argv[0]);
     return 2;
   }
 

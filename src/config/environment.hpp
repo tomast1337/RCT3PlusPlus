@@ -32,6 +32,9 @@ namespace rct3::config
         ConfigHome,   ///< XDG_CONFIG_HOME: the user's configuration folder
         Home,         ///< HOME: the user's home folder
         AppData,      ///< APPDATA: the user's application data folder on Windows
+        LcAll,        ///< LC_ALL: the locale for everything, before LC_MESSAGES and LANG
+        LcMessages,   ///< LC_MESSAGES: the locale for messages, before LANG
+        Lang,         ///< LANG: the user's locale, e.g. de_DE.UTF-8
 
         Count_, ///< Number of variables; not a variable
     };

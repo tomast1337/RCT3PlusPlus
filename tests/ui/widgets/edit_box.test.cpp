@@ -14,7 +14,7 @@ namespace
     Font test_font()
     {
         ovl::Font f;
-        f.metrics = { 0.1f, 2.0f, 0.5f };
+        f.metrics = { 0.1f, 1.5f, 0.5f }; // Lines 20 apart, the baseline 15 down
         f.has_code_table = true;
         for (char16_t c : std::u16string_view(u"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "))
             f.glyphs.push_back({ c, 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });

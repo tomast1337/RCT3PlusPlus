@@ -11,6 +11,7 @@
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
+#include "ui/interface_fonts.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/string_table.hpp"
 #include "ui/ui_renderer.hpp"
@@ -33,7 +34,9 @@ namespace rct3::scene
         ui::UiRenderer renderer;
         ui::UiTextures textures;
         ui::SkinLibrary skins;
-        ui::FontSet fonts;
+        std::optional<config::GameInstall> install; ///< Where font sets come from as the width changes
+        ui::InterfaceFonts fonts;
+        const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         /// On the heap: windows keep a reference, and the demo moves.
         std::unique_ptr<ui::StringTable> strings = std::make_unique<ui::StringTable>();
         ui::Desktop desktop;
@@ -47,10 +50,11 @@ namespace rct3::scene
     /// Where `./nob fetch` puts the fallback font, from the repository root.
     inline const std::filesystem::path kDefaultFallbackFont = "downloads/unifont-15.0.06.ttf";
 
-    /// Loads skins and fonts from the install's main overlay and English strings, uploads the images and
-    /// opens the first window. Missing strings leave the text empty. Each game font gets `fallback_font`
-    /// for the characters it lacks; without that file the game fonts are used alone.
-    [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::filesystem::path& fallback_font);
+    /// Loads skins from the install's main overlay and the strings of `language`, uploads the images and
+    /// opens the first window. Missing strings leave the text empty. Fonts come in sets for the width of the
+    /// interface, each font with `fallback_font` for the characters it lacks; without that file the game
+    /// fonts are used alone.
+    [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font);
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
     /// Returns whether the interface has the pointer. `elapsed` is the frame time in seconds.

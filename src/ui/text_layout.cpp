@@ -29,6 +29,34 @@ namespace rct3::ui
             return 0;
         }
 
+        // Chinese and Japanese characters, their punctuation and full-width forms: lines may break between
+        // them. Korean is left out; it breaks at spaces.
+        bool is_wide(char16_t c)
+        {
+            const bool hangul_letters = c >= 0x3130 && c <= 0x318F;
+            return (c >= 0x2E80 && c <= 0x9FFF && !hangul_letters) || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFF00 && c <= 0xFFEF);
+        }
+
+        // Punctuation that must not start a line.
+        bool is_closing(char16_t c)
+        {
+            constexpr std::u16string_view kClosing = u"、。，．！？：；）〕］｝〉》」』】〙〗〟’”…ー々ゝゞヽヾ％＞!%),.:;>?]}";
+            return kClosing.find(c) != std::u16string_view::npos;
+        }
+
+        // Punctuation that must not end a line.
+        bool is_opening(char16_t c)
+        {
+            constexpr std::u16string_view kOpening = u"（〔［｛〈《「『【〘〖〝‘“＜([{<";
+            return kOpening.find(c) != std::u16string_view::npos;
+        }
+
+        // Whether a line may break between `before` and `after` without a space.
+        bool breaks_between(char16_t before, char16_t after)
+        {
+            return (is_wide(before) || is_wide(after)) && !is_closing(after) && !is_opening(before);
+        }
+
         // Width without trailing spaces, which a line ending in a break should not count.
         TextLine trimmed(const Font& font, std::u16string_view text)
         {
@@ -64,6 +92,8 @@ namespace rct3::ui
             {
                 const char16_t c = paragraph[i];
                 const float a = advance(font, c);
+                if (i > line && breaks_between(paragraph[i - 1], c))
+                    last_break = i;
                 if (max_width > 0 && width + a > max_width && c != u' ' && i > line)
                 {
                     const std::size_t next = last_break != std::u16string_view::npos && last_break > line ? last_break : i;

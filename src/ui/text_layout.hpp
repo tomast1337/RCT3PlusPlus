@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Laying out and drawing UTF-16 text with a Font. Lines break at line feeds, and when wrapping, at spaces
-// (dropped at the break) and after hyphens; a word wider than the box is cut between characters. Text is
+// (dropped at the break) and after hyphens; a word wider than the box is cut between characters. Chinese
+// and Japanese text, which has no spaces, may break between any two of its characters, except that closing
+// punctuation such as 。 or 」 never starts a line and opening punctuation such as 「 never ends one. Text is
 // not shaped or kerned: each code unit is one glyph. Text is laid out again every time it is drawn.
 #pragma once
 

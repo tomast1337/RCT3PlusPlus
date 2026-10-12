@@ -13,6 +13,8 @@
 #include <vector>
 
 #include "ovl/overlay.hpp"
+#include "ovl/pointer_fields.hpp"
+#include "ovl/reference_names.hpp"
 
 namespace rct3::ovl {
 
@@ -23,7 +25,8 @@ struct SceneryItemSquare {
   std::uint32_t flags = 0;
   std::int32_t min_height = 0;  ///< Lowest occupied level. -1 and -2 occur.
   std::int32_t max_height = 0;  ///< Highest occupied level, 0 for tiles without collision.
-  /// Bit masks, one 32-bit word per entry, usually one. Bit n set means level n is occupied.
+  /// Bit masks, one 32-bit word per entry, usually one. Bit n set means level n is occupied. Empty for
+  /// tiles without collision, whose array pointer is null.
   std::vector<std::uint32_t> height_masks;
 };
 
@@ -108,6 +111,39 @@ struct SceneryItem {
 struct SceneryItemEntry {
   std::string_view name;               ///< Symbol name without the tag
   std::optional<SceneryItem> item;     ///< Nothing when any part of the structure is unreadable
+};
+
+/// Reads item structures from one part of an overlay. Other item types embed the same structure, so
+/// this is shared with them.
+class SceneryItemReader {
+ public:
+  /// Views in the results point into the overlay's bytes, so the overlay must outlive them.
+  SceneryItemReader(const Overlay& overlay, const Part& part);
+
+  /// The structure at `address`. `allow_compact` accepts the shorter base form, which is only told
+  /// apart by its block ending early, so it is off for structures embedded among other data.
+  [[nodiscard]] std::optional<SceneryItem> read(std::uint32_t address, bool allow_compact = true) const;
+
+  /// Structures stored back to back from `address` until the block ends. Each is followed by the
+  /// visual reference slots it needs beyond the first. Nothing when any structure is unreadable or
+  /// the data does not end with the block.
+  [[nodiscard]] std::optional<std::vector<SceneryItem>> read_run(std::uint32_t address) const;
+
+  /// Research link rows (12 bytes each) at `address`, as stored by scenery items and the types that
+  /// embed them. False when the rows do not fit.
+  bool read_research(std::uint32_t address, std::uint32_t count, std::vector<SceneryItemResearch>& out) const;
+
+  /// The AddressSpace the reader resolves pointers in.
+  [[nodiscard]] const AddressSpace& space() const noexcept { return space_; }
+  [[nodiscard]] const ReferenceNames& references() const noexcept { return refs_; }
+  [[nodiscard]] const PointerFields& pointers() const noexcept { return pointers_; }
+
+ private:
+  [[nodiscard]] static std::size_t stride_of(const SceneryItem& item) noexcept;
+
+  AddressSpace space_;
+  ReferenceNames refs_;
+  PointerFields pointers_;
 };
 
 /// Scenery items of one part of an overlay: pointer symbols tagged "sid". Views in the result point into

@@ -525,9 +525,16 @@ void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, c
         continue;
       }
       const auto& it = *entry.item;
-      std::printf("  %-32s v%u%s type %u flags %08x squares %ux%u cost %d visuals %zu sounds %zu params %zu nodes %zu\n",
+      std::size_t masks = 0, without_masks = 0;
+      for (const auto& sq : it.squares) {
+        masks += sq.height_masks.size();
+        if (sq.height_masks.empty()) ++without_masks;
+      }
+      std::printf("  %-32s v%u%s type %u flags %08x squares %ux%u (%zu without masks) masks %zu cost %d visuals %zu "
+                  "sounds %zu params %zu nodes %zu\n",
                   name.c_str(), it.version, it.compact ? " compact" : "", it.type, it.flags, it.x_squares,
-                  it.z_squares, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
+                  it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(),
+                  it.parameters.size(), it.nodes.size());
     }
   }
 }

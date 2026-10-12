@@ -25,8 +25,9 @@ namespace rct3::config
 
     enum class EnvVar : std::uint8_t
     {
-        GamePath,   ///< RCT3PP_GAME_PATH: root folder of the installed original game
-        Validation, ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
+        GamePath,     ///< RCT3PP_GAME_PATH: root folder of the installed original game
+        Validation,   ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
+        FallbackFont, ///< RCT3PP_FALLBACK_FONT: TrueType font for characters the game fonts lack
 
         Count_, ///< Number of variables; not a variable
     };

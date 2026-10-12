@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,7 @@
 #include "ovl/track_section.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "ovl/static_shape.hpp"
+#include "ovl/mesh.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 #include "ovl/text.hpp"
@@ -962,11 +964,66 @@ void export_textures(const char* title, const rct3::ovl::Overlay& overlay, const
 }
 // --- end texture decoding export ---
 
+// --- mesh export (feat/mesh-semantics) ---
+// Writes every static shape and bone shape (rest pose) of one part as <prefix>__<name>.obj and .mtl in
+// `dir`. Returns false when a file cannot be written.
+std::string export_file_name(std::string_view prefix, std::string_view name, const char* tag) {
+  std::string out(prefix);
+  out += "__";
+  out += name;
+  for (char& c : out) {
+    const bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' ||
+                    c == '-' || c == '.';
+    if (!ok) c = '_';
+  }
+  return out + "." + tag;
+}
+
+bool write_text_file(const std::filesystem::path& path, const std::string& text) {
+  std::ofstream f(path, std::ios::binary);
+  f.write(text.data(), static_cast<std::streamsize>(text.size()));
+  return static_cast<bool>(f);
+}
+
+bool export_mesh(const std::filesystem::path& dir, std::string_view prefix, std::string_view name,
+                 const char* kind, const rct3::ovl::Mesh& mesh) {
+  const std::string stem = export_file_name(prefix, std::string(kind) + "_" + std::string(name), "obj");
+  const std::string base = stem.substr(0, stem.size() - 4);
+  return write_text_file(dir / (base + ".obj"), rct3::ovl::write_obj(mesh, base + ".mtl")) &&
+         write_text_file(dir / (base + ".mtl"), rct3::ovl::write_mtl(mesh));
+}
+
+bool export_part_meshes(const std::filesystem::path& dir, std::string_view prefix, const rct3::ovl::Overlay& overlay,
+                        const Part& part, std::size_t& written, std::size_t& failed) {
+  bool ok = true;
+  for (const auto& item : rct3::ovl::read_static_shapes(overlay, part)) {
+    if (!item.shape) {
+      ++failed;
+      std::fprintf(stderr, "  %s <unreadable static shape>\n", std::string(item.name).c_str());
+      continue;
+    }
+    if (export_mesh(dir, prefix, item.name, "shs", rct3::ovl::mesh_from_static_shape(*item.shape))) ++written;
+    else ok = false, ++failed;
+  }
+  for (const auto& item : rct3::ovl::read_bone_shapes(overlay, part)) {
+    if (!item.shape) {
+      ++failed;
+      std::fprintf(stderr, "  %s <unreadable bone shape>\n", std::string(item.name).c_str());
+      continue;
+    }
+    if (export_mesh(dir, prefix, item.name, "bsh", rct3::ovl::mesh_from_bone_shape(*item.shape))) ++written;
+    else ok = false, ++failed;
+  }
+  return ok;
+}
+// --- end mesh export ---
+
 }  // namespace
 
 int main(int argc, char** argv) {
   Options opt;
   const char* path = nullptr;
+  const char* obj_dir = nullptr;  // mesh export directory
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--symbols") == 0) opt.symbols = true;
     else if (std::strcmp(argv[i], "--loaders") == 0) opt.loaders = true;
@@ -998,11 +1055,14 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--anr") == 0) opt.anr = true;
     else if (std::strcmp(argv[i], "--sta") == 0) opt.sta = true;
     else if (std::strcmp(argv[i], "--sat") == 0) opt.sat = true;
+    // --- mesh export option ---
+    else if (std::strcmp(argv[i], "--obj") == 0 && i + 1 < argc) obj_dir = argv[++i];
+    // --- end mesh export option ---
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH\n", argv[0]);
     std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
     return 2;
   }
@@ -1027,5 +1087,29 @@ int main(int argc, char** argv) {
   }
   print_scenery_types("common", *overlay, overlay->common());
   if (const auto* unique = overlay->unique()) print_scenery_types("unique", *overlay, *unique);
+  // --- mesh export ---
+  if (obj_dir) {
+    std::error_code ec;
+    std::filesystem::create_directories(obj_dir, ec);
+    if (ec) {
+      std::fprintf(stderr, "%s: %s\n", obj_dir, ec.message().c_str());
+      return 1;
+    }
+    const std::string prefix = std::filesystem::path(path).filename().string();
+    std::string stem = prefix;
+    for (const char* suffix : {".common.ovl", ".unique.ovl", ".ovl"}) {
+      const std::string_view s = suffix;
+      if (stem.size() > s.size() && stem.compare(stem.size() - s.size(), s.size(), s) == 0) {
+        stem.resize(stem.size() - s.size());
+        break;
+      }
+    }
+    std::size_t written = 0, failed = 0;
+    bool ok = export_part_meshes(obj_dir, stem + "_c", *overlay, overlay->common(), written, failed);
+    if (const auto* unique = overlay->unique()) ok = export_part_meshes(obj_dir, stem + "_u", *overlay, *unique, written, failed) && ok;
+    std::printf("exported meshes %zu (%zu failed)\n", written, failed);
+    if (!ok || failed != 0) return 1;
+  }
+  // --- end mesh export ---
   return 0;
 }

@@ -20,6 +20,9 @@ namespace rct3::config
             { EnvVar::ConfigHome, "XDG_CONFIG_HOME", "Where the settings file lives on Linux and other free systems (default ~/.config)", true },
             { EnvVar::Home, "HOME", "The user's home folder, for the default configuration folder", true },
             { EnvVar::AppData, "APPDATA", "Where the settings file lives on Windows", true },
+            { EnvVar::LcAll, "LC_ALL", "The locale; picks the interface language when the settings do not", true },
+            { EnvVar::LcMessages, "LC_MESSAGES", "The locale for messages, when LC_ALL is not set", true },
+            { EnvVar::Lang, "LANG", "The locale, when neither LC_ALL nor LC_MESSAGES is set", true },
         } };
 
         // The table is indexed by EnvVar, so its order must follow the enum.

@@ -19,8 +19,9 @@ namespace rct3::ui
     {
         std::string name;
         /// The font item. Its `face` and `texture` views are cleared, since the overlay they pointed into
-        /// is gone.
+        /// is gone; `face` keeps the face's name.
         ovl::Font font;
+        std::string face { };
         std::vector<ovl::RgbaImage> pages; ///< By page index; an unreadable page is an empty image
     };
 

@@ -13,7 +13,7 @@ namespace
     Font test_font()
     {
         ovl::Font f;
-        f.metrics = { 0.1f, 2.0f, 0.5f };
+        f.metrics = { 0.1f, 1.5f, 0.5f }; // Lines 20 apart, the baseline 15 down
         f.has_code_table = true;
         for (char16_t c = u'a'; c <= u'z'; ++c)
             f.glyphs.push_back({ c, 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });
@@ -96,4 +96,33 @@ TEST_CASE("draw_text aligns lines in the box")
         REQUIRE(list.vertices().size() == 16);
         CHECK(list.vertices()[8].y == list.vertices()[0].y + 20);
     }
+}
+
+namespace
+{
+    // Ideographs and their punctuation, each 10 wide.
+    Font wide_font()
+    {
+        ovl::Font f;
+        f.metrics = { 0.1f, 1.5f, 0.5f };
+        f.has_code_table = true;
+        for (const char16_t c : std::u16string_view(u"一二三。「」ab "))
+            f.glyphs.push_back({ c, 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });
+        const std::array<Font::Page, 1> pages = { { { 3, 100, 100 } } };
+        return Font::from(f, pages);
+    }
+
+} // namespace
+
+TEST_CASE("chinese text breaks between characters, keeping punctuation with its neighbour")
+{
+    const Font f = wide_font();
+    using V = std::vector<std::u16string_view>;
+    CHECK(texts(break_lines(f, u"一二三一二三", 30)) == V { u"一二三", u"一二三" });
+    // The full stop may not start a line, so the character before it goes down with it.
+    CHECK(texts(break_lines(f, u"一二三。一二", 30)) == V { u"一二", u"三。一", u"二" });
+    // An opening bracket may not end a line.
+    CHECK(texts(break_lines(f, u"一二「三」", 30)) == V { u"一二", u"「三」" });
+    // Latin words between them still break at spaces only.
+    CHECK(texts(break_lines(f, u"ab ab一", 30)) == V { u"ab", u"ab一" });
 }

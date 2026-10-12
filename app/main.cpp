@@ -3,12 +3,13 @@
 // rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
 // the game installed it first plays the startup logos and the loading screen, then shows a window built from real skins.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--frames N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--frames N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
+//   --language NAME   interface language as the game names it, e.g. German or SChinese
 //   --frames N        exit after N frames (smoke test)
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the settings (config/settings.hpp) and the environment variables read
@@ -25,6 +26,7 @@
 #include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
+#include "ui/language.hpp"
 
 #include <algorithm>
 #include <array>
@@ -44,7 +46,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--frames N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--frames N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<std::filesystem::path>& settings_file)
@@ -220,6 +222,10 @@ int main(int argc, char** argv)
             }
             settings.set(config::Setting::InterfaceScale, value);
         }
+        else if (std::strcmp(argv[i], "--language") == 0 && i + 1 < argc)
+        {
+            settings.set(config::Setting::Language, argv[++i]);
+        }
         else if (std::strcmp(argv[i], "--write-settings") == 0)
         {
             write_settings = true;
@@ -324,7 +330,21 @@ int main(int argc, char** argv)
         }
     }
     const auto load_widgets = [&] {
-        auto loaded = rct3::scene::create_widget_demo(*device, *install, env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont));
+        // The language set, else the locale's, of those installed.
+        const auto gui = install->find("gui");
+        const auto installed = gui ? rct3::ui::installed_languages(*gui) : std::vector<std::string> { };
+        std::string_view locale;
+        for (const config::EnvVar var : { config::EnvVar::LcAll, config::EnvVar::LcMessages, config::EnvVar::Lang })
+        {
+            if (const auto value = env.get(var); value && locale.empty())
+                locale = *value;
+        }
+        const std::string_view wanted = settings.get(config::Setting::Language).value_or(std::string_view { });
+        const std::string language = rct3::ui::choose_language(installed, wanted, locale);
+        if (!wanted.empty() && !rct3::ui::find_language(wanted))
+            log.warning("language {}: not a language the game knows", wanted);
+        log.info("language {}", language);
+        auto loaded = rct3::scene::create_widget_demo(*device, *install, language, env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont));
         if (loaded)
         {
             widgets = std::move(*loaded);

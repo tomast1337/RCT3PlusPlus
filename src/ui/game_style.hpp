@@ -18,7 +18,6 @@
 #include "ui/widgets/toolbar.hpp"
 #include "ui/widgets/window.hpp"
 
-#include <array>
 #include <string_view>
 #include <utility>
 
@@ -56,14 +55,6 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kTextButton = "GUI2Swatch_Background";
     /// What the lozenge's border and drop shadow take from each side (ours, measured on the skin).
     inline constexpr Rect kLozengeInset { 3, 2, 5, 5 };
-
-    /// The fixed-size interface fonts, by role.
-    inline constexpr std::array<std::pair<FontRole, std::string_view>, kFontRoleCount> kFonts = { {
-        { FontRole::Tiny, "GUIFontTiny" },
-        { FontRole::Small, "GUIFontSmall" },
-        { FontRole::Medium, "GUIFontMedium" },
-        { FontRole::Large, "GUIFontLarge" },
-    } };
 
     [[nodiscard]] inline WindowStyle window_style()
     {

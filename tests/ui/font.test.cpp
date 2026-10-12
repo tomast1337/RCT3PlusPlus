@@ -36,8 +36,16 @@ TEST_CASE("metrics scale with the cell")
 {
     const Font f = Font::from(font_with({ }), kPages);
     CHECK(f.cell() == doctest::Approx(10));
-    CHECK(f.line_height() == doctest::Approx(9));
-    CHECK(f.ascent() == doctest::Approx(7));
+    // A line is the line height and the descent: 9 + 2, the baseline 9 down.
+    CHECK(f.line_height() == doctest::Approx(11));
+    CHECK(f.ascent() == doctest::Approx(9));
+}
+
+TEST_CASE("fonts of the roomy face leave room for the descent twice")
+{
+    const Font f = Font::from(font_with({ }), kPages, kRoomyFace);
+    CHECK(f.line_height() == doctest::Approx(13));
+    CHECK(f.ascent() == doctest::Approx(11));
 }
 
 TEST_CASE("glyph boxes sit on the baseline")

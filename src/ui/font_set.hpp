@@ -20,9 +20,10 @@ namespace rct3::ui
         Small,
         Medium,
         Large,
+        AllScripts, ///< Has the glyphs of every language's own name, for a list of languages
     };
 
-    inline constexpr std::size_t kFontRoleCount = 4;
+    inline constexpr std::size_t kFontRoleCount = 5;
 
     class FontSet
     {

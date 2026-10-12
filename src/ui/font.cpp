@@ -8,11 +8,19 @@ namespace rct3::ui
 
     Font Font::from(const ovl::Font& font, std::span<const Page> pages)
     {
+        return from(font, pages, font.face);
+    }
+
+    Font Font::from(const ovl::Font& font, std::span<const Page> pages, std::string_view face)
+    {
         Font out;
         if (!(font.metrics[0] > 0))
             return out;
         out.cell_ = 1 / font.metrics[0];
-        out.line_height_ = font.metrics[1] * out.cell_;
+        // A line is the line height and the descent below it; SimSun fonts leave room for the descent twice,
+        // the extra above the baseline.
+        const float descents = face == kRoomyFace ? 2.0f : 1.0f;
+        out.line_height_ = (font.metrics[1] + descents * font.metrics[2]) * out.cell_;
         out.descent_ = font.metrics[2] * out.cell_;
 
         for (std::size_t i = 0; i < font.glyphs.size(); ++i)

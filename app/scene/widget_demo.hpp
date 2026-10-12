@@ -40,8 +40,8 @@ namespace rct3::scene
     [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install);
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels. Returns whether
-    /// the interface has the pointer.
-    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels);
+    /// the interface has the pointer. `elapsed` is the frame time in seconds.
+    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, float elapsed);
 
     /// Records the interface into the current pass.
     void draw_widget_demo(render::Device& device, WidgetDemo& demo);

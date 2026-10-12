@@ -4,60 +4,65 @@
 // shape, a bone shape or a billboard.
 #pragma once
 
+#include "ovl/overlay.hpp"
+
 #include <array>
 #include <cstdint>
 #include <optional>
 #include <string_view>
 #include <vector>
 
-#include "ovl/overlay.hpp"
+namespace rct3::ovl
+{
 
-namespace rct3::ovl {
+    /// Values of `SceneryVisualLod::mesh_type` seen in files.
+    enum class LodMeshType : std::uint32_t
+    {
+        StaticShape = 0,
+        BoneShape = 3,
+        Billboard = 4,
+    };
 
-/// Values of `SceneryVisualLod::mesh_type` seen in files.
-enum class LodMeshType : std::uint32_t {
-  StaticShape = 0,
-  BoneShape = 3,
-  Billboard = 4,
-};
+    struct SceneryVisualLod
+    {
+        std::uint32_t mesh_type = 0;   ///< A `LodMeshType` value, other values are kept as read
+        std::string_view name;         ///< Name of this level, a string in the file
+        std::string_view static_shape; ///< "shs" item, for static shapes
+        std::string_view bone_shape;   ///< "bsh" item, for bone shapes
+        std::string_view texture;      ///< "ftx" item, for billboards
+        std::string_view style;        ///< "txs" item, for billboards (always the standard billboard style)
+        /// Billboard size. 1 x 1 for the other types.
+        float width = 0;
+        float height = 0;
+        /// Texture rectangle as {u0, u1, v0, v1}, {0, 1, 0, 1} for the other types.
+        std::array<float, 4> texcoords { };
+        /// Farthest view distance at which this level is still drawn, in world units. Levels are listed from
+        /// the most to the least detailed and the values grow along the list in all but a few items; the last
+        /// level of a multi-level item is usually a large value (hundreds to thousands) so it covers the rest.
+        float distance = 0;
+        std::vector<std::string_view> animations; ///< "ban" items, for bone shapes
+    };
 
-struct SceneryVisualLod {
-  std::uint32_t mesh_type = 0;  ///< A `LodMeshType` value, other values are kept as read
-  std::string_view name;        ///< Name of this level, a string in the file
-  std::string_view static_shape;  ///< "shs" item, for static shapes
-  std::string_view bone_shape;    ///< "bsh" item, for bone shapes
-  std::string_view texture;       ///< "ftx" item, for billboards
-  std::string_view style;         ///< "txs" item, for billboards (always the standard billboard style)
-  /// Billboard size. 1 x 1 for the other types.
-  float width = 0;
-  float height = 0;
-  /// Texture rectangle as {u0, u1, v0, v1}, {0, 1, 0, 1} for the other types.
-  std::array<float, 4> texcoords{};
-  /// Farthest view distance at which this level is still drawn, in world units. Levels are listed from
-  /// the most to the least detailed and the values grow along the list in all but a few items; the last
-  /// level of a multi-level item is usually a large value (hundreds to thousands) so it covers the rest.
-  float distance = 0;
-  std::vector<std::string_view> animations;  ///< "ban" items, for bone shapes
-};
+    struct SceneryVisual
+    {
+        /// Bit mask. 0x01000000 is set on exactly the items of version-4 files and 0x02000000 on exactly the
+        /// items of version-5 files (the first and second expansion). The low bits mark plants (0x1, with
+        /// swaying, mostly), 0x2, 0x4 and 0x70 groups; their exact meaning is not confirmed.
+        std::uint32_t flags = 0;
+        float sway = 0;            ///< 0 for static items, 0.1 to 0.2 for plants
+        float brightness = 0;      ///< 1, or 0.6 to 0.8 for plants
+        float scale_variation = 0; ///< 0, or 0.35 to 0.4 for plants
+        std::vector<SceneryVisualLod> lods;
+    };
 
-struct SceneryVisual {
-  /// Bit mask. 0x01000000 is set on exactly the items of version-4 files and 0x02000000 on exactly the
-  /// items of version-5 files (the first and second expansion). The low bits mark plants (0x1, with
-  /// swaying, mostly), 0x2, 0x4 and 0x70 groups; their exact meaning is not confirmed.
-  std::uint32_t flags = 0;
-  float sway = 0;           ///< 0 for static items, 0.1 to 0.2 for plants
-  float brightness = 0;     ///< 1, or 0.6 to 0.8 for plants
-  float scale_variation = 0;  ///< 0, or 0.35 to 0.4 for plants
-  std::vector<SceneryVisualLod> lods;
-};
+    struct SceneryVisualItem
+    {
+        std::string_view name;               ///< Symbol name without the tag
+        std::optional<SceneryVisual> visual; ///< Nothing when any part of the structure is unreadable
+    };
 
-struct SceneryVisualItem {
-  std::string_view name;                 ///< Symbol name without the tag
-  std::optional<SceneryVisual> visual;   ///< Nothing when any part of the structure is unreadable
-};
+    /// Scenery item visuals of one part of an overlay: pointer symbols tagged "svd". Views in the result
+    /// point into the overlay's bytes.
+    [[nodiscard]] std::vector<SceneryVisualItem> read_scenery_visuals(const Overlay& overlay, const Part& part);
 
-/// Scenery item visuals of one part of an overlay: pointer symbols tagged "svd". Views in the result
-/// point into the overlay's bytes.
-[[nodiscard]] std::vector<SceneryVisualItem> read_scenery_visuals(const Overlay& overlay, const Part& part);
-
-}  // namespace rct3::ovl
+} // namespace rct3::ovl

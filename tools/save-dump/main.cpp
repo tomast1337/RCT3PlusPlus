@@ -11,6 +11,12 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include "save/model/park.hpp"
+#include "save/model/people.hpp"
+#include "save/model/rides.hpp"
+#include "save/save_file.hpp"
+#include "save/value.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
@@ -22,630 +28,704 @@
 #include <string>
 #include <vector>
 
-#include "save/model/park.hpp"
-#include "save/model/people.hpp"
-#include "save/model/rides.hpp"
-#include "save/save_file.hpp"
-#include "save/value.hpp"
+namespace
+{
 
-namespace {
+    using rct3::save::Value;
+    using rct3::save::ValueKind;
 
-using rct3::save::Value;
-using rct3::save::ValueKind;
-
-void print_value(const Value& v, int indent, const char* name) {
-  std::printf("%*s", indent, "");
-  if (name) std::printf("%s = ", name);
-  switch (v.kind()) {
-    case ValueKind::Raw: {
-      const auto raw = v.raw();
-      std::printf("raw[%zu]", raw.size());
-      for (std::size_t i = 0; i < raw.size() && i < 16; ++i) std::printf(" %02x", static_cast<unsigned>(raw[i]));
-      if (raw.size() > 16) std::printf(" ...");
-      std::printf("\n");
-      return;
-    }
-    case ValueKind::Bool: std::printf("%s\n", v.as_bool() ? "true" : "false"); return;
-    case ValueKind::Integer: std::printf("%lld\n", static_cast<long long>(v.as_integer())); return;
-    case ValueKind::Float: std::printf("%g\n", static_cast<double>(v.as_float())); return;
-    case ValueKind::String: std::printf("\"%.*s\"\n", static_cast<int>(v.text().size()), v.text().data()); return;
-    case ValueKind::Reference:
-      if (v.as_reference() == 0) std::printf("null\n");
-      else std::printf("ref %llu\n", static_cast<unsigned long long>(v.as_reference()));
-      return;
-    case ValueKind::Vector3:
-    case ValueKind::Orientation:
-    case ValueKind::Matrix44:
-    case ValueKind::FloatArray: {
-      std::printf("%s[", rct3::save::to_string(v.kind()));
-      const auto f = v.floats();
-      for (std::size_t i = 0; i < f.size() && i < 24; ++i) std::printf("%s%g", i ? " " : "", static_cast<double>(f[i]));
-      if (f.size() > 24) std::printf(" ... (%zu)", f.size());
-      std::printf("]\n");
-      return;
-    }
-    case ValueKind::List: {
-      std::printf("list[%zu]\n", v.items().size());
-      std::size_t shown = 0;
-      for (const auto& item : v.items()) {
-        if (++shown > 8) {
-          std::printf("%*s...\n", indent + 2, "");
-          break;
+    void print_value(const Value& v, int indent, const char* name)
+    {
+        std::printf("%*s", indent, "");
+        if (name)
+            std::printf("%s = ", name);
+        switch (v.kind())
+        {
+            case ValueKind::Raw:
+            {
+                const auto raw = v.raw();
+                std::printf("raw[%zu]", raw.size());
+                for (std::size_t i = 0; i < raw.size() && i < 16; ++i)
+                    std::printf(" %02x", static_cast<unsigned>(raw[i]));
+                if (raw.size() > 16)
+                    std::printf(" ...");
+                std::printf("\n");
+                return;
+            }
+            case ValueKind::Bool:
+                std::printf("%s\n", v.as_bool() ? "true" : "false");
+                return;
+            case ValueKind::Integer:
+                std::printf("%lld\n", static_cast<long long>(v.as_integer()));
+                return;
+            case ValueKind::Float:
+                std::printf("%g\n", static_cast<double>(v.as_float()));
+                return;
+            case ValueKind::String:
+                std::printf("\"%.*s\"\n", static_cast<int>(v.text().size()), v.text().data());
+                return;
+            case ValueKind::Reference:
+                if (v.as_reference() == 0)
+                    std::printf("null\n");
+                else
+                    std::printf("ref %llu\n", static_cast<unsigned long long>(v.as_reference()));
+                return;
+            case ValueKind::Vector3:
+            case ValueKind::Orientation:
+            case ValueKind::Matrix44:
+            case ValueKind::FloatArray:
+            {
+                std::printf("%s[", rct3::save::to_string(v.kind()));
+                const auto f = v.floats();
+                for (std::size_t i = 0; i < f.size() && i < 24; ++i)
+                    std::printf("%s%g", i ? " " : "", static_cast<double>(f[i]));
+                if (f.size() > 24)
+                    std::printf(" ... (%zu)", f.size());
+                std::printf("]\n");
+                return;
+            }
+            case ValueKind::List:
+            {
+                std::printf("list[%zu]\n", v.items().size());
+                std::size_t shown = 0;
+                for (const auto& item : v.items())
+                {
+                    if (++shown > 8)
+                    {
+                        std::printf("%*s...\n", indent + 2, "");
+                        break;
+                    }
+                    print_value(item, indent + 2, nullptr);
+                }
+                return;
+            }
+            case ValueKind::Struct:
+            {
+                std::printf("{\n");
+                for (std::size_t i = 0; i < v.items().size(); ++i)
+                {
+                    const auto n = std::string(v.names()[i]);
+                    print_value(v.items()[i], indent + 2, n.c_str());
+                }
+                std::printf("%*s}\n", indent, "");
+                return;
+            }
         }
-        print_value(item, indent + 2, nullptr);
-      }
-      return;
     }
-    case ValueKind::Struct: {
-      std::printf("{\n");
-      for (std::size_t i = 0; i < v.items().size(); ++i) {
-        const auto n = std::string(v.names()[i]);
-        print_value(v.items()[i], indent + 2, n.c_str());
-      }
-      std::printf("%*s}\n", indent, "");
-      return;
+
+    struct RefCount
+    {
+        std::size_t total = 0;
+        std::size_t null = 0;
+        std::size_t resolved = 0;
+    };
+
+    void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& rc)
+    {
+        if (v.kind() == ValueKind::Reference)
+        {
+            ++rc.total;
+            if (v.as_reference() == 0)
+                ++rc.null;
+            else if (index.find(v.as_reference()))
+                ++rc.resolved;
+        }
+        for (const auto& item : v.items())
+            count_refs(item, index, rc);
     }
-  }
-}
 
-struct RefCount {
-  std::size_t total = 0;
-  std::size_t null = 0;
-  std::size_t resolved = 0;
-};
-
-void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& rc) {
-  if (v.kind() == ValueKind::Reference) {
-    ++rc.total;
-    if (v.as_reference() == 0) ++rc.null;
-    else if (index.find(v.as_reference())) ++rc.resolved;
-  }
-  for (const auto& item : v.items()) count_refs(item, index, rc);
-}
-
-}  // namespace
-
+} // namespace
 
 // ---- world report (--world, --world-png) begin ---------------------------------------------------------------
+#include "save/model/world.hpp"
+
 #include <algorithm>
 #include <array>
 #include <map>
 #include <set>
 #include <utility>
 
-#include "save/model/world.hpp"
+namespace
+{
 
-namespace {
-
-// Minimal PNG writer: 8-bit grayscale, stored (uncompressed) deflate blocks.
-std::uint32_t png_crc(const unsigned char* d, std::size_t n, std::uint32_t crc = 0xffffffffu) {
-  for (std::size_t i = 0; i < n; ++i) {
-    crc ^= d[i];
-    for (int k = 0; k < 8; ++k) crc = (crc >> 1) ^ (0xedb88320u & (0u - (crc & 1u)));
-  }
-  return crc;
-}
-
-void png_chunk(std::vector<unsigned char>& out, const char* type, const std::vector<unsigned char>& data) {
-  const auto put32 = [&](std::uint32_t v) {
-    for (int s = 24; s >= 0; s -= 8) out.push_back(static_cast<unsigned char>(v >> s));
-  };
-  put32(static_cast<std::uint32_t>(data.size()));
-  std::vector<unsigned char> body(type, type + 4);
-  body.insert(body.end(), data.begin(), data.end());
-  out.insert(out.end(), body.begin(), body.end());
-  put32(png_crc(body.data(), body.size()) ^ 0xffffffffu);
-}
-
-bool write_gray_png(const char* path, int w, int h, const std::vector<unsigned char>& pixels) {
-  std::vector<unsigned char> raw;
-  raw.reserve(static_cast<std::size_t>(h) * (static_cast<std::size_t>(w) + 1));
-  for (int y = 0; y < h; ++y) {
-    raw.push_back(0);  // filter: none
-    raw.insert(raw.end(), pixels.begin() + static_cast<std::ptrdiff_t>(y) * w,
-               pixels.begin() + static_cast<std::ptrdiff_t>(y + 1) * w);
-  }
-  std::vector<unsigned char> z{0x78, 0x01};
-  for (std::size_t pos = 0; pos < raw.size() || pos == 0;) {
-    const std::size_t n = std::min<std::size_t>(65535, raw.size() - pos);
-    const bool last = pos + n >= raw.size();
-    z.push_back(last ? 1 : 0);
-    z.push_back(static_cast<unsigned char>(n & 0xff));
-    z.push_back(static_cast<unsigned char>(n >> 8));
-    z.push_back(static_cast<unsigned char>(~n & 0xff));
-    z.push_back(static_cast<unsigned char>((~n >> 8) & 0xff));
-    z.insert(z.end(), raw.begin() + static_cast<std::ptrdiff_t>(pos), raw.begin() + static_cast<std::ptrdiff_t>(pos + n));
-    pos += n;
-    if (last) break;
-  }
-  std::uint32_t a = 1, b = 0;
-  for (const unsigned char c : raw) {
-    a = (a + c) % 65521u;
-    b = (b + a) % 65521u;
-  }
-  const std::uint32_t adler = (b << 16) | a;
-  for (int s = 24; s >= 0; s -= 8) z.push_back(static_cast<unsigned char>(adler >> s));
-
-  std::vector<unsigned char> out{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a};
-  std::vector<unsigned char> ihdr;
-  for (const int v : {w, h}) {
-    for (int s = 24; s >= 0; s -= 8) ihdr.push_back(static_cast<unsigned char>(v >> s));
-  }
-  ihdr.insert(ihdr.end(), {8, 0, 0, 0, 0});
-  png_chunk(out, "IHDR", ihdr);
-  png_chunk(out, "IDAT", z);
-  png_chunk(out, "IEND", {});
-  std::ofstream f(path, std::ios::binary);
-  f.write(reinterpret_cast<const char*>(out.data()), static_cast<std::streamsize>(out.size()));
-  return static_cast<bool>(f);
-}
-
-// Prints the world model summary of one save. Returns false when loading fails or issues were found.
-bool world_report(const rct3::save::SaveFile& file, const char* path, const char* png_path) {
-  using namespace rct3::save;
-  const ObjectIndex index(file);
-  const auto world = load_world(file, index);
-  if (!world) {
-    std::printf("world %s: load failed: %s\n", path, to_string(world.error()));
-    return false;
-  }
-  const WorldModel& w = *world;
-  const TerrainGrid& g = w.terrain;
-  std::printf("world %s\n", path);
-  if (g.empty()) {
-    std::printf("  terrain      none\n");
-  } else {
-    float lo = g.cells[0].corners[0], hi = lo;
-    std::array<std::size_t, 6> own{};
-    std::set<int> surfaces, cliffs;
-    std::size_t flat = 0;
-    std::map<int, std::size_t> flag_values;
-    for (const auto& c : g.cells) {
-      lo = std::min(lo, c.min_height());
-      hi = std::max(hi, c.max_height());
-      ++own[static_cast<std::size_t>(c.ownership())];
-      surfaces.insert(c.surface);
-      cliffs.insert(c.cliff);
-      if (c.min_height() == c.max_height()) ++flat;
-      ++flag_values[c.flags];
+    // Minimal PNG writer: 8-bit grayscale, stored (uncompressed) deflate blocks.
+    std::uint32_t png_crc(const unsigned char* d, std::size_t n, std::uint32_t crc = 0xffffffffu)
+    {
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            crc ^= d[i];
+            for (int k = 0; k < 8; ++k)
+                crc = (crc >> 1) ^ (0xedb88320u & (0u - (crc & 1u)));
+        }
+        return crc;
     }
-    std::printf("  terrain      %dx%d cells, %s layout, trailing %zu, tile %g x %g, origin (%g, %g)\n", g.width,
-                g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes,
-                static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x),
-                static_cast<double>(g.origin_z));
-    std::printf("  heights      %g .. %g, flat tiles %zu, surfaces %zu distinct, cliff styles %zu distinct\n",
-                static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
-    std::printf("  ownership   ");
-    for (std::size_t i = 0; i < own.size(); ++i) {
-      std::printf(" %s=%zu", to_string(static_cast<Ownership>(i)), own[i]);
-    }
-    std::printf("\n  flag bytes  ");
-    for (const auto& [v, n] : flag_values) std::printf(" %02x:%zu", static_cast<unsigned>(v), n);
-    std::printf("\n");
-  }
-  std::printf("  water        %zu bodies, %zu triangles, map %dx%d", w.water.bodies.size(), w.water.triangle_count(),
-              w.water.width, w.water.height);
-  for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
-    std::printf(" [level %g, %zu tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
-  std::printf("\n");
 
-  std::array<std::size_t, 4> kinds{};
-  std::size_t with_underground = 0;
-  std::map<std::pair<int, int>, std::size_t> per_tile;
-  for (const auto& p : w.paths) {
-    ++kinds[static_cast<std::size_t>(p.kind)];
-    ++per_tile[{p.col, p.row}];
-    if (p.elevation && p.elevation->underground) ++with_underground;
-  }
-  std::size_t stacked = 0;
-  for (const auto& [t, n] : per_tile) stacked += n > 1;
-  std::printf("  paths        %zu tiles (ground %zu, flying %zu, queue %zu, unknown %zu), %zu distinct positions, "
-              "%zu positions with several, %zu queue lines, %zu underground\n",
-              w.paths.size(), kinds[0], kinds[1], kinds[2], kinds[3], per_tile.size(), stacked, w.queue_lines.size(),
-              with_underground);
-  std::size_t free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
-  std::set<std::string> symbols;
-  for (const auto& o : w.objects) {
-    free_standing += o.free_standing();
-    hidden += o.hidden;
-    unset += !o.base_height;
-    adjust += o.height_adjust.has_value();
-    named += !o.symbol.empty();
-    symbols.insert(o.symbol);
-  }
-  std::printf("  scenery      %zu placed (free-standing %zu, hidden %zu, height unset %zu, with adjust %zu, "
-              "symbol resolved %zu, %zu distinct symbols), skirt trees %zu, blocking blob %zu bytes\n",
-              w.objects.size(), free_standing, hidden, unset, adjust, named, symbols.size(), w.skirt_trees.size(),
-              w.blocking_scenery.size());
-  if (!g.empty()) {
-    // Orientation check: paths and scenery sit on bought land, so the (col,row) reading should hit owned
-    // tiles far more often than the transposed (row,col) reading.
-    std::size_t direct = 0, swapped = 0, total = 0;
-    int max_col = -1, max_row = -1;
-    const auto owned = [&](int c, int r) {
-      return g.contains(c, r) && g.at(c, r).ownership() == Ownership::Owned;
-    };
-    for (const auto& p : w.paths) {
-      ++total;
-      direct += owned(p.col, p.row);
-      swapped += owned(p.row, p.col);
-      max_col = std::max<int>(max_col, p.col);
-      max_row = std::max<int>(max_row, p.row);
+    void png_chunk(std::vector<unsigned char>& out, const char* type, const std::vector<unsigned char>& data)
+    {
+        const auto put32 = [&](std::uint32_t v) {
+            for (int s = 24; s >= 0; s -= 8)
+                out.push_back(static_cast<unsigned char>(v >> s));
+        };
+        put32(static_cast<std::uint32_t>(data.size()));
+        std::vector<unsigned char> body(type, type + 4);
+        body.insert(body.end(), data.begin(), data.end());
+        out.insert(out.end(), body.begin(), body.end());
+        put32(png_crc(body.data(), body.size()) ^ 0xffffffffu);
     }
-    for (const auto& o : w.objects) {
-      ++total;
-      direct += owned(o.col, o.row);
-      swapped += owned(o.row, o.col);
-      max_col = std::max(max_col, o.col);
-      max_row = std::max(max_row, o.row);
-    }
-    std::printf("  orientation  paths+scenery on owned tiles: (col,row) %zu, (row,col) %zu of %zu; max col %d, max row %d\n",
-                direct, swapped, total, max_col, max_row);
-  }
-  if (w.weather) {
-    const Weather& k = *w.weather;
-    std::printf("  weather      %s (raw %d), forecast %s, climate %d, %g degC, wind %g\n", to_string(k.type),
-                k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature),
-                static_cast<double>(k.wind_speed));
-  }
-  if (w.sky_background) std::printf("  sky          background %d\n", *w.sky_background);
-  if (w.time)
-    std::printf("  time         day fraction %g, time %g\n", static_cast<double>(w.time->day_fraction),
-                static_cast<double>(w.time->time));
-  if (w.camera)
-    std::printf("  camera       pos (%g, %g, %g) orientation (%g, %g, %g)\n", static_cast<double>(w.camera->position.x),
-                static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z),
-                static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y),
-                static_cast<double>(w.camera->orientation.z));
-  bool ok = true;
-  for (const auto& i : w.issues) {
-    std::printf("  ISSUE        %s x%zu (first object %llu)\n", to_string(i.kind), i.count,
-                static_cast<unsigned long long>(i.first_object));
-    ok = false;
-  }
-  if (png_path && !g.empty()) {
-    float lo = g.cells[0].corners[0], hi = lo;
-    for (const auto& c : g.cells) {
-      lo = std::min(lo, c.min_height());
-      hi = std::max(hi, c.max_height());
-    }
-    const float span = hi > lo ? hi - lo : 1.0f;
-    constexpr int kScale = 3;
-    const int pw = g.width * kScale, ph = g.height * kScale;
-    std::vector<unsigned char> px(static_cast<std::size_t>(pw) * static_cast<std::size_t>(ph));
-    for (int y = 0; y < ph; ++y) {
-      for (int x = 0; x < pw; ++x) {
-        const float v = (g.at(x / kScale, y / kScale).corners[0] - lo) / span;
-        px[static_cast<std::size_t>(y) * static_cast<std::size_t>(pw) + static_cast<std::size_t>(x)] =
-            static_cast<unsigned char>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
-      }
-    }
-    if (write_gray_png(png_path, pw, ph, px)) std::printf("  png          wrote %s (row 0 at the top)\n", png_path);
-    else std::printf("  png          cannot write %s\n", png_path);
-  }
-  return ok;
-}
 
-}  // namespace
+    bool write_gray_png(const char* path, int w, int h, const std::vector<unsigned char>& pixels)
+    {
+        std::vector<unsigned char> raw;
+        raw.reserve(static_cast<std::size_t>(h) * (static_cast<std::size_t>(w) + 1));
+        for (int y = 0; y < h; ++y)
+        {
+            raw.push_back(0); // filter: none
+            raw.insert(raw.end(), pixels.begin() + static_cast<std::ptrdiff_t>(y) * w, pixels.begin() + static_cast<std::ptrdiff_t>(y + 1) * w);
+        }
+        std::vector<unsigned char> z { 0x78, 0x01 };
+        for (std::size_t pos = 0; pos < raw.size() || pos == 0;)
+        {
+            const std::size_t n = std::min<std::size_t>(65535, raw.size() - pos);
+            const bool last = pos + n >= raw.size();
+            z.push_back(last ? 1 : 0);
+            z.push_back(static_cast<unsigned char>(n & 0xff));
+            z.push_back(static_cast<unsigned char>(n >> 8));
+            z.push_back(static_cast<unsigned char>(~n & 0xff));
+            z.push_back(static_cast<unsigned char>((~n >> 8) & 0xff));
+            z.insert(z.end(), raw.begin() + static_cast<std::ptrdiff_t>(pos), raw.begin() + static_cast<std::ptrdiff_t>(pos + n));
+            pos += n;
+            if (last)
+                break;
+        }
+        std::uint32_t a = 1, b = 0;
+        for (const unsigned char c : raw)
+        {
+            a = (a + c) % 65521u;
+            b = (b + a) % 65521u;
+        }
+        const std::uint32_t adler = (b << 16) | a;
+        for (int s = 24; s >= 0; s -= 8)
+            z.push_back(static_cast<unsigned char>(adler >> s));
+
+        std::vector<unsigned char> out { 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a };
+        std::vector<unsigned char> ihdr;
+        for (const int v : { w, h })
+        {
+            for (int s = 24; s >= 0; s -= 8)
+                ihdr.push_back(static_cast<unsigned char>(v >> s));
+        }
+        ihdr.insert(ihdr.end(), { 8, 0, 0, 0, 0 });
+        png_chunk(out, "IHDR", ihdr);
+        png_chunk(out, "IDAT", z);
+        png_chunk(out, "IEND", { });
+        std::ofstream f(path, std::ios::binary);
+        f.write(reinterpret_cast<const char*>(out.data()), static_cast<std::streamsize>(out.size()));
+        return static_cast<bool>(f);
+    }
+
+    // Prints the world model summary of one save. Returns false when loading fails or issues were found.
+    bool world_report(const rct3::save::SaveFile& file, const char* path, const char* png_path)
+    {
+        using namespace rct3::save;
+        const ObjectIndex index(file);
+        const auto world = load_world(file, index);
+        if (!world)
+        {
+            std::printf("world %s: load failed: %s\n", path, to_string(world.error()));
+            return false;
+        }
+        const WorldModel& w = *world;
+        const TerrainGrid& g = w.terrain;
+        std::printf("world %s\n", path);
+        if (g.empty())
+        {
+            std::printf("  terrain      none\n");
+        }
+        else
+        {
+            float lo = g.cells[0].corners[0], hi = lo;
+            std::array<std::size_t, 6> own { };
+            std::set<int> surfaces, cliffs;
+            std::size_t flat = 0;
+            std::map<int, std::size_t> flag_values;
+            for (const auto& c : g.cells)
+            {
+                lo = std::min(lo, c.min_height());
+                hi = std::max(hi, c.max_height());
+                ++own[static_cast<std::size_t>(c.ownership())];
+                surfaces.insert(c.surface);
+                cliffs.insert(c.cliff);
+                if (c.min_height() == c.max_height())
+                    ++flat;
+                ++flag_values[c.flags];
+            }
+            std::printf("  terrain      %dx%d cells, %s layout, trailing %zu, tile %g x %g, origin (%g, %g)\n", g.width, g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes, static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x), static_cast<double>(g.origin_z));
+            std::printf("  heights      %g .. %g, flat tiles %zu, surfaces %zu distinct, cliff styles %zu distinct\n", static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
+            std::printf("  ownership   ");
+            for (std::size_t i = 0; i < own.size(); ++i)
+            {
+                std::printf(" %s=%zu", to_string(static_cast<Ownership>(i)), own[i]);
+            }
+            std::printf("\n  flag bytes  ");
+            for (const auto& [v, n] : flag_values)
+                std::printf(" %02x:%zu", static_cast<unsigned>(v), n);
+            std::printf("\n");
+        }
+        std::printf("  water        %zu bodies, %zu triangles, map %dx%d", w.water.bodies.size(), w.water.triangle_count(), w.water.width, w.water.height);
+        for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
+            std::printf(" [level %g, %zu tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
+        std::printf("\n");
+
+        std::array<std::size_t, 4> kinds { };
+        std::size_t with_underground = 0;
+        std::map<std::pair<int, int>, std::size_t> per_tile;
+        for (const auto& p : w.paths)
+        {
+            ++kinds[static_cast<std::size_t>(p.kind)];
+            ++per_tile[{ p.col, p.row }];
+            if (p.elevation && p.elevation->underground)
+                ++with_underground;
+        }
+        std::size_t stacked = 0;
+        for (const auto& [t, n] : per_tile)
+            stacked += n > 1;
+        std::printf(
+            "  paths        %zu tiles (ground %zu, flying %zu, queue %zu, unknown %zu), %zu distinct positions, "
+            "%zu positions with several, %zu queue lines, %zu underground\n",
+            w.paths.size(), kinds[0], kinds[1], kinds[2], kinds[3], per_tile.size(), stacked, w.queue_lines.size(), with_underground);
+        std::size_t free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
+        std::set<std::string> symbols;
+        for (const auto& o : w.objects)
+        {
+            free_standing += o.free_standing();
+            hidden += o.hidden;
+            unset += !o.base_height;
+            adjust += o.height_adjust.has_value();
+            named += !o.symbol.empty();
+            symbols.insert(o.symbol);
+        }
+        std::printf(
+            "  scenery      %zu placed (free-standing %zu, hidden %zu, height unset %zu, with adjust %zu, "
+            "symbol resolved %zu, %zu distinct symbols), skirt trees %zu, blocking blob %zu bytes\n",
+            w.objects.size(), free_standing, hidden, unset, adjust, named, symbols.size(), w.skirt_trees.size(), w.blocking_scenery.size());
+        if (!g.empty())
+        {
+            // Orientation check: paths and scenery sit on bought land, so the (col,row) reading should hit owned
+            // tiles far more often than the transposed (row,col) reading.
+            std::size_t direct = 0, swapped = 0, total = 0;
+            int max_col = -1, max_row = -1;
+            const auto owned = [&](int c, int r) { return g.contains(c, r) && g.at(c, r).ownership() == Ownership::Owned; };
+            for (const auto& p : w.paths)
+            {
+                ++total;
+                direct += owned(p.col, p.row);
+                swapped += owned(p.row, p.col);
+                max_col = std::max<int>(max_col, p.col);
+                max_row = std::max<int>(max_row, p.row);
+            }
+            for (const auto& o : w.objects)
+            {
+                ++total;
+                direct += owned(o.col, o.row);
+                swapped += owned(o.row, o.col);
+                max_col = std::max(max_col, o.col);
+                max_row = std::max(max_row, o.row);
+            }
+            std::printf("  orientation  paths+scenery on owned tiles: (col,row) %zu, (row,col) %zu of %zu; max col %d, max row %d\n", direct, swapped, total, max_col, max_row);
+        }
+        if (w.weather)
+        {
+            const Weather& k = *w.weather;
+            std::printf("  weather      %s (raw %d), forecast %s, climate %d, %g degC, wind %g\n", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature), static_cast<double>(k.wind_speed));
+        }
+        if (w.sky_background)
+            std::printf("  sky          background %d\n", *w.sky_background);
+        if (w.time)
+            std::printf("  time         day fraction %g, time %g\n", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time));
+        if (w.camera)
+            std::printf("  camera       pos (%g, %g, %g) orientation (%g, %g, %g)\n", static_cast<double>(w.camera->position.x), static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z), static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y), static_cast<double>(w.camera->orientation.z));
+        bool ok = true;
+        for (const auto& i : w.issues)
+        {
+            std::printf("  ISSUE        %s x%zu (first object %llu)\n", to_string(i.kind), i.count, static_cast<unsigned long long>(i.first_object));
+            ok = false;
+        }
+        if (png_path && !g.empty())
+        {
+            float lo = g.cells[0].corners[0], hi = lo;
+            for (const auto& c : g.cells)
+            {
+                lo = std::min(lo, c.min_height());
+                hi = std::max(hi, c.max_height());
+            }
+            const float span = hi > lo ? hi - lo : 1.0f;
+            constexpr int kScale = 3;
+            const int pw = g.width * kScale, ph = g.height * kScale;
+            std::vector<unsigned char> px(static_cast<std::size_t>(pw) * static_cast<std::size_t>(ph));
+            for (int y = 0; y < ph; ++y)
+            {
+                for (int x = 0; x < pw; ++x)
+                {
+                    const float v = (g.at(x / kScale, y / kScale).corners[0] - lo) / span;
+                    px[static_cast<std::size_t>(y) * static_cast<std::size_t>(pw) + static_cast<std::size_t>(x)] = static_cast<unsigned char>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
+                }
+            }
+            if (write_gray_png(png_path, pw, ph, px))
+                std::printf("  png          wrote %s (row 0 at the top)\n", png_path);
+            else
+                std::printf("  png          cannot write %s\n", png_path);
+        }
+        return ok;
+    }
+
+} // namespace
 // ---- world report end ----------------------------------------------------------------------------------------
 
-int main(int argc, char** argv) {
-  // BEGIN park: `save-dump --park [--root INSTALL_DIR] FILE...` prints the decoded park summary and checks.
-  if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--park") == 0; })) {
-    const char* root = nullptr;
-    int bad = 0;
-    for (int i = 1; i < argc; ++i) {
-      if (std::strcmp(argv[i], "--root") == 0 && i + 1 < argc) root = argv[i + 1];
-    }
-    for (int i = 1; i < argc; ++i) {
-      if (std::strcmp(argv[i], "--park") == 0) continue;
-      if (std::strcmp(argv[i], "--root") == 0) {
-        ++i;
-        continue;
-      }
-      std::ifstream in(argv[i], std::ios::binary);
-      const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-      const auto bytes = std::as_bytes(std::span(raw));
-      const auto file = rct3::save::read_save(bytes, {.verify_checksum = false});
-      if (!file) {
-        std::printf("%s: read error %s\n", argv[i], rct3::save::to_string(file.error()));
-        ++bad;
-        continue;
-      }
-      const rct3::save::ObjectIndex index(*file);
-      const auto model = rct3::save::load_park(*file, index);
-      if (!model) {
-        std::printf("%s: park load error %s\n", argv[i], rct3::save::to_string(model.error()));
-        ++bad;
-        continue;
-      }
-      const auto& m = *model;
-      const auto date = m.clock.date();
-      std::printf("%s\n", argv[i]);
-      std::printf("  park       rating %g guests %g flags %x open %d..%d\n",
-                  static_cast<double>(m.park.rating().value_or(-1.0f)),
-                  static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw,
-                  m.park.opening_minutes, m.park.closing_minutes);
-      std::printf("  clock      time %g year %lld month %d week %d\n", static_cast<double>(m.clock.time),
-                  static_cast<long long>(date.year), date.month, date.week);
-      std::printf("  finance    cash %d loan %d/%d ledger periods %zu sum0 %lld\n", m.finance.cash, m.finance.loan,
-                  m.finance.max_loan, m.finance.ledger_periods_loaded,
-                  static_cast<long long>(m.finance.ledger[0].raw_sum()));
-      std::printf("  scenario   objectives %zu conditions %zu challenges %zu categories %zu messages %zu/%zu"
-                  " particles %zu\n",
-                  m.objectives.objectives.size(), m.objectives.conditions.size(), m.objectives.challenges.size(),
-                  m.research.categories.size(), m.messages.ordered.size(), m.messages.ring_size,
-                  m.particle_objects);
-      std::printf("  content    requirements %zu without overlay %zu invented %zu\n", m.content.entries.size(),
-                  m.content.entries_without_overlay, m.content.invented_count());
-      if (root) {
-        const auto rep = rct3::save::check_content(m.content, root);
-        std::printf("  install    resolved %zu (exact %zu, other case %zu, with unique %zu) missing %zu"
+int main(int argc, char** argv)
+{
+    // BEGIN park: `save-dump --park [--root INSTALL_DIR] FILE...` prints the decoded park summary and checks.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--park") == 0; }))
+    {
+        const char* root = nullptr;
+        int bad = 0;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strcmp(argv[i], "--root") == 0 && i + 1 < argc)
+                root = argv[i + 1];
+        }
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strcmp(argv[i], "--park") == 0)
+                continue;
+            if (std::strcmp(argv[i], "--root") == 0)
+            {
+                ++i;
+                continue;
+            }
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto bytes = std::as_bytes(std::span(raw));
+            const auto file = rct3::save::read_save(bytes, { .verify_checksum = false });
+            if (!file)
+            {
+                std::printf("%s: read error %s\n", argv[i], rct3::save::to_string(file.error()));
+                ++bad;
+                continue;
+            }
+            const rct3::save::ObjectIndex index(*file);
+            const auto model = rct3::save::load_park(*file, index);
+            if (!model)
+            {
+                std::printf("%s: park load error %s\n", argv[i], rct3::save::to_string(model.error()));
+                ++bad;
+                continue;
+            }
+            const auto& m = *model;
+            const auto date = m.clock.date();
+            std::printf("%s\n", argv[i]);
+            std::printf("  park       rating %g guests %g flags %x open %d..%d\n", static_cast<double>(m.park.rating().value_or(-1.0f)), static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
+            std::printf("  clock      time %g year %lld month %d week %d\n", static_cast<double>(m.clock.time), static_cast<long long>(date.year), date.month, date.week);
+            std::printf("  finance    cash %d loan %d/%d ledger periods %zu sum0 %lld\n", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger_periods_loaded, static_cast<long long>(m.finance.ledger[0].raw_sum()));
+            std::printf(
+                "  scenario   objectives %zu conditions %zu challenges %zu categories %zu messages %zu/%zu"
+                " particles %zu\n",
+                m.objectives.objectives.size(), m.objectives.conditions.size(), m.objectives.challenges.size(), m.research.categories.size(), m.messages.ordered.size(), m.messages.ring_size, m.particle_objects);
+            std::printf("  content    requirements %zu without overlay %zu invented %zu\n", m.content.entries.size(), m.content.entries_without_overlay, m.content.invented_count());
+            if (root)
+            {
+                const auto rep = rct3::save::check_content(m.content, root);
+                std::printf(
+                    "  install    resolved %zu (exact %zu, other case %zu, with unique %zu) missing %zu"
                     " (%zu distinct stems)\n",
-                    rep.resolved, rep.exact_case, rep.resolved - rep.exact_case, rep.with_unique, rep.missing,
-                    rep.missing_stems.size());
-      }
-      for (const auto& v : rct3::save::validate(m)) {
-        std::printf("  VIOLATION  %s\n", v.c_str());
-        ++bad;
-      }
+                    rep.resolved, rep.exact_case, rep.resolved - rep.exact_case, rep.with_unique, rep.missing, rep.missing_stems.size());
+            }
+            for (const auto& v : rct3::save::validate(m))
+            {
+                std::printf("  VIOLATION  %s\n", v.c_str());
+                ++bad;
+            }
+        }
+        return bad ? 1 : 0;
     }
-    return bad ? 1 : 0;
-  }
-  // END park
-  // --- people sweep: save-dump --people PATH... (begin) ---
-  if (argc > 1 && std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--people") == 0; })) {
-    using namespace rct3::save;
-    PeopleModel total;
-    std::map<std::string, std::size_t> issue_counts;
-    std::map<std::string, std::size_t> kinds;
-    std::size_t files = 0, failed = 0, shown = 0;
-    for (int i = 1; i < argc; ++i) {
-      if (std::strncmp(argv[i], "--", 2) == 0) continue;
-      std::ifstream in(argv[i], std::ios::binary);
-      const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-      const auto file = read_save(std::as_bytes(std::span(raw)), {.verify_checksum = false});
-      if (!file) {
-        std::printf("%s: container error %s\n", argv[i], to_string(file.error()));
-        ++failed;
-        continue;
-      }
-      const ObjectIndex index(*file);
-      auto model = load_people(*file, index);
-      if (!model) {
-        std::printf("%s: people load error %s\n", argv[i], to_string(model.error()));
-        ++failed;
-        continue;
-      }
-      ++files;
-      const auto issues = validate(*model);
-      for (const auto& is : issues) ++issue_counts[to_string(is.kind)];
-      std::printf("%-40s guests %5zu staff %3zu animals %5zu zoo %3zu groups %5zu holders %5zu carried %4zu shop %4zu"
-                  " litter %5zu issues %zu\n",
-                  std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), model->guests.size(),
-                  model->staff.size(), model->animals.size(), model->zoo_animals.size(), model->groups.size(),
-                  model->holders.size(), model->carried_items.size(), model->shop_items.size(), model->litter.size(),
-                  issues.size());
-      for (const auto& s : model->staff) ++kinds[to_string(s.kind)];
-      for (const auto& a : model->animals) ++kinds[to_string(a.kind)];
-      if (shown < 2 && !model->guests.empty()) {
-        const auto& g = model->guests.front();
-        std::printf("  e.g. guest %llu %s at (%.1f %.1f %.1f) state %d/%d cash %d food %.2f happy %.2f group %llu\n",
-                    static_cast<unsigned long long>(g.person.id), to_string(g.person.type),
-                    static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y),
-                    static_cast<double>(g.person.position.z), static_cast<int>(g.person.state), g.person.sub_state,
-                    g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness),
-                    static_cast<unsigned long long>(g.group.id));
-        ++shown;
-      }
-      const auto add = [](auto& dst, auto& src) { std::move(src.begin(), src.end(), std::back_inserter(dst)); };
-      add(total.guests, model->guests);
-      add(total.staff, model->staff);
-      add(total.animals, model->animals);
-      add(total.zoo_animals, model->zoo_animals);
-      add(total.groups, model->groups);
-      add(total.holders, model->holders);
-      add(total.carried_items, model->carried_items);
-      add(total.shop_items, model->shop_items);
-      add(total.litter, model->litter);
+    // END park
+    // --- people sweep: save-dump --people PATH... (begin) ---
+    if (argc > 1 && std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--people") == 0; }))
+    {
+        using namespace rct3::save;
+        PeopleModel total;
+        std::map<std::string, std::size_t> issue_counts;
+        std::map<std::string, std::size_t> kinds;
+        std::size_t files = 0, failed = 0, shown = 0;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+            {
+                std::printf("%s: container error %s\n", argv[i], to_string(file.error()));
+                ++failed;
+                continue;
+            }
+            const ObjectIndex index(*file);
+            auto model = load_people(*file, index);
+            if (!model)
+            {
+                std::printf("%s: people load error %s\n", argv[i], to_string(model.error()));
+                ++failed;
+                continue;
+            }
+            ++files;
+            const auto issues = validate(*model);
+            for (const auto& is : issues)
+                ++issue_counts[to_string(is.kind)];
+            std::printf(
+                "%-40s guests %5zu staff %3zu animals %5zu zoo %3zu groups %5zu holders %5zu carried %4zu shop %4zu"
+                " litter %5zu issues %zu\n",
+                std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), model->guests.size(), model->staff.size(), model->animals.size(), model->zoo_animals.size(), model->groups.size(), model->holders.size(), model->carried_items.size(), model->shop_items.size(), model->litter.size(), issues.size());
+            for (const auto& s : model->staff)
+                ++kinds[to_string(s.kind)];
+            for (const auto& a : model->animals)
+                ++kinds[to_string(a.kind)];
+            if (shown < 2 && !model->guests.empty())
+            {
+                const auto& g = model->guests.front();
+                std::printf(
+                    "  e.g. guest %llu %s at (%.1f %.1f %.1f) state %d/%d cash %d food %.2f happy %.2f group %llu\n", static_cast<unsigned long long>(g.person.id), to_string(g.person.type), static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y), static_cast<double>(g.person.position.z), static_cast<int>(g.person.state), g.person.sub_state, g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness), static_cast<unsigned long long>(g.group.id));
+                ++shown;
+            }
+            const auto add = [](auto& dst, auto& src) { std::move(src.begin(), src.end(), std::back_inserter(dst)); };
+            add(total.guests, model->guests);
+            add(total.staff, model->staff);
+            add(total.animals, model->animals);
+            add(total.zoo_animals, model->zoo_animals);
+            add(total.groups, model->groups);
+            add(total.holders, model->holders);
+            add(total.carried_items, model->carried_items);
+            add(total.shop_items, model->shop_items);
+            add(total.litter, model->litter);
+        }
+        std::printf(
+            "TOTAL files %zu failed %zu guests %zu staff %zu animals %zu zoo %zu groups %zu holders %zu carried %zu"
+            " shop %zu litter %zu\n",
+            files, failed, total.guests.size(), total.staff.size(), total.animals.size(), total.zoo_animals.size(), total.groups.size(), total.holders.size(), total.carried_items.size(), total.shop_items.size(), total.litter.size());
+        for (const auto& [k, n] : kinds)
+            std::printf("  kind %-16s %zu\n", k.c_str(), n);
+        for (const auto& [k, n] : issue_counts)
+            std::printf("  issue %-30s %zu\n", k.c_str(), n);
+        return failed ? 1 : 0;
     }
-    std::printf("TOTAL files %zu failed %zu guests %zu staff %zu animals %zu zoo %zu groups %zu holders %zu carried %zu"
-                " shop %zu litter %zu\n",
-                files, failed, total.guests.size(), total.staff.size(), total.animals.size(), total.zoo_animals.size(),
-                total.groups.size(), total.holders.size(), total.carried_items.size(), total.shop_items.size(),
-                total.litter.size());
-    for (const auto& [k, n] : kinds) std::printf("  kind %-16s %zu\n", k.c_str(), n);
-    for (const auto& [k, n] : issue_counts) std::printf("  issue %-30s %zu\n", k.c_str(), n);
-    return failed ? 1 : 0;
-  }
-  // --- people sweep (end) ---
-  bool classes = false;
-  bool objects = false;
-  bool check = false;
-  bool world = false;               // world report option
-  const char* world_png = nullptr;  // world report option
-  const char* value_class = nullptr;
-  const char* object_id = nullptr;
-  const char* path = nullptr;
-  bool rides = false;  // --rides
-  for (int i = 1; i < argc; ++i) {
-    if (std::strcmp(argv[i], "--classes") == 0) classes = true;
-    else if (std::strcmp(argv[i], "--objects") == 0) objects = true;
-    else if (std::strcmp(argv[i], "--check") == 0) check = true;
-    else if (std::strcmp(argv[i], "--rides") == 0) rides = true;
-    else if (std::strcmp(argv[i], "--values") == 0 && i + 1 < argc) value_class = argv[++i];
-    else if (std::strcmp(argv[i], "--object") == 0 && i + 1 < argc) object_id = argv[++i];
-    else if (std::strcmp(argv[i], "--world") == 0) world = true;  // world report option
-    else if (std::strcmp(argv[i], "--world-png") == 0 && i + 1 < argc) world_png = argv[++i];  // world report option
-    else path = argv[i];
-  }
-  if (!path) {
-    std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--world] [--world-png FILE] PATH\n");
-    return 2;
-  }
+    // --- people sweep (end) ---
+    bool classes = false;
+    bool objects = false;
+    bool check = false;
+    bool world = false;              // world report option
+    const char* world_png = nullptr; // world report option
+    const char* value_class = nullptr;
+    const char* object_id = nullptr;
+    const char* path = nullptr;
+    bool rides = false; // --rides
+    for (int i = 1; i < argc; ++i)
+    {
+        if (std::strcmp(argv[i], "--classes") == 0)
+            classes = true;
+        else if (std::strcmp(argv[i], "--objects") == 0)
+            objects = true;
+        else if (std::strcmp(argv[i], "--check") == 0)
+            check = true;
+        else if (std::strcmp(argv[i], "--rides") == 0)
+            rides = true;
+        else if (std::strcmp(argv[i], "--values") == 0 && i + 1 < argc)
+            value_class = argv[++i];
+        else if (std::strcmp(argv[i], "--object") == 0 && i + 1 < argc)
+            object_id = argv[++i];
+        else if (std::strcmp(argv[i], "--world") == 0)
+            world = true; // world report option
+        else if (std::strcmp(argv[i], "--world-png") == 0 && i + 1 < argc)
+            world_png = argv[++i]; // world report option
+        else
+            path = argv[i];
+    }
+    if (!path)
+    {
+        std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--world] [--world-png FILE] PATH\n");
+        return 2;
+    }
 
-  std::ifstream in(path, std::ios::binary);
-  if (!in) {
-    std::fprintf(stderr, "cannot open %s\n", path);
-    return 2;
-  }
-  const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-  const auto bytes = std::as_bytes(std::span(raw));
+    std::ifstream in(path, std::ios::binary);
+    if (!in)
+    {
+        std::fprintf(stderr, "cannot open %s\n", path);
+        return 2;
+    }
+    const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const auto bytes = std::as_bytes(std::span(raw));
 
-  const auto file = rct3::save::read_save(bytes, {.verify_checksum = false});
-  if (!file) {
-    std::printf("error: %s\n", rct3::save::to_string(file.error()));
-    return 1;
-  }
+    const auto file = rct3::save::read_save(bytes, { .verify_checksum = false });
+    if (!file)
+    {
+        std::printf("error: %s\n", rct3::save::to_string(file.error()));
+        return 1;
+    }
 
-  if (world || world_png) return world_report(*file, path, world_png) ? 0 : 1;  // world report option
+    if (world || world_png)
+        return world_report(*file, path, world_png) ? 0 : 1; // world report option
 
-  std::printf("size           %zu\n", raw.size());
-  std::printf("header         %s\n", file->has_header ? "yes" : "no");
-  if (file->has_header) {
-    std::printf("version        %u\n", file->header.version());
-    std::printf("header words  ");
-    for (const auto w : file->header.words) std::printf(" %x", w);
-    std::printf("\n");
-  }
-  std::printf("sections\n");
-  for (const auto& s : file->sections) {
-    std::printf("  %-13s offset %-9zu size %zu\n", rct3::save::to_string(s.kind), s.offset, s.size);
-  }
-  std::printf("classes        %zu\n", file->classes.size());
-  std::printf("objects        %zu\n", file->objects.size());
-  bool ok = true;
-  if (file->has_checksum) {
-    ok = file->stored_checksum == file->computed_checksum;
-    std::printf("checksum       stored %08x computed %08x %s\n", file->stored_checksum, file->computed_checksum,
-                ok ? "ok" : "MISMATCH");
-  }
+    std::printf("size           %zu\n", raw.size());
+    std::printf("header         %s\n", file->has_header ? "yes" : "no");
+    if (file->has_header)
+    {
+        std::printf("version        %u\n", file->header.version());
+        std::printf("header words  ");
+        for (const auto w : file->header.words)
+            std::printf(" %x", w);
+        std::printf("\n");
+    }
+    std::printf("sections\n");
+    for (const auto& s : file->sections)
+    {
+        std::printf("  %-13s offset %-9zu size %zu\n", rct3::save::to_string(s.kind), s.offset, s.size);
+    }
+    std::printf("classes        %zu\n", file->classes.size());
+    std::printf("objects        %zu\n", file->objects.size());
+    bool ok = true;
+    if (file->has_checksum)
+    {
+        ok = file->stored_checksum == file->computed_checksum;
+        std::printf("checksum       stored %08x computed %08x %s\n", file->stored_checksum, file->computed_checksum, ok ? "ok" : "MISMATCH");
+    }
 
-  std::vector<std::size_t> count(file->classes.size());
-  std::vector<std::size_t> size(file->classes.size());
-  for (const auto& o : file->objects) {
-    ++count[o.class_index];
-    size[o.class_index] += o.bytes.size();
-  }
-  if (classes) {
-    std::printf("class table\n");
-    std::printf("  %-4s %-34s %-6s %-8s %s\n", "idx", "name", "attrs", "objects", "bytes");
-    for (std::size_t i = 0; i < file->classes.size(); ++i) {
-      const auto& c = file->classes[i];
-      std::printf("  %-4zu %-34.*s %-6zu %-8zu %zu\n", i, static_cast<int>(c.name.size()), c.name.data(),
-                  c.attributes.size(), count[i], size[i]);
+    std::vector<std::size_t> count(file->classes.size());
+    std::vector<std::size_t> size(file->classes.size());
+    for (const auto& o : file->objects)
+    {
+        ++count[o.class_index];
+        size[o.class_index] += o.bytes.size();
     }
-  }
-  if (objects) {
-    std::printf("objects\n");
-    for (const auto& o : file->objects) {
-      const auto& name = file->classes[o.class_index].name;
-      std::printf("  id %-10llu class %-4u %-30.*s offset %-9zu size %zu\n", static_cast<unsigned long long>(o.id),
-                  o.class_index, static_cast<int>(name.size()), name.data(), o.offset, o.bytes.size());
+    if (classes)
+    {
+        std::printf("class table\n");
+        std::printf("  %-4s %-34s %-6s %-8s %s\n", "idx", "name", "attrs", "objects", "bytes");
+        for (std::size_t i = 0; i < file->classes.size(); ++i)
+        {
+            const auto& c = file->classes[i];
+            std::printf("  %-4zu %-34.*s %-6zu %-8zu %zu\n", i, static_cast<int>(c.name.size()), c.name.data(), c.attributes.size(), count[i], size[i]);
+        }
     }
-  }
+    if (objects)
+    {
+        std::printf("objects\n");
+        for (const auto& o : file->objects)
+        {
+            const auto& name = file->classes[o.class_index].name;
+            std::printf("  id %-10llu class %-4u %-30.*s offset %-9zu size %zu\n", static_cast<unsigned long long>(o.id), o.class_index, static_cast<int>(name.size()), name.data(), o.offset, o.bytes.size());
+        }
+    }
 
-  const auto print_object = [&](const rct3::save::Object& o) {
-    const auto decoded = rct3::save::decode_object(*file, o);
-    if (!decoded) {
-      std::printf("object %llu: %s\n", static_cast<unsigned long long>(o.id), rct3::save::to_string(decoded.error()));
-      return;
+    const auto print_object = [&](const rct3::save::Object& o) {
+        const auto decoded = rct3::save::decode_object(*file, o);
+        if (!decoded)
+        {
+            std::printf("object %llu: %s\n", static_cast<unsigned long long>(o.id), rct3::save::to_string(decoded.error()));
+            return;
+        }
+        std::printf("object %llu class %.*s (%zu values, %zu opaque, %zu fallbacks)\n", static_cast<unsigned long long>(decoded->id), static_cast<int>(decoded->class_name.size()), decoded->class_name.data(), decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
+        print_value(decoded->fields, 2, nullptr);
+    };
+    if (value_class)
+    {
+        for (const auto& o : file->objects)
+        {
+            if (file->classes[o.class_index].name == value_class)
+                print_object(o);
+        }
     }
-    std::printf("object %llu class %.*s (%zu values, %zu opaque, %zu fallbacks)\n",
-                static_cast<unsigned long long>(decoded->id), static_cast<int>(decoded->class_name.size()),
-                decoded->class_name.data(), decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
-    print_value(decoded->fields, 2, nullptr);
-  };
-  if (value_class) {
-    for (const auto& o : file->objects) {
-      if (file->classes[o.class_index].name == value_class) print_object(o);
+    if (object_id)
+    {
+        const rct3::save::ObjectIndex index(*file);
+        if (const auto* o = index.find(std::strtoull(object_id, nullptr, 10)))
+            print_object(*o);
+        else
+            std::printf("no object with id %s\n", object_id);
     }
-  }
-  if (object_id) {
-    const rct3::save::ObjectIndex index(*file);
-    if (const auto* o = index.find(std::strtoull(object_id, nullptr, 10))) print_object(*o);
-    else std::printf("no object with id %s\n", object_id);
-  }
-  if (check) {
-    const rct3::save::ObjectIndex index(*file);
-    rct3::save::DecodeStats total;
-    RefCount refs;
-    std::size_t failed = 0;
-    for (const auto& o : file->objects) {
-      const auto decoded = rct3::save::decode_object(*file, o);
-      if (!decoded) {
-        ++failed;
-        continue;
-      }
-      total.values += decoded->stats.values;
-      total.opaque += decoded->stats.opaque;
-      total.fallbacks += decoded->stats.fallbacks;
-      if (decoded->stats.fallbacks)
-        std::printf("fallbacks in %.*s id %llu: %zu\n", static_cast<int>(decoded->class_name.size()),
-                    decoded->class_name.data(), static_cast<unsigned long long>(decoded->id),
-                    decoded->stats.fallbacks);
-      count_refs(decoded->fields, index, refs);
+    if (check)
+    {
+        const rct3::save::ObjectIndex index(*file);
+        rct3::save::DecodeStats total;
+        RefCount refs;
+        std::size_t failed = 0;
+        for (const auto& o : file->objects)
+        {
+            const auto decoded = rct3::save::decode_object(*file, o);
+            if (!decoded)
+            {
+                ++failed;
+                continue;
+            }
+            total.values += decoded->stats.values;
+            total.opaque += decoded->stats.opaque;
+            total.fallbacks += decoded->stats.fallbacks;
+            if (decoded->stats.fallbacks)
+                std::printf("fallbacks in %.*s id %llu: %zu\n", static_cast<int>(decoded->class_name.size()), decoded->class_name.data(), static_cast<unsigned long long>(decoded->id), decoded->stats.fallbacks);
+            count_refs(decoded->fields, index, refs);
+        }
+        std::printf("check          objects %zu failed %zu values %zu opaque %zu fallbacks %zu\n", file->objects.size(), failed, total.values, total.opaque, total.fallbacks);
+        std::printf("references     total %zu null %zu resolved %zu unresolved %zu\n", refs.total, refs.null, refs.resolved, refs.total - refs.null - refs.resolved);
+        if (failed || total.fallbacks)
+            ok = false;
     }
-    std::printf("check          objects %zu failed %zu values %zu opaque %zu fallbacks %zu\n", file->objects.size(),
-                failed, total.values, total.opaque, total.fallbacks);
-    std::printf("references     total %zu null %zu resolved %zu unresolved %zu\n", refs.total, refs.null,
-                refs.resolved, refs.total - refs.null - refs.resolved);
-    if (failed || total.fallbacks) ok = false;
-  }
-  // --- rides: begin ---------------------------------------------------------------------------------
-  // --rides: load the ride model and print one summary line plus validation counters.
-  if (rides) {
-    const rct3::save::ObjectIndex index(*file);
-    const auto model = rct3::save::load_rides(*file, index);
-    if (!model) {
-      std::printf("rides          error: %s\n", rct3::save::to_string(model.error()));
-      return 1;
+    // --- rides: begin ---------------------------------------------------------------------------------
+    // --rides: load the ride model and print one summary line plus validation counters.
+    if (rides)
+    {
+        const rct3::save::ObjectIndex index(*file);
+        const auto model = rct3::save::load_rides(*file, index);
+        if (!model)
+        {
+            std::printf("rides          error: %s\n", rct3::save::to_string(model.error()));
+            return 1;
+        }
+        std::size_t tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
+        std::size_t trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
+        for (const auto& r : model->rides)
+        {
+            tracked += r.kind == rct3::save::RideKind::Tracked;
+            flat += r.kind == rct3::save::RideKind::Flat;
+            special += r.kind == rct3::save::RideKind::Special;
+            stations += r.stations.size();
+            trains += r.trains.size();
+            for (const auto& t : r.trains)
+                cars += t.cars.size();
+            if (r.track)
+            {
+                ++tracks;
+                circuits += r.track->circuit;
+                pieces += r.track->pieces.size();
+                segments += r.track->segments.size();
+            }
+        }
+        for (const auto& s : model->stalls)
+        {
+            items += s.items.size();
+            extras += s.extras.size();
+        }
+        std::printf("rides          tracked %zu flat %zu special %zu stalls %zu\n", tracked, flat, special, model->stalls.size());
+        std::printf("tracks         %zu circuit %zu open %zu segments %zu pieces %zu orphan_pieces %zu\n", tracks, circuits, tracks - circuits, segments, pieces, model->orphan_pieces);
+        std::printf("trains         %zu cars %zu stations %zu shop_items %zu shop_extras %zu\n", trains, cars, stations, items, extras);
+        const auto& g = model->diagnostics;
+        std::printf(
+            "invariants     track_back %zu unresolved_tracks %zu truncated %zu segment_pieces %zu piece_segment %zu "
+            "platform_back %zu open_live_ends %zu train_back %zu train_index %zu car_back %zu car_index %zu "
+            "car_count %zu unresolved_trains %zu unresolved_cars %zu dup_refs %zu queue_size %zu item_back %zu "
+            "unresolved_items %zu\n",
+            g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch, g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link, g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch, g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch, g.item_back_link_mismatch, g.unresolved_items);
+        for (const auto& r : model->rides)
+        {
+            std::printf("  ride %-10llu kind %u state %d mode %d ticket %lld stations %zu trains %zu pieces %zu%s\n", static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind), static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
+        }
     }
-    std::size_t tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
-    std::size_t trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
-    for (const auto& r : model->rides) {
-      tracked += r.kind == rct3::save::RideKind::Tracked;
-      flat += r.kind == rct3::save::RideKind::Flat;
-      special += r.kind == rct3::save::RideKind::Special;
-      stations += r.stations.size();
-      trains += r.trains.size();
-      for (const auto& t : r.trains) cars += t.cars.size();
-      if (r.track) {
-        ++tracks;
-        circuits += r.track->circuit;
-        pieces += r.track->pieces.size();
-        segments += r.track->segments.size();
-      }
-    }
-    for (const auto& s : model->stalls) {
-      items += s.items.size();
-      extras += s.extras.size();
-    }
-    std::printf("rides          tracked %zu flat %zu special %zu stalls %zu\n", tracked, flat, special,
-                model->stalls.size());
-    std::printf("tracks         %zu circuit %zu open %zu segments %zu pieces %zu orphan_pieces %zu\n", tracks,
-                circuits, tracks - circuits, segments, pieces, model->orphan_pieces);
-    std::printf("trains         %zu cars %zu stations %zu shop_items %zu shop_extras %zu\n", trains, cars,
-                stations, items, extras);
-    const auto& g = model->diagnostics;
-    std::printf(
-        "invariants     track_back %zu unresolved_tracks %zu truncated %zu segment_pieces %zu piece_segment %zu "
-        "platform_back %zu open_live_ends %zu train_back %zu train_index %zu car_back %zu car_index %zu "
-        "car_count %zu unresolved_trains %zu unresolved_cars %zu dup_refs %zu queue_size %zu item_back %zu "
-        "unresolved_items %zu\n",
-        g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch,
-        g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link,
-        g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch,
-        g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch,
-        g.item_back_link_mismatch, g.unresolved_items);
-    for (const auto& r : model->rides) {
-      std::printf("  ride %-10llu kind %u state %d mode %d ticket %lld stations %zu trains %zu pieces %zu%s\n",
-                  static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind),
-                  static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price),
-                  r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0,
-                  r.track ? (r.track->circuit ? " circuit" : " open") : "");
-    }
-  }
-  // --- rides: end -----------------------------------------------------------------------------------
-  return ok ? 0 : 1;
+    // --- rides: end -----------------------------------------------------------------------------------
+    return ok ? 0 : 1;
 }

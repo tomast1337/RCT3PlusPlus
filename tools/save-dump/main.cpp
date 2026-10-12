@@ -9,6 +9,7 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "save/model/park.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -99,6 +101,69 @@ void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& 
 }  // namespace
 
 int main(int argc, char** argv) {
+  // BEGIN park: `save-dump --park [--root INSTALL_DIR] FILE...` prints the decoded park summary and checks.
+  if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--park") == 0; })) {
+    const char* root = nullptr;
+    int bad = 0;
+    for (int i = 1; i < argc; ++i) {
+      if (std::strcmp(argv[i], "--root") == 0 && i + 1 < argc) root = argv[i + 1];
+    }
+    for (int i = 1; i < argc; ++i) {
+      if (std::strcmp(argv[i], "--park") == 0) continue;
+      if (std::strcmp(argv[i], "--root") == 0) {
+        ++i;
+        continue;
+      }
+      std::ifstream in(argv[i], std::ios::binary);
+      const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+      const auto bytes = std::as_bytes(std::span(raw));
+      const auto file = rct3::save::read_save(bytes, {.verify_checksum = false});
+      if (!file) {
+        std::printf("%s: read error %s\n", argv[i], rct3::save::to_string(file.error()));
+        ++bad;
+        continue;
+      }
+      const rct3::save::ObjectIndex index(*file);
+      const auto model = rct3::save::load_park(*file, index);
+      if (!model) {
+        std::printf("%s: park load error %s\n", argv[i], rct3::save::to_string(model.error()));
+        ++bad;
+        continue;
+      }
+      const auto& m = *model;
+      const auto date = m.clock.date();
+      std::printf("%s\n", argv[i]);
+      std::printf("  park       rating %g guests %g flags %x open %d..%d\n",
+                  static_cast<double>(m.park.rating().value_or(-1.0f)),
+                  static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw,
+                  m.park.opening_minutes, m.park.closing_minutes);
+      std::printf("  clock      time %g year %lld month %d week %d\n", static_cast<double>(m.clock.time),
+                  static_cast<long long>(date.year), date.month, date.week);
+      std::printf("  finance    cash %d loan %d/%d ledger periods %zu sum0 %lld\n", m.finance.cash, m.finance.loan,
+                  m.finance.max_loan, m.finance.ledger_periods_loaded,
+                  static_cast<long long>(m.finance.ledger[0].raw_sum()));
+      std::printf("  scenario   objectives %zu conditions %zu challenges %zu categories %zu messages %zu/%zu"
+                  " particles %zu\n",
+                  m.objectives.objectives.size(), m.objectives.conditions.size(), m.objectives.challenges.size(),
+                  m.research.categories.size(), m.messages.ordered.size(), m.messages.ring_size,
+                  m.particle_objects);
+      std::printf("  content    requirements %zu without overlay %zu invented %zu\n", m.content.entries.size(),
+                  m.content.entries_without_overlay, m.content.invented_count());
+      if (root) {
+        const auto rep = rct3::save::check_content(m.content, root);
+        std::printf("  install    resolved %zu (exact %zu, other case %zu, with unique %zu) missing %zu"
+                    " (%zu distinct stems)\n",
+                    rep.resolved, rep.exact_case, rep.resolved - rep.exact_case, rep.with_unique, rep.missing,
+                    rep.missing_stems.size());
+      }
+      for (const auto& v : rct3::save::validate(m)) {
+        std::printf("  VIOLATION  %s\n", v.c_str());
+        ++bad;
+      }
+    }
+    return bad ? 1 : 0;
+  }
+  // END park
   bool classes = false;
   bool objects = false;
   bool check = false;

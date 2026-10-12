@@ -18,3 +18,6 @@ local/
 /nob
 /nob.old
 *.dat
+
+# Dear ImGui writes window layout here when the viewer runs.
+imgui.ini

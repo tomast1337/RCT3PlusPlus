@@ -8,6 +8,9 @@
 #include "ui/tooltip.hpp"
 #include "ui/widgets/list_box.hpp"
 #include "ui/widgets/scroll_bar.hpp"
+#include "ui/widgets/slider.hpp"
+#include "ui/widgets/spinner.hpp"
+#include "ui/widgets/tabs.hpp"
 #include "ui/widgets/window.hpp"
 
 #include <array>
@@ -31,6 +34,9 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kListBoxFocused = "EditBox_Focus";
     inline constexpr std::string_view kSelectedRow = "GUI2SolidBlueBackground";
     inline constexpr std::string_view kTooltip = "GUI2Swatch_Background";
+    inline constexpr std::string_view kSliderThumb = "LeftRight_SliderArrows";
+    inline constexpr std::string_view kSpinnerUp = "SpinnerUp"; ///< Family: "SpinnerUpDisabled"
+    inline constexpr std::string_view kSpinnerDown = "SpinnerDown";
     inline constexpr std::string_view kScrollUp = "ScrollBar_UpArrow";
     inline constexpr std::string_view kScrollDown = "ScrollBar_DownArrow";
     inline constexpr std::string_view kScrollLeft = "ScrollBar_LeftArrow";
@@ -91,6 +97,42 @@ namespace rct3::ui::game_skins
         s.selection_skin = kSelectedRow;
         s.font = FontRole::Small;
         s.row_height = 18;
+        return s;
+    }
+
+    /// Tabs as text lozenges, the current one drawn down. The game's tab strips are rows of text buttons;
+    /// the sizes are ours.
+    [[nodiscard]] inline TabsStyle tabs_style()
+    {
+        TabsStyle s;
+        s.tab = kTextButton;
+        s.text_inset = kLozengeInset;
+        s.font = FontRole::Small;
+        s.bar_height = 24;
+        return s;
+    }
+
+    /// The green double arrow at the size the skin has, on a line in the frames' blue (ours).
+    [[nodiscard]] inline SliderStyle slider_style()
+    {
+        SliderStyle s;
+        s.thumb = kSliderThumb;
+        s.rail_colour = { 20, 100, 160, 255 };
+        s.rail_thickness = 4;
+        s.thumb_width = 18;
+        s.thumb_height = 13;
+        return s;
+    }
+
+    /// The number in the edit box frame, the two arrows stacked at their size.
+    [[nodiscard]] inline SpinnerStyle spinner_style()
+    {
+        SpinnerStyle s;
+        s.field = kListBox;
+        s.field_focused = kListBoxFocused;
+        s.up = kSpinnerUp;
+        s.down = kSpinnerDown;
+        s.arrow_width = 20;
         return s;
     }
 

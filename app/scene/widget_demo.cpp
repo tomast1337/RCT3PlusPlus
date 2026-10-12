@@ -2,6 +2,7 @@
 #include "scene/widget_demo.hpp"
 
 #include "logging/log.hpp"
+#include "strings/unicode.hpp"
 #include "ui/fallback_font.hpp"
 #include "ui/font_images.hpp"
 #include "ui/game_style.hpp"
@@ -14,6 +15,9 @@
 #include "ui/widgets/list_box.hpp"
 #include "ui/widgets/panel.hpp"
 #include "ui/widgets/scroll_area.hpp"
+#include "ui/widgets/slider.hpp"
+#include "ui/widgets/spinner.hpp"
+#include "ui/widgets/tabs.hpp"
 #include "ui/widgets/tickbox.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -46,6 +50,8 @@ namespace rct3::scene
         constexpr float kTextButtonWidth = 70;
         constexpr float kTextButtonHeight = 26;
         constexpr std::size_t kNameLength = 40;
+        constexpr float kButtonRow = 36; ///< Below the tabs
+        constexpr float kRowHeight = 18; ///< Of the controls page
         constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.
@@ -65,46 +71,12 @@ namespace rct3::scene
                 min_size = { kMinWidth, kMinHeight };
                 ui::Widget& body = content();
 
-                // The text area stretches with the window; the rows below it stay on the bottom edge.
-                auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
-                list.placement = { { 0, 0, 0.6f, 1 }, { 0, 0, -3, -130 } };
-                // The help text runs on with the options' help, more than fits, to show scrolling.
-                std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
-                for (const std::string_view key : kOptionTips)
-                    text += u"\n\n" + std::u16string(strings.get(key));
-                auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(ui::Orientation::Vertical));
-                scroll.placement = ui::fill(2);
-                auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::FontRole::Small);
-                help.placement = ui::fill(4);
-                help.style.wrap = true;
-                list.clip_children = true;
-
-                for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
-                {
-                    const float bottom = 80 - static_cast<float>(i) * 18;
-                    auto& tick = body.add<ui::Tickbox>("option" + std::to_string(i), std::string(skins::kTickbox), std::string(skins::kTick));
-                    tick.placement = ui::bottom_left(0, bottom, 12, 12);
-                    tick.ticked = i == 0;
-                    tick.tooltip = strings.get(kOptionTips[i]);
-                    auto& label = body.add<ui::Label>("label" + std::to_string(i), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
-                    label.placement = { { 0, 1, 1, 1 }, { 18, -bottom - 15, -80, -bottom + 3 } };
-                    label.style.vertical = ui::Align::Centre;
-                }
-                // Beside it, rides to pick a window name from: a double click or Enter takes one.
-                rides_ = &body.add<ui::ListBox>("rides", skins::list_box_style(), skins::scroll_bar_style(ui::Orientation::Vertical));
-                rides_->placement = { { 0.6f, 0, 1, 1 }, { 3, 0, 0, -130 } };
-                rides_->items.assign(kRideNames.begin(), kRideNames.end());
-
-                // Typing here renames the window.
-                name_ = &body.add<ui::EditBox>("name", title);
-                name_->skin = std::string(skins::kListBox);
-                name_->focused_skin = std::string(skins::kListBoxFocused);
-                name_->placement = { { 0, 1, 1, 1 }, { 0, -124, 0, -104 } };
-                name_->max_length = kNameLength;
-
-                auto& toggle = body.add<ui::Button>("toggle", std::string(kToggleFamily));
-                toggle.toggle = true;
-                toggle.placement = ui::bottom_right(0, 60, 20, 20);
+                // Three pages above the button row: text, a list and controls.
+                auto& tabs = body.add<ui::Tabs>("tabs", skins::tabs_style());
+                tabs.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -kButtonRow } };
+                build_text_page(tabs.add_page("text", u"Text"), strings);
+                build_list_page(tabs.add_page("list", u"List"));
+                build_controls_page(tabs.add_page("controls", u"Controls"), strings);
 
                 cancel_ = &body.add<ui::Button>("cancel", std::string(skins::kButton), std::string(skins::kCancelIcon));
                 cancel_->placement = ui::bottom_right(0, 4, 30, 30);
@@ -126,9 +98,80 @@ namespace rct3::scene
                 text_buttons[2]->enabled = false;
             }
 
+            void build_text_page(ui::Widget& page, const ui::StringTable& strings)
+            {
+                // The text area stretches with the window; the name field stays on the bottom edge.
+                auto& list = page.add<ui::Panel>("list", std::string(skins::kListBox));
+                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -26 } };
+                // The help text runs on with the options' help, more than fits, to show scrolling.
+                std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
+                for (const std::string_view key : kOptionTips)
+                    text += u"\n\n" + std::u16string(strings.get(key));
+                auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(ui::Orientation::Vertical));
+                scroll.placement = ui::fill(2);
+                auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::FontRole::Small);
+                help.placement = ui::fill(4);
+                help.style.wrap = true;
+                list.clip_children = true;
+
+                // Typing here renames the window.
+                name_ = &page.add<ui::EditBox>("name", title);
+                name_->skin = std::string(skins::kListBox);
+                name_->focused_skin = std::string(skins::kListBoxFocused);
+                name_->placement = { { 0, 1, 1, 1 }, { 0, -20, 0, 0 } };
+                name_->max_length = kNameLength;
+            }
+
+            void build_list_page(ui::Widget& page)
+            {
+                // Rides to pick a window name from: a double click or Enter takes one.
+                rides_ = &page.add<ui::ListBox>("rides", skins::list_box_style(), skins::scroll_bar_style(ui::Orientation::Vertical));
+                rides_->items.assign(kRideNames.begin(), kRideNames.end());
+            }
+
+            void build_controls_page(ui::Widget& page, const ui::StringTable& strings)
+            {
+                for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
+                {
+                    const float y = static_cast<float>(i) * kRowHeight;
+                    auto& tick = page.add<ui::Tickbox>("option" + std::to_string(i), std::string(skins::kTickbox), std::string(skins::kTick));
+                    tick.placement = ui::top_left(0, y + 3, 12, 12);
+                    tick.ticked = i == 0;
+                    tick.tooltip = strings.get(kOptionTips[i]);
+                    auto& label = page.add<ui::Label>("label" + std::to_string(i), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
+                    label.placement = { { 0, 0, 1, 0 }, { 18, y, -30, y + kRowHeight } };
+                    label.style.vertical = ui::Align::Centre;
+                }
+                auto& toggle = page.add<ui::Button>("toggle", std::string(kToggleFamily));
+                toggle.toggle = true;
+                toggle.placement = ui::top_right(0, 0, 20, 20);
+
+                // A slider and a spinner, each showing its value beside it.
+                const float y = static_cast<float>(kOptionKeys.size()) * kRowHeight + 8;
+                volume_ = &page.add<ui::Slider>("volume", skins::slider_style());
+                volume_->maximum = 100;
+                volume_->set_value(70);
+                volume_->placement = { { 0, 0, 1, 0 }, { 0, y, -50, y + kRowHeight } };
+                volume_label_ = &page.add<ui::Label>("volume_value", u"", ui::FontRole::Small);
+                volume_label_->placement = { { 1, 0, 1, 0 }, { -44, y, 0, y + kRowHeight } };
+                volume_label_->style.vertical = ui::Align::Centre;
+
+                guests_ = &page.add<ui::Spinner>("guests", skins::spinner_style());
+                guests_->maximum = 9999;
+                guests_->step = 50;
+                guests_->set_value(500);
+                guests_->placement = ui::top_left(0, y + kRowHeight + 8, 90, 16);
+                guests_label_ = &page.add<ui::Label>("guests_label", u"guests", ui::FontRole::Small);
+                guests_label_->placement = ui::top_left(96, y + kRowHeight + 8, 120, 16);
+                guests_label_->style.vertical = ui::Align::Centre;
+            }
+
             void update(const ui::UpdateContext& context) override
             {
                 ui::Window::update(context);
+                volume_label_->text = strings::to_utf16(std::to_string(static_cast<int>(volume_->value())) + "%");
+                if (guests_->take_change())
+                    guests_label_->text = guests_->value() == 1 ? u"guest" : u"guests";
                 if (name_->take_change())
                     title = name_->text;
                 if (rides_->take_activate() && rides_->selected())
@@ -155,6 +198,10 @@ namespace rct3::scene
             ui::Button* text_cancel_ = nullptr;
             ui::EditBox* name_ = nullptr;
             ui::ListBox* rides_ = nullptr;
+            ui::Slider* volume_ = nullptr;
+            ui::Label* volume_label_ = nullptr;
+            ui::Spinner* guests_ = nullptr;
+            ui::Label* guests_label_ = nullptr;
         };
 
         // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure

@@ -2,13 +2,14 @@
 //
 // rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--frames N]
+//   rct3pp [--renderer NAME] [--no-vsync] [--frames N] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
 //   --frames N        exit after N frames (smoke test)
-//
-// RCT3_VALIDATION set in the environment enables the graphics API's validation layer.
+//   --help            this text and the environment variables read (config/environment.hpp)
+#include "config/environment.hpp"
+#include "config/game_install.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "platform/window.hpp"
@@ -29,11 +30,18 @@
 namespace
 {
 
-    constexpr const char* kValidationEnv = "RCT3_VALIDATION";
-
-    void print_usage()
+    // Command-line help, not log messages.
+    void print_usage(std::FILE* out)
     {
-        std::fprintf(stderr, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--frames N]\n"); // command-line help, not a log message
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--frames N] [--help]\n");
+    }
+
+    void print_help()
+    {
+        print_usage(stdout);
+        std::printf("\nenvironment:\n");
+        for (const auto& var : rct3::config::env_vars())
+            std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data());
     }
 
     void draw_profiler_window(const rct3::render::Device& device)
@@ -132,7 +140,9 @@ int main(int argc, char** argv)
 {
     namespace prof = rct3::profiling;
     namespace render = rct3::render;
+    namespace config = rct3::config;
     const auto log = rct3::logging::logger("app");
+    const auto env = config::Environment::from_process();
 
     int max_frames = -1;
     render::Backend backend = render::Backend::Vulkan;
@@ -148,7 +158,7 @@ int main(int argc, char** argv)
             const auto parsed = render::parse_backend(argv[++i]);
             if (!parsed)
             {
-                print_usage();
+                print_usage(stderr);
                 return 2;
             }
             backend = *parsed;
@@ -157,12 +167,24 @@ int main(int argc, char** argv)
         {
             vsync = false;
         }
+        else if (std::strcmp(argv[i], "--help") == 0)
+        {
+            print_help();
+            return 0;
+        }
         else
         {
-            print_usage();
+            print_usage(stderr);
             return 2;
         }
     }
+
+    // Nothing is loaded from the game yet, so a missing install is not fatal for now.
+    const auto install = config::find_game_install(env);
+    if (install)
+        log.info("game install: {}", install->root().string());
+    else
+        log.warning("{}", config::describe(install.error()));
 
     auto window = rct3::platform::Window::open({ }, backend);
     if (!window)
@@ -172,12 +194,12 @@ int main(int argc, char** argv)
     }
 
     const auto device = render::make_device(backend);
-    const render::DeviceConfig config {
+    const render::DeviceConfig device_config {
         .window = window->handle(),
         .vsync = vsync,
-        .validation = std::getenv(kValidationEnv) != nullptr,
+        .validation = env.flag(config::EnvVar::Validation),
     };
-    if (auto ready = device->init(config); !ready)
+    if (auto ready = device->init(device_config); !ready)
     {
         log.critical("{} renderer: {}", render::backend_name(backend), ready.error());
         return 1;

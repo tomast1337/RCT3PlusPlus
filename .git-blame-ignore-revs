@@ -1,0 +1,5 @@
+# Revisions to skip in git blame. Enable with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: apply clang-format to the whole tree
+2d5dbdbb7c4863348cb42f35e6a5db246f6b8992

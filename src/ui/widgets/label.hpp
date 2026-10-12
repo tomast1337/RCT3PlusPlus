@@ -27,7 +27,7 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
 
     private:
-        float text_height_ = 0; // As of the last update
+        Point text_size_; // Widest line and all lines' height, as of the last update
     };
 
 } // namespace rct3::ui

@@ -78,7 +78,8 @@ namespace rct3::ui
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
-        bool on_wheel(float notches) override;
+        /// Uses the wheel along the bar: y for a vertical bar, x for a horizontal one.
+        bool on_wheel(Point notches) override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 

@@ -42,23 +42,23 @@ TEST_CASE("a scroll area sizes its bar from the children and moves them")
     desktop.layout({ 0, 0, 300, 300 });
 
     desktop.update({ { 200, 200 }, false, true });
-    CHECK(area.bar().content == 250);
-    CHECK(area.bar().visible == 100);
+    CHECK(area.vertical()->content == 250);
+    CHECK(area.vertical()->visible == 100);
     CHECK(area.content().rect().x1 == 100); // Leaves room for the bar
 
     SUBCASE("the wheel over a child scrolls the area")
     {
-        desktop.update({ { 20, 20 }, false, true, -2 });
-        CHECK(area.bar().position == 60);
+        desktop.update({ { 20, 20 }, false, true, { 0, -2 } });
+        CHECK(area.vertical()->position == 60);
         CHECK(tall.rect().y0 == -60);
     }
     SUBCASE("shrinking content pulls the view back")
     {
-        area.bar().position = 150;
+        area.vertical()->position = 150;
         tall.placement = top_left(0, 0, 50, 120);
         desktop.update({ { 200, 200 }, false, true });
         desktop.update({ { 200, 200 }, false, true });
-        CHECK(area.bar().position == 20);
+        CHECK(area.vertical()->position == 20);
     }
     SUBCASE("children outside the view are cut off")
     {
@@ -88,8 +88,8 @@ TEST_CASE("wrapped labels count their text, not their box")
     desktop.update({ { 200, 200 }, false, true }, context);
     CHECK(label.extent().y1 == 60);
     desktop.update({ { 200, 200 }, false, true }, context);
-    CHECK(area.bar().content == 60);
-    CHECK(area.bar().range() == 10);
+    CHECK(area.vertical()->content == 60);
+    CHECK(area.vertical()->range() == 10);
 }
 
 TEST_CASE("the wheel goes up the tree to the first widget that takes it")
@@ -103,7 +103,94 @@ TEST_CASE("the wheel goes up the tree to the first widget that takes it")
     desktop.layout({ 0, 0, 300, 300 });
     desktop.update({ { 200, 200 }, false, true });
 
-    desktop.update({ { 20, 20 }, false, true, -1 });
-    CHECK(inner.bar().position == 0);
-    CHECK(outer.bar().position == 30);
+    desktop.update({ { 20, 20 }, false, true, { 0, -1 } });
+    CHECK(inner.vertical()->position == 0);
+    CHECK(outer.vertical()->position == 30);
+}
+
+TEST_CASE("a horizontal bar scrolls content wider than the view")
+{
+    Desktop desktop;
+    ScrollArea& area = desktop.root().add<ScrollArea>("area", std::nullopt, style());
+    area.placement = top_left(0, 0, 100, 60);
+    REQUIRE(area.vertical() == nullptr);
+    REQUIRE(area.horizontal() != nullptr);
+    Widget& wide = area.content().add<Widget>("wide");
+    wide.placement = top_left(0, 0, 300, 20);
+    Widget& stretched = area.content().add<Widget>("stretched");
+    stretched.placement = fill();
+    desktop.layout({ 0, 0, 300, 300 });
+
+    desktop.update({ { 200, 200 }, false, true });
+    CHECK(area.horizontal()->content == 300);
+    CHECK(area.horizontal()->visible == 100);
+    CHECK(area.horizontal()->rect() == Rect { 0, 50, 100, 60 });
+    CHECK(area.content().rect().y1 == 50); // Above the bar
+    CHECK(stretched.rect().x1 == 300);     // Follows the content, not the view
+
+    SUBCASE("the usual wheel scrolls sideways when there is no vertical bar")
+    {
+        desktop.update({ { 20, 20 }, false, true, { 0, -1 } });
+        CHECK(area.horizontal()->position == 30);
+        CHECK(wide.rect().x0 == -30);
+    }
+    SUBCASE("so does the sideways wheel")
+    {
+        desktop.update({ { 20, 20 }, false, true, { -2, 0 } });
+        CHECK(area.horizontal()->position == 60);
+    }
+    SUBCASE("narrower content needs no scrolling")
+    {
+        wide.placement = top_left(0, 0, 50, 20);
+        stretched.visible = false;
+        desktop.update({ { 200, 200 }, false, true });
+        desktop.update({ { 200, 200 }, false, true });
+        CHECK(area.horizontal()->content == 100);
+        CHECK(area.horizontal()->range() == 0);
+    }
+}
+
+TEST_CASE("an area with both bars scrolls each way and leaves the corner free")
+{
+    Desktop desktop;
+    ScrollArea& area = desktop.root().add<ScrollArea>("area", style(), style());
+    area.placement = top_left(0, 0, 110, 70);
+    area.content().add<Widget>("big").placement = top_left(0, 0, 400, 200);
+    desktop.layout({ 0, 0, 300, 300 });
+    desktop.update({ { 200, 200 }, false, true });
+
+    CHECK(area.vertical()->rect() == Rect { 100, 0, 110, 60 });
+    CHECK(area.horizontal()->rect() == Rect { 0, 60, 100, 70 });
+    CHECK(area.vertical()->visible == 60);
+    CHECK(area.vertical()->content == 200);
+    CHECK(area.horizontal()->visible == 100);
+    CHECK(area.horizontal()->content == 400);
+
+    desktop.update({ { 20, 20 }, false, true, { 0, -1 } });
+    CHECK(area.vertical()->position == 30);
+    CHECK(area.horizontal()->position == 0);
+    desktop.update({ { 20, 20 }, false, true, { -1, 0 } });
+    CHECK(area.horizontal()->position == 30);
+    CHECK(area.content().rect().x0 == -30);
+    CHECK(area.content().rect().y0 == -30);
+}
+
+TEST_CASE("unwrapped labels count their widest line")
+{
+    FontSet fonts;
+    fonts.set(FontRole::Small, test_font());
+    Desktop desktop;
+    ScrollArea& area = desktop.root().add<ScrollArea>("area", std::nullopt, style());
+    area.placement = top_left(0, 0, 50, 60);
+    // Eight glyphs of 10 units on the longest line: 80 wide in a 50 wide view.
+    Label& label = area.content().add<Label>("text", u"xx\nxxxx xxx\nx");
+    label.placement = fill();
+    desktop.layout({ 0, 0, 300, 300 });
+
+    const UpdateContext context { 0, &fonts };
+    desktop.update({ { 200, 200 }, false, true }, context);
+    CHECK(label.extent().x1 == 80);
+    desktop.update({ { 200, 200 }, false, true }, context);
+    CHECK(area.horizontal()->content == 80);
+    CHECK(area.horizontal()->range() == 30);
 }

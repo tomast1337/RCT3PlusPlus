@@ -146,9 +146,11 @@ namespace rct3::ui
         virtual void on_release(Point, bool /*inside*/)
         {
         }
-        /// The wheel turned with the pointer over this widget or a child that did not take it. `notches` is
-        /// positive away from the user. Returns whether the widget used it; if not, its parent is asked.
-        virtual bool on_wheel(float /*notches*/)
+        /// The wheel turned with the pointer over this widget or a child that did not take it. `notches.y`
+        /// is positive away from the user, `notches.x` (a tilting wheel, a touchpad, or Shift held) positive to
+        /// the left: both move the view towards the start. Returns whether the widget used it; if not, its
+        /// parent is asked.
+        virtual bool on_wheel(Point /*notches*/)
         {
             return false;
         }

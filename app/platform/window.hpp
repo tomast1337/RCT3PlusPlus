@@ -49,7 +49,8 @@ namespace rct3::platform
             float x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
             float y = 0;
             bool left = false;
-            float wheel = 0; ///< Notches turned since the last poll_events, positive away from the user
+            float wheel_x = 0; ///< Notches turned sideways since the last poll_events, positive to the left
+            float wheel_y = 0; ///< Notches turned since the last poll_events, positive away from the user
         };
         [[nodiscard]] Pointer pointer() const;
 
@@ -61,7 +62,8 @@ namespace rct3::platform
         // user pointer stays valid when the Window moves.
         struct Collected
         {
-            double wheel = 0;
+            double wheel_x = 0;
+            double wheel_y = 0;
         };
 
         Window(GLFWwindow* window, std::unique_ptr<Collected> collected)

@@ -124,12 +124,12 @@ TEST_CASE("the rider drags; the rail centres it on the pointer first")
 TEST_CASE("the wheel scrolls when there is something to scroll")
 {
     Fixture f;
-    CHECK(f.bar.on_wheel(-1));
+    CHECK(f.bar.on_wheel({ 0, -1 }));
     CHECK(f.bar.position == 50);
-    CHECK(f.bar.on_wheel(2));
+    CHECK(f.bar.on_wheel({ 0, 2 }));
     CHECK(f.bar.position == 0);
     f.bar.content = 50;
-    CHECK_FALSE(f.bar.on_wheel(-1));
+    CHECK_FALSE(f.bar.on_wheel({ 0, -1 }));
 }
 
 TEST_CASE("horizontal bars lay out along x")

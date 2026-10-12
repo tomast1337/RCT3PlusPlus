@@ -184,7 +184,7 @@ namespace rct3::ui
         was_down_ = down;
 
         // The wheel goes to the deepest widget under the pointer that wants it, then up through its parents.
-        if (pointer.present && pointer.wheel != 0 && held_ == nullptr)
+        if (pointer.present && (pointer.wheel.x != 0 || pointer.wheel.y != 0) && held_ == nullptr)
         {
             for (Widget* w = deepest(pointer.position); w != nullptr; w = w->parent())
             {

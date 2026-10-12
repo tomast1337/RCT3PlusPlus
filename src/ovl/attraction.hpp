@@ -4,67 +4,69 @@
 // kind of attraction it is and how the park builder's list shows it. Internal to the item readers.
 #pragma once
 
+#include "ovl/item_record.hpp"
+
 #include <cstdint>
 #include <string_view>
 
-#include "ovl/item_record.hpp"
+namespace rct3::ovl
+{
 
-namespace rct3::ovl {
+    struct AttractionInfo
+    {
+        /// Kind of attraction within its item type. Files store it directly in version 1 and with an offset of
+        /// 512 (version 4) or 768 (version 5) later, which is removed here.
+        std::uint32_t type_id = 0;
+        std::string_view name_text;        ///< "txt" item: name shown in the park builder
+        std::string_view description_text; ///< "txt" item: description shown there
+        std::string_view icon;             ///< "gsi" item: icon of the entry
+        std::string_view style;            ///< "sid" item the attraction is placed as
+        std::string_view spline;           ///< "spl" item
+        /// Two values stored as 10000 and -7500 in most items, and other pairs (580 and -522, 30000 and
+        /// -30000) in some. Meaning unconfirmed.
+        std::int32_t value_a = 0;
+        std::int32_t value_b = 0;
+        /// 2500 or 4960 in nearly all items. Meaning unconfirmed.
+        std::uint32_t value_c = 0;
+    };
 
-struct AttractionInfo {
-  /// Kind of attraction within its item type. Files store it directly in version 1 and with an offset of
-  /// 512 (version 4) or 768 (version 5) later, which is removed here.
-  std::uint32_t type_id = 0;
-  std::string_view name_text;         ///< "txt" item: name shown in the park builder
-  std::string_view description_text;  ///< "txt" item: description shown there
-  std::string_view icon;              ///< "gsi" item: icon of the entry
-  std::string_view style;             ///< "sid" item the attraction is placed as
-  std::string_view spline;            ///< "spl" item
-  /// Two values stored as 10000 and -7500 in most items, and other pairs (580 and -522, 30000 and
-  /// -30000) in some. Meaning unconfirmed.
-  std::int32_t value_a = 0;
-  std::int32_t value_b = 0;
-  /// 2500 or 4960 in nearly all items. Meaning unconfirmed.
-  std::uint32_t value_c = 0;
-};
+    namespace detail
+    {
 
-namespace detail {
+        /// Byte offsets of the fields of `AttractionInfo` in one item type and file version, -1 where it has none.
+        struct AttractionLayout
+        {
+            int type_id = -1;
+            int name_text = -1;
+            int description_text = -1;
+            int icon = -1;
+            int style = -1;
+            int spline = -1;
+            int value_a = -1;
+            int value_b = -1;
+            int value_c = -1;
+        };
 
-/// Byte offsets of the fields of `AttractionInfo` in one item type and file version, -1 where it has none.
-struct AttractionLayout {
-  int type_id = -1;
-  int name_text = -1;
-  int description_text = -1;
-  int icon = -1;
-  int style = -1;
-  int spline = -1;
-  int value_a = -1;
-  int value_b = -1;
-  int value_c = -1;
-};
+        [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, std::uint32_t version)
+        {
+            const auto word = [&](int offset) -> std::uint32_t { return offset < 0 ? 0 : record.u32(offset); };
+            const auto ref = [&](int offset, std::string_view tag) -> std::string_view { return offset < 0 ? std::string_view { } : record.ref(offset, tag); };
 
-[[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at,
-                                                    std::uint32_t version) {
-  const auto word = [&](int offset) -> std::uint32_t { return offset < 0 ? 0 : record.u32(offset); };
-  const auto ref = [&](int offset, std::string_view tag) -> std::string_view {
-    return offset < 0 ? std::string_view{} : record.ref(offset, tag);
-  };
+            AttractionInfo info;
+            const std::uint32_t offset = version == 4 ? 512 : version == 5 ? 768 : 0;
+            const std::uint32_t stored = word(at.type_id);
+            info.type_id = stored >= offset ? stored - offset : stored;
+            info.name_text = ref(at.name_text, "txt");
+            info.description_text = ref(at.description_text, "txt");
+            info.icon = ref(at.icon, "gsi");
+            info.style = ref(at.style, "sid");
+            info.spline = ref(at.spline, "spl");
+            info.value_a = static_cast<std::int32_t>(word(at.value_a));
+            info.value_b = static_cast<std::int32_t>(word(at.value_b));
+            info.value_c = word(at.value_c);
+            return info;
+        }
 
-  AttractionInfo info;
-  const std::uint32_t offset = version == 4 ? 512 : version == 5 ? 768 : 0;
-  const std::uint32_t stored = word(at.type_id);
-  info.type_id = stored >= offset ? stored - offset : stored;
-  info.name_text = ref(at.name_text, "txt");
-  info.description_text = ref(at.description_text, "txt");
-  info.icon = ref(at.icon, "gsi");
-  info.style = ref(at.style, "sid");
-  info.spline = ref(at.spline, "spl");
-  info.value_a = static_cast<std::int32_t>(word(at.value_a));
-  info.value_b = static_cast<std::int32_t>(word(at.value_b));
-  info.value_c = word(at.value_c);
-  return info;
-}
+    } // namespace detail
 
-}  // namespace detail
-
-}  // namespace rct3::ovl
+} // namespace rct3::ovl

@@ -26,7 +26,13 @@ namespace rct3::platform
         // Installed before ImGui's own callbacks, which call it in turn.
         auto collected = std::make_unique<Collected>();
         glfwSetWindowUserPointer(window, collected.get());
-        glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) { static_cast<Collected*>(glfwGetWindowUserPointer(w))->wheel += y; });
+        glfwSetScrollCallback(window, [](GLFWwindow* w, double x, double y) {
+            auto* collected = static_cast<Collected*>(glfwGetWindowUserPointer(w));
+            // Shift turns the wheel sideways, as in most programs.
+            const bool shift = glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(w, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+            collected->wheel_x += shift ? x + y : x;
+            collected->wheel_y += shift ? 0 : y;
+        });
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -61,7 +67,8 @@ namespace rct3::platform
 
     void Window::poll_events()
     {
-        collected_->wheel = 0;
+        collected_->wheel_x = 0;
+        collected_->wheel_y = 0;
         glfwPollEvents();
     }
 
@@ -90,7 +97,8 @@ namespace rct3::platform
             p.y = static_cast<float>(cy * fh / wh);
         }
         p.left = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-        p.wheel = static_cast<float>(collected_->wheel);
+        p.wheel_x = static_cast<float>(collected_->wheel_x);
+        p.wheel_y = static_cast<float>(collected_->wheel_y);
         return p;
     }
 

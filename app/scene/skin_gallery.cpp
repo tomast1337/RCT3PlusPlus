@@ -62,17 +62,13 @@ namespace rct3::scene
             return std::unexpected(renderer.error());
         gallery.renderer = *renderer;
 
-        for (const auto& [name, image] : set->images)
+        auto textures = ui::upload_textures(device, set->images);
+        if (!textures)
         {
-            const auto pixels = std::as_bytes(std::span(image.pixels));
-            auto texture = device.create_texture({ image.width, image.height, render::TextureFormat::Rgba8, pixels, name });
-            if (!texture)
-            {
-                destroy_skin_gallery(device, gallery);
-                return std::unexpected(name + ": " + texture.error());
-            }
-            gallery.textures.emplace(name, GalleryTexture { *texture, static_cast<float>(image.width), static_cast<float>(image.height) });
+            destroy_skin_gallery(device, gallery);
+            return std::unexpected(textures.error());
         }
+        gallery.textures = std::move(*textures);
         gallery.skins = std::move(set->skins);
         return gallery;
     }
@@ -138,8 +134,7 @@ namespace rct3::scene
 
     void destroy_skin_gallery(render::Device& device, SkinGallery& gallery)
     {
-        for (auto& [name, texture] : gallery.textures)
-            device.destroy_texture(texture.handle);
+        ui::destroy_textures(device, gallery.textures);
         ui::destroy_ui_renderer(device, gallery.renderer);
         gallery = { };
     }

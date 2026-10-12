@@ -10,6 +10,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/skin_set.hpp"
 #include "ui/ui_renderer.hpp"
+#include "ui/ui_textures.hpp"
 
 #include <array>
 #include <expected>
@@ -20,18 +21,11 @@
 namespace rct3::scene
 {
 
-    struct GalleryTexture
-    {
-        render::TextureHandle handle;
-        float width = 0;
-        float height = 0;
-    };
-
     struct SkinGallery
     {
         ui::UiRenderer renderer;
         std::map<std::string, ui::NamedSkin, std::less<>> skins;
-        std::map<std::string, GalleryTexture, std::less<>> textures;
+        ui::UiTextures textures;
         ui::DrawList list;
     };
 

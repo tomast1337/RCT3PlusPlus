@@ -1,0 +1,19 @@
+build/
+.cache/
+compile_commands.json
+
+# Private, game-derived material. See CLEAN_ROOM.md.
+local/
+
+# Safety net: game files must never be tracked.
+*.ovl
+*.ftx
+*.shs
+*.chk
+*.gpr
+*.rep/
+*.lock
+
+# nob bootstrap binary
+/nob
+/nob.old

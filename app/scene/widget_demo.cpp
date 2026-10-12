@@ -237,7 +237,7 @@ namespace rct3::scene
         return demo;
     }
 
-    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, float elapsed)
+    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed)
     {
         const float scale = scale_for(device, demo);
         const render::Extent extent = device.extent();
@@ -249,7 +249,7 @@ namespace rct3::scene
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        return demo.desktop.update(pointer, { elapsed, &demo.fonts });
+        return demo.desktop.update(pointer, keyboard, { elapsed, &demo.fonts });
     }
 
     void draw_widget_demo(render::Device& device, WidgetDemo& demo)

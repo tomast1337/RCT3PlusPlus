@@ -194,3 +194,43 @@ TEST_CASE("unwrapped labels count their widest line")
     CHECK(area.horizontal()->content == 80);
     CHECK(area.horizontal()->range() == 30);
 }
+
+TEST_CASE("a focused scroll area moves with the keys")
+{
+    Desktop desktop;
+    ScrollArea& area = desktop.root().add<ScrollArea>("area", style(), style());
+    area.placement = top_left(0, 0, 110, 110);
+    area.content().add<Widget>("big").placement = top_left(0, 0, 400, 500);
+    desktop.layout({ 0, 0, 300, 300 });
+    desktop.update({ { 20, 20 }, true, true });
+    desktop.update({ { 20, 20 }, false, true });
+    REQUIRE(desktop.keyboard_focus() == &area);
+    ScrollBar& v = *area.vertical();
+    ScrollBar& h = *area.horizontal();
+    REQUIRE(v.visible == 100);
+
+    const auto press = [&](Key key) {
+        KeyboardState k;
+        k.presses.push_back({ key });
+        desktop.update({ { 200, 200 }, false, true }, k);
+    };
+    press(Key::Down);
+    CHECK(v.position == style().step);
+    press(Key::PageDown);
+    CHECK(v.position == style().step + (100 - style().step));
+    press(Key::End);
+    CHECK(v.position == v.range());
+    press(Key::Home);
+    CHECK(v.position == 0);
+    press(Key::Right);
+    CHECK(h.position == style().step);
+    CHECK(v.position == 0);
+    press(Key::Left);
+    CHECK(h.position == 0);
+}
+
+TEST_CASE("an area with nothing to scroll leaves the keys to its parents")
+{
+    ScrollArea area("area", style());
+    CHECK_FALSE(area.on_key({ Key::Down }));
+}

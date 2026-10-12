@@ -15,6 +15,7 @@
 #include "platform/window.hpp"
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
+#include "scene/skin_gallery.hpp"
 #include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
 
@@ -25,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -181,7 +183,7 @@ int main(int argc, char** argv)
         }
     }
 
-    // Nothing is loaded from the game yet, so a missing install is not fatal for now.
+    // Only the skin gallery uses the game so far, so a missing install is not fatal for now.
     const auto install = config::find_game_install(env);
     if (install)
         log.info("game install: {}", install->root().string());
@@ -220,6 +222,19 @@ int main(int argc, char** argv)
         log.critical("ui demo: {}", ui_demo.error());
         return 1;
     }
+    // Real skins replace the generated demo when the game is there to read them from.
+    std::optional<rct3::scene::SkinGallery> gallery;
+    if (install)
+    {
+        if (const auto main_ovl = install->find("Main.common.ovl"))
+        {
+            auto loaded = rct3::scene::create_skin_gallery(*device, *main_ovl);
+            if (loaded)
+                gallery = std::move(*loaded);
+            else
+                log.warning("skins: {}", loaded.error());
+        }
+    }
 
     int status = 0;
     try
@@ -247,7 +262,10 @@ int main(int argc, char** argv)
                     device->begin_frame();
                     device->begin_pass({ .clear_color = { 0.05f, 0.06f, 0.08f, 1.0f } });
                     rct3::scene::draw_test_scene(*device, *scene, now);
-                    rct3::scene::draw_ui_demo(*device, *ui_demo, now);
+                    if (gallery)
+                        rct3::scene::draw_skin_gallery(*device, *gallery, now);
+                    else
+                        rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     device->draw_ui();
                     device->end_pass();
                     device->end_frame();
@@ -263,6 +281,8 @@ int main(int argc, char** argv)
         status = 1;
     }
 
+    if (gallery)
+        rct3::scene::destroy_skin_gallery(*device, *gallery);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);
     rct3::scene::destroy_test_scene(*device, *scene);
     device->shutdown();

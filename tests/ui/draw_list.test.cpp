@@ -112,3 +112,20 @@ TEST_CASE("clear starts the next frame empty")
     CHECK(list.batches().empty());
     CHECK(list.clip() == nullptr);
 }
+
+TEST_CASE("the scale turns logical units into pixels before rounding")
+{
+    DrawList list;
+    list.set_scale(2.5f);
+    REQUIRE(list.push_clip({ 0, 0, 10, 10 }));
+    CHECK(*list.clip() == Rect { 0, 0, 25, 25 });
+    list.fill({ 1, 1, 3, 20 }, kRed);
+    list.pop_clip();
+    REQUIRE(list.vertices().size() == 4);
+    CHECK(list.vertices()[0].x == 3); // 2.5 rounds up
+    CHECK(list.vertices()[0].y == 3);
+    CHECK(list.vertices()[2].x == 8); // 7.5 rounds up
+    CHECK(list.vertices()[2].y == 25);
+    list.clear();
+    CHECK(list.scale() == 2.5f);
+}

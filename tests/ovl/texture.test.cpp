@@ -97,6 +97,7 @@ TEST_CASE("textures expose parameters, style and node")
     CHECK(t.first == 1);
     CHECK(t.count == 2);
     REQUIRE(t.node.has_value());
+    CHECK(t.node->address == kBase + kNode);
     CHECK(t.node->first == 0);
     CHECK(t.node->second == 12);
     CHECK(t.node->scale == 30.0f);

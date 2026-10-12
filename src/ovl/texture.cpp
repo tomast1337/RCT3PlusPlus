@@ -68,6 +68,7 @@ namespace rct3::ovl
                 if (!node)
                     return std::nullopt;
                 TextureNode out;
+                out.address = u32_at(*cell, 0);
                 out.first = u32_at(*node, 0);
                 out.second = u32_at(*node, 4);
                 std::memcpy(&out.scale, node->data() + 8, sizeof out.scale);

@@ -1,0 +1,3 @@
+Checks: '-*,clang-analyzer-*,bugprone-dangling-handle,bugprone-undefined-memory-manipulation,bugprone-use-after-move,performance-move-const-arg'
+WarningsAsErrors: 'clang-analyzer-*,bugprone-dangling-handle,bugprone-undefined-memory-manipulation,bugprone-use-after-move,performance-move-const-arg'
+HeaderFilterRegex: '(^|.*/)(src|tests)/'

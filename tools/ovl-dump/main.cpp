@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "ovl/overlay.hpp"
+#include "ovl/sound.hpp"
 #include "ovl/text.hpp"
 
 namespace {
@@ -23,6 +24,7 @@ struct Options {
   bool symbols = false;
   bool loaders = false;
   bool text = false;
+  bool sound = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -117,6 +119,26 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   sym.name.empty() ? "<unresolved>" : std::string(sym.name).c_str());
     }
   }
+  if (opt.sound) {
+    const auto sounds = rct3::ovl::read_sounds(overlay, part);
+    std::size_t bad = 0;
+    std::size_t no_samples = 0;
+    for (const auto& item : sounds) {
+      if (!item.info) ++bad;
+      else if (!item.info->samples) ++no_samples;
+    }
+    std::printf("sounds         %zu (%zu unreadable, %zu without samples)\n", sounds.size(), bad, no_samples);
+    for (const auto& item : sounds) {
+      const std::string name(item.name);
+      if (!item.info) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& s = *item.info;
+      std::printf("  %-32s fmt %u ch %u rate %u bits %u size %u addr %08x flag %u\n", name.c_str(), s.format_tag,
+                  s.channels, s.sample_rate, s.bits_per_sample, s.data_size, s.data_address, s.flag);
+    }
+  }
   if (opt.text) {
     const auto texts = rct3::ovl::read_texts(overlay, part);
     std::size_t bad = 0;
@@ -148,11 +170,12 @@ int main(int argc, char** argv) {
     if (std::strcmp(argv[i], "--symbols") == 0) opt.symbols = true;
     else if (std::strcmp(argv[i], "--loaders") == 0) opt.loaders = true;
     else if (std::strcmp(argv[i], "--text") == 0) opt.text = true;
+    else if (std::strcmp(argv[i], "--sound") == 0) opt.sound = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] PATH\n", argv[0]);
     return 2;
   }
 

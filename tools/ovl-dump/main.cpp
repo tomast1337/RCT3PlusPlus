@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,7 @@
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 #include "ovl/text.hpp"
+#include "ovl/texture_image.hpp"
 
 namespace {
 
@@ -884,6 +886,82 @@ void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, c
 }
 // --- end scenery and placement item types ---
 
+// --- texture decoding export (feat/texture-decode) ---
+// Decodes every flexi texture frame, bitmap-table bitmap and revision 2 flic image of a part. With a
+// directory, each image is written there as an uncompressed TGA; with "-" nothing is written and only the
+// counts are printed. Meant for checking the decoders against real files.
+const char* g_tex_export_dir = nullptr;
+std::string g_tex_export_stem;
+
+void export_textures(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  namespace ovl = rct3::ovl;
+  const bool write = std::strcmp(g_tex_export_dir, "-") != 0;
+  std::size_t frames = 0, frames_bad = 0, bitmaps = 0, bitmaps_bad = 0, flics = 0, flics_bad = 0, images = 0;
+  std::size_t by_format[32] = {};
+
+  auto save = [&](const ovl::RgbaImage& image, const std::string& name) {
+    ++images;
+    if (!write) return;
+    const auto tga = ovl::encode_tga(image);
+    std::string safe = name;
+    for (char& c : safe) {
+      if (c == '/' || c == '\\' || c == '\0') c = '_';
+    }
+    const std::string path = std::string(g_tex_export_dir) + "/" + g_tex_export_stem + "_" + title + "_" + safe + ".tga";
+    if (std::FILE* f = std::fopen(path.c_str(), "wb")) {
+      std::fwrite(tga.data(), 1, tga.size(), f);
+      std::fclose(f);
+    }
+  };
+  auto save_levels = [&](const std::vector<ovl::RgbaImage>& levels, const std::string& name) {
+    for (std::size_t m = 0; m < levels.size(); ++m) save(levels[m], name + "_m" + std::to_string(m));
+  };
+
+  for (const auto& item : ovl::read_flexi_textures(overlay, part)) {
+    if (!item.texture) continue;
+    for (std::size_t i = 0; i < item.texture->frames.size(); ++i) {
+      ++frames;
+      const auto image = ovl::decode_flexi_frame(item.texture->frames[i]);
+      if (!image) {
+        ++frames_bad;
+        continue;
+      }
+      save(*image, "ftx_" + std::string(item.name) + "_f" + std::to_string(i));
+    }
+  }
+  for (const auto& item : ovl::read_bitmap_tables(overlay, part)) {
+    if (!item.table) continue;
+    for (std::size_t i = 0; i < item.table->bitmaps.size(); ++i) {
+      const auto& b = item.table->bitmaps[i];
+      ++bitmaps;
+      auto levels = ovl::decode_bitmap(b);
+      if (levels.empty()) {
+        ++bitmaps_bad;
+        continue;
+      }
+      if (b.format < 32) ++by_format[b.format];
+      save_levels(levels, "btbl" + std::to_string(item.row) + "_b" + std::to_string(i));
+    }
+  }
+  for (const auto& item : ovl::read_flics(overlay, part)) {
+    if (!item.flic || item.flic->revision != 2) continue;
+    ++flics;
+    auto levels = ovl::decode_flic_image(*item.flic);
+    if (levels.empty()) {
+      ++flics_bad;
+      continue;
+    }
+    if (item.flic->image && item.flic->image->format < 32) ++by_format[item.flic->image->format];
+    save_levels(levels, "flic" + std::to_string(item.address));
+  }
+  std::printf("tex export     %s: frames %zu (%zu failed) bitmaps %zu (%zu failed) flics %zu (%zu failed) images %zu\n",
+              title, frames, frames_bad, bitmaps, bitmaps_bad, flics, flics_bad, images);
+  for (std::size_t f = 0; f < 32; ++f) {
+    if (by_format[f]) std::printf("tex format     %s: %zu x format %zu\n", title, by_format[f], f);
+  }
+}
+// --- end texture decoding export ---
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -911,6 +989,7 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
     else if (std::strcmp(argv[i], "--btbl") == 0) opt.btbl = true;
     else if (std::strcmp(argv[i], "--flt") == 0) opt.flt = true;
+    else if (std::strcmp(argv[i], "--tex-export") == 0 && i + 1 < argc) g_tex_export_dir = argv[++i];
     else if (parse_scenery_option(argv[i])) {}
     else if (std::strcmp(argv[i], "--tks") == 0) opt.tks = true;
     else if (std::strcmp(argv[i], "--trr") == 0) opt.trr = true;
@@ -923,7 +1002,7 @@ int main(int argc, char** argv) {
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] PATH\n", argv[0]);
     std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
     return 2;
   }
@@ -934,9 +1013,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  if (g_tex_export_dir) {
+    g_tex_export_stem = std::filesystem::path(path).stem().string();
+    if (std::strcmp(g_tex_export_dir, "-") != 0) std::filesystem::create_directories(g_tex_export_dir);
+  }
+
   print_part("common", *overlay, overlay->common(), opt);
   if (const auto* unique = overlay->unique()) print_part("unique", *overlay, *unique, opt);
   else std::printf("== unique\n(none)\n");
+  if (g_tex_export_dir) {
+    export_textures("common", *overlay, overlay->common());
+    if (const auto* unique = overlay->unique()) export_textures("unique", *overlay, *unique);
+  }
   print_scenery_types("common", *overlay, overlay->common());
   if (const auto* unique = overlay->unique()) print_scenery_types("unique", *overlay, *unique);
   return 0;

@@ -41,6 +41,7 @@
 #include "ovl/sound.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/text.hpp"
+#include "ovl/texture_image.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
   std::vector<std::byte> bytes(reinterpret_cast<const std::byte*>(data), reinterpret_cast<const std::byte*>(data) + size);
@@ -52,6 +53,24 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   sink += rct3::ovl::read_texts(*overlay, part).size();
   sink += rct3::ovl::read_sounds(*overlay, part).size();
   sink += rct3::ovl::read_flexi_textures(*overlay, part).size();
+  // --- texture decoding (feat/texture-decode) ---
+  for (const auto& item : rct3::ovl::read_flexi_textures(*overlay, part)) {
+    if (!item.texture) continue;
+    for (const auto& frame : item.texture->frames) {
+      if (const auto image = rct3::ovl::decode_flexi_frame(frame)) sink += image->pixels.size();
+    }
+  }
+  for (const auto& item : rct3::ovl::read_bitmap_tables(*overlay, part)) {
+    if (!item.table) continue;
+    for (const auto& bitmap : item.table->bitmaps) {
+      for (const auto& level : rct3::ovl::decode_bitmap(bitmap)) sink += level.pixels.size();
+    }
+  }
+  for (const auto& item : rct3::ovl::read_flics(*overlay, part)) {
+    if (!item.flic) continue;
+    for (const auto& level : rct3::ovl::decode_flic_image(*item.flic)) sink += level.pixels.size();
+  }
+  // --- end texture decoding ---
   for (const auto& item : rct3::ovl::read_static_shapes(*overlay, part)) {
     if (!item.shape) continue;
     for (const auto& mesh : item.shape->meshes) {

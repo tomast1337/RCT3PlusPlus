@@ -215,10 +215,18 @@ namespace rct3::ui
         }
 
         // Keys after the pointer, so a press that moves the focus counts for keys in the same frame.
-        if (focus_ != nullptr && !usable(*focus_))
-            focus_ = nullptr;
         for (const KeyPress& key : keyboard.presses)
         {
+            // Checked for each key: one may hide the focused widget, e.g. by turning a page. Keys then
+            // start at its nearest parent still in use, so the rest still reach the widget that hid it.
+            if (focus_ != nullptr && !usable(*focus_))
+            {
+                while (focus_ != nullptr && focus_ != root_.get() && !usable(*focus_))
+                    focus_ = focus_->parent();
+                if (focus_ == root_.get())
+                    focus_ = nullptr;
+                focus_shown_ = false;
+            }
             Widget* top = root_->children().empty() ? nullptr : root_->children().back().get();
             Widget* start = focus_ != nullptr ? focus_ : top;
             bool used = false;

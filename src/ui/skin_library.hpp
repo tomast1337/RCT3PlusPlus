@@ -67,4 +67,13 @@ namespace rct3::ui
     /// instead of failing.
     void draw_skin(DrawList& list, const SkinRef* skin, const Rect& rect, Color tint = kWhite);
 
+    /// What draw_skin_state tints a resting face with when a family lacks the member for the state.
+    inline constexpr Color kPressedTint { 190, 190, 190, 255 };
+    inline constexpr Color kDisabledTint { 128, 128, 128, 160 };
+
+    /// Draws the member of `family` for `state` over `rect`. When the family has no member of its own for a
+    /// held, on or disabled state, its resting look is tinted darker or faded instead, so the state still
+    /// shows on plain skins.
+    void draw_skin_state(DrawList& list, const SkinLibrary& skins, std::string_view family, SkinState state, const Rect& rect);
+
 } // namespace rct3::ui

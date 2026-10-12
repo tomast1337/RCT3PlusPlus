@@ -37,6 +37,7 @@ namespace rct3::render
     enum class Backend : std::uint8_t
     {
         Vulkan,
+        Null, ///< Draws nothing; for running without a GPU and for checking callers
     };
 
     struct DeviceConfig

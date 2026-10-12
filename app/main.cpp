@@ -4,7 +4,7 @@
 //
 //   rct3pp [--renderer NAME] [--no-vsync] [--frames N]
 //
-//   --renderer NAME   render backend: vulkan (default)
+//   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
 //   --frames N        exit after N frames (smoke test)
 //
@@ -33,7 +33,7 @@ namespace
 
     void print_usage()
     {
-        std::fprintf(stderr, "usage: rct3pp [--renderer vulkan] [--no-vsync] [--frames N]\n"); // command-line help, not a log message
+        std::fprintf(stderr, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--frames N]\n"); // command-line help, not a log message
     }
 
     void draw_profiler_window(const rct3::render::Device& device)

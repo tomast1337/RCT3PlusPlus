@@ -6,10 +6,69 @@
 #include "render/backend.hpp"
 
 #include <GLFW/glfw3.h>
+#include <optional>
 #include <utility>
 
 namespace rct3::platform
 {
+
+    namespace
+    {
+
+        std::optional<ui::Key> interface_key(int key)
+        {
+            switch (key)
+            {
+                case GLFW_KEY_LEFT:
+                    return ui::Key::Left;
+                case GLFW_KEY_RIGHT:
+                    return ui::Key::Right;
+                case GLFW_KEY_UP:
+                    return ui::Key::Up;
+                case GLFW_KEY_DOWN:
+                    return ui::Key::Down;
+                case GLFW_KEY_PAGE_UP:
+                    return ui::Key::PageUp;
+                case GLFW_KEY_PAGE_DOWN:
+                    return ui::Key::PageDown;
+                case GLFW_KEY_HOME:
+                    return ui::Key::Home;
+                case GLFW_KEY_END:
+                    return ui::Key::End;
+                case GLFW_KEY_TAB:
+                    return ui::Key::Tab;
+                case GLFW_KEY_ESCAPE:
+                    return ui::Key::Escape;
+                case GLFW_KEY_ENTER:
+                case GLFW_KEY_KP_ENTER:
+                    return ui::Key::Enter;
+                case GLFW_KEY_BACKSPACE:
+                    return ui::Key::Backspace;
+                case GLFW_KEY_DELETE:
+                    return ui::Key::Delete;
+                default:
+                    return std::nullopt;
+            }
+        }
+
+        void append_utf16(std::u16string& out, unsigned int c)
+        {
+            if (c < 0x10000)
+            {
+                out += static_cast<char16_t>(c);
+                return;
+            }
+            c -= 0x10000;
+            out += static_cast<char16_t>(0xD800 + (c >> 10));
+            out += static_cast<char16_t>(0xDC00 + (c & 0x3FF));
+        }
+
+        Window::Collected& collected_of(GLFWwindow* w)
+        {
+            return *static_cast<Window::Collected*>(glfwGetWindowUserPointer(w));
+        }
+
+    } // namespace
 
     std::expected<Window, std::string> Window::open(const WindowConfig& config, render::Backend backend)
     {
@@ -27,12 +86,19 @@ namespace rct3::platform
         auto collected = std::make_unique<Collected>();
         glfwSetWindowUserPointer(window, collected.get());
         glfwSetScrollCallback(window, [](GLFWwindow* w, double x, double y) {
-            auto* collected = static_cast<Collected*>(glfwGetWindowUserPointer(w));
+            Collected* collected = &collected_of(w);
             // Shift turns the wheel sideways, as in most programs.
             const bool shift = glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(w, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
             collected->wheel_x += shift ? x + y : x;
             collected->wheel_y += shift ? 0 : y;
         });
+        // Presses and the system's repeats, not releases.
+        glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
+            const auto mapped = interface_key(key);
+            if (action != GLFW_RELEASE && mapped)
+                collected_of(w).keyboard.presses.push_back({ *mapped, (mods & GLFW_MOD_SHIFT) != 0, (mods & GLFW_MOD_CONTROL) != 0 });
+        });
+        glfwSetCharCallback(window, [](GLFWwindow* w, unsigned int c) { append_utf16(collected_of(w).keyboard.text, c); });
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -69,6 +135,8 @@ namespace rct3::platform
     {
         collected_->wheel_x = 0;
         collected_->wheel_y = 0;
+        collected_->keyboard.presses.clear();
+        collected_->keyboard.text.clear();
         glfwPollEvents();
     }
 

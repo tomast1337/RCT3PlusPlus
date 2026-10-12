@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/desktop.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
+#include <initializer_list>
 #include <vector>
 
 using namespace rct3::ui;
@@ -212,4 +214,131 @@ TEST_CASE("clipped parents hide children outside them")
     DrawContext context { list, skins, fonts };
     desktop.draw(context);
     CHECK(list.clip() == nullptr); // Balanced
+}
+
+// Keyboard focus and key routing.
+namespace
+{
+    // Records keys; uses only the ones listed in `uses`.
+    class KeyProbe : public Widget
+    {
+    public:
+        using Widget::Widget;
+        bool focusable = false;
+        bool blocks = true;
+        std::vector<Key> uses;
+        std::vector<Key> seen;
+
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return blocks;
+        }
+        [[nodiscard]] bool takes_focus() const override
+        {
+            return focusable;
+        }
+        bool on_key(const KeyPress& key) override
+        {
+            seen.push_back(key.key);
+            return std::ranges::find(uses, key.key) != uses.end();
+        }
+    };
+
+    KeyboardState keys(std::initializer_list<Key> list)
+    {
+        KeyboardState k;
+        for (Key key : list)
+            k.presses.push_back({ key });
+        return k;
+    }
+
+    struct Fixture
+    {
+        Desktop desktop;
+        KeyProbe& back = desktop.root().add<KeyProbe>("back");
+        KeyProbe& top = desktop.root().add<KeyProbe>("top");
+        KeyProbe& field = top.add<KeyProbe>("field");
+        KeyProbe& inner = field.add<KeyProbe>("inner");
+
+        Fixture()
+        {
+            back.placement = top_left(0, 0, 50, 50);
+            top.placement = top_left(100, 0, 100, 100);
+            field.placement = top_left(10, 10, 40, 40);
+            inner.placement = fill(5);
+            inner.blocks = false; // A label, say: pressing it presses the field
+            field.focusable = true;
+            desktop.layout(kView);
+        }
+    };
+} // namespace
+
+TEST_CASE("without a focused widget, keys go to the top-most window")
+{
+    Fixture f;
+    f.desktop.update(at(0, 0), keys({ Key::Escape }));
+    CHECK(f.top.seen == std::vector { Key::Escape });
+    CHECK(f.back.seen.empty());
+    CHECK(f.field.seen.empty());
+    CHECK(f.desktop.keyboard_focus() == nullptr);
+}
+
+TEST_CASE("pressing gives the focus to the nearest widget that takes it")
+{
+    Fixture f;
+    f.desktop.update(at(120, 20, true)); // On `inner`, which does not take the focus
+    f.desktop.update(at(120, 20));
+    CHECK(f.desktop.keyboard_focus() == &f.field);
+    CHECK(f.field.has_keyboard_focus());
+    CHECK_FALSE(f.top.has_keyboard_focus());
+
+    SUBCASE("keys go to it, then up to its parents until one uses them")
+    {
+        f.field.uses = { Key::Down };
+        f.desktop.update(at(120, 20), keys({ Key::Down, Key::Escape }));
+        CHECK(f.field.seen == std::vector { Key::Down, Key::Escape });
+        CHECK(f.top.seen == std::vector { Key::Escape });
+        CHECK(f.inner.seen.empty());
+    }
+    SUBCASE("pressing elsewhere takes it away")
+    {
+        f.desktop.update(at(150, 80, true));
+        CHECK(f.desktop.keyboard_focus() == nullptr);
+    }
+    SUBCASE("hiding or disabling it takes it away")
+    {
+        f.field.enabled = false;
+        f.desktop.update(at(0, 0), keys({ Key::Up }));
+        CHECK(f.desktop.keyboard_focus() == nullptr);
+        CHECK(f.field.seen.empty());
+        CHECK(f.top.seen == std::vector { Key::Up });
+    }
+    SUBCASE("closing its window takes it away")
+    {
+        f.top.close();
+        f.desktop.update(at(0, 0));
+        CHECK(f.desktop.keyboard_focus() == nullptr);
+        f.desktop.update(at(0, 0), keys({ Key::Up }));
+        CHECK(f.back.seen == std::vector { Key::Up });
+    }
+}
+
+TEST_CASE("a press moves the focus before keys of the same update")
+{
+    Fixture f;
+    f.field.uses = { Key::Tab };
+    f.desktop.update(at(120, 20, true), keys({ Key::Tab }));
+    CHECK(f.field.seen == std::vector { Key::Tab });
+    CHECK(f.top.seen.empty());
+}
+
+TEST_CASE("the focus can be set and cleared from outside")
+{
+    Fixture f;
+    f.desktop.set_keyboard_focus(&f.back);
+    f.desktop.update(at(0, 0), keys({ Key::Home }));
+    CHECK(f.back.seen == std::vector { Key::Home });
+    f.desktop.set_keyboard_focus(nullptr);
+    f.desktop.update(at(0, 0), keys({ Key::End }));
+    CHECK(f.top.seen == std::vector { Key::End });
 }

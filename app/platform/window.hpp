@@ -5,6 +5,7 @@
 #pragma once
 
 #include "render/device.hpp"
+#include "ui/keyboard.hpp"
 
 #include <expected>
 #include <memory>
@@ -53,19 +54,25 @@ namespace rct3::platform
             float wheel_y = 0; ///< Notches turned since the last poll_events, positive away from the user
         };
         [[nodiscard]] Pointer pointer() const;
+        /// Keys pressed and text typed since the last poll_events.
+        [[nodiscard]] const ui::KeyboardState& keyboard() const
+        {
+            return collected_->keyboard;
+        }
+
+        // Input GLFW only reports through callbacks, gathered between polls. On the heap so the window's
+        // user pointer stays valid when the Window moves; public so the callbacks can reach it.
+        struct Collected
+        {
+            double wheel_x = 0;
+            double wheel_y = 0;
+            ui::KeyboardState keyboard;
+        };
 
         /// The platform half of starting an ImGui frame; call after the device's `ui_new_frame`.
         void ui_new_frame();
 
     private:
-        // Input GLFW only reports through callbacks, gathered between polls. On the heap so the window's
-        // user pointer stays valid when the Window moves.
-        struct Collected
-        {
-            double wheel_x = 0;
-            double wheel_y = 0;
-        };
-
         Window(GLFWwindow* window, std::unique_ptr<Collected> collected)
             : window_(window)
             , collected_(std::move(collected))

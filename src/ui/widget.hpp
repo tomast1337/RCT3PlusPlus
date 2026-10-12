@@ -12,6 +12,7 @@
 
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
+#include "ui/keyboard.hpp"
 #include "ui/placement.hpp"
 #include "ui/skin_library.hpp"
 
@@ -123,10 +124,15 @@ namespace rct3::ui
         {
             return pressed_;
         }
-        /// Inside the top-most window, the one keyboard and highlight go to.
+        /// Inside the top-most window, the one drawn highlighted.
         [[nodiscard]] bool focused() const
         {
             return focused_;
+        }
+        /// Gets keys before any other widget (see Desktop::keyboard_focus).
+        [[nodiscard]] bool has_keyboard_focus() const
+        {
+            return keyboard_focus_;
         }
 
         /// Whether the pointer stops at this widget. Widgets that return false let it through to whatever is
@@ -151,6 +157,18 @@ namespace rct3::ui
         /// the left: both move the view towards the start. Returns whether the widget used it; if not, its
         /// parent is asked.
         virtual bool on_wheel(Point /*notches*/)
+        {
+            return false;
+        }
+
+        /// Whether pressing this widget, or a child that does not take it, gives it the keyboard focus.
+        [[nodiscard]] virtual bool takes_focus() const
+        {
+            return false;
+        }
+        /// A key pressed while this widget or a child that did not use it has the keyboard focus. Returns
+        /// whether the widget used it; if not, its parent is asked.
+        virtual bool on_key(const KeyPress&)
         {
             return false;
         }
@@ -185,6 +203,7 @@ namespace rct3::ui
         bool hovered_ = false;
         bool pressed_ = false;
         bool focused_ = false;
+        bool keyboard_focus_ = false;
     };
 
 } // namespace rct3::ui

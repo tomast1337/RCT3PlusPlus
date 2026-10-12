@@ -10,6 +10,10 @@
 //
 // The wheel over the area scrolls it: turned normally vertically, turned sideways (or with Shift)
 // horizontally. An area that only scrolls horizontally takes either.
+//
+// Pressing inside the area gives it the keyboard focus. Then the arrow keys move by a bar's arrow step, Page
+// Up and Page Down by a view's length less one step, so a line stays in sight, and Home and End go to the
+// ends. Up and down move the horizontal bar when there is no vertical one.
 #pragma once
 
 #include "ui/widgets/scroll_bar.hpp"
@@ -40,7 +44,17 @@ namespace rct3::ui
             return horizontal_;
         }
 
+        /// So a press on empty parts of the view stays in the interface and focuses the area.
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return true;
+        }
+        [[nodiscard]] bool takes_focus() const override
+        {
+            return true;
+        }
         bool on_wheel(Point notches) override;
+        bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;
 
     private:

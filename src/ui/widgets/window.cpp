@@ -108,6 +108,14 @@ namespace rct3::ui
         edges_ = 0;
     }
 
+    bool Window::on_key(const KeyPress& key)
+    {
+        if (key.key != Key::Escape)
+            return false;
+        close();
+        return true;
+    }
+
     void Window::update(const UpdateContext&)
     {
         if (close_->take_click())

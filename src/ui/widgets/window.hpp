@@ -10,6 +10,8 @@
 // content is laid out again at the new size, so window classes anchor their widgets to the edges they
 // should follow.
 //
+// Escape closes the window when the widget with the keyboard focus inside it does not use the key.
+//
 // Window classes derive from it, add their widgets to content() in the constructor and handle them in an
 // update() override that calls Window::update() first.
 #pragma once
@@ -77,6 +79,7 @@ namespace rct3::ui
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
+        bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 

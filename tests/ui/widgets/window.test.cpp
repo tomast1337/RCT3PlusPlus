@@ -221,3 +221,16 @@ TEST_CASE("the minimum never exceeds the size a window was made at")
     CHECK(w.min_size.x == 100);
     CHECK(w.min_size.y == 60);
 }
+
+TEST_CASE("escape closes the top-most window")
+{
+    Desktop desktop;
+    desktop.root().add<Window>("a", style(), 100, 100);
+    desktop.root().add<Window>("b", style(), 100, 100);
+    desktop.layout(kView);
+    KeyboardState keys;
+    keys.presses.push_back({ Key::Escape });
+    desktop.update(at(0, 0), keys);
+    REQUIRE(desktop.root().children().size() == 1);
+    CHECK(desktop.root().children().front()->name() == "a");
+}

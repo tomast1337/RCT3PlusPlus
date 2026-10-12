@@ -36,8 +36,8 @@ std::vector<std::byte> make_v5() {
   return b.bytes;
 }
 
-// v5 with a sub-version block of `size` bytes holding `tag`, zero padded.
-std::vector<std::byte> make_v5_sub_version(std::uint32_t size, const std::string& tag) {
+// v5 with one data stream and a stream block of `size` bytes holding `tag`, zero padded.
+std::vector<std::byte> make_v5_streamed(std::uint32_t size, const std::string& tag) {
   Builder b;
   b.raw("FGRK", 4);
   b.u8(0x02);
@@ -88,7 +88,7 @@ TEST_CASE("v5 header parses references, loaders and symbol counts") {
   SUBCASE("every truncated prefix fails") { check_every_prefix_fails(file); }
 }
 
-TEST_CASE("v5 sub-version block") {
+TEST_CASE("v5 stream block") {
   // Both variants seen in real files: size 20 with a tag, size 16 with an empty tag.
   struct Variant {
     std::uint32_t size;
@@ -96,11 +96,11 @@ TEST_CASE("v5 sub-version block") {
   };
   for (const auto& v : {Variant{20, "tg"}, Variant{16, ""}}) {
     CAPTURE(v.size);
-    const auto file = make_v5_sub_version(v.size, v.tag);
+    const auto file = make_v5_streamed(v.size, v.tag);
     auto h = parse_header(file);
     REQUIRE(h.has_value());
 
-    CHECK(h->sub_version == 1);
+    CHECK(h->stream_count == 1);
     CHECK(h->stream_tag == v.tag);
     REQUIRE(h->loaders.size() == 1);
     CHECK(h->loaders[0].tag == "mdl");
@@ -124,9 +124,9 @@ TEST_CASE("rejects bad input") {
     bad[8] = std::byte{9};
     CHECK(parse_header(bad).error() == Error::UnsupportedVersion);
   }
-  SUBCASE("sub-version block smaller than its own header") {
-    auto bad = make_v5_sub_version(20, "tg");
+  SUBCASE("stream block smaller than its own header") {
+    auto bad = make_v5_streamed(20, "tg");
     bad[0x14] = std::byte{8};
-    CHECK(parse_header(bad).error() == Error::BadSubVersionBlock);
+    CHECK(parse_header(bad).error() == Error::BadStreamBlock);
   }
 }

@@ -113,3 +113,54 @@ TEST_CASE("truncated and oversized block data fail cleanly") {
     CHECK(parse(bad).error() == Error::ImplausibleCount);
   }
 }
+
+TEST_CASE("per-stream relocation tables are read for v4 and streamed v5") {
+  const std::vector<std::vector<std::byte>> one_block = {std::vector<std::byte>(8, std::byte{0})};
+
+  SUBCASE("v4 has exactly one table, empty by default") {
+    const auto file = rct3::test::build_file(4, {one_block}, {});
+    auto f = parse(file);
+    REQUIRE(f.has_value());
+    REQUIRE(f->stream_relocations.size() == 1);
+    CHECK(f->stream_relocations[0].empty());
+    CHECK(f->end_offset == file.size());
+  }
+
+  SUBCASE("v4 table entries keep their order") {
+    const auto file = rct3::test::build_file(4, {one_block}, {}, {}, {{{4, 0}, {0, 4}}});
+    auto f = parse(file);
+    REQUIRE(f.has_value());
+    REQUIRE(f->stream_relocations[0].size() == 2);
+    CHECK(f->stream_relocations[0][0].location == 4);
+    CHECK(f->stream_relocations[0][0].value == 0);
+    CHECK(f->stream_relocations[0][1].location == 0);
+    CHECK(f->stream_relocations[0][1].value == 4);
+    CHECK(f->end_offset == file.size());
+  }
+
+  SUBCASE("v5 has one table per stream") {
+    const auto file = rct3::test::build_file(5, {one_block}, {}, {}, {{{0, 4}}, {}});
+    auto f = parse(file);
+    REQUIRE(f.has_value());
+    CHECK(f->header.stream_count == 2);
+    REQUIRE(f->stream_relocations.size() == 2);
+    CHECK(f->stream_relocations[0].size() == 1);
+    CHECK(f->stream_relocations[1].empty());
+    CHECK(f->end_offset == file.size());
+  }
+
+  SUBCASE("v5 without streams and v1 have no tables") {
+    for (std::uint32_t version : {1u, 5u}) {
+      const auto file = rct3::test::build_file(version, {one_block}, {});
+      auto f = parse(file);
+      REQUIRE(f.has_value());
+      CHECK(f->stream_relocations.empty());
+    }
+  }
+
+  SUBCASE("a pair count larger than the file is refused") {
+    auto file = rct3::test::build_file(4, {one_block}, {});
+    for (std::size_t i = file.size() - 4; i < file.size(); ++i) file[i] = std::byte{0xFF};
+    CHECK(parse(file).error() == Error::ImplausibleCount);
+  }
+}

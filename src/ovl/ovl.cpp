@@ -62,7 +62,7 @@ class Cursor {
       if (ch == '\0') return s;
       s.push_back(ch);
     }
-    return std::unexpected(Error::BadSubVersionBlock);
+    return std::unexpected(Error::BadStreamBlock);
   }
 
   // Every counted entry costs at least `min_entry_size` bytes, so the count cannot exceed what is left.
@@ -100,7 +100,7 @@ const char* to_string(Error e) noexcept {
     case Error::Truncated: return "file truncated";
     case Error::BadMagic: return "bad magic, expected FGRK";
     case Error::UnsupportedVersion: return "unsupported OVL version";
-    case Error::BadSubVersionBlock: return "malformed v5 sub-version block";
+    case Error::BadStreamBlock: return "malformed v5 stream block";
     case Error::BadLoaderIndex: return "symbol count references unknown loader";
     case Error::ImplausibleCount: return "entry count exceeds remaining file size";
     case Error::BadSymbolTable: return "symbol table size is not a whole number of entries";
@@ -137,14 +137,15 @@ std::expected<Header, Error> read_header(Cursor& c) {
   if (h.version == 5) {
     RCT3_TRY(sub, c.read<std::int16_t>());
     RCT3_TRY(extra, c.read<std::int16_t>());
-    h.sub_version = *sub;
+    if (*sub < 0) return std::unexpected(Error::ImplausibleCount);
+    h.stream_count = *sub;
     h.extra_flag = *extra;
-    if (h.sub_version != 0) {
+    if (h.stream_count != 0) {
       // Self-sized block: u32 size (counted from its own start), two reserved u32, a NUL-terminated
       // tag, then padding up to the size. Seen with size 20 + tag and size 16 + empty tag.
       const std::size_t start = c.position();
       RCT3_TRY(size, c.read<std::uint32_t>());
-      if (*size < 16) return std::unexpected(Error::BadSubVersionBlock);
+      if (*size < 16) return std::unexpected(Error::BadStreamBlock);
       RCT3_TRY(reserved_a, c.read<std::uint32_t>());
       RCT3_TRY(reserved_b, c.read<std::uint32_t>());
       RCT3_TRY(tag, c.read_cstring(start + *size));
@@ -218,7 +219,7 @@ std::expected<File, Error> parse(std::span<const std::byte> data) {
   File f;
   f.header = std::move(*header);
   const std::uint32_t version = f.header.version;
-  const bool has_extra = version == 5 && f.header.sub_version != 0;
+  const bool has_extra = version == 5 && f.header.stream_count != 0;
 
   // Block definitions. v1 keeps sizes inline with the data instead of here.
   for (auto& type : f.block_types) {
@@ -290,6 +291,20 @@ std::expected<File, Error> parse(std::span<const std::byte> data) {
   for (std::uint32_t i = 0; i < *relocation_count; ++i) {
     RCT3_TRY(address, c.read<std::uint32_t>());
     f.relocations.push_back(*address);
+  }
+
+  // One table per data stream: u32 count, then count pairs of u32 (location, value).
+  const std::size_t streams = version == 4 ? 1 : version == 5 ? static_cast<std::size_t>(f.header.stream_count) : 0;
+  f.stream_relocations.resize(streams);
+  for (auto& table : f.stream_relocations) {
+    RCT3_TRY(count, c.read<std::uint32_t>());
+    if (!c.plausible_count(*count, 2 * sizeof(std::uint32_t))) return std::unexpected(Error::ImplausibleCount);
+    table.reserve(*count);
+    for (std::uint32_t i = 0; i < *count; ++i) {
+      RCT3_TRY(location, c.read<std::uint32_t>());
+      RCT3_TRY(value, c.read<std::uint32_t>());
+      table.push_back({*location, *value});
+    }
   }
 
   f.end_offset = c.position();
@@ -406,13 +421,9 @@ std::expected<LoaderTable, Error> read_loaders(const File& file, std::span<const
     out.entries.push_back(e);
   }
 
-  // The chunk stream starts after the relocation table, behind a 4-byte field in v4 and in v5 files
-  // that have a sub-version block.
+  // The chunk stream starts right after the relocation tables.
   Cursor c(bytes);
   RCT3_TRY(sought, c.seek(file.end_offset));
-  if (file.header.version == 4 || (v5 && file.header.sub_version != 0)) {
-    RCT3_TRY(skipped, c.read<std::uint32_t>());
-  }
 
   out.extra.resize(out.entries.size());
   for (std::size_t i = 0; i < out.entries.size(); ++i) {

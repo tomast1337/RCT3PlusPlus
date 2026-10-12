@@ -16,6 +16,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
 
   // A successful parse never claims more bytes than it was given, and every block lies inside the input.
   if (file->end_offset > size) __builtin_trap();
+  const auto streams = file->header.version == 4 ? 1u : file->header.version == 5 ? file->header.stream_count : 0;
+  if (file->stream_relocations.size() != static_cast<std::size_t>(streams)) __builtin_trap();
   for (const auto& type : file->block_types) {
     for (const auto& block : type.blocks) {
       if (block.file_offset > size || block.size > size - block.file_offset) __builtin_trap();

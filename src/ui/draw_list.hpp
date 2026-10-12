@@ -5,8 +5,9 @@
 // runs of quads that use the same texture. The renderer uploads the result once and issues one draw per
 // group. Nothing is kept between frames: clear() and draw again.
 //
-// Coordinates are screen pixels, origin at the top-left corner, y down. Rectangle edges are rounded to
-// whole pixels so that point-sampled skins land on the pixel grid.
+// Callers work in logical units, origin at the top-left corner, y down. The list's scale turns them into
+// screen pixels, so one layout serves every window size and pixel density; edges are then rounded to whole
+// pixels so that point-sampled skins land on the pixel grid. Output and clip() are in pixels.
 #pragma once
 
 #include <array>
@@ -87,8 +88,18 @@ namespace rct3::ui
     class DrawList
     {
     public:
-        /// Starts a new frame: drops all geometry and the clip stack.
+        /// Starts a new frame: drops all geometry and the clip stack. Keeps the scale.
         void clear();
+
+        /// Pixels per logical unit, applied to every rectangle drawn or clipped after this. Default 1.
+        void set_scale(float scale)
+        {
+            scale_ = scale;
+        }
+        [[nodiscard]] float scale() const
+        {
+            return scale_;
+        }
 
         void fill(const Rect& rect, Color color);
         void gradient(const Rect& rect, const CornerColors& colors);
@@ -121,6 +132,7 @@ namespace rct3::ui
         std::vector<std::uint32_t> indices_;
         std::vector<Batch> batches_;
         std::vector<Rect> clips_;
+        float scale_ = 1;
     };
 
 } // namespace rct3::ui

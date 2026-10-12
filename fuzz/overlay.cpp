@@ -19,6 +19,7 @@
 #include "ovl/gui_skin.hpp"
 #include "ovl/integer_value.hpp"
 #include "ovl/manifold_mesh.hpp"
+#include "ovl/mesh.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/simple_anim.hpp"
 #include "ovl/simple_skin.hpp"
@@ -74,7 +75,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   for (const auto& item : rct3::ovl::read_static_shapes(*overlay, part)) {
     if (!item.shape) continue;
     for (const auto& mesh : item.shape->meshes) {
-      for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += mesh.vertex(i).extra > 0.0f;
+      for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += mesh.vertex(i).colour[3];
       for (std::size_t i = 0; i < mesh.index_count; ++i) sink += mesh.index(i);
     }
   }
@@ -191,5 +192,30 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (entry.gallery) sink += entry.gallery->unknown_04 + entry.gallery->unknown_24;
   }
   // --- end scenery and placement item types ---
+  // --- mesh conversion (feat/mesh-semantics) ---
+  // Convert bounded numbers of shapes; sinks are sizes and indices only, never floats cast to integers.
+  {
+    std::size_t budget = 64;
+    for (const auto& item : rct3::ovl::read_static_shapes(*overlay, part)) {
+      if (!item.shape || budget == 0) continue;
+      --budget;
+      const auto mesh = rct3::ovl::mesh_from_static_shape(*item.shape);
+      sink += mesh.positions.size() + mesh.parts.size();
+      for (const auto index : mesh.indices) {
+        if (index >= mesh.positions.size()) __builtin_trap();
+      }
+      if (budget % 8 == 0) sink += rct3::ovl::write_obj(mesh, "m.mtl").size() + rct3::ovl::write_mtl(mesh).size();
+    }
+    for (const auto& item : rct3::ovl::read_bone_shapes(*overlay, part)) {
+      if (!item.shape || budget == 0) continue;
+      --budget;
+      const auto mesh = rct3::ovl::mesh_from_bone_shape(*item.shape);
+      sink += mesh.positions.size() + mesh.parts.size();
+      for (const auto index : mesh.indices) {
+        if (index >= mesh.positions.size()) __builtin_trap();
+      }
+    }
+  }
+  // --- end mesh conversion ---
   return 0;
 }

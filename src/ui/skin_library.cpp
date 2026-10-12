@@ -93,4 +93,16 @@ namespace rct3::ui
             draw_skin(list, skin->layout, rect, skin->texture, skin->texture_width, skin->texture_height, tint);
     }
 
+    void draw_skin_state(DrawList& list, const SkinLibrary& skins, std::string_view family, SkinState state, const Rect& rect)
+    {
+        const SkinRef* face = skins.find(family, state);
+        Color tint = kWhite;
+        const bool fell_back = face == skins.find(family, SkinState::Up);
+        if (fell_back && (state == SkinState::Pressed || state == SkinState::Down || state == SkinState::DownOver))
+            tint = kPressedTint;
+        else if (fell_back && state == SkinState::Disabled)
+            tint = kDisabledTint;
+        draw_skin(list, face, rect, tint);
+    }
+
 } // namespace rct3::ui

@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -13,6 +13,12 @@
 #include <vector>
 
 #include "ovl/bone_anim.hpp"
+#include "ovl/texture.hpp"
+#include "ovl/gui_skin.hpp"
+#include "ovl/font.hpp"
+#include "ovl/float_value.hpp"
+#include "ovl/flic.hpp"
+#include "ovl/bitmap_table.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/scenery_visual.hpp"
@@ -35,6 +41,12 @@ struct Options {
   bool svd = false;
   bool ban = false;
   bool bsh = false;
+  bool flic = false;
+  bool fct = false;
+  bool tex = false;
+  bool gsi = false;
+  bool btbl = false;
+  bool flt = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -232,6 +244,107 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
     }
   }
+  if (opt.flt) {
+    const auto floats = rct3::ovl::read_floats(overlay, part);
+    std::printf("float values   %zu\n", floats.size());
+    for (const auto& item : floats) {
+      std::printf("  %-32s %g\n", std::string(item.name).c_str(), item.value);
+    }
+  }
+  if (opt.btbl) {
+    const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : tables) {
+      if (!item.table) ++bad;
+    }
+    std::printf("bitmap tables  %zu (%zu unreadable)\n", tables.size(), bad);
+    for (const auto& item : tables) {
+      if (!item.table) {
+        std::printf("  row %zu <unreadable>\n", item.row);
+        continue;
+      }
+      std::size_t bytes = 0;
+      for (const auto& b : item.table->bitmaps) bytes += b.data.size();
+      std::printf("  row %-6zu bitmaps %zu bytes %zu\n", item.row, item.table->bitmaps.size(), bytes);
+    }
+  }
+  if (opt.gsi) {
+    const auto skins = rct3::ovl::read_gui_skins(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : skins) {
+      if (!item.skin) ++bad;
+    }
+    std::printf("gui skins      %zu (%zu unreadable)\n", skins.size(), bad);
+    for (const auto& item : skins) {
+      const std::string name(item.name);
+      if (!item.skin) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& s = *item.skin;
+      std::printf("  %-40s kind %u values %zu texture %s\n", name.c_str(), s.kind, s.coordinates.size(),
+                  s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+    }
+  }
+  if (opt.tex) {
+    const auto textures = rct3::ovl::read_textures(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : textures) {
+      if (!item.texture) ++bad;
+    }
+    std::printf("textures       %zu (%zu unreadable)\n", textures.size(), bad);
+    for (const auto& item : textures) {
+      const std::string name(item.name);
+      if (!item.texture) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& t = *item.texture;
+      const std::string style(t.style);
+      std::printf("  %-32s style %-24s params %u %u %u first %u count %u node %s\n", name.c_str(), style.c_str(),
+                  t.parameters[0], t.parameters[1], t.parameters[2], t.first, t.count, t.node ? "yes" : "no");
+    }
+  }
+  if (opt.fct) {
+    const auto fonts = rct3::ovl::read_fonts(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : fonts) {
+      if (!item.font) ++bad;
+    }
+    std::printf("fonts          %zu (%zu unreadable)\n", fonts.size(), bad);
+    for (const auto& item : fonts) {
+      const std::string name(item.name);
+      if (!item.font) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& f = *item.font;
+      std::printf("  %-28s face %-20s texture %-24s weight %u glyphs %zu\n", name.c_str(),
+                  std::string(f.face).c_str(), std::string(f.texture).c_str(), f.weight, f.glyphs.size());
+    }
+  }
+  if (opt.flic) {
+    const auto flics = rct3::ovl::read_flics(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : flics) {
+      if (!item.flic) ++bad;
+    }
+    std::printf("flics          %zu (%zu unreadable)\n", flics.size(), bad);
+    for (const auto& item : flics) {
+      if (!item.flic) {
+        std::printf("  %08x <unreadable>\n", item.address);
+        continue;
+      }
+      const auto& f = *item.flic;
+      std::printf("  %08x rev %u frames %u rate %g data %zu", item.address, f.revision, f.frame_count, f.rate,
+                  f.data.size());
+      if (f.image) {
+        std::printf(" image %ux%u format %u levels %u", f.image->width, f.image->height, f.image->format,
+                    f.image->level_count);
+      }
+      std::printf("\n");
+    }
+  }
   if (opt.sound) {
     const auto sounds = rct3::ovl::read_sounds(overlay, part);
     std::size_t bad = 0;
@@ -289,11 +402,17 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--svd") == 0) opt.svd = true;
     else if (std::strcmp(argv[i], "--ban") == 0) opt.ban = true;
     else if (std::strcmp(argv[i], "--bsh") == 0) opt.bsh = true;
+    else if (std::strcmp(argv[i], "--flic") == 0) opt.flic = true;
+    else if (std::strcmp(argv[i], "--fct") == 0) opt.fct = true;
+    else if (std::strcmp(argv[i], "--tex") == 0) opt.tex = true;
+    else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
+    else if (std::strcmp(argv[i], "--btbl") == 0) opt.btbl = true;
+    else if (std::strcmp(argv[i], "--flt") == 0) opt.flt = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] PATH\n", argv[0]);
     return 2;
   }
 

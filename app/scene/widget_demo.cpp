@@ -11,6 +11,7 @@
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/panel.hpp"
+#include "ui/widgets/scroll_area.hpp"
 #include "ui/widgets/tickbox.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -58,8 +59,14 @@ namespace rct3::scene
                 // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
                 list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -104 } };
-                auto& help = list.add<ui::Label>("help", std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample), ui::FontRole::Small);
-                help.placement = ui::fill(6);
+                // The help text runs on with the options' help, more than fits, to show scrolling.
+                std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
+                for (const std::string_view key : kOptionTips)
+                    text += u"\n\n" + std::u16string(strings.get(key));
+                auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(ui::Orientation::Vertical));
+                scroll.placement = ui::fill(2);
+                auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::FontRole::Small);
+                help.placement = ui::fill(4);
                 help.style.wrap = true;
                 list.clip_children = true;
 
@@ -98,9 +105,9 @@ namespace rct3::scene
                 text_buttons[2]->enabled = false;
             }
 
-            void update() override
+            void update(const ui::UpdateContext& context) override
             {
-                ui::Window::update();
+                ui::Window::update(context);
                 if (cancel_->take_click() || text_cancel_->take_click())
                     close();
                 const bool open = confirm_->take_click() || ok_->take_click();
@@ -237,7 +244,7 @@ namespace rct3::scene
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        return demo.desktop.update(pointer, elapsed);
+        return demo.desktop.update(pointer, { elapsed, &demo.fonts });
     }
 
     void draw_widget_demo(render::Device& device, WidgetDemo& demo)

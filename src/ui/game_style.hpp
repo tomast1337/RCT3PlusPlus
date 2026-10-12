@@ -6,6 +6,7 @@
 
 #include "ui/font_set.hpp"
 #include "ui/tooltip.hpp"
+#include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/window.hpp"
 
 #include <array>
@@ -27,6 +28,14 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
     inline constexpr std::string_view kTooltip = "GUI2Swatch_Background";
+    inline constexpr std::string_view kScrollUp = "ScrollBar_UpArrow";
+    inline constexpr std::string_view kScrollDown = "ScrollBar_DownArrow";
+    inline constexpr std::string_view kScrollLeft = "ScrollBar_LeftArrow";
+    inline constexpr std::string_view kScrollRight = "ScrollBar_RightArrow";
+    inline constexpr std::string_view kVerticalRail = "VScrollBar_Rail";
+    inline constexpr std::string_view kHorizontalRail = "HScrollBar_Rail";
+    inline constexpr std::string_view kVerticalRider = "VScrollBar_Rider";   ///< Family
+    inline constexpr std::string_view kHorizontalRider = "HScrollBar_Rider"; ///< Family
     /// The game passes text buttons their skin case by case; this lozenge is our default for them.
     inline constexpr std::string_view kTextButton = "GUI2Swatch_Background";
     /// What the lozenge's border and drop shadow take from each side (ours, measured on the skin).
@@ -51,6 +60,21 @@ namespace rct3::ui::game_skins
         // The frame's top-left corner holds the window's icon and the title rule; content goes below it.
         s.content_inset = { 12, 70, 12, 12 };
         s.title_box = { 62, 20, 30, 40 }; // Right of the icon, on the title rule
+        return s;
+    }
+
+    /// The game's scroll bars: 15 units thick with square arrows, 20 units per arrow press. The wheel step
+    /// and the arrow repeat timing are ours.
+    [[nodiscard]] inline ScrollBarStyle scroll_bar_style(Orientation orientation)
+    {
+        const bool vertical = orientation == Orientation::Vertical;
+        ScrollBarStyle s;
+        s.back_arrow = vertical ? kScrollUp : kScrollLeft;
+        s.forward_arrow = vertical ? kScrollDown : kScrollRight;
+        s.rail = vertical ? kVerticalRail : kHorizontalRail;
+        s.rider = vertical ? kVerticalRider : kHorizontalRider;
+        s.thickness = 15;
+        s.step = 20;
         return s;
     }
 

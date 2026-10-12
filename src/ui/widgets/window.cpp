@@ -43,7 +43,7 @@ namespace rct3::ui
         dragging_ = false;
     }
 
-    void Window::update()
+    void Window::update(const UpdateContext&)
     {
         if (close_->take_click())
             close();

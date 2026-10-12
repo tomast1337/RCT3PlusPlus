@@ -33,7 +33,7 @@ namespace
         {
             events.push_back(inside ? "release inside" : "release outside");
         }
-        void update() override
+        void update(const UpdateContext&) override
         {
             ++updates;
         }

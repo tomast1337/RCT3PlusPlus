@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -16,6 +16,7 @@
 #include "ovl/texture.hpp"
 #include "ovl/gui_skin.hpp"
 #include "ovl/integer_value.hpp"
+#include "ovl/manifold_mesh.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/simple_anim.hpp"
 #include "ovl/simple_skin.hpp"
@@ -52,6 +53,7 @@ struct Options {
   bool san = false;
   bool modelanim = false;
   bool ssk = false;
+  bool mam = false;
   bool fct = false;
   bool tex = false;
   bool gsi = false;
@@ -339,6 +341,23 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   item.skin->part_ids.size(), item.skin->vertices.size(), item.skin->indices.size() / 3, outside);
     }
   }
+  if (opt.mam) {
+    const auto meshes = rct3::ovl::read_manifold_meshes(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : meshes) {
+      if (!item.mesh) ++bad;
+    }
+    std::printf("manifold meshes %zu (%zu unreadable)\n", meshes.size(), bad);
+    for (const auto& item : meshes) {
+      const std::string name(item.name);
+      if (!item.mesh) {
+        std::printf("  %-32s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::printf("  %-32s vertices %zu triangles %zu\n", name.c_str(), item.mesh->vertices.size(),
+                  item.mesh->indices.size() / 3);
+    }
+  }
   if (opt.btbl) {
     const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
     std::size_t bad = 0;
@@ -496,6 +515,7 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--san") == 0) opt.san = true;
     else if (std::strcmp(argv[i], "--modelanim") == 0) opt.modelanim = true;
     else if (std::strcmp(argv[i], "--ssk") == 0) opt.ssk = true;
+    else if (std::strcmp(argv[i], "--mam") == 0) opt.mam = true;
     else if (std::strcmp(argv[i], "--fct") == 0) opt.fct = true;
     else if (std::strcmp(argv[i], "--tex") == 0) opt.tex = true;
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
@@ -505,7 +525,7 @@ int main(int argc, char** argv) {
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
     return 2;
   }
 

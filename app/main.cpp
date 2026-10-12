@@ -16,6 +16,7 @@
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
 #include "scene/test_scene.hpp"
+#include "scene/ui_demo.hpp"
 
 #include <algorithm>
 #include <array>
@@ -213,6 +214,12 @@ int main(int argc, char** argv)
         log.critical("test scene: {}", scene.error());
         return 1;
     }
+    auto ui_demo = rct3::scene::create_ui_demo(*device);
+    if (!ui_demo)
+    {
+        log.critical("ui demo: {}", ui_demo.error());
+        return 1;
+    }
 
     int status = 0;
     try
@@ -240,6 +247,7 @@ int main(int argc, char** argv)
                     device->begin_frame();
                     device->begin_pass({ .clear_color = { 0.05f, 0.06f, 0.08f, 1.0f } });
                     rct3::scene::draw_test_scene(*device, *scene, now);
+                    rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     device->draw_ui();
                     device->end_pass();
                     device->end_frame();
@@ -255,6 +263,7 @@ int main(int argc, char** argv)
         status = 1;
     }
 
+    rct3::scene::destroy_ui_demo(*device, *ui_demo);
     rct3::scene::destroy_test_scene(*device, *scene);
     device->shutdown();
     return status;

@@ -64,6 +64,9 @@ namespace rct3::scene
         constexpr std::size_t kCloseWindowItem = 1;
         constexpr std::size_t kAutoScaleItem = 0; ///< Then one item for each whole scale from 1
         constexpr int kScaleChoices = 4;
+        constexpr std::size_t kCloseAllItem = 3;
+        constexpr std::size_t kCloseAllYes = 0;
+        constexpr float kIconSwell = 2; ///< Of the confirm and cancel buttons
         constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.
@@ -107,6 +110,10 @@ namespace rct3::scene
                 }
                 ok_ = text_buttons[0];
                 text_cancel_ = text_buttons[1];
+                default_button = ok_;
+                cancel_button = text_cancel_;
+                cancel_->swell = kIconSwell;
+                confirm_->swell = kIconSwell;
                 text_buttons[2]->enabled = false;
             }
 
@@ -251,8 +258,7 @@ namespace rct3::scene
             window_items[kNewWindowItem].text = u"New window";
             window_items[kCloseWindowItem].text = u"Close window";
             window_items[2].separator = true;
-            window_items[3].text = u"Quit";
-            window_items[3].enabled = false;
+            window_items[kCloseAllItem].text = u"Close all windows...";
             demo.menu_bar->menus = { { u"Window", std::move(window_items) }, { u"Scale", scale_items(demo.scale) } };
 
             demo.toolbar = &root.add<ui::Toolbar>("toolbar", skins::toolbar_style(), ui::Orientation::Vertical);
@@ -274,10 +280,27 @@ namespace rct3::scene
                     if (top != tops.rend())
                         (*top)->close();
                 }
+                if (choice->menu == kWindowMenu && choice->item == kCloseAllItem && demo.question == nullptr)
+                    demo.question = &demo.desktop.root().add<ui::QuestionBox>("question", skins::question_box_style(), u"Close all", u"Close every window? A new one opens in their place.", std::vector<std::u16string> { u"Yes", u"No" });
                 if (choice->menu == kScaleMenu)
                 {
                     demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<float>(choice->item));
                     demo.menu_bar->menus[kScaleMenu].items = scale_items(demo.scale);
+                }
+            }
+            if (demo.question != nullptr)
+            {
+                if (const auto answer = demo.question->take_answer())
+                {
+                    if (*answer == kCloseAllYes)
+                    {
+                        for (const auto& c : demo.desktop.root().children())
+                        {
+                            if (is_demo_window(*c))
+                                c->close();
+                        }
+                    }
+                    demo.question = nullptr; // It closed with the answer
                 }
             }
             if (demo.toolbar->children().front()->visible && static_cast<ui::Button&>(*demo.toolbar->children().front()).take_click())

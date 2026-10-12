@@ -172,3 +172,35 @@ TEST_CASE("space and enter click a focused button")
     CHECK(b.on_key({ Key::Space }));
     CHECK(b.on);
 }
+
+TEST_CASE("a swelling button grows its face while the pointer is over it")
+{
+    Fixture f;
+    f.button.swell = 4;
+    f.button.swell_time = 0.1f;
+    UpdateContext half;
+    half.elapsed = 0.05f;
+
+    f.desktop.update(at(5, 5), half);
+    CHECK(f.button.face() == Rect { -2, -2, 22, 22 }); // Half way, eased
+    f.desktop.update(at(5, 5), half);
+    CHECK(f.button.face() == Rect { -4, -4, 24, 24 });
+    f.desktop.update(at(5, 5), half);
+    CHECK(f.button.face() == Rect { -4, -4, 24, 24 });
+    // Only the face grows: the pointer just outside still misses it.
+    CHECK(f.desktop.hit({ 21, 5 }) == nullptr);
+
+    f.desktop.update(at(90, 90), half);
+    CHECK(f.button.face() == Rect { -2, -2, 22, 22 });
+    f.desktop.update(at(90, 90), half);
+    CHECK(f.button.face() == f.button.rect());
+}
+
+TEST_CASE("buttons without a swell keep their face")
+{
+    Fixture f;
+    UpdateContext later;
+    later.elapsed = 1;
+    f.desktop.update(at(5, 5), later);
+    CHECK(f.button.face() == f.button.rect());
+}

@@ -71,6 +71,9 @@ namespace rct3::ui
         /// For a top-level widget such as a menu: it closes when the pointer presses outside it, and takes
         /// the keyboard focus while it is the top-most (see Desktop).
         bool popup = false;
+        /// For a top-level widget such as a question: while it is shown, the pointer and the keys reach only
+        /// it and what is above it, and what is below is shaded (see Desktop).
+        bool modal = false;
         /// Help shown beside the pointer when it rests here; children without their own show this one.
         std::u16string tooltip;
 

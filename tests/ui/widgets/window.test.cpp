@@ -234,3 +234,33 @@ TEST_CASE("escape closes the top-most window")
     REQUIRE(desktop.root().children().size() == 1);
     CHECK(desktop.root().children().front()->name() == "a");
 }
+
+TEST_CASE("enter clicks the default button and escape the cancel button")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    Button& ok = w.content().add<Button>("ok", "Btn");
+    Button& no = w.content().add<Button>("no", "Btn");
+    w.default_button = &ok;
+    w.cancel_button = &no;
+    desktop.layout(kView);
+
+    KeyboardState keys;
+    keys.presses = { { Key::Enter }, { Key::Escape } };
+    desktop.update(at(0, 0), keys);
+    CHECK(ok.take_click());
+    CHECK(no.take_click());
+    CHECK_FALSE(w.closing());
+
+    SUBCASE("not when they cannot be used")
+    {
+        ok.enabled = false;
+        no.visible = false;
+        keys.presses = { { Key::Enter } };
+        desktop.update(at(0, 0), keys);
+        CHECK_FALSE(ok.take_click());
+        keys.presses = { { Key::Escape } };
+        desktop.update(at(0, 0), keys);
+        CHECK(desktop.root().children().empty()); // Escape closed the window instead
+    }
+}

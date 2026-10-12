@@ -10,7 +10,8 @@
 // content is laid out again at the new size, so window classes anchor their widgets to the edges they
 // should follow.
 //
-// Escape closes the window when the widget with the keyboard focus inside it does not use the key.
+// Escape closes the window when the widget with the keyboard focus inside it does not use the key, or
+// clicks its cancel button when it has one. Enter that nothing inside uses clicks its default button.
 //
 // Window classes derive from it, add their widgets to content() in the constructor and handle them in an
 // update() override that calls Window::update() first.
@@ -55,7 +56,9 @@ namespace rct3::ui
 
         std::u16string title;
         bool resizable = false;
-        Point min_size; ///< Smallest width and height a resize leaves; the size it was made at caps it
+        Point min_size;                   ///< Smallest width and height a resize leaves; the size it was made at caps it
+        Button* default_button = nullptr; ///< In this window: clicked by Enter that nothing inside uses
+        Button* cancel_button = nullptr;  ///< In this window: clicked by Escape instead of closing it
 
         /// Whether an edge of the window is following the pointer.
         [[nodiscard]] bool resizing() const
@@ -82,6 +85,12 @@ namespace rct3::ui
         bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
+
+    protected:
+        [[nodiscard]] Button& close_button()
+        {
+            return *close_;
+        }
 
     private:
         enum Edge : std::uint8_t

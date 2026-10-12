@@ -17,3 +17,4 @@ local/
 # nob bootstrap binary
 /nob
 /nob.old
+*.dat

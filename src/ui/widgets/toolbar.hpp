@@ -22,6 +22,7 @@ namespace rct3::ui
         float button_size = 30;      ///< Buttons are squares
         float gap = 4;               ///< Between buttons
         float separator_room = 12;   ///< Taken by a separator, its line in the middle
+        float swell = 0;             ///< Of the buttons; see Button
     };
 
     class Toolbar : public Widget

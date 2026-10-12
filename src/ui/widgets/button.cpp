@@ -3,6 +3,7 @@
 
 #include "ui/text_layout.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace rct3::ui
@@ -55,27 +56,47 @@ namespace rct3::ui
             on = !on;
     }
 
+    Rect Button::face() const
+    {
+        // Eased in and out, and whole units so the skin's edges stay sharp.
+        const float t = grown_ * grown_ * (3 - 2 * grown_);
+        const float by = std::round(swell * t);
+        const Rect& r = rect();
+        return { r.x0 - by, r.y0 - by, r.x1 + by, r.y1 + by };
+    }
+
+    void Button::update(const UpdateContext& context)
+    {
+        const float target = hovered() && enabled && swell > 0 ? 1.0f : 0.0f;
+        const float step = swell_time > 0 ? context.elapsed / swell_time : 1.0f;
+        grown_ = grown_ < target ? std::min(target, grown_ + step) : std::max(target, grown_ - step);
+    }
+
     void Button::draw(DrawContext& context) const
     {
         const SkinState s = state();
-        draw_skin_state(context.list, context.skins, skin, s, rect());
+        const Rect r = face();
+        draw_skin_state(context.list, context.skins, skin, s, r);
 
         // The face looks pushed in while held: what is on it moves by one unit.
         const float nudge = s == SkinState::Pressed ? 1.0f : 0.0f;
         if (const SkinRef* glyph = icon.empty() ? nullptr : context.skins.find(icon))
         {
-            const auto [w, h] = glyph->size();
-            const float x = std::round(rect().x0 + (rect().width() - w) / 2) + nudge;
-            const float y = std::round(rect().y0 + (rect().height() - h) / 2) + nudge;
+            // The icon grows with the face.
+            const float grow = rect().width() > 0 ? r.width() / rect().width() : 1.0f;
+            const float w = std::round(glyph->size()[0] * grow);
+            const float h = std::round(glyph->size()[1] * grow);
+            const float x = std::round(r.x0 + (r.width() - w) / 2) + nudge;
+            const float y = std::round(r.y0 + (r.height() - h) / 2) + nudge;
             draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? Color { 255, 255, 255, 128 } : kWhite);
         }
 
         const Font* f = text.empty() ? nullptr : context.fonts.get(font);
         if (f == nullptr)
             return;
-        if (context.list.push_clip(rect()))
+        if (context.list.push_clip(r))
         {
-            const Rect box { rect().x0 + text_inset.x0 + nudge, rect().y0 + text_inset.y0 + nudge, rect().x1 - text_inset.x1 + nudge, rect().y1 - text_inset.y1 + nudge };
+            const Rect box { r.x0 + text_inset.x0 + nudge, r.y0 + text_inset.y0 + nudge, r.x1 - text_inset.x1 + nudge, r.y1 - text_inset.y1 + nudge };
             draw_text(context.list, *f, text, box, { enabled ? text_colour : disabled_text_colour, Align::Centre, Align::Centre, false });
         }
         context.list.pop_clip();

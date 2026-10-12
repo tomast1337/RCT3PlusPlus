@@ -16,6 +16,10 @@
 //
 // Popups (Widget::popup), such as menus, are top-level widgets that close when a press misses them. The
 // top-most one takes the keyboard focus, which goes back where it was when the popup closes.
+//
+// A modal top-level widget (Widget::modal), such as a question, shuts out everything below it: the pointer
+// and the keys reach only it and what was put above it later, and pointer input never reaches the 3D view
+// while it is shown. The rest is drawn under a shade.
 #pragma once
 
 #include "ui/keyboard.hpp"
@@ -23,6 +27,7 @@
 #include "ui/tooltip.hpp"
 #include "ui/widget.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -90,12 +95,13 @@ namespace rct3::ui
         void draw(DrawContext& context) const;
 
         TooltipStyle tooltip_style;
+        Color modal_shade { 0, 0, 0, 96 }; ///< Over what a modal widget shuts out
         [[nodiscard]] const Tooltip& tooltip() const
         {
             return tooltip_;
         }
 
-        /// The widget under `p` that takes the pointer, if any.
+        /// The widget under `p` that takes the pointer, if any. Below a modal widget, nothing does.
         [[nodiscard]] Widget* hit(Point p) const;
         /// The deepest visible widget under `p`, whether it takes the pointer or not; the root when nothing
         /// else is there.
@@ -103,6 +109,10 @@ namespace rct3::ui
 
     private:
         void follow_popups();
+        /// The index of the top-most modal top-level widget shown; input reaches it and those above.
+        [[nodiscard]] std::optional<std::size_t> top_modal() const;
+        /// Takes the keyboard focus from a widget a modal one shuts out.
+        void drop_shut_out_focus();
 
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
         Rect view_;

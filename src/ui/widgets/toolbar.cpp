@@ -34,6 +34,7 @@ namespace rct3::ui
     {
         Button& b = add<Button>(std::move(name), style_.button, std::move(icon));
         b.tooltip = std::move(tooltip);
+        b.swell = style_.swell;
         arrange();
         return b;
     }

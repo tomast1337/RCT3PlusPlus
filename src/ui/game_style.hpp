@@ -10,6 +10,7 @@
 #include "ui/widgets/list_box.hpp"
 #include "ui/widgets/menu.hpp"
 #include "ui/widgets/menu_bar.hpp"
+#include "ui/widgets/question_box.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/slider.hpp"
 #include "ui/widgets/spinner.hpp"
@@ -177,13 +178,26 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// Square buttons on the window background.
+    /// Square buttons on the window background, swelling under the pointer (our measure).
     [[nodiscard]] inline ToolbarStyle toolbar_style()
     {
         ToolbarStyle s;
         s.background = kWindowBackground;
         s.button = kButton;
         s.button_size = 30;
+        s.swell = 2;
+        return s;
+    }
+
+    /// A question in a window, its answers as text lozenges.
+    [[nodiscard]] inline QuestionBoxStyle question_box_style()
+    {
+        QuestionBoxStyle s;
+        s.window = window_style();
+        s.button = kTextButton;
+        s.button_inset = kLozengeInset;
+        s.width = 320;
+        s.height = 180;
         return s;
     }
 

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay.
+// rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
+// the game installed it first plays the startup logos and the loading screen, then shows real skins.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--frames N] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--frames N] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
+//   --no-intro        skip the startup logos
 //   --frames N        exit after N frames (smoke test)
 //   --help            this text and the environment variables read (config/environment.hpp)
 #include "config/environment.hpp"
@@ -16,6 +18,7 @@
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
 #include "scene/skin_gallery.hpp"
+#include "scene/startup_screen.hpp"
 #include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
 
@@ -36,7 +39,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--frames N] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--frames N] [--help]\n");
     }
 
     void print_help()
@@ -45,6 +48,15 @@ namespace
         std::printf("\nenvironment:\n");
         for (const auto& var : rct3::config::env_vars())
             std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data());
+    }
+
+    // Any key or click the developer windows did not take skips the logos.
+    bool skip_requested()
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        const bool click = !io.WantCaptureMouse && (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right));
+        const bool key = !io.WantCaptureKeyboard && (ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::IsKeyPressed(ImGuiKey_Space) || ImGui::IsKeyPressed(ImGuiKey_Enter));
+        return click || key;
     }
 
     void draw_profiler_window(const rct3::render::Device& device)
@@ -151,6 +163,7 @@ int main(int argc, char** argv)
     int max_frames = -1;
     render::Backend backend = render::Backend::Vulkan;
     bool vsync = true;
+    bool intro = true;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -170,6 +183,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--no-vsync") == 0)
         {
             vsync = false;
+        }
+        else if (std::strcmp(argv[i], "--no-intro") == 0)
+        {
+            intro = false;
         }
         else if (std::strcmp(argv[i], "--help") == 0)
         {
@@ -222,19 +239,45 @@ int main(int argc, char** argv)
         log.critical("ui demo: {}", ui_demo.error());
         return 1;
     }
-    // Real skins replace the generated demo when the game is there to read them from.
+    // With the game installed: logos, then the loading screen while the skins load, then the skin gallery
+    // in place of the generated demo.
+    enum class Phase : std::uint8_t
+    {
+        Intro,
+        Loading,
+        Running,
+    };
+    Phase phase = Phase::Running;
+    std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::SkinGallery> gallery;
     if (install)
     {
-        if (const auto main_ovl = install->find("Main.common.ovl"))
+        auto created = rct3::scene::create_startup_screen(*device, *install, { });
+        if (created)
         {
-            auto loaded = rct3::scene::create_skin_gallery(*device, *main_ovl);
-            if (loaded)
-                gallery = std::move(*loaded);
-            else
-                log.warning("skins: {}", loaded.error());
+            startup = std::move(*created);
+            phase = intro ? Phase::Intro : Phase::Loading;
+        }
+        else
+        {
+            log.warning("startup screen: {}", created.error());
         }
     }
+    const auto load_gallery = [&] {
+        const auto main_ovl = install->find("Main.common.ovl");
+        if (!main_ovl)
+        {
+            log.warning("skins: Main.common.ovl not found");
+            return;
+        }
+        auto loaded = rct3::scene::create_skin_gallery(*device, *main_ovl);
+        if (loaded)
+            gallery = std::move(*loaded);
+        else
+            log.warning("skins: {}", loaded.error());
+    };
+    if (install && !startup)
+        load_gallery();
 
     int status = 0;
     try
@@ -246,7 +289,8 @@ int main(int argc, char** argv)
             window->poll_events();
 
             const double now = window->time();
-            prof::update(now - last_time);
+            const double delta = now - last_time;
+            prof::update(delta);
             last_time = now;
 
             prof::section("Frame", [&] {
@@ -254,21 +298,49 @@ int main(int argc, char** argv)
                     device->ui_new_frame();
                     window->ui_new_frame();
                     ImGui::NewFrame();
-                    draw_profiler_window(*device);
-                    draw_log_window();
-                    ImGui::ShowDemoWindow();
+                    if (phase == Phase::Intro)
+                    {
+                        startup->sequence.update(static_cast<float>(delta), skip_requested());
+                        if (startup->sequence.finished())
+                            phase = Phase::Loading;
+                    }
+                    if (phase == Phase::Running)
+                    {
+                        draw_profiler_window(*device);
+                        draw_log_window();
+                        ImGui::ShowDemoWindow();
+                    }
                 });
                 prof::section("Draw", [&] {
                     device->begin_frame();
                     device->begin_pass({ .clear_color = { 0.05f, 0.06f, 0.08f, 1.0f } });
-                    rct3::scene::draw_test_scene(*device, *scene, now);
-                    if (gallery)
-                        rct3::scene::draw_skin_gallery(*device, *gallery, now);
+                    if (phase == Phase::Intro)
+                    {
+                        rct3::scene::draw_startup_logo(*device, *startup);
+                    }
+                    else if (phase == Phase::Loading)
+                    {
+                        rct3::scene::draw_loading_screen(*device, *startup);
+                    }
                     else
-                        rct3::scene::draw_ui_demo(*device, *ui_demo, now);
+                    {
+                        rct3::scene::draw_test_scene(*device, *scene, now);
+                        if (gallery)
+                            rct3::scene::draw_skin_gallery(*device, *gallery, now);
+                        else
+                            rct3::scene::draw_ui_demo(*device, *ui_demo, now);
+                    }
                     device->draw_ui();
                     device->end_pass();
                     device->end_frame();
+                    // The loading screen is on screen now; load while it shows, as the game does.
+                    if (phase == Phase::Loading)
+                    {
+                        load_gallery();
+                        rct3::scene::destroy_startup_screen(*device, *startup);
+                        startup.reset();
+                        phase = Phase::Running;
+                    }
                 });
             });
             prof::capture_frame();
@@ -281,6 +353,8 @@ int main(int argc, char** argv)
         status = 1;
     }
 
+    if (startup)
+        rct3::scene::destroy_startup_screen(*device, *startup);
     if (gallery)
         rct3::scene::destroy_skin_gallery(*device, *gallery);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);

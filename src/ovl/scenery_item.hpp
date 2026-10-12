@@ -124,14 +124,17 @@ class SceneryItemReader {
   /// apart by its block ending early, so it is off for structures embedded among other data.
   [[nodiscard]] std::optional<SceneryItem> read(std::uint32_t address, bool allow_compact = true) const;
 
-  /// Structures stored back to back from `address` until the block ends. Each is followed by the
-  /// visual reference slots it needs beyond the first. Nothing when any structure is unreadable or
-  /// the data does not end with the block.
+  /// Structures stored back to back from `address` until the end of the block that holds it. Each is
+  /// followed by the visual reference slots it needs beyond the first. Nothing when any structure is
+  /// unreadable or the data does not end exactly with the block.
   [[nodiscard]] std::optional<std::vector<SceneryItem>> read_run(std::uint32_t address) const;
 
   /// Research link rows (12 bytes each) at `address`, as stored by scenery items and the types that
   /// embed them. False when the rows do not fit.
   bool read_research(std::uint32_t address, std::uint32_t count, std::vector<SceneryItemResearch>& out) const;
+
+  /// Address just past the block of the reader's part that holds `address`.
+  [[nodiscard]] std::optional<std::uint32_t> block_end(std::uint32_t address) const noexcept;
 
   /// The AddressSpace the reader resolves pointers in.
   [[nodiscard]] const AddressSpace& space() const noexcept { return space_; }
@@ -140,7 +143,7 @@ class SceneryItemReader {
 
  private:
   [[nodiscard]] static std::size_t stride_of(const SceneryItem& item) noexcept;
-
+  const Part* part_;
   AddressSpace space_;
   ReferenceNames refs_;
   PointerFields pointers_;

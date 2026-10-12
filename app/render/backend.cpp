@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "render/backend.hpp"
 
+#include "render/null/null_device.hpp"
 #include "render/vulkan/vulkan_device.hpp"
 
 #include <GLFW/glfw3.h>
@@ -19,6 +20,7 @@ namespace rct3::render
 
         constexpr std::array kBackends = {
             BackendInfo { Backend::Vulkan, "vulkan" },
+            BackendInfo { Backend::Null, "null" },
         };
 
         constexpr auto kBackendIds = [] {
@@ -59,7 +61,8 @@ namespace rct3::render
         switch (backend)
         {
             case Backend::Vulkan:
-                // Vulkan does not want GLFW to create an OpenGL context. An OpenGL backend would ask for one here.
+            case Backend::Null:
+                // Neither wants GLFW to create an OpenGL context. An OpenGL backend would ask for one here.
                 glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
                 break;
         }
@@ -71,6 +74,8 @@ namespace rct3::render
         {
             case Backend::Vulkan:
                 return std::make_unique<vulkan::VulkanDevice>();
+            case Backend::Null:
+                return std::make_unique<null::NullDevice>();
         }
         return nullptr;
     }

@@ -57,6 +57,31 @@ TEST_CASE("paths inside the install resolve without regard to case or separator"
     CHECK_FALSE(install->find("gui/../style").has_value());
 }
 
+TEST_CASE("without the variable, the settings file names the install")
+{
+    FakeInstall fake;
+    Settings settings;
+    settings.set(Setting::GamePath, fake.root.string());
+    const auto install = find_game_install(Environment(), settings);
+    REQUIRE(install.has_value());
+    CHECK(install->root() == fake.root);
+
+    SUBCASE("the variable wins")
+    {
+        const auto env = Environment::from_values({ { EnvVar::GamePath, (fake.root / "nowhere").string() } });
+        CHECK_FALSE(find_game_install(env, settings).has_value());
+    }
+    SUBCASE("a problem names the setting, not the variable")
+    {
+        settings.set(Setting::GamePath, (fake.root / "nowhere").string());
+        const auto missing = find_game_install(Environment(), settings);
+        REQUIRE_FALSE(missing.has_value());
+        const std::string message = describe(missing.error());
+        CHECK(message.find("game_path") != std::string::npos);
+        CHECK(message.find("RCT3PP_GAME_PATH") == std::string::npos);
+    }
+}
+
 TEST_CASE("problems are reported with what to fix")
 {
     SUBCASE("variable not set")
@@ -65,6 +90,7 @@ TEST_CASE("problems are reported with what to fix")
         REQUIRE_FALSE(install.has_value());
         CHECK(install.error().error == InstallError::NotConfigured);
         CHECK(describe(install.error()).find("RCT3PP_GAME_PATH") != std::string::npos);
+        CHECK(describe(install.error()).find("game_path") != std::string::npos);
     }
     SUBCASE("path does not exist")
     {

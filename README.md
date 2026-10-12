@@ -43,14 +43,38 @@ font embedding exception. Without it the viewer runs with the game's fonts alone
 
 ## Configuration
 
-rct3++ reads the original game's data from your own install. Settings come from environment variables
-for now; `rct3pp --help` lists them all.
+rct3++ reads the original game's data from your own install. Tell it where that is in the settings file
+or with an environment variable; `rct3pp --help` lists both, with the file's location.
+
+The settings file is `settings.ini` in `rct3pp/` under your configuration folder (`$XDG_CONFIG_HOME`, else
+`~/.config`; `%APPDATA%` on Windows). `rct3pp --write-settings` creates it with every setting described,
+including any given on the same command line:
+
+```
+rct3pp --no-intro --scale 2 --write-settings
+```
+
+```
+# rct3++ settings. Lines are name = value; lines starting with # are ignored.
+
+# Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it.
+game_path = /path/to/RollerCoaster Tycoon 3
+
+# Start without the logos (yes/no). --no-intro skips them too.
+skip_intro = yes
+
+# Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.
+interface_scale = 2
+```
+
+The command line wins over environment variables, which win over the file.
 
 | Variable | Meaning |
 |----------|---------|
 | `RCT3PP_GAME_PATH` | Root folder of the installed game, the one that contains `gui/` and `Style/` |
 | `RCT3PP_VALIDATION` | `1` enables the graphics API's validation layer |
 | `RCT3PP_FALLBACK_FONT` | TrueType font for characters the game fonts lack (default `downloads/unifont-15.0.06.ttf`) |
+| `RCT3PP_SETTINGS` | Settings file to use instead of the default one |
 
 ```
 export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"

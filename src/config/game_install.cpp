@@ -39,11 +39,11 @@ namespace rct3::config
 
     std::string describe(const InstallProblem& problem)
     {
-        const std::string variable(env_name(EnvVar::GamePath));
+        const std::string variable = problem.source.empty() ? std::string(env_name(EnvVar::GamePath)) : problem.source;
         switch (problem.error)
         {
             case InstallError::NotConfigured:
-                return variable + " is not set; point it at the folder the original game is installed in";
+                return std::string(env_name(EnvVar::GamePath)) + " and " + std::string(setting_name(Setting::GamePath)) + " in the settings file are not set; point one of them at the folder the original game is installed in";
             case InstallError::NotFound:
                 return "game folder " + problem.path.string() + " does not exist (from " + variable + ")";
             case InstallError::NotADirectory:
@@ -78,24 +78,29 @@ namespace rct3::config
     {
         std::error_code ec;
         if (!fs::exists(root, ec))
-            return std::unexpected(InstallProblem { InstallError::NotFound, root, { } });
+            return std::unexpected(InstallProblem { InstallError::NotFound, root, { }, { } });
         if (!fs::is_directory(root, ec))
-            return std::unexpected(InstallProblem { InstallError::NotADirectory, root, { } });
+            return std::unexpected(InstallProblem { InstallError::NotADirectory, root, { }, { } });
         for (std::string_view folder : kRequiredFolders)
         {
             const auto entry = find_entry(root, folder);
             if (!entry || !fs::is_directory(*entry, ec))
-                return std::unexpected(InstallProblem { InstallError::MissingContent, root, std::string(folder) });
+                return std::unexpected(InstallProblem { InstallError::MissingContent, root, std::string(folder), { } });
         }
         return GameInstall(root);
     }
 
-    std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env)
+    std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env, const Settings& settings)
     {
-        const auto root = env.path(EnvVar::GamePath);
+        if (const auto root = env.path(EnvVar::GamePath))
+            return open_game_install(*root);
+        const auto root = settings.path(Setting::GamePath);
         if (!root)
-            return std::unexpected(InstallProblem { InstallError::NotConfigured, { }, { } });
-        return open_game_install(*root);
+            return std::unexpected(InstallProblem { InstallError::NotConfigured, { }, { }, { } });
+        auto install = open_game_install(*root);
+        if (!install)
+            install.error().source = std::string(setting_name(Setting::GamePath)) + " in the settings file";
+        return install;
     }
 
 } // namespace rct3::config

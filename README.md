@@ -19,7 +19,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
 ./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
 ./nob run                      # graphical viewer: Vulkan triangle + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
-./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3_VALIDATION=1 enables validation layers
+./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
 build/debug/ovl-dump "/path/to/Main.common.ovl"
 build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound item (omit the name to list them)
@@ -33,6 +33,22 @@ only for now.
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
+
+## Configuration
+
+rct3++ reads the original game's data from your own install. Settings come from environment variables
+for now; `rct3pp --help` lists them all.
+
+| Variable | Meaning |
+|----------|---------|
+| `RCT3PP_GAME_PATH` | Root folder of the installed game, the one that contains `gui/` and `Style/` |
+| `RCT3PP_VALIDATION` | `1` enables the graphics API's validation layer |
+
+```
+export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"
+```
+
+File names inside the install are matched without regard to case, as on Windows.
 
 ## Clean-room policy
 

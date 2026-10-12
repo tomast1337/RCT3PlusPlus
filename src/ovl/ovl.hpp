@@ -45,6 +45,7 @@ enum class Error {
   ImplausibleCount,
   BadSymbolTable,
   BadLoaderTable,
+  BadReferenceTable,
   Io,           ///< A file could not be read
   MissingFile,  ///< A required file of a common/unique pair does not exist
 };
@@ -162,6 +163,22 @@ struct SymbolName {
 [[nodiscard]] std::expected<std::vector<Symbol>, Error> read_symbols(const File& file,
                                                                       std::span<const std::byte> bytes,
                                                                       const AddressSpace& space);
+
+/// One row of the reference table (block type 2, block 2): the 32-bit field at `location` names an item
+/// that another file or another part of this one provides, by symbol name (for example "Wall:ftx").
+struct Reference {
+  std::uint32_t location = 0;      ///< Address of the field that holds the reference
+  std::uint32_t name_address = 0;  ///< Address of the referenced item's full symbol name
+  std::uint32_t owner = 0;         ///< Address next to the loader row of the item the field belongs to
+  std::uint32_t hash = 0;          ///< v4/v5 only
+  std::string_view name;           ///< Full symbol name. Empty if the pointer is bad.
+};
+
+/// Reads `file`'s reference table. Rows are 12 bytes in v1 and 16 bytes later. A file without the table
+/// has no references. Names are resolved through `space` as in `read_symbols`.
+[[nodiscard]] std::expected<std::vector<Reference>, Error> read_references(const File& file,
+                                                                           std::span<const std::byte> bytes,
+                                                                           const AddressSpace& space);
 
 /// One row of the loader table (block type 2, block 1): ties a loaded item to its type handler.
 struct LoaderEntry {

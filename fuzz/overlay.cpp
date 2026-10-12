@@ -7,6 +7,7 @@
 #include <vector>
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
+#include "ovl/carried_item.hpp"
 #include "ovl/scenery_item.hpp"
 // --- end scenery and placement item types ---
 #include "ovl/bone_anim.hpp"
@@ -109,6 +110,13 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     for (const auto& sq : it.squares) sink += sq.height_masks.size() + sq.flags;
     for (const auto& sound : it.sounds) sink += sound.sounds.size() + sound.script_count;
     sink += it.type + it.flags;
+  }
+  for (const auto& entry : rct3::ovl::read_carried_items(*overlay, part)) {
+    if (!entry.item) continue;
+    sink += entry.item->extras.size() + entry.item->flags + entry.item->amounts[0];
+  }
+  for (const auto& entry : rct3::ovl::read_carried_item_extras(*overlay, part)) {
+    if (entry.extra) sink += entry.extra->unknown_0c;
   }
   // --- end scenery and placement item types ---
   return 0;

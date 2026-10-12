@@ -6,6 +6,9 @@
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
 //   ./nob fuzz [TARGET] [--seconds N]
 //
+// The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
+// only. It needs no audio device or system audio package.
+//
 // Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
 #include "nob.hpp"
 
@@ -164,6 +167,48 @@ std::vector<fs::path> all_headers() {
   return headers;
 }
 
+// The audio module (src/audio/) is its own target: it pulls in vendored miniaudio and its link flags, so
+// the core library, the fuzz targets and the viewer build without it. Tools that include "audio/..." and
+// the test binary link it. It needs no audio device (miniaudio loads backends at run time, and the tests
+// use its offline mode), only -ldl -lpthread -lm.
+bool is_audio_source(const fs::path& p) { return p.generic_string().starts_with("src/audio/"); }
+
+std::vector<fs::path> core_sources() {
+  std::vector<fs::path> out;
+  for (auto& p : find_files("src", ".cpp")) {
+    if (!is_audio_source(p)) out.push_back(std::move(p));
+  }
+  return out;
+}
+
+bool uses_audio(const fs::path& source) {
+  std::ifstream in(source);
+  std::string line;
+  while (std::getline(in, line)) {
+    if (line.starts_with("#include \"audio/")) return true;
+  }
+  return false;
+}
+
+// Compiles src/audio/*.cpp and the miniaudio implementation unit (vendored code, warnings off).
+bool compile_audio(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects,
+                   std::vector<CompileEntry>& database) {
+  std::vector<fs::path> sources;
+  for (auto& p : find_files("src", ".cpp")) {
+    if (is_audio_source(p)) sources.push_back(std::move(p));
+  }
+  if (!compile(cfg, sources, headers, objects, database)) return false;
+
+  Config vendored = cfg;
+  vendored.compile_flags.push_back("-w");
+  return compile(vendored, {"third_party/miniaudio/miniaudio_impl.cpp"}, headers, objects, database);
+}
+
+Config with_audio_link(Config cfg) {
+  cfg.link_flags.insert(cfg.link_flags.end(), {"-ldl", "-lpthread", "-lm"});
+  return cfg;
+}
+
 // Library objects, tools (tools/<name>/main.cpp -> build/<mode>/<name>) and the single test binary.
 bool build_all(const Config& cfg) {
   if (!mkdir_p(cfg.obj_dir())) return false;
@@ -172,18 +217,26 @@ bool build_all(const Config& cfg) {
   std::vector<CompileEntry> database;
 
   std::vector<fs::path> lib_objects;
-  if (!compile(cfg, find_files("src", ".cpp"), headers, lib_objects, database)) return false;
+  if (!compile(cfg, core_sources(), headers, lib_objects, database)) return false;
+
+  std::vector<fs::path> audio_objects;
+  if (!compile_audio(cfg, headers, audio_objects, database)) return false;
 
   for (const auto& main_cpp : find_files("tools", ".cpp")) {
+    const bool audio = uses_audio(main_cpp);
     std::vector<fs::path> objects = lib_objects;
+    if (audio) objects.insert(objects.end(), audio_objects.begin(), audio_objects.end());
     if (!compile(cfg, {main_cpp}, headers, objects, database)) return false;
-    if (!link(cfg, cfg.out_dir() / main_cpp.parent_path().filename(), objects)) return false;
+    if (!link(audio ? with_audio_link(cfg) : cfg, cfg.out_dir() / main_cpp.parent_path().filename(), objects))
+      return false;
   }
 
-  // All of tests/**/*.cpp (the doctest runner plus every *.test.cpp) links into one binary.
+  // All of tests/**/*.cpp (the doctest runner plus every *.test.cpp) links into one binary, together
+  // with the audio module.
   std::vector<fs::path> test_objects = lib_objects;
+  test_objects.insert(test_objects.end(), audio_objects.begin(), audio_objects.end());
   if (!compile(cfg, find_files("tests", ".cpp"), headers, test_objects, database)) return false;
-  if (!link(cfg, cfg.test_binary(), test_objects)) return false;
+  if (!link(with_audio_link(cfg), cfg.test_binary(), test_objects)) return false;
 
   write_compile_commands(database);
   return true;
@@ -223,7 +276,7 @@ bool build_app(const Config& cfg, fs::path& binary) {
   app.compile_flags.insert(app.compile_flags.end(),
                            {"-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan",
                             "-Iapp", "-I" + gen_dir.string()});
-  std::vector<fs::path> lib_sources = find_files("src", ".cpp");
+  std::vector<fs::path> lib_sources = core_sources();
   std::vector<fs::path> app_headers = headers;
   for (const auto& h : find_files("app", ".hpp")) app_headers.push_back(h);
   for (const auto& inc : find_files(gen_dir, ".inc")) app_headers.push_back(inc);
@@ -244,7 +297,7 @@ bool build_fuzz(const Config& cfg, std::vector<fs::path>& targets) {
   std::vector<CompileEntry> database;
 
   std::vector<fs::path> lib_objects;
-  if (!compile(cfg, find_files("src", ".cpp"), headers, lib_objects, database)) return false;
+  if (!compile(cfg, core_sources(), headers, lib_objects, database)) return false;
 
   for (const auto& source : find_files("fuzz", ".cpp")) {
     std::vector<fs::path> objects = lib_objects;

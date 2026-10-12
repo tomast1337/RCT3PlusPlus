@@ -54,7 +54,7 @@ namespace rct3::platform
             float wheel_y = 0; ///< Notches turned since the last poll_events, positive away from the user
         };
         [[nodiscard]] Pointer pointer() const;
-        /// Keys pressed and text typed since the last poll_events.
+        /// Keys pressed and text typed since the last poll_events, in order.
         [[nodiscard]] const ui::KeyboardState& keyboard() const
         {
             return collected_->keyboard;

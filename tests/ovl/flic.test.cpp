@@ -66,12 +66,12 @@ Overlay load(const std::vector<std::byte>& file) {
   return std::move(*overlay);
 }
 
-// A 16 x 8 block compressed image with 16-byte blocks, one level: header and 4 x 2 blocks.
+// A 16 x 8 block compressed image with 16-byte blocks, one level: header, 4 x 2 blocks and trailing padding.
 std::vector<std::byte> image_chunk(std::uint32_t format = 19, std::uint32_t row_bytes = 64) {
   std::vector<std::byte> out;
   words(out, {format, 16, 8, 1, 16, 8, row_bytes, 2});
-  words(out, {0, 0, 0, 0});  // four words of an unknown purpose
   out.resize(out.size() + 8 * 16, std::byte{0x11});
+  out.resize(out.size() + 16, std::byte{0});  // padding
   return out;
 }
 

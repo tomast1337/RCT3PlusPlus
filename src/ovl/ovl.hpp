@@ -45,6 +45,8 @@ enum class Error {
   ImplausibleCount,
   BadSymbolTable,
   BadLoaderTable,
+  Io,           ///< A file could not be read
+  MissingFile,  ///< A required file of a common/unique pair does not exist
 };
 
 [[nodiscard]] const char* to_string(Error e) noexcept;

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Real interface skins, fonts and strings on the widget tree: a window class with a wrapped help text,
-// labelled tick boxes, a toggle and buttons. Confirm opens another window beside it, the cross or cancel
-// closes one, the title bar drags it, pressing a window raises it. A first real window until the game's own
-// windows exist.
+// Real interface skins, fonts and strings on the widget tree: a menu bar and a toolbar along the top, and
+// a window class with pages of text, a list and controls. Confirm opens another window beside it, the cross
+// or cancel closes one, the title bar drags it, pressing a window raises it. The menus open and close
+// windows and pick the interface scale. A first real window until the game's own windows exist.
 #pragma once
 
 #include "config/game_install.hpp"
@@ -15,6 +15,8 @@
 #include "ui/string_table.hpp"
 #include "ui/ui_renderer.hpp"
 #include "ui/ui_textures.hpp"
+#include "ui/widgets/menu_bar.hpp"
+#include "ui/widgets/toolbar.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -34,6 +36,8 @@ namespace rct3::scene
         /// On the heap: windows keep a reference, and the demo moves.
         std::unique_ptr<ui::StringTable> strings = std::make_unique<ui::StringTable>();
         ui::Desktop desktop;
+        ui::MenuBar* menu_bar = nullptr; ///< In the desktop's tree, which lives as long as the demo
+        ui::Toolbar* toolbar = nullptr;
         ui::DrawList list;
         std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
     };

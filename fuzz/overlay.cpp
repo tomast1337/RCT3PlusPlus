@@ -6,6 +6,7 @@
 #include <optional>
 #include <vector>
 
+#include "ovl/bone_anim.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_visual.hpp"
@@ -32,6 +33,10 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   for (const auto& item : rct3::ovl::read_scenery_visuals(*overlay, part)) {
     if (item.visual) sink += item.visual->lods.size();
+  }
+  for (const auto& item : rct3::ovl::read_bone_anims(*overlay, part)) {
+    if (!item.anim) continue;
+    for (const auto& bone : item.anim->bones) sink += bone.positions.size() + bone.rotations.size();
   }
   return 0;
 }

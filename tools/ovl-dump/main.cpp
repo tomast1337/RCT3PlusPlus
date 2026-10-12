@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -18,6 +18,7 @@
 #include "ovl/integer_value.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/simple_anim.hpp"
+#include "ovl/simple_skin.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/font.hpp"
 #include "ovl/float_value.hpp"
@@ -50,6 +51,7 @@ struct Options {
   bool spl = false;
   bool san = false;
   bool modelanim = false;
+  bool ssk = false;
   bool fct = false;
   bool tex = false;
   bool gsi = false;
@@ -316,6 +318,27 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   item.anim->duration, item.anim->position_bones.size(), item.anim->rotation_bones.size());
     }
   }
+  if (opt.ssk) {
+    const auto skins = rct3::ovl::read_simple_skins(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : skins) {
+      if (!item.skin) ++bad;
+    }
+    std::printf("simple skins   %zu (%zu unreadable)\n", skins.size(), bad);
+    for (const auto& item : skins) {
+      const std::string name(item.name);
+      if (!item.skin) {
+        std::printf("  %-32s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::size_t outside = 0;
+      for (const auto index : item.skin->indices) {
+        if (index >= item.skin->vertices.size()) ++outside;
+      }
+      std::printf("  %-32s parts %zu vertices %zu triangles %zu outside %zu\n", name.c_str(),
+                  item.skin->part_ids.size(), item.skin->vertices.size(), item.skin->indices.size() / 3, outside);
+    }
+  }
   if (opt.btbl) {
     const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
     std::size_t bad = 0;
@@ -472,6 +495,7 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--spl") == 0) opt.spl = true;
     else if (std::strcmp(argv[i], "--san") == 0) opt.san = true;
     else if (std::strcmp(argv[i], "--modelanim") == 0) opt.modelanim = true;
+    else if (std::strcmp(argv[i], "--ssk") == 0) opt.ssk = true;
     else if (std::strcmp(argv[i], "--fct") == 0) opt.fct = true;
     else if (std::strcmp(argv[i], "--tex") == 0) opt.tex = true;
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
@@ -481,7 +505,7 @@ int main(int argc, char** argv) {
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] PATH\n", argv[0]);
     return 2;
   }
 

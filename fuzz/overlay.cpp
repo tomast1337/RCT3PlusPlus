@@ -12,6 +12,7 @@
 #include "ovl/integer_value.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/simple_anim.hpp"
+#include "ovl/simple_skin.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/font.hpp"
 #include "ovl/float_value.hpp"
@@ -60,6 +61,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   sink += rct3::ovl::read_integers(*overlay, part).size();
   for (const auto& item : rct3::ovl::read_model_anims(*overlay, part)) {
     if (item.anim) sink += item.anim->positions.size() + item.anim->rotations.size() + item.anim->position_bones.size();
+  }
+  for (const auto& item : rct3::ovl::read_simple_skins(*overlay, part)) {
+    if (!item.skin) continue;
+    sink += item.skin->vertices.size();
+    for (const auto index : item.skin->indices) sink += index;
   }
   for (const auto& item : rct3::ovl::read_simple_anims(*overlay, part)) {
     if (item.anim) sink += item.anim->times.size() + item.anim->samples.size();

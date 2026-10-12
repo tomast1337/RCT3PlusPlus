@@ -51,6 +51,7 @@
 #include "ovl/texture_image.hpp"
 #include "ovl/track_section.hpp"
 #include "ovl/tracked_ride.hpp"
+#include "strings/unicode.hpp"
 
 namespace
 {
@@ -745,7 +746,7 @@ namespace
             {
                 const std::string name(item.name);
                 if (item.value)
-                    std::printf("  %s = %s\n", name.c_str(), rct3::ovl::to_utf8(*item.value).c_str());
+                    std::printf("  %s = %s\n", name.c_str(), rct3::strings::to_utf8(*item.value).c_str());
                 else
                     std::printf("  %s = <unreadable>\n", name.c_str());
             }

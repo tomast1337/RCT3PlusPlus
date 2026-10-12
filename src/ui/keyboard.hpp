@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Keyboard input for the interface, read once per frame like the pointer: the keys pressed since the last
-// update, in order, with the system's key repeat already applied, and the text typed. Keys go to the widget
-// with the keyboard focus first, then up through its parents until one uses them (see Desktop).
+// Keyboard input for the interface, read once per frame like the pointer: what was pressed and typed since
+// the last update, in the order it happened, with the system's key repeat already applied. Keys go to the
+// widget with the keyboard focus first, then up through its parents until one uses them (see Desktop).
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <vector>
 
 namespace rct3::ui
 {
 
-    /// The keys widgets react to. Printable characters arrive as text instead.
     enum class Key : std::uint8_t
     {
         Left,
@@ -28,7 +26,9 @@ namespace rct3::ui
         Enter,
         Backspace,
         Delete,
-        Space, ///< Also arrives as text
+        Space,     ///< Also arrives as a typed ' '
+        Character, ///< Typed text: `character` holds it
+        Shortcut,  ///< A letter or digit key with Control held: `character` holds it, lower case
     };
 
     struct KeyPress
@@ -36,12 +36,12 @@ namespace rct3::ui
         Key key = Key::Escape;
         bool shift = false;
         bool control = false;
+        char32_t character = 0; ///< For Character and Shortcut
     };
 
     struct KeyboardState
     {
         std::vector<KeyPress> presses; ///< Since the last update, oldest first
-        std::u16string text;           ///< Typed since the last update
     };
 
 } // namespace rct3::ui

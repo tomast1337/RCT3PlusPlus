@@ -53,18 +53,6 @@ namespace rct3::platform
             }
         }
 
-        void append_utf16(std::u16string& out, unsigned int c)
-        {
-            if (c < 0x10000)
-            {
-                out += static_cast<char16_t>(c);
-                return;
-            }
-            c -= 0x10000;
-            out += static_cast<char16_t>(0xD800 + (c >> 10));
-            out += static_cast<char16_t>(0xDC00 + (c & 0x3FF));
-        }
-
         Window::Collected& collected_of(GLFWwindow* w)
         {
             return *static_cast<Window::Collected*>(glfwGetWindowUserPointer(w));
@@ -96,11 +84,22 @@ namespace rct3::platform
         });
         // Presses and the system's repeats, not releases.
         glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
-            const auto mapped = interface_key(key);
-            if (action != GLFW_RELEASE && mapped)
-                collected_of(w).keyboard.presses.push_back({ *mapped, (mods & GLFW_MOD_SHIFT) != 0, (mods & GLFW_MOD_CONTROL) != 0 });
+            if (action == GLFW_RELEASE)
+                return;
+            const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+            const bool control = (mods & GLFW_MOD_CONTROL) != 0;
+            auto& presses = collected_of(w).keyboard.presses;
+            if (const auto mapped = interface_key(key))
+                presses.push_back({ *mapped, shift, control });
+            // Control+letter types nothing, so it comes as a shortcut instead. GLFW names keys by the US
+            // layout; the layout's own letter would need the key name, which is a later refinement.
+            else if (control && key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+                presses.push_back({ ui::Key::Shortcut, shift, control, static_cast<char32_t>(U'a' + (key - GLFW_KEY_A)) });
+            else if (control && key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
+                presses.push_back({ ui::Key::Shortcut, shift, control, static_cast<char32_t>(U'0' + (key - GLFW_KEY_0)) });
         });
-        glfwSetCharCallback(window, [](GLFWwindow* w, unsigned int c) { append_utf16(collected_of(w).keyboard.text, c); });
+        // Text in the order it was typed, between the key presses.
+        glfwSetCharCallback(window, [](GLFWwindow* w, unsigned int c) { collected_of(w).keyboard.presses.push_back({ ui::Key::Character, false, false, static_cast<char32_t>(c) }); });
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -138,7 +137,6 @@ namespace rct3::platform
         collected_->wheel_x = 0;
         collected_->wheel_y = 0;
         collected_->keyboard.presses.clear();
-        collected_->keyboard.text.clear();
         glfwPollEvents();
     }
 

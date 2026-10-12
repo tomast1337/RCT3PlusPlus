@@ -9,6 +9,7 @@
 #include "ui/skin_set.hpp"
 #include "ui/truetype_font.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/panel.hpp"
 #include "ui/widgets/scroll_area.hpp"
@@ -32,7 +33,7 @@ namespace rct3::scene
         constexpr float kWidth = 340;
         constexpr float kHeight = 300;
         constexpr float kMinWidth = 320; ///< Room for the button row
-        constexpr float kMinHeight = 260;
+        constexpr float kMinHeight = 280;
         constexpr float kCascade = 28; ///< How far each new window opens from the last
 
         // Game string keys the demo shows.
@@ -43,6 +44,7 @@ namespace rct3::scene
         constexpr std::array<std::string_view, 3> kTextButtonKeys = { "SMB_Label_OK", "SMB_Label_Cancel", "SMB_Label_Help" };
         constexpr float kTextButtonWidth = 70;
         constexpr float kTextButtonHeight = 26;
+        constexpr std::size_t kNameLength = 40;
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.
         constexpr std::u16string_view kFallbackSample = u"\n\n\u0393\u03B5\u03B9\u03AC \u03C3\u03BF\u03C5 \u03BA\u03CC\u03C3\u03BC\u03B5 \u00B7 \u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440 \u00B7 \u2190 \u2191 \u2192 \u2193 \u00B7 \u00BD \u00BE \u2122 \u25A0";
@@ -63,7 +65,7 @@ namespace rct3::scene
 
                 // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
-                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -104 } };
+                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -130 } };
                 // The help text runs on with the options' help, more than fits, to show scrolling.
                 std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
                 for (const std::string_view key : kOptionTips)
@@ -86,6 +88,12 @@ namespace rct3::scene
                     label.placement = { { 0, 1, 1, 1 }, { 18, -bottom - 15, -80, -bottom + 3 } };
                     label.style.vertical = ui::Align::Centre;
                 }
+                // Typing here renames the window.
+                name_ = &body.add<ui::EditBox>("name", title);
+                name_->skin = std::string(skins::kListBox);
+                name_->placement = { { 0, 1, 1, 1 }, { 0, -124, 0, -104 } };
+                name_->max_length = kNameLength;
+
                 auto& toggle = body.add<ui::Button>("toggle", std::string(kToggleFamily));
                 toggle.toggle = true;
                 toggle.placement = ui::bottom_right(0, 60, 20, 20);
@@ -113,6 +121,8 @@ namespace rct3::scene
             void update(const ui::UpdateContext& context) override
             {
                 ui::Window::update(context);
+                if (name_->take_change())
+                    title = name_->text;
                 if (cancel_->take_click() || text_cancel_->take_click())
                     close();
                 const bool open = confirm_->take_click() || ok_->take_click();
@@ -129,6 +139,7 @@ namespace rct3::scene
             ui::Button* cancel_ = nullptr;
             ui::Button* ok_ = nullptr;
             ui::Button* text_cancel_ = nullptr;
+            ui::EditBox* name_ = nullptr;
         };
 
         // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure

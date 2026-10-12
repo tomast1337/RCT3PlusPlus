@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -15,6 +15,7 @@
 #include "ovl/bone_anim.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/gui_skin.hpp"
+#include "ovl/integer_value.hpp"
 #include "ovl/font.hpp"
 #include "ovl/float_value.hpp"
 #include "ovl/flic.hpp"
@@ -42,6 +43,7 @@ struct Options {
   bool ban = false;
   bool bsh = false;
   bool flic = false;
+  bool int_values = false;
   bool fct = false;
   bool tex = false;
   bool gsi = false;
@@ -251,6 +253,13 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
       std::printf("  %-32s %g\n", std::string(item.name).c_str(), item.value);
     }
   }
+  if (opt.int_values) {
+    const auto values = rct3::ovl::read_integers(overlay, part);
+    std::printf("integer values %zu\n", values.size());
+    for (const auto& item : values) {
+      std::printf("  %-32s %d\n", std::string(item.name).c_str(), item.value);
+    }
+  }
   if (opt.btbl) {
     const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
     std::size_t bad = 0;
@@ -403,6 +412,7 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--ban") == 0) opt.ban = true;
     else if (std::strcmp(argv[i], "--bsh") == 0) opt.bsh = true;
     else if (std::strcmp(argv[i], "--flic") == 0) opt.flic = true;
+    else if (std::strcmp(argv[i], "--int") == 0) opt.int_values = true;
     else if (std::strcmp(argv[i], "--fct") == 0) opt.fct = true;
     else if (std::strcmp(argv[i], "--tex") == 0) opt.tex = true;
     else if (std::strcmp(argv[i], "--gsi") == 0) opt.gsi = true;
@@ -412,7 +422,7 @@ int main(int argc, char** argv) {
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] PATH\n", argv[0]);
     return 2;
   }
 

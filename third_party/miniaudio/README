@@ -1,0 +1,5 @@
+miniaudio 0.11.25 (release tag 0.11.25, 2026-03-03)
+https://github.com/mackron/miniaudio
+miniaudio.h is vendored unmodified from the tag above. MA_VERSION_STRING inside the header reads 0.11.25.
+Licensed, at your choice, under the Unlicense (public domain) or MIT No Attribution; see LICENSE.
+miniaudio_impl.cpp is the one translation unit that compiles the implementation (ours, GPL-3.0-or-later).

@@ -183,6 +183,10 @@ namespace rct3::ui
         {
             return false;
         }
+        /// What an input method is composing, every update while this widget has the keyboard focus.
+        virtual void on_composition(const Composition&)
+        {
+        }
         /// Text for the clipboard, taken by the desktop right after this widget used a key: what Copy or Cut
         /// gave. Nothing by default.
         [[nodiscard]] virtual std::optional<std::u16string> take_copied()

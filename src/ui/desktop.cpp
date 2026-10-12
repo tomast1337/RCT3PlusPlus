@@ -306,6 +306,9 @@ namespace rct3::ui
             }
         }
 
+        if (focus_ != nullptr && usable(*focus_))
+            focus_->on_composition(keyboard.composition);
+
         // Input may have moved or raised things: lay out and look again so the flags match what is drawn.
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;

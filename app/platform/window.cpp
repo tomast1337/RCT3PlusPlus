@@ -123,7 +123,8 @@ namespace rct3::platform
             else if (control && key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
                 presses.push_back({ ui::Key::Shortcut, shift, control, static_cast<char32_t>(U'0' + (key - GLFW_KEY_0)) });
         });
-        // Text in the order it was typed, between the key presses.
+        // Text in the order it was typed, between the key presses. Input method text arrives here once
+        // confirmed; GLFW does not report what is still being composed, so the composition stays empty.
         glfwSetCharCallback(window, [](GLFWwindow* w, unsigned int c) { collected_of(w).keyboard.presses.push_back({ ui::Key::Character, false, false, static_cast<char32_t>(c) }); });
 
         IMGUI_CHECKVERSION();

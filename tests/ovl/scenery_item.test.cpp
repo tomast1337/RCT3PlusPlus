@@ -158,8 +158,10 @@ std::vector<std::byte> structure(std::uint32_t version = 2, std::uint32_t x = 2,
   return out;
 }
 
-Overlay make(const std::vector<std::byte>& block, const std::vector<std::byte>& refs = all_references()) {
-  auto overlay = Overlay::from_bytes(build_file(5, {{names()}, {block}, {symbol_row(), {}, refs}}, {}), std::nullopt);
+Overlay make(const std::vector<std::byte>& block, const std::vector<std::byte>& refs = all_references(),
+             const std::vector<std::uint32_t>& relocations = {}) {
+  auto overlay =
+      Overlay::from_bytes(build_file(5, {{names()}, {block}, {symbol_row(), {}, refs}}, relocations), std::nullopt);
   REQUIRE(overlay.has_value());
   return std::move(*overlay);
 }
@@ -331,6 +333,26 @@ TEST_CASE("scenery item edge cases") {
     const auto overlay = make(block);
     const auto items = read_scenery_items(overlay, overlay.common());
     CHECK_FALSE(items[0].item.has_value());
+  }
+
+  SUBCASE("a null mask pointer with a count gives no masks") {
+    auto block = structure();
+    // Second square: count 3, pointer 0 and not relocated.
+    block[kSquares + 20 + 16] = std::byte{3};
+    const auto overlay = make(block);
+    const auto items = read_scenery_items(overlay, overlay.common());
+    REQUIRE(items[0].item.has_value());
+    CHECK(items[0].item->squares[1].height_masks.empty());
+  }
+
+  SUBCASE("a relocated zero pointer is a pointer to the first byte") {
+    auto block = structure();
+    block[kSquares + 20 + 16] = std::byte{1};
+    const auto overlay = make(block, all_references(), {kBase + kSquares + 20 + 12});
+    const auto items = read_scenery_items(overlay, overlay.common());
+    REQUIRE(items[0].item.has_value());
+    REQUIRE(items[0].item->squares[1].height_masks.size() == 1);
+    CHECK(items[0].item->squares[1].height_masks[0] == 0x6d657449u);  // "Item", the first bytes of the data
   }
 
   SUBCASE("an enormous node count is refused") {

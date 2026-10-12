@@ -6,11 +6,15 @@
 
 #include "ui/font_set.hpp"
 #include "ui/tooltip.hpp"
+#include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/list_box.hpp"
+#include "ui/widgets/menu.hpp"
+#include "ui/widgets/menu_bar.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/slider.hpp"
 #include "ui/widgets/spinner.hpp"
 #include "ui/widgets/tabs.hpp"
+#include "ui/widgets/toolbar.hpp"
 #include "ui/widgets/window.hpp"
 
 #include <array>
@@ -34,6 +38,8 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kListBoxFocused = "EditBox_Focus";
     inline constexpr std::string_view kSelectedRow = "GUI2SolidBlueBackground";
     inline constexpr std::string_view kTooltip = "GUI2Swatch_Background";
+    inline constexpr std::string_view kMenuBackground = "GUIMenuSurround";
+    inline constexpr std::string_view kDropdownOpener = "ListBoxOpener"; ///< Family: "ListBoxOpenerDisabled"
     inline constexpr std::string_view kSliderThumb = "LeftRight_SliderArrows";
     inline constexpr std::string_view kSpinnerUp = "SpinnerUp"; ///< Family: "SpinnerUpDisabled"
     inline constexpr std::string_view kSpinnerDown = "SpinnerDown";
@@ -133,6 +139,51 @@ namespace rct3::ui::game_skins
         s.up = kSpinnerUp;
         s.down = kSpinnerDown;
         s.arrow_width = 20;
+        return s;
+    }
+
+    /// Menus on the white rounded surround, the highlighted row on the blue patch, ticks as in tick boxes.
+    [[nodiscard]] inline MenuStyle menu_style()
+    {
+        MenuStyle s;
+        s.background = kMenuBackground;
+        s.highlight_skin = kSelectedRow;
+        s.tick = kTick;
+        s.font = FontRole::Small;
+        s.padding = { 6, 6, 9, 9 }; // The surround's shadow takes the right and bottom
+        s.tick_room = 20;
+        return s;
+    }
+
+    /// A drop-down in the edit box frame with the game's opener arrow.
+    [[nodiscard]] inline DropdownStyle dropdown_style()
+    {
+        DropdownStyle s;
+        s.field = kListBox;
+        s.focused = kListBoxFocused;
+        s.opener = kDropdownOpener;
+        s.opener_width = 15;
+        s.menu = menu_style();
+        return s;
+    }
+
+    /// A menu bar on the window background, the open title on the blue patch.
+    [[nodiscard]] inline MenuBarStyle menu_bar_style()
+    {
+        MenuBarStyle s;
+        s.background = kWindowBackground;
+        s.highlight_skin = kSelectedRow;
+        s.menu = menu_style();
+        return s;
+    }
+
+    /// Square buttons on the window background.
+    [[nodiscard]] inline ToolbarStyle toolbar_style()
+    {
+        ToolbarStyle s;
+        s.background = kWindowBackground;
+        s.button = kButton;
+        s.button_size = 30;
         return s;
     }
 

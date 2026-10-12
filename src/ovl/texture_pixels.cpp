@@ -29,7 +29,17 @@ namespace rct3::ovl
         return out;
     }
 
-    std::optional<RgbaImage> TexturePixels::first_frame(const Texture& texture) const
+    std::size_t TexturePixels::frame_count(const Texture& texture) const
+    {
+        if (!texture.node)
+            return 0;
+        const auto flic = flics_.find(texture.node->address);
+        if (flic == flics_.end())
+            return 0;
+        return flic->second.image ? 1 : flic->second.frames.size();
+    }
+
+    std::optional<RgbaImage> TexturePixels::frame(const Texture& texture, std::size_t index) const
     {
         if (!texture.node)
             return std::nullopt;
@@ -39,12 +49,14 @@ namespace rct3::ovl
 
         if (flic->second.image)
         {
+            if (index != 0)
+                return std::nullopt;
             auto levels = decode_flic_image(flic->second);
             if (levels.empty())
                 return std::nullopt;
             return std::move(levels.front());
         }
-        if (flic->second.frames.empty())
+        if (index >= flic->second.frames.size())
             return std::nullopt;
 
         // The nearest table before the flic.
@@ -52,10 +64,10 @@ namespace rct3::ovl
         if (after == tables_.begin())
             return std::nullopt;
         const BitmapTable& table = std::prev(after)->table;
-        const std::uint32_t frame = flic->second.frames.front();
-        if (frame >= table.bitmaps.size())
+        const std::uint32_t bitmap = flic->second.frames[index];
+        if (bitmap >= table.bitmaps.size())
             return std::nullopt;
-        auto levels = decode_bitmap(table.bitmaps[frame]);
+        auto levels = decode_bitmap(table.bitmaps[bitmap]);
         if (levels.empty())
             return std::nullopt;
         return std::move(levels.front());

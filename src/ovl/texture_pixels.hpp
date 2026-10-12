@@ -27,7 +27,16 @@ namespace rct3::ovl
 
         /// The largest mip level of the texture's first frame, rows as stored in the file. Nothing when the
         /// texture has no node, the node is not a flic, or the pixels cannot be decoded.
-        [[nodiscard]] std::optional<RgbaImage> first_frame(const Texture& texture) const;
+        [[nodiscard]] std::optional<RgbaImage> first_frame(const Texture& texture) const
+        {
+            return frame(texture, 0);
+        }
+
+        /// Frames the texture's flic lists (1 for a flic that carries its own image, 0 without a flic).
+        [[nodiscard]] std::size_t frame_count(const Texture& texture) const;
+        /// The largest mip level of frame `index`, rows as stored. Nothing when the frame is out of range or
+        /// cannot be decoded. Font pages are the frames of the font's texture.
+        [[nodiscard]] std::optional<RgbaImage> frame(const Texture& texture, std::size_t index) const;
 
         [[nodiscard]] std::size_t flic_count() const
         {

@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ui/draw_list.hpp"
+#include "ui/font_set.hpp"
 #include "ui/placement.hpp"
 #include "ui/skin_library.hpp"
 
@@ -40,6 +41,7 @@ namespace rct3::ui
     {
         DrawList& list;
         const SkinLibrary& skins;
+        const FontSet& fonts;
     };
 
     class Widget

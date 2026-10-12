@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/window.hpp"
 
+#include "ui/text_layout.hpp"
+
 namespace rct3::ui
 {
 
@@ -53,6 +55,15 @@ namespace rct3::ui
         const float in = style_.background_inset;
         draw_skin(context.list, context.skins.find(style_.background), { r.x0 + in, r.y0 + in, r.x1 - in, r.y1 - in });
         draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
+
+        const Font* font = context.fonts.get(style_.title_font);
+        if (font == nullptr || title.empty())
+            return;
+        const Rect& t = style_.title_box;
+        const Rect box { r.x0 + t.x0, r.y0 + t.y0, r.x1 - t.x1, r.y0 + t.y1 };
+        if (context.list.push_clip(box))
+            draw_text(context.list, *font, title, box, { style_.title_colour, Align::Start, Align::End, false });
+        context.list.pop_clip();
     }
 
 } // namespace rct3::ui

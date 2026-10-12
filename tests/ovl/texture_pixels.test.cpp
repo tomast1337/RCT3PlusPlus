@@ -24,4 +24,6 @@ TEST_CASE("textures without a node have no pixels")
 {
     const TexturePixels empty;
     CHECK_FALSE(empty.first_frame(Texture { }).has_value());
+    CHECK(empty.frame_count(Texture { }) == 0);
+    CHECK_FALSE(empty.frame(Texture { }, 3).has_value());
 }

@@ -22,11 +22,17 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
 build/debug/ovl-dump "/path/to/Main.common.ovl"
+build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound item (omit the name to list them)
+build/debug/sound-play --null --tone 440                       # same path without an audio device
 ```
 
 `./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `g++`). Fuzzing uses `CLANGXX` (default `clang++`).
 `build/compile_commands.json` is written for clangd. Needs a C++26 compiler (GCC 15+, Clang 20+). POSIX
 only for now.
+
+Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
+the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
+loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
 
 ## Clean-room policy
 

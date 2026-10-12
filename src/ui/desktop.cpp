@@ -139,7 +139,7 @@ namespace rct3::ui
         return hit_tree(*root_, p);
     }
 
-    bool Desktop::update(const PointerState& pointer)
+    bool Desktop::update(const PointerState& pointer, float elapsed)
     {
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
@@ -177,12 +177,15 @@ namespace rct3::ui
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
         layout(view_);
+        under = pointer.present ? hit(pointer.position) : nullptr;
+        tooltip_.update(under, pointer.position, down, elapsed, tooltip_style);
         return under != nullptr || held_ != nullptr;
     }
 
     void Desktop::draw(DrawContext& context) const
     {
         draw_tree(*root_, context);
+        tooltip_.draw(context, tooltip_style, view_);
     }
 
 } // namespace rct3::ui

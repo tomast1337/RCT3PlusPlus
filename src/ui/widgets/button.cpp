@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/button.hpp"
 
+#include "ui/text_layout.hpp"
+
 #include <cmath>
 
 namespace rct3::ui
@@ -55,16 +57,25 @@ namespace rct3::ui
             tint = { 128, 128, 128, 160 };
         draw_skin(context.list, face, rect(), tint);
 
-        if (icon.empty())
-            return;
-        const SkinRef* glyph = context.skins.find(icon);
-        if (glyph == nullptr)
-            return;
-        const auto [w, h] = glyph->size();
+        // The face looks pushed in while held: what is on it moves by one unit.
         const float nudge = s == SkinState::Pressed ? 1.0f : 0.0f;
-        const float x = std::round(rect().x0 + (rect().width() - w) / 2) + nudge;
-        const float y = std::round(rect().y0 + (rect().height() - h) / 2) + nudge;
-        draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? Color { 255, 255, 255, 128 } : kWhite);
+        if (const SkinRef* glyph = icon.empty() ? nullptr : context.skins.find(icon))
+        {
+            const auto [w, h] = glyph->size();
+            const float x = std::round(rect().x0 + (rect().width() - w) / 2) + nudge;
+            const float y = std::round(rect().y0 + (rect().height() - h) / 2) + nudge;
+            draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? Color { 255, 255, 255, 128 } : kWhite);
+        }
+
+        const Font* f = text.empty() ? nullptr : context.fonts.get(font);
+        if (f == nullptr)
+            return;
+        if (context.list.push_clip(rect()))
+        {
+            const Rect box { rect().x0 + text_inset.x0 + nudge, rect().y0 + text_inset.y0 + nudge, rect().x1 - text_inset.x1 + nudge, rect().y1 - text_inset.y1 + nudge };
+            draw_text(context.list, *f, text, box, { enabled ? text_colour : disabled_text_colour, Align::Centre, Align::Centre, false });
+        }
+        context.list.pop_clip();
     }
 
 } // namespace rct3::ui

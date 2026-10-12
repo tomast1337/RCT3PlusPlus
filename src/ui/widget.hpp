@@ -59,6 +59,8 @@ namespace rct3::ui
         bool enabled = true;
         bool clip_children = false; ///< Children are cut to this widget's rectangle
         bool keep_inside = false;   ///< Layout moves the widget back inside its parent, e.g. a dragged window
+        /// Help shown beside the pointer when it rests here; children without their own show this one.
+        std::u16string tooltip;
 
         [[nodiscard]] std::string_view name() const
         {

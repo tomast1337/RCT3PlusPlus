@@ -33,6 +33,10 @@ namespace rct3::scene
         constexpr std::string_view kTitleKey = "GameOptionsDialog_Title";
         constexpr std::string_view kHelpKey = "GameOptionsDialog_WaterReflect_EnabledHelp";
         constexpr std::array<std::string_view, 3> kOptionKeys = { "GameOptionsDialog_AutoScrollAtEdge", "GameOptionsDialog_BackgroundMusic", "GameOptionsDialog_Bloom" };
+        constexpr std::array<std::string_view, 3> kOptionTips = { "GameOptionsDialog_AutoScrollAtEdgeHelp", "GameOptionsDialog_BackgroundMusicTT", "GameOptionsDialog_Bloom_TT" };
+        constexpr std::array<std::string_view, 3> kTextButtonKeys = { "SMB_Label_OK", "SMB_Label_Cancel", "SMB_Label_Help" };
+        constexpr float kTextButtonWidth = 70;
+        constexpr float kTextButtonHeight = 26;
 
         class DemoWindow : public ui::Window
         {
@@ -47,7 +51,7 @@ namespace rct3::scene
 
                 // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
-                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -86 } };
+                list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -104 } };
                 auto& help = list.add<ui::Label>("help", std::u16string(strings.get(kHelpKey)), ui::FontRole::Small);
                 help.placement = ui::fill(6);
                 help.style.wrap = true;
@@ -55,30 +59,46 @@ namespace rct3::scene
 
                 for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
                 {
-                    const float bottom = 62 - static_cast<float>(i) * 18;
+                    const float bottom = 80 - static_cast<float>(i) * 18;
                     auto& tick = body.add<ui::Tickbox>("option" + std::to_string(i), std::string(skins::kTickbox), std::string(skins::kTick));
                     tick.placement = ui::bottom_left(0, bottom, 12, 12);
                     tick.ticked = i == 0;
+                    tick.tooltip = strings.get(kOptionTips[i]);
                     auto& label = body.add<ui::Label>("label" + std::to_string(i), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
                     label.placement = { { 0, 1, 1, 1 }, { 18, -bottom - 15, -80, -bottom + 3 } };
                     label.style.vertical = ui::Align::Centre;
                 }
                 auto& toggle = body.add<ui::Button>("toggle", std::string(kToggleFamily));
                 toggle.toggle = true;
-                toggle.placement = ui::bottom_right(0, 48, 20, 20);
+                toggle.placement = ui::bottom_right(0, 60, 20, 20);
 
                 cancel_ = &body.add<ui::Button>("cancel", std::string(skins::kButton), std::string(skins::kCancelIcon));
                 cancel_->placement = ui::bottom_right(0, 4, 30, 30);
                 confirm_ = &body.add<ui::Button>("confirm", std::string(skins::kButton), std::string(skins::kConfirmIcon));
                 confirm_->placement = ui::bottom_right(36, 4, 30, 30);
+
+                // Text buttons: OK opens another window like confirm, Cancel closes this one, Help is disabled.
+                std::array<ui::Button*, kTextButtonKeys.size()> text_buttons { };
+                for (std::size_t i = 0; i < kTextButtonKeys.size(); ++i)
+                {
+                    auto& b = body.add<ui::Button>("text" + std::to_string(i), std::string(skins::kTextButton));
+                    b.text = strings.get(kTextButtonKeys[i]);
+                    b.text_inset = skins::kLozengeInset;
+                    b.placement = ui::bottom_left(static_cast<float>(i) * (kTextButtonWidth + 6), 6, kTextButtonWidth, kTextButtonHeight);
+                    text_buttons[i] = &b;
+                }
+                ok_ = text_buttons[0];
+                text_cancel_ = text_buttons[1];
+                text_buttons[2]->enabled = false;
             }
 
             void update() override
             {
                 ui::Window::update();
-                if (cancel_->take_click())
+                if (cancel_->take_click() || text_cancel_->take_click())
                     close();
-                if (confirm_->take_click() && parent() != nullptr)
+                const bool open = confirm_->take_click() || ok_->take_click();
+                if (open && parent() != nullptr)
                 {
                     const auto n = static_cast<float>(parent()->children().size());
                     parent()->add<DemoWindow>("window" + std::to_string(parent()->children().size()), n * kCascade, strings_);
@@ -89,6 +109,8 @@ namespace rct3::scene
             const ui::StringTable& strings_;
             ui::Button* confirm_ = nullptr;
             ui::Button* cancel_ = nullptr;
+            ui::Button* ok_ = nullptr;
+            ui::Button* text_cancel_ = nullptr;
         };
 
         float scale_for(const render::Device& device)
@@ -155,11 +177,12 @@ namespace rct3::scene
             if (auto strings = ui::StringTable::load(*english))
                 *demo.strings = std::move(*strings);
         }
+        demo.desktop.tooltip_style = skins::tooltip_style();
         demo.desktop.root().add<DemoWindow>("window0", 0.0f, *demo.strings);
         return demo;
     }
 
-    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels)
+    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, float elapsed)
     {
         const float scale = scale_for(device);
         const render::Extent extent = device.extent();
@@ -171,7 +194,7 @@ namespace rct3::scene
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        return demo.desktop.update(pointer);
+        return demo.desktop.update(pointer, elapsed);
     }
 
     void draw_widget_demo(render::Device& device, WidgetDemo& demo)

@@ -5,6 +5,7 @@
 //   ./nob [build|test|clean] [--release] [--sanitize] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
 //   ./nob fuzz [TARGET] [--seconds N]
+//   ./nob format [--check]                        clang-format our sources (never third_party/)
 //
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
@@ -309,6 +310,28 @@ bool build_fuzz(const Config& cfg, std::vector<fs::path>& targets) {
   return true;
 }
 
+// Formats our own sources with clang-format using the style in .clang-format. With `check` it only reports
+// files that would change. Vendored code in third_party/ is never touched. CLANGFORMAT overrides the binary.
+bool run_format(bool check) {
+  std::vector<fs::path> files;
+  for (const char* dir : {"src", "tests", "tools", "fuzz", "app"}) {
+    if (!fs::exists(dir)) continue;
+    for (const char* ext : {".cpp", ".hpp", ".h"}) {
+      const auto found = find_files(dir, ext);
+      files.insert(files.end(), found.begin(), found.end());
+    }
+  }
+  files.push_back("nob.cpp");
+  files.push_back("nob.hpp");
+  const char* binary = std::getenv("CLANGFORMAT");
+  Cmd cmd;
+  cmd << (binary ? binary : "clang-format") << "--style=file";
+  if (check) cmd << "--dry-run" << "-Werror";
+  else cmd << "-i";
+  for (const auto& f : files) cmd << f.string();
+  return run(cmd);
+}
+
 // Runs one fuzz target for `seconds`. New inputs land in the git-ignored local/ directory, crashes too.
 bool run_fuzz(const fs::path& binary, int seconds) {
   const std::string name = binary.filename().string();
@@ -334,6 +357,7 @@ int main(int argc, char** argv) {
   std::string command = "build";
   bool release = false;
   bool sanitize = false;
+  bool check = false;
   std::vector<std::string> test_args;
   std::string fuzz_target;
   int fuzz_seconds = 30;
@@ -347,12 +371,13 @@ int main(int argc, char** argv) {
     else if (arg == "--") {
       for (++i; i < argc; ++i) test_args.emplace_back(argv[i]);
     } else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" ||
-               arg == "app" || arg == "run") command = arg;
+               arg == "app" || arg == "run" || arg == "format") command = arg;
+    else if (arg == "--check") check = true;
     else if (command == "fuzz" && !arg.starts_with("-")) fuzz_target = arg;
     else {
       log(Level::Error,
           "unknown argument '{}'. usage: ./nob [build|test|clean] [--release] [--sanitize] "
-          "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N]",
+          "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check]",
           arg);
       return 2;
     }
@@ -363,6 +388,8 @@ int main(int argc, char** argv) {
     fs::remove_all(kBuildDir, ec);
     return ec ? 1 : 0;
   }
+
+  if (command == "format") return run_format(check) ? 0 : 1;
 
   if (command == "fuzz") {
     const Config cfg = make_config(false, false, true);

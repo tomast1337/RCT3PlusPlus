@@ -141,3 +141,83 @@ TEST_CASE("the title is drawn in the title font, clipped to the title box")
         CHECK(v.x <= right);
     CHECK(list.clip() == nullptr);
 }
+
+TEST_CASE("a resizable window follows the edge or corner it is pressed on")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    w.resizable = true;
+    w.min_size = { 150, 80 };
+    desktop.layout(kView);
+    REQUIRE(w.rect() == Rect { 100, 100, 300, 200 });
+
+    SUBCASE("right edge")
+    {
+        desktop.update(at(298, 150, true));
+        CHECK(w.resizing());
+        desktop.update(at(338, 170, true));
+        CHECK(w.rect() == Rect { 100, 100, 340, 200 });
+        desktop.update(at(338, 170));
+        CHECK_FALSE(w.resizing());
+    }
+    SUBCASE("bottom-right corner, along the edge near the corner")
+    {
+        desktop.update(at(290, 198, true));
+        desktop.update(at(310, 218, true));
+        CHECK(w.rect() == Rect { 100, 100, 320, 220 });
+    }
+    SUBCASE("top-left corner moves the top and left edges")
+    {
+        desktop.update(at(101, 101, true));
+        desktop.update(at(81, 91, true));
+        CHECK(w.rect() == Rect { 80, 90, 300, 200 });
+        CHECK_FALSE(w.dragging());
+    }
+    SUBCASE("not smaller than the minimum, and the edge waits for the pointer to come back")
+    {
+        desktop.update(at(298, 150, true));
+        desktop.update(at(150, 150, true));
+        CHECK(w.rect().width() == 150);
+        desktop.update(at(268, 150, true));
+        CHECK(w.rect() == Rect { 100, 100, 270, 200 });
+    }
+    SUBCASE("not past the desktop")
+    {
+        desktop.update(at(150, 198, true));
+        desktop.update(at(150, 900, true));
+        CHECK(w.rect().y1 == kView.y1);
+    }
+    SUBCASE("the content follows")
+    {
+        desktop.update(at(298, 150, true));
+        desktop.update(at(348, 150, true));
+        CHECK(w.content().rect().x1 == 350 - style().content_inset.x1);
+    }
+    SUBCASE("the title bar still moves it away from the edges")
+    {
+        desktop.update(at(150, 110, true));
+        CHECK(w.dragging());
+        CHECK_FALSE(w.resizing());
+    }
+}
+
+TEST_CASE("a window that is not resizable only moves")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    desktop.layout(kView);
+    desktop.update(at(298, 150, true));
+    desktop.update(at(338, 150, true));
+    CHECK_FALSE(w.resizing());
+    CHECK(w.rect() == Rect { 100, 100, 300, 200 });
+}
+
+TEST_CASE("the minimum never exceeds the size a window was made at")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 100, 60);
+    w.resizable = true;
+    desktop.layout(kView);
+    CHECK(w.min_size.x == 100);
+    CHECK(w.min_size.y == 60);
+}

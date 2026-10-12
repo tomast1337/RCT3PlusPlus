@@ -31,6 +31,8 @@ namespace rct3::scene
         constexpr std::string_view kToggleFamily = "Staff_TaskButtonBins";
         constexpr float kWidth = 340;
         constexpr float kHeight = 300;
+        constexpr float kMinWidth = 320; ///< Room for the button row
+        constexpr float kMinHeight = 260;
         constexpr float kCascade = 28; ///< How far each new window opens from the last
 
         // Game string keys the demo shows.
@@ -54,6 +56,9 @@ namespace rct3::scene
             {
                 placement = ui::centred(kWidth, kHeight, cascade, cascade);
                 title = strings.get(kTitleKey);
+                // Everything below is anchored to the edges it follows, so the window can be resized.
+                resizable = true;
+                min_size = { kMinWidth, kMinHeight };
                 ui::Widget& body = content();
 
                 // The text area stretches with the window; the rows below it stay on the bottom edge.

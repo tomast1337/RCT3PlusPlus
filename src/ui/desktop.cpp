@@ -149,15 +149,59 @@ namespace rct3::ui
         place_tree(*root_, view);
     }
 
+    std::optional<std::size_t> Desktop::top_modal() const
+    {
+        const auto& tops = root_->children();
+        for (std::size_t i = tops.size(); i-- > 0;)
+        {
+            if (tops[i]->modal && tops[i]->visible && !tops[i]->closing())
+                return i;
+        }
+        return std::nullopt;
+    }
+
+    void Desktop::drop_shut_out_focus()
+    {
+        const std::size_t from = top_modal().value_or(0);
+        if (focus_ == nullptr || from == 0)
+            return;
+        const Widget* top = top_level(*root_, focus_);
+        const auto& tops = root_->children();
+        for (std::size_t i = 0; i < from; ++i)
+        {
+            if (tops[i].get() == top)
+            {
+                focus_ = nullptr;
+                focus_shown_ = false;
+                return;
+            }
+        }
+    }
+
     Widget* Desktop::hit(Point p) const
     {
-        return hit_tree(*root_, p);
+        if (!root_->visible || (root_->clip_children && !contains(root_->rect(), p)))
+            return nullptr;
+        const auto& tops = root_->children();
+        const std::size_t from = top_modal().value_or(0);
+        for (std::size_t i = tops.size(); i-- > from;)
+        {
+            if (Widget* w = hit_tree(*tops[i], p))
+                return w;
+        }
+        return nullptr;
     }
 
     Widget* Desktop::deepest(Point p) const
     {
-        Widget* w = deepest_tree(*root_, p);
-        return w != nullptr ? w : root_.get();
+        const auto& tops = root_->children();
+        const std::size_t from = top_modal().value_or(0);
+        for (std::size_t i = tops.size(); i-- > from;)
+        {
+            if (Widget* w = deepest_tree(*tops[i], p))
+                return w;
+        }
+        return root_.get();
     }
 
     bool Desktop::update(const PointerState& pointer, const UpdateContext& context)
@@ -171,6 +215,7 @@ namespace rct3::ui
             held_ = nullptr;
         if (focus_ != nullptr && !in_tree(*root_, focus_))
             focus_ = nullptr;
+        drop_shut_out_focus();
 
         Widget* under = pointer.present ? hit(pointer.position) : nullptr;
         const bool down = pointer.present && pointer.down;
@@ -277,10 +322,11 @@ namespace rct3::ui
         if (focus_ != nullptr && !in_tree(*root_, focus_))
             focus_ = nullptr;
         follow_popups();
+        drop_shut_out_focus();
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
-        return under != nullptr || held_ != nullptr;
+        return under != nullptr || held_ != nullptr || (pointer.present && top_modal());
     }
 
     void Desktop::follow_popups()
@@ -309,7 +355,23 @@ namespace rct3::ui
 
     void Desktop::draw(DrawContext& context) const
     {
-        draw_tree(*root_, context);
+        const auto shaded = top_modal();
+        if (!shaded)
+        {
+            draw_tree(*root_, context);
+        }
+        else if (root_->visible)
+        {
+            // The root draws nothing of its own and does not clip; the shade goes between its children.
+            root_->draw(context);
+            const auto& tops = root_->children();
+            for (std::size_t i = 0; i < tops.size(); ++i)
+            {
+                if (i == *shaded)
+                    context.list.fill(view_, modal_shade);
+                draw_tree(*tops[i], context);
+            }
+        }
         if (focus_shown_ && focus_ != nullptr && usable(*focus_))
             draw_focus_mark(context.list, *focus_, focus_mark_style);
         tooltip_.draw(context, tooltip_style, view_);

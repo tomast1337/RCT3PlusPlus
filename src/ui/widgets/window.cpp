@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/window.hpp"
 
+#include "ui/keyboard_focus.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -110,9 +111,19 @@ namespace rct3::ui
 
     bool Window::on_key(const KeyPress& key)
     {
+        if (key.key == Key::Enter)
+        {
+            if (default_button == nullptr || !usable(*default_button))
+                return false;
+            default_button->click();
+            return true;
+        }
         if (key.key != Key::Escape)
             return false;
-        close();
+        if (cancel_button != nullptr && usable(*cancel_button))
+            cancel_button->click();
+        else
+            close();
         return true;
     }
 

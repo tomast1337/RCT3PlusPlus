@@ -377,3 +377,58 @@ TEST_CASE("a key that hides the focused widget sends the next keys to its parent
     CHECK(window.keys == 1);
     CHECK(desktop.keyboard_focus() == &window);
 }
+
+TEST_CASE("a modal widget shuts out the widgets below it")
+{
+    Fixture f;
+    f.desktop.update(at(120, 20, true));
+    f.desktop.update(at(120, 20));
+    REQUIRE(f.desktop.keyboard_focus() == &f.field);
+
+    KeyProbe& modal = f.desktop.root().add<KeyProbe>("modal");
+    modal.modal = true;
+    modal.placement = top_left(60, 60, 30, 30);
+    f.desktop.layout(kView);
+
+    SUBCASE("keys go to it, not to the focus below")
+    {
+        f.desktop.update(at(0, 0), keys({ Key::Escape }));
+        CHECK(modal.seen == std::vector { Key::Escape });
+        CHECK(f.field.seen.empty());
+        CHECK(f.desktop.keyboard_focus() == nullptr);
+    }
+    SUBCASE("the pointer does not reach below it, nor the 3D view")
+    {
+        CHECK(f.desktop.hit({ 120, 20 }) == nullptr);
+        CHECK(f.desktop.hit({ 70, 70 }) == &modal);
+        CHECK(f.desktop.update(at(10, 10, true)));
+        CHECK(f.desktop.root().children().back().get() == &modal); // Nothing below was raised
+        f.desktop.update(at(10, 10));
+        CHECK(f.desktop.update(at(195, 95)));
+    }
+    SUBCASE("what is put above it still works")
+    {
+        KeyProbe& above = f.desktop.root().add<KeyProbe>("above");
+        above.placement = top_left(0, 0, 20, 20);
+        f.desktop.layout(kView);
+        CHECK(f.desktop.hit({ 10, 10 }) == &above);
+        f.desktop.update(at(0, 0), keys({ Key::Escape }));
+        CHECK(above.seen == std::vector { Key::Escape });
+    }
+    SUBCASE("everything below is shaded")
+    {
+        DrawList list;
+        const SkinLibrary skins;
+        const FontSet fonts;
+        DrawContext context { list, skins, fonts };
+        f.desktop.draw(context);
+        REQUIRE(list.vertices().size() == 4);
+        CHECK(list.vertices()[0].color[3] == f.desktop.modal_shade.a);
+    }
+    SUBCASE("once it closes, the rest takes input again")
+    {
+        modal.close();
+        f.desktop.update(at(0, 0));
+        CHECK(f.desktop.hit({ 120, 20 }) == &f.field);
+    }
+}

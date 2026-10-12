@@ -7,6 +7,9 @@
 //
 // A click is a press and release over the button, or Space or Enter while it has the keyboard focus. The
 // owner asks for it with take_click().
+//
+// A button can swell while the pointer is over it: its face grows by a few units on each side, eased in
+// and out, while the part that takes the pointer stays put.
 #pragma once
 
 #include "ui/widget.hpp"
@@ -29,13 +32,20 @@ namespace rct3::ui
         Color disabled_text_colour { 127, 127, 127, 255 };
         Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow
         bool toggle = false;
-        bool on = false; ///< Toggles only
+        bool on = false;         ///< Toggles only
+        float swell = 0;         ///< Units the face grows by on each side while the pointer is over it
+        float swell_time = 0.1f; ///< Seconds to grow or shrink fully
 
         /// True once for each click since the last call.
         [[nodiscard]] bool take_click();
 
+        /// As if the user clicked: counts a click and turns a toggle over.
+        void click();
+
         /// The family member this button draws with now.
         [[nodiscard]] SkinState state() const;
+        /// Where the face is drawn: the button's rectangle, grown while it swells.
+        [[nodiscard]] Rect face() const;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -48,12 +58,12 @@ namespace rct3::ui
         void on_release(Point p, bool inside) override;
         /// Space and Enter work like a click.
         bool on_key(const KeyPress& key) override;
+        void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
     private:
-        void click();
-
         int clicks_ = 0;
+        float grown_ = 0; // 0 to 1, how far into its swell
     };
 
 } // namespace rct3::ui

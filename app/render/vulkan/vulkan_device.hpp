@@ -2,7 +2,8 @@
 //
 // The Vulkan backend. Needs Vulkan 1.3 (dynamic rendering, synchronization2). Two frames in flight, one
 // depth buffer, swapchain recreated when the window changes size. Buffers live in host-visible memory for
-// now; a staging path and an allocator come with bigger meshes.
+// now; a staging path and an allocator come with bigger meshes. Textures are uploaded through a staging
+// buffer and the call waits for the copy, which suits loading but not streaming.
 #pragma once
 
 #include "render/device.hpp"
@@ -38,8 +39,11 @@ namespace rct3::render::vulkan
 
         [[nodiscard]] std::expected<BufferHandle, std::string> create_buffer(const BufferDesc& desc) override;
         void destroy_buffer(BufferHandle buffer) override;
+        [[nodiscard]] std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) override;
+        void destroy_texture(TextureHandle texture) override;
         [[nodiscard]] std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) override;
         void destroy_pipeline(PipelineHandle pipeline) override;
+        [[nodiscard]] std::expected<BufferSlice, std::string> allocate_transient(std::span<const std::byte> data) override;
 
         void begin_frame() override;
         void begin_pass(const PassDesc& pass) override;
@@ -63,6 +67,22 @@ namespace rct3::render::vulkan
             VkDeviceMemory memory = VK_NULL_HANDLE;
         };
 
+        struct Texture
+        {
+            VkImage image = VK_NULL_HANDLE;
+            VkDeviceMemory memory = VK_NULL_HANDLE;
+            VkImageView view = VK_NULL_HANDLE;
+            VkDescriptorSet set = VK_NULL_HANDLE;
+        };
+
+        // One block of per-frame memory, mapped for its whole life and registered in buffers_ so draws find it.
+        struct TransientBlock
+        {
+            std::uint32_t id = 0;
+            std::byte* mapped = nullptr;
+            VkDeviceSize size = 0;
+        };
+
         struct Pipeline
         {
             VkPipeline pipeline = VK_NULL_HANDLE;
@@ -73,6 +93,7 @@ namespace rct3::render::vulkan
         struct Garbage
         {
             std::vector<Buffer> buffers;
+            std::vector<Texture> textures;
             std::vector<VkPipeline> pipelines;
         };
 
@@ -83,6 +104,10 @@ namespace rct3::render::vulkan
             VkSemaphore image_available = VK_NULL_HANDLE;
             VkFence in_flight = VK_NULL_HANDLE;
             Garbage garbage;
+            // Filled front to back each frame; a full block gets a successor, and the next use of the slot
+            // merges them into one block big enough for the whole frame.
+            std::vector<TransientBlock> transient;
+            VkDeviceSize transient_used = 0; ///< In the last block
         };
 
         enum class State : std::uint8_t
@@ -101,15 +126,22 @@ namespace rct3::render::vulkan
         void create_depth();
         void create_frames();
         void create_pipeline_layout();
+        void create_samplers();
         void init_ui();
 
         void destroy_swapchain();
         void recreate_swapchain();
         void release(Garbage& garbage);
         [[nodiscard]] Garbage& garbage_slot();
+        void reset_transient(Frame& frame);
 
         // Resources (vulkan_resources.cpp)
         [[nodiscard]] std::uint32_t find_memory_type(std::uint32_t type_bits, VkMemoryPropertyFlags properties) const;
+        [[nodiscard]] Buffer make_buffer(VkDeviceSize size, VkBufferUsageFlags usage);
+        void destroy(const Buffer& buffer);
+        void destroy(const Texture& texture);
+        [[nodiscard]] TransientBlock make_transient_block(VkDeviceSize size);
+        void upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height);
 
         DeviceConfig config_;
         State state_ = State::Off;
@@ -135,7 +167,15 @@ namespace rct3::render::vulkan
         VkDeviceMemory depth_memory_ = VK_NULL_HANDLE;
         VkImageView depth_view_ = VK_NULL_HANDLE;
 
+        // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag).
+        VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
+        VkDescriptorSetLayout sampler_set_layout_ = VK_NULL_HANDLE;
         VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
+        VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
+        VkCommandPool upload_pool_ = VK_NULL_HANDLE;
+        static constexpr std::size_t kSamplerCount = 4; // Filter x AddressMode
+        std::array<VkSampler, kSamplerCount> samplers_ { };
+        std::array<VkDescriptorSet, kSamplerCount> sampler_sets_ { };
 
         std::array<Frame, kFramesInFlight> frames_ { };
         std::uint32_t frame_index_ = 0;
@@ -145,6 +185,7 @@ namespace rct3::render::vulkan
         std::uint32_t next_id_ = 1;
         std::unordered_map<std::uint32_t, Buffer> buffers_;
         std::unordered_map<std::uint32_t, Pipeline> pipelines_;
+        std::unordered_map<std::uint32_t, Texture> textures_;
 
         FrameStats frame_stats_;
         FrameStats last_stats_;

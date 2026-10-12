@@ -8,10 +8,11 @@
 //
 //   auto device = make_device(backend);        // render/backend.hpp; nothing is created yet
 //   device->init(config);                      // instance, device, swapchain, UI renderer
-//   ... create_buffer / create_pipeline ...
+//   ... create_buffer / create_texture / create_pipeline ...
 //   per frame:
 //     device->ui_new_frame();                  // then the platform's ImGui new frame, ImGui::NewFrame, UI code
 //     device->begin_frame();                   // waits for a free frame slot, acquires the target
+//     device->allocate_transient(bytes);       // per-frame vertex/index data, any time inside the frame
 //     device->begin_pass({ ... });             // one or more passes
 //       device->draw({ ... });
 //       device->draw_ui();                     // in the last pass, so the UI is on top
@@ -84,8 +85,16 @@ namespace rct3::render
         [[nodiscard]] virtual std::expected<BufferHandle, std::string> create_buffer(const BufferDesc& desc) = 0;
         virtual void destroy_buffer(BufferHandle buffer) = 0;
 
+        [[nodiscard]] virtual std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) = 0;
+        virtual void destroy_texture(TextureHandle texture) = 0;
+
         [[nodiscard]] virtual std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) = 0;
         virtual void destroy_pipeline(PipelineHandle pipeline) = 0;
+
+        /// Copies `data` into memory that lives until the end of the current frame and returns where it went.
+        /// Usable as vertex or index data by draws of this frame. Only between begin_frame and end_frame.
+        /// Slices start at multiples of 16 bytes.
+        [[nodiscard]] virtual std::expected<BufferSlice, std::string> allocate_transient(std::span<const std::byte> data) = 0;
 
         // Frame ---------------------------------------------------------------------------------------------
 

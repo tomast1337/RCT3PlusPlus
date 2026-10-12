@@ -14,6 +14,8 @@
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 #include "ovl/carried_item.hpp"
+#include "ovl/piece_set.hpp"
+#include "ovl/room_type.hpp"
 #include "ovl/research_category.hpp"
 #include "ovl/terrain_type.hpp"
 #include "ovl/scenery_item.hpp"
@@ -507,6 +509,12 @@ struct SceneryOptions {
   bool ced = false;
   bool rcg = false;
   bool ter = false;
+  bool ptd = false;
+  bool qtd = false;
+  bool pty = false;
+  bool enc = false;
+  bool chg = false;
+  bool vwg = false;
 };
 SceneryOptions g_scenery;
 
@@ -517,6 +525,12 @@ bool parse_scenery_option(const char* arg) {
   else if (std::strcmp(arg, "--ced") == 0) g_scenery.ced = true;
   else if (std::strcmp(arg, "--rcg") == 0) g_scenery.rcg = true;
   else if (std::strcmp(arg, "--ter") == 0) g_scenery.ter = true;
+  else if (std::strcmp(arg, "--ptd") == 0) g_scenery.ptd = true;
+  else if (std::strcmp(arg, "--qtd") == 0) g_scenery.qtd = true;
+  else if (std::strcmp(arg, "--pty") == 0) g_scenery.pty = true;
+  else if (std::strcmp(arg, "--enc") == 0) g_scenery.enc = true;
+  else if (std::strcmp(arg, "--chg") == 0) g_scenery.chg = true;
+  else if (std::strcmp(arg, "--vwg") == 0) g_scenery.vwg = true;
   else return false;
   return true;
 }
@@ -592,9 +606,124 @@ void print_research_and_terrain(const char* title, const rct3::ovl::Overlay& ove
   }
 }
 
+// One line per piece item: name text and shape of the first visual, to see that the run decoded sensibly.
+void print_piece_items(const std::vector<rct3::ovl::SceneryItem>& items) {
+  for (const auto& it : items) {
+    const std::string text(it.name_text), group(it.group);
+    std::printf("    item v%u type %u flags %08x squares %ux%u visuals %zu text %s group %s\n", it.version, it.type,
+                it.flags, it.x_squares, it.z_squares, it.visuals.size(), text.c_str(), group.c_str());
+  }
+}
+
+void print_piece_sets(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  if (g_scenery.ptd) {
+    const auto types = rct3::ovl::read_path_types(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : types) bad += entry.path ? 0 : 1;
+    std::printf("path types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+    for (const auto& entry : types) {
+      const std::string name(entry.name);
+      if (!entry.path) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.path->name_text);
+      std::printf("  %-20s header %08x names %zu research %zu items %zu text %s\n", name.c_str(),
+                  entry.path->header_word, entry.path->piece_names.size(), entry.path->research.size(),
+                  entry.path->items.size(), text.c_str());
+      print_piece_items(entry.path->items);
+    }
+  }
+  if (g_scenery.qtd) {
+    const auto types = rct3::ovl::read_queue_types(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : types) bad += entry.queue ? 0 : 1;
+    std::printf("queue types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+    for (const auto& entry : types) {
+      const std::string name(entry.name);
+      if (!entry.queue) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.queue->name_text), ground(entry.queue->ground);
+      std::printf("  %-20s research %zu items %zu text %s ground %s\n", name.c_str(), entry.queue->research.size(),
+                  entry.queue->items.size(), text.c_str(), ground.c_str());
+      print_piece_items(entry.queue->items);
+    }
+  }
+  if (g_scenery.pty) {
+    const auto types = rct3::ovl::read_pool_types(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : types) bad += entry.pool ? 0 : 1;
+    std::printf("pool types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+    for (const auto& entry : types) {
+      const std::string name(entry.name);
+      if (!entry.pool) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.pool->name_text);
+      std::printf("  %-20s names %zu splines %zu items %zu text %s\n", name.c_str(), entry.pool->piece_names.size(),
+                  entry.pool->splines.size(), entry.pool->items.size(), text.c_str());
+      print_piece_items(entry.pool->items);
+    }
+  }
+  if (g_scenery.enc) {
+    const auto types = rct3::ovl::read_enclosure_types(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : types) bad += entry.enclosure ? 0 : 1;
+    std::printf("enclosure types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+    for (const auto& entry : types) {
+      const std::string name(entry.name);
+      if (!entry.enclosure) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.enclosure->name_text);
+      std::printf("  %-20s items %zu text %s\n", name.c_str(), entry.enclosure->items.size(), text.c_str());
+      print_piece_items(entry.enclosure->items);
+    }
+  }
+}
+
+void print_rooms(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  if (g_scenery.chg) {
+    const auto rooms = rct3::ovl::read_changing_rooms(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : rooms) bad += entry.room ? 0 : 1;
+    std::printf("changing rooms (%s) %zu (%zu unreadable)\n", title, rooms.size(), bad);
+    for (const auto& entry : rooms) {
+      const std::string name(entry.name);
+      if (!entry.room) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string item(entry.room->scenery_item), text(entry.room->name_text);
+      std::printf("  %-20s item %s text %s\n", name.c_str(), item.c_str(), text.c_str());
+    }
+  }
+  if (g_scenery.vwg) {
+    const auto galleries = rct3::ovl::read_viewing_galleries(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : galleries) bad += entry.gallery ? 0 : 1;
+    std::printf("viewing galleries (%s) %zu (%zu unreadable)\n", title, galleries.size(), bad);
+    for (const auto& entry : galleries) {
+      const std::string name(entry.name);
+      if (!entry.gallery) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string text(entry.gallery->name_text);
+      std::printf("  %-20s text %s\n", name.c_str(), text.c_str());
+    }
+  }
+}
+
 void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
   print_carried_items(title, overlay, part);
   print_research_and_terrain(title, overlay, part);
+  print_piece_sets(title, overlay, part);
+  print_rooms(title, overlay, part);
   if (g_scenery.sid) {
     const auto items = rct3::ovl::read_scenery_items(overlay, part);
     std::size_t bad = 0;
@@ -657,7 +786,7 @@ int main(int argc, char** argv) {
   }
   if (!path) {
     std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
-    std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter]\n");
+    std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
     return 2;
   }
 

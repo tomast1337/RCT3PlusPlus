@@ -5,6 +5,11 @@
 // left near an edge comes back into view when the game window shrinks. It takes the pointer everywhere
 // inside it, so clicks on empty parts do not reach the 3D view.
 //
+// A resizable window also follows its edges and corners: pressing within a thin band inside an edge drags
+// that edge, and a corner drags both of its edges. Its size stays between min_size and the desktop's. The
+// content is laid out again at the new size, so window classes anchor their widgets to the edges they
+// should follow.
+//
 // Window classes derive from it, add their widgets to content() in the constructor and handle them in an
 // update() override that calls Window::update() first.
 #pragma once
@@ -13,6 +18,7 @@
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace rct3::ui
@@ -34,6 +40,9 @@ namespace rct3::ui
         FontRole title_font = FontRole::Medium;
         Rect title_box { 12, 2, 40, 20 }; ///< Title text: left inset, top, right inset, bottom; tops and bottoms from the top edge
         Color title_colour { 0, 0, 0, 255 };
+        float resize_band = 6;             ///< Inside each edge of a resizable window, the part that drags it
+        float resize_corner = 16;          ///< Along each edge from a corner, the part that drags both edges
+        Color grip_colour { 0, 0, 0, 96 }; ///< Marks in the bottom-right corner of a resizable window
     };
 
     class Window : public Widget
@@ -43,6 +52,14 @@ namespace rct3::ui
         Window(std::string name, const WindowStyle& style, float width, float height);
 
         std::u16string title;
+        bool resizable = false;
+        Point min_size; ///< Smallest width and height a resize leaves; the size it was made at caps it
+
+        /// Whether an edge of the window is following the pointer.
+        [[nodiscard]] bool resizing() const
+        {
+            return edges_ != 0;
+        }
 
         [[nodiscard]] Widget& content()
         {
@@ -64,11 +81,25 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
 
     private:
+        enum Edge : std::uint8_t
+        {
+            Left = 1,
+            Top = 2,
+            Right = 4,
+            Bottom = 8,
+        };
+
+        /// The edges a press at `p` takes hold of, as Edge bits; 0 when none.
+        [[nodiscard]] std::uint8_t edges_at(Point p) const;
+        void resize_to(Point p);
+
         WindowStyle style_;
         Widget* content_ = nullptr;
         Button* close_ = nullptr;
         bool dragging_ = false;
         Point grab_;
+        std::uint8_t edges_ = 0;
+        Rect start_rect_; // Of a resize, so limits do not make the edge drift from the pointer
     };
 
 } // namespace rct3::ui

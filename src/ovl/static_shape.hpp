@@ -15,24 +15,46 @@
 
 namespace rct3::ovl {
 
-/// Bytes of one vertex: nine 32-bit floats.
+/// Bytes of one vertex: position, normal, a packed colour and a texture coordinate pair.
 inline constexpr std::size_t kShapeVertexSize = 36;
 
 struct ShapeVertex {
   std::array<float, 3> position{};
   std::array<float, 3> normal{};  ///< Unit length in every file seen
-  std::array<float, 2> texcoord{};
-  float extra = 0;  ///< Ninth float. Purpose unknown, often 0 or 1.
+  /// Vertex colour, four bytes in file order (blue, green, red, alpha). Alpha is 255 in every file seen
+  /// and almost all vertices are white.
+  std::array<std::uint8_t, 4> colour{};
+  std::array<float, 2> texcoord{};  ///< u, v. Origin at the top left of the image, values beyond 0..1 occur
 };
 
+/// Confirmed bits of `ShapeMesh::texture_flags` (shared with bone shapes). With the terrain bit set, the
+/// surface or cliff bit chooses which terrain texture the engine draws instead of the part's own.
+inline constexpr std::uint32_t kMeshFlagTerrainTexture = 0x1000;
+inline constexpr std::uint32_t kMeshFlagTerrainSurface = 0x2000;
+inline constexpr std::uint32_t kMeshFlagTerrainCliff = 0x4000;
+/// The part shows an advertisement texture chosen at run time.
+inline constexpr std::uint32_t kMeshFlagAdvertisement = 0x8000;
+
 struct ShapeMesh {
-  /// Small bit-like values 1, 2, 4, 8 or 0xFFFFFFFF (none) in files seen. Meaning not confirmed.
+  /// 0xFFFFFFFF for an ordinary part. Parts of path, queue and track pieces that belong to one kind of
+  /// support carry a single bit (1, 2, 4 or 8) instead. Used only by those piece types; the exact
+  /// selection rule is not confirmed.
   std::uint32_t support_type = 0;
   std::string_view texture;  ///< Flexi texture name without the tag. Empty when not referenced.
   std::string_view style;    ///< Texture style name without the tag. Empty when not referenced.
-  std::uint32_t transparency = 0;   ///< 0, 1 or 2 in files seen. Meaning not confirmed.
-  std::uint32_t texture_flags = 0;  ///< Bit mask. Meaning not confirmed.
-  std::uint32_t sides = 0;          ///< 1 or 3 in files seen. Meaning not confirmed.
+  /// How the part is blended: 0 opaque, 1 alpha tested (cut-out), 2 alpha blended (drawn in a later,
+  /// sorted pass). Always agrees with the texture style's name in files seen.
+  std::uint32_t transparency = 0;
+  /// Bit mask that selects special handling, 0 for almost all parts. Terrain and advertisement bits are
+  /// the `kMeshFlag*` constants. The low bits are not fully understood: 0x4 is present in every nonzero
+  /// value below 0x1000. With 0x8 it marks sign and entrance boards, which are drawn with the texture
+  /// style alone. With 0x10 it marks chain lifts and flowing water, with 0x20 or 0x40 wheels, whose
+  /// texture is likely animated at run time. Bit 0x1 is never stored, the engine sets it after loading
+  /// for parts that need the blended pass.
+  std::uint32_t texture_flags = 0;
+  /// Face culling, a Direct3D cull mode: 1 draws both sides of every triangle, 3 draws only the front
+  /// (triangles wound clockwise as seen from outside in the game's left-handed space).
+  std::uint32_t sides = 0;
   std::uint32_t vertex_count = 0;
   std::uint32_t index_count = 0;
 

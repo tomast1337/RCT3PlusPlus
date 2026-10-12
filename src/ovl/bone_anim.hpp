@@ -16,7 +16,10 @@ namespace rct3::ovl {
 /// One keyframe of a track: a time in seconds and three values.
 struct BoneKeyframe {
   float time = 0;
-  /// Translation for a position track. For a rotation track three angles, apparently in radians.
+  /// Translation for a position track. For a rotation track three angles in radians. A single-axis
+  /// angle about x matches the bone's stored rotation under the row-vector convention
+  /// [[1,0,0],[0,cos,sin],[0,-sin,cos]]. The order in which the three axes combine and the way
+  /// keyframes are interpolated are not confirmed.
   std::array<float, 3> value{};
 };
 

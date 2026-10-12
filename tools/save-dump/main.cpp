@@ -98,10 +98,236 @@ void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& 
 
 }  // namespace
 
+
+// ---- world report (--world, --world-png) begin ---------------------------------------------------------------
+#include <algorithm>
+#include <array>
+#include <map>
+#include <set>
+#include <utility>
+
+#include "save/model/world.hpp"
+
+namespace {
+
+// Minimal PNG writer: 8-bit grayscale, stored (uncompressed) deflate blocks.
+std::uint32_t png_crc(const unsigned char* d, std::size_t n, std::uint32_t crc = 0xffffffffu) {
+  for (std::size_t i = 0; i < n; ++i) {
+    crc ^= d[i];
+    for (int k = 0; k < 8; ++k) crc = (crc >> 1) ^ (0xedb88320u & (0u - (crc & 1u)));
+  }
+  return crc;
+}
+
+void png_chunk(std::vector<unsigned char>& out, const char* type, const std::vector<unsigned char>& data) {
+  const auto put32 = [&](std::uint32_t v) {
+    for (int s = 24; s >= 0; s -= 8) out.push_back(static_cast<unsigned char>(v >> s));
+  };
+  put32(static_cast<std::uint32_t>(data.size()));
+  std::vector<unsigned char> body(type, type + 4);
+  body.insert(body.end(), data.begin(), data.end());
+  out.insert(out.end(), body.begin(), body.end());
+  put32(png_crc(body.data(), body.size()) ^ 0xffffffffu);
+}
+
+bool write_gray_png(const char* path, int w, int h, const std::vector<unsigned char>& pixels) {
+  std::vector<unsigned char> raw;
+  raw.reserve(static_cast<std::size_t>(h) * (static_cast<std::size_t>(w) + 1));
+  for (int y = 0; y < h; ++y) {
+    raw.push_back(0);  // filter: none
+    raw.insert(raw.end(), pixels.begin() + static_cast<std::ptrdiff_t>(y) * w,
+               pixels.begin() + static_cast<std::ptrdiff_t>(y + 1) * w);
+  }
+  std::vector<unsigned char> z{0x78, 0x01};
+  for (std::size_t pos = 0; pos < raw.size() || pos == 0;) {
+    const std::size_t n = std::min<std::size_t>(65535, raw.size() - pos);
+    const bool last = pos + n >= raw.size();
+    z.push_back(last ? 1 : 0);
+    z.push_back(static_cast<unsigned char>(n & 0xff));
+    z.push_back(static_cast<unsigned char>(n >> 8));
+    z.push_back(static_cast<unsigned char>(~n & 0xff));
+    z.push_back(static_cast<unsigned char>((~n >> 8) & 0xff));
+    z.insert(z.end(), raw.begin() + static_cast<std::ptrdiff_t>(pos), raw.begin() + static_cast<std::ptrdiff_t>(pos + n));
+    pos += n;
+    if (last) break;
+  }
+  std::uint32_t a = 1, b = 0;
+  for (const unsigned char c : raw) {
+    a = (a + c) % 65521u;
+    b = (b + a) % 65521u;
+  }
+  const std::uint32_t adler = (b << 16) | a;
+  for (int s = 24; s >= 0; s -= 8) z.push_back(static_cast<unsigned char>(adler >> s));
+
+  std::vector<unsigned char> out{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a};
+  std::vector<unsigned char> ihdr;
+  for (const int v : {w, h}) {
+    for (int s = 24; s >= 0; s -= 8) ihdr.push_back(static_cast<unsigned char>(v >> s));
+  }
+  ihdr.insert(ihdr.end(), {8, 0, 0, 0, 0});
+  png_chunk(out, "IHDR", ihdr);
+  png_chunk(out, "IDAT", z);
+  png_chunk(out, "IEND", {});
+  std::ofstream f(path, std::ios::binary);
+  f.write(reinterpret_cast<const char*>(out.data()), static_cast<std::streamsize>(out.size()));
+  return static_cast<bool>(f);
+}
+
+// Prints the world model summary of one save. Returns false when loading fails or issues were found.
+bool world_report(const rct3::save::SaveFile& file, const char* path, const char* png_path) {
+  using namespace rct3::save;
+  const ObjectIndex index(file);
+  const auto world = load_world(file, index);
+  if (!world) {
+    std::printf("world %s: load failed: %s\n", path, to_string(world.error()));
+    return false;
+  }
+  const WorldModel& w = *world;
+  const TerrainGrid& g = w.terrain;
+  std::printf("world %s\n", path);
+  if (g.empty()) {
+    std::printf("  terrain      none\n");
+  } else {
+    float lo = g.cells[0].corners[0], hi = lo;
+    std::array<std::size_t, 6> own{};
+    std::set<int> surfaces, cliffs;
+    std::size_t flat = 0;
+    std::map<int, std::size_t> flag_values;
+    for (const auto& c : g.cells) {
+      lo = std::min(lo, c.min_height());
+      hi = std::max(hi, c.max_height());
+      ++own[static_cast<std::size_t>(c.ownership())];
+      surfaces.insert(c.surface);
+      cliffs.insert(c.cliff);
+      if (c.min_height() == c.max_height()) ++flat;
+      ++flag_values[c.flags];
+    }
+    std::printf("  terrain      %dx%d cells, %s layout, trailing %zu, tile %g x %g, origin (%g, %g)\n", g.width,
+                g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes,
+                static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x),
+                static_cast<double>(g.origin_z));
+    std::printf("  heights      %g .. %g, flat tiles %zu, surfaces %zu distinct, cliff styles %zu distinct\n",
+                static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
+    std::printf("  ownership   ");
+    for (std::size_t i = 0; i < own.size(); ++i) {
+      std::printf(" %s=%zu", to_string(static_cast<Ownership>(i)), own[i]);
+    }
+    std::printf("\n  flag bytes  ");
+    for (const auto& [v, n] : flag_values) std::printf(" %02x:%zu", static_cast<unsigned>(v), n);
+    std::printf("\n");
+  }
+  std::printf("  water        %zu bodies, %zu triangles, map %dx%d", w.water.bodies.size(), w.water.triangle_count(),
+              w.water.width, w.water.height);
+  for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
+    std::printf(" [level %g, %zu tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
+  std::printf("\n");
+
+  std::array<std::size_t, 4> kinds{};
+  std::size_t with_underground = 0;
+  std::map<std::pair<int, int>, std::size_t> per_tile;
+  for (const auto& p : w.paths) {
+    ++kinds[static_cast<std::size_t>(p.kind)];
+    ++per_tile[{p.col, p.row}];
+    if (p.elevation && p.elevation->underground) ++with_underground;
+  }
+  std::size_t stacked = 0;
+  for (const auto& [t, n] : per_tile) stacked += n > 1;
+  std::printf("  paths        %zu tiles (ground %zu, flying %zu, queue %zu, unknown %zu), %zu distinct positions, "
+              "%zu positions with several, %zu queue lines, %zu underground\n",
+              w.paths.size(), kinds[0], kinds[1], kinds[2], kinds[3], per_tile.size(), stacked, w.queue_lines.size(),
+              with_underground);
+  std::size_t free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
+  std::set<std::string> symbols;
+  for (const auto& o : w.objects) {
+    free_standing += o.free_standing();
+    hidden += o.hidden;
+    unset += !o.base_height;
+    adjust += o.height_adjust.has_value();
+    named += !o.symbol.empty();
+    symbols.insert(o.symbol);
+  }
+  std::printf("  scenery      %zu placed (free-standing %zu, hidden %zu, height unset %zu, with adjust %zu, "
+              "symbol resolved %zu, %zu distinct symbols), skirt trees %zu, blocking blob %zu bytes\n",
+              w.objects.size(), free_standing, hidden, unset, adjust, named, symbols.size(), w.skirt_trees.size(),
+              w.blocking_scenery.size());
+  if (!g.empty()) {
+    // Orientation check: paths and scenery sit on bought land, so the (col,row) reading should hit owned
+    // tiles far more often than the transposed (row,col) reading.
+    std::size_t direct = 0, swapped = 0, total = 0;
+    int max_col = -1, max_row = -1;
+    const auto owned = [&](int c, int r) {
+      return g.contains(c, r) && g.at(c, r).ownership() == Ownership::Owned;
+    };
+    for (const auto& p : w.paths) {
+      ++total;
+      direct += owned(p.col, p.row);
+      swapped += owned(p.row, p.col);
+      max_col = std::max<int>(max_col, p.col);
+      max_row = std::max<int>(max_row, p.row);
+    }
+    for (const auto& o : w.objects) {
+      ++total;
+      direct += owned(o.col, o.row);
+      swapped += owned(o.row, o.col);
+      max_col = std::max(max_col, o.col);
+      max_row = std::max(max_row, o.row);
+    }
+    std::printf("  orientation  paths+scenery on owned tiles: (col,row) %zu, (row,col) %zu of %zu; max col %d, max row %d\n",
+                direct, swapped, total, max_col, max_row);
+  }
+  if (w.weather) {
+    const Weather& k = *w.weather;
+    std::printf("  weather      %s (raw %d), forecast %s, climate %d, %g degC, wind %g\n", to_string(k.type),
+                k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature),
+                static_cast<double>(k.wind_speed));
+  }
+  if (w.sky_background) std::printf("  sky          background %d\n", *w.sky_background);
+  if (w.time)
+    std::printf("  time         day fraction %g, time %g\n", static_cast<double>(w.time->day_fraction),
+                static_cast<double>(w.time->time));
+  if (w.camera)
+    std::printf("  camera       pos (%g, %g, %g) orientation (%g, %g, %g)\n", static_cast<double>(w.camera->position.x),
+                static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z),
+                static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y),
+                static_cast<double>(w.camera->orientation.z));
+  bool ok = true;
+  for (const auto& i : w.issues) {
+    std::printf("  ISSUE        %s x%zu (first object %llu)\n", to_string(i.kind), i.count,
+                static_cast<unsigned long long>(i.first_object));
+    ok = false;
+  }
+  if (png_path && !g.empty()) {
+    float lo = g.cells[0].corners[0], hi = lo;
+    for (const auto& c : g.cells) {
+      lo = std::min(lo, c.min_height());
+      hi = std::max(hi, c.max_height());
+    }
+    const float span = hi > lo ? hi - lo : 1.0f;
+    constexpr int kScale = 3;
+    const int pw = g.width * kScale, ph = g.height * kScale;
+    std::vector<unsigned char> px(static_cast<std::size_t>(pw) * static_cast<std::size_t>(ph));
+    for (int y = 0; y < ph; ++y) {
+      for (int x = 0; x < pw; ++x) {
+        const float v = (g.at(x / kScale, y / kScale).corners[0] - lo) / span;
+        px[static_cast<std::size_t>(y) * static_cast<std::size_t>(pw) + static_cast<std::size_t>(x)] =
+            static_cast<unsigned char>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
+      }
+    }
+    if (write_gray_png(png_path, pw, ph, px)) std::printf("  png          wrote %s (row 0 at the top)\n", png_path);
+    else std::printf("  png          cannot write %s\n", png_path);
+  }
+  return ok;
+}
+
+}  // namespace
+// ---- world report end ----------------------------------------------------------------------------------------
+
 int main(int argc, char** argv) {
   bool classes = false;
   bool objects = false;
   bool check = false;
+  bool world = false;               // world report option
+  const char* world_png = nullptr;  // world report option
   const char* value_class = nullptr;
   const char* object_id = nullptr;
   const char* path = nullptr;
@@ -111,10 +337,12 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--check") == 0) check = true;
     else if (std::strcmp(argv[i], "--values") == 0 && i + 1 < argc) value_class = argv[++i];
     else if (std::strcmp(argv[i], "--object") == 0 && i + 1 < argc) object_id = argv[++i];
+    else if (std::strcmp(argv[i], "--world") == 0) world = true;  // world report option
+    else if (std::strcmp(argv[i], "--world-png") == 0 && i + 1 < argc) world_png = argv[++i];  // world report option
     else path = argv[i];
   }
   if (!path) {
-    std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH\n");
+    std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--world] [--world-png FILE] PATH\n");
     return 2;
   }
 
@@ -131,6 +359,8 @@ int main(int argc, char** argv) {
     std::printf("error: %s\n", rct3::save::to_string(file.error()));
     return 1;
   }
+
+  if (world || world_png) return world_report(*file, path, world_png) ? 0 : 1;  // world report option
 
   std::printf("size           %zu\n", raw.size());
   std::printf("header         %s\n", file->has_header ? "yes" : "no");

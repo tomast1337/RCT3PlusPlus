@@ -6,11 +6,30 @@
 #include <cstdint>
 #include <span>
 
+#include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
   const auto bytes = std::as_bytes(std::span(data, size));
+  // ---- world model fuzz block begin ----
+  // The blob decoders take any bytes: run them on the raw input, and on the same input shifted by one.
+  for (const auto view : {bytes, bytes.empty() ? bytes : bytes.subspan(1)}) {
+    if (const auto g = rct3::save::decode_terrain(view)) {
+      if (g->cells.size() != static_cast<std::size_t>(g->width) * static_cast<std::size_t>(g->height)) __builtin_trap();
+      if (g->cells.size() > rct3::save::kMaxTerrainCells) __builtin_trap();
+      (void)g->height_at(0.0f, 0.0f);
+      (void)g->height_bilinear_at(g->origin_x + 1.0f, g->origin_z + 1.0f);
+    }
+    if (const auto w = rct3::save::decode_water(view)) {
+      if (w->triangle_count() * 4 + w->bodies.size() * 8 + 6 != view.size()) __builtin_trap();
+    }
+    if (const auto t = rct3::save::decode_skirt_trees(view)) {
+      if (t->size() * 20 + 4 != view.size()) __builtin_trap();
+    }
+  }
+  // ---- world model fuzz block end ----
+
   const auto file = rct3::save::read_save(bytes, {.verify_checksum = false});
   if (!file) return 0;
 
@@ -46,5 +65,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (decoded->fields.items().size() != file->classes[o.class_index].attributes.size()) __builtin_trap();
     if (index.find(o.id) == nullptr) __builtin_trap();
   }
+
+  // ---- world model fuzz block begin ----
+  // The loader never fails on a file whose objects all decode; its parts must stay consistent.
+  const auto world = rct3::save::load_world(*file, index);
+  if (!world) __builtin_trap();
+  if (world->terrain.cells.size() !=
+      static_cast<std::size_t>(world->terrain.width) * static_cast<std::size_t>(world->terrain.height))
+    __builtin_trap();
+  if (world->objects.size() + world->paths.size() > file->objects.size()) __builtin_trap();
+  // ---- world model fuzz block end ----
   return 0;
 }

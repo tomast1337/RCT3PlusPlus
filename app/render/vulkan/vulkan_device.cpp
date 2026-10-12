@@ -111,6 +111,7 @@ namespace rct3::render::vulkan
             create_depth();
             create_frames();
             create_pipeline_layout();
+            create_samplers();
             if (config_.ui)
                 init_ui();
         }
@@ -137,14 +138,19 @@ namespace rct3::render::vulkan
         }
         if (device_ != VK_NULL_HANDLE)
         {
-            for (auto& [id, b] : buffers_)
-            {
-                vkDestroyBuffer(device_, b.buffer, nullptr);
-                vkFreeMemory(device_, b.memory, nullptr);
-            }
+            for (auto& [id, b] : buffers_) // Includes the transient blocks
+                destroy(b);
+            for (auto& [id, t] : textures_)
+                destroy(t);
             for (auto& [id, p] : pipelines_)
                 vkDestroyPipeline(device_, p.pipeline, nullptr);
+            for (VkSampler s : samplers_)
+                vkDestroySampler(device_, s, nullptr);
+            vkDestroyDescriptorPool(device_, descriptor_pool_, nullptr); // Frees every set
             vkDestroyPipelineLayout(device_, pipeline_layout_, nullptr);
+            vkDestroyDescriptorSetLayout(device_, texture_set_layout_, nullptr);
+            vkDestroyDescriptorSetLayout(device_, sampler_set_layout_, nullptr);
+            vkDestroyCommandPool(device_, upload_pool_, nullptr);
             for (Frame& f : frames_)
             {
                 release(f.garbage);
@@ -168,8 +174,15 @@ namespace rct3::render::vulkan
         }
 
         buffers_.clear();
+        textures_.clear();
         pipelines_.clear();
+        samplers_ = { };
+        sampler_sets_ = { };
+        descriptor_pool_ = VK_NULL_HANDLE;
         pipeline_layout_ = VK_NULL_HANDLE;
+        texture_set_layout_ = VK_NULL_HANDLE;
+        sampler_set_layout_ = VK_NULL_HANDLE;
+        upload_pool_ = VK_NULL_HANDLE;
         frames_ = { };
         frame_index_ = 0;
         device_ = VK_NULL_HANDLE;
@@ -475,19 +488,90 @@ namespace rct3::render::vulkan
             fence.flags = VK_FENCE_CREATE_SIGNALED_BIT;
             check(vkCreateFence(device_, &fence, nullptr, &f.in_flight), "vkCreateFence");
         }
+
+        VkCommandPoolCreateInfo pool { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        pool.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        pool.queueFamilyIndex = queue_family_;
+        check(vkCreateCommandPool(device_, &pool, nullptr, &upload_pool_), "vkCreateCommandPool");
     }
 
-    // All pipelines share one layout: a single push constant block with the draw's transform.
+    // All pipelines share one layout: a push constant block with the draw's transform, then a texture set
+    // and a sampler set that only textured shaders read. Also creates the pool those sets come from.
     void VulkanDevice::create_pipeline_layout()
     {
+        const auto make_set_layout = [&](VkDescriptorType type) {
+            VkDescriptorSetLayoutBinding binding { };
+            binding.descriptorType = type;
+            binding.descriptorCount = 1;
+            binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            VkDescriptorSetLayoutCreateInfo info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+            info.bindingCount = 1;
+            info.pBindings = &binding;
+            VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+            check(vkCreateDescriptorSetLayout(device_, &info, nullptr, &layout), "vkCreateDescriptorSetLayout");
+            return layout;
+        };
+        texture_set_layout_ = make_set_layout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+        sampler_set_layout_ = make_set_layout(VK_DESCRIPTOR_TYPE_SAMPLER);
+
+        // Texture count is a guess at what the UI and a park need at once; raise it when it runs out.
+        constexpr std::uint32_t kMaxTextures = 4096;
+        const VkDescriptorPoolSize sizes[] = {
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, kMaxTextures },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, kSamplerCount },
+        };
+        VkDescriptorPoolCreateInfo pool { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        pool.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        pool.maxSets = kMaxTextures + kSamplerCount;
+        pool.poolSizeCount = 2;
+        pool.pPoolSizes = sizes;
+        check(vkCreateDescriptorPool(device_, &pool, nullptr, &descriptor_pool_), "vkCreateDescriptorPool");
+
         VkPushConstantRange push { };
         push.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push.size = sizeof(glm::mat4);
 
+        const VkDescriptorSetLayout sets[] = { texture_set_layout_, sampler_set_layout_ };
         VkPipelineLayoutCreateInfo layout { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+        layout.setLayoutCount = 2;
+        layout.pSetLayouts = sets;
         layout.pushConstantRangeCount = 1;
         layout.pPushConstantRanges = &push;
         check(vkCreatePipelineLayout(device_, &layout, nullptr, &pipeline_layout_), "vkCreatePipelineLayout");
+    }
+
+    // One sampler per Filter x AddressMode pair, at index filter * 2 + address.
+    void VulkanDevice::create_samplers()
+    {
+        for (std::size_t i = 0; i < kSamplerCount; ++i)
+        {
+            const VkFilter filter = i / 2 == 0 ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+            const VkSamplerAddressMode address = i % 2 == 0 ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            VkSamplerCreateInfo info { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            info.magFilter = filter;
+            info.minFilter = filter;
+            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            info.addressModeU = address;
+            info.addressModeV = address;
+            info.addressModeW = address;
+            info.maxLod = VK_LOD_CLAMP_NONE;
+            check(vkCreateSampler(device_, &info, nullptr, &samplers_[i]), "vkCreateSampler");
+
+            VkDescriptorSetAllocateInfo alloc { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+            alloc.descriptorPool = descriptor_pool_;
+            alloc.descriptorSetCount = 1;
+            alloc.pSetLayouts = &sampler_set_layout_;
+            check(vkAllocateDescriptorSets(device_, &alloc, &sampler_sets_[i]), "vkAllocateDescriptorSets");
+
+            VkDescriptorImageInfo image { };
+            image.sampler = samplers_[i];
+            VkWriteDescriptorSet write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet = sampler_sets_[i];
+            write.descriptorCount = 1;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+            write.pImageInfo = &image;
+            vkUpdateDescriptorSets(device_, 1, &write, 0, nullptr);
+        }
     }
 
     void VulkanDevice::init_ui()
@@ -516,13 +600,13 @@ namespace rct3::render::vulkan
     void VulkanDevice::release(Garbage& garbage)
     {
         for (const Buffer& b : garbage.buffers)
-        {
-            vkDestroyBuffer(device_, b.buffer, nullptr);
-            vkFreeMemory(device_, b.memory, nullptr);
-        }
+            destroy(b);
+        for (const Texture& t : garbage.textures)
+            destroy(t);
         for (VkPipeline p : garbage.pipelines)
             vkDestroyPipeline(device_, p, nullptr);
         garbage.buffers.clear();
+        garbage.textures.clear();
         garbage.pipelines.clear();
     }
 
@@ -533,6 +617,42 @@ namespace rct3::render::vulkan
         if (state_ == State::InFrame || state_ == State::InPass)
             return frames_[frame_index_].garbage;
         return frames_[(frame_index_ + kFramesInFlight - 1) % kFramesInFlight].garbage;
+    }
+
+    // Copies staging into the whole image and leaves it ready for sampling. Waits for the GPU.
+    void VulkanDevice::upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height)
+    {
+        VkCommandBufferAllocateInfo alloc { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        alloc.commandPool = upload_pool_;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc.commandBufferCount = 1;
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        check(vkAllocateCommandBuffers(device_, &alloc, &cmd), "vkAllocateCommandBuffers");
+        try
+        {
+            VkCommandBufferBeginInfo begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+            begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            check(vkBeginCommandBuffer(cmd, &begin), "vkBeginCommandBuffer");
+            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+            VkBufferImageCopy region { };
+            region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            region.imageExtent = { width, height, 1 };
+            vkCmdCopyBufferToImage(cmd, staging.buffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+            check(vkEndCommandBuffer(cmd), "vkEndCommandBuffer");
+
+            VkSubmitInfo submit { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submit.commandBufferCount = 1;
+            submit.pCommandBuffers = &cmd;
+            check(vkQueueSubmit(queue_, 1, &submit, VK_NULL_HANDLE), "vkQueueSubmit");
+            check(vkQueueWaitIdle(queue_), "vkQueueWaitIdle");
+        }
+        catch (...)
+        {
+            vkFreeCommandBuffers(device_, upload_pool_, 1, &cmd);
+            throw;
+        }
+        vkFreeCommandBuffers(device_, upload_pool_, 1, &cmd);
     }
 
     void VulkanDevice::ui_new_frame()
@@ -547,6 +667,7 @@ namespace rct3::render::vulkan
         Frame& frame = frames_[frame_index_];
         check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
         release(frame.garbage);
+        reset_transient(frame);
 
         for (;;)
         {
@@ -612,7 +733,7 @@ namespace rct3::render::vulkan
     {
         assert(state_ == State::InPass);
         const auto pipeline = pipelines_.find(command.pipeline.id);
-        const auto vertices = buffers_.find(command.vertices.id);
+        const auto vertices = buffers_.find(command.vertices.buffer.id);
         assert(pipeline != pipelines_.end() && "draw with an unknown pipeline");
         assert(vertices != buffers_.end() && "draw with an unknown vertex buffer");
         if (pipeline == pipelines_.end() || vertices == buffers_.end())
@@ -621,16 +742,26 @@ namespace rct3::render::vulkan
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->second.pipeline);
         vkCmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof command.transform, &command.transform);
-        const VkDeviceSize offset = 0;
+        if (command.texture)
+        {
+            const auto texture = textures_.find(command.texture.id);
+            assert(texture != textures_.end() && "draw with an unknown texture");
+            if (texture == textures_.end())
+                return;
+            const std::size_t sampler = static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address);
+            const VkDescriptorSet sets[] = { texture->second.set, sampler_sets_[sampler] };
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 2, sets, 0, nullptr);
+        }
+        const VkDeviceSize offset = command.vertices.offset;
         vkCmdBindVertexBuffers(cmd, 0, 1, &vertices->second.buffer, &offset);
 
-        if (command.indices)
+        if (command.indices.buffer)
         {
-            const auto indices = buffers_.find(command.indices.id);
+            const auto indices = buffers_.find(command.indices.buffer.id);
             assert(indices != buffers_.end() && "draw with an unknown index buffer");
             if (indices == buffers_.end())
                 return;
-            vkCmdBindIndexBuffer(cmd, indices->second.buffer, 0, command.index_type == IndexType::U16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(cmd, indices->second.buffer, command.indices.offset, command.index_type == IndexType::U16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
             vkCmdDrawIndexed(cmd, command.count, 1, command.first, command.vertex_offset, 0);
         }
         else

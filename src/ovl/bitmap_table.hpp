@@ -14,11 +14,11 @@
 
 namespace rct3::ovl {
 
-/// How the pixels of a bitmap format are stored, deduced from the sizes of the data in files.
+/// How the pixels of a bitmap format are stored.
 enum class BitmapLayout {
-  Pixels32,  ///< 4 bytes per pixel
-  Blocks8,   ///< 4x4 pixel blocks of 8 bytes
-  Blocks16,  ///< 4x4 pixel blocks of 16 bytes
+  Pixels32,  ///< 4 bytes per pixel: blue, green, red, alpha
+  Blocks8,   ///< 4x4 pixel blocks of 8 bytes: DXT1 compression
+  Blocks16,  ///< 4x4 pixel blocks of 16 bytes: DXT3 compression, explicit 4-bit alpha
 };
 
 /// Layout of a stored format value: 2 is 32 bits per pixel, 18 and 19 are 4x4 block formats of 8 and 16

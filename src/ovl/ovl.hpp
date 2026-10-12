@@ -126,6 +126,10 @@ class AddressSpace {
   /// NUL-terminated string at `address`, if it ends inside its block.
   [[nodiscard]] std::optional<std::string_view> cstring_at(std::uint32_t address) const noexcept;
 
+  /// UTF-16 little-endian string at `address`, up to a 16-bit NUL that must lie inside the same block.
+  /// The terminator is not part of the result. Code units are not validated.
+  [[nodiscard]] std::optional<std::u16string> utf16_at(std::uint32_t address) const;
+
  private:
   struct Entry {
     const File* file;

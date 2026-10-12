@@ -341,6 +341,25 @@ std::optional<std::string_view> AddressSpace::cstring_at(std::uint32_t address) 
   return std::nullopt;
 }
 
+std::optional<std::u16string> AddressSpace::utf16_at(std::uint32_t address) const {
+  for (const auto& e : entries_) {
+    const auto at = e.file->locate(address, e.base);
+    if (!at) continue;
+    const Block& block = e.file->block_types[at->type].blocks[at->index];
+    const auto rest = e.bytes.subspan(block.file_offset + at->offset, block.size - at->offset);
+
+    std::u16string out;
+    for (std::size_t i = 0; i + 1 < rest.size(); i += 2) {
+      const auto unit = static_cast<char16_t>(std::to_integer<unsigned>(rest[i]) |
+                                              (std::to_integer<unsigned>(rest[i + 1]) << 8));
+      if (unit == 0) return out;
+      out.push_back(unit);
+    }
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 SymbolName split_symbol_name(std::string_view full) noexcept {
   const auto colon = full.rfind(':');
   if (colon == std::string_view::npos) return {full, {}};

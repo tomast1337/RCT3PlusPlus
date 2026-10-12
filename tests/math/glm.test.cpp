@@ -18,7 +18,7 @@ TEST_CASE("row-major row-vector matrices copy into glm as the same transform")
     };
     glm::mat4 m;
     static_assert(sizeof(m) == sizeof(rows));
-    std::memcpy(&m, rows.data(), sizeof(m));
+    std::memcpy(static_cast<void*>(&m), rows.data(), sizeof(m));
     const glm::vec4 p = m * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     CHECK(p.x == doctest::Approx(3.0f));
     CHECK(p.y == doctest::Approx(4.0f));

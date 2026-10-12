@@ -33,6 +33,7 @@ namespace rct3::config
         GamePath,       ///< game_path: root folder of the installed original game
         SkipIntro,      ///< skip_intro: start without the logos
         InterfaceScale, ///< interface_scale: auto, or how many pixels per interface unit
+        Language,       ///< language: the interface language, by the game's name for it; unset picks one
 
         Count_, ///< Number of settings; not a setting
     };

@@ -3,9 +3,8 @@
 
 #include "logging/log.hpp"
 #include "strings/unicode.hpp"
-#include "ui/fallback_font.hpp"
-#include "ui/font_images.hpp"
 #include "ui/game_style.hpp"
+#include "ui/language.hpp"
 #include "ui/scale.hpp"
 #include "ui/skin_set.hpp"
 #include "ui/truetype_font.hpp"
@@ -307,30 +306,6 @@ namespace rct3::scene
                 open_window(demo);
         }
 
-        // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure
-        // the font is returned as it was.
-        std::expected<ui::Font, std::string> with_fallback(render::Device& device, WidgetDemo& demo, const ui::Font& font, const std::string& name, const ui::TrueTypeFile& fallback)
-        {
-            const float em = ui::fallback_em_pixels(ui::cap_height(font), fallback.cap_per_em, ui::kUnifontGrid);
-            auto baked = ui::bake_truetype(fallback, em, ui::kFallbackRanges, { .hard_edges = true });
-            if (!baked)
-                return std::unexpected(baked.error());
-            std::map<std::string, ovl::RgbaImage, std::less<>> images;
-            for (std::size_t i = 0; i < baked->pages.size(); ++i)
-                images.emplace(name + "#fallback" + std::to_string(i), std::move(baked->pages[i]));
-            auto pages = ui::upload_textures(device, images);
-            if (!pages)
-                return std::unexpected(pages.error());
-            std::vector<ui::Font::Page> refs;
-            for (std::size_t i = 0; i < images.size(); ++i)
-            {
-                const ui::UiTexture& t = pages->at(name + "#fallback" + std::to_string(i));
-                refs.push_back({ ui::texture_id(t.handle), t.width, t.height });
-            }
-            demo.textures.merge(*pages);
-            return font.with_fallback(ui::font_from_baked(*baked, refs));
-        }
-
         float scale_for(const render::Device& device, const WidgetDemo& demo)
         {
             return ui::interface_scale(static_cast<float>(device.extent().height), demo.scale);
@@ -338,7 +313,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::filesystem::path& fallback_font)
+    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font)
     {
         const auto log = logging::logger("ui");
         const auto main_ovl = install.find("Main.common.ovl");
@@ -347,15 +322,15 @@ namespace rct3::scene
         auto set = ui::load_skin_set(*main_ovl);
         if (!set)
             return std::unexpected(set.error());
-        auto fonts = ui::load_font_images(*main_ovl);
-        if (!fonts)
-            return std::unexpected("fonts: " + fonts.error());
-
-        const auto fallback = ui::load_truetype(fallback_font);
-        if (!fallback)
-            log.warning("fallback font {}: {}; characters the game fonts lack will not show (run ./nob fetch)", fallback_font.string(), fallback.error());
 
         WidgetDemo demo;
+        demo.install = install;
+        demo.fonts.language = language;
+        if (auto fallback = ui::load_truetype(fallback_font))
+            demo.fonts.fallback = std::move(*fallback);
+        else
+            log.warning("fallback font {}: {}; characters the game fonts lack will not show (run ./nob fetch)", fallback_font.string(), fallback.error());
+
         auto renderer = ui::create_ui_renderer(device);
         if (!renderer)
             return std::unexpected(renderer.error());
@@ -370,43 +345,17 @@ namespace rct3::scene
         demo.textures = std::move(*textures);
         demo.skins = ui::skin_library(set->skins, demo.textures);
 
-        // Font pages go up under the font's name and page number; each role gets the font of its name.
-        for (const ui::FontImages& f : *fonts)
+        // The language's strings, else English's: a language whose file is missing is shown in English.
+        for (const std::string& name : { language, std::string(ui::kDefaultLanguage) })
         {
-            const auto role = std::ranges::find(skins::kFonts, std::string_view(f.name), &std::pair<ui::FontRole, std::string_view>::second);
-            if (role == skins::kFonts.end())
+            const auto path = install.find(ui::text_overlay(name));
+            if (!path)
                 continue;
-            std::map<std::string, ovl::RgbaImage, std::less<>> images;
-            for (std::size_t i = 0; i < f.pages.size(); ++i)
-                images.emplace(f.name + "#" + std::to_string(i), f.pages[i]);
-            auto pages = ui::upload_textures(device, images);
-            if (!pages)
+            if (auto strings = ui::StringTable::load(*path))
             {
-                destroy_widget_demo(device, demo);
-                return std::unexpected(pages.error());
-            }
-            std::vector<ui::Font::Page> refs;
-            for (std::size_t i = 0; i < f.pages.size(); ++i)
-            {
-                const ui::UiTexture& t = pages->at(f.name + "#" + std::to_string(i));
-                refs.push_back({ ui::texture_id(t.handle), t.width, t.height });
-            }
-            demo.textures.merge(*pages);
-            ui::Font font = ui::Font::from(f.font, refs);
-            if (fallback)
-            {
-                if (auto merged = with_fallback(device, demo, font, f.name, *fallback))
-                    font = std::move(*merged);
-                else
-                    log.warning("fallback font for {}: {}", f.name, merged.error());
-            }
-            demo.fonts.set(role->first, std::move(font));
-        }
-
-        if (const auto english = install.find("gui/English.common.ovl"))
-        {
-            if (auto strings = ui::StringTable::load(*english))
                 *demo.strings = std::move(*strings);
+                break;
+            }
         }
         demo.desktop.tooltip_style = skins::tooltip_style();
         add_bars(demo);
@@ -426,7 +375,8 @@ namespace rct3::scene
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        const bool over = demo.desktop.update(pointer, keyboard, { elapsed, &demo.fonts });
+        demo.current_fonts = &ui::fonts_for(device, *demo.install, demo.fonts, demo.desktop.root().rect().width());
+        const bool over = demo.desktop.update(pointer, keyboard, { elapsed, demo.current_fonts });
         follow_bars(demo);
         return over;
     }
@@ -435,7 +385,8 @@ namespace rct3::scene
     {
         demo.list.clear();
         demo.list.set_scale(scale_for(device, demo));
-        ui::DrawContext context { demo.list, demo.skins, demo.fonts };
+        static const ui::FontSet kNoFonts;
+        ui::DrawContext context { demo.list, demo.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts };
         demo.desktop.draw(context);
         ui::render_draw_list(device, demo.renderer, demo.list);
     }
@@ -443,6 +394,7 @@ namespace rct3::scene
     void destroy_widget_demo(render::Device& device, WidgetDemo& demo)
     {
         ui::destroy_textures(device, demo.textures);
+        ui::destroy_interface_fonts(device, demo.fonts);
         ui::destroy_ui_renderer(device, demo.renderer);
         demo = { };
     }

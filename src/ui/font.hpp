@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -34,6 +35,9 @@ namespace rct3::ui
         Glyph glyph;
     };
 
+    /// Fonts made from this face take the room for the descent twice in each line.
+    inline constexpr std::string_view kRoomyFace = "SimSun";
+
     class Font
     {
     public:
@@ -48,6 +52,8 @@ namespace rct3::ui
         Font() = default;
         /// Glyphs on pages that are missing still advance the pen but draw nothing.
         [[nodiscard]] static Font from(const ovl::Font& font, std::span<const Page> pages);
+        /// The same, for a font item whose face is no longer at hand: `face` names it.
+        [[nodiscard]] static Font from(const ovl::Font& font, std::span<const Page> pages, std::string_view face);
         /// A font from ready glyphs; the first glyph with a code wins. `line_height` is also the cell.
         [[nodiscard]] static Font from_glyphs(std::span<const CodedGlyph> glyphs, float line_height, float descent);
 
@@ -62,7 +68,8 @@ namespace rct3::ui
         {
             return cell_;
         }
-        /// Distance between the tops of consecutive lines.
+        /// Distance between the tops of consecutive lines: the font's line height and its descent, the
+        /// descent twice for kRoomyFace.
         [[nodiscard]] float line_height() const
         {
             return line_height_;

@@ -21,6 +21,7 @@ namespace rct3::config
             { Setting::GamePath, "game_path", "Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it.", "" },
             { Setting::SkipIntro, "skip_intro", "Start without the logos (yes/no). --no-intro skips them too.", "no" },
             { Setting::InterfaceScale, "interface_scale", "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
+            { Setting::Language, "language", "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.

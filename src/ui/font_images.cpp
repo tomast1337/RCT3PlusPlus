@@ -31,7 +31,7 @@ namespace rct3::ui
             {
                 if (!item.font)
                     continue;
-                FontImages f { std::string(item.name), std::move(*item.font), { } };
+                FontImages f { std::string(item.name), std::move(*item.font), { }, { } };
                 fonts.push_back(std::move(f));
             }
         }
@@ -47,6 +47,7 @@ namespace rct3::ui
                 f.pages.push_back(pixels.frame(texture->second, i).value_or(ovl::RgbaImage { }));
             if (f.pages.empty())
                 continue;
+            f.face = std::string(f.font.face);
             f.font.face = { };
             f.font.texture = { };
             out.push_back(std::move(f));

@@ -60,9 +60,9 @@ namespace rct3::ovl
                         ride.splines[i] = record->ref(static_cast<std::size_t>(v.splines) + i * 4, "spl");
                     }
                 }
-                item.ride = std::move(ride);
+                item.ride = ride;
             }
-            items.push_back(std::move(item));
+            items.push_back(item);
         }
         return items;
     }

@@ -33,7 +33,7 @@ namespace rct3::ovl
             // No version 4 file holds one, so that layout is not known.
             if (version == 4)
             {
-                items.push_back(std::move(item));
+                items.push_back(item);
                 continue;
             }
             if (const auto record = ItemRecord::open(space, refs, symbol.data, size))
@@ -42,9 +42,9 @@ namespace rct3::ovl
                 a.info = detail::read_attraction(*record, at, version);
                 if (!first)
                     a.name = record->text(0x04);
-                item.attraction = std::move(a);
+                item.attraction = a;
             }
-            items.push_back(std::move(item));
+            items.push_back(item);
         }
         return items;
     }

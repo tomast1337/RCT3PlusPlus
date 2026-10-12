@@ -1134,7 +1134,7 @@ namespace rct3::save
                     break;
                 case Slot::Animal:
                     if (auto a = make_animal(d, index))
-                        m.animals.push_back(std::move(*a));
+                        m.animals.push_back(*a);
                     break;
                 case Slot::Zoo:
                     if (auto z = make_zoo_animal(d, index))
@@ -1158,11 +1158,11 @@ namespace rct3::save
                     break;
                 case Slot::ShopExtra:
                     if (auto s = make_shop_extra(d, index))
-                        m.shop_extras.push_back(std::move(*s));
+                        m.shop_extras.push_back(*s);
                     break;
                 case Slot::Litter:
                     if (auto l = make_litter(d, index))
-                        m.litter.push_back(std::move(*l));
+                        m.litter.push_back(*l);
                     break;
                 case Slot::None:
                     break;

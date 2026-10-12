@@ -31,6 +31,13 @@
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_visual.hpp"
+#include "ovl/animated_ride.hpp"
+#include "ovl/ride_car.hpp"
+#include "ovl/ride_train.hpp"
+#include "ovl/special_attraction.hpp"
+#include "ovl/stall.hpp"
+#include "ovl/track_section.hpp"
+#include "ovl/tracked_ride.hpp"
 #include "ovl/sound.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/text.hpp"
@@ -87,6 +94,19 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   for (const auto& item : rct3::ovl::read_splines(*overlay, part)) {
     if (item.spline) sink += item.spline->nodes.size() + item.spline->segment_lengths.size();
   }
+  for (const auto& item : rct3::ovl::read_track_sections(*overlay, part)) {
+    if (item.section) sink += item.section->references.size() + item.section->record.size();
+  }
+  for (const auto& item : rct3::ovl::read_ride_cars(*overlay, part)) {
+    if (item.car) sink += item.car->references.size() + item.car->record.size();
+  }
+  for (const auto& item : rct3::ovl::read_ride_trains(*overlay, part)) {
+    if (item.train) sink += item.train->references.size() + item.train->record.size();
+  }
+  for (const auto& item : rct3::ovl::read_tracked_rides(*overlay, part)) sink += item.ride.has_value();
+  for (const auto& item : rct3::ovl::read_animated_rides(*overlay, part)) sink += item.ride.has_value();
+  for (const auto& item : rct3::ovl::read_stalls(*overlay, part)) sink += item.stall.has_value();
+  for (const auto& item : rct3::ovl::read_special_attractions(*overlay, part)) sink += item.attraction.has_value();
   for (const auto& item : rct3::ovl::read_bitmap_tables(*overlay, part)) {
     if (!item.table) continue;
     for (const auto& bitmap : item.table->bitmaps) sink += bitmap.data.size() + bitmap.levels;

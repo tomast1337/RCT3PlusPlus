@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -36,6 +36,13 @@
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/scenery_visual.hpp"
+#include "ovl/animated_ride.hpp"
+#include "ovl/ride_car.hpp"
+#include "ovl/ride_train.hpp"
+#include "ovl/special_attraction.hpp"
+#include "ovl/stall.hpp"
+#include "ovl/track_section.hpp"
+#include "ovl/tracked_ride.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
@@ -67,6 +74,14 @@ struct Options {
   bool gsi = false;
   bool btbl = false;
   bool flt = false;
+
+  bool tks = false;
+  bool trr = false;
+  bool ric = false;
+  bool rit = false;
+  bool anr = false;
+  bool sta = false;
+  bool sat = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -364,6 +379,122 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
       }
       std::printf("  %-32s vertices %zu triangles %zu\n", name.c_str(), item.mesh->vertices.size(),
                   item.mesh->indices.size() / 3);
+    }
+  }
+  if (opt.tks) {
+    const auto items = rct3::ovl::read_track_sections(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.section;
+    std::printf("track sections %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.section) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& s = *item.section;
+      std::printf("  %-32s sid %-24s splines %s %s %s %s refs %zu\n", name.c_str(),
+                  std::string(s.scenery_item).c_str(), std::string(s.splines[0]).c_str(),
+                  std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(),
+                  std::string(s.splines[3]).c_str(), s.references.size());
+    }
+  }
+  if (opt.ric) {
+    const auto items = rct3::ovl::read_ride_cars(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.car;
+    std::printf("ride cars      %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.car) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::printf("  %-32s kind %u visual %s refs %zu\n", name.c_str(), item.car->kind,
+                  std::string(item.car->visual).c_str(), item.car->references.size());
+    }
+  }
+  if (opt.rit) {
+    const auto items = rct3::ovl::read_ride_trains(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.train;
+    std::printf("ride trains    %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.train) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::printf("  %-32s cars", name.c_str());
+      for (const auto car : item.train->cars) {
+        if (!car.empty()) std::printf(" %s", std::string(car).c_str());
+      }
+      std::printf("\n");
+    }
+  }
+  if (opt.trr) {
+    const auto items = rct3::ovl::read_tracked_rides(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.ride;
+    std::printf("tracked rides  %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.ride) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& r = *item.ride;
+      std::printf("  %-32s type %u name %s text %s splines %s sections %s\n", name.c_str(), r.info.type_id,
+                  std::string(r.name).c_str(), std::string(r.info.name_text).c_str(),
+                  std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
+    }
+  }
+  if (opt.anr) {
+    const auto items = rct3::ovl::read_animated_rides(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.ride;
+    std::printf("animated rides %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.ride) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& i = item.ride->info;
+      std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id,
+                  std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+    }
+  }
+  if (opt.sta) {
+    const auto items = rct3::ovl::read_stalls(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.stall;
+    std::printf("stalls         %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.stall) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& i = item.stall->info;
+      std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id,
+                  std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+    }
+  }
+  if (opt.sat) {
+    const auto items = rct3::ovl::read_special_attractions(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : items) bad += !item.attraction;
+    std::printf("special attrs  %zu (%zu unreadable)\n", items.size(), bad);
+    for (const auto& item : items) {
+      const std::string name(item.name);
+      if (!item.attraction) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& i = item.attraction->info;
+      std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id,
+                  std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
     }
   }
   if (opt.btbl) {
@@ -781,11 +912,18 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--btbl") == 0) opt.btbl = true;
     else if (std::strcmp(argv[i], "--flt") == 0) opt.flt = true;
     else if (parse_scenery_option(argv[i])) {}
+    else if (std::strcmp(argv[i], "--tks") == 0) opt.tks = true;
+    else if (std::strcmp(argv[i], "--trr") == 0) opt.trr = true;
+    else if (std::strcmp(argv[i], "--ric") == 0) opt.ric = true;
+    else if (std::strcmp(argv[i], "--rit") == 0) opt.rit = true;
+    else if (std::strcmp(argv[i], "--anr") == 0) opt.anr = true;
+    else if (std::strcmp(argv[i], "--sta") == 0) opt.sta = true;
+    else if (std::strcmp(argv[i], "--sat") == 0) opt.sat = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] PATH\n", argv[0]);
     std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
     return 2;
   }

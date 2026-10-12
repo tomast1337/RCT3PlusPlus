@@ -105,6 +105,8 @@ const char* to_string(Error e) noexcept {
     case Error::ImplausibleCount: return "entry count exceeds remaining file size";
     case Error::BadSymbolTable: return "symbol table size is not a whole number of entries";
     case Error::BadLoaderTable: return "loader table size is not a whole number of entries";
+    case Error::Io: return "cannot read file";
+    case Error::MissingFile: return "file not found";
   }
   return "unknown error";
 }

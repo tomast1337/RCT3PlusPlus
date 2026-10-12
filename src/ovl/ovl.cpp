@@ -105,6 +105,7 @@ const char* to_string(Error e) noexcept {
     case Error::ImplausibleCount: return "entry count exceeds remaining file size";
     case Error::BadSymbolTable: return "symbol table size is not a whole number of entries";
     case Error::BadLoaderTable: return "loader table size is not a whole number of entries";
+    case Error::BadReferenceTable: return "reference table size is not a whole number of entries";
     case Error::Io: return "cannot read file";
     case Error::MissingFile: return "file not found";
   }
@@ -402,6 +403,38 @@ std::expected<std::vector<Symbol>, Error> read_symbols(const File& file, std::sp
     }
     if (const auto name = space.cstring_at(sym.name_address)) sym.name = *name;
     out.push_back(sym);
+  }
+  return out;
+}
+
+std::expected<std::vector<Reference>, Error> read_references(const File& file, std::span<const std::byte> bytes,
+                                                              const AddressSpace& space) {
+  constexpr std::size_t kTableType = 2;
+  constexpr std::size_t kTableBlock = 2;
+
+  const auto& blocks = file.block_types[kTableType].blocks;
+  if (blocks.size() <= kTableBlock) return std::vector<Reference>{};
+
+  const bool wide = file.header.version != 1;
+  const std::size_t stride = wide ? 16 : 12;
+
+  const Block& table = blocks[kTableBlock];
+  if (table.size % stride != 0) return std::unexpected(Error::BadReferenceTable);
+  if (bytes.size() < table.file_offset || bytes.size() - table.file_offset < table.size) {
+    return std::unexpected(Error::Truncated);
+  }
+
+  std::vector<Reference> out;
+  out.reserve(table.size / stride);
+  for (std::size_t off = 0; off < table.size; off += stride) {
+    const std::byte* row = bytes.data() + table.file_offset + off;
+    Reference ref;
+    std::memcpy(&ref.location, row, 4);
+    std::memcpy(&ref.name_address, row + 4, 4);
+    std::memcpy(&ref.owner, row + 8, 4);
+    if (wide) std::memcpy(&ref.hash, row + 12, 4);
+    if (const auto name = space.cstring_at(ref.name_address)) ref.name = *name;
+    out.push_back(ref);
   }
   return out;
 }

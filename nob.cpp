@@ -3,6 +3,7 @@
 // Build script. Bootstrap once with:  g++ -std=c++26 -o nob nob.cpp
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--filter TEXT] [-- TEST_ARGS...]
+//   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
 //   ./nob fuzz [TARGET] [--seconds N]
 //
 // Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
@@ -188,6 +189,53 @@ bool build_all(const Config& cfg) {
   return true;
 }
 
+// The graphical viewer in app/. Not part of `build` so the library and tests never need GLFW or Vulkan.
+// Shaders (app/shaders/NAME.{vert,frag}) are compiled with glslc into C arrays included by the sources.
+bool build_app(const Config& cfg, fs::path& binary) {
+  if (!mkdir_p(cfg.obj_dir())) return false;
+  const fs::path gen_dir = cfg.out_dir() / "gen";
+  if (!mkdir_p(gen_dir)) return false;
+
+  for (const auto& shader : find_files("app/shaders", ".vert")) {
+    for (const char* ext : {".vert", ".frag"}) {
+      fs::path source = shader;
+      source.replace_extension(ext);
+      if (!fs::exists(source)) continue;
+      const fs::path output = gen_dir / (source.filename().string() + ".inc");
+      if (!needs_rebuild(output, std::array<fs::path, 1>{source})) continue;
+      Cmd cmd;
+      cmd << "glslc" << "-mfmt=c" << "--target-env=vulkan1.3" << source.string() << "-o" << output.string();
+      if (!run(cmd)) return false;
+    }
+  }
+
+  const auto headers = all_headers();
+  std::vector<CompileEntry> ignored;
+
+  // Dear ImGui is vendored as-is; its warnings are not ours.
+  Config third_party = cfg;
+  third_party.compile_flags.insert(third_party.compile_flags.end(), {"-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan"});
+  std::vector<fs::path> imgui_sources = find_files("third_party/imgui", ".cpp");
+  std::vector<fs::path> objects;
+  if (!compile(third_party, imgui_sources, headers, objects, ignored)) return false;
+
+  Config app = cfg;
+  app.compile_flags.insert(app.compile_flags.end(),
+                           {"-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan",
+                            "-Iapp", "-I" + gen_dir.string()});
+  std::vector<fs::path> lib_sources = find_files("src", ".cpp");
+  std::vector<fs::path> app_headers = headers;
+  for (const auto& h : find_files("app", ".hpp")) app_headers.push_back(h);
+  for (const auto& inc : find_files(gen_dir, ".inc")) app_headers.push_back(inc);
+  if (!compile(app, lib_sources, app_headers, objects, ignored)) return false;
+  if (!compile(app, find_files("app", ".cpp"), app_headers, objects, ignored)) return false;
+
+  binary = cfg.out_dir() / "rct3pp";
+  Config linker = cfg;
+  linker.link_flags.insert(linker.link_flags.end(), {"-lglfw", "-lvulkan"});
+  return link(linker, binary, objects);
+}
+
 // Fuzz targets: fuzz/<name>.cpp -> build/fuzz/<name>, linked with the library objects.
 bool build_fuzz(const Config& cfg, std::vector<fs::path>& targets) {
   if (!mkdir_p(cfg.obj_dir())) return false;
@@ -245,7 +293,8 @@ int main(int argc, char** argv) {
     else if (arg == "--filter" && i + 1 < argc) test_args.push_back(std::format("-tc=*{}*", argv[++i]));
     else if (arg == "--") {
       for (++i; i < argc; ++i) test_args.emplace_back(argv[i]);
-    } else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz") command = arg;
+    } else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" ||
+               arg == "app" || arg == "run") command = arg;
     else if (command == "fuzz" && !arg.starts_with("-")) fuzz_target = arg;
     else {
       log(Level::Error,
@@ -274,6 +323,17 @@ int main(int argc, char** argv) {
   }
 
   const Config cfg = make_config(release, sanitize, false);
+
+  if (command == "app" || command == "run") {
+    fs::path binary;
+    if (!build_app(cfg, binary)) return 1;
+    if (command == "app") return 0;
+    Cmd run_cmd;
+    run_cmd << binary.string();
+    run_cmd.append(test_args);
+    return run(run_cmd) ? 0 : 1;
+  }
+
   if (!build_all(cfg)) return 1;
   if (command != "test") return 0;
 

@@ -10,8 +10,9 @@
 //
 // Keys go to the widget with the keyboard focus, then up through its parents until one uses them; without a
 // focused widget they start at the top-most window. Pressing gives the focus to the nearest widget under the
-// pointer that takes it, or takes it away when none does, the 3D view included. Tab and Shift+Tab that no widget uses move it
-// within the window and show it with a mark (see keyboard_focus.hpp).
+// pointer that takes it, or takes it away when none does, the 3D view included. Hiding or disabling the
+// focused widget moves the focus to its nearest parent still in use. Tab and Shift+Tab that no widget uses
+// move it within the window and show it with a mark (see keyboard_focus.hpp).
 #pragma once
 
 #include "ui/keyboard.hpp"

@@ -305,11 +305,11 @@ TEST_CASE("pressing gives the focus to the nearest widget that takes it")
         f.desktop.update(at(150, 80, true));
         CHECK(f.desktop.keyboard_focus() == nullptr);
     }
-    SUBCASE("hiding or disabling it takes it away")
+    SUBCASE("hiding or disabling it moves it to the nearest parent still in use")
     {
         f.field.enabled = false;
         f.desktop.update(at(0, 0), keys({ Key::Up }));
-        CHECK(f.desktop.keyboard_focus() == nullptr);
+        CHECK(f.desktop.keyboard_focus() == &f.top);
         CHECK(f.field.seen.empty());
         CHECK(f.top.seen == std::vector { Key::Up });
     }
@@ -341,4 +341,39 @@ TEST_CASE("the focus can be set and cleared from outside")
     f.desktop.set_keyboard_focus(nullptr);
     f.desktop.update(at(0, 0), keys({ Key::End }));
     CHECK(f.top.seen == std::vector { Key::End });
+}
+
+TEST_CASE("a key that hides the focused widget sends the next keys to its parent")
+{
+    struct Hider : Widget
+    {
+        using Widget::Widget;
+        Widget* target = nullptr;
+        int keys = 0;
+        [[nodiscard]] bool takes_focus() const override
+        {
+            return true;
+        }
+        bool on_key(const KeyPress&) override
+        {
+            ++keys;
+            if (target != nullptr)
+                target->visible = false;
+            return true;
+        }
+    };
+    Desktop desktop;
+    Hider& window = desktop.root().add<Hider>("window");
+    Hider& field = window.add<Hider>("field");
+    field.target = &field;
+    desktop.layout({ 0, 0, 100, 100 });
+    desktop.set_keyboard_focus(&field);
+
+    KeyboardState keys;
+    keys.presses.push_back({ Key::Down });
+    keys.presses.push_back({ Key::Down });
+    desktop.update({ }, keys);
+    CHECK(field.keys == 1);
+    CHECK(window.keys == 1);
+    CHECK(desktop.keyboard_focus() == &window);
 }

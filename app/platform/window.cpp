@@ -4,6 +4,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "imgui.h"
 #include "render/backend.hpp"
+#include "strings/unicode.hpp"
 
 #include <GLFW/glfw3.h>
 #include <optional>
@@ -53,6 +54,19 @@ namespace rct3::platform
             }
         }
 
+        // The clipboard keys, by both their usual and their older names.
+        std::optional<ui::Key> clipboard_key(int key, bool shift, bool control)
+        {
+            const bool insert = key == GLFW_KEY_INSERT;
+            if (control && (key == GLFW_KEY_C || insert))
+                return ui::Key::Copy;
+            if ((control && key == GLFW_KEY_X) || (shift && !control && key == GLFW_KEY_DELETE))
+                return ui::Key::Cut;
+            if ((control && key == GLFW_KEY_V) || (shift && !control && insert))
+                return ui::Key::Paste;
+            return std::nullopt;
+        }
+
         Window::Collected& collected_of(GLFWwindow* w)
         {
             return *static_cast<Window::Collected*>(glfwGetWindowUserPointer(w));
@@ -89,7 +103,18 @@ namespace rct3::platform
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
             const bool control = (mods & GLFW_MOD_CONTROL) != 0;
             auto& presses = collected_of(w).keyboard.presses;
-            if (const auto mapped = interface_key(key))
+            if (const auto clipboard = clipboard_key(key, shift, control))
+            {
+                ui::KeyPress press { *clipboard, shift, control };
+                // Read now, so the paste carries what the clipboard had when the keys went down.
+                if (*clipboard == ui::Key::Paste)
+                {
+                    if (const char* text = glfwGetClipboardString(w))
+                        press.text = strings::to_utf16(text);
+                }
+                presses.push_back(std::move(press));
+            }
+            else if (const auto mapped = interface_key(key))
                 presses.push_back({ *mapped, shift, control });
             // Control+letter types nothing, so it comes as a shortcut instead. GLFW names keys by the US
             // layout; the layout's own letter would need the key name, which is a later refinement.
@@ -138,6 +163,11 @@ namespace rct3::platform
         collected_->wheel_y = 0;
         collected_->keyboard.presses.clear();
         glfwPollEvents();
+    }
+
+    void Window::set_clipboard(std::u16string_view text)
+    {
+        glfwSetClipboardString(window_, strings::to_utf8(text).c_str());
     }
 
     double Window::time() const

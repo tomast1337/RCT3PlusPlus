@@ -10,6 +10,7 @@
 #include <expected>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 struct GLFWwindow;
@@ -59,6 +60,9 @@ namespace rct3::platform
         {
             return collected_->keyboard;
         }
+
+        /// Puts `text` on the system clipboard.
+        void set_clipboard(std::u16string_view text);
 
         // Input GLFW only reports through callbacks, gathered between polls. On the heap so the window's
         // user pointer stays valid when the Window moves; public so the callbacks can reach it.

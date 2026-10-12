@@ -28,10 +28,14 @@ struct Flic {
   std::uint32_t revision = 0;     ///< Format revision of the handler that declares the flic: 2 or 3
   std::uint32_t frame_count = 0;  ///< 1 for every revision 2 flic
   float rate = 0;                 ///< 1.0 in all files seen but one animation, which has 30.0
-  std::span<const std::byte> data;  ///< The item's extra data chunk
+  /// The item's extra data chunk. For revision 2 it is the 32-byte image header, then the pixels of the
+  /// first mip level, then for each smaller level a 16-byte record (width, height, row bytes, row count)
+  /// followed by its pixels, then 16 bytes of padding. Block formats store no level below 4x4.
+  std::span<const std::byte> data;
 
-  /// Revision 3: one number per frame, read from `data`. Empty for other revisions or a chunk whose
-  /// size is not four bytes per frame.
+  /// Revision 3: one number per frame, read from `data`. Each is an index into the bitmaps of the bitmap
+  /// table in the same file (in files that have several tables the numbering is not resolved). Empty for
+  /// other revisions or a chunk whose size is not four bytes per frame.
   std::vector<std::uint32_t> frames;
 
   /// Revision 2: the image geometry, when `data` starts with a header of 32 bytes that is consistent.

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <span>
 
+#include "save/model/park.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -46,5 +47,19 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (decoded->fields.items().size() != file->classes[o.class_index].attributes.size()) __builtin_trap();
     if (index.find(o.id) == nullptr) __builtin_trap();
   }
+  // BEGIN park: the park loader accepts everything that decodes and yields a self-consistent model.
+  {
+    const auto model = rct3::save::load_park(*file, index);
+    if (!model) __builtin_trap();
+    if (model->messages.ordered.size() > model->messages.ring_size) __builtin_trap();
+    if (model->content.entries.size() + model->content.entries_without_overlay > file->objects.size()) {
+      __builtin_trap();
+    }
+    for (const auto& e : model->content.entries) {
+      if (e.overlay_stem.empty()) __builtin_trap();
+    }
+    (void)rct3::save::validate(*model);
+  }
+  // END park
   return 0;
 }

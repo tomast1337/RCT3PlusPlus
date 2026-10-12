@@ -9,7 +9,10 @@
 #include "ovl/font.hpp"
 
 using namespace rct3::test;
+using rct3::ovl::Font;
+using rct3::ovl::FontGlyph;
 using rct3::ovl::Overlay;
+using rct3::ovl::find_glyph;
 using rct3::ovl::read_fonts;
 
 namespace {
@@ -173,5 +176,69 @@ TEST_CASE("font edge cases") {
     REQUIRE(items.size() == 1);
     REQUIRE(items[0].font.has_value());
     CHECK(items[0].font->texture.empty());
+  }
+}
+
+namespace {
+
+Font synthetic_font(bool table, std::uint32_t first, std::initializer_list<std::uint32_t> codes) {
+  Font font;
+  font.first_char = first;
+  font.has_code_table = table;
+  for (std::uint32_t c : codes) {
+    FontGlyph g;
+    g.code = c;
+    g.advance = static_cast<float>(c);  // lets the tests tell rows apart
+    font.glyphs.push_back(g);
+  }
+  return font;
+}
+
+}  // namespace
+
+TEST_CASE("find_glyph with a code table") {
+  const Font font = synthetic_font(true, 0, {65, 66, 0x4E2D, 66, 0, 70});
+
+  SUBCASE("finds a code") {
+    const FontGlyph* g = find_glyph(font, 0x4E2D);
+    REQUIRE(g != nullptr);
+    CHECK(g == &font.glyphs[2]);
+  }
+
+  SUBCASE("the first of duplicate codes wins") {
+    CHECK(find_glyph(font, 66) == &font.glyphs[1]);
+  }
+
+  SUBCASE("a missing code gives no glyph and there is no fallback") {
+    CHECK(find_glyph(font, 67) == nullptr);
+    CHECK(find_glyph(font, 0xD83D) == nullptr);  // a surrogate half is just another unit
+  }
+
+  SUBCASE("a row with code 0 ends the search") {
+    CHECK(find_glyph(font, 70) == nullptr);
+    CHECK(find_glyph(font, 0) == nullptr);
+  }
+
+  SUBCASE("codes above the 16-bit range never match") {
+    CHECK(find_glyph(font, 0x10041) == nullptr);
+  }
+}
+
+TEST_CASE("find_glyph with a code range") {
+  const Font font = synthetic_font(false, 31, {31, 32, 33});
+
+  SUBCASE("indexes from the first code") {
+    CHECK(find_glyph(font, 31) == &font.glyphs[0]);
+    CHECK(find_glyph(font, 33) == &font.glyphs[2]);
+  }
+
+  SUBCASE("outside the range there is no glyph") {
+    CHECK(find_glyph(font, 30) == nullptr);
+    CHECK(find_glyph(font, 34) == nullptr);
+  }
+
+  SUBCASE("a range starting at 0 includes code 0") {
+    const Font zero = synthetic_font(false, 0, {0, 1});
+    CHECK(find_glyph(zero, 0) == &zero.glyphs[0]);
   }
 }

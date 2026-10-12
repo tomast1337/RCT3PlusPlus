@@ -70,6 +70,7 @@ std::optional<Font> read_font(const AddressSpace& space, const ReferenceNames& r
     if (!codes) return std::nullopt;
   }
 
+  font.has_code_table = codes.has_value();
   font.glyphs.reserve(glyph_count);
   for (std::uint32_t i = 0; i < glyph_count; ++i) {
     const auto row = rows->subspan(std::size_t{i} * kFontGlyphSize, kFontGlyphSize);
@@ -81,12 +82,27 @@ std::optional<Font> read_font(const AddressSpace& space, const ReferenceNames& r
     for (std::size_t k = 0; k < 4; ++k) g.texcoords[k] = f32_at(row, 12 + k * 4);
     g.shift[0] = f32_at(row, 28);
     g.shift[1] = f32_at(row, 32);
+    g.page = u16_at(row, 10);
     font.glyphs.push_back(g);
   }
   return font;
 }
 
 }  // namespace
+
+const FontGlyph* find_glyph(const Font& font, std::uint32_t code) noexcept {
+  if (font.has_code_table) {
+    if (code == 0 || code > 0xFFFF) return nullptr;
+    for (const FontGlyph& glyph : font.glyphs) {
+      if (glyph.code == 0) return nullptr;
+      if (glyph.code == code) return &glyph;
+    }
+    return nullptr;
+  }
+  if (code < font.first_char) return nullptr;
+  const std::uint64_t index = std::uint64_t{code} - font.first_char;
+  return index < font.glyphs.size() ? &font.glyphs[static_cast<std::size_t>(index)] : nullptr;
+}
 
 std::vector<FontItem> read_fonts(const Overlay& overlay, const Part& part) {
   const AddressSpace space = overlay.space();

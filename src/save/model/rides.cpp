@@ -560,7 +560,7 @@ namespace rct3::save
                         p.flags = static_cast<std::uint32_t>(f[id::kFlags].integer());
                         p.colours = colours_of(f[id::kPieceColours]);
                         rec.piece_ref = f[id::kPlatformPiece].ref();
-                        platforms_.emplace(d->id, std::move(rec));
+                        platforms_.emplace(d->id, rec);
                     }
                     else
                     {

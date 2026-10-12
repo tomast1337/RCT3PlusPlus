@@ -36,7 +36,7 @@ namespace rct3::ovl
                     const detail::AttractionLayout at { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
                     TrackedRide ride;
                     ride.info = detail::read_attraction(*record, at, version);
-                    item.ride = std::move(ride);
+                    item.ride = ride;
                 }
             }
             else if (const auto record = ItemRecord::open(space, refs, symbol.data, kLaterSize))
@@ -48,9 +48,9 @@ namespace rct3::ovl
                     ride.track_sections[i] = record->ref(0xD4 + i * 4, "tks");
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
-                item.ride = std::move(ride);
+                item.ride = ride;
             }
-            items.push_back(std::move(item));
+            items.push_back(item);
         }
         return items;
     }

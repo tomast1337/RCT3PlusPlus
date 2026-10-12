@@ -27,9 +27,9 @@ struct Loader {
 struct Header {
   std::uint8_t flags = 0;
   std::uint32_t version = 0;  ///< 1, 4 or 5
-  std::int16_t sub_version = 0;  ///< v5 only
-  std::int16_t extra_flag = 0;   ///< v5 only
-  std::string stream_tag;        ///< v5 with sub_version != 0 only; may be empty
+  std::int16_t stream_count = 0;  ///< v5 only: number of data streams. v4 always has one, v1 none.
+  std::int16_t extra_flag = 0;    ///< v5 only, purpose unknown
+  std::string stream_tag;         ///< v5 with streams only; may be empty
   std::vector<std::string> external_refs;
   std::vector<std::string> secondary_refs;
   std::vector<Loader> loaders;
@@ -40,7 +40,7 @@ enum class Error {
   Truncated,
   BadMagic,
   UnsupportedVersion,
-  BadSubVersionBlock,
+  BadStreamBlock,
   BadLoaderIndex,
   ImplausibleCount,
   BadSymbolTable,
@@ -78,8 +78,15 @@ struct BlockLocation {
   std::uint32_t offset;  ///< Byte offset inside the block
 };
 
-/// Everything up to and including the relocation table. Loader extra data chunks that follow are not
-/// parsed yet.
+/// A relocation of a streamed data section: the 32-bit pointer at `location` is set to `value`. Both are
+/// addresses in the shared address space.
+struct StreamRelocation {
+  std::uint32_t location = 0;
+  std::uint32_t value = 0;
+};
+
+/// Everything up to and including the relocation tables. Loader extra data chunks that follow are not
+/// parsed by `parse`, see `read_loaders`.
 struct File {
   Header header;
   std::array<BlockType, kBlockTypeCount> block_types;
@@ -90,7 +97,9 @@ struct File {
 
   std::uint32_t data_size = 0;  ///< Total bytes of all blocks, the size of the relative address space
   std::vector<std::uint32_t> relocations;  ///< Relative addresses of 32-bit pointers to patch
-  std::size_t end_offset = 0;              ///< Stream position after the relocation table
+  /// One table per data stream (v4: one, v5: `header.stream_count`, v1: none).
+  std::vector<std::vector<StreamRelocation>> stream_relocations;
+  std::size_t end_offset = 0;  ///< Stream position after the last relocation table
 
   /// Finds the block holding `address`, or nothing when it is outside every block.
   ///

@@ -73,6 +73,9 @@ void print_part(const char* title, const Part& part, const Options& opt) {
   }
   std::printf("relocations    %zu (%zu outside blocks, %zu pointing past own data)\n", file.relocations.size(),
               misplaced, leaving);
+  std::size_t stream_pairs = 0;
+  for (const auto& table : file.stream_relocations) stream_pairs += table.size();
+  std::printf("streams        %zu (%zu relocation pairs)\n", file.stream_relocations.size(), stream_pairs);
 
   std::size_t unresolved = 0;
   std::size_t untagged = 0;

@@ -9,7 +9,7 @@ working tree. When a change is ready, suggest a commit message instead and let t
 
 Suggested messages:
 
-- Imperative mood, subject at most 72 characters, no trailing period: `Parse v5 sub-version header block`.
+- Imperative mood, subject at most 72 characters, no trailing period: `Parse v5 stream header block`.
 - Body explains why, wrapped at 72 columns. Skip it when the subject says everything.
 - Group unrelated edits into separate suggested commits rather than one large message.
 - The maintainer adds their own `Signed-off-by` line. Do not add `Co-Authored-By` or other attribution

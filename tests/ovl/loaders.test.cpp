@@ -76,12 +76,9 @@ TEST_CASE("v5 packs the chunk count into the low half of the field") {
   CHECK(t->extra[0][0].size == 3);
 }
 
-TEST_CASE("v4 has a 4-byte field before the chunk stream") {
+TEST_CASE("v4 chunks follow the stream relocation table") {
   const auto rows = loader_row(0, 0, 1, 0, 0);
-  std::vector<std::byte> tail;
-  append_u32(tail, 0);  // the extra field
-  tail = concat(tail, chunk(5));
-  const auto file = build_file(4, {{}, {}, {std::vector<std::byte>(16, std::byte{0}), rows}}, {}, tail);
+  const auto file = build_file(4, {{}, {}, {std::vector<std::byte>(16, std::byte{0}), rows}}, {}, chunk(5));
 
   auto f = parse(file);
   REQUIRE(f.has_value());

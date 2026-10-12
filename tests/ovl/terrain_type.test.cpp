@@ -58,8 +58,8 @@ std::vector<std::byte> block() {
   w[4] = 2;
   w[6] = name_at("GroundHelp");
   w[7] = name_at("GroundLabel");
-  w[8] = 0xFF9F6E42u;
-  w[9] = 0xFF9F6E43u;
+  w[8] = 0xFF112233u;
+  w[9] = 0xFF112244u;
   w[10] = std::bit_cast<std::uint32_t>(0.1f);
   w[12] = std::bit_cast<std::uint32_t>(0.3f);
   w[14] = std::bit_cast<std::uint32_t>(-0.5f);
@@ -95,8 +95,8 @@ TEST_CASE("terrain types expose texture, names, colours and parameters") {
   CHECK(t.texture == "Ground");
   CHECK(t.help_name == "GroundHelp");
   CHECK(t.label_name == "GroundLabel");
-  CHECK(t.colours[0] == 0xFF9F6E42u);
-  CHECK(t.colours[1] == 0xFF9F6E43u);
+  CHECK(t.colours[0] == 0xFF112233u);
+  CHECK(t.colours[1] == 0xFF112244u);
   CHECK(t.parameters[0] == 0.1f);
   CHECK(t.parameters[2] == 0.3f);
   CHECK(t.parameters[4] == -0.5f);

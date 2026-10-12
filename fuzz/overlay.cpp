@@ -8,6 +8,8 @@
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 #include "ovl/carried_item.hpp"
+#include "ovl/piece_set.hpp"
+#include "ovl/room_type.hpp"
 #include "ovl/research_category.hpp"
 #include "ovl/terrain_type.hpp"
 #include "ovl/scenery_item.hpp"
@@ -125,6 +127,29 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   for (const auto& entry : rct3::ovl::read_terrain_types(*overlay, part)) {
     if (entry.terrain) sink += entry.terrain->index + entry.terrain->colours[0];
+  }
+  for (const auto& entry : rct3::ovl::read_path_types(*overlay, part)) {
+    if (!entry.path) continue;
+    sink += entry.path->items.size() + entry.path->piece_names.size() + entry.path->research.size();
+    for (const auto& it : entry.path->items) sink += it.squares.size() + it.visuals.size();
+  }
+  for (const auto& entry : rct3::ovl::read_queue_types(*overlay, part)) {
+    if (!entry.queue) continue;
+    sink += entry.queue->items.size() + entry.queue->research.size();
+    for (const auto& it : entry.queue->items) sink += it.squares.size() + it.visuals.size();
+  }
+  for (const auto& entry : rct3::ovl::read_pool_types(*overlay, part)) {
+    if (!entry.pool) continue;
+    sink += entry.pool->items.size() + entry.pool->splines.size() + static_cast<std::size_t>(entry.pool->unknown_values[3] > 0);
+  }
+  for (const auto& entry : rct3::ovl::read_enclosure_types(*overlay, part)) {
+    if (entry.enclosure) sink += entry.enclosure->items.size() + entry.enclosure->piece_names.size();
+  }
+  for (const auto& entry : rct3::ovl::read_changing_rooms(*overlay, part)) {
+    if (entry.room) sink += entry.room->unknown_0c + entry.room->unknown_2c;
+  }
+  for (const auto& entry : rct3::ovl::read_viewing_galleries(*overlay, part)) {
+    if (entry.gallery) sink += entry.gallery->unknown_04 + entry.gallery->unknown_24;
   }
   // --- end scenery and placement item types ---
   return 0;

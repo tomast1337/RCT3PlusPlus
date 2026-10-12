@@ -13,6 +13,9 @@
 // pointer that takes it, or takes it away when none does, the 3D view included. Hiding or disabling the
 // focused widget moves the focus to its nearest parent still in use. Tab and Shift+Tab that no widget uses
 // move it within the window and show it with a mark (see keyboard_focus.hpp).
+//
+// Popups (Widget::popup), such as menus, are top-level widgets that close when a press misses them. The
+// top-most one takes the keyboard focus, which goes back where it was when the popup closes.
 #pragma once
 
 #include "ui/keyboard.hpp"
@@ -99,11 +102,14 @@ namespace rct3::ui
         [[nodiscard]] Widget* deepest(Point p) const;
 
     private:
+        void follow_popups();
+
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
         Rect view_;
         Widget* held_ = nullptr;
         Widget* focus_ = nullptr;
         bool focus_shown_ = false;
+        Widget* before_popup_ = nullptr; // The focus before a popup took it; checked before use
         std::optional<std::u16string> clipboard_;
         bool was_down_ = false;
         Tooltip tooltip_;

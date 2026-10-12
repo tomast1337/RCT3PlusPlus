@@ -174,11 +174,18 @@ namespace rct3::ui
 
         Widget* under = pointer.present ? hit(pointer.position) : nullptr;
         const bool down = pointer.present && pointer.down;
-        // Any press, even on the 3D view, takes the focus from where it was.
+        // Any press, even on the 3D view, takes the focus from where it was, and closes the popups it
+        // misses.
         if (down && !was_down_)
         {
             focus_ = nullptr;
             focus_shown_ = false;
+            Widget* pressed_top = pointer.present ? top_level(*root_, deepest(pointer.position)) : nullptr;
+            for (const auto& top : root_->children())
+            {
+                if (top->popup && top.get() != pressed_top)
+                    top->close();
+            }
         }
         if (down && !was_down_ && under != nullptr && under->enabled)
         {
@@ -260,6 +267,8 @@ namespace rct3::ui
         const auto& tops = root_->children();
         for (std::size_t i = 0; i < tops.size(); ++i)
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
+        if (under != nullptr && (held_ == nullptr || held_ == under))
+            under->on_hover(pointer.position);
 
         update_tree(*root_, context);
         sweep(*root_);
@@ -267,10 +276,35 @@ namespace rct3::ui
             held_ = nullptr;
         if (focus_ != nullptr && !in_tree(*root_, focus_))
             focus_ = nullptr;
+        follow_popups();
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
         return under != nullptr || held_ != nullptr;
+    }
+
+    void Desktop::follow_popups()
+    {
+        Widget* top = root_->children().empty() ? nullptr : root_->children().back().get();
+        if (top != nullptr && top->popup && !top->closing())
+        {
+            // A popup on top takes the keys; where they went before gets them back when it goes.
+            if (focus_ == nullptr || top_level(*root_, focus_) != top)
+            {
+                if (before_popup_ == nullptr)
+                    before_popup_ = focus_;
+                focus_ = top;
+                focus_shown_ = false;
+            }
+            return;
+        }
+        if (before_popup_ != nullptr)
+        {
+            const bool in_popup = focus_ != nullptr && top_level(*root_, focus_) != nullptr && top_level(*root_, focus_)->popup;
+            if ((focus_ == nullptr || in_popup) && in_tree(*root_, before_popup_) && usable(*before_popup_))
+                focus_ = before_popup_;
+            before_popup_ = nullptr;
+        }
     }
 
     void Desktop::draw(DrawContext& context) const

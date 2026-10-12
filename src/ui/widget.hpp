@@ -68,6 +68,9 @@ namespace rct3::ui
         bool enabled = true;
         bool clip_children = false; ///< Children are cut to this widget's rectangle
         bool keep_inside = false;   ///< Layout moves the widget back inside its parent, e.g. a dragged window
+        /// For a top-level widget such as a menu: it closes when the pointer presses outside it, and takes
+        /// the keyboard focus while it is the top-most (see Desktop).
+        bool popup = false;
         /// Help shown beside the pointer when it rests here; children without their own show this one.
         std::u16string tooltip;
 
@@ -143,6 +146,10 @@ namespace rct3::ui
             return false;
         }
         virtual void on_press(Point)
+        {
+        }
+        /// The pointer is over this widget and it is hovered(); each update, before update().
+        virtual void on_hover(Point)
         {
         }
         /// The pointer moved while this widget holds it, wherever the pointer is.

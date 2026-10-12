@@ -7,6 +7,12 @@
 #include <vector>
 
 #include "ovl/bone_anim.hpp"
+#include "ovl/texture.hpp"
+#include "ovl/gui_skin.hpp"
+#include "ovl/font.hpp"
+#include "ovl/float_value.hpp"
+#include "ovl/flic.hpp"
+#include "ovl/bitmap_table.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
@@ -45,6 +51,26 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
       for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += mesh.vertex(i).weights[0];
       for (std::size_t i = 0; i < mesh.index_count; ++i) sink += mesh.index(i);
     }
+  }
+  sink += rct3::ovl::read_floats(*overlay, part).size();
+  for (const auto& item : rct3::ovl::read_bitmap_tables(*overlay, part)) {
+    if (!item.table) continue;
+    for (const auto& bitmap : item.table->bitmaps) sink += bitmap.data.size() + bitmap.levels;
+  }
+  for (const auto& item : rct3::ovl::read_gui_skins(*overlay, part)) {
+    if (item.skin) sink += item.skin->coordinates.size();
+  }
+  for (const auto& item : rct3::ovl::read_textures(*overlay, part)) {
+    if (item.texture) sink += item.texture->count + (item.texture->node ? item.texture->node->second : 0);
+  }
+  for (const auto& item : rct3::ovl::read_fonts(*overlay, part)) {
+    if (!item.font) continue;
+    sink += item.font->face.size() + item.font->glyphs.size();
+    for (const auto& g : item.font->glyphs) sink += g.code;
+  }
+  for (const auto& item : rct3::ovl::read_flics(*overlay, part)) {
+    if (!item.flic) continue;
+    sink += item.flic->frames.size() + item.flic->data.size();
   }
   return 0;
 }

@@ -8,6 +8,8 @@
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 #include "ovl/carried_item.hpp"
+#include "ovl/research_category.hpp"
+#include "ovl/terrain_type.hpp"
 #include "ovl/scenery_item.hpp"
 // --- end scenery and placement item types ---
 #include "ovl/bone_anim.hpp"
@@ -117,6 +119,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   for (const auto& entry : rct3::ovl::read_carried_item_extras(*overlay, part)) {
     if (entry.extra) sink += entry.extra->unknown_0c;
+  }
+  for (const auto& entry : rct3::ovl::read_research_categories(*overlay, part)) {
+    if (entry.category) sink += entry.category->prerequisites.size() + entry.category->kind;
+  }
+  for (const auto& entry : rct3::ovl::read_terrain_types(*overlay, part)) {
+    if (entry.terrain) sink += entry.terrain->index + entry.terrain->colours[0];
   }
   // --- end scenery and placement item types ---
   return 0;

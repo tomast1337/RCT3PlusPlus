@@ -5,16 +5,20 @@
 //   ./nob [build|test|clean] [--release] [--sanitize] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
 //   ./nob fuzz [TARGET] [--seconds N]
+//   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
 //
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
 //
 // Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
+// CLANGFORMAT and CLANGTIDY override the clang-format and clang-tidy binaries.
 #include "nob.hpp"
 
 #include <array>
 #include <fstream>
+#include <future>
+#include <thread>
 
 using namespace nob;
 
@@ -415,6 +419,43 @@ namespace
         return run(cmd);
     }
 
+    // Runs clang-tidy over our library, tool and fuzz sources using the compile database written by the build.
+    // The checks come from .clang-tidy. The files are split across the available cores. CLANGTIDY overrides
+    // the binary.
+    bool run_tidy()
+    {
+        std::vector<fs::path> files;
+        for (const char* dir : { "src", "tools", "fuzz" })
+        {
+            const auto found = find_files(dir, ".cpp");
+            files.insert(files.end(), found.begin(), found.end());
+        }
+        if (!fs::exists(kBuildDir / "compile_commands.json"))
+        {
+            log(Level::Error, "no {}: run ./nob build first", (kBuildDir / "compile_commands.json").string());
+            return false;
+        }
+        const char* binary = std::getenv("CLANGTIDY");
+        const std::size_t jobs = std::max<std::size_t>(1, std::thread::hardware_concurrency());
+        const std::size_t chunk = (files.size() + jobs - 1) / jobs;
+        std::vector<std::future<bool>> pending;
+        for (std::size_t begin = 0; begin < files.size(); begin += chunk)
+        {
+            const std::size_t end = std::min(files.size(), begin + chunk);
+            pending.push_back(std::async(std::launch::async, [&files, binary, begin, end] {
+                Cmd cmd;
+                cmd << (binary ? binary : "clang-tidy") << "-p" << kBuildDir.string() << "--quiet";
+                for (std::size_t i = begin; i < end; ++i)
+                    cmd << files[i].string();
+                return run(cmd);
+            }));
+        }
+        bool ok = true;
+        for (auto& f : pending)
+            ok = f.get() && ok;
+        return ok;
+    }
+
     // Runs one fuzz target for `seconds`. New inputs land in the git-ignored local/ directory, crashes too.
     bool run_fuzz(const fs::path& binary, int seconds)
     {
@@ -465,7 +506,7 @@ int main(int argc, char** argv)
             for (++i; i < argc; ++i)
                 test_args.emplace_back(argv[i]);
         }
-        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format")
+        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy")
             command = arg;
         else if (arg == "--check")
             check = true;
@@ -475,7 +516,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean] [--release] [--sanitize] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check]",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy",
                 arg);
             return 2;
         }
@@ -524,6 +565,8 @@ int main(int argc, char** argv)
 
     if (!build_all(cfg))
         return 1;
+    if (command == "tidy")
+        return run_tidy() ? 0 : 1;
     if (command != "test")
         return 0;
 

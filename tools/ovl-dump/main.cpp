@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "ovl/bone_anim.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
@@ -31,6 +32,7 @@ struct Options {
   bool ftx = false;
   bool shs = false;
   bool svd = false;
+  bool ban = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -189,6 +191,25 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
       }
     }
   }
+  if (opt.ban) {
+    const auto anims = rct3::ovl::read_bone_anims(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : anims) {
+      if (!item.anim) ++bad;
+    }
+    std::printf("bone anims     %zu (%zu unreadable)\n", anims.size(), bad);
+    for (const auto& item : anims) {
+      const std::string name(item.name);
+      if (!item.anim) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      std::size_t keys = 0;
+      for (const auto& b : item.anim->bones) keys += b.positions.size() + b.rotations.size();
+      std::printf("  %-32s bones %zu keyframes %zu duration %g\n", name.c_str(), item.anim->bones.size(), keys,
+                  item.anim->duration);
+    }
+  }
   if (opt.sound) {
     const auto sounds = rct3::ovl::read_sounds(overlay, part);
     std::size_t bad = 0;
@@ -244,11 +265,12 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--ftx") == 0) opt.ftx = true;
     else if (std::strcmp(argv[i], "--shs") == 0) opt.shs = true;
     else if (std::strcmp(argv[i], "--svd") == 0) opt.svd = true;
+    else if (std::strcmp(argv[i], "--ban") == 0) opt.ban = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] PATH\n", argv[0]);
     return 2;
   }
 

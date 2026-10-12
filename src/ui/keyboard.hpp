@@ -28,6 +28,7 @@ namespace rct3::ui
         Enter,
         Backspace,
         Delete,
+        Space, ///< Also arrives as text
     };
 
     struct KeyPress

@@ -156,3 +156,19 @@ TEST_CASE("text is centred in the button, grey when disabled and cut to the butt
     for (const Vertex& v : list.vertices())
         CHECK((v.x >= 10 && v.x <= 50));
 }
+
+TEST_CASE("space and enter click a focused button")
+{
+    Button b("b", "Skin");
+    CHECK(b.takes_focus());
+    CHECK(b.on_key({ Key::Space }));
+    CHECK(b.on_key({ Key::Enter }));
+    CHECK_FALSE(b.on_key({ Key::Escape }));
+    CHECK(b.take_click());
+    CHECK(b.take_click());
+    CHECK_FALSE(b.take_click());
+
+    b.toggle = true;
+    CHECK(b.on_key({ Key::Space }));
+    CHECK(b.on);
+}

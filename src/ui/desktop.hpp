@@ -10,10 +10,12 @@
 //
 // Keys go to the widget with the keyboard focus, then up through its parents until one uses them; without a
 // focused widget they start at the top-most window. Pressing gives the focus to the nearest widget under the
-// pointer that takes it, or takes it away when none does.
+// pointer that takes it, or takes it away when none does, the 3D view included. Tab and Shift+Tab that no widget uses move it
+// within the window and show it with a mark (see keyboard_focus.hpp).
 #pragma once
 
 #include "ui/keyboard.hpp"
+#include "ui/keyboard_focus.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widget.hpp"
 
@@ -58,11 +60,18 @@ namespace rct3::ui
         {
             return focus_;
         }
-        /// Gives `w` the keyboard focus, or takes it away with nullptr.
-        void set_keyboard_focus(Widget* w)
+        /// Gives `w` the keyboard focus, or takes it away with nullptr. `show` draws the mark around it.
+        void set_keyboard_focus(Widget* w, bool show = false)
         {
             focus_ = w;
+            focus_shown_ = show && w != nullptr;
         }
+        /// Whether the mark around the focused widget is drawn.
+        [[nodiscard]] bool keyboard_focus_shown() const
+        {
+            return focus_shown_ && focus_ != nullptr;
+        }
+        FocusMarkStyle focus_mark_style;
 
         /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
@@ -84,6 +93,7 @@ namespace rct3::ui
         Rect view_;
         Widget* held_ = nullptr;
         Widget* focus_ = nullptr;
+        bool focus_shown_ = false;
         bool was_down_ = false;
         Tooltip tooltip_;
     };

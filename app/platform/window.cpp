@@ -46,6 +46,8 @@ namespace rct3::platform
                     return ui::Key::Backspace;
                 case GLFW_KEY_DELETE:
                     return ui::Key::Delete;
+                case GLFW_KEY_SPACE:
+                    return ui::Key::Space;
                 default:
                     return std::nullopt;
             }

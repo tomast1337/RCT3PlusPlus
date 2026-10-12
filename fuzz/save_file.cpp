@@ -7,6 +7,7 @@
 #include <span>
 
 #include "save/model/park.hpp"
+#include "save/model/people.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -61,5 +62,14 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     (void)rct3::save::validate(*model);
   }
   // END park
+
+  // --- people model loader (begin) ---
+  // Must accept anything the decoder accepted, and its validation must terminate without trapping.
+  {
+    const auto people = rct3::save::load_people(*file, index);
+    if (!people) __builtin_trap();
+    (void)rct3::save::validate(*people);
+  }
+  // --- people model loader (end) ---
   return 0;
 }

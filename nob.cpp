@@ -1,0 +1,284 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Build script. Bootstrap once with:  g++ -std=c++26 -o nob nob.cpp
+//
+//   ./nob [build|test|clean] [--release] [--sanitize] [--filter TEXT] [-- TEST_ARGS...]
+//   ./nob fuzz [TARGET] [--seconds N]
+//
+// Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
+#include "nob.hpp"
+
+#include <array>
+#include <fstream>
+
+using namespace nob;
+
+namespace {
+
+// Where everything we generate goes. Git-ignored. Each mode gets its own subdirectory so objects built
+// with different flags never mix.
+const fs::path kBuildDir = "build";
+
+struct Config {
+  std::string mode;  // "debug", "release", "asan" or "fuzz"
+  std::string cxx;
+  std::vector<std::string> compile_flags;
+  std::vector<std::string> link_flags;
+
+  [[nodiscard]] fs::path out_dir() const { return kBuildDir / mode; }
+  [[nodiscard]] fs::path obj_dir() const { return out_dir() / "obj"; }
+  [[nodiscard]] fs::path test_binary() const { return out_dir() / "rct3_tests"; }
+};
+
+Config make_config(bool release, bool sanitize, bool fuzz) {
+  const char* cxx = std::getenv("CXX");
+  Config c;
+  c.cxx = cxx ? cxx : "g++";
+  c.compile_flags = {"-std=c++26", "-Wall", "-Wextra", "-Wpedantic", "-Isrc", "-isystem", "third_party"};
+
+  if (fuzz) {
+    // libFuzzer ships with Clang only. Objects get coverage instrumentation, the link adds the driver.
+    const char* clangxx = std::getenv("CLANGXX");
+    c.cxx = clangxx ? clangxx : "clang++";
+    c.mode = "fuzz";
+    c.compile_flags.insert(c.compile_flags.end(), {"-O1", "-g", "-fsanitize=fuzzer-no-link,address,undefined",
+                                                   "-fno-omit-frame-pointer"});
+    c.link_flags = {"-fsanitize=fuzzer,address,undefined"};
+  } else if (sanitize) {
+    c.mode = "asan";
+    const std::vector<std::string> san = {"-fsanitize=address,undefined", "-fno-omit-frame-pointer"};
+    c.compile_flags.insert(c.compile_flags.end(), {"-O1", "-g"});
+    c.compile_flags.insert(c.compile_flags.end(), san.begin(), san.end());
+    c.link_flags = san;
+  } else if (release) {
+    c.mode = "release";
+    c.compile_flags.insert(c.compile_flags.end(), {"-O2", "-DNDEBUG"});
+  } else {
+    c.mode = "debug";
+    c.compile_flags.insert(c.compile_flags.end(), {"-O0", "-g"});
+  }
+  return c;
+}
+
+// One entry of compile_commands.json.
+struct CompileEntry {
+  fs::path file;
+  std::vector<std::string> args;
+};
+
+// src/ovl/ovl.cpp -> build/<mode>/obj/src_ovl_ovl.o
+fs::path object_path(const Config& cfg, const fs::path& source) {
+  std::string name = fs::path(source).replace_extension().generic_string();
+  std::ranges::replace(name, '/', '_');
+  return cfg.obj_dir() / (name + ".o");
+}
+
+Cmd compile_cmd(const Config& cfg, const fs::path& source, const fs::path& object) {
+  Cmd cmd;
+  cmd << cfg.cxx;
+  cmd.append(cfg.compile_flags);
+  cmd << "-c" << source.string() << "-o" << object.string();
+  return cmd;
+}
+
+// Compiles sources in parallel. Objects are rebuilt when the source or any header is newer.
+bool compile(const Config& cfg, const std::vector<fs::path>& sources, const std::vector<fs::path>& headers,
+             std::vector<fs::path>& objects, std::vector<CompileEntry>& database) {
+  Procs procs;
+  bool ok = true;
+  for (const auto& source : sources) {
+    const fs::path object = object_path(cfg, source);
+    objects.push_back(object);
+
+    const Cmd cmd = compile_cmd(cfg, source, object);
+    database.push_back({source, cmd.args});
+
+    std::vector<fs::path> deps = headers;
+    deps.push_back(source);
+    if (!needs_rebuild(object, deps)) continue;
+
+    if (auto pid = start(cmd)) procs.add(*pid);
+    else ok = false;
+  }
+  return procs.wait_all() && ok;
+}
+
+// Links `objects` into `output`. The object list is remembered next to the output so that removing a
+// source file (which leaves every remaining object older than the binary) still triggers a relink.
+bool link(const Config& cfg, const fs::path& output, const std::vector<fs::path>& objects) {
+  fs::path list_file = output;
+  list_file += ".objects";
+
+  std::string list;
+  for (const auto& o : objects) list += o.string() + "\n";
+
+  std::string previous;
+  if (std::ifstream in(list_file); in) previous.assign(std::istreambuf_iterator<char>(in), {});
+
+  if (previous == list && !needs_rebuild(output, objects)) return true;
+
+  Cmd cmd;
+  cmd << cfg.cxx;
+  cmd.append(cfg.link_flags);
+  cmd << "-o" << output.string();
+  for (const auto& o : objects) cmd << o.string();
+  if (!run(cmd)) return false;
+
+  std::ofstream(list_file) << list;
+  return true;
+}
+
+std::string json_escape(std::string_view s) {
+  std::string out;
+  for (char c : s) {
+    if (c == '"' || c == '\\') out += '\\';
+    out += c;
+  }
+  return out;
+}
+
+void write_compile_commands(const std::vector<CompileEntry>& database) {
+  const fs::path cwd = fs::current_path();
+  std::ofstream out(kBuildDir / "compile_commands.json");
+  out << "[\n";
+  for (std::size_t i = 0; i < database.size(); ++i) {
+    const auto& e = database[i];
+    out << "  {\"directory\": \"" << json_escape(cwd.string()) << "\", \"file\": \""
+        << json_escape(e.file.string()) << "\", \"arguments\": [";
+    for (std::size_t j = 0; j < e.args.size(); ++j) {
+      out << (j ? ", " : "") << '"' << json_escape(e.args[j]) << '"';
+    }
+    out << "]}" << (i + 1 < database.size() ? "," : "") << "\n";
+  }
+  out << "]\n";
+}
+
+std::vector<fs::path> all_headers() {
+  std::vector<fs::path> headers;
+  for (const auto& [dir, ext] : {std::pair{"src", ".hpp"}, std::pair{"tests", ".hpp"},
+                                 std::pair{"third_party", ".h"}}) {
+    const auto found = find_files(dir, ext);
+    headers.insert(headers.end(), found.begin(), found.end());
+  }
+  return headers;
+}
+
+// Library objects, tools (tools/<name>/main.cpp -> build/<mode>/<name>) and the single test binary.
+bool build_all(const Config& cfg) {
+  if (!mkdir_p(cfg.obj_dir())) return false;
+
+  const auto headers = all_headers();
+  std::vector<CompileEntry> database;
+
+  std::vector<fs::path> lib_objects;
+  if (!compile(cfg, find_files("src", ".cpp"), headers, lib_objects, database)) return false;
+
+  for (const auto& main_cpp : find_files("tools", ".cpp")) {
+    std::vector<fs::path> objects = lib_objects;
+    if (!compile(cfg, {main_cpp}, headers, objects, database)) return false;
+    if (!link(cfg, cfg.out_dir() / main_cpp.parent_path().filename(), objects)) return false;
+  }
+
+  // All of tests/**/*.cpp (the doctest runner plus every *.test.cpp) links into one binary.
+  std::vector<fs::path> test_objects = lib_objects;
+  if (!compile(cfg, find_files("tests", ".cpp"), headers, test_objects, database)) return false;
+  if (!link(cfg, cfg.test_binary(), test_objects)) return false;
+
+  write_compile_commands(database);
+  return true;
+}
+
+// Fuzz targets: fuzz/<name>.cpp -> build/fuzz/<name>, linked with the library objects.
+bool build_fuzz(const Config& cfg, std::vector<fs::path>& targets) {
+  if (!mkdir_p(cfg.obj_dir())) return false;
+
+  const auto headers = all_headers();
+  std::vector<CompileEntry> database;
+
+  std::vector<fs::path> lib_objects;
+  if (!compile(cfg, find_files("src", ".cpp"), headers, lib_objects, database)) return false;
+
+  for (const auto& source : find_files("fuzz", ".cpp")) {
+    std::vector<fs::path> objects = lib_objects;
+    if (!compile(cfg, {source}, headers, objects, database)) return false;
+    const fs::path binary = cfg.out_dir() / source.stem();
+    if (!link(cfg, binary, objects)) return false;
+    targets.push_back(binary);
+  }
+  return true;
+}
+
+// Runs one fuzz target for `seconds`. New inputs land in the git-ignored local/ directory, crashes too.
+bool run_fuzz(const fs::path& binary, int seconds) {
+  const std::string name = binary.filename().string();
+  const fs::path corpus = fs::path("local") / "fuzz-corpus" / name;
+  const fs::path crashes = fs::path("local") / "fuzz-crashes" / name;
+  if (!mkdir_p(corpus) || !mkdir_p(crashes)) return false;
+
+  Cmd cmd;
+  cmd << binary.string() << std::format("-max_total_time={}", seconds)
+      << std::format("-artifact_prefix={}/", crashes.string()) << "-print_final_stats=1";
+  if (fs::exists("fuzz/ovl.dict")) cmd << "-dict=fuzz/ovl.dict";
+  cmd << corpus.string();
+  const fs::path seeds = fs::path("fuzz") / "seeds" / name;
+  if (fs::exists(seeds)) cmd << seeds.string();
+  return run(cmd);
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  go_rebuild_urself(argv, __FILE__, std::array<fs::path, 1>{"nob.hpp"});
+
+  std::string command = "build";
+  bool release = false;
+  bool sanitize = false;
+  std::vector<std::string> test_args;
+  std::string fuzz_target;
+  int fuzz_seconds = 30;
+
+  for (int i = 1; i < argc; ++i) {
+    const std::string_view arg = argv[i];
+    if (arg == "--release") release = true;
+    else if (arg == "--sanitize") sanitize = true;
+    else if (arg == "--seconds" && i + 1 < argc) fuzz_seconds = std::atoi(argv[++i]);
+    else if (arg == "--filter" && i + 1 < argc) test_args.push_back(std::format("-tc=*{}*", argv[++i]));
+    else if (arg == "--") {
+      for (++i; i < argc; ++i) test_args.emplace_back(argv[i]);
+    } else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz") command = arg;
+    else if (command == "fuzz" && !arg.starts_with("-")) fuzz_target = arg;
+    else {
+      log(Level::Error,
+          "unknown argument '{}'. usage: ./nob [build|test|clean] [--release] [--sanitize] "
+          "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N]",
+          arg);
+      return 2;
+    }
+  }
+
+  if (command == "clean") {
+    std::error_code ec;
+    fs::remove_all(kBuildDir, ec);
+    return ec ? 1 : 0;
+  }
+
+  if (command == "fuzz") {
+    const Config cfg = make_config(false, false, true);
+    std::vector<fs::path> targets;
+    if (!build_fuzz(cfg, targets)) return 1;
+    for (const auto& t : targets) {
+      if (!fuzz_target.empty() && t.filename() != fuzz_target) continue;
+      if (!run_fuzz(t, fuzz_seconds)) return 1;
+    }
+    return 0;
+  }
+
+  const Config cfg = make_config(release, sanitize, false);
+  if (!build_all(cfg)) return 1;
+  if (command != "test") return 0;
+
+  Cmd cmd;
+  cmd << cfg.test_binary().string();
+  cmd.append(test_args);
+  return run(cmd) ? 0 : 1;
+}

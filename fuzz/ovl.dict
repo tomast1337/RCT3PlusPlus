@@ -1,0 +1,8 @@
+# Tokens that guide the fuzzer through the OVL header. Shapes only, no game data.
+magic="FGRK"
+version4="\x04\x00\x00\x00"
+version5="\x05\x00\x00\x00"
+size16="\x10\x00\x00\x00"
+size20="\x14\x00\x00\x00"
+zero32="\x00\x00\x00\x00"
+one32="\x01\x00\x00\x00"

@@ -112,3 +112,47 @@ TEST_CASE("buttons draw the family member for their state, then the icon")
         CHECK(list.vertices()[0].color[0] < 255);
     }
 }
+
+TEST_CASE("text is centred in the button, grey when disabled and cut to the button")
+{
+    rct3::ovl::Font f;
+    f.metrics = { 0.1f, 1.0f, 0.2f };
+    f.has_code_table = true;
+    f.glyphs.push_back({ u'x', 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });
+    const std::array<Font::Page, 1> pages = { { { 9, 100, 100 } } };
+    FontSet fonts;
+    fonts.set(FontRole::Small, Font::from(f, pages));
+    const SkinLibrary skins;
+
+    Desktop desktop;
+    Button& b = desktop.root().add<Button>("b", "Btn");
+    b.text = u"xx";
+    b.placement = top_left(10, 10, 40, 20);
+    desktop.layout({ 0, 0, 100, 100 });
+
+    const auto draw = [&] {
+        DrawList list;
+        DrawContext context { list, skins, fonts };
+        desktop.draw(context);
+        CHECK(list.clip() == nullptr);
+        return list;
+    };
+    DrawList list = draw();
+    REQUIRE(list.vertices().size() == 8);
+    CHECK(list.vertices()[0].x == 20); // 20 wide text in a 40 wide button at 10
+    CHECK(list.vertices()[0].color == std::array<std::uint8_t, 4> { 0, 0, 0, 255 });
+
+    b.enabled = false;
+    list = draw();
+    REQUIRE(list.vertices().size() == 8);
+    CHECK(list.vertices()[0].color == std::array<std::uint8_t, 4> { 127, 127, 127, 255 });
+
+    b.text_inset = { 10, 0, 0, 0 };
+    list = draw();
+    CHECK(list.vertices()[0].x == 25);
+
+    b.text = u"xxxxxxxxxxxx";
+    list = draw();
+    for (const Vertex& v : list.vertices())
+        CHECK((v.x >= 10 && v.x <= 50));
+}

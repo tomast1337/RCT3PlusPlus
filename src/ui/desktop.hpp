@@ -9,6 +9,7 @@
 // leaves it, and gets a click only when released over it.
 #pragma once
 
+#include "ui/tooltip.hpp"
 #include "ui/widget.hpp"
 
 #include <memory>
@@ -41,10 +42,17 @@ namespace rct3::ui
 
         /// Routes the pointer, runs every widget's update, detaches widgets that asked to close and lays the
         /// tree out again. Returns whether the pointer is over the interface; when false it belongs to the 3D
-        /// view.
-        bool update(const PointerState& pointer);
+        /// view. `elapsed` is the time since the last update in seconds; tooltips wait on it.
+        bool update(const PointerState& pointer, float elapsed = 0);
 
+        /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
+
+        TooltipStyle tooltip_style;
+        [[nodiscard]] const Tooltip& tooltip() const
+        {
+            return tooltip_;
+        }
 
         /// The widget under `p` that takes the pointer, if any.
         [[nodiscard]] Widget* hit(Point p) const;
@@ -54,6 +62,7 @@ namespace rct3::ui
         Rect view_;
         Widget* held_ = nullptr;
         bool was_down_ = false;
+        Tooltip tooltip_;
     };
 
 } // namespace rct3::ui

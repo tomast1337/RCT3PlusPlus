@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A push button, or a toggle that stays down until clicked again. Drawn with a skin family (see
-// SkinLibrary) and an optional icon centred on top at its own size. When the family has no member for the
-// current state the base skin is tinted instead, so plain skins still show presses.
+// SkinLibrary), with an optional icon centred on top at its own size and optional text centred over that.
+// When the family has no member for the current state the base skin is tinted instead, so plain skins still
+// show presses. Text is black, grey when the button is disabled, as in the game.
 //
 // A click is a press and release over the button. The owner asks for it with take_click().
 #pragma once
@@ -21,6 +22,11 @@ namespace rct3::ui
 
         std::string skin; ///< Family base name
         std::string icon; ///< Optional skin drawn on top
+        std::u16string text;
+        FontRole font = FontRole::Small;
+        Color text_colour { 0, 0, 0, 255 };
+        Color disabled_text_colour { 127, 127, 127, 255 };
+        Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow
         bool toggle = false;
         bool on = false; ///< Toggles only
 

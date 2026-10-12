@@ -49,11 +49,45 @@ namespace rct3::ui
             out.glyphs_.push_back(glyph);
         }
 
-        // The first row with a code wins, as in the file's own lookup.
-        std::ranges::stable_sort(out.index_, { }, &std::pair<char16_t, std::uint32_t>::first);
-        const auto [first, last] = std::ranges::unique(out.index_, { }, &std::pair<char16_t, std::uint32_t>::first);
-        out.index_.erase(first, last);
+        out.sort_index(); // The first row with a code wins, as in the file's own lookup
         return out;
+    }
+
+    Font Font::from_glyphs(std::span<const CodedGlyph> glyphs, float line_height, float descent)
+    {
+        Font out;
+        out.cell_ = line_height;
+        out.line_height_ = line_height;
+        out.descent_ = descent;
+        for (const CodedGlyph& g : glyphs)
+        {
+            out.index_.emplace_back(g.code, static_cast<std::uint32_t>(out.glyphs_.size()));
+            out.glyphs_.push_back(g.glyph);
+        }
+        out.sort_index();
+        return out;
+    }
+
+    Font Font::with_fallback(const Font& fallback) const
+    {
+        Font out = *this;
+        for (const auto& [code, index] : fallback.index_)
+        {
+            if (find(code) != nullptr)
+                continue;
+            out.index_.emplace_back(code, static_cast<std::uint32_t>(out.glyphs_.size()));
+            out.glyphs_.push_back(fallback.glyphs_[index]);
+        }
+        out.sort_index();
+        return out;
+    }
+
+    void Font::sort_index()
+    {
+        // Stable, so among rows with the same code the earliest stays and unique() keeps it.
+        std::ranges::stable_sort(index_, { }, &std::pair<char16_t, std::uint32_t>::first);
+        const auto [first, last] = std::ranges::unique(index_, { }, &std::pair<char16_t, std::uint32_t>::first);
+        index_.erase(first, last);
     }
 
     const Glyph* Font::find(char16_t code) const

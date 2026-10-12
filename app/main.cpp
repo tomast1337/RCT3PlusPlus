@@ -264,7 +264,7 @@ int main(int argc, char** argv)
         }
     }
     const auto load_widgets = [&] {
-        auto loaded = rct3::scene::create_widget_demo(*device, *install);
+        auto loaded = rct3::scene::create_widget_demo(*device, *install, env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont));
         if (loaded)
             widgets = std::move(*loaded);
         else

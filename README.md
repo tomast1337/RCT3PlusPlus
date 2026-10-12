@@ -21,6 +21,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob run                      # graphical viewer: Vulkan triangle + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
+./nob fetch                    # optional downloads into downloads/: the fallback font (GNU Unifont)
 build/debug/ovl-dump "/path/to/Main.common.ovl"
 build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound item (omit the name to list them)
 build/debug/sound-play --null --tone 440                       # same path without an audio device
@@ -34,6 +35,12 @@ Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and i
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
 
+Text the game's fonts cannot draw (Greek, Cyrillic, arrows and other signs) falls back to
+[GNU Unifont](https://unifoundry.com/unifont/), rendered with the vendored [stb_truetype](third_party/stb/).
+The font is not in the repository: `./nob fetch` downloads a pinned release into `downloads/` and checks
+its SHA-256. Unifont is dual-licensed under the SIL Open Font License 1.1 and GPL-2.0-or-later with the GNU
+font embedding exception. Without it the viewer runs with the game's fonts alone.
+
 ## Configuration
 
 rct3++ reads the original game's data from your own install. Settings come from environment variables
@@ -43,6 +50,7 @@ for now; `rct3pp --help` lists them all.
 |----------|---------|
 | `RCT3PP_GAME_PATH` | Root folder of the installed game, the one that contains `gui/` and `Style/` |
 | `RCT3PP_VALIDATION` | `1` enables the graphics API's validation layer |
+| `RCT3PP_FALLBACK_FONT` | TrueType font for characters the game fonts lack (default `downloads/unifont-15.0.06.ttf`) |
 
 ```
 export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"

@@ -15,6 +15,7 @@ namespace rct3::config
         constexpr std::array<EnvVarInfo, kEnvVarCount> kEnvVars = { {
             { EnvVar::GamePath, "RCT3PP_GAME_PATH", "Root folder of the installed original game (the one that contains gui/ and Style/)" },
             { EnvVar::Validation, "RCT3PP_VALIDATION", "Enable the graphics API's validation layer (1/0)" },
+            { EnvVar::FallbackFont, "RCT3PP_FALLBACK_FONT", "TrueType font for characters the game fonts lack (default: the one `./nob fetch` downloads)" },
         } };
 
         // The table is indexed by EnvVar, so its order must follow the enum.

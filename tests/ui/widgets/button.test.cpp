@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/widgets/button.hpp"
+
+#include "ui/desktop.hpp"
+
+#include <doctest/doctest.h>
+
+using namespace rct3::ui;
+
+namespace
+{
+    SkinRef skin(TextureId texture)
+    {
+        SkinRef s;
+        s.layout.xs = { 0, 8 };
+        s.layout.ys = { 0, 8 };
+        s.layout.x_count = 2;
+        s.layout.y_count = 2;
+        s.texture = texture;
+        s.texture_width = 16;
+        s.texture_height = 16;
+        return s;
+    }
+
+    PointerState at(float x, float y, bool down = false)
+    {
+        return { { x, y }, down, true };
+    }
+
+    struct Fixture
+    {
+        Desktop desktop;
+        Button& button = desktop.root().add<Button>("b", "Btn", "Icon");
+        Fixture()
+        {
+            button.placement = top_left(0, 0, 20, 20);
+            desktop.layout({ 0, 0, 100, 100 });
+        }
+        void click(float x = 5)
+        {
+            desktop.update(at(5, 5, true));
+            desktop.update(at(x, 5, false));
+        }
+    };
+} // namespace
+
+TEST_CASE("a click is a press and release over the button")
+{
+    Fixture f;
+    CHECK_FALSE(f.button.take_click());
+    f.click();
+    CHECK(f.button.take_click());
+    CHECK_FALSE(f.button.take_click());
+
+    f.click(60); // Released outside
+    CHECK_FALSE(f.button.take_click());
+}
+
+TEST_CASE("the state follows the pointer")
+{
+    Fixture f;
+    CHECK(f.button.state() == SkinState::Up);
+    f.desktop.update(at(5, 5));
+    CHECK(f.button.state() == SkinState::UpOver);
+    f.desktop.update(at(5, 5, true));
+    CHECK(f.button.state() == SkinState::Pressed);
+    f.desktop.update(at(5, 5, false));
+    f.button.enabled = false;
+    CHECK(f.button.state() == SkinState::Disabled);
+}
+
+TEST_CASE("a toggle stays down until clicked again")
+{
+    Fixture f;
+    f.button.toggle = true;
+    f.click();
+    CHECK(f.button.on);
+    CHECK(f.button.state() == SkinState::DownOver);
+    f.desktop.update(at(60, 60));
+    CHECK(f.button.state() == SkinState::Down);
+    f.click();
+    CHECK_FALSE(f.button.on);
+}
+
+TEST_CASE("buttons draw the family member for their state, then the icon")
+{
+    Fixture f;
+    SkinLibrary skins;
+    skins.add("BtnUp", skin(1));
+    skins.add("BtnUpOver", skin(2));
+    skins.add("Icon", skin(7));
+    DrawList list;
+    DrawContext context { list, skins };
+
+    f.desktop.update(at(5, 5));
+    f.desktop.draw(context);
+    REQUIRE(list.batches().size() == 2);
+    CHECK(list.batches()[0].texture == 2);
+    CHECK(list.batches()[1].texture == 7);
+    // The icon keeps its size and is centred.
+    const Vertex& icon = list.vertices()[4];
+    CHECK(icon.x == 6);
+    CHECK(icon.y == 6);
+
+    SUBCASE("a missing pressed member tints the resting one")
+    {
+        list.clear();
+        f.desktop.update(at(5, 5, true));
+        f.desktop.draw(context);
+        CHECK(list.batches()[0].texture == 1);
+        CHECK(list.vertices()[0].color[0] < 255);
+    }
+}

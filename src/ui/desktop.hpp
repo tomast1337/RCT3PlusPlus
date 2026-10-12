@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The root of the widget tree: lays it out for the window, routes the pointer to it and draws it. Its direct
+// children are the screen's top-level widgets, usually windows; pressing on one raises it above the others,
+// and the top-most one has focus.
+//
+// The pointer is read as a state each frame (where it is, whether the button is down), not as a stream of
+// events. A widget that is pressed holds the pointer until release, so dragging works when the pointer
+// leaves it, and gets a click only when released over it.
+#pragma once
+
+#include "ui/widget.hpp"
+
+#include <memory>
+
+namespace rct3::ui
+{
+
+    struct PointerState
+    {
+        Point position;      ///< Logical units
+        bool down = false;   ///< The primary button
+        bool present = true; ///< False when something else, such as a developer tool, has the pointer
+    };
+
+    class Desktop
+    {
+    public:
+        [[nodiscard]] Widget& root()
+        {
+            return *root_;
+        }
+        [[nodiscard]] const Widget& root() const
+        {
+            return *root_;
+        }
+
+        /// Places the whole tree in `view`, the window in logical units. Call when the view changes or the
+        /// tree was edited from outside; update() lays out again after its own changes.
+        void layout(const Rect& view);
+
+        /// Routes the pointer, runs every widget's update, detaches widgets that asked to close and lays the
+        /// tree out again. Returns whether the pointer is over the interface; when false it belongs to the 3D
+        /// view.
+        bool update(const PointerState& pointer);
+
+        void draw(DrawContext& context) const;
+
+        /// The widget under `p` that takes the pointer, if any.
+        [[nodiscard]] Widget* hit(Point p) const;
+
+    private:
+        std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
+        Rect view_;
+        Widget* held_ = nullptr;
+        bool was_down_ = false;
+    };
+
+} // namespace rct3::ui

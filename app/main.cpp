@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
-// the game installed it first plays the startup logos and the loading screen, then shows real skins.
+// the game installed it first plays the startup logos and the loading screen, then shows a window built from real skins.
 //
 //   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--frames N] [--help]
 //
@@ -17,10 +17,10 @@
 #include "platform/window.hpp"
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
-#include "scene/skin_gallery.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
+#include "scene/widget_demo.hpp"
 
 #include <algorithm>
 #include <array>
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
         }
     }
 
-    // Only the skin gallery uses the game so far, so a missing install is not fatal for now.
+    // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
     const auto install = config::find_game_install(env);
     if (install)
         log.info("game install: {}", install->root().string());
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
         log.critical("ui demo: {}", ui_demo.error());
         return 1;
     }
-    // With the game installed: logos, then the loading screen while the skins load, then the skin gallery
+    // With the game installed: logos, then the loading screen while the skins load, then the widget demo
     // in place of the generated demo.
     enum class Phase : std::uint8_t
     {
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
     };
     Phase phase = Phase::Running;
     std::optional<rct3::scene::StartupScreen> startup;
-    std::optional<rct3::scene::SkinGallery> gallery;
+    std::optional<rct3::scene::WidgetDemo> widgets;
     if (install)
     {
         auto created = rct3::scene::create_startup_screen(*device, *install, { });
@@ -263,21 +263,21 @@ int main(int argc, char** argv)
             log.warning("startup screen: {}", created.error());
         }
     }
-    const auto load_gallery = [&] {
+    const auto load_widgets = [&] {
         const auto main_ovl = install->find("Main.common.ovl");
         if (!main_ovl)
         {
             log.warning("skins: Main.common.ovl not found");
             return;
         }
-        auto loaded = rct3::scene::create_skin_gallery(*device, *main_ovl);
+        auto loaded = rct3::scene::create_widget_demo(*device, *main_ovl);
         if (loaded)
-            gallery = std::move(*loaded);
+            widgets = std::move(*loaded);
         else
             log.warning("skins: {}", loaded.error());
     };
     if (install && !startup)
-        load_gallery();
+        load_widgets();
 
     int status = 0;
     try
@@ -310,6 +310,13 @@ int main(int argc, char** argv)
                         draw_log_window();
                         ImGui::ShowDemoWindow();
                     }
+                    if (phase == Phase::Running && widgets)
+                    {
+                        // The developer windows come first: where they want the pointer, the game does not get it.
+                        const auto p = window->pointer();
+                        const rct3::ui::PointerState pointer { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse };
+                        rct3::scene::update_widget_demo(*device, *widgets, pointer);
+                    }
                 });
                 prof::section("Draw", [&] {
                     device->begin_frame();
@@ -325,8 +332,8 @@ int main(int argc, char** argv)
                     else
                     {
                         rct3::scene::draw_test_scene(*device, *scene, now);
-                        if (gallery)
-                            rct3::scene::draw_skin_gallery(*device, *gallery, now);
+                        if (widgets)
+                            rct3::scene::draw_widget_demo(*device, *widgets);
                         else
                             rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     }
@@ -336,7 +343,7 @@ int main(int argc, char** argv)
                     // The loading screen is on screen now; load while it shows, as the game does.
                     if (phase == Phase::Loading)
                     {
-                        load_gallery();
+                        load_widgets();
                         rct3::scene::destroy_startup_screen(*device, *startup);
                         startup.reset();
                         phase = Phase::Running;
@@ -355,8 +362,8 @@ int main(int argc, char** argv)
 
     if (startup)
         rct3::scene::destroy_startup_screen(*device, *startup);
-    if (gallery)
-        rct3::scene::destroy_skin_gallery(*device, *gallery);
+    if (widgets)
+        rct3::scene::destroy_widget_demo(*device, *widgets);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);
     rct3::scene::destroy_test_scene(*device, *scene);
     device->shutdown();

@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/widgets/window.hpp"
+
+#include "ui/desktop.hpp"
+
+#include <doctest/doctest.h>
+
+using namespace rct3::ui;
+
+namespace
+{
+    PointerState at(float x, float y, bool down = false)
+    {
+        return { { x, y }, down, true };
+    }
+
+    WindowStyle style()
+    {
+        WindowStyle s;
+        s.frame = "Frame";
+        s.frame_unfocused = "FrameDim";
+        s.background = "Back";
+        s.title_button = "TitleButton";
+        s.close_icon = "Close";
+        return s;
+    }
+
+    constexpr Rect kView { 0, 0, 400, 300 };
+} // namespace
+
+TEST_CASE("a window starts centred with its content inset")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    desktop.layout(kView);
+    CHECK(w.rect() == Rect { 100, 100, 300, 200 });
+    const Rect& in = style().content_inset;
+    CHECK(w.content().rect() == Rect { 100 + in.x0, 100 + in.y0, 300 - in.x1, 200 - in.y1 });
+    CHECK(w.find("close") != nullptr);
+}
+
+TEST_CASE("dragging the title bar moves the window")
+{
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    desktop.layout(kView);
+
+    desktop.update(at(150, 105, true));
+    CHECK(w.dragging());
+    desktop.update(at(170, 125, true));
+    CHECK(w.rect() == Rect { 120, 120, 320, 220 });
+    desktop.update(at(170, 125, false));
+    CHECK_FALSE(w.dragging());
+
+    SUBCASE("not below the title bar")
+    {
+        desktop.update(at(150, 180, true));
+        desktop.update(at(190, 180, true));
+        CHECK(w.rect() == Rect { 120, 120, 320, 220 });
+    }
+    SUBCASE("not off the desktop")
+    {
+        desktop.update(at(150, 125, true));
+        desktop.update(at(1000, 125, true));
+        CHECK(w.rect().x1 == 400);
+    }
+    SUBCASE("it keeps its place relative to the centre when the desktop changes")
+    {
+        desktop.layout({ 0, 0, 250, 200 });
+        CHECK(w.rect() == Rect { 45, 70, 245, 170 });
+    }
+    SUBCASE("it comes back when the desktop shrinks under it")
+    {
+        desktop.layout({ 0, 0, 150, 150 });
+        CHECK(w.rect() == Rect { 0, 45, 200, 145 }); // Wider than the desktop: left edge wins
+    }
+}
+
+TEST_CASE("the close button closes the window")
+{
+    Desktop desktop;
+    desktop.root().add<Window>("w", style(), 200, 100);
+    desktop.layout(kView);
+    const Rect close = desktop.root().find("w/close")->rect();
+    const Point p { close.x0 + 2, close.y0 + 2 };
+
+    desktop.update({ p, true, true });
+    CHECK(desktop.root().children().size() == 1);
+    desktop.update({ p, false, true });
+    CHECK(desktop.root().children().empty());
+}
+
+TEST_CASE("only the top window draws the focused frame")
+{
+    Desktop desktop;
+    Window& a = desktop.root().add<Window>("a", style(), 100, 100);
+    Window& b = desktop.root().add<Window>("b", style(), 100, 100);
+    desktop.layout(kView);
+    desktop.update(at(0, 0));
+    CHECK(b.focused());
+    CHECK_FALSE(a.focused());
+}
+
+TEST_CASE("pressing a window behind raises it")
+{
+    Desktop desktop;
+    Window& a = desktop.root().add<Window>("a", style(), 100, 100);
+    Window& b = desktop.root().add<Window>("b", style(), 100, 100);
+    b.placement = centred(100, 100, 30, 30);
+    desktop.layout(kView);
+    desktop.update(at(a.rect().x0 + 5, a.rect().y0 + 5, true));
+    desktop.update(at(a.rect().x0 + 5, a.rect().y0 + 5, false));
+    CHECK(desktop.root().children().back().get() == &a);
+    CHECK(a.focused());
+    CHECK_FALSE(b.focused());
+}

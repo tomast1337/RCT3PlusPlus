@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// rct3++ viewer, first step: a window, a Vulkan triangle and a Dear ImGui overlay.
+// rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay.
 //
-//   rct3pp [--frames N]    --frames N exits after N frames (smoke test)
+//   rct3pp [--renderer NAME] [--no-vsync] [--frames N]
+//
+//   --renderer NAME   render backend: vulkan (default)
+//   --no-vsync        present as fast as possible
+//   --frames N        exit after N frames (smoke test)
+//
+// RCT3_VALIDATION set in the environment enables the graphics API's validation layer.
 #include "imgui.h"
 #include "logging/log.hpp"
+#include "platform/window.hpp"
 #include "profiling/profiler.hpp"
-#include "renderer.hpp"
+#include "render/backend.hpp"
+#include "scene/test_scene.hpp"
 
-#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -16,17 +23,27 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <string>
 #include <vector>
 
 namespace
 {
 
-    void draw_profiler_window()
+    constexpr const char* kValidationEnv = "RCT3_VALIDATION";
+
+    void print_usage()
+    {
+        std::fprintf(stderr, "usage: rct3pp [--renderer vulkan] [--no-vsync] [--frames N]\n"); // command-line help, not a log message
+    }
+
+    void draw_profiler_window(const rct3::render::Device& device)
     {
         ImGui::SetNextWindowPos({ 12, 12 }, ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize({ 460, 260 }, ImGuiCond_FirstUseEver);
         ImGui::Begin("Profiler");
+        const rct3::render::FrameStats stats = device.stats();
         ImGui::Text("%.1f fps", static_cast<double>(ImGui::GetIO().Framerate));
+        ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives));
         if (ImGui::BeginTable("scopes", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
         {
             ImGui::TableSetupColumn("scope");
@@ -114,31 +131,63 @@ namespace
 int main(int argc, char** argv)
 {
     namespace prof = rct3::profiling;
+    namespace render = rct3::render;
     const auto log = rct3::logging::logger("app");
 
     int max_frames = -1;
+    render::Backend backend = render::Backend::Vulkan;
+    bool vsync = true;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
+        {
             max_frames = std::atoi(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--renderer") == 0 && i + 1 < argc)
+        {
+            const auto parsed = render::parse_backend(argv[++i]);
+            if (!parsed)
+            {
+                print_usage();
+                return 2;
+            }
+            backend = *parsed;
+        }
+        else if (std::strcmp(argv[i], "--no-vsync") == 0)
+        {
+            vsync = false;
+        }
         else
         {
-            std::fprintf(stderr, "usage: rct3pp [--frames N]\n"); // command-line help, not a log message
+            print_usage();
             return 2;
         }
     }
 
-    if (!glfwInit())
+    auto window = rct3::platform::Window::open({ }, backend);
+    if (!window)
     {
-        log.critical("cannot initialise GLFW");
+        log.critical("{}", window.error());
         return 1;
     }
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "rct3++", nullptr, nullptr);
-    if (window == nullptr)
+
+    const auto device = render::make_device(backend);
+    const render::DeviceConfig config {
+        .window = window->handle(),
+        .vsync = vsync,
+        .validation = std::getenv(kValidationEnv) != nullptr,
+    };
+    if (auto ready = device->init(config); !ready)
     {
-        log.critical("cannot create window");
-        glfwTerminate();
+        log.critical("{} renderer: {}", render::backend_name(backend), ready.error());
+        return 1;
+    }
+    log.info("rendering with {} on {}", render::backend_name(backend), device->device_name());
+
+    auto scene = rct3::scene::create_test_scene(*device);
+    if (!scene)
+    {
+        log.critical("test scene: {}", scene.error());
         return 1;
     }
 
@@ -146,37 +195,44 @@ int main(int argc, char** argv)
     try
     {
         prof::register_thread("Main");
-        rct3::app::Renderer renderer(window);
-        log.info("using {}", renderer.device_name());
-
-        double last_time = glfwGetTime();
-        for (int frame = 0; !glfwWindowShouldClose(window) && frame != max_frames; ++frame)
+        double last_time = window->time();
+        for (int frame = 0; !window->should_close() && frame != max_frames; ++frame)
         {
-            glfwPollEvents();
+            window->poll_events();
 
-            const double now = glfwGetTime();
+            const double now = window->time();
             prof::update(now - last_time);
             last_time = now;
 
             prof::section("Frame", [&] {
                 prof::section("Ui", [&] {
-                    renderer.begin_frame();
-                    draw_profiler_window();
+                    device->ui_new_frame();
+                    window->ui_new_frame();
+                    ImGui::NewFrame();
+                    draw_profiler_window(*device);
                     draw_log_window();
                     ImGui::ShowDemoWindow();
                 });
-                prof::section("Draw", [&] { renderer.draw_frame(); });
+                prof::section("Draw", [&] {
+                    device->begin_frame();
+                    device->begin_pass({ .clear_color = { 0.05f, 0.06f, 0.08f, 1.0f } });
+                    rct3::scene::draw_test_scene(*device, *scene, now);
+                    device->draw_ui();
+                    device->end_pass();
+                    device->end_frame();
+                });
             });
             prof::capture_frame();
         }
     }
     catch (const std::exception& e)
     {
+        // A failing graphics call after init means a lost device or a driver fault.
         log.critical("{}", e.what());
         status = 1;
     }
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    rct3::scene::destroy_test_scene(*device, *scene);
+    device->shutdown();
     return status;
 }

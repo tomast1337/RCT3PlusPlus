@@ -36,8 +36,20 @@ namespace rct3::ui
 
     void Button::on_release(Point, bool inside)
     {
-        if (!inside)
-            return;
+        if (inside)
+            click();
+    }
+
+    bool Button::on_key(const KeyPress& key)
+    {
+        if (key.key != Key::Space && key.key != Key::Enter)
+            return false;
+        click();
+        return true;
+    }
+
+    void Button::click()
+    {
         ++clicks_;
         if (toggle)
             on = !on;

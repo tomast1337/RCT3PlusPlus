@@ -5,7 +5,8 @@
 // When the family has no member for the current state the base skin is tinted instead, so plain skins still
 // show presses. Text is black, grey when the button is disabled, as in the game.
 //
-// A click is a press and release over the button. The owner asks for it with take_click().
+// A click is a press and release over the button, or Space or Enter while it has the keyboard focus. The
+// owner asks for it with take_click().
 #pragma once
 
 #include "ui/widget.hpp"
@@ -40,10 +41,18 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] bool takes_focus() const override
+        {
+            return true;
+        }
         void on_release(Point p, bool inside) override;
+        /// Space and Enter work like a click.
+        bool on_key(const KeyPress& key) override;
         void draw(DrawContext& context) const override;
 
     private:
+        void click();
+
         int clicks_ = 0;
     };
 

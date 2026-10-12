@@ -21,8 +21,20 @@ namespace rct3::ui
 
     void Tickbox::on_release(Point, bool inside)
     {
-        if (!inside)
-            return;
+        if (inside)
+            flip();
+    }
+
+    bool Tickbox::on_key(const KeyPress& key)
+    {
+        if (key.key != Key::Space && key.key != Key::Enter)
+            return false;
+        flip();
+        return true;
+    }
+
+    void Tickbox::flip()
+    {
         ticked = !ticked;
         ++changes_;
     }

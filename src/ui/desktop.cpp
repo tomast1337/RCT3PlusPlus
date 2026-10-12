@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/desktop.hpp"
 
+#include "ui/keyboard_focus.hpp"
+
 #include <cstddef>
 #include <vector>
 
@@ -98,17 +100,6 @@ namespace rct3::ui
                 set_flags_tree(*c, under, held, focused, focus);
         }
 
-        // Whether `w` and everything above it are shown and take input.
-        bool usable(const Widget& w)
-        {
-            for (const Widget* p = &w; p != nullptr; p = p->parent())
-            {
-                if (!p->visible || !p->enabled)
-                    return false;
-            }
-            return true;
-        }
-
         void update_tree(Widget& w, const UpdateContext& context)
         {
             w.update(context);
@@ -183,12 +174,17 @@ namespace rct3::ui
 
         Widget* under = pointer.present ? hit(pointer.position) : nullptr;
         const bool down = pointer.present && pointer.down;
+        // Any press, even on the 3D view, takes the focus from where it was.
+        if (down && !was_down_)
+        {
+            focus_ = nullptr;
+            focus_shown_ = false;
+        }
         if (down && !was_down_ && under != nullptr && under->enabled)
         {
             held_ = under;
             if (Widget* window = top_level(*root_, under))
                 root_->raise(*window);
-            focus_ = nullptr;
             for (Widget* w = deepest(pointer.position); w != nullptr && focus_ == nullptr; w = w->parent())
             {
                 if (w->takes_focus() && usable(*w))
@@ -223,11 +219,23 @@ namespace rct3::ui
             focus_ = nullptr;
         for (const KeyPress& key : keyboard.presses)
         {
-            Widget* start = focus_ != nullptr ? focus_ : (root_->children().empty() ? nullptr : root_->children().back().get());
-            for (Widget* w = start; w != nullptr; w = w->parent())
+            Widget* top = root_->children().empty() ? nullptr : root_->children().back().get();
+            Widget* start = focus_ != nullptr ? focus_ : top;
+            bool used = false;
+            for (Widget* w = start; w != nullptr && !used; w = w->parent())
+                used = w->enabled && w->on_key(key);
+            // Tab nobody used moves the focus within its window.
+            if (!used && key.key == Key::Tab && !key.control)
             {
-                if (w->enabled && w->on_key(key))
-                    break;
+                Widget* scope = focus_ != nullptr ? top_level(*root_, focus_) : top;
+                if (scope != nullptr)
+                {
+                    if (Widget* next = next_focus(*scope, focus_, key.shift))
+                    {
+                        focus_ = next;
+                        focus_shown_ = true;
+                    }
+                }
             }
         }
 
@@ -253,6 +261,8 @@ namespace rct3::ui
     void Desktop::draw(DrawContext& context) const
     {
         draw_tree(*root_, context);
+        if (focus_shown_ && focus_ != nullptr && usable(*focus_))
+            draw_focus_mark(context.list, *focus_, focus_mark_style);
         tooltip_.draw(context, tooltip_style, view_);
     }
 

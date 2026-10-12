@@ -25,7 +25,4 @@ namespace rct3::ovl
     /// through `overlay`, which must be the overlay `part` belongs to.
     [[nodiscard]] std::vector<TextItem> read_texts(const Overlay& overlay, const Part& part);
 
-    /// Converts UTF-16 to UTF-8. An unpaired surrogate becomes U+FFFD.
-    [[nodiscard]] std::string to_utf8(std::u16string_view text);
-
 } // namespace rct3::ovl

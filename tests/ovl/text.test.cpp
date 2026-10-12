@@ -2,6 +2,7 @@
 #include "ovl/text.hpp"
 
 #include "builder.hpp"
+#include "strings/unicode.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -10,7 +11,7 @@
 using namespace rct3::test;
 using rct3::ovl::Overlay;
 using rct3::ovl::read_texts;
-using rct3::ovl::to_utf8;
+using rct3::strings::to_utf8;
 
 namespace
 {
@@ -43,25 +44,6 @@ namespace
     }
 
 } // namespace
-
-TEST_CASE("utf-8 conversion")
-{
-    CHECK(to_utf8(u"abc") == "abc");
-    CHECK(to_utf8(u"\u00e9") == "\xc3\xa9");
-    CHECK(to_utf8(u"\u20ac") == "\xe2\x82\xac");
-    CHECK(to_utf8(u"\U0001F600") == "\xf0\x9f\x98\x80");
-    CHECK(to_utf8(u"") == "");
-
-    SUBCASE("unpaired surrogates become U+FFFD")
-    {
-        CHECK(
-            to_utf8(std::u16string { u'a', char16_t(0xD800), u'b' })
-            == "a\xef\xbf\xbd"
-               "b");
-        CHECK(to_utf8(std::u16string { char16_t(0xDC00) }) == "\xef\xbf\xbd");
-        CHECK(to_utf8(std::u16string { char16_t(0xD800) }) == "\xef\xbf\xbd");
-    }
-}
 
 TEST_CASE("text items are read from txt symbols")
 {

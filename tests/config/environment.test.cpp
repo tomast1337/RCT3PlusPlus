@@ -7,7 +7,7 @@
 
 using namespace rct3::config;
 
-TEST_CASE("every variable is registered once, in id order, with the project prefix")
+TEST_CASE("every variable is registered once, in id order, ours with the project prefix")
 {
     const auto vars = env_vars();
     REQUIRE(vars.size() == kEnvVarCount);
@@ -15,7 +15,7 @@ TEST_CASE("every variable is registered once, in id order, with the project pref
     for (std::size_t i = 0; i < vars.size(); ++i)
     {
         CHECK(static_cast<std::size_t>(vars[i].var) == i);
-        CHECK(vars[i].name.starts_with("RCT3PP_"));
+        CHECK(vars[i].name.starts_with("RCT3PP_") != vars[i].standard);
         CHECK_FALSE(vars[i].description.empty());
         CHECK(names.insert(vars[i].name).second);
     }

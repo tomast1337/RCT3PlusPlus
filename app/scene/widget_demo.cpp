@@ -155,9 +155,9 @@ namespace rct3::scene
             return font.with_fallback(ui::font_from_baked(*baked, refs));
         }
 
-        float scale_for(const render::Device& device)
+        float scale_for(const render::Device& device, const WidgetDemo& demo)
         {
-            return ui::auto_scale(static_cast<float>(device.extent().height));
+            return ui::interface_scale(static_cast<float>(device.extent().height), demo.scale);
         }
 
     } // namespace
@@ -239,7 +239,7 @@ namespace rct3::scene
 
     bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, float elapsed)
     {
-        const float scale = scale_for(device);
+        const float scale = scale_for(device, demo);
         const render::Extent extent = device.extent();
         demo.desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
@@ -255,7 +255,7 @@ namespace rct3::scene
     void draw_widget_demo(render::Device& device, WidgetDemo& demo)
     {
         demo.list.clear();
-        demo.list.set_scale(scale_for(device));
+        demo.list.set_scale(scale_for(device, demo));
         ui::DrawContext context { demo.list, demo.skins, demo.fonts };
         demo.desktop.draw(context);
         ui::render_draw_list(device, demo.renderer, demo.list);

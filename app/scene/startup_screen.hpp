@@ -29,6 +29,7 @@ namespace rct3::scene
         std::optional<ui::NamedSkin> loading;
         ui::StartupSequence sequence { { } };
         ui::DrawList list;
+        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
     };
 
     /// Loads the banner logos and the loading screen from the install.

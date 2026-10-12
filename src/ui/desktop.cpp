@@ -57,6 +57,18 @@ namespace rct3::ui
             return inside && w.takes_pointer() ? const_cast<Widget*>(&w) : nullptr;
         }
 
+        Widget* deepest_tree(const Widget& w, Point p)
+        {
+            if (!w.visible || !contains(w.rect(), p))
+                return nullptr;
+            for (auto it = w.children().rbegin(); it != w.children().rend(); ++it)
+            {
+                if (Widget* found = deepest_tree(**it, p))
+                    return found;
+            }
+            return const_cast<Widget*>(&w);
+        }
+
         bool in_tree(const Widget& root, const Widget* target)
         {
             if (&root == target)
@@ -85,12 +97,12 @@ namespace rct3::ui
                 set_flags_tree(*c, under, held, focused);
         }
 
-        void update_tree(Widget& w)
+        void update_tree(Widget& w, const UpdateContext& context)
         {
-            w.update();
+            w.update(context);
             // By index: an update may add widgets here, e.g. a window opening another beside it.
             for (std::size_t i = 0; i < w.children().size(); ++i)
-                update_tree(*w.children()[i]);
+                update_tree(*w.children()[i], context);
         }
 
         // Detaches every closing widget below `w`.
@@ -139,7 +151,13 @@ namespace rct3::ui
         return hit_tree(*root_, p);
     }
 
-    bool Desktop::update(const PointerState& pointer, float elapsed)
+    Widget* Desktop::deepest(Point p) const
+    {
+        Widget* w = deepest_tree(*root_, p);
+        return w != nullptr ? w : root_.get();
+    }
+
+    bool Desktop::update(const PointerState& pointer, const UpdateContext& context)
     {
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
@@ -165,6 +183,16 @@ namespace rct3::ui
         }
         was_down_ = down;
 
+        // The wheel goes to the deepest widget under the pointer that wants it, then up through its parents.
+        if (pointer.present && pointer.wheel != 0 && held_ == nullptr)
+        {
+            for (Widget* w = deepest(pointer.position); w != nullptr; w = w->parent())
+            {
+                if (w->enabled && w->on_wheel(pointer.wheel))
+                    break;
+            }
+        }
+
         // Input may have moved or raised things: lay out and look again so the flags match what is drawn.
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
@@ -172,13 +200,13 @@ namespace rct3::ui
         for (std::size_t i = 0; i < tops.size(); ++i)
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size());
 
-        update_tree(*root_);
+        update_tree(*root_, context);
         sweep(*root_);
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
-        tooltip_.update(under, pointer.position, down, elapsed, tooltip_style);
+        tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
         return under != nullptr || held_ != nullptr;
     }
 

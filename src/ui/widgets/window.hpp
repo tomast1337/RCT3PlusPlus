@@ -60,7 +60,7 @@ namespace rct3::ui
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
-        void update() override;
+        void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
     private:

@@ -138,6 +138,9 @@ namespace rct3::render::vulkan
         }
         if (device_ != VK_NULL_HANDLE)
         {
+            // Garbage first: freeing a texture's descriptor set needs the pool still alive.
+            for (Frame& f : frames_)
+                release(f.garbage);
             for (auto& [id, b] : buffers_) // Includes the transient blocks
                 destroy(b);
             for (auto& [id, t] : textures_)
@@ -153,7 +156,6 @@ namespace rct3::render::vulkan
             vkDestroyCommandPool(device_, upload_pool_, nullptr);
             for (Frame& f : frames_)
             {
-                release(f.garbage);
                 vkDestroyFence(device_, f.in_flight, nullptr);
                 vkDestroySemaphore(device_, f.image_available, nullptr);
                 vkDestroyCommandPool(device_, f.pool, nullptr);

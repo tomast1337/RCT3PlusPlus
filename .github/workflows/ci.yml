@@ -51,3 +51,34 @@ jobs:
 
       - name: Test
         run: ./nob test ${{ matrix.test_flags }}
+
+  # Formatting and static analysis. The tool versions are pinned from PyPI so the result does not depend on
+  # what the base image ships: formatting differs between clang-format releases, so a floating version
+  # would make this job flaky.
+  lint:
+    name: format and tidy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: gcc:15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install clang-format and clang-tidy
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
+          pip install --break-system-packages clang-format==23.1.1 clang-tidy==22.1.8
+          clang-format --version
+          clang-tidy --version
+
+      - name: Bootstrap nob
+        run: g++ -std=c++26 -o nob nob.cpp
+
+      - name: Check formatting
+        run: ./nob format --check
+
+      - name: Static analysis
+        run: ./nob tidy

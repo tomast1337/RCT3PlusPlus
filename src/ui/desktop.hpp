@@ -7,8 +7,13 @@
 // The pointer is read as a state each frame (where it is, whether the button is down), not as a stream of
 // events. A widget that is pressed holds the pointer until release, so dragging works when the pointer
 // leaves it, and gets a click only when released over it.
+//
+// Keys go to the widget with the keyboard focus, then up through its parents until one uses them; without a
+// focused widget they start at the top-most window. Pressing gives the focus to the nearest widget under the
+// pointer that takes it, or takes it away when none does.
 #pragma once
 
+#include "ui/keyboard.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widget.hpp"
 
@@ -45,6 +50,19 @@ namespace rct3::ui
         /// tree out again. Returns whether the pointer is over the interface; when false it belongs to the 3D
         /// view. The context's time drives tooltips and anything else that waits.
         bool update(const PointerState& pointer, const UpdateContext& context = { });
+        /// The same, with the keys pressed since the last update, routed after the pointer.
+        bool update(const PointerState& pointer, const KeyboardState& keyboard, const UpdateContext& context = { });
+
+        /// The widget keys go to first; nothing when keys start at the top-most window.
+        [[nodiscard]] Widget* keyboard_focus() const
+        {
+            return focus_;
+        }
+        /// Gives `w` the keyboard focus, or takes it away with nullptr.
+        void set_keyboard_focus(Widget* w)
+        {
+            focus_ = w;
+        }
 
         /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
@@ -65,6 +83,7 @@ namespace rct3::ui
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
         Rect view_;
         Widget* held_ = nullptr;
+        Widget* focus_ = nullptr;
         bool was_down_ = false;
         Tooltip tooltip_;
     };

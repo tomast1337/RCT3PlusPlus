@@ -13,11 +13,12 @@ namespace rct3::ui
         {
             w.rect_ = r;
         }
-        static void set_flags(Widget& w, bool hovered, bool pressed, bool focused)
+        static void set_flags(Widget& w, bool hovered, bool pressed, bool focused, bool keyboard_focus)
         {
             w.hovered_ = hovered;
             w.pressed_ = pressed;
             w.focused_ = focused;
+            w.keyboard_focus_ = keyboard_focus;
         }
     };
 
@@ -89,12 +90,23 @@ namespace rct3::ui
             return w;
         }
 
-        void set_flags_tree(Widget& w, const Widget* under, const Widget* held, bool focused)
+        void set_flags_tree(Widget& w, const Widget* under, const Widget* held, bool focused, const Widget* focus)
         {
             const bool hovered = &w == under && (held == nullptr || held == &w);
-            DesktopAccess::set_flags(w, hovered, &w == held && held == under, focused);
+            DesktopAccess::set_flags(w, hovered, &w == held && held == under, focused, &w == focus);
             for (const auto& c : w.children())
-                set_flags_tree(*c, under, held, focused);
+                set_flags_tree(*c, under, held, focused, focus);
+        }
+
+        // Whether `w` and everything above it are shown and take input.
+        bool usable(const Widget& w)
+        {
+            for (const Widget* p = &w; p != nullptr; p = p->parent())
+            {
+                if (!p->visible || !p->enabled)
+                    return false;
+            }
+            return true;
         }
 
         void update_tree(Widget& w, const UpdateContext& context)
@@ -159,8 +171,15 @@ namespace rct3::ui
 
     bool Desktop::update(const PointerState& pointer, const UpdateContext& context)
     {
+        return update(pointer, KeyboardState { }, context);
+    }
+
+    bool Desktop::update(const PointerState& pointer, const KeyboardState& keyboard, const UpdateContext& context)
+    {
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
+        if (focus_ != nullptr && !in_tree(*root_, focus_))
+            focus_ = nullptr;
 
         Widget* under = pointer.present ? hit(pointer.position) : nullptr;
         const bool down = pointer.present && pointer.down;
@@ -169,6 +188,12 @@ namespace rct3::ui
             held_ = under;
             if (Widget* window = top_level(*root_, under))
                 root_->raise(*window);
+            focus_ = nullptr;
+            for (Widget* w = deepest(pointer.position); w != nullptr && focus_ == nullptr; w = w->parent())
+            {
+                if (w->takes_focus() && usable(*w))
+                    focus_ = w;
+            }
             held_->on_press(pointer.position);
         }
         else if (down && held_ != nullptr)
@@ -193,17 +218,32 @@ namespace rct3::ui
             }
         }
 
+        // Keys after the pointer, so a press that moves the focus counts for keys in the same frame.
+        if (focus_ != nullptr && !usable(*focus_))
+            focus_ = nullptr;
+        for (const KeyPress& key : keyboard.presses)
+        {
+            Widget* start = focus_ != nullptr ? focus_ : (root_->children().empty() ? nullptr : root_->children().back().get());
+            for (Widget* w = start; w != nullptr; w = w->parent())
+            {
+                if (w->enabled && w->on_key(key))
+                    break;
+            }
+        }
+
         // Input may have moved or raised things: lay out and look again so the flags match what is drawn.
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
         const auto& tops = root_->children();
         for (std::size_t i = 0; i < tops.size(); ++i)
-            set_flags_tree(*tops[i], under, held_, i + 1 == tops.size());
+            set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
 
         update_tree(*root_, context);
         sweep(*root_);
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
+        if (focus_ != nullptr && !in_tree(*root_, focus_))
+            focus_ = nullptr;
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);

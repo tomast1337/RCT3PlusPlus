@@ -65,6 +65,42 @@ namespace rct3::ui
         return horizontal_->on_wheel(sideways);
     }
 
+    bool ScrollArea::on_key(const KeyPress& key)
+    {
+        ScrollBar* along = vertical_ != nullptr ? vertical_ : horizontal_;
+        if (key.key == Key::Left || key.key == Key::Right)
+            along = horizontal_;
+        if (along == nullptr || along->range() <= 0)
+            return false;
+        const float step = along->style().step;
+        const float page = std::max(step, along->visible - step);
+        switch (key.key)
+        {
+            case Key::Up:
+            case Key::Left:
+                along->scroll_by(-step);
+                return true;
+            case Key::Down:
+            case Key::Right:
+                along->scroll_by(step);
+                return true;
+            case Key::PageUp:
+                along->scroll_by(-page);
+                return true;
+            case Key::PageDown:
+                along->scroll_by(page);
+                return true;
+            case Key::Home:
+                along->scroll_by(-along->range());
+                return true;
+            case Key::End:
+                along->scroll_by(along->range());
+                return true;
+            default:
+                return false;
+        }
+    }
+
     void ScrollArea::update(const UpdateContext&)
     {
         // Measured as laid out last time; the new position applies at the next layout.

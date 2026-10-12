@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/widget_demo.hpp"
 
+#include "logging/log.hpp"
+#include "ui/fallback_font.hpp"
 #include "ui/font_images.hpp"
 #include "ui/game_style.hpp"
 #include "ui/scale.hpp"
 #include "ui/skin_set.hpp"
+#include "ui/truetype_font.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/panel.hpp"
@@ -37,6 +40,9 @@ namespace rct3::scene
         constexpr std::array<std::string_view, 3> kTextButtonKeys = { "SMB_Label_OK", "SMB_Label_Cancel", "SMB_Label_Help" };
         constexpr float kTextButtonWidth = 70;
         constexpr float kTextButtonHeight = 26;
+        // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
+        // arrows and a few signs.
+        constexpr std::u16string_view kFallbackSample = u"\n\n\u0393\u03B5\u03B9\u03AC \u03C3\u03BF\u03C5 \u03BA\u03CC\u03C3\u03BC\u03B5 \u00B7 \u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440 \u00B7 \u2190 \u2191 \u2192 \u2193 \u00B7 \u00BD \u00BE \u2122 \u25A0";
 
         class DemoWindow : public ui::Window
         {
@@ -52,7 +58,7 @@ namespace rct3::scene
                 // The text area stretches with the window; the rows below it stay on the bottom edge.
                 auto& list = body.add<ui::Panel>("list", std::string(skins::kListBox));
                 list.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -104 } };
-                auto& help = list.add<ui::Label>("help", std::u16string(strings.get(kHelpKey)), ui::FontRole::Small);
+                auto& help = list.add<ui::Label>("help", std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample), ui::FontRole::Small);
                 help.placement = ui::fill(6);
                 help.style.wrap = true;
                 list.clip_children = true;
@@ -113,6 +119,30 @@ namespace rct3::scene
             ui::Button* text_cancel_ = nullptr;
         };
 
+        // Renders the fallback at the size that matches `font`, uploads its pages and merges it in. On failure
+        // the font is returned as it was.
+        std::expected<ui::Font, std::string> with_fallback(render::Device& device, WidgetDemo& demo, const ui::Font& font, const std::string& name, const ui::TrueTypeFile& fallback)
+        {
+            const float em = ui::fallback_em_pixels(ui::cap_height(font), fallback.cap_per_em, ui::kUnifontGrid);
+            auto baked = ui::bake_truetype(fallback, em, ui::kFallbackRanges, { .hard_edges = true });
+            if (!baked)
+                return std::unexpected(baked.error());
+            std::map<std::string, ovl::RgbaImage, std::less<>> images;
+            for (std::size_t i = 0; i < baked->pages.size(); ++i)
+                images.emplace(name + "#fallback" + std::to_string(i), std::move(baked->pages[i]));
+            auto pages = ui::upload_textures(device, images);
+            if (!pages)
+                return std::unexpected(pages.error());
+            std::vector<ui::Font::Page> refs;
+            for (std::size_t i = 0; i < images.size(); ++i)
+            {
+                const ui::UiTexture& t = pages->at(name + "#fallback" + std::to_string(i));
+                refs.push_back({ ui::texture_id(t.handle), t.width, t.height });
+            }
+            demo.textures.merge(*pages);
+            return font.with_fallback(ui::font_from_baked(*baked, refs));
+        }
+
         float scale_for(const render::Device& device)
         {
             return ui::auto_scale(static_cast<float>(device.extent().height));
@@ -120,8 +150,9 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install)
+    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::filesystem::path& fallback_font)
     {
+        const auto log = logging::logger("ui");
         const auto main_ovl = install.find("Main.common.ovl");
         if (!main_ovl)
             return std::unexpected("Main.common.ovl not found");
@@ -131,6 +162,10 @@ namespace rct3::scene
         auto fonts = ui::load_font_images(*main_ovl);
         if (!fonts)
             return std::unexpected("fonts: " + fonts.error());
+
+        const auto fallback = ui::load_truetype(fallback_font);
+        if (!fallback)
+            log.warning("fallback font {}: {}; characters the game fonts lack will not show (run ./nob fetch)", fallback_font.string(), fallback.error());
 
         WidgetDemo demo;
         auto renderer = ui::create_ui_renderer(device);
@@ -169,7 +204,15 @@ namespace rct3::scene
                 refs.push_back({ ui::texture_id(t.handle), t.width, t.height });
             }
             demo.textures.merge(*pages);
-            demo.fonts.set(role->first, ui::Font::from(f.font, refs));
+            ui::Font font = ui::Font::from(f.font, refs);
+            if (fallback)
+            {
+                if (auto merged = with_fallback(device, demo, font, f.name, *fallback))
+                    font = std::move(*merged);
+                else
+                    log.warning("fallback font for {}: {}", f.name, merged.error());
+            }
+            demo.fonts.set(role->first, std::move(font));
         }
 
         if (const auto english = install.find("gui/English.common.ovl"))

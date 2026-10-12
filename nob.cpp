@@ -7,6 +7,7 @@
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
+//   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
@@ -258,6 +259,14 @@ namespace
         return compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database);
     }
 
+    // Vendored code every target links: the stb_truetype implementation unit, built without our warnings.
+    bool compile_vendored_core(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
+    {
+        Config vendored = cfg;
+        vendored.compile_flags.push_back("-w");
+        return compile(vendored, { "third_party/stb/stb_truetype_impl.cpp" }, headers, objects, database);
+    }
+
     Config with_audio_link(Config cfg)
     {
         cfg.link_flags.insert(cfg.link_flags.end(), { "-ldl", "-lpthread", "-lm" });
@@ -275,6 +284,8 @@ namespace
 
         std::vector<fs::path> lib_objects;
         if (!compile(cfg, core_sources(), headers, lib_objects, database))
+            return false;
+        if (!compile_vendored_core(cfg, headers, lib_objects, database))
             return false;
 
         std::vector<fs::path> audio_objects;
@@ -355,6 +366,8 @@ namespace
             app_headers.push_back(inc);
         if (!compile(app, lib_sources, app_headers, objects, ignored))
             return false;
+        if (!compile_vendored_core(cfg, headers, objects, ignored))
+            return false;
         if (!compile(app, find_files("app", ".cpp"), app_headers, objects, ignored))
             return false;
 
@@ -375,6 +388,8 @@ namespace
 
         std::vector<fs::path> lib_objects;
         if (!compile(cfg, core_sources(), headers, lib_objects, database))
+            return false;
+        if (!compile_vendored_core(cfg, headers, lib_objects, database))
             return false;
 
         for (const auto& source : find_files("fuzz", ".cpp"))
@@ -456,6 +471,64 @@ namespace
         return ok;
     }
 
+    // Optional assets the project does not track: too big for the repository, or under their own licence.
+    // Each is pinned to a release and checked against its SHA-256 after download.
+    struct Download
+    {
+        std::string_view url;
+        std::string_view sha256;
+        std::string_view file; ///< Under kDownloadDir
+    };
+
+    const fs::path kDownloadDir = "downloads";
+
+    constexpr std::array kDownloads = {
+        // GNU Unifont, the fallback for characters the game fonts lack. SIL OFL 1.1, or GPL-2.0-or-later with
+        // the font embedding exception.
+        Download { "https://unifoundry.com/pub/unifont/unifont-15.0.06/font-builds/unifont-15.0.06.ttf", "9282b6eff54eeca2e7f58c9a40a91049bd219f3e6a45fbee8eba013379b9af3a", "unifont-15.0.06.ttf" },
+    };
+
+    // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
+    bool run_fetch()
+    {
+        if (!mkdir_p(kDownloadDir))
+            return false;
+        for (const Download& d : kDownloads)
+        {
+            const fs::path target = kDownloadDir / d.file;
+            if (fs::exists(target))
+            {
+                log(Level::Info, "{} is already there", target.string());
+                continue;
+            }
+            const fs::path partial = target.string() + ".part";
+            Cmd get;
+            get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
+            if (!run(get))
+                return false;
+            const fs::path sums = kDownloadDir / "sha256.txt";
+            {
+                std::ofstream out(sums);
+                out << d.sha256 << "  " << partial.string() << "\n";
+            }
+            Cmd check;
+            check << "sha256sum" << "--check" << "--quiet" << sums.string();
+            const bool ok = run(check);
+            std::error_code ec;
+            fs::remove(sums, ec);
+            if (!ok)
+            {
+                log(Level::Error, "{} does not match its checksum", d.url);
+                fs::remove(partial, ec);
+                return false;
+            }
+            fs::rename(partial, target, ec);
+            if (ec)
+                return false;
+        }
+        return true;
+    }
+
     // Runs one fuzz target for `seconds`. New inputs land in the git-ignored local/ directory, crashes too.
     bool run_fuzz(const fs::path& binary, int seconds)
     {
@@ -506,7 +579,7 @@ int main(int argc, char** argv)
             for (++i; i < argc; ++i)
                 test_args.emplace_back(argv[i]);
         }
-        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy")
+        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy" || arg == "fetch")
             command = arg;
         else if (arg == "--check")
             check = true;
@@ -516,7 +589,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean] [--release] [--sanitize] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch",
                 arg);
             return 2;
         }
@@ -531,6 +604,9 @@ int main(int argc, char** argv)
 
     if (command == "format")
         return run_format(check) ? 0 : 1;
+
+    if (command == "fetch")
+        return run_fetch() ? 0 : 1;
 
     if (command == "fuzz")
     {

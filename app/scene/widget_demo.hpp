@@ -17,6 +17,7 @@
 #include "ui/ui_textures.hpp"
 
 #include <expected>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -35,9 +36,13 @@ namespace rct3::scene
         ui::DrawList list;
     };
 
+    /// Where `./nob fetch` puts the fallback font, from the repository root.
+    inline const std::filesystem::path kDefaultFallbackFont = "downloads/unifont-15.0.06.ttf";
+
     /// Loads skins and fonts from the install's main overlay and English strings, uploads the images and
-    /// opens the first window. Missing strings leave the text empty.
-    [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install);
+    /// opens the first window. Missing strings leave the text empty. Each game font gets `fallback_font`
+    /// for the characters it lacks; without that file the game fonts are used alone.
+    [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::filesystem::path& fallback_font);
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels. Returns whether
     /// the interface has the pointer. `elapsed` is the frame time in seconds.

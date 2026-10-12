@@ -4,6 +4,7 @@
 //
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
+//   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
 // Prints the section table, header words, the class table summary and per-class object counts.
 // --values CLASS and --object ID print decoded attribute values of the matching objects. --check decodes
@@ -23,6 +24,7 @@
 
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
+#include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -465,10 +467,12 @@ int main(int argc, char** argv) {
   const char* value_class = nullptr;
   const char* object_id = nullptr;
   const char* path = nullptr;
+  bool rides = false;  // --rides
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--classes") == 0) classes = true;
     else if (std::strcmp(argv[i], "--objects") == 0) objects = true;
     else if (std::strcmp(argv[i], "--check") == 0) check = true;
+    else if (std::strcmp(argv[i], "--rides") == 0) rides = true;
     else if (std::strcmp(argv[i], "--values") == 0 && i + 1 < argc) value_class = argv[++i];
     else if (std::strcmp(argv[i], "--object") == 0 && i + 1 < argc) object_id = argv[++i];
     else if (std::strcmp(argv[i], "--world") == 0) world = true;  // world report option
@@ -588,5 +592,60 @@ int main(int argc, char** argv) {
                 refs.resolved, refs.total - refs.null - refs.resolved);
     if (failed || total.fallbacks) ok = false;
   }
+  // --- rides: begin ---------------------------------------------------------------------------------
+  // --rides: load the ride model and print one summary line plus validation counters.
+  if (rides) {
+    const rct3::save::ObjectIndex index(*file);
+    const auto model = rct3::save::load_rides(*file, index);
+    if (!model) {
+      std::printf("rides          error: %s\n", rct3::save::to_string(model.error()));
+      return 1;
+    }
+    std::size_t tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
+    std::size_t trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
+    for (const auto& r : model->rides) {
+      tracked += r.kind == rct3::save::RideKind::Tracked;
+      flat += r.kind == rct3::save::RideKind::Flat;
+      special += r.kind == rct3::save::RideKind::Special;
+      stations += r.stations.size();
+      trains += r.trains.size();
+      for (const auto& t : r.trains) cars += t.cars.size();
+      if (r.track) {
+        ++tracks;
+        circuits += r.track->circuit;
+        pieces += r.track->pieces.size();
+        segments += r.track->segments.size();
+      }
+    }
+    for (const auto& s : model->stalls) {
+      items += s.items.size();
+      extras += s.extras.size();
+    }
+    std::printf("rides          tracked %zu flat %zu special %zu stalls %zu\n", tracked, flat, special,
+                model->stalls.size());
+    std::printf("tracks         %zu circuit %zu open %zu segments %zu pieces %zu orphan_pieces %zu\n", tracks,
+                circuits, tracks - circuits, segments, pieces, model->orphan_pieces);
+    std::printf("trains         %zu cars %zu stations %zu shop_items %zu shop_extras %zu\n", trains, cars,
+                stations, items, extras);
+    const auto& g = model->diagnostics;
+    std::printf(
+        "invariants     track_back %zu unresolved_tracks %zu truncated %zu segment_pieces %zu piece_segment %zu "
+        "platform_back %zu open_live_ends %zu train_back %zu train_index %zu car_back %zu car_index %zu "
+        "car_count %zu unresolved_trains %zu unresolved_cars %zu dup_refs %zu queue_size %zu item_back %zu "
+        "unresolved_items %zu\n",
+        g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch,
+        g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link,
+        g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch,
+        g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch,
+        g.item_back_link_mismatch, g.unresolved_items);
+    for (const auto& r : model->rides) {
+      std::printf("  ride %-10llu kind %u state %d mode %d ticket %lld stations %zu trains %zu pieces %zu%s\n",
+                  static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind),
+                  static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price),
+                  r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0,
+                  r.track ? (r.track->circuit ? " circuit" : " open") : "");
+    }
+  }
+  // --- rides: end -----------------------------------------------------------------------------------
   return ok ? 0 : 1;
 }

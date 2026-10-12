@@ -9,6 +9,7 @@
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/world.hpp"
+#include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -100,5 +101,17 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     __builtin_trap();
   if (world->objects.size() + world->paths.size() > file->objects.size()) __builtin_trap();
   // ---- world model fuzz block end ----
+  // --- rides: begin ---
+  // The ride loader must accept anything that decodes, with every walk bounded by the input.
+  {
+    const auto model = rct3::save::load_rides(*file, index);
+    if (!model) __builtin_trap();
+    std::size_t pieces = 0;
+    for (const auto& r : model->rides) {
+      if (r.track) pieces += r.track->pieces.size();
+    }
+    if (pieces > file->objects.size()) __builtin_trap();
+  }
+  // --- rides: end ---
   return 0;
 }

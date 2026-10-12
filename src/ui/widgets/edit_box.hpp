@@ -15,6 +15,9 @@
 // The caret blinks, half a second on and half off, and shows again at once after each change. Text wider
 // than the box scrolls sideways to keep the caret in view.
 //
+// Text an input method is composing shows at the caret on a tinted, underlined patch, with the caret at the
+// input method's cursor; it becomes part of `text` only when it arrives typed.
+//
 // Positions are UTF-16 indices into `text`, always at character boundaries. The owner may change `text`;
 // the caret and selection are kept inside it.
 #pragma once
@@ -42,10 +45,11 @@ namespace rct3::ui
         Color disabled_text_colour { 127, 127, 127, 255 };
         Color caret_colour { 0, 0, 0, 255 };
         Color selection_colour { 0, 127, 255, 80 };
-        Rect padding { 3, 2, 3, 2 }; ///< Between the edges and the text
-        std::size_t max_length = 0;  ///< In characters; 0 for no limit
-        std::u16string allowed;      ///< Characters that may be typed; any printable one when empty
-        bool upper_case = false;     ///< Typed letters a to z become capitals
+        Color composition_colour { 0, 127, 255, 51 }; ///< Behind text being composed
+        Rect padding { 3, 2, 3, 2 };                  ///< Between the edges and the text
+        std::size_t max_length = 0;                   ///< In characters; 0 for no limit
+        std::u16string allowed;                       ///< Characters that may be typed; any printable one when empty
+        bool upper_case = false;                      ///< Typed letters a to z become capitals
 
         [[nodiscard]] std::size_t caret() const
         {
@@ -80,6 +84,11 @@ namespace rct3::ui
         void on_press(Point p) override;
         void on_drag(Point p) override;
         bool on_key(const KeyPress& key) override;
+        void on_composition(const Composition& composition) override;
+        [[nodiscard]] const Composition& composition() const
+        {
+            return composition_;
+        }
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
@@ -105,6 +114,7 @@ namespace rct3::ui
         int commits_ = 0;
         int changes_ = 0;
         std::optional<std::u16string> copied_;
+        Composition composition_; // Cleared when the focus goes
     };
 
 } // namespace rct3::ui

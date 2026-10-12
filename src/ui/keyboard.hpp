@@ -6,8 +6,14 @@
 //
 // The clipboard keys arrive as their own presses, whatever keys made them, and a paste carries the
 // clipboard's text with it. Text copied the other way comes out of Desktop::take_clipboard().
+//
+// An input method, as used to type Chinese or Japanese, composes text over several key presses before the
+// user confirms it. What it is composing is part of the state (KeyboardState::composition) and is shown at
+// the caret of the focused widget; once confirmed, it arrives as typed Character presses like any other
+// text. The platform fills the composition when its window system reports one.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -47,9 +53,19 @@ namespace rct3::ui
         std::u16string text { }; ///< For Paste
     };
 
+    /// Text an input method is composing, not yet typed.
+    struct Composition
+    {
+        std::u16string text { }; ///< Empty when nothing is being composed
+        std::size_t caret = 0;   ///< Where in `text` the input method's cursor is, in UTF-16 units
+
+        friend bool operator==(const Composition&, const Composition&) = default;
+    };
+
     struct KeyboardState
     {
         std::vector<KeyPress> presses; ///< Since the last update, oldest first
+        Composition composition;       ///< As it stands now
     };
 
 } // namespace rct3::ui

@@ -284,3 +284,50 @@ TEST_CASE("the desktop collects what a focused widget copied")
     CHECK(desktop.take_clipboard() == u"coaster");
     CHECK_FALSE(desktop.take_clipboard());
 }
+
+TEST_CASE("text being composed shows at the caret without being typed")
+{
+    FontSet fonts;
+    fonts.set(FontRole::Small, test_font());
+    Desktop desktop;
+    EditBox& box = desktop.root().add<EditBox>("box", u"ab");
+    box.placement = top_left(0, 0, 200, 24);
+    desktop.layout({ 0, 0, 300, 100 });
+    const UpdateContext context { 0, &fonts };
+    desktop.set_keyboard_focus(&box);
+
+    KeyboardState keys;
+    keys.composition = { u"xyz", 1 };
+    desktop.update({ }, keys, context);
+    CHECK(box.composition().text == u"xyz");
+    CHECK(box.text == u"ab");
+
+    DrawList list;
+    const SkinLibrary skins;
+    DrawContext draw { list, skins, fonts };
+    box.draw(draw);
+    const auto v = list.vertices();
+    // First the tinted patch over the three composed characters, after "ab".
+    REQUIRE(v.size() >= 8);
+    CHECK(v[0].color[3] == box.composition_colour.a);
+    const float patch_x0 = v[0].x;
+    CHECK(v[1].x - patch_x0 == doctest::Approx(30));
+    // The caret sits at the input method's cursor, after "x".
+    const float caret_x = (v[v.size() - 4].x + v[v.size() - 2].x) / 2;
+    CHECK(caret_x - patch_x0 == doctest::Approx(10));
+
+    SUBCASE("confirmed text arrives typed")
+    {
+        keys.composition = { };
+        keys.presses = { { Key::Character, false, false, U'x' } };
+        desktop.update({ }, keys, context);
+        CHECK(box.text == u"abx");
+        CHECK(box.composition().text.empty());
+    }
+    SUBCASE("it goes when the focus does")
+    {
+        desktop.set_keyboard_focus(nullptr);
+        desktop.update({ }, context);
+        CHECK(box.composition().text.empty());
+    }
+}

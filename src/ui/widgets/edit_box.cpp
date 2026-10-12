@@ -307,8 +307,18 @@ namespace rct3::ui
         return { r.x0 + padding.x0, r.y0 + padding.y0, r.x1 - padding.x1, r.y1 - padding.y1 };
     }
 
+    void EditBox::on_composition(const Composition& composition)
+    {
+        if (composition != composition_)
+            blink_time_ = 0;
+        composition_ = composition;
+        composition_.caret = boundary(composition_.text, std::min(composition_.caret, composition_.text.size()));
+    }
+
     void EditBox::update(const UpdateContext& context)
     {
+        if (!has_keyboard_focus())
+            composition_ = { };
         blink_time_ = std::fmod(blink_time_ + context.elapsed, kBlinkPeriod);
         caret_ = boundary(text, caret_);
         anchor_ = boundary(text, anchor_);
@@ -323,7 +333,7 @@ namespace rct3::ui
         }
 
         // Keep the caret in view, and no empty room on the right while the text is wider than the box.
-        const float caret_x = text_width(*f, std::u16string_view(text).substr(0, caret_));
+        const float caret_x = text_width(*f, std::u16string_view(text).substr(0, caret_)) + text_width(*f, std::u16string_view(composition_.text).substr(0, composition_.caret));
         const float room = std::max(0.0f, box.width() - 2 * kCaretHalfWidth);
         scroll_ = std::clamp(scroll_, caret_x - room, caret_x);
         scroll_ = std::clamp(scroll_, 0.0f, std::max(0.0f, text_width(*f, text) - room));
@@ -340,17 +350,30 @@ namespace rct3::ui
         const Rect box = text_box();
         if (context.list.push_clip(box))
         {
+            // Text being composed is shown in place at the caret, as if typed.
+            const bool composing = !composition_.text.empty();
+            const std::u16string shown = composing ? text.substr(0, caret_) + composition_.text + text.substr(caret_) : text;
             const float top = std::round(box.y0 + (box.height() - f->line_height()) / 2);
+            const float bottom = top + f->line_height();
             const float origin = box.x0 + kCaretHalfWidth - scroll_;
-            const auto x_of = [&](std::size_t at) { return std::round(origin + text_width(*f, std::u16string_view(text).substr(0, at))); };
-            if (has_selection())
-                context.list.fill({ x_of(std::min(caret_, anchor_)), top, x_of(std::max(caret_, anchor_)), top + f->line_height() }, selection_colour);
-            const Rect line { origin, top, origin + text_width(*f, text) + 1, top + f->line_height() };
-            draw_text(context.list, *f, text, line, { enabled ? text_colour : disabled_text_colour, Align::Start, Align::Start, false });
+            const auto x_of = [&](std::size_t at) { return std::round(origin + text_width(*f, std::u16string_view(shown).substr(0, at))); };
+            if (composing)
+            {
+                const float x0 = x_of(caret_);
+                const float x1 = x_of(caret_ + composition_.text.size());
+                context.list.fill({ x0, top, x1, bottom }, composition_colour);
+                context.list.fill({ x0, bottom - 1, x1, bottom }, text_colour);
+            }
+            else if (has_selection())
+            {
+                context.list.fill({ x_of(std::min(caret_, anchor_)), top, x_of(std::max(caret_, anchor_)), bottom }, selection_colour);
+            }
+            const Rect line { origin, top, origin + text_width(*f, shown) + 1, bottom };
+            draw_text(context.list, *f, shown, line, { enabled ? text_colour : disabled_text_colour, Align::Start, Align::Start, false });
             if (has_keyboard_focus() && blink_time_ < kBlinkPeriod / 2)
             {
-                const float x = x_of(caret_);
-                context.list.fill({ x - kCaretHalfWidth, top, x + kCaretHalfWidth, top + f->line_height() }, caret_colour);
+                const float x = x_of(caret_ + composition_.caret);
+                context.list.fill({ x - kCaretHalfWidth, top, x + kCaretHalfWidth, bottom }, caret_colour);
             }
         }
         context.list.pop_clip();

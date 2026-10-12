@@ -114,3 +114,30 @@ TEST_CASE("pressing a window behind raises it")
     CHECK(a.focused());
     CHECK_FALSE(b.focused());
 }
+
+TEST_CASE("the title is drawn in the title font, clipped to the title box")
+{
+    rct3::ovl::Font f;
+    f.metrics = { 0.1f, 1.0f, 0.2f };
+    f.has_code_table = true;
+    f.glyphs.push_back({ u'x', 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });
+    const std::array<Font::Page, 1> pages = { { { 9, 100, 100 } } };
+    FontSet fonts;
+    fonts.set(style().title_font, Font::from(f, pages));
+
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", style(), 200, 100);
+    w.title = u"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // Longer than the box
+    desktop.layout(kView);
+
+    DrawList list;
+    const SkinLibrary skins;
+    DrawContext context { list, skins, fonts };
+    desktop.draw(context);
+    REQUIRE(list.batches().size() == 1);
+    CHECK(list.batches()[0].texture == 9);
+    const float right = w.rect().x1 - style().title_box.x1;
+    for (const Vertex& v : list.vertices())
+        CHECK(v.x <= right);
+    CHECK(list.clip() == nullptr);
+}

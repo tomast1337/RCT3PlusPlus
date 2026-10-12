@@ -90,7 +90,8 @@ TEST_CASE("buttons draw the family member for their state, then the icon")
     skins.add("BtnUpOver", skin(2));
     skins.add("Icon", skin(7));
     DrawList list;
-    DrawContext context { list, skins };
+    const FontSet fonts;
+    DrawContext context { list, skins, fonts };
 
     f.desktop.update(at(5, 5));
     f.desktop.draw(context);

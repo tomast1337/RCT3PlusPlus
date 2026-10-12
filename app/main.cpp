@@ -264,13 +264,7 @@ int main(int argc, char** argv)
         }
     }
     const auto load_widgets = [&] {
-        const auto main_ovl = install->find("Main.common.ovl");
-        if (!main_ovl)
-        {
-            log.warning("skins: Main.common.ovl not found");
-            return;
-        }
-        auto loaded = rct3::scene::create_widget_demo(*device, *main_ovl);
+        auto loaded = rct3::scene::create_widget_demo(*device, *install);
         if (loaded)
             widgets = std::move(*loaded);
         else

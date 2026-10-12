@@ -14,6 +14,8 @@
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 #include "ovl/carried_item.hpp"
+#include "ovl/research_category.hpp"
+#include "ovl/terrain_type.hpp"
 #include "ovl/scenery_item.hpp"
 // --- end scenery and placement item types ---
 #include "ovl/bone_anim.hpp"
@@ -503,6 +505,8 @@ struct SceneryOptions {
   bool sid = false;
   bool cid = false;
   bool ced = false;
+  bool rcg = false;
+  bool ter = false;
 };
 SceneryOptions g_scenery;
 
@@ -511,6 +515,8 @@ bool parse_scenery_option(const char* arg) {
   if (std::strcmp(arg, "--sid") == 0) g_scenery.sid = true;
   else if (std::strcmp(arg, "--cid") == 0) g_scenery.cid = true;
   else if (std::strcmp(arg, "--ced") == 0) g_scenery.ced = true;
+  else if (std::strcmp(arg, "--rcg") == 0) g_scenery.rcg = true;
+  else if (std::strcmp(arg, "--ter") == 0) g_scenery.ter = true;
   else return false;
   return true;
 }
@@ -550,8 +556,45 @@ void print_carried_items(const char* title, const rct3::ovl::Overlay& overlay, c
   }
 }
 
+void print_research_and_terrain(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
+  if (g_scenery.rcg) {
+    const auto categories = rct3::ovl::read_research_categories(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : categories) bad += entry.category ? 0 : 1;
+    std::printf("research categories (%s) %zu (%zu unreadable)\n", title, categories.size(), bad);
+    for (const auto& entry : categories) {
+      const std::string name(entry.name);
+      if (!entry.category) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& c = *entry.category;
+      const std::string text(c.name_text);
+      std::printf("  %-28s kind %u prerequisites %zu text %s\n", name.c_str(), c.kind, c.prerequisites.size(),
+                  text.c_str());
+    }
+  }
+  if (g_scenery.ter) {
+    const auto types = rct3::ovl::read_terrain_types(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& entry : types) bad += entry.terrain ? 0 : 1;
+    std::printf("terrain types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+    for (const auto& entry : types) {
+      const std::string name(entry.name);
+      if (!entry.terrain) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const std::string texture(entry.terrain->texture), label(entry.terrain->label_name);
+      std::printf("  %-28s index %u texture %s label %s\n", name.c_str(), entry.terrain->index, texture.c_str(),
+                  label.c_str());
+    }
+  }
+}
+
 void print_scenery_types(const char* title, const rct3::ovl::Overlay& overlay, const Part& part) {
   print_carried_items(title, overlay, part);
+  print_research_and_terrain(title, overlay, part);
   if (g_scenery.sid) {
     const auto items = rct3::ovl::read_scenery_items(overlay, part);
     std::size_t bad = 0;
@@ -614,7 +657,7 @@ int main(int argc, char** argv) {
   }
   if (!path) {
     std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] PATH\n", argv[0]);
-    std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced]\n");
+    std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter]\n");
     return 2;
   }
 

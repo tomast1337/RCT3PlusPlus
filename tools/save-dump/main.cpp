@@ -2,6 +2,7 @@
 //
 // save-dump: print the container structure of a park or scenario save file.
 //
+//   save-dump --people PATH...   (people and animals model: counts and validation summary)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //
 // Prints the section table, header words, the class table summary and per-class object counts.
@@ -16,10 +17,12 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "save/model/park.hpp"
+#include "save/model/people.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -164,6 +167,72 @@ int main(int argc, char** argv) {
     return bad ? 1 : 0;
   }
   // END park
+  // --- people sweep: save-dump --people PATH... (begin) ---
+  if (argc > 1 && std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--people") == 0; })) {
+    using namespace rct3::save;
+    PeopleModel total;
+    std::map<std::string, std::size_t> issue_counts;
+    std::map<std::string, std::size_t> kinds;
+    std::size_t files = 0, failed = 0, shown = 0;
+    for (int i = 1; i < argc; ++i) {
+      if (std::strncmp(argv[i], "--", 2) == 0) continue;
+      std::ifstream in(argv[i], std::ios::binary);
+      const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+      const auto file = read_save(std::as_bytes(std::span(raw)), {.verify_checksum = false});
+      if (!file) {
+        std::printf("%s: container error %s\n", argv[i], to_string(file.error()));
+        ++failed;
+        continue;
+      }
+      const ObjectIndex index(*file);
+      auto model = load_people(*file, index);
+      if (!model) {
+        std::printf("%s: people load error %s\n", argv[i], to_string(model.error()));
+        ++failed;
+        continue;
+      }
+      ++files;
+      const auto issues = validate(*model);
+      for (const auto& is : issues) ++issue_counts[to_string(is.kind)];
+      std::printf("%-40s guests %5zu staff %3zu animals %5zu zoo %3zu groups %5zu holders %5zu carried %4zu shop %4zu"
+                  " litter %5zu issues %zu\n",
+                  std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), model->guests.size(),
+                  model->staff.size(), model->animals.size(), model->zoo_animals.size(), model->groups.size(),
+                  model->holders.size(), model->carried_items.size(), model->shop_items.size(), model->litter.size(),
+                  issues.size());
+      for (const auto& s : model->staff) ++kinds[to_string(s.kind)];
+      for (const auto& a : model->animals) ++kinds[to_string(a.kind)];
+      if (shown < 2 && !model->guests.empty()) {
+        const auto& g = model->guests.front();
+        std::printf("  e.g. guest %llu %s at (%.1f %.1f %.1f) state %d/%d cash %d food %.2f happy %.2f group %llu\n",
+                    static_cast<unsigned long long>(g.person.id), to_string(g.person.type),
+                    static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y),
+                    static_cast<double>(g.person.position.z), static_cast<int>(g.person.state), g.person.sub_state,
+                    g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness),
+                    static_cast<unsigned long long>(g.group.id));
+        ++shown;
+      }
+      const auto add = [](auto& dst, auto& src) { std::move(src.begin(), src.end(), std::back_inserter(dst)); };
+      add(total.guests, model->guests);
+      add(total.staff, model->staff);
+      add(total.animals, model->animals);
+      add(total.zoo_animals, model->zoo_animals);
+      add(total.groups, model->groups);
+      add(total.holders, model->holders);
+      add(total.carried_items, model->carried_items);
+      add(total.shop_items, model->shop_items);
+      add(total.litter, model->litter);
+    }
+    std::printf("TOTAL files %zu failed %zu guests %zu staff %zu animals %zu zoo %zu groups %zu holders %zu carried %zu"
+                " shop %zu litter %zu\n",
+                files, failed, total.guests.size(), total.staff.size(), total.animals.size(), total.zoo_animals.size(),
+                total.groups.size(), total.holders.size(), total.carried_items.size(), total.shop_items.size(),
+                total.litter.size());
+    for (const auto& [k, n] : kinds) std::printf("  kind %-16s %zu\n", k.c_str(), n);
+    for (const auto& [k, n] : issue_counts) std::printf("  issue %-30s %zu\n", k.c_str(), n);
+    return failed ? 1 : 0;
+  }
+  // --- people sweep (end) ---
   bool classes = false;
   bool objects = false;
   bool check = false;

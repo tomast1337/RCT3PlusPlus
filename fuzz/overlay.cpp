@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "ovl/bone_anim.hpp"
+#include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_visual.hpp"
@@ -27,7 +28,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   for (const auto& item : rct3::ovl::read_static_shapes(*overlay, part)) {
     if (!item.shape) continue;
     for (const auto& mesh : item.shape->meshes) {
-      for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += static_cast<std::size_t>(mesh.vertex(i).extra);
+      for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += mesh.vertex(i).extra > 0.0f;
       for (std::size_t i = 0; i < mesh.index_count; ++i) sink += mesh.index(i);
     }
   }
@@ -37,6 +38,13 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   for (const auto& item : rct3::ovl::read_bone_anims(*overlay, part)) {
     if (!item.anim) continue;
     for (const auto& bone : item.anim->bones) sink += bone.positions.size() + bone.rotations.size();
+  }
+  for (const auto& item : rct3::ovl::read_bone_shapes(*overlay, part)) {
+    if (!item.shape) continue;
+    for (const auto& mesh : item.shape->meshes) {
+      for (std::size_t i = 0; i < mesh.vertex_count; ++i) sink += mesh.vertex(i).weights[0];
+      for (std::size_t i = 0; i < mesh.index_count; ++i) sink += mesh.index(i);
+    }
   }
   return 0;
 }

@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "ovl/bone_anim.hpp"
+#include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
@@ -33,6 +34,7 @@ struct Options {
   bool shs = false;
   bool svd = false;
   bool ban = false;
+  bool bsh = false;
 };
 
 void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part& part, const Options& opt) {
@@ -210,6 +212,26 @@ void print_part(const char* title, const rct3::ovl::Overlay& overlay, const Part
                   item.anim->duration);
     }
   }
+  if (opt.bsh) {
+    const auto shapes = rct3::ovl::read_bone_shapes(overlay, part);
+    std::size_t bad = 0;
+    for (const auto& item : shapes) {
+      if (!item.shape) ++bad;
+    }
+    std::printf("bone shapes    %zu (%zu unreadable)\n", shapes.size(), bad);
+    for (const auto& item : shapes) {
+      const std::string name(item.name);
+      if (!item.shape) {
+        std::printf("  %s <unreadable>\n", name.c_str());
+        continue;
+      }
+      const auto& sh = *item.shape;
+      std::size_t untextured = 0;
+      for (const auto& m : sh.meshes) untextured += m.texture.empty();
+      std::printf("  %-32s meshes %zu vertices %u indices %u bones %zu untextured %zu\n", name.c_str(),
+                  sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
+    }
+  }
   if (opt.sound) {
     const auto sounds = rct3::ovl::read_sounds(overlay, part);
     std::size_t bad = 0;
@@ -266,11 +288,12 @@ int main(int argc, char** argv) {
     else if (std::strcmp(argv[i], "--shs") == 0) opt.shs = true;
     else if (std::strcmp(argv[i], "--svd") == 0) opt.svd = true;
     else if (std::strcmp(argv[i], "--ban") == 0) opt.ban = true;
+    else if (std::strcmp(argv[i], "--bsh") == 0) opt.bsh = true;
     else if (!path) path = argv[i];
     else path = nullptr, i = argc;  // more than one path: usage error below
   }
   if (!path) {
-    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] PATH\n", argv[0]);
+    std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] PATH\n", argv[0]);
     return 2;
   }
 

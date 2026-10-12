@@ -31,8 +31,11 @@ namespace rct3::render::null
 
         [[nodiscard]] std::expected<BufferHandle, std::string> create_buffer(const BufferDesc& desc) override;
         void destroy_buffer(BufferHandle buffer) override;
+        [[nodiscard]] std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) override;
+        void destroy_texture(TextureHandle texture) override;
         [[nodiscard]] std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) override;
         void destroy_pipeline(PipelineHandle pipeline) override;
+        [[nodiscard]] std::expected<BufferSlice, std::string> allocate_transient(std::span<const std::byte> data) override;
 
         void begin_frame() override;
         void begin_pass(const PassDesc& pass) override;
@@ -68,6 +71,10 @@ namespace rct3::render::null
         std::uint32_t next_id_ = 1;
         std::unordered_map<std::uint32_t, Buffer> buffers_;
         std::unordered_map<std::uint32_t, Topology> pipelines_;
+        std::unordered_map<std::uint32_t, Extent> textures_;
+        // One id stands for all transient memory; its size is the high-water mark of offsets handed out.
+        std::uint32_t transient_id_ = 0;
+        std::uint64_t transient_used_ = 0;
         FrameStats frame_stats_;
         FrameStats last_stats_;
     };

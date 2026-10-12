@@ -52,6 +52,8 @@ namespace rct3::render::null
         }
         buffers_.clear();
         pipelines_.clear();
+        textures_.clear();
+        transient_id_ = 0;
         state_ = State::Off;
     }
 
@@ -79,6 +81,37 @@ namespace rct3::render::null
         buffers_.erase(buffer.id);
     }
 
+    std::expected<TextureHandle, std::string> NullDevice::create_texture(const TextureDesc& desc)
+    {
+        assert(state_ != State::Off);
+        if (desc.width == 0 || desc.height == 0)
+            return std::unexpected("empty texture");
+        if (desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
+            return std::unexpected("pixel data does not match the texture size");
+        const std::uint32_t id = next_id_++;
+        textures_.emplace(id, Extent { desc.width, desc.height });
+        return TextureHandle { id };
+    }
+
+    void NullDevice::destroy_texture(TextureHandle texture)
+    {
+        textures_.erase(texture.id);
+    }
+
+    std::expected<BufferSlice, std::string> NullDevice::allocate_transient(std::span<const std::byte> data)
+    {
+        assert(state_ == State::InFrame || state_ == State::InPass);
+        if (transient_id_ == 0)
+        {
+            transient_id_ = next_id_++;
+            buffers_.emplace(transient_id_, Buffer { BufferUsage::Vertex, 0 });
+        }
+        const std::uint64_t offset = (transient_used_ + 15) & ~std::uint64_t { 15 };
+        transient_used_ = offset + data.size();
+        frame_stats_.transient_bytes += data.size();
+        return BufferSlice { BufferHandle { transient_id_ }, static_cast<std::uint32_t>(offset) };
+    }
+
     std::expected<PipelineHandle, std::string> NullDevice::create_pipeline(const PipelineDesc& desc)
     {
         assert(state_ != State::Off);
@@ -98,6 +131,7 @@ namespace rct3::render::null
     {
         assert(state_ == State::Idle);
         frame_stats_ = { };
+        transient_used_ = 0;
         state_ = State::InFrame;
     }
 
@@ -113,8 +147,9 @@ namespace rct3::render::null
         assert(state_ == State::InPass);
         const auto pipeline = pipelines_.find(command.pipeline.id);
         assert(pipeline != pipelines_.end() && "draw with an unknown pipeline");
-        assert(buffers_.contains(command.vertices.id) && "draw with an unknown vertex buffer");
-        assert((!command.indices || buffers_.contains(command.indices.id)) && "draw with an unknown index buffer");
+        assert(buffers_.contains(command.vertices.buffer.id) && "draw with an unknown vertex buffer");
+        assert((!command.indices.buffer || buffers_.contains(command.indices.buffer.id)) && "draw with an unknown index buffer");
+        assert((!command.texture || textures_.contains(command.texture.id)) && "draw with an unknown texture");
         if (pipeline == pipelines_.end())
             return;
         ++frame_stats_.draws;

@@ -56,6 +56,16 @@ namespace rct3::render
         auto operator<=>(const PipelineHandle&) const = default;
     };
 
+    struct TextureHandle
+    {
+        std::uint32_t id = 0;
+        explicit operator bool() const
+        {
+            return id != 0;
+        }
+        auto operator<=>(const TextureHandle&) const = default;
+    };
+
     enum class BufferUsage : std::uint8_t
     {
         Vertex,
@@ -68,6 +78,45 @@ namespace rct3::render
         BufferUsage usage = BufferUsage::Vertex;
         std::span<const std::byte> data;
         std::string_view label;
+    };
+
+    /// A range of a buffer. Per-frame data from `Device::allocate_transient` comes back as one.
+    struct BufferSlice
+    {
+        BufferHandle buffer;
+        std::uint32_t offset = 0; ///< Bytes from the start of the buffer
+    };
+
+    enum class TextureFormat : std::uint8_t
+    {
+        Rgba8, ///< 4 bytes per pixel, R first, unsigned normalised
+    };
+
+    /// Pixels are copied at creation, rows top to bottom, tightly packed.
+    struct TextureDesc
+    {
+        std::uint32_t width = 0;
+        std::uint32_t height = 0;
+        TextureFormat format = TextureFormat::Rgba8;
+        std::span<const std::byte> pixels;
+        std::string_view label;
+    };
+
+    [[nodiscard]] constexpr std::size_t texture_bytes(std::uint32_t width, std::uint32_t height, TextureFormat)
+    {
+        return std::size_t { width } * height * 4;
+    }
+
+    enum class Filter : std::uint8_t
+    {
+        Nearest,
+        Linear,
+    };
+
+    enum class AddressMode : std::uint8_t
+    {
+        Clamp,
+        Repeat,
     };
 
     enum class IndexType : std::uint8_t
@@ -106,6 +155,9 @@ namespace rct3::render
     {
         /// Inputs: location 0 position (Float3), location 1 colour (Float4). Output: the colour, untextured.
         VertexColor,
+        /// Inputs: location 0 position (Float2 or Float3), location 1 colour (Float4 or UByte4Norm), location 2
+        /// texture coordinate (Float2). Output: texture sample times colour. Needs `DrawCommand::texture`.
+        Textured,
     };
 
     enum class Topology : std::uint8_t
@@ -155,13 +207,16 @@ namespace rct3::render
     struct DrawCommand
     {
         PipelineHandle pipeline;
-        BufferHandle vertices;
-        BufferHandle indices;
+        BufferSlice vertices;
+        BufferSlice indices;
         IndexType index_type = IndexType::U16;
         std::uint32_t count = 0;
         std::uint32_t first = 0;
         std::int32_t vertex_offset = 0; ///< Added to each index; indexed draws only
         glm::mat4 transform { 1.0f };   ///< Object to clip space
+        TextureHandle texture;          ///< For shaders that sample one
+        Filter filter = Filter::Nearest;
+        AddressMode address = AddressMode::Clamp;
     };
 
     /// Counters for one finished frame.
@@ -170,6 +225,7 @@ namespace rct3::render
         std::uint32_t passes = 0;
         std::uint32_t draws = 0;
         std::uint64_t primitives = 0;
+        std::uint64_t transient_bytes = 0; ///< Allocated with `allocate_transient`
     };
 
 } // namespace rct3::render

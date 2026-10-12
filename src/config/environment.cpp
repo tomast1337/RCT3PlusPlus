@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/environment.hpp"
 
-#include "strings/ascii.hpp"
+#include "config/flag.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -16,6 +16,10 @@ namespace rct3::config
             { EnvVar::GamePath, "RCT3PP_GAME_PATH", "Root folder of the installed original game (the one that contains gui/ and Style/)" },
             { EnvVar::Validation, "RCT3PP_VALIDATION", "Enable the graphics API's validation layer (1/0)" },
             { EnvVar::FallbackFont, "RCT3PP_FALLBACK_FONT", "TrueType font for characters the game fonts lack (default: the one `./nob fetch` downloads)" },
+            { EnvVar::SettingsFile, "RCT3PP_SETTINGS", "Settings file to use instead of the one in the user's configuration folder" },
+            { EnvVar::ConfigHome, "XDG_CONFIG_HOME", "Where the settings file lives on Linux and other free systems (default ~/.config)", true },
+            { EnvVar::Home, "HOME", "The user's home folder, for the default configuration folder", true },
+            { EnvVar::AppData, "APPDATA", "Where the settings file lives on Windows", true },
         } };
 
         // The table is indexed by EnvVar, so its order must follow the enum.
@@ -86,14 +90,7 @@ namespace rct3::config
     bool Environment::flag(EnvVar var) const
     {
         const auto value = get(var);
-        if (!value)
-            return false;
-        for (std::string_view off : { "0", "false", "no", "off" })
-        {
-            if (strings::equals_ignoring_case(*value, off))
-                return false;
-        }
-        return true;
+        return value && flag_value(*value);
     }
 
 } // namespace rct3::config

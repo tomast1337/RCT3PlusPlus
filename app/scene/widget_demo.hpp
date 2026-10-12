@@ -19,6 +19,7 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace rct3::scene
@@ -34,6 +35,7 @@ namespace rct3::scene
         std::unique_ptr<ui::StringTable> strings = std::make_unique<ui::StringTable>();
         ui::Desktop desktop;
         ui::DrawList list;
+        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
     };
 
     /// Where `./nob fetch` puts the fallback font, from the repository root.

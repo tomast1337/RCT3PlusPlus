@@ -14,11 +14,11 @@ namespace rct3::scene
     {
 
         // The window in logical units, after choosing the scale.
-        ui::Rect begin(render::Device& device, ui::DrawList& list)
+        ui::Rect begin(render::Device& device, ui::DrawList& list, std::optional<float> chosen)
         {
             const render::Extent extent = device.extent();
             list.clear();
-            list.set_scale(ui::auto_scale(static_cast<float>(extent.height)));
+            list.set_scale(ui::interface_scale(static_cast<float>(extent.height), chosen));
             return { 0, 0, static_cast<float>(extent.width) / list.scale(), static_cast<float>(extent.height) / list.scale() };
         }
 
@@ -79,7 +79,7 @@ namespace rct3::scene
 
     void draw_startup_logo(render::Device& device, StartupScreen& screen)
     {
-        const ui::Rect view = begin(device, screen.list);
+        const ui::Rect view = begin(device, screen.list, screen.scale);
         screen.list.fill(view, ui::kWhite);
         if (const auto frame = screen.sequence.frame())
         {
@@ -100,7 +100,7 @@ namespace rct3::scene
 
     void draw_loading_screen(render::Device& device, StartupScreen& screen)
     {
-        const ui::Rect view = begin(device, screen.list);
+        const ui::Rect view = begin(device, screen.list, screen.scale);
         screen.list.fill(view, { 0, 0, 0, 255 });
         if (screen.loading)
         {

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Locating the installed original game, whose data files the program reads. The location comes from
-// RCT3PP_GAME_PATH (see config/environment.hpp).
+// RCT3PP_GAME_PATH (see config/environment.hpp), else from game_path in the settings file
+// (config/settings.hpp).
 //
 // The game was made for Windows, where file names ignore case, and its data refers to files with whatever
 // case the author typed. `GameInstall::find` resolves such names on case-sensitive file systems.
 #pragma once
 
 #include "config/environment.hpp"
+#include "config/settings.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -20,7 +22,7 @@ namespace rct3::config
 
     enum class InstallError : std::uint8_t
     {
-        NotConfigured,  ///< RCT3PP_GAME_PATH is not set
+        NotConfigured,  ///< Neither RCT3PP_GAME_PATH nor game_path is set
         NotFound,       ///< The path does not exist
         NotADirectory,  ///< The path is a file
         MissingContent, ///< A folder every install has is missing: probably the wrong folder
@@ -31,6 +33,7 @@ namespace rct3::config
         InstallError error = InstallError::NotConfigured;
         std::filesystem::path path;
         std::string detail; ///< The missing entry, for MissingContent
+        std::string source; ///< Where the path came from, for messages; RCT3PP_GAME_PATH when empty
     };
 
     /// One line for logs and error messages, naming the variable to set where that helps.
@@ -62,7 +65,7 @@ namespace rct3::config
     /// Checks that `root` looks like an install of the game.
     [[nodiscard]] std::expected<GameInstall, InstallProblem> open_game_install(const std::filesystem::path& root);
 
-    /// The install named by RCT3PP_GAME_PATH.
-    [[nodiscard]] std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env);
+    /// The install named by RCT3PP_GAME_PATH, else by game_path in `settings`.
+    [[nodiscard]] std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env, const Settings& settings = { });
 
 } // namespace rct3::config

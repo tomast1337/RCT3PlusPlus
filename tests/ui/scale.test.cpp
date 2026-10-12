@@ -13,3 +13,10 @@ TEST_CASE("automatic scale grows in whole steps with the window height")
     CHECK(auto_scale(1440) == 2);
     CHECK(auto_scale(2160) == 3);
 }
+
+TEST_CASE("a chosen scale replaces the automatic one")
+{
+    CHECK(interface_scale(2160, std::nullopt) == 3);
+    CHECK(interface_scale(2160, 1.0f) == 1);
+    CHECK(interface_scale(600, 4.0f) == 4);
+}

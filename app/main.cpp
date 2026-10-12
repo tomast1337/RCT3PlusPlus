@@ -3,15 +3,19 @@
 // rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
 // the game installed it first plays the startup logos and the loading screen, then shows a window built from real skins.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--frames N] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--frames N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
+//   --scale auto|N    interface scale, instead of the one in the settings file
 //   --frames N        exit after N frames (smoke test)
-//   --help            this text and the environment variables read (config/environment.hpp)
+//   --write-settings  write the settings file, with any settings given here, and exit
+//   --help            this text, the settings (config/settings.hpp) and the environment variables read
+//                     (config/environment.hpp)
 #include "config/environment.hpp"
 #include "config/game_install.hpp"
+#include "config/settings.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "platform/window.hpp"
@@ -29,6 +33,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -39,12 +44,15 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--frames N] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--frames N] [--write-settings] [--help]\n");
     }
 
-    void print_help()
+    void print_help(const std::optional<std::filesystem::path>& settings_file)
     {
         print_usage(stdout);
+        std::printf("\nsettings (%s):\n", settings_file ? settings_file->string().c_str() : "no file: no configuration folder known");
+        for (const auto& setting : rct3::config::settings_table())
+            std::printf("  %-20.*s %.*s\n", static_cast<int>(setting.name.size()), setting.name.data(), static_cast<int>(setting.description.size()), setting.description.data());
         std::printf("\nenvironment:\n");
         for (const auto& var : rct3::config::env_vars())
             std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data());
@@ -160,10 +168,24 @@ int main(int argc, char** argv)
     const auto log = rct3::logging::logger("app");
     const auto env = config::Environment::from_process();
 
+    const auto settings_file = config::settings_path(env);
+    config::Settings settings;
+    if (settings_file)
+    {
+        std::vector<config::SettingsProblem> problems;
+        if (auto loaded = config::Settings::load(*settings_file, &problems))
+            settings = std::move(*loaded);
+        else
+            log.warning("settings: {}", loaded.error());
+        for (const auto& problem : problems)
+            log.warning("{}:{}: {}", settings_file->string(), problem.line, problem.message);
+    }
+
+    // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
     int max_frames = -1;
     render::Backend backend = render::Backend::Vulkan;
     bool vsync = true;
-    bool intro = true;
+    bool write_settings = false;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -186,11 +208,25 @@ int main(int argc, char** argv)
         }
         else if (std::strcmp(argv[i], "--no-intro") == 0)
         {
-            intro = false;
+            settings.set(config::Setting::SkipIntro, "yes");
+        }
+        else if (std::strcmp(argv[i], "--scale") == 0 && i + 1 < argc)
+        {
+            const char* value = argv[++i];
+            if (const auto parsed = config::parse_interface_scale(value); !parsed)
+            {
+                std::fprintf(stderr, "%s\n", parsed.error().c_str());
+                return 2;
+            }
+            settings.set(config::Setting::InterfaceScale, value);
+        }
+        else if (std::strcmp(argv[i], "--write-settings") == 0)
+        {
+            write_settings = true;
         }
         else if (std::strcmp(argv[i], "--help") == 0)
         {
-            print_help();
+            print_help(settings_file);
             return 0;
         }
         else
@@ -200,8 +236,31 @@ int main(int argc, char** argv)
         }
     }
 
+    if (write_settings)
+    {
+        if (!settings_file)
+        {
+            std::fprintf(stderr, "no configuration folder known; set %.*s\n", static_cast<int>(config::env_name(config::EnvVar::SettingsFile).size()), config::env_name(config::EnvVar::SettingsFile).data());
+            return 1;
+        }
+        if (auto saved = settings.save(*settings_file); !saved)
+        {
+            std::fprintf(stderr, "%s\n", saved.error().c_str());
+            return 1;
+        }
+        std::printf("wrote %s\n", settings_file->string().c_str());
+        return 0;
+    }
+
+    const bool intro = !settings.flag(config::Setting::SkipIntro);
+    std::optional<float> scale;
+    if (const auto parsed = config::parse_interface_scale(settings.get(config::Setting::InterfaceScale).value_or(std::string_view { })))
+        scale = *parsed;
+    else
+        log.warning("settings: {}", parsed.error());
+
     // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
-    const auto install = config::find_game_install(env);
+    const auto install = config::find_game_install(env, settings);
     if (install)
         log.info("game install: {}", install->root().string());
     else
@@ -256,6 +315,7 @@ int main(int argc, char** argv)
         if (created)
         {
             startup = std::move(*created);
+            startup->scale = scale;
             phase = intro ? Phase::Intro : Phase::Loading;
         }
         else
@@ -266,7 +326,10 @@ int main(int argc, char** argv)
     const auto load_widgets = [&] {
         auto loaded = rct3::scene::create_widget_demo(*device, *install, env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont));
         if (loaded)
+        {
             widgets = std::move(*loaded);
+            widgets->scale = scale;
+        }
         else
             log.warning("skins: {}", loaded.error());
     };

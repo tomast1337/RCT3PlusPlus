@@ -28,6 +28,10 @@ namespace rct3::config
         GamePath,     ///< RCT3PP_GAME_PATH: root folder of the installed original game
         Validation,   ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
         FallbackFont, ///< RCT3PP_FALLBACK_FONT: TrueType font for characters the game fonts lack
+        SettingsFile, ///< RCT3PP_SETTINGS: settings file to use instead of the default one
+        ConfigHome,   ///< XDG_CONFIG_HOME: the user's configuration folder
+        Home,         ///< HOME: the user's home folder
+        AppData,      ///< APPDATA: the user's application data folder on Windows
 
         Count_, ///< Number of variables; not a variable
     };
@@ -39,6 +43,7 @@ namespace rct3::config
         EnvVar var;
         std::string_view name;
         std::string_view description;
+        bool standard = false; ///< Set by the system or other programs; ours all start with RCT3PP_
     };
 
     /// Every registered variable, in EnvVar order. For help output and documentation.

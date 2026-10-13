@@ -34,6 +34,8 @@ only for now.
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
+The game's music is Windows Media Audio, decoded by [FFmpeg's WMA decoder](third_party/ffmpeg_wma/)
+(LGPL-2.1-or-later), vendored on its own and built into the binary.
 
 Text the game's fonts cannot draw (Greek, Cyrillic, arrows and other signs) falls back to
 [GNU Unifont](https://unifoundry.com/unifont/), rendered with the vendored [stb_truetype](third_party/stb/).

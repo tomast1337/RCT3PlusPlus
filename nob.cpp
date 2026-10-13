@@ -211,8 +211,8 @@ namespace
     }
 
     // The audio module (src/audio/) is its own target: it pulls in vendored miniaudio and its link flags, so
-    // the core library, the fuzz targets and the viewer build without it. Tools that include "audio/..." and
-    // the test binary link it. It needs no audio device (miniaudio loads backends at run time, and the tests
+    // the core library and the fuzz targets that do not need it build without it. Tools and fuzz targets that
+    // include "audio/...", the viewer and the test binary link it. It needs no audio device (miniaudio loads backends at run time, and the tests
     // use its offline mode), only -ldl -lpthread -lm.
     bool is_audio_source(const fs::path& p)
     {
@@ -243,6 +243,32 @@ namespace
     }
 
     // Compiles src/audio/*.cpp and the miniaudio implementation unit (vendored code, warnings off).
+    // The same build for C sources: the C compiler that goes with the C++ one, C17, no warnings (vendored code
+    // only), plus `flags`.
+    Config c_config(const Config& cfg, const std::vector<std::string>& flags)
+    {
+        Config c = cfg;
+        if (const char* cc = std::getenv("CC"))
+            c.cxx = cc;
+        else if (cfg.cxx.ends_with("clang++"))
+            c.cxx = cfg.cxx.substr(0, cfg.cxx.size() - 2);
+        else if (cfg.cxx.ends_with("g++"))
+            c.cxx = cfg.cxx.substr(0, cfg.cxx.size() - 3) + "gcc";
+        else
+            c.cxx = "cc";
+        c.compile_flags.clear();
+        for (const auto& f : cfg.compile_flags)
+        {
+            if (f == "-std=c++26")
+                c.compile_flags.push_back("-std=gnu17");
+            else if (!f.starts_with("-W"))
+                c.compile_flags.push_back(f);
+        }
+        c.compile_flags.push_back("-w");
+        c.compile_flags.insert(c.compile_flags.end(), flags.begin(), flags.end());
+        return c;
+    }
+
     bool compile_audio(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
@@ -256,7 +282,9 @@ namespace
 
         Config vendored = cfg;
         vendored.compile_flags.push_back("-w");
-        return compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database);
+        if (!compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database))
+            return false;
+        return compile(c_config(cfg, { "-Ithird_party/ffmpeg_wma" }), find_files("third_party/ffmpeg_wma", ".c"), headers, objects, database);
     }
 
     // Vendored code every target links: the stb_truetype and stb_image implementation units, built without our
@@ -369,11 +397,13 @@ namespace
             return false;
         if (!compile_vendored_core(cfg, headers, objects, ignored))
             return false;
+        if (!compile_audio(cfg, headers, objects, ignored))
+            return false;
         if (!compile(app, find_files("app", ".cpp"), app_headers, objects, ignored))
             return false;
 
         binary = cfg.out_dir() / "rct3pp";
-        Config linker = cfg;
+        Config linker = with_audio_link(cfg);
         linker.link_flags.insert(linker.link_flags.end(), { "-lglfw", "-lvulkan" });
         return link(linker, binary, objects);
     }
@@ -393,13 +423,19 @@ namespace
         if (!compile_vendored_core(cfg, headers, lib_objects, database))
             return false;
 
+        std::vector<fs::path> audio_objects;
         for (const auto& source : find_files("fuzz", ".cpp"))
         {
+            const bool audio = uses_audio(source);
+            if (audio && audio_objects.empty() && !compile_audio(cfg, headers, audio_objects, database))
+                return false;
             std::vector<fs::path> objects = lib_objects;
+            if (audio)
+                objects.insert(objects.end(), audio_objects.begin(), audio_objects.end());
             if (!compile(cfg, { source }, headers, objects, database))
                 return false;
             const fs::path binary = cfg.out_dir() / source.stem();
-            if (!link(cfg, binary, objects))
+            if (!link(audio ? with_audio_link(cfg) : cfg, binary, objects))
                 return false;
             targets.push_back(binary);
         }

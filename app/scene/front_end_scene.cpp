@@ -44,6 +44,7 @@ namespace rct3::scene
 
         FrontEndScene scene;
         scene.assets = std::move(*assets);
+        scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
         scene.options_file = std::move(setup.options_file);
         if (scene.options_file)
         {
@@ -82,6 +83,7 @@ namespace rct3::scene
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, scene.assets, desktop.root().rect().width());
         const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
+        update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         if (scene.live->front->take_options_closed())
             save_options(scene);
@@ -118,6 +120,9 @@ namespace rct3::scene
         scene.list.set_scale(scale_for(device, scene));
         static const ui::FontSet kNoFonts;
         ui::DrawContext context { scene.list, scene.assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts };
+        // The pictures show through the front screen's open corner and circle.
+        const ui::Rect& screen = scene.live->desktop.root().rect();
+        draw_slideshow_view(scene.slideshow, scene.list, ui::slideshow_rect(screen.width(), screen.height()));
         scene.live->desktop.draw(context);
         ui::render_draw_list(device, scene.assets.renderer, scene.list);
     }
@@ -126,6 +131,7 @@ namespace rct3::scene
     {
         if (scene.live && scene.live->front && scene.live->front->options_window() != nullptr)
             save_options(scene);
+        destroy_slideshow_view(device, scene.slideshow);
         ui::destroy_interface_assets(device, scene.assets);
         scene = { };
     }

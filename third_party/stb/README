@@ -1,5 +1,6 @@
-stb_truetype 1.26 (commit f58f558c120e9b32c217290b80bad1a0729fbb2c)
+stb_truetype 1.26 and stb_image 2.30 (commit f58f558c120e9b32c217290b80bad1a0729fbb2c)
 https://github.com/nothings/stb
-stb_truetype.h is vendored unmodified from the commit above.
+stb_truetype.h and stb_image.h are vendored unmodified from the commit above.
 Licensed, at your choice, as public domain or under the MIT licence; see LICENSE.
-stb_truetype_impl.cpp is the one translation unit that compiles the implementation (ours, GPL-3.0-or-later).
+stb_truetype_impl.cpp and stb_image_impl.cpp are the translation units that compile the implementations
+(ours, GPL-3.0-or-later).

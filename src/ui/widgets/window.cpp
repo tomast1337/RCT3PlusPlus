@@ -149,7 +149,8 @@ namespace rct3::ui
         if (style_.tile_background && background != nullptr)
         {
             const auto [w, h] = background->size();
-            if (w > 0 && h > 0 && context.list.push_clip(back))
+            const bool pushed = w > 0 && h > 0;
+            if (pushed && context.list.push_clip(back))
             {
                 const int rows = static_cast<int>(std::ceil(back.height() / h));
                 const int columns = static_cast<int>(std::ceil(back.width() / w));
@@ -163,7 +164,8 @@ namespace rct3::ui
                     }
                 }
             }
-            context.list.pop_clip();
+            if (pushed)
+                context.list.pop_clip();
         }
         else
             draw_skin(context.list, background, back);

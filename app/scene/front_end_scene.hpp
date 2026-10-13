@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The front end over the park: the front screen's menus and the windows they open, with the game's skins,
+// strings and fonts. The game options are read from the options file at the start and written back when
+// their window closes. What the window itself must do (quit, change size or go full screen) and a change
+// of language, which needs the strings and fonts again, are for the owner to take.
+#pragma once
+
+#include "config/game_install.hpp"
+#include "config/game_options.hpp"
+#include "render/device.hpp"
+#include "ui/desktop.hpp"
+#include "ui/draw_list.hpp"
+#include "ui/interface_assets.hpp"
+#include "ui/screens/front_end.hpp"
+
+#include <expected>
+#include <filesystem>
+#include <memory>
+#include <optional>
+#include <string>
+
+namespace rct3::scene
+{
+
+    struct FrontEndSceneSetup
+    {
+        std::vector<std::string> languages; ///< Installed
+        std::string language;               ///< The one to use
+        std::filesystem::path fallback_font;
+        std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
+        std::vector<ui::ScreenSize> screen_sizes;
+        std::optional<std::size_t> screen_size;
+        bool open_options = false;
+    };
+
+    struct FrontEndScene
+    {
+        ui::InterfaceAssets assets;
+        std::optional<std::filesystem::path> options_file;
+        // On the heap: the front end keeps references to the desktop and the options, and the scene moves.
+        struct Live
+        {
+            config::GameOptions options;
+            ui::Desktop desktop;
+            std::optional<ui::FrontEnd> front;
+        };
+        std::unique_ptr<Live> live = std::make_unique<Live>();
+        const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
+        ui::DrawList list;
+        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
+        bool fullscreen = false;    ///< As last applied
+    };
+
+    /// Things the scene wants done to the window or the program.
+    struct FrontEndRequests
+    {
+        bool quit = false;
+        std::optional<bool> fullscreen;
+        std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
+        std::optional<std::string> language;
+    };
+
+    [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);
+
+    /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
+    /// Returns whether the interface has the pointer.
+    bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed);
+
+    /// What the user asked for since the last call.
+    [[nodiscard]] FrontEndRequests take_front_end_requests(FrontEndScene& scene);
+
+    void draw_front_end_scene(render::Device& device, FrontEndScene& scene);
+
+    /// Saves the options if their window is still open, and frees the scene.
+    void destroy_front_end_scene(render::Device& device, FrontEndScene& scene);
+
+} // namespace rct3::scene

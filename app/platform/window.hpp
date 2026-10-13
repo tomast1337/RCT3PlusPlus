@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -63,6 +64,22 @@ namespace rct3::platform
 
         /// Puts `text` on the system clipboard.
         void set_clipboard(std::u16string_view text);
+
+        struct Size
+        {
+            int width = 0;
+            int height = 0;
+
+            friend bool operator==(const Size&, const Size&) = default;
+        };
+        /// The sizes the main screen can show, smallest first.
+        [[nodiscard]] std::vector<Size> screen_sizes() const;
+        /// The window's size in screen coordinates.
+        [[nodiscard]] Size size() const;
+        /// In full screen, also the screen's mode.
+        void set_size(Size size);
+        /// Full screen on the main screen at the window's size, or back in a window.
+        void set_fullscreen(bool on);
 
         // Input GLFW only reports through callbacks, gathered between polls. On the heap so the window's
         // user pointer stays valid when the Window moves; public so the callbacks can reach it.

@@ -22,3 +22,15 @@ TEST_CASE("loading a file that is not there fails")
 {
     CHECK_FALSE(StringTable::load("does-not-exist.common.ovl").has_value());
 }
+
+TEST_CASE("merging keeps the strings already there")
+{
+    StringTable a;
+    a.add("Ride", u"Ride");
+    StringTable b;
+    b.add("Ride", u"Attraction");
+    b.add("Shop", u"Shop");
+    a.merge(b);
+    CHECK(a.get("Ride") == u"Ride");
+    CHECK(a.get("Shop") == u"Shop");
+}

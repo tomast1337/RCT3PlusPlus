@@ -47,6 +47,28 @@ namespace rct3::ui
         options_open_ = true;
     }
 
+    FileDialog* FrontEnd::file_dialog() const
+    {
+        return static_cast<FileDialog*>(desktop_.root().find(kFilesName));
+    }
+
+    void FrontEnd::open_files(FrontAction action, config::UserFolder folder)
+    {
+        if (FileDialog* open = file_dialog())
+        {
+            if (folder == file_folder_)
+            {
+                desktop_.root().raise(*open);
+                return;
+            }
+            desktop_.root().remove(*open);
+        }
+        file_folder_ = folder;
+        file_action_ = action;
+        ++file_dialogs_opened_;
+        desktop_.root().add<FileDialog>(std::string(kFilesName), style_.files, strings_, FileDialogMode::Load, setup_.twelve_hour);
+    }
+
     void FrontEnd::update()
     {
         while (const auto request = screen_->take_request())
@@ -55,6 +77,15 @@ namespace rct3::ui
             {
                 case FrontAction::Options:
                     open_options();
+                    break;
+                case FrontAction::LoadSandbox:
+                    open_files(request->action, config::UserFolder::Parks);
+                    break;
+                case FrontAction::LoadCustomScenario:
+                    open_files(request->action, config::UserFolder::Scenarios);
+                    break;
+                case FrontAction::NewCustomScenario:
+                    open_files(request->action, config::UserFolder::NewScenarios);
                     break;
                 case FrontAction::Quit:
                     if (question_ == nullptr)

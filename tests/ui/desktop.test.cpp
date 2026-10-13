@@ -482,3 +482,43 @@ TEST_CASE("pressing and releasing a widget that clicks asks for its sounds")
         CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Release });
     }
 }
+
+TEST_CASE("widgets that click on hover click once as the pointer comes over them")
+{
+    class Hoverer : public Probe
+    {
+    public:
+        using Probe::Probe;
+        [[nodiscard]] bool clicks_on_hover() const override
+        {
+            return true;
+        }
+    };
+    Desktop desktop;
+    Hoverer& a = desktop.root().add<Hoverer>("a");
+    a.placement = top_left(0, 0, 50, 50);
+    Hoverer& b = desktop.root().add<Hoverer>("b");
+    b.placement = top_left(60, 0, 50, 50);
+    desktop.layout(kView);
+
+    desktop.update(at(10, 10));
+    CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Press });
+    desktop.update(at(20, 10)); // Still over it
+    CHECK(desktop.take_sounds().empty());
+    desktop.update(at(70, 10));
+    CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Press });
+    desktop.update(at(150, 10));
+    desktop.update(at(70, 10)); // Back over it after leaving
+    CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Press });
+
+    SUBCASE("not while something is held, nor when disabled")
+    {
+        desktop.update(at(70, 10, true)); // b held
+        desktop.update(at(10, 10, true));
+        CHECK(desktop.take_sounds().empty());
+        desktop.update(at(150, 10, false));
+        b.enabled = false;
+        desktop.update(at(70, 10));
+        CHECK(desktop.take_sounds().empty());
+    }
+}

@@ -148,6 +148,11 @@ namespace rct3::ui
         {
             return false;
         }
+        /// Whether pressing and releasing this widget clicks (interface_sound.hpp), as buttons do.
+        [[nodiscard]] virtual bool clicks() const
+        {
+            return false;
+        }
         virtual void on_press(Point)
         {
         }

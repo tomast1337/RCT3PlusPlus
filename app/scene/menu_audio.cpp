@@ -1,0 +1,152 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "scene/menu_audio.hpp"
+
+#include "audio/menu_music.hpp"
+#include "logging/log.hpp"
+#include "ovl/overlay.hpp"
+#include "ovl/sound.hpp"
+
+#include <array>
+#include <chrono>
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+namespace rct3::scene
+{
+
+    namespace
+    {
+
+        constexpr std::string_view kMusicFolder = "Music";
+        constexpr std::string_view kClickOverlay = "Main.common.ovl";
+        constexpr std::array<std::string_view, 3> kPressSounds = { "BClick1", "BClick2", "BClick3" };
+        constexpr std::array<std::string_view, 3> kReleaseSounds = { "BRelese1", "BRelese2", "BRelese3" };
+
+        // The music folder's file names, for pick_menu_music.
+        std::vector<std::string> music_files(const std::filesystem::path& folder)
+        {
+            std::vector<std::string> names;
+            std::error_code error;
+            for (const auto& entry : std::filesystem::directory_iterator(folder, error))
+            {
+                if (entry.is_regular_file(error))
+                    names.push_back(entry.path().filename().string());
+            }
+            return names;
+        }
+
+        void start_music(audio::AudioEngine& engine, MenuAudio& menu, const config::GameInstall& install, config::GameOptions& options)
+        {
+            const auto log = logging::logger("audio");
+            const auto folder = install.find(kMusicFolder);
+            if (!folder)
+            {
+                log.warning("no menu music: the game's music folder is missing");
+                return;
+            }
+            const auto files = music_files(*folder);
+            const std::optional<int> place = options.flag(config::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::GameOption::MenuTrack)) : std::nullopt;
+            const auto pick = audio::pick_menu_music(place, audio::is_halloween(std::chrono::system_clock::now()), files);
+            if (pick.next_place)
+                options.set(config::GameOption::MenuTrack, static_cast<float>(*pick.next_place));
+            if (!pick.file)
+            {
+                log.warning("no menu music: {} is missing", pick.track);
+                return;
+            }
+            auto music = audio::MusicPlayer::start(engine, *folder / files[*pick.file], 0);
+            if (!music)
+            {
+                log.warning("no menu music: {}", music.error());
+                return;
+            }
+            log.info("menu music: {}", files[*pick.file]);
+            menu.music = std::move(*music);
+        }
+
+        std::vector<audio::SoundBuffer> sounds_named(const std::vector<ovl::SoundItem>& items, std::span<const std::string_view> names)
+        {
+            std::vector<audio::SoundBuffer> out;
+            for (const auto name : names)
+            {
+                for (const auto& item : items)
+                {
+                    if (item.name != name || !item.info)
+                        continue;
+                    if (auto buffer = audio::from_ovl_sound(*item.info))
+                        out.push_back(std::move(*buffer));
+                    break;
+                }
+            }
+            return out;
+        }
+
+        void load_clicks(MenuAudio& menu, const config::GameInstall& install)
+        {
+            const auto log = logging::logger("audio");
+            const auto path = install.find(kClickOverlay);
+            if (!path)
+            {
+                log.warning("no click sounds: {} not found", kClickOverlay);
+                return;
+            }
+            const auto overlay = ovl::Overlay::load(*path);
+            if (!overlay)
+            {
+                log.warning("no click sounds: {}: {}", kClickOverlay, ovl::to_string(overlay.error()));
+                return;
+            }
+            const auto items = ovl::read_sounds(*overlay, overlay->common());
+            menu.presses = sounds_named(items, kPressSounds);
+            menu.releases = sounds_named(items, kReleaseSounds);
+            if (menu.presses.empty() || menu.releases.empty())
+                log.warning("click sounds missing from {}", kClickOverlay);
+        }
+
+        void play_one(audio::AudioEngine& engine, std::span<const audio::SoundBuffer> sounds, std::minstd_rand& random, float volume)
+        {
+            if (sounds.empty() || volume <= 0)
+                return;
+            std::uniform_int_distribution<std::size_t> pick(0, sounds.size() - 1);
+            if (auto played = engine.play(sounds[pick(random)], { .volume = volume }); !played)
+                logging::logger("audio").debug("click: {}", audio::to_string(played.error()));
+        }
+
+    } // namespace
+
+    MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed)
+    {
+        MenuAudio menu;
+        menu.random.seed(seed);
+        start_music(engine, menu, install, options);
+        load_clicks(menu, install);
+        return menu;
+    }
+
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds)
+    {
+        if (menu.music)
+        {
+            const float volume = audio::kMenuMusicLevel * options.get(config::GameOption::MusicVolume);
+            if (volume != menu.music_volume)
+            {
+                menu.music->set_volume(engine, volume);
+                menu.music_volume = volume;
+            }
+            if (auto fed = menu.music->update(engine); !fed)
+                logging::logger("audio").warning("menu music: {}", fed.error());
+        }
+        const float clicks = options.get(config::GameOption::InterfaceVolume);
+        for (const auto sound : sounds)
+            play_one(engine, sound == ui::InterfaceSound::Press ? menu.presses : menu.releases, menu.random, clicks);
+    }
+
+    void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu)
+    {
+        if (menu.music)
+            menu.music->stop(engine);
+        menu.music.reset();
+    }
+
+} // namespace rct3::scene

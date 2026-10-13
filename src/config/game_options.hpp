@@ -41,6 +41,7 @@ namespace rct3::config
         InterfaceVolume,
         ImportMyMusic,  ///< Play the player's own music in the park
         CycleMenuMusic, ///< A different menu track each start
+        MenuTrack,      ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
 
         // Camera
         InvertRideCameraY,

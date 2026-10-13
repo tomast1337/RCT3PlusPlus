@@ -78,10 +78,8 @@ namespace rct3::ui
             shown = text.empty() ? none : std::u16string(text.begin(), text.end());
         }
         if (context.list.push_clip(box))
-        {
             draw_text(context.list, *f, shown, box, { enabled ? text_colour : disabled_text_colour, Align::Start, Align::Centre, false });
-            context.list.pop_clip();
-        }
+        context.list.pop_clip(); // Pushed even when nothing shows
     }
 
 } // namespace rct3::ui

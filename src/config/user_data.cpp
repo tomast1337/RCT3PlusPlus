@@ -19,6 +19,9 @@ namespace rct3::config
             { UserFolder::Config, "config", "Settings, game options and keys" },
             { UserFolder::Screenshots, "screenshots", "Screenshots" },
             { UserFolder::Music, "music", "The user's own music for the park" },
+            { UserFolder::Parks, "parks", "Saved sandbox parks" },
+            { UserFolder::Scenarios, "scenarios", "Saved custom scenarios" },
+            { UserFolder::NewScenarios, "new_scenarios", "Scenarios to start a custom scenario from" },
         } };
 
         constexpr std::array<UserFileInfo, kUserFileCount> kFiles = { {

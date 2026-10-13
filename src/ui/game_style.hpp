@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ui/font_set.hpp"
+#include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -39,6 +40,11 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kButton = "GUI2Button";
     inline constexpr std::string_view kConfirmIcon = "GUI2MiniDialog_Confirm";
     inline constexpr std::string_view kCancelIcon = "GUI2MiniDialog_Cancel";
+    inline constexpr std::string_view kLoadIcon = "GUI2_Load";
+    inline constexpr std::string_view kSaveIcon = "GUI2_Save";
+    inline constexpr std::string_view kFileCancelIcon = "GUI2LoadSave_Cancel";
+    inline constexpr std::string_view kFileDeleteIcon = "GUI2LoadSave_DeleteDat";
+    inline constexpr std::string_view kStandardBorder = "GUI2StandardBorder";
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
@@ -260,6 +266,24 @@ namespace rct3::ui::game_skins
         s.scroll = scroll_bar_style(Orientation::Vertical);
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
+        return s;
+    }
+
+    /// The load and save window in the game's frame, the list and pictures in its plain border.
+    [[nodiscard]] inline FileDialogStyle file_dialog_style()
+    {
+        FileDialogStyle s;
+        s.window = window_style();
+        s.question = question_box_style();
+        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.load_icon = kLoadIcon;
+        s.save_icon = kSaveIcon;
+        s.cancel_icon = kFileCancelIcon;
+        s.delete_icon = kFileDeleteIcon;
+        s.button = kButton;
+        s.border = kStandardBorder;
+        s.name_box = kListBox;
+        s.name_box_focused = kListBoxFocused;
         return s;
     }
 

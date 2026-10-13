@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The front end: the front screen and the windows it opens, on one desktop. Options opens the options
-// window (once; asking again brings it to the front), and Quit asks first. What needs more than the
+// window (once; asking again brings it to the front), and Quit asks first. Loading a sandbox park or a
+// custom scenario, or starting a new custom scenario, opens the window that loads games on the folder the
+// game keeps those in; the owner fills it with the folder's files and acts on what the user picks there. What needs more than the
 // interface goes to the owner: quitting, a new language or screen size, the options to save once their
 // window has closed, and the menu choices nothing handles yet.
 //
@@ -10,7 +12,9 @@
 #pragma once
 
 #include "config/game_options.hpp"
+#include "config/user_data.hpp"
 #include "ui/desktop.hpp"
+#include "ui/screens/file_dialog.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -27,6 +31,7 @@ namespace rct3::ui
     {
         OptionsDialogStyle options;
         QuestionBoxStyle question;
+        FileDialogStyle files;
     };
 
     struct FrontEndSetup
@@ -35,6 +40,7 @@ namespace rct3::ui
         OptionsChoices choices;    ///< For the options window; its language is the one in use
         bool open_options = false; ///< Start with the options window open, e.g. after a language change
         bool settled = false;      ///< Start without the front screen's opening animation
+        bool twelve_hour = true;   ///< Times with am and pm, as the game shows them in English
     };
 
     class FrontEnd
@@ -50,6 +56,23 @@ namespace rct3::ui
             return *screen_;
         }
         [[nodiscard]] OptionsDialog* options_window() const;
+        /// The window loading a game, while it is open.
+        [[nodiscard]] FileDialog* file_dialog() const;
+        /// The folder the window loading a game shows.
+        [[nodiscard]] config::UserFolder file_folder() const
+        {
+            return file_folder_;
+        }
+        /// The menu choice that opened it.
+        [[nodiscard]] FrontAction file_action() const
+        {
+            return file_action_;
+        }
+        /// Counts the windows loading a game opened, so the owner tells a new one from the last.
+        [[nodiscard]] std::size_t file_dialogs_opened() const
+        {
+            return file_dialogs_opened_;
+        }
         [[nodiscard]] QuestionBox* question() const
         {
             return question_;
@@ -69,9 +92,11 @@ namespace rct3::ui
 
         static constexpr std::string_view kOptionsName = "options";
         static constexpr std::string_view kQuestionName = "quit";
+        static constexpr std::string_view kFilesName = "load_game";
 
     private:
         void open_options();
+        void open_files(FrontAction action, config::UserFolder folder);
 
         Desktop& desktop_;
         FrontEndStyle style_;
@@ -80,6 +105,9 @@ namespace rct3::ui
         FrontEndSetup setup_;
         FrontScreen* screen_ = nullptr;
         QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
+        config::UserFolder file_folder_ = config::UserFolder::Parks;
+        FrontAction file_action_ = FrontAction::LoadSandbox;
+        std::size_t file_dialogs_opened_ = 0;
         bool options_open_ = false;
         bool options_closed_ = false;
         bool quit_ = false;

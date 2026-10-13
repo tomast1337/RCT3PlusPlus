@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "scene/menu_audio.hpp"
 #include "ui/game_style.hpp"
+#include "ui/language.hpp"
 #include "ui/scale.hpp"
 
 #include <algorithm>
@@ -51,6 +52,7 @@ namespace rct3::scene
         scene.assets = std::move(*assets);
         scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
         scene.options_file = std::move(setup.options_file);
+        scene.saves.data = std::move(setup.data);
         if (scene.options_file)
         {
             std::vector<config::FileProblem> problems;
@@ -75,9 +77,11 @@ namespace rct3::scene
         const auto shown = std::ranges::find(front.choices.background_music, kFirstBackgroundMusic);
         if (shown != front.choices.background_music.end())
             front.choices.background_track = static_cast<std::size_t>(shown - front.choices.background_music.begin());
+        // The game writes times with am and pm only in English.
+        front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -94,6 +98,7 @@ namespace rct3::scene
         const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
+        update_save_browser(device, scene.saves, *scene.live->front);
         if (scene.live->front->take_options_closed())
             save_options(scene);
         while (const auto request = scene.live->front->take_unhandled())
@@ -141,6 +146,7 @@ namespace rct3::scene
         if (scene.live && scene.live->front && scene.live->front->options_window() != nullptr)
             save_options(scene);
         destroy_slideshow_view(device, scene.slideshow);
+        destroy_save_browser(device, scene.saves);
         ui::destroy_interface_assets(device, scene.assets);
         scene = { };
     }

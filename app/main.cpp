@@ -428,6 +428,7 @@ int main(int argc, char** argv)
         setup.language = language;
         setup.fallback_font = fallback_font;
         setup.options_file = user_file(config::UserFile::GameOptions);
+        setup.data = data;
         const auto current = window->size();
         for (const auto& s : window->screen_sizes())
         {

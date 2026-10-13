@@ -1,0 +1,22 @@
+FFmpeg's Windows Media Audio decoder (versions 1 and 2), cut from FFmpeg n7.1.1
+(commit db69d06eeeab4f46da15030a80d539efb4503ca8)
+https://ffmpeg.org/
+Licensed under the GNU Lesser General Public License version 2.1 or later; see COPYING.LGPLv2.1.
+
+Vendored unmodified from the tag above, in libavcodec/:
+  wmadec.c wma.c wma.h wma_common.c wma_common.h wma_freqs.c wma_freqs.h wmadata.h
+
+Cut from the tag above:
+  libavcodec/aactab_scalefactor.c  the scale factor code tables from libavcodec/aactab.c (the only part of
+                                   that file the decoder uses), with its license header
+
+Written for rct3pp, LGPL-2.1-or-later, standing in for the parts of FFmpeg the decoder expects around it:
+  libavutil/*.h, libavcodec/avcodec.h codec_internal.h config_components.h decode.h get_bits.h internal.h
+  put_bits.h sinewin.h
+                     small versions of FFmpeg's headers: the structures and helpers the decoder uses, a
+                     bounds-checked bit reader and a tree-walking VLC reader
+  compat.c           float vector helpers, sine windows, the inverse MDCT and the VLC table builders
+  rct3_wma.h rct3_wma.c
+                     the C interface rct3pp calls: open a decoder for a stream's format, decode a packet
+
+It is compiled as C17 into the rct3pp binary; nothing of FFmpeg is linked from the system.

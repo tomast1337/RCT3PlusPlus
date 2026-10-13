@@ -37,11 +37,11 @@ namespace rct3::ui
             waiting_ = true;
             return true;
         }
-        if (key.key == Key::Escape && !key.control && !key.shift)
+        if (!game_key && key.key == Key::Escape && !key.control && !key.shift)
         {
             waiting_ = false;
         }
-        else if (const auto made = key_combo(key))
+        else if (const auto made = game_key ? play_key_combo(key) : key_combo(key))
         {
             waiting_ = false;
             if (combos != std::vector { *made })
@@ -74,7 +74,7 @@ namespace rct3::ui
         {
             std::string text;
             for (const KeyCombo& c : combos)
-                text += (text.empty() ? "" : ", ") + to_string(c);
+                text += (text.empty() ? "" : ", ") + (game_key ? key_text(c) : to_string(c));
             shown = text.empty() ? none : std::u16string(text.begin(), text.end());
         }
         if (context.list.push_clip(box))

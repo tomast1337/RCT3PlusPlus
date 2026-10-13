@@ -36,3 +36,25 @@ TEST_CASE("a combination matches only its own modifiers")
     CHECK(matches(d, { Key::Shortcut, false, true, U'd' }));
     CHECK_FALSE(matches(d, { Key::Shortcut, true, true, U'd' }));
 }
+
+TEST_CASE("game keys can be any key, shown as the game shows them")
+{
+    const auto letter = play_key_combo({ Key::Letter, true, false, U'n' });
+    REQUIRE(letter);
+    CHECK(key_text(*letter) == "Shift+N");
+    CHECK(play_key_combo({ Key::Shortcut, false, true, U'c' }) == KeyCombo { Key::Letter, U'c', true });
+    CHECK(play_key_combo({ Key::Left }) == KeyCombo { Key::Left });
+    CHECK_FALSE(play_key_combo({ Key::Character, false, false, U'n' }));
+    CHECK_FALSE(key_combo({ Key::Left }));
+    CHECK_FALSE(key_combo({ Key::F5, false, false, 0, { }, true })); // Alt is for game keys
+
+    const KeyCombo all { Key::F11, 0, true, true, true };
+    CHECK(key_text(all) == "Alt+Shift+Ctrl+F11");
+    CHECK(to_string(all) == "Ctrl+Shift+Alt+F11");
+    CHECK(parse_play_key_combo(to_string(all)) == all);
+    CHECK(key_text({ Key::Escape }) == "Esc");
+    CHECK(parse_play_key_combo("left arrow") == KeyCombo { Key::Left });
+    CHECK(parse_play_key_combo("Left") == KeyCombo { Key::Left });
+    CHECK(parse_play_key_combo("B") == KeyCombo { Key::Letter, U'b' });
+    CHECK_FALSE(parse_key_combo("B"));
+}

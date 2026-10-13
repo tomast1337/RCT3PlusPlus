@@ -79,3 +79,23 @@ TEST_CASE("while waiting the key box takes tab and shifted escape")
     f.press({ Key::Escape, true });
     CHECK(f.box->combos == std::vector { KeyCombo { Key::Escape, 0, false, true } });
 }
+
+TEST_CASE("a box cut off entirely leaves the cut as it found it")
+{
+    rct3::ovl::Font f;
+    f.metrics = { 0.1f, 1.0f, 0.2f };
+    f.has_code_table = true;
+    const std::array<Font::Page, 1> pages = { { { 9, 100, 100 } } };
+    FontSet fonts;
+    fonts.set(FontRole::Small, Font::from(f, pages));
+    Fixture fx;
+    DrawList list;
+    const SkinLibrary skins;
+    DrawContext context { list, skins, fonts };
+    REQUIRE(list.push_clip({ 200, 200, 300, 300 })); // Away from the box: nothing of it shows
+    fx.box->draw(context);
+    REQUIRE(list.clip() != nullptr);
+    CHECK(list.clip()->x0 == 200);
+    list.pop_clip();
+    CHECK(list.clip() == nullptr);
+}

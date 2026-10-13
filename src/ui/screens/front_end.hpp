@@ -34,6 +34,7 @@ namespace rct3::ui
         std::array<bool, kExpansionCount> expansions { };
         OptionsChoices choices;    ///< For the options window; its language is the one in use
         bool open_options = false; ///< Start with the options window open, e.g. after a language change
+        bool settled = false;      ///< Start without the front screen's opening animation
     };
 
     class FrontEnd

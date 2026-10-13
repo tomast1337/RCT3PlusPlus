@@ -116,6 +116,9 @@ namespace rct3::ui
         void open(FrontMenu menu);
         /// Back to the parent menu; nothing on the main menu.
         void back();
+        /// Puts every button where it is going and shows the labels, skipping the animation; for a screen
+        /// built again in place of one already shown.
+        void settle();
 
         [[nodiscard]] std::optional<FrontRequest> take_request();
 

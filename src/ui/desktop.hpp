@@ -17,8 +17,9 @@
 // Popups (Widget::popup), such as menus, are top-level widgets that close when a press misses them. The
 // top-most one takes the keyboard focus, which goes back where it was when the popup closes.
 //
-// Pressing and releasing widgets that click, and closing popups by pressing elsewhere, ask for interface
-// sounds (interface_sound.hpp), which the owner takes with take_sounds().
+// Pressing and releasing widgets that click, the pointer coming over widgets that click on hover, and closing
+// popups by pressing elsewhere ask for interface sounds (interface_sound.hpp), which the owner takes with
+// take_sounds().
 //
 // A modal top-level widget (Widget::modal), such as a question, shuts out everything below it: the pointer
 // and the keys reach only it and what was put above it later, and pointer input never reaches the 3D view
@@ -128,6 +129,7 @@ namespace rct3::ui
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
         Rect view_;
         Widget* held_ = nullptr;
+        const Widget* last_under_ = nullptr; // Under the pointer at the last update with nothing held
         Widget* focus_ = nullptr;
         bool focus_shown_ = false;
         Widget* before_popup_ = nullptr; // The focus before a popup took it; checked before use

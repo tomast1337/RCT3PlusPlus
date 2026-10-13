@@ -153,6 +153,11 @@ namespace rct3::ui
         {
             return false;
         }
+        /// Whether the pointer coming over this widget, enabled, clicks as a press does.
+        [[nodiscard]] virtual bool clicks_on_hover() const
+        {
+            return false;
+        }
         virtual void on_press(Point)
         {
         }

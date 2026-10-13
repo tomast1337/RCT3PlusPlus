@@ -327,6 +327,11 @@ namespace rct3::ui
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
         if (under != nullptr && (held_ == nullptr || held_ == under))
             under->on_hover(pointer.position);
+        // Only compared, never followed: it may be gone.
+        if (held_ == nullptr && under != last_under_ && under != nullptr && under->enabled && under->clicks_on_hover())
+            sounds_.push_back(InterfaceSound::Press);
+        if (held_ == nullptr)
+            last_under_ = under;
 
         update_tree(*root_, context);
         sweep(*root_);

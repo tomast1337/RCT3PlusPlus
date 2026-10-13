@@ -24,9 +24,12 @@ namespace rct3::config
 
     enum class UserFolder : std::uint8_t
     {
-        Config,      ///< config/: settings, game options, keys
-        Screenshots, ///< screenshots/
-        Music,       ///< music/: the user's own music for the park
+        Config,       ///< config/: settings, game options, keys
+        Screenshots,  ///< screenshots/
+        Music,        ///< music/: the user's own music for the park
+        Parks,        ///< parks/: saved sandbox parks
+        Scenarios,    ///< scenarios/: saved custom scenarios
+        NewScenarios, ///< new_scenarios/: scenarios to start a custom scenario from
 
         Count_, ///< Number of folders; not a folder
     };
@@ -36,7 +39,7 @@ namespace rct3::config
     {
         Settings,    ///< The program's settings (settings.hpp)
         GameOptions, ///< What the options window sets (game_options.hpp)
-        Keys,        ///< The keys of the interface's commands (key_map.hpp)
+        Keys,        ///< The keys of the game's and the interface's commands (key_map.hpp)
 
         Count_, ///< Number of files; not a file
     };

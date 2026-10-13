@@ -12,7 +12,7 @@ namespace
 {
     FrontEndStyle style()
     {
-        return { game_skins::options_dialog_style(), game_skins::question_box_style() };
+        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style() };
     }
 
     struct Fixture
@@ -101,4 +101,29 @@ TEST_CASE("the options window can be open from the start")
     setup.open_options = true;
     Fixture f(setup);
     CHECK(f.front.options_window() != nullptr);
+}
+
+TEST_CASE("loading opens the window that loads games on the right folder, once")
+{
+    Fixture f;
+    f.front.screen().open(FrontMenu::Sandbox);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::Sandbox, 1));
+    FileDialog* parks = f.front.file_dialog();
+    REQUIRE(parks != nullptr);
+    CHECK(parks->mode() == FileDialogMode::Load);
+    CHECK(f.front.file_folder() == config::UserFolder::Parks);
+    CHECK(f.front.file_action() == FrontAction::LoadSandbox);
+    CHECK(f.front.file_dialogs_opened() == 1);
+    CHECK_FALSE(f.front.take_unhandled());
+
+    // The same choice again keeps the window; another folder replaces it.
+    f.press(f.front.screen().button(FrontMenu::Sandbox, 1));
+    CHECK(f.front.file_dialogs_opened() == 1);
+    f.front.screen().open(FrontMenu::CustomScenario);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::CustomScenario, 0));
+    CHECK(f.front.file_folder() == config::UserFolder::NewScenarios);
+    CHECK(f.front.file_action() == FrontAction::NewCustomScenario);
+    CHECK(f.front.file_dialogs_opened() == 2);
 }

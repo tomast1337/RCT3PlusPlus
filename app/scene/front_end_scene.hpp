@@ -9,6 +9,7 @@
 #include "config/game_install.hpp"
 #include "config/game_options.hpp"
 #include "render/device.hpp"
+#include "scene/save_browser.hpp"
 #include "scene/slideshow_view.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
@@ -30,6 +31,7 @@ namespace rct3::scene
         std::string language;               ///< The one to use
         std::filesystem::path fallback_font;
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
+        std::optional<config::UserData> data;              ///< Where the saves are; without it there are none
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
         ui::KeyMap keys;                                    ///< In use, for the options window to change
@@ -42,6 +44,7 @@ namespace rct3::scene
     {
         ui::InterfaceAssets assets;
         SlideshowView slideshow;
+        SaveBrowser saves;
         std::optional<std::filesystem::path> options_file;
         // On the heap: the front end keeps references to the desktop and the options, and the scene moves.
         struct Live

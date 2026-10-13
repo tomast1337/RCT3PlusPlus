@@ -54,10 +54,10 @@ namespace rct3::ui
         std::optional<std::size_t> screen_size;    ///< The one in use, if it is in the list
         std::vector<int> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
         KeyMap keys { };                           ///< In use; the keys page changes a copy
-        /// The music files the park can play when zoomed out; the row shows with any. The choice is not kept
-        /// and changes nothing yet.
+        /// The music files the park can play when zoomed out; the row shows with any. The choice goes into the
+        /// options.
         std::vector<std::string> background_music { };
-        std::optional<std::size_t> background_track { }; ///< Shown at first; nothing for no music
+        std::optional<std::size_t> background_track { }; ///< Shown while the player has not chosen; nothing for no music
     };
 
     struct OptionsDialogStyle
@@ -129,6 +129,10 @@ namespace rct3::ui
         {
             return language_;
         }
+        [[nodiscard]] Dropdown* background_music_list() const
+        {
+            return music_;
+        }
 
         void update(const UpdateContext& context) override;
 
@@ -136,6 +140,9 @@ namespace rct3::ui
         /// Makes the window as tall as the open page's shown rows.
         void fit_page();
         void build_general(Widget& page, const StringTable& strings);
+        /// Selects the park music the options hold.
+        void show_background_music();
+        void update_background_music();
         void build_keys(Widget& page, const StringTable& strings);
         void build_graphics(Widget& page, const StringTable& strings);
         void build_camera(Widget& page, const StringTable& strings);
@@ -154,6 +161,7 @@ namespace rct3::ui
         ScrollArea* custom_ = nullptr;
         Dropdown* language_ = nullptr;
         Dropdown* resolution_ = nullptr;
+        Dropdown* music_ = nullptr; // The park's: the files, then shuffle, then none
         std::array<KeyBox*, kCommandCount> key_boxes_ { };
         Button* usual_keys_ = nullptr;
         OptionsPage page_ = OptionsPage::General;

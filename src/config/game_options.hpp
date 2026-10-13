@@ -7,7 +7,8 @@
 // Every option is a number with a range, registered once in the table in game_options.cpp: on/off options
 // are 0 or 1, choices count from 0, levels are any value in their range or whole steps of it. The file is a
 // JSON object holding the options that differ from their defaults (true and false read as 1 and 0); values
-// it does not understand are reported and skipped.
+// it does not understand are reported and skipped. One option is a file name rather than a number: the
+// park's music when zoomed out, kept under "background_music".
 //
 // Many options have no effect yet: they are kept so the dialog shows what the player chose.
 #pragma once
@@ -23,6 +24,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::config
@@ -40,9 +42,10 @@ namespace rct3::config
         GameVolume,
         MusicVolume,
         InterfaceVolume,
-        ImportMyMusic,  ///< Play the player's own music in the park
-        CycleMenuMusic, ///< A different menu track each start
-        MenuTrack,      ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
+        ImportMyMusic,          ///< Play the player's own music in the park
+        CycleMenuMusic,         ///< A different menu track each start
+        ShuffleBackgroundMusic, ///< The park's music when zoomed out is picked at random (ours; the game has no such choice)
+        MenuTrack,              ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
 
         // Camera
         InvertRideCameraY,
@@ -168,6 +171,17 @@ namespace rct3::config
         /// Sets the value, kept in range and snapped to a whole step.
         void set(GameOption option, float value);
 
+        /// The park's music when zoomed out: a file of the game's music folder by name, empty for no music.
+        /// Nothing until the player picks one. Ignored while ShuffleBackgroundMusic is on.
+        [[nodiscard]] const std::optional<std::string>& background_music() const
+        {
+            return background_music_;
+        }
+        void set_background_music(std::optional<std::string> track)
+        {
+            background_music_ = std::move(track);
+        }
+
         /// The file text: the options that differ from their defaults.
         [[nodiscard]] std::string text() const;
         /// Writes text() to `path`, creating its folder.
@@ -177,6 +191,7 @@ namespace rct3::config
 
     private:
         std::array<float, kGameOptionCount> values_ { };
+        std::optional<std::string> background_music_;
     };
 
 } // namespace rct3::config

@@ -76,6 +76,33 @@ TEST_CASE("the language list shows with two languages, each by its own name")
     CHECK_FALSE(two.dialog->take_language());
 }
 
+TEST_CASE("the park's music is picked from the files, shuffled or none, and kept in the options")
+{
+    Fixture none;
+    CHECK(none.dialog->background_music_list() == nullptr);
+
+    OptionsChoices choices;
+    choices.background_music = { "A.wma", "B.wma" };
+    choices.background_track = 1;
+    Fixture f(choices);
+    Dropdown* list = f.dialog->background_music_list();
+    REQUIRE(list != nullptr);
+    CHECK(list->items.size() == 4); // The files, shuffle, no music
+    CHECK(list->selected() == 1);   // Not chosen yet: the owner's pick
+
+    list->on_key({ Key::Down });
+    f.desktop.update({ });
+    CHECK(f.options.flag(O::ShuffleBackgroundMusic));
+    CHECK(f.dialog->take_change());
+    list->on_key({ Key::Down });
+    f.desktop.update({ });
+    CHECK_FALSE(f.options.flag(O::ShuffleBackgroundMusic));
+    CHECK(f.options.background_music() == "");
+    list->on_key({ Key::Home });
+    f.desktop.update({ });
+    CHECK(f.options.background_music() == "A.wma");
+}
+
 TEST_CASE("controls change the options at once")
 {
     Fixture f;

@@ -42,6 +42,18 @@ namespace rct3::ui
         Copy,      ///< Control+C or Control+Insert
         Cut,       ///< Control+X or Shift+Delete
         Paste,     ///< Control+V or Shift+Insert: `text` holds what the clipboard had
+        F1,        ///< The function keys, F1 to F12 in order
+        F2,
+        F3,
+        F4,
+        F5,
+        F6,
+        F7,
+        F8,
+        F9,
+        F10,
+        F11,
+        F12,
     };
 
     struct KeyPress

@@ -29,6 +29,7 @@ namespace rct3::config
             { O::InterfaceVolume, "interface_volume", 0, 1, kAny, 0.8f },
             { O::ImportMyMusic, "import_my_music", 0, 1, 1, 0 },
             { O::CycleMenuMusic, "cycle_menu_music", 0, 1, 1, 1 },
+            { O::MenuTrack, "menu_track", 0, 50, 1, 0 },
 
             { O::InvertRideCameraY, "invert_ride_camera_y", 0, 1, 1, 0 },
             { O::AllPhotos, "all_photos", 0, 1, 1, 1 },

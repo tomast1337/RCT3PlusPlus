@@ -432,3 +432,53 @@ TEST_CASE("a modal widget shuts out the widgets below it")
         CHECK(f.desktop.hit({ 120, 20 }) == &f.field);
     }
 }
+
+TEST_CASE("pressing and releasing a widget that clicks asks for its sounds")
+{
+    class Clicker : public Probe
+    {
+    public:
+        using Probe::Probe;
+        [[nodiscard]] bool clicks() const override
+        {
+            return true;
+        }
+    };
+    Desktop desktop;
+    Clicker& c = desktop.root().add<Clicker>("c");
+    c.placement = top_left(0, 0, 50, 50);
+    Probe& quiet = desktop.root().add<Probe>("quiet");
+    quiet.placement = top_left(100, 0, 50, 50);
+    desktop.layout(kView);
+
+    desktop.update(at(10, 10, true));
+    CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Press });
+    CHECK(desktop.take_sounds().empty());
+    desktop.update(at(12, 10, false));
+    CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Release });
+
+    SUBCASE("released elsewhere: no second click")
+    {
+        desktop.update(at(10, 10, true));
+        desktop.update(at(120, 10, false));
+        CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Press });
+    }
+    SUBCASE("widgets that do not click, and disabled ones, are quiet")
+    {
+        desktop.update(at(110, 10, true));
+        desktop.update(at(110, 10, false));
+        c.enabled = false;
+        desktop.update(at(10, 10, true));
+        desktop.update(at(10, 10, false));
+        CHECK(desktop.take_sounds().empty());
+    }
+    SUBCASE("a press that closes a popup sounds like a release")
+    {
+        Probe& menu = desktop.root().add<Probe>("menu");
+        menu.popup = true;
+        menu.placement = top_left(60, 60, 20, 20);
+        desktop.layout(kView);
+        desktop.update(at(110, 10, true));
+        CHECK(desktop.take_sounds() == std::vector { InterfaceSound::Release });
+    }
+}

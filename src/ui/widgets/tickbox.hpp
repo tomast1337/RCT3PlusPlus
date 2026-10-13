@@ -27,6 +27,10 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] bool clicks() const override
+        {
+            return true;
+        }
         [[nodiscard]] bool takes_focus() const override
         {
             return true;

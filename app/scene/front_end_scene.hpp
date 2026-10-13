@@ -9,6 +9,7 @@
 #include "config/game_install.hpp"
 #include "config/game_options.hpp"
 #include "render/device.hpp"
+#include "scene/slideshow_view.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
@@ -31,13 +32,16 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
-        ui::KeyMap keys;     ///< In use, for the options window to change
-        bool reload = false; ///< Built again after a language change: no opening animation, options window open
+        ui::KeyMap keys;                                    ///< In use, for the options window to change
+        std::vector<std::filesystem::path> picture_folders; ///< Of the slideshow behind the front screen, in order
+        std::uint32_t picture_seed = 0;                     ///< Shuffles the slideshow
+        bool reload = false;                                ///< Built again after a language change: no opening animation, options window open
     };
 
     struct FrontEndScene
     {
         ui::InterfaceAssets assets;
+        SlideshowView slideshow;
         std::optional<std::filesystem::path> options_file;
         // On the heap: the front end keeps references to the desktop and the options, and the scene moves.
         struct Live

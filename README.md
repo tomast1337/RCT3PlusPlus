@@ -49,7 +49,8 @@ or with an environment variable; `rct3pp --help` lists both, with the file's loc
 Everything rct3++ keeps for you lives in one folder: `rct3pp/` under your data folder (`$XDG_DATA_HOME`,
 else `~/.local/share`; `%APPDATA%` on Windows), or `$RCT3PP_DATA` when set. In it, `config/` holds the
 settings (`settings.json`), what the options window sets (`options.json`) and the keys you bound
-(`keys.json`); `screenshots/` and `music/` are for screenshots and your own park music. The files are JSON,
+(`keys.json`); `screenshots/` and `music/` are for screenshots and your own park music. Pictures in
+`screenshots/` (JPEG, PNG, BMP or TGA) join the game's own in the slideshow behind the front screen. The files are JSON,
 read with the vendored [JSON for Modern C++](third_party/nlohmann/).
 
 `rct3pp --write-settings` writes the settings file with every setting, including any given on the same

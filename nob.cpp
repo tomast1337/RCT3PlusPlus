@@ -259,12 +259,13 @@ namespace
         return compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database);
     }
 
-    // Vendored code every target links: the stb_truetype implementation unit, built without our warnings.
+    // Vendored code every target links: the stb_truetype and stb_image implementation units, built without our
+    // warnings.
     bool compile_vendored_core(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         Config vendored = cfg;
         vendored.compile_flags.push_back("-w");
-        return compile(vendored, { "third_party/stb/stb_truetype_impl.cpp" }, headers, objects, database);
+        return compile(vendored, { "third_party/stb/stb_truetype_impl.cpp", "third_party/stb/stb_image_impl.cpp" }, headers, objects, database);
     }
 
     Config with_audio_link(Config cfg)

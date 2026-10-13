@@ -24,9 +24,9 @@ TEST_CASE("every setting is registered once, in id order, with a description")
     CHECK(setting_name(Setting::SkipIntro) == "skip_intro");
 }
 
-TEST_CASE("a file sets values by name, ignoring comments, blanks and spaces around them")
+TEST_CASE("a file sets values by name")
 {
-    const auto settings = Settings::parse("# a comment\n\n  game_path =  /games/park  \r\nskip_intro=yes\n");
+    const auto settings = Settings::parse(R"({ "game_path": "/games/park", "skip_intro": true, "interface_scale": null })");
     REQUIRE(settings.get(Setting::GamePath).has_value());
     CHECK(*settings.get(Setting::GamePath) == "/games/park");
     CHECK(settings.path(Setting::GamePath) == fs::path("/games/park"));
@@ -34,13 +34,15 @@ TEST_CASE("a file sets values by name, ignoring comments, blanks and spaces arou
     CHECK(settings.is_set(Setting::SkipIntro));
     CHECK_FALSE(settings.is_set(Setting::InterfaceScale));
 
-    SUBCASE("a later line wins")
+    SUBCASE("flags and scales may be written as text")
     {
-        CHECK_FALSE(Settings::parse("skip_intro = yes\nskip_intro = no\n").flag(Setting::SkipIntro));
+        const auto text = Settings::parse(R"({ "skip_intro": "yes", "interface_scale": "2" })");
+        CHECK(text.flag(Setting::SkipIntro));
+        CHECK(*text.get(Setting::InterfaceScale) == "2");
     }
-    SUBCASE("a value may contain '='")
+    SUBCASE("an empty file is no settings")
     {
-        CHECK(*Settings::parse("game_path = /a=b\n").get(Setting::GamePath) == "/a=b");
+        CHECK_FALSE(Settings::parse(" \n").is_set(Setting::SkipIntro));
     }
 }
 
@@ -52,34 +54,47 @@ TEST_CASE("unset settings give their defaults")
     REQUIRE(settings.get(Setting::InterfaceScale).has_value());
     CHECK(*settings.get(Setting::InterfaceScale) == "auto");
 
-    Settings changed = Settings::parse("skip_intro = yes\n");
+    Settings changed = Settings::parse(R"({ "skip_intro": true })");
     changed.set(Setting::SkipIntro, "");
     CHECK_FALSE(changed.is_set(Setting::SkipIntro));
 }
 
-TEST_CASE("bad lines are reported and skipped, the rest still apply")
+TEST_CASE("bad values are reported and skipped, the rest still apply")
 {
-    std::vector<SettingsProblem> problems;
-    const auto settings = Settings::parse("no equals sign\nfuture_option = 3\nskip_intro = yes\n", &problems);
+    std::vector<FileProblem> problems;
+    const auto settings = Settings::parse(R"({ "game_path": 3, "future_option": 3, "skip_intro": true, "interface_scale": 1.5 })", &problems);
     CHECK(settings.flag(Setting::SkipIntro));
-    REQUIRE(problems.size() == 2);
-    CHECK(problems[0].line == 1);
-    CHECK(problems[1].line == 2);
+    CHECK_FALSE(settings.is_set(Setting::GamePath));
+    CHECK_FALSE(settings.is_set(Setting::InterfaceScale));
+    REQUIRE(problems.size() == 3);
     CHECK(problems[1].message.find("future_option") != std::string::npos);
+
+    SUBCASE("a file that is not a JSON object is reported as a whole")
+    {
+        problems.clear();
+        CHECK_FALSE(Settings::parse("skip_intro = yes\n", &problems).is_set(Setting::SkipIntro));
+        CHECK(problems.size() == 1);
+        problems.clear();
+        (void)Settings::parse("[1, 2]", &problems);
+        CHECK(problems.size() == 1);
+    }
 }
 
 TEST_CASE("the written file reads back the same, keeping unknown settings")
 {
-    Settings settings = Settings::parse("future_option = 3\n");
+    Settings settings = Settings::parse(R"({ "future_option": { "a": [1, 2] } })");
     settings.set(Setting::GamePath, "/games/park");
+    settings.set(Setting::SkipIntro, "yes");
     settings.set(Setting::InterfaceScale, "2");
     const std::string text = settings.text();
 
-    CHECK(text.find("\ngame_path = /games/park\n") != std::string::npos);
-    CHECK(text.find("\n# skip_intro = no\n") != std::string::npos); // At its default: commented out
-    CHECK(text.find("\nfuture_option = 3\n") != std::string::npos);
+    CHECK(text.find(R"("game_path": "/games/park",)") != std::string::npos);
+    CHECK(text.find(R"("skip_intro": true,)") != std::string::npos);
+    CHECK(text.find(R"("interface_scale": 2,)") != std::string::npos);
+    CHECK(text.find(R"("language": null,)") != std::string::npos); // At its default
+    CHECK(text.find(R"("future_option": {)") != std::string::npos);
 
-    std::vector<SettingsProblem> problems;
+    std::vector<FileProblem> problems;
     const auto again = Settings::parse(text, &problems);
     for (const SettingInfo& info : settings_table())
     {
@@ -94,7 +109,7 @@ TEST_CASE("settings are saved to and loaded from a file")
 {
     const fs::path dir = fs::temp_directory_path() / "rct3pp_settings_test";
     fs::remove_all(dir);
-    const fs::path file = dir / "sub" / "settings.ini";
+    const fs::path file = dir / "sub" / "settings.json";
 
     CHECK(Settings::load(file).has_value()); // Not there yet: defaults
 
@@ -111,18 +126,6 @@ TEST_CASE("settings are saved to and loaded from a file")
         CHECK_FALSE(Settings::load(dir / "sub").has_value());
     }
     fs::remove_all(dir);
-}
-
-TEST_CASE("the settings file lives in the user's configuration folder")
-{
-    using E = EnvVar;
-    CHECK(settings_path(Environment::from_values({ { E::SettingsFile, "/a/mine.ini" }, { E::Home, "/users/someone" } })) == fs::path("/a/mine.ini"));
-#ifndef _WIN32
-    CHECK(settings_path(Environment::from_values({ { E::ConfigHome, "/cfg" }, { E::Home, "/users/someone" } })) == fs::path("/cfg/rct3pp/settings.ini"));
-    CHECK(settings_path(Environment::from_values({ { E::ConfigHome, "relative" }, { E::Home, "/users/someone" } })) == fs::path("/users/someone/.config/rct3pp/settings.ini"));
-    CHECK(settings_path(Environment::from_values({ { E::Home, "/users/someone" } })) == fs::path("/users/someone/.config/rct3pp/settings.ini"));
-    CHECK_FALSE(settings_path(Environment()).has_value());
-#endif
 }
 
 TEST_CASE("interface scale is auto or a whole number from 1 to 8")

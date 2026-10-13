@@ -40,39 +40,40 @@ TEST_CASE("values are kept in range and on whole steps")
 TEST_CASE("the file holds what differs from the defaults and reads back the same")
 {
     GameOptions options;
-    CHECK(options.text().find('\n') == options.text().size() - 1); // The heading only
+    CHECK(options.text() == "{}\n");
     options.set(GameOption::Fullscreen, 1);
     options.set(GameOption::MusicVolume, 0.25f);
     const std::string text = options.text();
-    CHECK(text.find("fullscreen = 1\n") != std::string::npos);
-    CHECK(text.find("music_volume = 0.25\n") != std::string::npos);
+    CHECK(text == "{\n    \"fullscreen\": 1,\n    \"music_volume\": 0.25\n}\n");
     CHECK(GameOptions::parse(text) == options);
+    CHECK(GameOptions::parse(R"({ "fullscreen": true })") == GameOptions::parse(R"({ "fullscreen": 1 })"));
 }
 
-TEST_CASE("bad lines are reported and skipped")
+TEST_CASE("bad values are reported and skipped")
 {
-    std::vector<GameOptionsProblem> problems;
-    const auto options = GameOptions::parse("clouds = 0\nfog = 1\nshadows = lots\nno equals\n", &problems);
+    std::vector<FileProblem> problems;
+    const auto options = GameOptions::parse(R"({ "clouds": 0, "fog": 1, "shadows": "lots" })", &problems);
     CHECK_FALSE(options.flag(GameOption::Clouds));
     CHECK(options.choice(GameOption::Shadows) == 2);
-    REQUIRE(problems.size() == 3);
-    CHECK(problems[0].line == 2);
-    CHECK(problems[1].line == 3);
-    CHECK(problems[2].line == 4);
+    REQUIRE(problems.size() == 2);
+    CHECK(problems[0].message.find("fog") != std::string::npos);
+    CHECK(problems[1].message.find("shadows") != std::string::npos);
+
+    problems.clear();
+    CHECK(GameOptions::parse("clouds = 0", &problems) == GameOptions { });
+    CHECK(problems.size() == 1);
 }
 
-TEST_CASE("options are saved beside the settings file")
+TEST_CASE("options are saved to and loaded from a file")
 {
-    CHECK(game_options_path(Environment::from_values({ { EnvVar::SettingsFile, "/config/rct3pp/settings.ini" } })) == fs::path("/config/rct3pp/options.ini"));
-
     const fs::path folder = fs::temp_directory_path() / "rct3pp-game-options-test";
     fs::remove_all(folder);
     GameOptions options;
     options.set(GameOption::CameraMode, 1);
-    REQUIRE(options.save(folder / "options.ini"));
-    const auto loaded = GameOptions::load(folder / "options.ini");
+    REQUIRE(options.save(folder / "options.json"));
+    const auto loaded = GameOptions::load(folder / "options.json");
     REQUIRE(loaded);
     CHECK(*loaded == options);
-    CHECK(GameOptions::load(folder / "missing.ini") == GameOptions { });
+    CHECK(GameOptions::load(folder / "missing.json") == GameOptions { });
     fs::remove_all(folder);
 }

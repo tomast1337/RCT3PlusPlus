@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/key_map.hpp"
 
-#include "config/text_file.hpp"
+#include "config/json_text.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -57,15 +57,6 @@ namespace rct3::ui
                     return true;
                 return combo && std::ranges::any_of(info.usual, [&](const auto& u) { return u && *u == *combo; });
             });
-        }
-
-        std::string_view trimmed(std::string_view s)
-        {
-            while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r'))
-                s.remove_prefix(1);
-            while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r'))
-                s.remove_suffix(1);
-            return s;
         }
 
     } // namespace
@@ -153,46 +144,33 @@ namespace rct3::ui
         return out;
     }
 
-    KeyMap KeyMap::parse(std::string_view text, std::vector<KeyMapProblem>* problems)
+    KeyMap KeyMap::parse(std::string_view text, std::vector<config::FileProblem>* problems)
     {
         KeyMap map;
-        const auto report = [&](std::size_t line, std::string message) {
-            if (problems != nullptr)
-                problems->push_back({ line, std::move(message) });
-        };
-        std::size_t number = 0;
-        while (!text.empty())
+        const auto json = config::parse_json_object(text, problems);
+        if (!json)
+            return map;
+        for (const auto& [name, value] : json->items())
         {
-            const std::size_t end = text.find('\n');
-            const std::string_view line = trimmed(text.substr(0, end));
-            text = end == std::string_view::npos ? std::string_view { } : text.substr(end + 1);
-            ++number;
-            if (line.empty() || line.front() == '#')
-                continue;
-            const std::size_t equals = line.find('=');
-            if (equals == std::string_view::npos)
-            {
-                report(number, "expected name = keys");
-                continue;
-            }
-            const std::string_view name = trimmed(line.substr(0, equals));
             const auto info = std::ranges::find(kCommands, name, &CommandInfo::name);
             if (info == kCommands.end())
             {
-                report(number, "unknown command " + std::string(name));
+                config::report(problems, "unknown command " + name);
+                continue;
+            }
+            if (!value.is_array())
+            {
+                config::report(problems, name + ": expected a list of keys");
                 continue;
             }
             std::vector<KeyCombo> combos;
-            std::string_view rest = trimmed(line.substr(equals + 1));
-            while (!rest.empty())
+            for (const auto& item : value)
             {
-                const std::size_t comma = rest.find(',');
-                const std::string_view part = trimmed(rest.substr(0, comma));
-                rest = comma == std::string_view::npos ? std::string_view { } : rest.substr(comma + 1);
-                if (const auto combo = parse_key_combo(part))
+                const auto combo = item.is_string() ? parse_key_combo(item.get<std::string>()) : std::nullopt;
+                if (combo)
                     combos.push_back(*combo);
                 else
-                    report(number, "not keys that can be bound: " + std::string(part));
+                    config::report(problems, name + ": not keys that can be bound: " + item.dump());
             }
             map.set_keys(info->command, std::move(combos));
         }
@@ -202,21 +180,20 @@ namespace rct3::ui
     std::string KeyMap::text() const
     {
         const KeyMap usual;
-        std::string out;
+        config::Json json = config::Json::object();
         for (const CommandInfo& info : kCommands)
         {
             const auto& list = keys(info.command);
             if (list == usual.keys(info.command))
                 continue;
-            out += std::string(info.name) + " =";
-            for (std::size_t i = 0; i < list.size(); ++i)
-                out += (i == 0 ? " " : ", ") + to_string(list[i]);
-            out += '\n';
+            config::Json& names = json[info.name] = config::Json::array();
+            for (const KeyCombo& combo : list)
+                names.push_back(to_string(combo));
         }
-        return out;
+        return config::json_text(json);
     }
 
-    std::expected<KeyMap, std::string> KeyMap::load(const std::filesystem::path& path, std::vector<KeyMapProblem>* problems)
+    std::expected<KeyMap, std::string> KeyMap::load(const std::filesystem::path& path, std::vector<config::FileProblem>* problems)
     {
         auto text = config::read_text_file(path);
         if (!text)

@@ -72,22 +72,20 @@ TEST_CASE("binding keys takes them from other commands")
 
 TEST_CASE("the file keeps only what differs from the usual keys")
 {
-    CHECK(KeyMap { }.text().empty());
+    CHECK(KeyMap { }.text() == "{}\n");
     KeyMap map;
     map.set_keys(Command::NextPage, { { Key::F6 }, { Key::Shortcut, U'n', true, false } });
     map.set_keys(Command::DeveloperWindows, { });
     const std::string text = map.text();
-    CHECK(text == "next_page = F6, Ctrl+N\ndeveloper_windows =\n");
+    CHECK(text == "{\n    \"next_page\": [\n        \"F6\",\n        \"Ctrl+N\"\n    ],\n    \"developer_windows\": []\n}\n");
     CHECK(KeyMap::parse(text) == map);
 }
 
 TEST_CASE("the file reports what it cannot read and keeps the rest")
 {
-    std::vector<KeyMapProblem> problems;
-    const KeyMap map = KeyMap::parse("# keys\ncancel = F4, Space\nnothing = F5\nno equals\n", &problems);
+    std::vector<rct3::config::FileProblem> problems;
+    const KeyMap map = KeyMap::parse(R"({ "cancel": ["F4", "Space", 3], "nothing": ["F5"], "copy": "F6" })", &problems);
     CHECK(map.keys(Command::Cancel) == std::vector { KeyCombo { Key::F4 } });
-    REQUIRE(problems.size() == 3);
-    CHECK(problems[0].line == 2);
-    CHECK(problems[1].line == 3);
-    CHECK(problems[2].line == 4);
+    CHECK(map.keys(Command::Copy) == KeyMap { }.keys(Command::Copy));
+    CHECK(problems.size() == 4);
 }

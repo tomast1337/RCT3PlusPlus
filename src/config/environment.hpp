@@ -28,8 +28,8 @@ namespace rct3::config
         GamePath,     ///< RCT3PP_GAME_PATH: root folder of the installed original game
         Validation,   ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
         FallbackFont, ///< RCT3PP_FALLBACK_FONT: TrueType font for characters the game fonts lack
-        SettingsFile, ///< RCT3PP_SETTINGS: settings file to use instead of the default one
-        ConfigHome,   ///< XDG_CONFIG_HOME: the user's configuration folder
+        DataFolder,   ///< RCT3PP_DATA: the folder for the user's data, instead of the default one
+        DataHome,     ///< XDG_DATA_HOME: the user's data folder
         Home,         ///< HOME: the user's home folder
         AppData,      ///< APPDATA: the user's application data folder on Windows
         LcAll,        ///< LC_ALL: the locale for everything, before LC_MESSAGES and LANG

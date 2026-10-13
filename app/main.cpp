@@ -14,12 +14,13 @@
 //   --widget-demo     a window of every kind of control instead of the front screen
 //   --frames N        exit after N frames (smoke test)
 //   --write-settings  write the settings file, with any settings given here, and exit
-//   --help            this text, the settings (config/settings.hpp) and the environment variables read
-//                     (config/environment.hpp)
+//   --help            this text, the user's data folder (config/user_data.hpp), the settings
+//                     (config/settings.hpp) and the environment variables read (config/environment.hpp)
 #include "config/environment.hpp"
 #include "config/game_install.hpp"
 #include "config/game_options.hpp"
 #include "config/settings.hpp"
+#include "config/user_data.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "platform/window.hpp"
@@ -53,10 +54,13 @@ namespace
         std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--frames N] [--write-settings] [--help]\n");
     }
 
-    void print_help(const std::optional<std::filesystem::path>& settings_file)
+    void print_help(const std::optional<rct3::config::UserData>& data)
     {
         print_usage(stdout);
-        std::printf("\nsettings (%s):\n", settings_file ? settings_file->string().c_str() : "no file: no configuration folder known");
+        std::printf("\nthe user's data (%s):\n", data ? data->root().string().c_str() : "no folder known");
+        for (const auto& folder : rct3::config::user_folders_table())
+            std::printf("  %-20s %.*s\n", (std::string(folder.name) + "/").c_str(), static_cast<int>(folder.description.size()), folder.description.data());
+        std::printf("\nsettings (%s):\n", data ? data->file(rct3::config::UserFile::Settings).string().c_str() : "not kept");
         for (const auto& setting : rct3::config::settings_table())
             std::printf("  %-20.*s %.*s\n", static_cast<int>(setting.name.size()), setting.name.data(), static_cast<int>(setting.description.size()), setting.description.data());
         std::printf("\nenvironment:\n");
@@ -174,18 +178,28 @@ int main(int argc, char** argv)
     const auto log = rct3::logging::logger("app");
     const auto env = config::Environment::from_process();
 
-    const auto settings_file = config::settings_path(env);
-    config::Settings settings;
-    if (settings_file)
-    {
-        std::vector<config::SettingsProblem> problems;
-        if (auto loaded = config::Settings::load(*settings_file, &problems))
-            settings = std::move(*loaded);
+    // Everything kept for the user lives in one folder.
+    const auto data = config::UserData::locate(env);
+    if (!data)
+        log.warning("no folder for the user's data known; set {}: settings, options and keys are not kept", config::env_name(config::EnvVar::DataFolder));
+    const auto user_file = [&](config::UserFile file) { return data ? std::optional(data->file(file)) : std::nullopt; };
+    // Reads one of the user's files; what cannot be read is logged, and the defaults stand in for it.
+    const auto load_user_file = [&]<typename T>(config::UserFile file, T& into) {
+        const auto path = user_file(file);
+        if (!path)
+            return;
+        std::vector<config::FileProblem> problems;
+        if (auto loaded = T::load(*path, &problems))
+            into = std::move(*loaded);
         else
-            log.warning("settings: {}", loaded.error());
+            log.warning("{}", loaded.error());
         for (const auto& problem : problems)
-            log.warning("{}:{}: {}", settings_file->string(), problem.line, problem.message);
-    }
+            log.warning("{}: {}", path->string(), problem.message);
+    };
+
+    const auto settings_file = user_file(config::UserFile::Settings);
+    config::Settings settings;
+    load_user_file(config::UserFile::Settings, settings);
 
     // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
     int max_frames = -1;
@@ -241,7 +255,7 @@ int main(int argc, char** argv)
         }
         else if (std::strcmp(argv[i], "--help") == 0)
         {
-            print_help(settings_file);
+            print_help(data);
             return 0;
         }
         else
@@ -255,7 +269,7 @@ int main(int argc, char** argv)
     {
         if (!settings_file)
         {
-            std::fprintf(stderr, "no configuration folder known; set %.*s\n", static_cast<int>(config::env_name(config::EnvVar::SettingsFile).size()), config::env_name(config::EnvVar::SettingsFile).data());
+            std::fprintf(stderr, "no folder for the user's data known; set %.*s\n", static_cast<int>(config::env_name(config::EnvVar::DataFolder).size()), config::env_name(config::EnvVar::DataFolder).data());
             return 1;
         }
         if (auto saved = settings.save(*settings_file); !saved)
@@ -275,18 +289,9 @@ int main(int argc, char** argv)
         log.warning("settings: {}", parsed.error());
 
     // The keys the user set for the interface's commands.
-    const auto keys_file = config::config_file_path(env, rct3::ui::kKeyMapFile);
+    const auto keys_file = user_file(config::UserFile::Keys);
     rct3::ui::KeyMap key_map;
-    if (keys_file)
-    {
-        std::vector<rct3::ui::KeyMapProblem> problems;
-        if (auto loaded = rct3::ui::KeyMap::load(*keys_file, &problems))
-            key_map = std::move(*loaded);
-        else
-            log.warning("keys: {}", loaded.error());
-        for (const auto& p : problems)
-            log.warning("keys: {}:{}: {}", keys_file->string(), p.line, p.message);
-    }
+    load_user_file(config::UserFile::Keys, key_map);
     // The developer windows start hidden; a command shows and hides them.
     bool developer_windows = false;
 
@@ -382,7 +387,7 @@ int main(int argc, char** argv)
         setup.languages = installed;
         setup.language = language;
         setup.fallback_font = fallback_font;
-        setup.options_file = config::game_options_path(env);
+        setup.options_file = user_file(config::UserFile::GameOptions);
         const auto current = window->size();
         for (const auto& s : window->screen_sizes())
         {

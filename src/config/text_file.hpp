@@ -13,6 +13,12 @@
 namespace rct3::config
 {
 
+    /// Something in a configuration file that could not be used; the rest of the file still applies.
+    struct FileProblem
+    {
+        std::string message;
+    };
+
     /// The file's contents; nothing when there is no file.
     [[nodiscard]] std::expected<std::optional<std::string>, std::string> read_text_file(const std::filesystem::path& path);
 

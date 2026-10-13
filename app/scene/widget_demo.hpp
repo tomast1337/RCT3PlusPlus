@@ -11,18 +11,13 @@
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
-#include "ui/interface_fonts.hpp"
-#include "ui/skin_library.hpp"
-#include "ui/string_table.hpp"
-#include "ui/ui_renderer.hpp"
-#include "ui/ui_textures.hpp"
+#include "ui/interface_assets.hpp"
 #include "ui/widgets/menu_bar.hpp"
 #include "ui/widgets/question_box.hpp"
 #include "ui/widgets/toolbar.hpp"
 
 #include <expected>
 #include <filesystem>
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -31,14 +26,8 @@ namespace rct3::scene
 
     struct WidgetDemo
     {
-        ui::UiRenderer renderer;
-        ui::UiTextures textures;
-        ui::SkinLibrary skins;
-        std::optional<config::GameInstall> install; ///< Where font sets come from as the width changes
-        ui::InterfaceFonts fonts;
+        ui::InterfaceAssets assets;
         const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
-        /// On the heap: windows keep a reference, and the demo moves.
-        std::unique_ptr<ui::StringTable> strings = std::make_unique<ui::StringTable>();
         ui::Desktop desktop;
         ui::MenuBar* menu_bar = nullptr; ///< In the desktop's tree, which lives as long as the demo
         ui::Toolbar* toolbar = nullptr;

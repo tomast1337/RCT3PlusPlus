@@ -20,6 +20,8 @@ namespace rct3::ui
         [[nodiscard]] static std::expected<StringTable, std::string> load(const std::filesystem::path& path);
 
         void add(std::string key, std::u16string value);
+        /// Adds the strings of `other` whose keys this table does not have yet.
+        void merge(const StringTable& other);
 
         /// The string for `key`, or an empty view when there is none.
         [[nodiscard]] std::u16string_view get(std::string_view key) const;

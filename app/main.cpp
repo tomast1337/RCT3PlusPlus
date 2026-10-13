@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
-// the game installed it first plays the startup logos and the loading screen, then shows a window built from real skins.
+// the game installed it first plays the startup logos and the loading screen, then shows the front screen
+// built from real skins.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--frames N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--frames N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
 //   --language NAME   interface language as the game names it, e.g. German or SChinese
+//   --widget-demo     a window of every kind of control instead of the front screen
 //   --frames N        exit after N frames (smoke test)
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the settings (config/settings.hpp) and the environment variables read
 //                     (config/environment.hpp)
 #include "config/environment.hpp"
 #include "config/game_install.hpp"
+#include "config/game_options.hpp"
 #include "config/settings.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "platform/window.hpp"
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
+#include "scene/front_end_scene.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
@@ -46,7 +50,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--frames N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--frames N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<std::filesystem::path>& settings_file)
@@ -188,6 +192,7 @@ int main(int argc, char** argv)
     render::Backend backend = render::Backend::Vulkan;
     bool vsync = true;
     bool write_settings = false;
+    bool widget_demo = false;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -225,6 +230,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--language") == 0 && i + 1 < argc)
         {
             settings.set(config::Setting::Language, argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--widget-demo") == 0)
+        {
+            widget_demo = true;
         }
         else if (std::strcmp(argv[i], "--write-settings") == 0)
         {
@@ -304,8 +313,8 @@ int main(int argc, char** argv)
         log.critical("ui demo: {}", ui_demo.error());
         return 1;
     }
-    // With the game installed: logos, then the loading screen while the skins load, then the widget demo
-    // in place of the generated demo.
+    // With the game installed: logos, then the loading screen while the skins load, then the front screen
+    // (or the widget demo) in place of the generated demo.
     enum class Phase : std::uint8_t
     {
         Intro,
@@ -315,6 +324,8 @@ int main(int argc, char** argv)
     Phase phase = Phase::Running;
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
+    std::optional<rct3::scene::FrontEndScene> front;
+    bool quit = false;
     if (install)
     {
         auto created = rct3::scene::create_startup_screen(*device, *install, { });
@@ -329,7 +340,7 @@ int main(int argc, char** argv)
             log.warning("startup screen: {}", created.error());
         }
     }
-    const auto load_widgets = [&] {
+    const auto load_widgets = [&](bool open_options) {
         // The language set, else the locale's, of those installed.
         const auto gui = install->find("gui");
         const auto installed = gui ? rct3::ui::installed_languages(*gui) : std::vector<std::string> { };
@@ -344,24 +355,75 @@ int main(int argc, char** argv)
         if (!wanted.empty() && !rct3::ui::find_language(wanted))
             log.warning("language {}: not a language the game knows", wanted);
         log.info("language {}", language);
-        auto loaded = rct3::scene::create_widget_demo(*device, *install, language, env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont));
+        const auto fallback_font = env.path(config::EnvVar::FallbackFont).value_or(rct3::scene::kDefaultFallbackFont);
+        if (widget_demo)
+        {
+            auto loaded = rct3::scene::create_widget_demo(*device, *install, language, fallback_font);
+            if (loaded)
+            {
+                widgets = std::move(*loaded);
+                widgets->scale = scale;
+            }
+            else
+                log.warning("skins: {}", loaded.error());
+            return;
+        }
+        rct3::scene::FrontEndSceneSetup setup;
+        setup.languages = installed;
+        setup.language = language;
+        setup.fallback_font = fallback_font;
+        setup.options_file = config::game_options_path(env);
+        const auto current = window->size();
+        for (const auto& s : window->screen_sizes())
+        {
+            if (s == current)
+                setup.screen_size = setup.screen_sizes.size();
+            setup.screen_sizes.push_back({ s.width, s.height });
+        }
+        setup.open_options = open_options;
+        auto loaded = rct3::scene::create_front_end_scene(*device, *install, std::move(setup));
         if (loaded)
         {
-            widgets = std::move(*loaded);
-            widgets->scale = scale;
+            front = std::move(*loaded);
+            front->scale = scale;
         }
         else
-            log.warning("skins: {}", loaded.error());
+            log.warning("front end: {}", loaded.error());
+    };
+    // What the front end asks of the window, and a new language, which loads it again with its options open.
+    const auto follow_front_end = [&] {
+        const auto requests = rct3::scene::take_front_end_requests(*front);
+        quit = quit || requests.quit;
+        if (requests.fullscreen)
+            window->set_fullscreen(*requests.fullscreen);
+        if (requests.screen_size)
+        {
+            const auto sizes = window->screen_sizes();
+            if (*requests.screen_size < sizes.size())
+                window->set_size(sizes[*requests.screen_size]);
+        }
+        if (requests.language)
+        {
+            settings.set(config::Setting::Language, *requests.language);
+            if (settings_file)
+            {
+                if (auto saved = settings.save(*settings_file); !saved)
+                    log.warning("settings: {}", saved.error());
+            }
+            rct3::scene::destroy_front_end_scene(*device, *front);
+            front.reset();
+            load_widgets(true);
+        }
     };
     if (install && !startup)
-        load_widgets();
+        load_widgets(false);
 
     int status = 0;
     try
     {
         prof::register_thread("Main");
         double last_time = window->time();
-        for (int frame = 0; !window->should_close() && frame != max_frames; ++frame)
+        for (int frame = 0; !window->should_close() && !quit && frame != max_frames; ++frame)
         {
             window->poll_events();
 
@@ -387,7 +449,7 @@ int main(int argc, char** argv)
                         draw_log_window();
                         ImGui::ShowDemoWindow();
                     }
-                    if (phase == Phase::Running && widgets)
+                    if (phase == Phase::Running && (widgets || front))
                     {
                         // The developer windows come first: where they want the pointer, the game does not get it.
                         const auto p = window->pointer();
@@ -395,9 +457,19 @@ int main(int argc, char** argv)
                         // Likewise keys, while a developer window has the keyboard.
                         const rct3::ui::KeyboardState no_keys;
                         const auto& keyboard = ImGui::GetIO().WantCaptureKeyboard ? no_keys : window->keyboard();
-                        rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));
-                        if (const auto copied = widgets->desktop.take_clipboard())
-                            window->set_clipboard(*copied);
+                        if (widgets)
+                        {
+                            rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));
+                            if (const auto copied = widgets->desktop.take_clipboard())
+                                window->set_clipboard(*copied);
+                        }
+                        else
+                        {
+                            rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, static_cast<float>(delta));
+                            if (const auto copied = front->live->desktop.take_clipboard())
+                                window->set_clipboard(*copied);
+                            follow_front_end();
+                        }
                     }
                 });
                 prof::section("Draw", [&] {
@@ -416,6 +488,8 @@ int main(int argc, char** argv)
                         rct3::scene::draw_test_scene(*device, *scene, now);
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
+                        else if (front)
+                            rct3::scene::draw_front_end_scene(*device, *front);
                         else
                             rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     }
@@ -425,7 +499,7 @@ int main(int argc, char** argv)
                     // The loading screen is on screen now; load while it shows, as the game does.
                     if (phase == Phase::Loading)
                     {
-                        load_widgets();
+                        load_widgets(false);
                         rct3::scene::destroy_startup_screen(*device, *startup);
                         startup.reset();
                         phase = Phase::Running;
@@ -446,6 +520,8 @@ int main(int argc, char** argv)
         rct3::scene::destroy_startup_screen(*device, *startup);
     if (widgets)
         rct3::scene::destroy_widget_demo(*device, *widgets);
+    if (front)
+        rct3::scene::destroy_front_end_scene(*device, *front);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);
     rct3::scene::destroy_test_scene(*device, *scene);
     device->shutdown();

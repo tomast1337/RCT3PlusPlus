@@ -26,6 +26,12 @@ namespace rct3::ui
         return table;
     }
 
+    void StringTable::merge(const StringTable& other)
+    {
+        for (const auto& [key, value] : other.strings_)
+            strings_.try_emplace(key, value);
+    }
+
     void StringTable::add(std::string key, std::u16string value)
     {
         strings_.insert_or_assign(std::move(key), std::move(value));

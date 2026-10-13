@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/widget_demo.hpp"
 
-#include "logging/log.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
-#include "ui/language.hpp"
 #include "ui/scale.hpp"
-#include "ui/skin_set.hpp"
-#include "ui/truetype_font.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/edit_box.hpp"
@@ -236,7 +232,7 @@ namespace rct3::scene
         {
             ui::Widget& root = demo.desktop.root();
             const auto n = std::ranges::count_if(root.children(), [](const auto& c) { return is_demo_window(*c); });
-            root.add<DemoWindow>("window" + std::to_string(root.children().size()), static_cast<float>(n) * kCascade, *demo.strings);
+            root.add<DemoWindow>("window" + std::to_string(root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings);
         }
 
         std::vector<ui::MenuItem> scale_items(std::optional<float> chosen)
@@ -315,48 +311,11 @@ namespace rct3::scene
 
     std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font)
     {
-        const auto log = logging::logger("ui");
-        const auto main_ovl = install.find("Main.common.ovl");
-        if (!main_ovl)
-            return std::unexpected("Main.common.ovl not found");
-        auto set = ui::load_skin_set(*main_ovl);
-        if (!set)
-            return std::unexpected(set.error());
-
+        auto assets = ui::load_interface_assets(device, install, language, fallback_font);
+        if (!assets)
+            return std::unexpected(assets.error());
         WidgetDemo demo;
-        demo.install = install;
-        demo.fonts.language = language;
-        if (auto fallback = ui::load_truetype(fallback_font))
-            demo.fonts.fallback = std::move(*fallback);
-        else
-            log.warning("fallback font {}: {}; characters the game fonts lack will not show (run ./nob fetch)", fallback_font.string(), fallback.error());
-
-        auto renderer = ui::create_ui_renderer(device);
-        if (!renderer)
-            return std::unexpected(renderer.error());
-        demo.renderer = *renderer;
-
-        auto textures = ui::upload_textures(device, set->images);
-        if (!textures)
-        {
-            destroy_widget_demo(device, demo);
-            return std::unexpected(textures.error());
-        }
-        demo.textures = std::move(*textures);
-        demo.skins = ui::skin_library(set->skins, demo.textures);
-
-        // The language's strings, else English's: a language whose file is missing is shown in English.
-        for (const std::string& name : { language, std::string(ui::kDefaultLanguage) })
-        {
-            const auto path = install.find(ui::text_overlay(name));
-            if (!path)
-                continue;
-            if (auto strings = ui::StringTable::load(*path))
-            {
-                *demo.strings = std::move(*strings);
-                break;
-            }
-        }
+        demo.assets = std::move(*assets);
         demo.desktop.tooltip_style = skins::tooltip_style();
         add_bars(demo);
         open_window(demo);
@@ -375,7 +334,7 @@ namespace rct3::scene
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
-        demo.current_fonts = &ui::fonts_for(device, *demo.install, demo.fonts, demo.desktop.root().rect().width());
+        demo.current_fonts = &ui::fonts_for(device, demo.assets, demo.desktop.root().rect().width());
         const bool over = demo.desktop.update(pointer, keyboard, { elapsed, demo.current_fonts });
         follow_bars(demo);
         return over;
@@ -386,16 +345,14 @@ namespace rct3::scene
         demo.list.clear();
         demo.list.set_scale(scale_for(device, demo));
         static const ui::FontSet kNoFonts;
-        ui::DrawContext context { demo.list, demo.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts };
+        ui::DrawContext context { demo.list, demo.assets.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts };
         demo.desktop.draw(context);
-        ui::render_draw_list(device, demo.renderer, demo.list);
+        ui::render_draw_list(device, demo.assets.renderer, demo.list);
     }
 
     void destroy_widget_demo(render::Device& device, WidgetDemo& demo)
     {
-        ui::destroy_textures(device, demo.textures);
-        ui::destroy_interface_fonts(device, demo.fonts);
-        ui::destroy_ui_renderer(device, demo.renderer);
+        ui::destroy_interface_assets(device, demo.assets);
         demo = { };
     }
 

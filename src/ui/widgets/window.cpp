@@ -167,6 +167,8 @@ namespace rct3::ui
         }
         else
             draw_skin(context.list, background, back);
+        if (!style_.content_background.empty())
+            draw_skin(context.list, context.skins.find(style_.content_background), content_->rect());
         draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
         if (const SkinRef* skin = icon.empty() ? nullptr : context.skins.find(icon))
         {

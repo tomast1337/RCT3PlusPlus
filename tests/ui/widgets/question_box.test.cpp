@@ -9,18 +9,15 @@ using namespace rct3::ui;
 
 namespace
 {
-    // A 200 by 100 box in a 400 by 300 view: from (100, 100), its content inset by 10 all round, so the
-    // buttons, 50 by 20 with 10 between, sit on y 170 to 190 around x 200.
+    // In a 400 by 300 view, the content inset by 10 all round. With no fonts the text takes no room: the
+    // buttons, 8 apart, sit 8 in from the content's bottom-right corner, and the content is 46 high. The row
+    // (146) and the hover name (128) with a gap make the content 8 + 282 + 8 wide, so the box is 318 by 66,
+    // from (41, 117).
     QuestionBoxStyle style()
     {
         QuestionBoxStyle s;
         s.window.content_inset = { 10, 10, 10, 10 };
         s.button = "Btn";
-        s.width = 200;
-        s.height = 100;
-        s.button_width = 50;
-        s.button_height = 20;
-        s.button_gap = 10;
         return s;
     }
 
@@ -33,7 +30,7 @@ namespace
     {
         Desktop desktop;
         Widget& below = desktop.root().add<Widget>("below");
-        QuestionBox& box = desktop.root().add<QuestionBox>("box", style(), u"Quit", u"Leave the park?", std::vector<std::u16string> { u"Yes", u"Save", u"No" });
+        QuestionBox& box = desktop.root().add<QuestionBox>("box", style(), u"Leave the park?", std::vector<QuestionAnswer> { { u"Yes", "Tick" }, { u"Save", "" }, { u"No", "Cross" } });
 
         Fixture()
         {
@@ -50,24 +47,38 @@ namespace
     };
 } // namespace
 
-TEST_CASE("a question box is modal, with its answers centred below the text")
+TEST_CASE("a question box is modal, its answers in the bottom-right corner")
 {
     Fixture f;
     CHECK(f.box.modal);
-    CHECK(f.box.title == u"Quit");
     CHECK(f.box.text().text == u"Leave the park?");
+    CHECK(f.box.rect() == Rect { 41, 117, 359, 183 });
     REQUIRE(f.box.buttons().size() == 3);
-    CHECK(f.box.buttons()[0]->rect() == Rect { 115, 170, 165, 190 });
-    CHECK(f.box.buttons()[1]->rect() == Rect { 175, 170, 225, 190 });
+    // Content from (51, 127) to (349, 173).
+    CHECK(f.box.buttons()[2]->rect() == Rect { 311, 135, 341, 165 });
+    CHECK(f.box.buttons()[1]->rect() == Rect { 233, 135, 303, 165 }); // No icon: wider, with its name
     CHECK(f.box.buttons()[1]->text == u"Save");
-    CHECK(f.box.text().rect().y1 == 170 - style().text_gap);
+    CHECK(f.box.buttons()[0]->rect() == Rect { 195, 135, 225, 165 });
+    CHECK(f.box.buttons()[0]->icon == "Tick");
+    CHECK(f.box.buttons()[0]->text.empty());
+}
+
+TEST_CASE("the answer under the pointer shows its name")
+{
+    Fixture f;
+    f.desktop.update(at(210, 150));
+    f.desktop.update(at(210, 150));
+    CHECK(f.box.hover().text == u"Yes");
+    f.desktop.update(at(260, 150));
+    f.desktop.update(at(260, 150));
+    CHECK(f.box.hover().text.empty()); // Its name is on it
 }
 
 TEST_CASE("clicking an answer gives it once and closes the box")
 {
     Fixture f;
-    f.desktop.update(at(200, 180, true));
-    f.desktop.update(at(200, 180));
+    f.desktop.update(at(250, 150, true));
+    f.desktop.update(at(260, 150));
     CHECK(f.box.take_answer() == 1u);
     CHECK_FALSE(f.box.take_answer());
     f.desktop.update(at(0, 0));

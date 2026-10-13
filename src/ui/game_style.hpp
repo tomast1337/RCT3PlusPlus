@@ -31,6 +31,7 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kWindowFrameUnfocused = "GUI2Dialog_FrameNoFocus";
     inline constexpr std::string_view kWindowBackground = "GUI2Dialog_Background"; ///< A small tile, repeated
     inline constexpr std::string_view kMiniBackground = "GUI2MiniDialog_Background";
+    inline constexpr std::string_view kMiniFrame = "GUI2MiniDialog_Frame";
     /// Textures drawn whole rather than cut by a skin; loaded as skins of their own name.
     inline constexpr std::array<std::string_view, 1> kWholeTextures = { kWindowBackground };
     inline constexpr std::string_view kTitleButton = "GUI2Dialog_TitleButton"; ///< Family
@@ -204,15 +205,34 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// A question in a window, its answers as text lozenges.
+    /// The small window of messages and questions: a plain blue band on top with the close button, no icon
+    /// and no title, the content on a white panel.
+    [[nodiscard]] inline WindowStyle mini_window_style()
+    {
+        WindowStyle s;
+        s.frame = kMiniFrame;
+        s.frame_unfocused = kMiniFrame;
+        s.background = kWindowBackground;
+        s.tile_background = true;
+        s.background_inset = { 1, 10, 4, 4 };
+        s.content_background = kMiniBackground;
+        s.title_button = kTitleButton;
+        s.close_icon = kCloseIcon;
+        s.title_height = 18;
+        s.title_button_margin = { 8, 2 };
+        s.content_inset = { 12, 28, 15, 14 };
+        return s;
+    }
+
+    /// A question in the small window, its answers as round buttons with a tick or a cross.
     [[nodiscard]] inline QuestionBoxStyle question_box_style()
     {
         QuestionBoxStyle s;
-        s.window = window_style();
-        s.button = kTextButton;
+        s.window = mini_window_style();
+        s.button = kButton;
         s.button_inset = kLozengeInset;
-        s.width = 320;
-        s.height = 180;
+        s.confirm_icon = kConfirmIcon;
+        s.cancel_icon = kCancelIcon;
         return s;
     }
 

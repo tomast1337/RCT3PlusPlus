@@ -38,6 +38,7 @@ namespace rct3::ui
         float title_height = 20;               ///< Band along the top that drags the window
         Rect background_inset { 6, 6, 6, 6 };  ///< Background drawn this far in from the frame's outer edges
         bool tile_background = false;          ///< Repeat the background skin at its own size instead of stretching it
+        std::string content_background;        ///< Stretched over the content, on the background; none when empty
         Rect icon_box { 6, 17, 52, 63 };       ///< From the top-left corner: the icon is centred in it at its own size
         Rect content_inset { 12, 28, 12, 12 }; ///< Content area in from the left, top, right and bottom edges
         float title_button_size = 14;

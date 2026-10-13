@@ -82,6 +82,21 @@ namespace rct3::career
 
     [[nodiscard]] CareerScore score(const Career& career);
 
+    /// What a locked scenario waits for.
+    struct Lock
+    {
+        enum class Kind : std::uint8_t
+        {
+            Open,         ///< Not locked
+            Levels,       ///< `levels` more scenarios completed at any level
+            Entrepreneur, ///< Entrepreneur or better on all the others but the last
+            Tycoon,       ///< Tycoon on all the others
+        };
+        Kind kind = Kind::Open;
+        std::size_t levels = 0;
+    };
+    [[nodiscard]] Lock lock(const Career& career, std::size_t index);
+
     [[nodiscard]] bool is_open(ScenarioStatus status);
 
 } // namespace rct3::career

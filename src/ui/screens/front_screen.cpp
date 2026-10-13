@@ -55,13 +55,13 @@ namespace rct3::ui
         } };
 
         const std::array<FrontMenuInfo, kFrontMenuCount> kMenus = { {
-            { M::Main, kMain },
-            { M::Main, kPlay },
-            { M::Main, kTools },
-            { M::Play, kSandbox },
-            { M::Play, kCustomScenario },
-            { M::Play, kCampaigns },
-            { M::Play, kTutorials },
+            { M::Main, kMain, "FrontScreen_MainMenu" },
+            { M::Main, kPlay, "FrontScreen_PlayMenu" },
+            { M::Main, kTools, "FrontScreen_ToolMenu" },
+            { M::Play, kSandbox, "FrontScreen_SandboxMenu" },
+            { M::Play, kCustomScenario, "FrontScreen_MainMenu" }, // As in the game
+            { M::Play, kCampaigns, "FrontScreen_SelectCampaign" },
+            { M::Play, kTutorials, "FrontScreen_SelectTutorial" },
         } };
 
         // The artwork's skins.
@@ -73,6 +73,8 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 5> kArcSkins = { "FrontScreen_OverCircle_P1", "FrontScreen_OverCircle_P2", "FrontScreen_OverCircle_P3", "FrontScreen_OverCircle_P4", "FrontScreen_OverCircle_P5" };
         constexpr std::string_view kButtonSkin = "FrontScreen_IconCircle_New";
         constexpr std::string_view kPatchSkin = "FrontScreen_IconCircle_Back";
+        constexpr std::string_view kBandEndSkin = "FrontScreen_Triangle";
+        constexpr Color kBandColour { 0xF7, 0xF2, 0xF2, 255 };
         constexpr std::string_view kSmallButtonSkin = "MenuButtonSmall";
         constexpr std::string_view kBackIcon = "File_CareerMap";
         constexpr std::string_view kQuitIcon = "File_Quit";
@@ -89,6 +91,7 @@ namespace rct3::ui
 
         constexpr float kSwellFactor = 1.46f; ///< How big a picture grows under the pointer
         constexpr float kDisabledAlpha = 0.6f;
+        constexpr float kDisabledBoxAlpha = 0.5f; // A disabled button's box and name
         constexpr Color kLabelColour { 0, 0, 0, 255 };
         constexpr Color kHelpColour { 0, 0, 0, 255 };
 
@@ -338,8 +341,8 @@ namespace rct3::ui
         for (std::size_t i = 0; i < badges_.size(); ++i)
             badges_[i].widget->placement = placed(fs::badge_rect(frame, i), rect());
 
-        // The help lines follow the pointer.
-        help_title_.clear();
+        // The help lines follow the pointer; without a button under it, the menu's name.
+        help_title_ = strings_.get(front_menu(current_).title_key);
         help_text_.clear();
         const auto show = [&](std::string_view title, std::string_view help) {
             help_title_ = strings_.get(title);
@@ -362,6 +365,23 @@ namespace rct3::ui
         draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
         draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
         draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
+
+        // The boxes beside the buttons that have arrived: a light band from a white ring behind the button,
+        // under its name and on under the arc, then the name. The arc comes after and covers the band's end.
+        const auto& current = buttons_[index(current_)];
+        const Font* label_font = context.fonts.get(FontRole::ScaledLarge);
+        for (std::size_t i = 0; i < current.size() && i < labels_.size(); ++i)
+        {
+            if (label_alpha_[i] <= 0)
+                continue;
+            const float alpha = current[i].button->enabled ? label_alpha_[i] : label_alpha_[i] * kDisabledBoxAlpha;
+            const fs::LabelBox box = fs::label_box(frame, i);
+            context.list.fill(box.band, faded(kBandColour, alpha));
+            draw_skin(context.list, context.skins.find(kBandEndSkin), box.end, faded(kWhite, alpha));
+            draw_skin(context.list, context.skins.find(kPatchSkin), box.patch, faded(kWhite, alpha));
+            if (label_font != nullptr)
+                draw_text(context.list, *label_font, labels_[i], box.text, { faded(kLabelColour, alpha), Align::Centre, Align::Centre, true });
+        }
         for (std::size_t i = 0; i < kArcSkins.size(); ++i)
             draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
         draw_at_size(context, frame, context.skins.find(logo_) != nullptr ? std::string_view(logo_) : kLogoSkin, fs::kLogo);
@@ -377,23 +397,9 @@ namespace rct3::ui
             }
         }
 
-        // The boxes beside the buttons: a white ring behind each button that has arrived, then its name.
-        const auto& current = buttons_[index(current_)];
-        const Font* label_font = context.fonts.get(FontRole::Large);
-        for (std::size_t i = 0; i < current.size() && i < labels_.size(); ++i)
-        {
-            if (label_alpha_[i] <= 0)
-                continue;
-            const float alpha = current[i].button->enabled ? label_alpha_[i] : label_alpha_[i] * kDisabledAlpha;
-            const fs::LabelBox box = fs::label_box(frame, i);
-            draw_skin(context.list, context.skins.find(kPatchSkin), box.patch, faded(kWhite, label_alpha_[i]));
-            if (label_font != nullptr)
-                draw_text(context.list, *label_font, labels_[i], box.text, { faded(kLabelColour, alpha), Align::Start, Align::Centre, true });
-        }
-
-        if (const Font* f = context.fonts.get(FontRole::Large))
+        if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
             draw_text(context.list, *f, help_title_, frame.stretched(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
-        if (const Font* f = context.fonts.get(FontRole::Small))
+        if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
             draw_text(context.list, *f, help_text_, frame.stretched(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
     }
 

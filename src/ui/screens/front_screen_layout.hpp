@@ -87,10 +87,15 @@ namespace rct3::ui::front_screen
     inline constexpr Point kLabelBoxOffset { -47.7f, -52.3f };
     inline constexpr Point kLabelBoxSize { 400, 100 };
     inline constexpr Rect kLabelPatch { 0, 3, 97, 100 }; ///< In the box: a white ring round the button
+    inline constexpr Rect kLabelBand { 46, 3, 268, 97 }; ///< A light band from the ring on to the right
     inline constexpr Rect kLabelText { 105, 3, 240, 97 };
+    /// The band's pointed end: the lower ones reach further, `kLabelEndStep` times the index squared.
+    inline constexpr float kLabelEndStep = 10;
     struct LabelBox
     {
         Rect patch;
+        Rect band;
+        Rect end;
         Rect text;
     };
     [[nodiscard]] LabelBox label_box(const Frame& frame, std::size_t index);

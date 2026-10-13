@@ -29,6 +29,7 @@
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
+#include "ui/key_combo.hpp"
 #include "ui/language.hpp"
 
 #include <algorithm>
@@ -273,6 +274,18 @@ int main(int argc, char** argv)
     else
         log.warning("settings: {}", parsed.error());
 
+    // The developer windows start hidden; these keys show and hide them.
+    const auto developer_keys_setting = [&] {
+        const std::string_view text = settings.get(config::Setting::DeveloperKeys).value_or(std::string_view { });
+        if (const auto keys = rct3::ui::parse_key_combo(text))
+            return *keys;
+        const std::string_view fallback = config::settings_table()[static_cast<std::size_t>(config::Setting::DeveloperKeys)].default_value;
+        log.warning("settings: developer_windows_key {}: not keys that can be bound; using {}", text, fallback);
+        return rct3::ui::parse_key_combo(fallback).value_or(rct3::ui::KeyCombo { });
+    };
+    rct3::ui::KeyCombo developer_keys = developer_keys_setting();
+    bool developer_windows = false;
+
     // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
     const auto install = config::find_game_install(env, settings);
     if (install)
@@ -373,6 +386,7 @@ int main(int argc, char** argv)
                 setup.screen_size = setup.screen_sizes.size();
             setup.screen_sizes.push_back({ s.width, s.height });
         }
+        setup.developer_keys = developer_keys;
         setup.reload = reload;
         auto loaded = rct3::scene::create_front_end_scene(*device, *install, std::move(setup));
         if (loaded)
@@ -382,6 +396,12 @@ int main(int argc, char** argv)
         }
         else
             log.warning("front end: {}", loaded.error());
+    };
+    const auto save_settings = [&] {
+        if (!settings_file)
+            return;
+        if (auto saved = settings.save(*settings_file); !saved)
+            log.warning("settings: {}", saved.error());
     };
     // What the front end asks of the window, and a new language, which loads it again with its options open.
     const auto follow_front_end = [&] {
@@ -395,14 +415,16 @@ int main(int argc, char** argv)
             if (*requests.screen_size < sizes.size())
                 window->set_size(sizes[*requests.screen_size]);
         }
+        if (requests.developer_keys)
+        {
+            developer_keys = *requests.developer_keys;
+            settings.set(config::Setting::DeveloperKeys, rct3::ui::to_string(developer_keys));
+            save_settings();
+        }
         if (requests.language)
         {
             settings.set(config::Setting::Language, *requests.language);
-            if (settings_file)
-            {
-                if (auto saved = settings.save(*settings_file); !saved)
-                    log.warning("settings: {}", saved.error());
-            }
+            save_settings();
             rct3::scene::destroy_front_end_scene(*device, *front);
             front.reset();
             load_widgets(true);
@@ -436,7 +458,16 @@ int main(int argc, char** argv)
                         if (startup->sequence.finished())
                             phase = Phase::Loading;
                     }
-                    if (phase == Phase::Running)
+                    // The developer windows' keys, unless the interface is waiting for keys to bind; they
+                    // then do nothing else.
+                    rct3::ui::KeyboardState keys = window->keyboard();
+                    if (!(front && rct3::scene::front_end_waiting_for_keys(*front)))
+                    {
+                        const auto toggles = std::ranges::count_if(keys.presses, [&](const rct3::ui::KeyPress& k) { return rct3::ui::matches(developer_keys, k); });
+                        developer_windows = developer_windows != (toggles % 2 == 1);
+                        std::erase_if(keys.presses, [&](const rct3::ui::KeyPress& k) { return rct3::ui::matches(developer_keys, k); });
+                    }
+                    if (phase == Phase::Running && developer_windows)
                     {
                         draw_profiler_window(*device);
                         draw_log_window();
@@ -449,7 +480,7 @@ int main(int argc, char** argv)
                         const rct3::ui::PointerState pointer { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
                         // Likewise keys, while a developer window has the keyboard.
                         const rct3::ui::KeyboardState no_keys;
-                        const auto& keyboard = ImGui::GetIO().WantCaptureKeyboard ? no_keys : window->keyboard();
+                        const auto& keyboard = ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys;
                         if (widgets)
                         {
                             rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));

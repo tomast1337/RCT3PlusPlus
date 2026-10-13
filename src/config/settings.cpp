@@ -22,6 +22,7 @@ namespace rct3::config
             { Setting::SkipIntro, "skip_intro", "Start without the logos (yes/no). --no-intro skips them too.", "no" },
             { Setting::InterfaceScale, "interface_scale", "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
             { Setting::Language, "language", "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
+            { Setting::DeveloperKeys, "developer_windows_key", "Keys that show and hide the developer windows (profiler, log): a function key or a letter or digit with Ctrl, with Ctrl and Shift if wanted, e.g. F12 or Ctrl+Shift+D.", "F12" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.

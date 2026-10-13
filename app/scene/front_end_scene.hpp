@@ -31,7 +31,8 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
-        bool reload = false; ///< Built again after a language change: no opening animation, options window open
+        std::optional<ui::KeyCombo> developer_keys; ///< Offered in the options window when set
+        bool reload = false;                        ///< Built again after a language change: no opening animation, options window open
     };
 
     struct FrontEndScene
@@ -59,6 +60,7 @@ namespace rct3::scene
         std::optional<bool> fullscreen;
         std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
+        std::optional<ui::KeyCombo> developer_keys;
     };
 
     [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);
@@ -69,6 +71,9 @@ namespace rct3::scene
 
     /// What the user asked for since the last call.
     [[nodiscard]] FrontEndRequests take_front_end_requests(FrontEndScene& scene);
+
+    /// True while the interface waits for a key combination, which should then do nothing else.
+    [[nodiscard]] bool front_end_waiting_for_keys(const FrontEndScene& scene);
 
     void draw_front_end_scene(render::Device& device, FrontEndScene& scene);
 

@@ -1,0 +1,104 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/screens/front_end.hpp"
+
+#include "ui/game_style.hpp"
+
+#include <doctest/doctest.h>
+
+using namespace rct3;
+using namespace rct3::ui;
+
+namespace
+{
+    FrontEndStyle style()
+    {
+        return { game_skins::options_dialog_style(), game_skins::question_box_style() };
+    }
+
+    struct Fixture
+    {
+        StringTable strings;
+        config::GameOptions options;
+        Desktop desktop;
+        FrontEnd front;
+
+        explicit Fixture(FrontEndSetup setup = { })
+            : front(desktop, style(), strings, options, std::move(setup))
+        {
+            desktop.layout({ 0, 0, 1024, 768 });
+            step();
+        }
+        void step()
+        {
+            desktop.update({ });
+            front.update();
+        }
+        void press(FrontButton* b)
+        {
+            REQUIRE(b != nullptr);
+            b->click();
+            step();
+        }
+    };
+} // namespace
+
+TEST_CASE("options opens its window once; closing it is the time to save")
+{
+    Fixture f;
+    CHECK(f.front.options_window() == nullptr);
+    f.press(f.front.screen().button(FrontMenu::Main, 2));
+    REQUIRE(f.front.options_window() != nullptr);
+    f.press(f.front.screen().button(FrontMenu::Main, 2));
+    CHECK(f.desktop.root().children().size() == 2); // The screen and one window
+    CHECK_FALSE(f.front.take_options_closed());
+
+    f.front.options_window()->close();
+    f.step();
+    CHECK(f.front.options_window() == nullptr);
+    CHECK(f.front.take_options_closed());
+    CHECK_FALSE(f.front.take_options_closed());
+}
+
+TEST_CASE("quitting asks first")
+{
+    Fixture f;
+    f.press(&f.front.screen().quit_button());
+    REQUIRE(f.front.question() != nullptr);
+    CHECK_FALSE(f.front.take_quit());
+
+    SUBCASE("no stays")
+    {
+        KeyboardState escape;
+        escape.presses.push_back({ Key::Escape });
+        f.desktop.update({ }, escape);
+        f.front.update();
+        CHECK(f.front.question() == nullptr);
+        CHECK_FALSE(f.front.take_quit());
+    }
+    SUBCASE("yes quits")
+    {
+        KeyboardState enter;
+        enter.presses.push_back({ Key::Enter });
+        f.desktop.update({ }, enter);
+        f.front.update();
+        CHECK(f.front.take_quit());
+    }
+}
+
+TEST_CASE("choices nothing carries out yet go to the owner")
+{
+    Fixture f;
+    f.front.screen().open(FrontMenu::Tools);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::Tools, 2));
+    CHECK(f.front.take_unhandled() == FrontRequest { FrontAction::CoasterDesigner, 0 });
+    CHECK_FALSE(f.front.take_unhandled());
+}
+
+TEST_CASE("the options window can be open from the start")
+{
+    FrontEndSetup setup;
+    setup.open_options = true;
+    Fixture f(setup);
+    CHECK(f.front.options_window() != nullptr);
+}

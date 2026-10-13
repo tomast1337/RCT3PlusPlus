@@ -64,7 +64,8 @@ namespace rct3::scene
         front.choices.language = std::move(setup.language);
         front.choices.screen_sizes = std::move(setup.screen_sizes);
         front.choices.screen_size = setup.screen_size;
-        front.open_options = setup.open_options;
+        front.open_options = setup.reload;
+        front.settled = setup.reload;
         scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }

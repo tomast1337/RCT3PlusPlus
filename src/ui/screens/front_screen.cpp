@@ -258,6 +258,22 @@ namespace rct3::ui
         return fs::kParked;
     }
 
+    void FrontScreen::settle()
+    {
+        for (std::size_t m = 0; m < kFrontMenuCount; ++m)
+        {
+            for (std::size_t i = 0; i < buttons_[m].size(); ++i)
+            {
+                MenuButton& mb = buttons_[m][i];
+                mb.at = goal(static_cast<FrontMenu>(m), i);
+                mb.arrived = true;
+            }
+        }
+        // The labels' text comes with the next update.
+        for (std::size_t i = 0; i < buttons_[index(current_)].size() && i < label_alpha_.size(); ++i)
+            label_alpha_[i] = 1;
+    }
+
     void FrontScreen::clear_labels()
     {
         for (auto& l : labels_)

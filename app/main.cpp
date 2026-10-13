@@ -333,7 +333,7 @@ int main(int argc, char** argv)
             log.warning("startup screen: {}", created.error());
         }
     }
-    const auto load_widgets = [&](bool open_options) {
+    const auto load_widgets = [&](bool reload) {
         // The language set, else the locale's, of those installed.
         const auto gui = install->find("gui");
         const auto installed = gui ? rct3::ui::installed_languages(*gui) : std::vector<std::string> { };
@@ -373,7 +373,7 @@ int main(int argc, char** argv)
                 setup.screen_size = setup.screen_sizes.size();
             setup.screen_sizes.push_back({ s.width, s.height });
         }
-        setup.open_options = open_options;
+        setup.reload = reload;
         auto loaded = rct3::scene::create_front_end_scene(*device, *install, std::move(setup));
         if (loaded)
         {

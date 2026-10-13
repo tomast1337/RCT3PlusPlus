@@ -95,3 +95,35 @@ TEST_CASE("controls change the options at once")
     CHECK(f.dialog->take_change());
     CHECK_FALSE(f.dialog->take_change());
 }
+
+TEST_CASE("the developer windows' keys can be set on the keys page")
+{
+    OptionsChoices choices;
+    choices.developer_keys = KeyCombo { Key::F12 };
+    Fixture f(choices);
+    f.dialog->show_page(OptionsPage::Keys);
+    KeyBox* box = nullptr;
+    for (const auto& c : f.dialog->find("content/page1")->children())
+    {
+        if (box == nullptr)
+            box = dynamic_cast<KeyBox*>(c.get());
+    }
+    REQUIRE(box != nullptr);
+    f.desktop.set_keyboard_focus(box);
+    KeyboardState keys;
+    keys.presses.push_back({ Key::Enter });
+    f.desktop.update({ }, keys);
+    CHECK(f.dialog->waiting_for_keys());
+    keys.presses = { { Key::F5, false, true } };
+    f.desktop.update({ }, keys);
+    CHECK_FALSE(f.dialog->waiting_for_keys());
+    CHECK(f.dialog->take_developer_keys() == KeyCombo { Key::F5, 0, true, false });
+    CHECK_FALSE(f.dialog->take_developer_keys());
+}
+
+TEST_CASE("without developer keys the keys page has no key box")
+{
+    Fixture f;
+    for (const auto& c : f.dialog->find("content/page1")->children())
+        CHECK(dynamic_cast<KeyBox*>(c.get()) == nullptr);
+}

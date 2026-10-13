@@ -34,6 +34,7 @@ namespace rct3::config
         SkipIntro,      ///< skip_intro: start without the logos
         InterfaceScale, ///< interface_scale: auto, or how many pixels per interface unit
         Language,       ///< language: the interface language, by the game's name for it; unset picks one
+        DeveloperKeys,  ///< developer_windows_key: the keys that show and hide the developer windows
 
         Count_, ///< Number of settings; not a setting
     };

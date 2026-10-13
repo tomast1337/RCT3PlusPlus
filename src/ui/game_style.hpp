@@ -204,6 +204,8 @@ namespace rct3::ui::game_skins
         s.rows.dropdown = dropdown_style();
         s.rows.slider = slider_style();
         s.rows.spinner = spinner_style();
+        s.rows.key_box = kListBox;
+        s.rows.key_box_focused = kListBoxFocused;
         s.scroll = scroll_bar_style(Orientation::Vertical);
         return s;
     }

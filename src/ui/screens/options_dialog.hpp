@@ -12,7 +12,7 @@
 //
 // The language and the screen size are not game options: the window offers them and the owner takes the
 // user's choice with take_language() and take_screen_size(). The keys page lists the keys the interface
-// uses; they cannot be changed yet.
+// uses, which cannot be changed yet, and the keys that show the developer windows, which can.
 //
 // The layout is ours, after the game's: a 460 unit wide page, names on the left and controls in a column
 // on the right.
@@ -49,8 +49,9 @@ namespace rct3::ui
         std::vector<std::string> languages; ///< Installed, by the game's names; the row shows with two or more
         std::string language;               ///< The one in use
         std::vector<ScreenSize> screen_sizes;
-        std::optional<std::size_t> screen_size;    ///< The one in use, if it is in the list
-        std::vector<int> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
+        std::optional<std::size_t> screen_size;     ///< The one in use, if it is in the list
+        std::vector<int> anti_aliasing_levels { };  ///< Offered after "none", e.g. 2, 4 and 8 samples
+        std::optional<KeyCombo> developer_keys { }; ///< Offered on the keys page when set
     };
 
     struct OptionsDialogStyle
@@ -96,6 +97,10 @@ namespace rct3::ui
         [[nodiscard]] std::optional<std::string> take_language();
         /// The index into OptionsChoices::screen_sizes the user picked, once.
         [[nodiscard]] std::optional<std::size_t> take_screen_size();
+        /// The keys the user set for the developer windows, once.
+        [[nodiscard]] std::optional<KeyCombo> take_developer_keys();
+        /// True while a key box waits for keys, which should then do nothing else.
+        [[nodiscard]] bool waiting_for_keys() const;
 
         [[nodiscard]] Button& tab(OptionsPage page) const
         {
@@ -130,10 +135,12 @@ namespace rct3::ui
         ScrollArea* custom_ = nullptr;
         Dropdown* language_ = nullptr;
         Dropdown* resolution_ = nullptr;
+        KeyBox* developer_keys_ = nullptr;
         OptionsPage page_ = OptionsPage::General;
         int changes_ = 0;
         std::optional<std::string> picked_language_;
         std::optional<std::size_t> picked_screen_size_;
+        std::optional<KeyCombo> picked_developer_keys_;
     };
 
 } // namespace rct3::ui

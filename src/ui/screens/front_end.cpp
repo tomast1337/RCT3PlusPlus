@@ -82,6 +82,8 @@ namespace rct3::ui
                 language_ = std::move(language);
             if (const auto size = dialog->take_screen_size())
                 screen_size_ = size;
+            if (const auto keys = dialog->take_developer_keys())
+                developer_keys_ = keys;
         }
         else if (options_open_)
         {
@@ -108,6 +110,17 @@ namespace rct3::ui
     std::optional<std::size_t> FrontEnd::take_screen_size()
     {
         return std::exchange(screen_size_, std::nullopt);
+    }
+
+    std::optional<KeyCombo> FrontEnd::take_developer_keys()
+    {
+        return std::exchange(developer_keys_, std::nullopt);
+    }
+
+    bool FrontEnd::waiting_for_keys() const
+    {
+        const OptionsDialog* dialog = options_window();
+        return dialog != nullptr && dialog->waiting_for_keys();
     }
 
     std::optional<FrontRequest> FrontEnd::take_unhandled()

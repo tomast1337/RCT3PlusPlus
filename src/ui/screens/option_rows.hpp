@@ -12,6 +12,7 @@
 
 #include "config/game_options.hpp"
 #include "ui/widgets/dropdown.hpp"
+#include "ui/widgets/key_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/slider.hpp"
 #include "ui/widgets/spinner.hpp"
@@ -32,6 +33,8 @@ namespace rct3::ui
         DropdownStyle dropdown;
         SliderStyle slider;
         SpinnerStyle spinner;
+        std::string key_box; ///< Skins of the key boxes
+        std::string key_box_focused;
         FontRole font = FontRole::Small;
         Color text_colour { 0, 0, 0, 255 };
         float left = 5;            ///< Where names start
@@ -72,6 +75,8 @@ namespace rct3::ui
         Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
         /// A name and a second text in the control column.
         Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
+        /// A key combination the owner handles; `prompt` shows while it waits for keys.
+        KeyBox& keys(std::u16string name, KeyCombo combo, std::u16string prompt, std::u16string tip = { });
 
         /// Puts a wider gap before the next row.
         void section();

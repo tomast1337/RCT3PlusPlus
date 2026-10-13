@@ -51,6 +51,8 @@ namespace rct3::platform
                 case GLFW_KEY_SPACE:
                     return ui::Key::Space;
                 default:
+                    if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
+                        return static_cast<ui::Key>(static_cast<int>(ui::Key::F1) + (key - GLFW_KEY_F1));
                     return std::nullopt;
             }
         }

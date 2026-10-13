@@ -37,7 +37,7 @@ namespace rct3::ui
         };
         constexpr std::array<KeyLine, 12> kKeyLines = { {
             { u"Close the window", u"Escape" },
-            { u"Press the default button", u"Enter" },
+            { u"Default button", u"Enter" },
             { u"Next control", u"Tab" },
             { u"Previous control", u"Shift+Tab" },
             { u"Next page", u"Ctrl+Tab, Ctrl+Page Down" },
@@ -47,7 +47,7 @@ namespace rct3::ui
             { u"Paste", u"Ctrl+V, Shift+Insert" },
             { u"Select all text", u"Ctrl+A" },
             { u"Move by a word", u"Ctrl+Left, Ctrl+Right" },
-            { u"Back to the last menu", u"Escape" },
+            { u"Last menu", u"Escape" },
         } };
 
         struct DetailRow
@@ -162,12 +162,15 @@ namespace rct3::ui
 
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
     {
-        OptionRowsStyle keys_style = style_.rows;
-        keys_style.control_x = 200; // Room for what the keys do
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, keys_style, options_));
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
         const std::u16string fixed = str(strings, kNoKeyChange);
         for (const KeyLine& line : kKeyLines)
             rows.text(std::u16string(line.action), std::u16string(line.keys), fixed);
+        if (choices_.developer_keys)
+        {
+            rows.section();
+            developer_keys_ = &rows.keys(u"Developer windows", *choices_.developer_keys, u"Press keys...", u"Click, then press F1 to F12 or Ctrl with a letter or digit, with Shift if wanted. Escape keeps the keys.");
+        }
     }
 
     void OptionsDialog::build_graphics(Widget& page, const StringTable& strings)
@@ -297,6 +300,16 @@ namespace rct3::ui
         return std::exchange(picked_screen_size_, std::nullopt);
     }
 
+    std::optional<KeyCombo> OptionsDialog::take_developer_keys()
+    {
+        return std::exchange(picked_developer_keys_, std::nullopt);
+    }
+
+    bool OptionsDialog::waiting_for_keys() const
+    {
+        return developer_keys_ != nullptr && developer_keys_->waiting();
+    }
+
     void OptionsDialog::update(const UpdateContext& context)
     {
         Window::update(context);
@@ -314,6 +327,8 @@ namespace rct3::ui
         }
         if (language_ != nullptr && language_->take_change() && language_->selected())
             picked_language_ = choices_.languages.at(*language_->selected());
+        if (developer_keys_ != nullptr && developer_keys_->take_change())
+            picked_developer_keys_ = developer_keys_->combo;
         if (resolution_->take_change() && resolution_->selected())
             picked_screen_size_ = *resolution_->selected();
 

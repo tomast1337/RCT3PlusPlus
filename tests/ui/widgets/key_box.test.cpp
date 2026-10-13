@@ -16,7 +16,7 @@ namespace
 
         Fixture()
         {
-            box = &desktop.root().add<KeyBox>("keys", KeyCombo { Key::F12 });
+            box = &desktop.root().add<KeyBox>("keys", std::vector { KeyCombo { Key::F12 }, KeyCombo { Key::F11 } });
             box->placement = top_left(10, 10, 100, 20);
             desktop.layout({ 0, 0, 400, 300 });
             desktop.set_keyboard_focus(box);
@@ -40,7 +40,7 @@ TEST_CASE("the key box takes the next combination that can be bound")
     CHECK(f.box->waiting());
     f.press({ Key::Shortcut, true, true, U'd' });
     CHECK_FALSE(f.box->waiting());
-    CHECK(f.box->combo == KeyCombo { Key::Shortcut, U'd', true, true });
+    CHECK(f.box->combos == std::vector { KeyCombo { Key::Shortcut, U'd', true, true } });
     CHECK(f.box->take_change());
     CHECK_FALSE(f.box->take_change());
 }
@@ -51,7 +51,7 @@ TEST_CASE("escape and losing the focus keep the old combination")
     f.press({ Key::Space });
     f.press({ Key::Escape });
     CHECK_FALSE(f.box->waiting());
-    CHECK(f.box->combo == KeyCombo { Key::F12 });
+    CHECK(f.box->combos.size() == 2);
 
     f.press({ Key::Space });
     f.desktop.set_keyboard_focus(nullptr);
@@ -66,4 +66,16 @@ TEST_CASE("a click starts waiting")
     f.desktop.update({ { 20, 20 }, true });
     f.desktop.update({ { 20, 20 }, false });
     CHECK(f.box->waiting());
+}
+
+TEST_CASE("while waiting the key box takes tab and shifted escape")
+{
+    Fixture f;
+    f.press({ Key::Enter });
+    f.press({ Key::Tab, true });
+    CHECK(f.desktop.keyboard_focus() == f.box);
+    CHECK(f.box->combos == std::vector { KeyCombo { Key::Tab, 0, false, true } });
+    f.press({ Key::Enter });
+    f.press({ Key::Escape, true });
+    CHECK(f.box->combos == std::vector { KeyCombo { Key::Escape, 0, false, true } });
 }

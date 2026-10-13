@@ -82,11 +82,6 @@ namespace rct3::ui
             turn(key.shift ? -1 : 1);
             return true;
         }
-        if (key.control && (key.key == Key::PageDown || key.key == Key::PageUp))
-        {
-            turn(key.key == Key::PageDown ? 1 : -1);
-            return true;
-        }
         return false;
     }
 

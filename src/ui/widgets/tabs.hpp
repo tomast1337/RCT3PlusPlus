@@ -4,8 +4,8 @@
 // the page's label, as wide as its text needs; the current one is drawn down. Only the current page is
 // visible, so the others take no input.
 //
-// Control+Tab and Control+Page Down go to the next page and Control+Shift+Tab and Control+Page Up to the
-// previous one, from anywhere inside the tabs. Left and Right do the same while a tab has the keyboard
+// Control+Tab goes to the next page and Control+Shift+Tab to the previous one, from anywhere inside the
+// tabs; other keys for those commands arrive as these (see key_map.hpp). Left and Right do the same while a tab has the keyboard
 // focus.
 //
 // The owner asks with take_change() whether the user changed the page.

@@ -61,7 +61,7 @@ namespace rct3::ui
         [[nodiscard]] bool take_options_closed();
         [[nodiscard]] std::optional<std::string> take_language();
         [[nodiscard]] std::optional<std::size_t> take_screen_size();
-        [[nodiscard]] std::optional<KeyCombo> take_developer_keys();
+        [[nodiscard]] std::optional<KeyMap> take_keys();
         /// True while the options window waits for keys, which should then do nothing else.
         [[nodiscard]] bool waiting_for_keys() const;
         /// Menu choices the front end cannot carry out, oldest first.
@@ -85,7 +85,7 @@ namespace rct3::ui
         bool quit_ = false;
         std::optional<std::string> language_;
         std::optional<std::size_t> screen_size_;
-        std::optional<KeyCombo> developer_keys_;
+        std::optional<KeyMap> keys_;
         std::vector<FrontRequest> unhandled_;
     };
 

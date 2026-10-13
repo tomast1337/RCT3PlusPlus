@@ -64,7 +64,7 @@ namespace rct3::scene
         front.choices.language = std::move(setup.language);
         front.choices.screen_sizes = std::move(setup.screen_sizes);
         front.choices.screen_size = setup.screen_size;
-        front.choices.developer_keys = setup.developer_keys;
+        front.choices.keys = std::move(setup.keys);
         front.open_options = setup.reload;
         front.settled = setup.reload;
         scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style() }, *scene.assets.strings, scene.live->options, std::move(front));
@@ -97,7 +97,7 @@ namespace rct3::scene
         r.quit = front.take_quit();
         r.screen_size = front.take_screen_size();
         r.language = front.take_language();
-        r.developer_keys = front.take_developer_keys();
+        r.keys = front.take_keys();
         const bool fullscreen = scene.live->options.flag(config::GameOption::Fullscreen);
         if (fullscreen != scene.fullscreen)
         {

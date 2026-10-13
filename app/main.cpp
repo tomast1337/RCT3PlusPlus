@@ -42,6 +42,7 @@
 #include <exception>
 #include <filesystem>
 #include <optional>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -396,6 +397,12 @@ int main(int argc, char** argv)
             setup.screen_sizes.push_back({ s.width, s.height });
         }
         setup.keys = key_map;
+        // The game's pictures, then the user's screenshots, shuffled together.
+        if (const auto pictures = install->find("Slideshow/Default"))
+            setup.picture_folders.push_back(*pictures);
+        if (data)
+            setup.picture_folders.push_back(data->folder(config::UserFolder::Screenshots));
+        setup.picture_seed = std::random_device { }();
         setup.reload = reload;
         auto loaded = rct3::scene::create_front_end_scene(*device, *install, std::move(setup));
         if (loaded)

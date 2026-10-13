@@ -28,3 +28,11 @@ TEST_CASE("a set's fonts fill roles by name")
     CHECK(set_font_role("GUIFontScaledAllLanguages") == FontRole::AllScripts);
     CHECK_FALSE(set_font_role("GUIFontMedium"));
 }
+
+TEST_CASE("only some roles follow the screen")
+{
+    CHECK(scaled_role(FontRole::Small) == FontRole::ScaledSmall);
+    CHECK(scaled_role(FontRole::Large) == FontRole::ScaledLarge);
+    CHECK_FALSE(scaled_role(FontRole::Medium));
+    CHECK_FALSE(scaled_role(FontRole::AllScripts));
+}

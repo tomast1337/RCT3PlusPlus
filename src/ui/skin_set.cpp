@@ -8,7 +8,7 @@
 namespace rct3::ui
 {
 
-    std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path)
+    std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path, std::span<const std::string_view> whole_textures)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
@@ -54,6 +54,25 @@ namespace rct3::ui
                 }
                 set.skins.insert_or_assign(std::string(item.name), NamedSkin { *layout, texture });
             }
+        }
+
+        for (const std::string_view name : whole_textures)
+        {
+            const auto source = textures.find(name);
+            if (source == textures.end() || set.skins.contains(name))
+                continue;
+            auto image = set.images.contains(name) ? std::nullopt : pixels.first_frame(source->second);
+            if (image)
+                set.images.emplace(std::string(name), ovl::flipped_vertically(std::move(*image)));
+            const auto it = set.images.find(name);
+            if (it == set.images.end())
+            {
+                ++set.skipped;
+                continue;
+            }
+            const auto w = static_cast<float>(it->second.width);
+            const auto h = static_cast<float>(it->second.height);
+            set.skins.emplace(std::string(name), NamedSkin { { ovl::GuiSkinKind::Rect, { 0, w }, { 0, h }, 2, 2 }, std::string(name) });
         }
         return set;
     }

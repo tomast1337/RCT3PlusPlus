@@ -54,6 +54,10 @@ namespace rct3::ui
         std::optional<std::size_t> screen_size;    ///< The one in use, if it is in the list
         std::vector<int> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
         KeyMap keys { };                           ///< In use; the keys page changes a copy
+        /// The music files the park can play when zoomed out; the row shows with any. The choice is not kept
+        /// and changes nothing yet.
+        std::vector<std::string> background_music { };
+        std::optional<std::size_t> background_track { }; ///< Shown at first; nothing for no music
     };
 
     struct OptionsDialogStyle
@@ -64,11 +68,16 @@ namespace rct3::ui
         float page_width = 460;
         float page_height = 330;
         float tab_size = 23;
-        float tab_step = 25;
-        float tabs_x = 265; ///< Where the tabs start, from the page's left
-        float tab_bar_height = 26;
+        float tab_step = 20; ///< The tabs overlap a little, as in the game
+        float tabs_x = 324;  ///< Where the tabs start, from the page's left
+        float tab_bar_height = 23;
+        float caption_x = 59; ///< Right of the window's icon, under the title
+        float caption_width = 160;
+        float caption_height = 20;
         float scroll_height = 230; ///< Of the custom graphics settings
-        FontRole caption_font = FontRole::Medium;
+        FontRole caption_font = FontRole::Small;
+        Color caption_colour { 0x24, 0x84, 0xBE, 255 };
+        std::string icon;   ///< In the window's corner
         std::string button; ///< Skin family of the text buttons
         Rect button_inset;  ///< Of their text; see Button::text_inset
         float button_width = 110;
@@ -124,6 +133,8 @@ namespace rct3::ui
         void update(const UpdateContext& context) override;
 
     private:
+        /// Makes the window as tall as the open page's shown rows.
+        void fit_page();
         void build_general(Widget& page, const StringTable& strings);
         void build_keys(Widget& page, const StringTable& strings);
         void build_graphics(Widget& page, const StringTable& strings);

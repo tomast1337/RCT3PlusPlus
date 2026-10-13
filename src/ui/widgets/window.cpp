@@ -5,6 +5,7 @@
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace rct3::ui
 {
@@ -79,6 +80,12 @@ namespace rct3::ui
         o = { o.x0 + r.x0 - now.x0, o.y0 + r.y0 - now.y0, o.x1 + r.x1 - now.x1, o.y1 + r.y1 - now.y1 };
     }
 
+    void Window::set_height(float height)
+    {
+        // Both vertical edges hang from the same fraction of the desktop, as a window's do.
+        placement.offsets.y1 = placement.offsets.y0 + height + (placement.anchors.y0 - placement.anchors.y1) * (parent() != nullptr ? parent()->rect().height() : 0);
+    }
+
     void Window::on_press(Point p)
     {
         grab_ = p;
@@ -136,9 +143,39 @@ namespace rct3::ui
     void Window::draw(DrawContext& context) const
     {
         const Rect& r = rect();
-        const float in = style_.background_inset;
-        draw_skin(context.list, context.skins.find(style_.background), { r.x0 + in, r.y0 + in, r.x1 - in, r.y1 - in });
+        const Rect& in = style_.background_inset;
+        const Rect back { r.x0 + in.x0, r.y0 + in.y0, r.x1 - in.x1, r.y1 - in.y1 };
+        const SkinRef* background = context.skins.find(style_.background);
+        if (style_.tile_background && background != nullptr)
+        {
+            const auto [w, h] = background->size();
+            if (w > 0 && h > 0 && context.list.push_clip(back))
+            {
+                const int rows = static_cast<int>(std::ceil(back.height() / h));
+                const int columns = static_cast<int>(std::ceil(back.width() / w));
+                for (int row = 0; row < rows; ++row)
+                {
+                    const float y = back.y0 + static_cast<float>(row) * h;
+                    for (int column = 0; column < columns; ++column)
+                    {
+                        const float x = back.x0 + static_cast<float>(column) * w;
+                        draw_skin(context.list, background, { x, y, x + w, y + h });
+                    }
+                }
+            }
+            context.list.pop_clip();
+        }
+        else
+            draw_skin(context.list, background, back);
         draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
+        if (const SkinRef* skin = icon.empty() ? nullptr : context.skins.find(icon))
+        {
+            const auto [w, h] = skin->size();
+            const Rect& b = style_.icon_box;
+            const float x = std::round(r.x0 + (b.x0 + b.x1 - w) / 2);
+            const float y = std::round(r.y0 + (b.y0 + b.y1 - h) / 2);
+            draw_skin(context.list, skin, { x, y, x + w, y + h });
+        }
 
         // Three steps of small squares along the diagonal of the bottom-right corner.
         if (resizable)
@@ -164,7 +201,7 @@ namespace rct3::ui
         const Rect& t = style_.title_box;
         const Rect box { r.x0 + t.x0, r.y0 + t.y0, r.x1 - t.x1, r.y0 + t.y1 };
         if (context.list.push_clip(box))
-            draw_text(context.list, *font, title, box, { style_.title_colour, Align::Start, Align::End, false });
+            draw_text(context.list, *font, title, box, { style_.title_colour, Align::Start, Align::Centre, false });
         context.list.pop_clip();
     }
 

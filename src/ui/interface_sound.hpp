@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The sounds the interface asks for, for its owner to play: a click when a button goes down and another when
-// it comes back up over the button. Pressing outside an open popup, which closes it, sounds like a release.
-// Hovering, opening and closing windows make no sound.
+// it comes back up over the button. The front screen's buttons also give the press click as the pointer comes
+// over them. Pressing outside an open popup, which closes it, sounds like a release. Opening and closing
+// windows make no sound.
 #pragma once
 
 #include <cstdint>

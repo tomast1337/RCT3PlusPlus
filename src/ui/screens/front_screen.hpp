@@ -95,6 +95,11 @@ namespace rct3::ui
     {
     public:
         using Button::Button;
+        /// The front screen's buttons click as the pointer passes over them, as in the game.
+        [[nodiscard]] bool clicks_on_hover() const override
+        {
+            return true;
+        }
         void draw(DrawContext& context) const override;
     };
 

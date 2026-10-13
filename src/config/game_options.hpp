@@ -1,0 +1,190 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The options the player changes in the game's options dialog: money and units, sound levels, camera
+// behaviour and graphics detail. They are kept apart from the program's settings (settings.hpp), in
+// options.ini beside the settings file, written whenever the dialog closes.
+//
+// Every option is a number with a range, registered once in the table in game_options.cpp: on/off options
+// are 0 or 1, choices count from 0, levels are any value in their range or whole steps of it. The file has
+// one `name = value` line per option that differs from its default; lines it does not understand are
+// reported and skipped.
+//
+// Many options have no effect yet: they are kept so the dialog shows what the player chose.
+#pragma once
+
+#include "config/environment.hpp"
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <filesystem>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace rct3::config
+{
+
+    enum class GameOption : std::uint8_t
+    {
+        // General
+        Fullscreen,
+        Currency,         ///< Index into the game's currency list
+        DistanceUnits,    ///< 0 metric, 1 imperial, 2 SI
+        TemperatureUnits, ///< 0 Celsius, 1 Fahrenheit
+        Brightness,
+        GameVolume,
+        MusicVolume,
+        InterfaceVolume,
+        ImportMyMusic,  ///< Play the player's own music in the park
+        CycleMenuMusic, ///< A different menu track each start
+
+        // Camera
+        InvertRideCameraY,
+        AllPhotos,
+        PhotoSpotPhotos,
+        CoasterCameraPhotos,
+        AutoScrollAtEdge,
+        CameraMode,     ///< 0 advanced, 1 free look, 2 isometric, 3 normal
+        CameraControls, ///< Advanced mode's control scheme
+        CameraIgnoresScenery,
+        CameraFocusOnMiddle,
+        FreeLookSpeed,
+        IsometricRotation, ///< How far the pointer moves before the isometric view turns
+
+        // Graphics
+        GraphicsQuality, ///< 0 to 4 from fastest to finest, 5 custom
+        AntiAliasing,    ///< 0 none, then each level the device offers
+        Shadows,         ///< 0 none, 1 static, 2 dynamic
+        ShowDetailLevels,
+        PeopleDetail,
+        PeopleDistance,
+        AnimalDetail,
+        AnimalDistance,
+        VegetationDetail,
+        VegetationDistance,
+        FenceDetail,
+        FenceDistance,
+        BuildingDetail,
+        BuildingDistance,
+        PathDetail,
+        PathDistance,
+        SceneryDetail,
+        SceneryDistance,
+        SupportDetail,
+        SupportDistance,
+        TrackDetail,
+        TrackDistance,
+        RideDetail,
+        RideDistance,
+        ImposterDistance, ///< Beyond it, scenery is drawn as flat pictures
+        BlendDetailLevels,
+        CompressTextures,
+        AggressiveDepthBias,
+        TextureDetail,
+        Trees3D,
+        OffMapTrees,
+        SimpleTerrain,
+        ReflectiveWater,
+        ReflectTerrain,
+        ReflectScenery,
+        ReflectPeople,
+        ReflectAnimals,
+        ReflectParticles,
+        WaterBumps,
+        FlowingWaterEnvironment,
+        Clouds,
+        Mountains,
+        DayNight, ///< 0 instant, 1 blend, 2 cycle
+        Bloom,
+        Refraction,
+        WaterDroplets,
+        LaserOcclusion,
+
+        Count_, ///< Number of options; not an option
+    };
+
+    inline constexpr std::size_t kGameOptionCount = static_cast<std::size_t>(GameOption::Count_);
+
+    struct GameOptionInfo
+    {
+        GameOption option;
+        std::string_view name;
+        float minimum = 0;
+        float maximum = 1;
+        float step = 1; ///< Values are whole steps from the minimum; 0 for any value
+        float default_value = 0;
+    };
+
+    /// Every option, in GameOption order.
+    [[nodiscard]] std::span<const GameOptionInfo> game_options_table();
+    [[nodiscard]] const GameOptionInfo& game_option_info(GameOption option);
+
+    /// The detail and draw distance options of one kind of thing, as the graphics page pairs them.
+    struct DetailPair
+    {
+        GameOption detail;
+        GameOption distance;
+    };
+    inline constexpr std::array<DetailPair, 10> kDetailPairs = { {
+        { GameOption::PeopleDetail, GameOption::PeopleDistance },
+        { GameOption::AnimalDetail, GameOption::AnimalDistance },
+        { GameOption::VegetationDetail, GameOption::VegetationDistance },
+        { GameOption::FenceDetail, GameOption::FenceDistance },
+        { GameOption::BuildingDetail, GameOption::BuildingDistance },
+        { GameOption::PathDetail, GameOption::PathDistance },
+        { GameOption::SceneryDetail, GameOption::SceneryDistance },
+        { GameOption::SupportDetail, GameOption::SupportDistance },
+        { GameOption::TrackDetail, GameOption::TrackDistance },
+        { GameOption::RideDetail, GameOption::RideDistance },
+    } };
+
+    inline constexpr int kCustomQuality = 5;
+
+    /// A line of the file that could not be used.
+    struct GameOptionsProblem
+    {
+        std::size_t line = 0; ///< From 1
+        std::string message;
+    };
+
+    class GameOptions
+    {
+    public:
+        /// Every option at its default.
+        GameOptions();
+
+        [[nodiscard]] static GameOptions parse(std::string_view text, std::vector<GameOptionsProblem>* problems = nullptr);
+        /// Reads the file at `path`. A file that is not there gives the defaults.
+        [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::vector<GameOptionsProblem>* problems = nullptr);
+
+        [[nodiscard]] float get(GameOption option) const;
+        [[nodiscard]] bool flag(GameOption option) const
+        {
+            return get(option) != 0;
+        }
+        [[nodiscard]] int choice(GameOption option) const
+        {
+            return static_cast<int>(get(option));
+        }
+        /// Sets the value, kept in range and snapped to a whole step.
+        void set(GameOption option, float value);
+
+        /// The file text: the options that differ from their defaults.
+        [[nodiscard]] std::string text() const;
+        /// Writes text() to `path`, creating its folder.
+        [[nodiscard]] std::expected<void, std::string> save(const std::filesystem::path& path) const;
+
+        friend bool operator==(const GameOptions&, const GameOptions&) = default;
+
+    private:
+        std::array<float, kGameOptionCount> values_ { };
+    };
+
+    /// options.ini in the folder of the settings file; nothing when that has no folder.
+    [[nodiscard]] std::optional<std::filesystem::path> game_options_path(const Environment& env);
+
+} // namespace rct3::config

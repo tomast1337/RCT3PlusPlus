@@ -83,7 +83,7 @@ namespace rct3::ui
         if (const SkinRef* glyph = icon.empty() ? nullptr : context.skins.find(icon))
         {
             // The icon grows with the face.
-            const float grow = rect().width() > 0 ? r.width() / rect().width() : 1.0f;
+            const float grow = (rect().width() > 0 ? r.width() / rect().width() : 1.0f) * icon_scale;
             const float w = std::round(glyph->size()[0] * grow);
             const float h = std::round(glyph->size()[1] * grow);
             const float x = std::round(r.x0 + (r.width() - w) / 2) + nudge;

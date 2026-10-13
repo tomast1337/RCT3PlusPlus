@@ -22,6 +22,7 @@ namespace rct3::config
             { UserFolder::Parks, "parks", "Saved sandbox parks" },
             { UserFolder::Scenarios, "scenarios", "Saved custom scenarios" },
             { UserFolder::NewScenarios, "new_scenarios", "Scenarios to start a custom scenario from" },
+            { UserFolder::Careers, "careers", "Careers and their games" },
         } };
 
         constexpr std::array<UserFileInfo, kUserFileCount> kFiles = { {

@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ui/font_set.hpp"
+#include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/tooltip.hpp"
@@ -45,6 +46,12 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kFileCancelIcon = "GUI2LoadSave_Cancel";
     inline constexpr std::string_view kFileDeleteIcon = "GUI2LoadSave_DeleteDat";
     inline constexpr std::string_view kStandardBorder = "GUI2StandardBorder";
+    inline constexpr std::string_view kCareerIcon = "Objective_Cup";
+    inline constexpr std::string_view kNewCareerIcon = "GUI2_StartNewScenario";
+    inline constexpr std::string_view kTycoonHat = "Difficulty_Hat_Tycoon";
+    inline constexpr std::string_view kEntrepreneurHat = "Difficulty_Hat_Entrepreneur";
+    inline constexpr std::string_view kApprenticeHat = "Difficulty_Hat_Apprentice";
+    inline constexpr std::string_view kNoParkPicture = "GUI2TestDat";
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
@@ -283,6 +290,27 @@ namespace rct3::ui::game_skins
         s.button = kButton;
         s.border = kStandardBorder;
         s.name_box = kListBox;
+        s.name_box_focused = kListBoxFocused;
+        return s;
+    }
+
+    /// The window that picks a career in the game's frame, its rows framed like edit boxes.
+    [[nodiscard]] inline CareerDialogStyle career_dialog_style()
+    {
+        CareerDialogStyle s;
+        s.window = window_style();
+        s.question = question_box_style();
+        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.icon = kCareerIcon;
+        s.button = kButton;
+        s.new_icon = kNewCareerIcon;
+        s.load_icon = kLoadIcon;
+        s.cancel_icon = kFileCancelIcon;
+        s.delete_icon = kFileDeleteIcon;
+        s.hats = { std::string(kTycoonHat), std::string(kEntrepreneurHat), std::string(kApprenticeHat) };
+        s.row_frame = kListBox;
+        s.row_frame_selected = kListBoxFocused;
+        s.no_picture = kNoParkPicture;
         s.name_box_focused = kListBoxFocused;
         return s;
     }

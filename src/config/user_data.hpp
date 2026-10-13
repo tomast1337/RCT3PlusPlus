@@ -30,6 +30,7 @@ namespace rct3::config
         Parks,        ///< parks/: saved sandbox parks
         Scenarios,    ///< scenarios/: saved custom scenarios
         NewScenarios, ///< new_scenarios/: scenarios to start a custom scenario from
+        Careers,      ///< careers/: the player's careers and their games (career/career_file.hpp)
 
         Count_, ///< Number of folders; not a folder
     };

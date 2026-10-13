@@ -52,6 +52,7 @@ namespace rct3::scene
         scene.assets = std::move(*assets);
         scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
         scene.options_file = std::move(setup.options_file);
+        scene.careers.data = setup.data;
         scene.saves.data = std::move(setup.data);
         if (scene.options_file)
         {
@@ -81,7 +82,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -99,6 +100,7 @@ namespace rct3::scene
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         update_save_browser(device, scene.saves, *scene.live->front);
+        update_career_browser(device, scene.careers, *scene.live->front, *scene.assets.strings);
         if (scene.live->front->take_options_closed())
             save_options(scene);
         while (const auto request = scene.live->front->take_unhandled())
@@ -147,6 +149,7 @@ namespace rct3::scene
             save_options(scene);
         destroy_slideshow_view(device, scene.slideshow);
         destroy_save_browser(device, scene.saves);
+        destroy_career_browser(device, scene.careers);
         ui::destroy_interface_assets(device, scene.assets);
         scene = { };
     }

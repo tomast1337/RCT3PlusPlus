@@ -12,7 +12,7 @@ namespace
 {
     FrontEndStyle style()
     {
-        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style() };
+        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style() };
     }
 
     struct Fixture
@@ -126,4 +126,21 @@ TEST_CASE("loading opens the window that loads games on the right folder, once")
     CHECK(f.front.file_folder() == config::UserFolder::NewScenarios);
     CHECK(f.front.file_action() == FrontAction::NewCustomScenario);
     CHECK(f.front.file_dialogs_opened() == 2);
+}
+
+TEST_CASE("a game's career button opens the window picking its careers")
+{
+    Fixture f;
+    f.front.screen().open(FrontMenu::Campaigns);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::Campaigns, 2));
+    REQUIRE(f.front.career_dialog() != nullptr);
+    CHECK(f.front.career_pack() == 2);
+    CHECK(f.front.career_dialogs_opened() == 1);
+    CHECK_FALSE(f.front.take_unhandled());
+    f.press(f.front.screen().button(FrontMenu::Campaigns, 2));
+    CHECK(f.front.career_dialogs_opened() == 1);
+    f.press(f.front.screen().button(FrontMenu::Campaigns, 0));
+    CHECK(f.front.career_pack() == 0);
+    CHECK(f.front.career_dialogs_opened() == 2);
 }

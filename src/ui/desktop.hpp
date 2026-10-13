@@ -17,11 +17,15 @@
 // Popups (Widget::popup), such as menus, are top-level widgets that close when a press misses them. The
 // top-most one takes the keyboard focus, which goes back where it was when the popup closes.
 //
+// Pressing and releasing widgets that click, and closing popups by pressing elsewhere, ask for interface
+// sounds (interface_sound.hpp), which the owner takes with take_sounds().
+//
 // A modal top-level widget (Widget::modal), such as a question, shuts out everything below it: the pointer
 // and the keys reach only it and what was put above it later, and pointer input never reaches the 3D view
 // while it is shown. The rest is drawn under a shade.
 #pragma once
 
+#include "ui/interface_sound.hpp"
 #include "ui/keyboard.hpp"
 #include "ui/keyboard_focus.hpp"
 #include "ui/tooltip.hpp"
@@ -32,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace rct3::ui
 {
@@ -91,6 +96,12 @@ namespace rct3::ui
             return std::exchange(clipboard_, std::nullopt);
         }
 
+        /// The sounds asked for since the last call, in order.
+        [[nodiscard]] std::vector<InterfaceSound> take_sounds()
+        {
+            return std::exchange(sounds_, { });
+        }
+
         /// Draws the tree, then the tooltip over everything.
         void draw(DrawContext& context) const;
 
@@ -121,6 +132,7 @@ namespace rct3::ui
         bool focus_shown_ = false;
         Widget* before_popup_ = nullptr; // The focus before a popup took it; checked before use
         std::optional<std::u16string> clipboard_;
+        std::vector<InterfaceSound> sounds_;
         bool was_down_ = false;
         Tooltip tooltip_;
     };

@@ -2,9 +2,9 @@
 //
 // rct3++ viewer: a window, the interface drawn through the render device and a Dear ImGui overlay. With
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
-// built from real skins.
+// built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--frames N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--frames N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
@@ -12,6 +12,7 @@
 //   --scale auto|N    interface scale, instead of the one in the settings file
 //   --language NAME   interface language as the game names it, e.g. German or SChinese
 //   --widget-demo     a window of every kind of control instead of the front screen
+//   --no-audio        no sound at all
 //   --frames N        exit after N frames (smoke test)
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
@@ -27,6 +28,7 @@
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
+#include "scene/menu_audio.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
@@ -52,7 +54,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--frames N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--frames N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -208,6 +210,7 @@ int main(int argc, char** argv)
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
+    bool sound = true;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -249,6 +252,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--widget-demo") == 0)
         {
             widget_demo = true;
+        }
+        else if (std::strcmp(argv[i], "--no-audio") == 0)
+        {
+            sound = false;
         }
         else if (std::strcmp(argv[i], "--write-settings") == 0)
         {
@@ -342,6 +349,36 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
     bool quit = false;
+    // The menus' sound starts with the first front screen and goes on through language changes. The options it
+    // reads are the front end's once there is one; until then, those in the file.
+    std::optional<rct3::audio::AudioEngine> audio;
+    std::optional<rct3::scene::MenuAudio> menu_audio;
+    config::GameOptions audio_options;
+    const auto start_audio = [&] {
+        auto engine = rct3::audio::AudioEngine::create();
+        if (!engine)
+        {
+            log.warning("audio: {}", rct3::audio::to_string(engine.error()));
+            return;
+        }
+        audio.emplace(std::move(*engine));
+        const auto options_file = user_file(config::UserFile::GameOptions);
+        bool keep = options_file.has_value();
+        if (options_file)
+        {
+            if (auto loaded = config::GameOptions::load(*options_file))
+                audio_options = std::move(*loaded);
+            else
+                keep = false; // The front end reports it; not written over
+        }
+        menu_audio = rct3::scene::start_menu_audio(*audio, *install, audio_options, std::random_device { }());
+        // The menu music's cycle moved on.
+        if (keep)
+        {
+            if (auto saved = audio_options.save(*options_file); !saved)
+                log.warning("options: {}", saved.error());
+        }
+    };
     if (install)
     {
         auto created = rct3::scene::create_startup_screen(*device, *install, { });
@@ -357,6 +394,8 @@ int main(int argc, char** argv)
         }
     }
     const auto load_widgets = [&](bool reload) {
+        if (sound && !reload && !audio)
+            start_audio();
         // The language set, else the locale's, of those installed.
         const auto gui = install->find("gui");
         const auto installed = gui ? rct3::ui::installed_languages(*gui) : std::vector<std::string> { };
@@ -506,19 +545,24 @@ int main(int argc, char** argv)
                         // Likewise keys, while a developer window has the keyboard.
                         const rct3::ui::KeyboardState no_keys;
                         const auto& keyboard = ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys;
+                        std::vector<rct3::ui::InterfaceSound> sounds;
                         if (widgets)
                         {
                             rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));
                             if (const auto copied = widgets->desktop.take_clipboard())
                                 window->set_clipboard(*copied);
+                            sounds = widgets->desktop.take_sounds();
                         }
                         else
                         {
                             rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, static_cast<float>(delta));
                             if (const auto copied = front->live->desktop.take_clipboard())
                                 window->set_clipboard(*copied);
+                            sounds = front->live->desktop.take_sounds();
                             follow_front_end();
                         }
+                        if (audio && menu_audio)
+                            rct3::scene::update_menu_audio(*audio, *menu_audio, front ? front->live->options : audio_options, sounds);
                     }
                 });
                 prof::section("Draw", [&] {
@@ -564,6 +608,8 @@ int main(int argc, char** argv)
         status = 1;
     }
 
+    if (audio && menu_audio)
+        rct3::scene::stop_menu_audio(*audio, *menu_audio);
     if (startup)
         rct3::scene::destroy_startup_screen(*device, *startup);
     if (widgets)

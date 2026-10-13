@@ -226,11 +226,17 @@ namespace rct3::ui
             focus_ = nullptr;
             focus_shown_ = false;
             Widget* pressed_top = pointer.present ? top_level(*root_, deepest(pointer.position)) : nullptr;
+            bool closed = false;
             for (const auto& top : root_->children())
             {
                 if (top->popup && top.get() != pressed_top)
+                {
+                    closed = closed || (top->visible && !top->closing());
                     top->close();
+                }
             }
+            if (closed)
+                sounds_.push_back(InterfaceSound::Release);
         }
         if (down && !was_down_ && under != nullptr && under->enabled)
         {
@@ -242,6 +248,8 @@ namespace rct3::ui
                 if (w->takes_focus() && usable(*w))
                     focus_ = w;
             }
+            if (held_->clicks())
+                sounds_.push_back(InterfaceSound::Press);
             held_->on_press(pointer.position);
         }
         else if (down && held_ != nullptr)
@@ -252,6 +260,8 @@ namespace rct3::ui
         {
             Widget* released = held_;
             held_ = nullptr;
+            if (released->clicks() && under == released)
+                sounds_.push_back(InterfaceSound::Release);
             released->on_release(pointer.position, under == released);
         }
         was_down_ = down;

@@ -49,6 +49,22 @@ TEST_CASE("the file holds what differs from the defaults and reads back the same
     CHECK(GameOptions::parse(R"({ "fullscreen": true })") == GameOptions::parse(R"({ "fullscreen": 1 })"));
 }
 
+TEST_CASE("the park's music is kept by file name, empty for none")
+{
+    GameOptions options;
+    CHECK_FALSE(options.background_music());
+    options.set_background_music("Track One.wma");
+    CHECK(GameOptions::parse(options.text()).background_music() == "Track One.wma");
+    options.set_background_music("");
+    CHECK(GameOptions::parse(options.text()).background_music() == "");
+    options.set(GameOption::ShuffleBackgroundMusic, 1);
+    CHECK(GameOptions::parse(options.text()) == options);
+
+    std::vector<FileProblem> problems;
+    CHECK_FALSE(GameOptions::parse(R"({ "background_music": 3 })", &problems).background_music());
+    CHECK(problems.size() == 1);
+}
+
 TEST_CASE("bad values are reported and skipped")
 {
     std::vector<FileProblem> problems;

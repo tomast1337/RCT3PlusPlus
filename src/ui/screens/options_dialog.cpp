@@ -34,6 +34,7 @@ namespace rct3::ui
         constexpr std::u16string_view kNoKeys = u"None";
         constexpr std::u16string_view kKeysTip = u"Click, then press the keys: F1 to F12, Escape, Enter, Tab, Page Up, Page Down or Insert, with Ctrl or Shift if wanted, or Ctrl with a letter or digit. Escape alone keeps the keys.";
         constexpr std::u16string_view kUsualKeys = u"Usual keys";
+        constexpr std::u16string_view kShuffle = u"Shuffle"; ///< Ours: a track at random each time
 
         struct DetailRow
         {
@@ -168,11 +169,41 @@ namespace rct3::ui
             std::vector<std::u16string> tracks;
             for (const std::string& name : choices_.background_music)
                 tracks.push_back(ascii(name));
+            tracks.emplace_back(kShuffle);
             tracks.push_back(str(strings, kNoMusic));
-            auto& music = rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"));
-            const std::size_t track = choices_.background_track.value_or(choices_.background_music.size());
-            music.select(std::min(track, choices_.background_music.size()));
+            music_ = &rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"));
+            show_background_music();
         }
+    }
+
+    void OptionsDialog::show_background_music()
+    {
+        const std::vector<std::string>& files = choices_.background_music;
+        const std::size_t shuffle = files.size();
+        const std::size_t none = shuffle + 1;
+        std::size_t shown = choices_.background_track.value_or(none);
+        if (options_.flag(O::ShuffleBackgroundMusic))
+            shown = shuffle;
+        else if (const auto& track = options_.background_music())
+        {
+            const auto it = std::ranges::find(files, *track);
+            shown = track->empty() ? none : it != files.end() ? static_cast<std::size_t>(it - files.begin()) : shown;
+        }
+        music_->select(std::min(shown, none));
+    }
+
+    void OptionsDialog::update_background_music()
+    {
+        if (music_ == nullptr || !music_->take_change() || !music_->selected())
+            return;
+        const std::vector<std::string>& files = choices_.background_music;
+        const std::size_t picked = *music_->selected();
+        options_.set(O::ShuffleBackgroundMusic, picked == files.size() ? 1.0f : 0.0f);
+        if (picked < files.size())
+            options_.set_background_music(files[picked]);
+        else if (picked > files.size())
+            options_.set_background_music(std::string { });
+        ++changes_;
     }
 
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
@@ -377,6 +408,7 @@ namespace rct3::ui
         if (language_ != nullptr && language_->take_change() && language_->selected())
             picked_language_ = choices_.languages.at(*language_->selected());
         update_keys();
+        update_background_music();
         if (resolution_->take_change() && resolution_->selected())
             picked_screen_size_ = *resolution_->selected();
 

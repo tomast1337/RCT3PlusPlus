@@ -7,6 +7,7 @@
 #include "strings/unicode.hpp"
 
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -169,6 +170,55 @@ namespace rct3::platform
     void Window::set_clipboard(std::u16string_view text)
     {
         glfwSetClipboardString(window_, strings::to_utf8(text).c_str());
+    }
+
+    std::vector<Window::Size> Window::screen_sizes() const
+    {
+        std::vector<Size> sizes;
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        int count = 0;
+        const GLFWvidmode* modes = monitor != nullptr ? glfwGetVideoModes(monitor, &count) : nullptr;
+        for (int i = 0; i < count; ++i)
+        {
+            const Size s { modes[i].width, modes[i].height };
+            if (std::ranges::find(sizes, s) == sizes.end())
+                sizes.push_back(s);
+        }
+        std::ranges::sort(sizes, [](Size a, Size b) { return std::pair { a.width, a.height } < std::pair { b.width, b.height }; });
+        return sizes;
+    }
+
+    Window::Size Window::size() const
+    {
+        Size s;
+        glfwGetWindowSize(window_, &s.width, &s.height);
+        return s;
+    }
+
+    void Window::set_size(Size size)
+    {
+        if (GLFWmonitor* monitor = glfwGetWindowMonitor(window_))
+            glfwSetWindowMonitor(window_, monitor, 0, 0, size.width, size.height, GLFW_DONT_CARE);
+        else
+            glfwSetWindowSize(window_, size.width, size.height);
+    }
+
+    void Window::set_fullscreen(bool on)
+    {
+        if ((glfwGetWindowMonitor(window_) != nullptr) == on)
+            return;
+        const Size s = size();
+        if (on)
+        {
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            if (monitor != nullptr)
+                glfwSetWindowMonitor(window_, monitor, 0, 0, s.width, s.height, GLFW_DONT_CARE);
+        }
+        else
+        {
+            constexpr int kWindowedPosition = 64; // Clear of the screen's corner and its title bar
+            glfwSetWindowMonitor(window_, nullptr, kWindowedPosition, kWindowedPosition, s.width, s.height, GLFW_DONT_CARE);
+        }
     }
 
     double Window::time() const

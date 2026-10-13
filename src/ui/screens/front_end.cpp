@@ -69,6 +69,27 @@ namespace rct3::ui
         desktop_.root().add<FileDialog>(std::string(kFilesName), style_.files, strings_, FileDialogMode::Load, setup_.twelve_hour);
     }
 
+    CareerDialog* FrontEnd::career_dialog() const
+    {
+        return static_cast<CareerDialog*>(desktop_.root().find(kCareersName));
+    }
+
+    void FrontEnd::open_careers(int pack)
+    {
+        if (CareerDialog* open = career_dialog())
+        {
+            if (pack == career_pack_)
+            {
+                desktop_.root().raise(*open);
+                return;
+            }
+            desktop_.root().remove(*open);
+        }
+        career_pack_ = pack;
+        ++career_dialogs_opened_;
+        desktop_.root().add<CareerDialog>(std::string(kCareersName), style_.careers, strings_);
+    }
+
     void FrontEnd::update()
     {
         while (const auto request = screen_->take_request())
@@ -77,6 +98,9 @@ namespace rct3::ui
             {
                 case FrontAction::Options:
                     open_options();
+                    break;
+                case FrontAction::Campaign:
+                    open_careers(request->pack);
                     break;
                 case FrontAction::LoadSandbox:
                     open_files(request->action, config::UserFolder::Parks);

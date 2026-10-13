@@ -45,6 +45,9 @@ namespace rct3::scene
     {
         ui::InterfaceAssets assets;
         SlideshowView slideshow;
+        std::vector<std::filesystem::path> picture_folders; ///< The slideshow's usual pictures
+        std::uint32_t picture_seed = 0;
+        std::optional<std::string> slideshow_shown; ///< The career map's folder of pictures shown instead
         SaveBrowser saves;
         CareerBrowser careers;
         std::optional<std::filesystem::path> options_file;

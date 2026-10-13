@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ui/font_set.hpp"
+#include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
@@ -52,6 +53,15 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kEntrepreneurHat = "Difficulty_Hat_Entrepreneur";
     inline constexpr std::string_view kApprenticeHat = "Difficulty_Hat_Apprentice";
     inline constexpr std::string_view kNoParkPicture = "GUI2TestDat";
+    // The career map.
+    inline constexpr std::string_view kMenuCircle = "FrontScreen_IconCircle_New";
+    inline constexpr std::string_view kMenuButtonSmall = "MenuButtonSmall";
+    inline constexpr std::string_view kResumeIcon = "GUI2_ResumeLastSaved";
+    inline constexpr std::string_view kMainMenuIcon = "GUI2_QuitToFrontScreen";
+    inline constexpr std::string_view kQuitIcon = "File_Quit";
+    inline constexpr std::string_view kPadlockLocked = "GUI2PadlockLocked";
+    inline constexpr std::string_view kPadlockOpen = "GUI2PadlockUnlocked";
+    inline constexpr std::string_view kNoScenarioPicture = "FrontScreen_PeopleUT";
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
@@ -312,6 +322,26 @@ namespace rct3::ui::game_skins
         s.row_frame_selected = kListBoxFocused;
         s.no_picture = kNoParkPicture;
         s.name_box_focused = kListBoxFocused;
+        return s;
+    }
+
+    /// The career map with the front screen's buttons and the game's marks.
+    [[nodiscard]] inline CareerBoardStyle career_board_style()
+    {
+        CareerBoardStyle s;
+        s.question = question_box_style();
+        s.scenario_button = kMenuCircle;
+        s.small_button = kMenuButtonSmall;
+        s.panel = kTooltip;
+        s.new_icon = kNewCareerIcon;
+        s.resume_icon = kResumeIcon;
+        s.load_icon = kLoadIcon;
+        s.menu_icon = kMainMenuIcon;
+        s.quit_icon = kQuitIcon;
+        s.locked = kPadlockLocked;
+        s.unlocked = kPadlockOpen;
+        s.hats = { std::string(kApprenticeHat), std::string(kEntrepreneurHat), std::string(kTycoonHat) };
+        s.no_picture = kNoScenarioPicture;
         return s;
     }
 

@@ -4,11 +4,15 @@
 // files found in the careers folder (or a folder in it) are brought over first: each becomes one of ours,
 // its games copied along, and the old file and its games are moved to "imported" so they are brought over
 // only once. Then the game's careers are listed, fitted to its scenarios, and shown, the picture of each
-// career's last game read one a frame. New, rename and delete happen here, on the disk. The career map is
-// not there yet, so loading a career is only logged.
+// career's last game read one a frame. New, rename and delete happen here, on the disk.
+//
+// Loading a career shows its map. A scenario picked there becomes the career's current one, saved at once,
+// and the slideshow behind turns to that scenario's pictures until the map closes. Starting or resuming a
+// scenario and loading a game are not there yet, so they are only logged.
 #pragma once
 
 #include "career/career_file.hpp"
+#include "config/game_install.hpp"
 #include "config/user_data.hpp"
 #include "render/device.hpp"
 #include "ui/screens/front_end.hpp"
@@ -31,9 +35,13 @@ namespace rct3::scene
         std::vector<career::CareerEntry> careers;
         std::size_t next_picture = 0; ///< The next career whose picture to read
         std::vector<render::TextureHandle> pictures;
+        std::optional<career::CareerEntry> playing; ///< The career whose map is shown
+        std::size_t map_opened = 0;                 ///< The front end's count of maps when it was shown
+        /// The folder of pictures the slideshow should show, relative to the game; nothing for its usual ones.
+        std::optional<std::string> slideshow;
     };
 
-    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::FrontEnd& front, const ui::StringTable& strings);
+    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install);
 
     void destroy_career_browser(render::Device& device, CareerBrowser& browser);
 

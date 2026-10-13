@@ -16,6 +16,9 @@ TEST_CASE("children are kept in drawing order")
     root.raise(a);
     CHECK(root.children()[0].get() == &b);
     CHECK(root.children()[1].get() == &a);
+    root.lower(a);
+    CHECK(root.children()[0].get() == &a);
+    root.raise(a);
 
     auto detached = root.remove(a);
     REQUIRE(detached);

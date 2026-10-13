@@ -12,7 +12,7 @@ namespace
 {
     FrontEndStyle style()
     {
-        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style() };
+        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style(), game_skins::career_board_style() };
     }
 
     struct Fixture
@@ -143,4 +143,37 @@ TEST_CASE("a game's career button opens the window picking its careers")
     f.press(f.front.screen().button(FrontMenu::Campaigns, 0));
     CHECK(f.front.career_pack() == 0);
     CHECK(f.front.career_dialogs_opened() == 2);
+}
+
+TEST_CASE("the career map stands in for the front screen, and going back shows the games' menu")
+{
+    Fixture f;
+    f.front.screen().open(FrontMenu::Campaigns);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::Campaigns, 0));
+    REQUIRE(f.front.career_dialog() != nullptr);
+    std::vector<CareerBoardScenario> scenarios(3);
+    scenarios[0].status = career::ScenarioStatus::Open;
+    f.front.open_career_board(std::move(scenarios), 0);
+    CHECK(f.front.career_dialog() == nullptr);
+    REQUIRE(f.front.career_board() != nullptr);
+    CHECK(f.front.career_boards_opened() == 1);
+    CHECK_FALSE(f.front.screen().visible);
+
+    f.front.career_board()->quit_button().click();
+    f.step();
+    REQUIRE(f.front.question() != nullptr);
+    f.front.question()->buttons().back()->click();
+    f.step();
+    f.step();
+
+    f.front.career_board()->menu_button().click();
+    f.step();
+    REQUIRE(f.front.career_board()->question() != nullptr);
+    f.front.career_board()->question()->buttons().front()->click();
+    f.step();
+    f.step();
+    CHECK(f.front.career_board() == nullptr);
+    CHECK(f.front.screen().visible);
+    CHECK(f.front.screen().current() == FrontMenu::Campaigns);
 }

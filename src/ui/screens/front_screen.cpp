@@ -158,6 +158,36 @@ namespace rct3::ui
             draw_skin(context.list, context.skins.find(icon), face(), tint);
     }
 
+    void draw_front_bands(DrawContext& context, const fs::Frame& frame)
+    {
+        draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
+        draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
+        draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
+    }
+
+    void draw_front_arc(DrawContext& context, const fs::Frame& frame, std::string_view logo)
+    {
+        for (std::size_t i = 0; i < kArcSkins.size(); ++i)
+            draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
+        draw_at_size(context, frame, context.skins.find(logo) != nullptr ? logo : kLogoSkin, fs::kLogo);
+    }
+
+    void draw_front_help(DrawContext& context, const fs::Frame& frame, std::u16string_view title, std::u16string_view text)
+    {
+        if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
+            draw_text(context.list, *f, title, frame.stretched(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
+        if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
+            draw_text(context.list, *f, text, frame.stretched(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
+    }
+
+    std::string front_logo(std::string_view language)
+    {
+        std::string logo(kLogoSkin);
+        if (std::ranges::find(kOwnLogoLanguages, language) != kOwnLogoLanguages.end())
+            logo += "_" + std::string(language);
+        return logo;
+    }
+
     std::array<bool, kExpansionCount> named_expansions(const StringTable& strings)
     {
         std::array<bool, kExpansionCount> named { };
@@ -169,11 +199,8 @@ namespace rct3::ui
     FrontScreen::FrontScreen(std::string name, const StringTable& strings, std::array<bool, kExpansionCount> expansions, std::string_view language)
         : Widget(std::move(name))
         , strings_(strings)
-        , logo_(kLogoSkin)
+        , logo_(front_logo(language))
     {
-        if (std::ranges::find(kOwnLogoLanguages, language) != kOwnLogoLanguages.end())
-            logo_ += "_" + std::string(language);
-
         for (std::size_t m = 0; m < kFrontMenuCount; ++m)
         {
             const auto& entries = kMenus[m].entries;
@@ -362,9 +389,7 @@ namespace rct3::ui
     void FrontScreen::draw(DrawContext& context) const
     {
         const fs::Frame frame = fs::frame_for(rect());
-        draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
-        draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
-        draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
+        draw_front_bands(context, frame);
 
         // The boxes beside the buttons that have arrived: a light band from a white ring behind the button,
         // under its name and on under the arc, then the name. The arc comes after and covers the band's end.
@@ -382,9 +407,7 @@ namespace rct3::ui
             if (label_font != nullptr)
                 draw_text(context.list, *label_font, labels_[i], box.text, { faded(kLabelColour, alpha), Align::Centre, Align::Centre, true });
         }
-        for (std::size_t i = 0; i < kArcSkins.size(); ++i)
-            draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
-        draw_at_size(context, frame, context.skins.find(logo_) != nullptr ? std::string_view(logo_) : kLogoSkin, fs::kLogo);
+        draw_front_arc(context, frame, logo_);
         if (current_ == FrontMenu::Main)
         {
             for (const std::string_view name : kChildrenSkins)
@@ -396,11 +419,7 @@ namespace rct3::ui
                 }
             }
         }
-
-        if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
-            draw_text(context.list, *f, help_title_, frame.stretched(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
-        if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
-            draw_text(context.list, *f, help_text_, frame.stretched(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
+        draw_front_help(context, frame, help_title_, help_text_);
     }
 
 } // namespace rct3::ui

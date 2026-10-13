@@ -20,8 +20,13 @@ namespace rct3::scene
 
         namespace skins = ui::game_skins;
 
-        /// The newest logo comes with its own skins.
-        constexpr std::array<std::string_view, 1> kMoreSkins = { "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl" };
+        /// The newest logo comes with its own skins, and the career map's pictures come in a file per game.
+        constexpr std::array<std::string_view, 4> kMoreSkins = {
+            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl",
+            "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl",
+            "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl",
+            "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl",
+        };
 
         /// What the options show for the zoomed-out park's music, as the game does at first.
         constexpr std::string_view kFirstBackgroundMusic = "Summer Air.wma";
@@ -51,6 +56,8 @@ namespace rct3::scene
         FrontEndScene scene;
         scene.assets = std::move(*assets);
         scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
+        scene.picture_folders = std::move(setup.picture_folders);
+        scene.picture_seed = setup.picture_seed;
         scene.options_file = std::move(setup.options_file);
         scene.careers.data = setup.data;
         scene.saves.data = std::move(setup.data);
@@ -82,7 +89,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -100,7 +107,19 @@ namespace rct3::scene
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         update_save_browser(device, scene.saves, *scene.live->front);
-        update_career_browser(device, scene.careers, *scene.live->front, *scene.assets.strings);
+        update_career_browser(device, scene.careers, *scene.live->front, *scene.assets.strings, *scene.assets.install);
+        if (scene.careers.slideshow != scene.slideshow_shown)
+        {
+            // The career map shows the picked scenario's pictures; back on the front screen, the usual ones.
+            scene.slideshow_shown = scene.careers.slideshow;
+            std::vector<std::filesystem::path> folders;
+            if (scene.slideshow_shown)
+            {
+                if (const auto folder = scene.assets.install->find(*scene.slideshow_shown))
+                    folders.push_back(*folder);
+            }
+            scene.slideshow.show.set_pictures(ui::slideshow_pictures(scene.slideshow_shown ? folders : scene.picture_folders, scene.picture_seed));
+        }
         if (scene.live->front->take_options_closed())
             save_options(scene);
         while (const auto request = scene.live->front->take_unhandled())

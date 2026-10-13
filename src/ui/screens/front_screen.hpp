@@ -104,6 +104,14 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
     };
 
+    /// The front screen's artwork, shared with the screens that stand in for it: the bands and the bottom
+    /// strip; the arc and the logo; the two lines along the bottom strip.
+    void draw_front_bands(DrawContext& context, const front_screen::Frame& frame);
+    void draw_front_arc(DrawContext& context, const front_screen::Frame& frame, std::string_view logo);
+    void draw_front_help(DrawContext& context, const front_screen::Frame& frame, std::u16string_view title, std::u16string_view text);
+    /// The logo's skin for `language`.
+    [[nodiscard]] std::string front_logo(std::string_view language);
+
     /// The expansion packs the strings name: a guess at which are installed, as their names come with them.
     [[nodiscard]] std::array<bool, kExpansionCount> named_expansions(const StringTable& strings);
 

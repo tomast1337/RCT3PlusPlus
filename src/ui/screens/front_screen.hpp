@@ -74,6 +74,7 @@ namespace rct3::ui
     {
         FrontMenu parent = FrontMenu::Main;
         std::span<const FrontEntry> entries;
+        std::string_view title_key; ///< Shown on the bottom strip while no button is under the pointer
     };
 
     /// Every menu, by FrontMenu.

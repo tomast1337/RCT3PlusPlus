@@ -24,6 +24,7 @@ namespace rct3::config
             { O::DistanceUnits, "distance_units", 0, 2, 1, 0 },
             { O::TemperatureUnits, "temperature_units", 0, 1, 1, 0 },
             { O::Brightness, "brightness", 0, 1, kAny, 0.5f },
+            { O::LiveContent, "live_content", 0, 1, 1, 1 },
             { O::GameVolume, "game_volume", 0, 1, kAny, 0.8f },
             { O::MusicVolume, "music_volume", 0, 1, kAny, 0.6f },
             { O::InterfaceVolume, "interface_volume", 0, 1, kAny, 0.8f },

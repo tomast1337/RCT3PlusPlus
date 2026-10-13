@@ -103,3 +103,22 @@ TEST_CASE("the keys and the wheel move the slider")
     CHECK(f.slider.value() == 12);
     CHECK_FALSE(f.slider.on_key({ Key::Escape }));
 }
+
+TEST_CASE("a bar takes the value under the pointer from its left edge")
+{
+    Desktop desktop;
+    SliderStyle s;
+    s.bar = true;
+    s.thumb_width = 0;
+    s.thumb_height = 0;
+    Slider& bar = desktop.root().add<Slider>("bar", s);
+    bar.placement = top_left(0, 0, 200, 10);
+    bar.maximum = 1;
+    desktop.layout({ 0, 0, 300, 300 });
+    desktop.update({ { 50, 5 }, true, true });
+    CHECK(bar.value() == doctest::Approx(0.25));
+    desktop.update({ { 150, 5 }, true, true });
+    CHECK(bar.value() == doctest::Approx(0.75));
+    desktop.update({ { 260, 5 }, true, true });
+    CHECK(bar.value() == doctest::Approx(1));
+}

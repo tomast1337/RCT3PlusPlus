@@ -23,9 +23,11 @@ namespace rct3::ui
 
     struct DropdownStyle
     {
-        std::string field;   ///< Behind the selected text
-        std::string focused; ///< Instead of `field` while the list has the keyboard focus
-        std::string opener;  ///< Family base name for the arrow on the right (see SkinLibrary)
+        std::string field;             ///< Behind the selected text
+        std::string focused;           ///< Instead of `field` while the list has the keyboard focus
+        std::string opener;            ///< Family base name for the arrow on the right (see SkinLibrary)
+        Color fill { 0, 0, 0, 0 };     ///< Behind the field skin, if any
+        bool opener_in_corner = false; ///< The arrow in the top-right corner instead of inset and centred
         Color text_colour { 0, 0, 0, 255 };
         Color disabled_text_colour { 127, 127, 127, 255 };
         FontRole font = FontRole::Small;

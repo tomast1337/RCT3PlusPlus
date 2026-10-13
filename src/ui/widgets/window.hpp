@@ -36,7 +36,9 @@ namespace rct3::ui
         std::string title_button; ///< Skin family of the title bar buttons
         std::string close_icon;
         float title_height = 20;               ///< Band along the top that drags the window
-        float background_inset = 6;            ///< Background drawn this far in from the frame's outer edge
+        Rect background_inset { 6, 6, 6, 6 };  ///< Background drawn this far in from the frame's outer edges
+        bool tile_background = false;          ///< Repeat the background skin at its own size instead of stretching it
+        Rect icon_box { 6, 17, 52, 63 };       ///< From the top-left corner: the icon is centred in it at its own size
         Rect content_inset { 12, 28, 12, 12 }; ///< Content area in from the left, top, right and bottom edges
         float title_button_size = 14;
         Point title_button_margin { 10, 6 }; ///< From the top-right corner
@@ -55,6 +57,7 @@ namespace rct3::ui
         Window(std::string name, const WindowStyle& style, float width, float height);
 
         std::u16string title;
+        std::string icon; ///< Skin in the frame's top-left corner, if any
         bool resizable = false;
         Point min_size;                   ///< Smallest width and height a resize leaves; the size it was made at caps it
         Button* default_button = nullptr; ///< In this window: clicked by Enter that nothing inside uses
@@ -65,6 +68,9 @@ namespace rct3::ui
         {
             return edges_ != 0;
         }
+
+        /// Makes the window `height` tall, keeping its top edge where it is.
+        void set_height(float height);
 
         [[nodiscard]] Widget& content()
         {

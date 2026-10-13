@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The skins the game's own interface is drawn with, by the names its data uses, and the measurements that
-// go with them. The measurements are ours, chosen to fit the skins.
+// go with them. The measurements are ours, chosen to fit the skins and to match the game's dialogs as they
+// show on screen.
 #pragma once
 
 #include "ui/font_set.hpp"
@@ -19,6 +20,7 @@
 #include "ui/widgets/toolbar.hpp"
 #include "ui/widgets/window.hpp"
 
+#include <array>
 #include <string_view>
 #include <utility>
 
@@ -27,7 +29,10 @@ namespace rct3::ui::game_skins
 
     inline constexpr std::string_view kWindowFrame = "GUI2Dialog_Frame";
     inline constexpr std::string_view kWindowFrameUnfocused = "GUI2Dialog_FrameNoFocus";
-    inline constexpr std::string_view kWindowBackground = "GUI2MiniDialog_Background";
+    inline constexpr std::string_view kWindowBackground = "GUI2Dialog_Background"; ///< A small tile, repeated
+    inline constexpr std::string_view kMiniBackground = "GUI2MiniDialog_Background";
+    /// Textures drawn whole rather than cut by a skin; loaded as skins of their own name.
+    inline constexpr std::array<std::string_view, 1> kWholeTextures = { kWindowBackground };
     inline constexpr std::string_view kTitleButton = "GUI2Dialog_TitleButton"; ///< Family
     inline constexpr std::string_view kCloseIcon = "GUI2Dialog_CloseIcon";
     inline constexpr std::string_view kButton = "GUI2Button";
@@ -42,6 +47,7 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kMenuBackground = "GUIMenuSurround";
     inline constexpr std::string_view kDropdownOpener = "ListBoxOpener"; ///< Family: "ListBoxOpenerDisabled"
     inline constexpr std::string_view kSliderThumb = "LeftRight_SliderArrows";
+    inline constexpr std::string_view kOptionsIcon = "File_GameOptions";
     inline constexpr std::string_view kSpinnerUp = "SpinnerUp"; ///< Family: "SpinnerUpDisabled"
     inline constexpr std::string_view kSpinnerDown = "SpinnerDown";
     inline constexpr std::string_view kScrollUp = "ScrollBar_UpArrow";
@@ -63,11 +69,16 @@ namespace rct3::ui::game_skins
         s.frame = kWindowFrame;
         s.frame_unfocused = kWindowFrameUnfocused;
         s.background = kWindowBackground;
+        s.tile_background = true;
+        s.background_inset = { 1, 10, 4, 4 };
         s.title_button = kTitleButton;
         s.close_icon = kCloseIcon;
-        // The frame's top-left corner holds the window's icon and the title rule; content goes below it.
-        s.content_inset = { 12, 70, 12, 12 };
-        s.title_box = { 62, 20, 30, 40 }; // Right of the icon, on the title rule
+        // The frame's top-left corner holds the window's icon in its circle and the title rule; content goes
+        // below the rule. The frame's right part is thicker than its left.
+        s.content_inset = { 8, 49, 13, 13 };
+        s.icon_box = { 6, 17, 52, 63 };
+        s.title_font = FontRole::Large;
+        s.title_box = { 67, 18, 13, 42 }; // Right of the icon, above the title rule
         return s;
     }
 
@@ -123,6 +134,16 @@ namespace rct3::ui::game_skins
         return s;
     }
 
+    /// The game's level bar: light blue as far as the value, grey after, no thumb.
+    [[nodiscard]] inline SliderStyle level_bar_style()
+    {
+        SliderStyle s;
+        s.bar = true;
+        s.thumb_width = 0;
+        s.thumb_height = 0;
+        return s;
+    }
+
     /// The number in the edit box frame, the two arrows stacked at their size.
     [[nodiscard]] inline SpinnerStyle spinner_style()
     {
@@ -148,14 +169,15 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// A drop-down in the edit box frame with the game's opener arrow.
+    /// A drop-down as the game draws it closed: plain white, the opener arrow in its top-right corner.
     [[nodiscard]] inline DropdownStyle dropdown_style()
     {
         DropdownStyle s;
-        s.field = kListBox;
-        s.focused = kListBoxFocused;
+        s.fill = { 255, 255, 255, 255 };
         s.opener = kDropdownOpener;
         s.opener_width = 15;
+        s.opener_in_corner = true;
+        s.text_indent = 4;
         s.menu = menu_style();
         return s;
     }
@@ -164,7 +186,7 @@ namespace rct3::ui::game_skins
     [[nodiscard]] inline MenuBarStyle menu_bar_style()
     {
         MenuBarStyle s;
-        s.background = kWindowBackground;
+        s.background = kMiniBackground;
         s.highlight_skin = kSelectedRow;
         s.menu = menu_style();
         return s;
@@ -174,7 +196,7 @@ namespace rct3::ui::game_skins
     [[nodiscard]] inline ToolbarStyle toolbar_style()
     {
         ToolbarStyle s;
-        s.background = kWindowBackground;
+        s.background = kMiniBackground;
         s.button = kButton;
         s.button_size = 30;
         s.swell = 2;
@@ -193,16 +215,23 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// The options window: tick boxes, lists, sliders and number fields as everywhere else, in rows 18 units
-    /// high (ours, to fit the small font).
+    /// The options window as the game lays it out: rows as tall as the small font with a little between,
+    /// 12 unit tick boxes, level bars, the page's name in blue left of the tabs.
     [[nodiscard]] inline OptionsDialogStyle options_dialog_style()
     {
         OptionsDialogStyle s;
         s.window = window_style();
+        s.icon = kOptionsIcon;
         s.rows.tick_box = kTickbox;
         s.rows.tick = kTick;
+        s.rows.tick_size = 12;
+        s.rows.tick_gap = 5;
+        s.rows.row_height = 15;
+        s.rows.row_gap = 2;
+        s.rows.section_gap = 6;
         s.rows.dropdown = dropdown_style();
-        s.rows.slider = slider_style();
+        s.rows.slider = level_bar_style();
+        s.rows.slider_inset = 2;
         s.rows.spinner = spinner_style();
         s.rows.key_box = kListBox;
         s.rows.key_box_focused = kListBoxFocused;

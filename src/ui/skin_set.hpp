@@ -11,7 +11,9 @@
 #include <expected>
 #include <filesystem>
 #include <map>
+#include <span>
 #include <string>
+#include <string_view>
 
 namespace rct3::ui
 {
@@ -30,7 +32,10 @@ namespace rct3::ui
         std::size_t skipped = 0; ///< Skins whose layout or image could not be read
     };
 
-    /// Reads every GUI skin of the overlay at `path` (either file of the pair, or the stem).
-    [[nodiscard]] std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path);
+    /// Reads every GUI skin of the overlay at `path` (either file of the pair, or the stem). Some textures are
+    /// drawn whole, with no skin cutting them, such as a tile repeated behind a window: each texture named in
+    /// `whole_textures` that the overlay has becomes a skin of the same name over all of it, unless a skin
+    /// already has that name.
+    [[nodiscard]] std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path, std::span<const std::string_view> whole_textures = { });
 
 } // namespace rct3::ui

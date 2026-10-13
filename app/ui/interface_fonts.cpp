@@ -83,24 +83,46 @@ namespace rct3::ui
         return set;
     }
 
+    namespace
+    {
+
+        const FontSet& loaded_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
+        {
+            if (const auto it = fonts.sets.find(width); it != fonts.sets.end())
+                return it->second;
+            auto set = load_font_set(device, install, fonts, width);
+            if (!set)
+            {
+                logging::logger("ui").warning("fonts for {} at {}: {}", fonts.language, width, set.error());
+                return fonts.sets[width];
+            }
+            return fonts.sets.emplace(width, std::move(*set)).first->second;
+        }
+
+    } // namespace
+
     const FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width)
     {
         const int width = font_set_width(view_width);
-        if (const auto it = fonts.sets.find(width); it != fonts.sets.end())
+        if (const auto it = fonts.mixed.find(width); it != fonts.mixed.end())
             return it->second;
-        auto set = load_font_set(device, install, fonts, width);
-        if (!set)
+        FontSet mixed = loaded_set(device, install, fonts, kFixedFontSetWidth);
+        const FontSet& scaled = loaded_set(device, install, fonts, width);
+        for (std::size_t i = 0; i < kFontRoleCount; ++i)
         {
-            logging::logger("ui").warning("fonts for {} at {}: {}", fonts.language, width, set.error());
-            return fonts.sets[width];
+            const auto role = scaled_role(static_cast<FontRole>(i));
+            const Font* font = role ? scaled.get(static_cast<FontRole>(i)) : nullptr;
+            if (font != nullptr)
+                mixed.set(*role, *font);
         }
-        return fonts.sets.emplace(width, std::move(*set)).first->second;
+        return fonts.mixed.emplace(width, std::move(mixed)).first->second;
     }
 
     void destroy_interface_fonts(render::Device& device, InterfaceFonts& fonts)
     {
         destroy_textures(device, fonts.pages);
         fonts.sets.clear();
+        fonts.mixed.clear();
     }
 
 } // namespace rct3::ui

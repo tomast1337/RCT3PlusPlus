@@ -6,7 +6,9 @@
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <string>
@@ -19,22 +21,10 @@ namespace rct3::scene
     {
 
         constexpr std::string_view kMusicFolder = "Music";
+        constexpr std::string_view kMusicExtension = ".wma";
         constexpr std::string_view kClickOverlay = "Main.common.ovl";
         constexpr std::array<std::string_view, 3> kPressSounds = { "BClick1", "BClick2", "BClick3" };
         constexpr std::array<std::string_view, 3> kReleaseSounds = { "BRelese1", "BRelese2", "BRelese3" };
-
-        // The music folder's file names, for pick_menu_music.
-        std::vector<std::string> music_files(const std::filesystem::path& folder)
-        {
-            std::vector<std::string> names;
-            std::error_code error;
-            for (const auto& entry : std::filesystem::directory_iterator(folder, error))
-            {
-                if (entry.is_regular_file(error))
-                    names.push_back(entry.path().filename().string());
-            }
-            return names;
-        }
 
         void start_music(audio::AudioEngine& engine, MenuAudio& menu, const config::GameInstall& install, config::GameOptions& options)
         {
@@ -45,7 +35,7 @@ namespace rct3::scene
                 log.warning("no menu music: the game's music folder is missing");
                 return;
             }
-            const auto files = music_files(*folder);
+            const auto files = music_files(install);
             const std::optional<int> place = options.flag(config::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::GameOption::MenuTrack)) : std::nullopt;
             const auto pick = audio::pick_menu_music(place, audio::is_halloween(std::chrono::system_clock::now()), files);
             if (pick.next_place)
@@ -114,6 +104,24 @@ namespace rct3::scene
         }
 
     } // namespace
+
+    std::vector<std::string> music_files(const config::GameInstall& install)
+    {
+        std::vector<std::string> names;
+        const auto folder = install.find(kMusicFolder);
+        if (!folder)
+            return names;
+        std::error_code error;
+        for (const auto& entry : std::filesystem::directory_iterator(*folder, error))
+        {
+            std::string extension = entry.path().extension().string();
+            std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (entry.is_regular_file(error) && extension == kMusicExtension)
+                names.push_back(entry.path().filename().string());
+        }
+        std::ranges::sort(names);
+        return names;
+    }
 
     MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed)
     {

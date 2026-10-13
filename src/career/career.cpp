@@ -91,6 +91,19 @@ namespace rct3::career
         }
     }
 
+    Lock lock(const Career& career, std::size_t index)
+    {
+        const std::size_t n = career.scenarios.size();
+        if (index >= n || is_open(career.scenarios[index].status))
+            return { };
+        if (index + 1 == n)
+            return { Lock::Kind::Tycoon };
+        if (index + 2 == n)
+            return { Lock::Kind::Entrepreneur };
+        const auto open = static_cast<std::size_t>(std::ranges::count_if(career.scenarios, [](const ScenarioProgress& p) { return is_open(p.status); }));
+        return { Lock::Kind::Levels, index + 1 > open ? index + 1 - open : 1 };
+    }
+
     void complete(Career& career, std::size_t index, ScenarioStatus status, std::int64_t now)
     {
         if (index >= career.scenarios.size())

@@ -57,6 +57,8 @@ namespace rct3::ui
         F10,
         F11,
         F12,
+        Letter, ///< A letter or digit key without Control: `character` holds it, lower case. Comes besides the
+                ///< text the key types, for keys bound to the game (see key_map.hpp); widgets leave it alone
     };
 
     struct KeyPress
@@ -64,8 +66,9 @@ namespace rct3::ui
         Key key = Key::Escape;
         bool shift = false;
         bool control = false;
-        char32_t character = 0;  ///< For Character and Shortcut
+        char32_t character = 0;  ///< For Character, Shortcut and Letter
         std::u16string text { }; ///< For Paste
+        bool alt = false;        ///< Only keys bound to the game read it
     };
 
     /// Text an input method is composing, not yet typed.

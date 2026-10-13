@@ -28,6 +28,9 @@ namespace rct3::ui
         constexpr std::string_view kLanguageName = "Language_"; ///< + the game's name: the language in its own script
         constexpr std::string_view kCurrencyBefore = "Money";   ///< + number + "a": what goes before amounts
         constexpr std::string_view kNoKeyChange = "GameOptionsDialog_NoKeyBindingHelp";
+        constexpr std::string_view kKeyChange = "GameOptionsDialog_KeyBindingHelp";
+        constexpr std::string_view kKeySettingPrefix = "KeySetting_"; ///< Of the game commands' names
+        constexpr std::u16string_view kInterfaceKeys = u"Interface";  ///< Ours: the group of our commands
         constexpr std::string_view kNoMusic = "AttractionViewDialogNoMusic";
 
         constexpr std::u16string_view kPressKeys = u"Press keys...";
@@ -208,25 +211,101 @@ namespace rct3::ui
 
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
     {
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
+        const KeyListStyle& k = style_.keys;
+        const float width = style_.page_width;
+        auto& back = page.add<Panel>("key_back", std::string { });
+        back.colour = k.background;
+        back.placement = top_left(0, 0, width, k.height);
+        auto& area = page.add<ScrollArea>("key_list", style_.scroll);
+        area.placement = top_left(0, 0, width, k.height);
+        Widget& list = area.content();
+
+        float y = k.top;
+        int count = 0;
+        const auto bar = [&](std::u16string text) {
+            y += k.group_gap;
+            auto& fill = list.add<Panel>("bar" + std::to_string(count), std::string { });
+            fill.colour = k.bar_colour;
+            fill.placement = top_left(0, y, width, k.bar_height);
+            auto& name = list.add<Label>("bar_name" + std::to_string(count++), std::move(text), style_.rows.font);
+            name.style.colour = k.bar_text_colour;
+            name.style.vertical = Align::Centre;
+            name.placement = top_left(k.bar_text_inset, y, width - 2 * k.bar_text_inset, k.bar_height);
+            y += k.bar_height;
+        };
+        const auto row = [&](std::u16string text, Widget& keys) {
+            y += k.row_gap;
+            auto& name = list.add<Label>("name" + std::to_string(count++), std::move(text), style_.rows.font);
+            name.style.colour = style_.rows.text_colour;
+            name.style.vertical = Align::Centre;
+            name.placement = top_left(k.name_x, y, k.name_width, k.row_height);
+            keys.placement = top_left(k.keys_x, y, width - k.keys_right - k.keys_x, k.row_height);
+            y += k.row_height;
+        };
+        const auto box = [&](std::vector<KeyCombo> combos) -> KeyBox& {
+            auto& b = list.add<KeyBox>("keys" + std::to_string(count++), std::move(combos));
+            b.focused_skin = k.focused;
+            b.font = style_.rows.font;
+            b.text_colour = style_.rows.text_colour;
+            b.padding = { 3, 0, 3, 0 };
+            return b;
+        };
+        const auto fixed = [&](std::u16string keys) -> Label& {
+            auto& l = list.add<Label>("fixed" + std::to_string(count++), std::move(keys), style_.rows.font);
+            l.style.colour = style_.rows.text_colour;
+            l.style.vertical = Align::Centre;
+            l.tooltip = str(strings, kNoKeyChange);
+            return l;
+        };
+
+        // The game's commands, as the game groups and names them.
+        for (const PlayKeyGroup group : { PlayKeyGroup::Universal, PlayKeyGroup::DuringPlay })
+        {
+            bar(str(strings, play_key_group_key(group)));
+            for (const PlayCommandInfo& info : play_commands_table())
+            {
+                if (info.group != group)
+                    continue;
+                std::u16string name = str(strings, info.label_key);
+                if (name.empty())
+                    name = ascii(info.label_key.substr(kKeySettingPrefix.size()));
+                if (!info.fixed.empty())
+                {
+                    Label& keys = fixed(std::u16string(info.fixed));
+                    keys.style.horizontal = Align::Start;
+                    row(std::move(name), keys);
+                    keys.placement.offsets.x0 += 3;
+                    continue;
+                }
+                const auto& combo = keys_.play_key(info.command);
+                KeyBox& b = box(combo ? std::vector { *combo } : std::vector<KeyCombo> { });
+                b.game_key = true;
+                b.tooltip = str(strings, kKeyChange);
+                play_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
+                row(std::move(name), b);
+            }
+        }
+
         // Ours, in English until they have names in a string table.
+        bar(std::u16string(kInterfaceKeys));
         for (const CommandInfo& info : commands_table())
         {
-            if (info.command == Command::DeveloperWindows)
-                rows.section();
-            KeyBox& box = rows.keys(std::u16string(info.label), keys_.keys(info.command), std::u16string(kPressKeys), std::u16string(kKeysTip));
-            box.none = kNoKeys;
-            key_boxes_.at(static_cast<std::size_t>(info.command)) = &box;
+            KeyBox& b = box(keys_.keys(info.command));
+            b.prompt = kPressKeys;
+            b.none = kNoKeys;
+            b.tooltip = kKeysTip;
+            key_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
+            row(std::u16string(info.label), b);
         }
-        rows.section();
-        rows.text(u"Move by a word", u"Ctrl+Left, Ctrl+Right", str(strings, kNoKeyChange));
-        rows.update();
+        row(u"Move by a word", fixed(u"Ctrl+Left, Ctrl+Right"));
+        auto& end = list.add<Widget>("end");
+        end.placement = top_left(0, y, 1, k.bottom);
 
         usual_keys_ = &page.add<Button>("usual_keys", style_.button);
         usual_keys_->text = kUsualKeys;
         usual_keys_->font = style_.rows.font;
         usual_keys_->text_inset = style_.button_inset;
-        usual_keys_->placement = top_left(style_.page_width - style_.button_width - style_.rows.left, rows.height() + style_.rows.section_gap, style_.button_width, style_.button_height);
+        usual_keys_->placement = top_left(style_.page_width - style_.button_width - style_.rows.left, k.height + style_.rows.section_gap, style_.button_width, style_.button_height);
     }
 
     void OptionsDialog::build_graphics(Widget& page, const StringTable& strings)
@@ -363,7 +442,8 @@ namespace rct3::ui
 
     bool OptionsDialog::waiting_for_keys() const
     {
-        return std::ranges::any_of(key_boxes_, [](const KeyBox* box) { return box != nullptr && box->waiting(); });
+        const auto waiting = [](const KeyBox* box) { return box != nullptr && box->waiting(); };
+        return std::ranges::any_of(key_boxes_, waiting) || std::ranges::any_of(play_boxes_, waiting);
     }
 
     void OptionsDialog::update_keys()
@@ -378,6 +458,16 @@ namespace rct3::ui
                 changed = true;
             }
         }
+        for (std::size_t i = 0; i < kPlayCommandCount; ++i)
+        {
+            KeyBox* box = play_boxes_[i];
+            if (box != nullptr && box->take_change())
+            {
+                // Takes the key from any other game command too.
+                keys_.bind_play(static_cast<PlayCommand>(i), box->combos.empty() ? std::nullopt : std::optional(box->combos.front()));
+                changed = true;
+            }
+        }
         if (usual_keys_->take_click())
         {
             keys_.reset();
@@ -387,6 +477,14 @@ namespace rct3::ui
             return;
         for (std::size_t i = 0; i < kCommandCount; ++i)
             key_boxes_[i]->combos = keys_.keys(static_cast<Command>(i));
+        for (std::size_t i = 0; i < kPlayCommandCount; ++i)
+        {
+            if (KeyBox* box = play_boxes_[i])
+            {
+                const auto& combo = keys_.play_key(static_cast<PlayCommand>(i));
+                box->combos = combo ? std::vector { *combo } : std::vector<KeyCombo> { };
+            }
+        }
         picked_keys_ = keys_;
     }
 

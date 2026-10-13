@@ -128,11 +128,8 @@ namespace
     std::vector<KeyBox*> key_boxes(const Fixture& f)
     {
         std::vector<KeyBox*> boxes;
-        for (const auto& c : f.dialog->find("content/page1")->children())
-        {
-            if (auto* box = dynamic_cast<KeyBox*>(c.get()))
-                boxes.push_back(box);
-        }
+        for (std::size_t i = 0; i < kCommandCount; ++i)
+            boxes.push_back(&f.dialog->key_box(static_cast<Command>(i)));
         return boxes;
     }
 
@@ -187,4 +184,34 @@ TEST_CASE("the usual keys button puts every command back")
     f.desktop.update({ });
     CHECK(f.dialog->take_keys() == KeyMap { });
     CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos.size() == 2);
+}
+
+TEST_CASE("the keys page lists the game's commands in groups, any key binding them")
+{
+    Fixture f;
+    f.strings.add("KeyGroup_Universal", u"Everywhere");
+    f.dialog->show_page(OptionsPage::Keys);
+    CHECK(f.dialog->play_key_box(PlayCommand::FlattenTerrain) == nullptr); // Fixed: only shown
+    KeyBox* pause = f.dialog->play_key_box(PlayCommand::TogglePause);
+    KeyBox* reset = f.dialog->play_key_box(PlayCommand::ResetCamera);
+    REQUIRE(pause != nullptr);
+    REQUIRE(reset != nullptr);
+    CHECK(pause->game_key);
+
+    // Plain letters and Escape bind; the key leaves the command that had it.
+    f.desktop.set_keyboard_focus(reset);
+    press(f, { Key::Enter });
+    press(f, { Key::Letter, false, false, U'p' });
+    CHECK(reset->combos == std::vector { KeyCombo { Key::Letter, U'p' } });
+    CHECK(pause->combos.empty());
+    const auto keys = f.dialog->take_keys();
+    REQUIRE(keys);
+    CHECK(keys->play_key(PlayCommand::ResetCamera) == KeyCombo { Key::Letter, U'p' });
+    CHECK_FALSE(keys->play_key(PlayCommand::TogglePause));
+
+    f.desktop.set_keyboard_focus(pause);
+    press(f, { Key::Enter });
+    press(f, { Key::Escape });
+    CHECK(pause->combos == std::vector { KeyCombo { Key::Escape } });
+    CHECK_FALSE(f.dialog->take_keys()->play_key(PlayCommand::ExitGame));
 }

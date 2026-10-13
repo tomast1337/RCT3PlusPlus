@@ -94,15 +94,18 @@ namespace rct3::platform
                 return;
             const bool shift = (mods & GLFW_MOD_SHIFT) != 0;
             const bool control = (mods & GLFW_MOD_CONTROL) != 0;
+            const bool alt = (mods & GLFW_MOD_ALT) != 0;
             auto& presses = collected_of(w).keyboard.presses;
+            // Control+letter types nothing, so it comes as a shortcut; without Control the letter comes as
+            // well as the text it types, for keys bound to the game. GLFW names keys by the US layout; the
+            // layout's own letter would need the key name, which is a later refinement.
+            const ui::Key letter = control ? ui::Key::Shortcut : ui::Key::Letter;
             if (const auto mapped = interface_key(key))
-                presses.push_back({ *mapped, shift, control });
-            // Control+letter types nothing, so it comes as a shortcut instead. GLFW names keys by the US
-            // layout; the layout's own letter would need the key name, which is a later refinement.
-            else if (control && key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
-                presses.push_back({ ui::Key::Shortcut, shift, control, static_cast<char32_t>(U'a' + (key - GLFW_KEY_A)) });
-            else if (control && key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
-                presses.push_back({ ui::Key::Shortcut, shift, control, static_cast<char32_t>(U'0' + (key - GLFW_KEY_0)) });
+                presses.push_back({ *mapped, shift, control, 0, { }, alt });
+            else if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+                presses.push_back({ letter, shift, control, static_cast<char32_t>(U'a' + (key - GLFW_KEY_A)), { }, alt });
+            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
+                presses.push_back({ letter, shift, control, static_cast<char32_t>(U'0' + (key - GLFW_KEY_0)), { }, alt });
         });
         // Text in the order it was typed, between the key presses. Input method text arrives here once
         // confirmed; GLFW does not report what is still being composed, so the composition stays empty.

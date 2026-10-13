@@ -5,6 +5,9 @@
 // bound (see key_combo.hpp) becomes its only one; Escape alone, or losing the focus, stops waiting and keeps
 // the old ones. While waiting it takes every key, Tab too, so the keys pressed do nothing else; the owner
 // should then give it the keys as pressed, not as a key map turns them into commands.
+//
+// A box for a game key takes any key a game command can have, Escape too, as the game's does: only losing
+// the focus stops it waiting. It shows its key as the game shows keys.
 #pragma once
 
 #include "ui/key_combo.hpp"
@@ -30,6 +33,7 @@ namespace rct3::ui
         Color text_colour { 0, 0, 0, 255 };
         Color disabled_text_colour { 127, 127, 127, 255 };
         Rect padding { 3, 2, 3, 2 }; ///< Between the edges and the text
+        bool game_key = false;       ///< Takes a game key (see key_combo.hpp)
 
         [[nodiscard]] bool waiting() const
         {

@@ -30,6 +30,7 @@ namespace rct3::config
             { O::InterfaceVolume, "interface_volume", 0, 1, kAny, 0.8f },
             { O::ImportMyMusic, "import_my_music", 0, 1, 1, 0 },
             { O::CycleMenuMusic, "cycle_menu_music", 0, 1, 1, 1 },
+            { O::ShuffleBackgroundMusic, "shuffle_background_music", 0, 1, 1, 0 },
             { O::MenuTrack, "menu_track", 0, 50, 1, 0 },
 
             { O::InvertRideCameraY, "invert_ride_camera_y", 0, 1, 1, 0 },
@@ -103,6 +104,8 @@ namespace rct3::config
             return true;
         }());
 
+        constexpr std::string_view kBackgroundMusic = "background_music";
+
         constexpr std::size_t index(GameOption option)
         {
             return static_cast<std::size_t>(option);
@@ -148,7 +151,14 @@ namespace rct3::config
         for (const auto& [name, value] : json->items())
         {
             const GameOptionInfo* info = find_option(name);
-            if (info == nullptr)
+            if (name == kBackgroundMusic)
+            {
+                if (value.is_string())
+                    options.background_music_ = value.get<std::string>();
+                else
+                    report(problems, name + ": not a file name");
+            }
+            else if (info == nullptr)
                 report(problems, "unknown option " + name);
             else if (value.is_boolean())
                 options.set(info->option, value.get<bool>() ? 1.0f : 0.0f);
@@ -192,6 +202,8 @@ namespace rct3::config
             else
                 json[info.name] = value;
         }
+        if (background_music_)
+            json[kBackgroundMusic] = *background_music_;
         return json_text(json);
     }
 

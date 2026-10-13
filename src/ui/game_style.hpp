@@ -77,6 +77,7 @@ namespace rct3::ui::game_skins
         // below the rule. The frame's right part is thicker than its left.
         s.content_inset = { 8, 49, 13, 13 };
         s.icon_box = { 6, 17, 52, 63 };
+        s.title_button_margin = { 8, 2 }; // On the frame's top band, as the game places it
         s.title_font = FontRole::Large;
         s.title_box = { 67, 18, 13, 42 }; // Right of the icon, above the title rule
         return s;

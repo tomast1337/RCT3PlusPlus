@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/game_options.hpp"
 
-#include "config/settings.hpp"
-#include "config/text_file.hpp"
+#include "config/json_text.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 
 namespace rct3::config
@@ -103,25 +101,9 @@ namespace rct3::config
             return true;
         }());
 
-        constexpr std::string_view kFileName = "options.ini";
-
         constexpr std::size_t index(GameOption option)
         {
             return static_cast<std::size_t>(option);
-        }
-
-        constexpr bool is_space(char c)
-        {
-            return c == ' ' || c == '\t' || c == '\r';
-        }
-
-        std::string_view trimmed(std::string_view s)
-        {
-            while (!s.empty() && is_space(s.front()))
-                s.remove_prefix(1);
-            while (!s.empty() && is_space(s.back()))
-                s.remove_suffix(1);
-            return s;
         }
 
         const GameOptionInfo* find_option(std::string_view name)
@@ -155,49 +137,28 @@ namespace rct3::config
             values_[index(info.option)] = info.default_value;
     }
 
-    GameOptions GameOptions::parse(std::string_view text, std::vector<GameOptionsProblem>* problems)
+    GameOptions GameOptions::parse(std::string_view text, std::vector<FileProblem>* problems)
     {
         GameOptions options;
-        const auto report = [&](std::size_t line, std::string message) {
-            if (problems != nullptr)
-                problems->push_back({ line, std::move(message) });
-        };
-        std::size_t number = 0;
-        while (!text.empty())
+        const auto json = parse_json_object(text, problems);
+        if (!json)
+            return options;
+        for (const auto& [name, value] : json->items())
         {
-            const std::size_t end = text.find('\n');
-            const std::string_view line = trimmed(text.substr(0, end));
-            text = end == std::string_view::npos ? std::string_view { } : text.substr(end + 1);
-            ++number;
-            if (line.empty() || line.front() == '#')
-                continue;
-            const std::size_t equals = line.find('=');
-            if (equals == std::string_view::npos)
-            {
-                report(number, "expected name = value");
-                continue;
-            }
-            const std::string_view name = trimmed(line.substr(0, equals));
-            const std::string_view value = trimmed(line.substr(equals + 1));
             const GameOptionInfo* info = find_option(name);
             if (info == nullptr)
-            {
-                report(number, "unknown option " + std::string(name));
-                continue;
-            }
-            float number_value = 0;
-            const auto [rest, ec] = std::from_chars(value.data(), value.data() + value.size(), number_value);
-            if (ec != std::errc { } || rest != value.data() + value.size() || !std::isfinite(number_value))
-            {
-                report(number, std::string(name) + ": not a number");
-                continue;
-            }
-            options.set(info->option, number_value);
+                report(problems, "unknown option " + name);
+            else if (value.is_boolean())
+                options.set(info->option, value.get<bool>() ? 1.0f : 0.0f);
+            else if (value.is_number() && std::isfinite(value.get<double>()))
+                options.set(info->option, value.get<float>());
+            else
+                report(problems, name + ": not a number");
         }
         return options;
     }
 
-    std::expected<GameOptions, std::string> GameOptions::load(const fs::path& path, std::vector<GameOptionsProblem>* problems)
+    std::expected<GameOptions, std::string> GameOptions::load(const fs::path& path, std::vector<FileProblem>* problems)
     {
         auto text = read_text_file(path);
         if (!text)
@@ -218,30 +179,23 @@ namespace rct3::config
 
     std::string GameOptions::text() const
     {
-        std::string out = "# rct3++ game options, as the options dialog sets them. Lines are name = value.\n";
+        Json json = Json::object();
         for (const GameOptionInfo& info : kOptions)
         {
             const float value = values_[index(info.option)];
             if (value == info.default_value)
                 continue;
-            std::array<char, 32> buffer { };
-            const auto written = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
-            out += info.name;
-            out += " = ";
-            out.append(buffer.data(), written.ptr);
-            out += '\n';
+            if (value == std::trunc(value))
+                json[info.name] = static_cast<long long>(value);
+            else
+                json[info.name] = value;
         }
-        return out;
+        return json_text(json);
     }
 
     std::expected<void, std::string> GameOptions::save(const fs::path& path) const
     {
         return write_text_file(path, text());
-    }
-
-    std::optional<fs::path> game_options_path(const Environment& env)
-    {
-        return config_file_path(env, kFileName);
     }
 
 } // namespace rct3::config

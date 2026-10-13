@@ -2,7 +2,7 @@
 #include "config/settings.hpp"
 
 #include "config/flag.hpp"
-#include "config/text_file.hpp"
+#include "config/json_text.hpp"
 #include "strings/ascii.hpp"
 
 #include <charconv>
@@ -16,10 +16,10 @@ namespace rct3::config
         namespace fs = std::filesystem;
 
         constexpr std::array<SettingInfo, kSettingCount> kSettings = { {
-            { Setting::GamePath, "game_path", "Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it.", "" },
-            { Setting::SkipIntro, "skip_intro", "Start without the logos (yes/no). --no-intro skips them too.", "no" },
-            { Setting::InterfaceScale, "interface_scale", "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
-            { Setting::Language, "language", "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
+            { Setting::GamePath, "game_path", SettingKind::Text, "Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it.", "" },
+            { Setting::SkipIntro, "skip_intro", SettingKind::Flag, "Start without the logos (true/false). --no-intro skips them too.", "no" },
+            { Setting::InterfaceScale, "interface_scale", SettingKind::Scale, "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
+            { Setting::Language, "language", SettingKind::Text, "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.
@@ -32,7 +32,6 @@ namespace rct3::config
             return true;
         }());
 
-        constexpr std::string_view kFileName = "settings.ini";
         constexpr int kMaxScale = 8;
 
         constexpr std::size_t index(Setting setting)
@@ -76,47 +75,37 @@ namespace rct3::config
         return index(setting) < kSettings.size() ? kSettings[index(setting)].name : std::string_view { };
     }
 
-    Settings Settings::parse(std::string_view text, std::vector<SettingsProblem>* problems)
+    Settings Settings::parse(std::string_view text, std::vector<FileProblem>* problems)
     {
         Settings settings;
-        const auto report = [&](std::size_t line, std::string message) {
-            if (problems != nullptr)
-                problems->push_back({ line, std::move(message) });
-        };
-        std::size_t number = 0;
-        while (!text.empty())
+        const auto json = parse_json_object(text, problems);
+        if (!json)
+            return settings;
+        for (const auto& [name, value] : json->items())
         {
-            const std::size_t end = text.find('\n');
-            const std::string_view raw = text.substr(0, end);
-            text = end == std::string_view::npos ? std::string_view { } : text.substr(end + 1);
-            ++number;
-
-            const std::string_view line = trimmed(raw);
-            if (line.empty() || line.front() == '#')
-                continue;
-            const std::size_t equals = line.find('=');
-            if (equals == std::string_view::npos)
-            {
-                report(number, "expected name = value");
-                continue;
-            }
-            const std::string_view name = trimmed(line.substr(0, equals));
-            const std::string_view value = trimmed(line.substr(equals + 1));
-            if (const SettingInfo* info = find_setting(name))
-            {
-                settings.set(info->setting, value);
-            }
-            else
+            const SettingInfo* info = find_setting(name);
+            if (info == nullptr)
             {
                 // Perhaps from a newer version: kept for writing back.
-                settings.unknown_.emplace_back(line);
-                report(number, "unknown setting " + std::string(name));
+                settings.unknown_.emplace_back(name, value.dump());
+                report(problems, "unknown setting " + name);
+                continue;
             }
+            if (value.is_null())
+                settings.set(info->setting, "");
+            else if (value.is_string())
+                settings.set(info->setting, value.get<std::string>());
+            else if (info->kind == SettingKind::Flag && value.is_boolean())
+                settings.set(info->setting, value.get<bool>() ? "yes" : "no");
+            else if (info->kind == SettingKind::Scale && value.is_number_integer())
+                settings.set(info->setting, std::to_string(value.get<long long>()));
+            else
+                report(problems, name + ": " + (info->kind == SettingKind::Flag ? "expected true or false" : info->kind == SettingKind::Scale ? "expected \"auto\" or a whole number" : "expected text"));
         }
         return settings;
     }
 
-    std::expected<Settings, std::string> Settings::load(const fs::path& path, std::vector<SettingsProblem>* problems)
+    std::expected<Settings, std::string> Settings::load(const fs::path& path, std::vector<FileProblem>* problems)
     {
         auto text = read_text_file(path);
         if (!text)
@@ -167,64 +156,30 @@ namespace rct3::config
 
     std::string Settings::text() const
     {
-        std::string out = "# rct3++ settings. Lines are name = value; lines starting with # are ignored.\n";
+        Json json = Json::object();
         for (const SettingInfo& info : kSettings)
         {
-            out += "\n# ";
-            out += info.description;
-            out += '\n';
             const auto& value = values_[index(info.setting)];
+            Json& out = json[info.name];
             if (!value)
-                out += "# ";
-            out += info.name;
-            out += " =";
-            const std::string_view shown = value ? std::string_view(*value) : info.default_value;
-            if (!shown.empty())
-            {
-                out += ' ';
-                out += shown;
-            }
-            out += '\n';
+                continue; // null
+            int scale = 0;
+            const auto [end, ec] = std::from_chars(value->data(), value->data() + value->size(), scale);
+            if (info.kind == SettingKind::Flag)
+                out = flag_value(*value);
+            else if (info.kind == SettingKind::Scale && ec == std::errc { } && end == value->data() + value->size())
+                out = scale;
+            else
+                out = *value;
         }
-        if (!unknown_.empty())
-        {
-            out += "\n# Not known to this version\n";
-            for (const std::string& line : unknown_)
-            {
-                out += line;
-                out += '\n';
-            }
-        }
-        return out;
+        for (const auto& [name, value] : unknown_)
+            json[name] = Json::parse(value);
+        return json_text(json);
     }
 
     std::expected<void, std::string> Settings::save(const fs::path& path) const
     {
         return write_text_file(path, text());
-    }
-
-    std::optional<fs::path> config_file_path(const Environment& env, std::string_view name)
-    {
-        const auto settings = settings_path(env);
-        if (!settings || !settings->has_parent_path())
-            return std::nullopt;
-        return settings->parent_path() / name;
-    }
-
-    std::optional<fs::path> settings_path(const Environment& env)
-    {
-        if (const auto file = env.path(EnvVar::SettingsFile))
-            return *file;
-#ifdef _WIN32
-        if (const auto app_data = env.path(EnvVar::AppData))
-            return *app_data / "rct3pp" / kFileName;
-#endif
-        // The XDG base directory rules ignore a relative XDG_CONFIG_HOME.
-        if (const auto config = env.path(EnvVar::ConfigHome); config && config->is_absolute())
-            return *config / "rct3pp" / kFileName;
-        if (const auto home = env.path(EnvVar::Home))
-            return *home / ".config" / "rct3pp" / kFileName;
-        return std::nullopt;
     }
 
     std::expected<std::optional<float>, std::string> parse_interface_scale(std::string_view value)

@@ -23,3 +23,34 @@ TEST_CASE("a new career is named in the language, with a number")
     strings.add("PlayerProfile_Player", u"Joueur");
     CHECK(default_career_name(strings, 3) == u"Joueur 3");
 }
+
+TEST_CASE("a scenario's text, pictures and folders come from its id and place")
+{
+    StringTable strings;
+    strings.add("ScenarioMeadow_Title", u"The Meadow");
+    strings.add("ScenarioMeadow_Text", u"Grass.");
+    strings.add("Meadow_Filename", u"Field");
+    strings.add("AOP_FSName_1", u"Second");
+    const CareerScenarioInfo base = career_scenario(strings, 0, 2, "Meadow");
+    CHECK(base.title == u"The Meadow");
+    CHECK(base.description == u"Grass.");
+    CHECK(base.icon == "ScenarioIcon_Meadow");
+    CHECK(base.picture == "CareerMap_LargeImage3");
+    CHECK(base.picture_front == "CareerMap_LargeImageForeground3");
+    CHECK(base.slideshow == "Slideshow/Scenario3");
+    CHECK(base.file_part == "Field");
+    const CareerScenarioInfo more = career_scenario(strings, 2, 0, "Meadow");
+    CHECK(more.picture == "CareerMap_LargeImage_Meadow");
+    CHECK(more.picture_front == "CareerMap_LargeImageFG_Meadow");
+    CHECK(more.slideshow == "Slideshow/Second/Scenario1");
+    CHECK(career_park_folder(strings, 0) == "Campaigns/Base");
+    CHECK(career_park_folder(strings, 2) == "Campaigns/Base/Second");
+}
+
+TEST_CASE("a scenario's park is the first file whose name holds its part, ignoring case")
+{
+    const std::vector<std::filesystem::path> files { "a/Blank.dat", "a/BigFIELDS.dat", "a/Field.dat" };
+    CHECK(find_career_park(files, "field") == 1);
+    CHECK_FALSE(find_career_park(files, "Lake"));
+    CHECK_FALSE(find_career_park(files, ""));
+}

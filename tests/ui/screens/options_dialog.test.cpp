@@ -96,34 +96,68 @@ TEST_CASE("controls change the options at once")
     CHECK_FALSE(f.dialog->take_change());
 }
 
-TEST_CASE("the developer windows' keys can be set on the keys page")
+namespace
 {
-    OptionsChoices choices;
-    choices.developer_keys = KeyCombo { Key::F12 };
-    Fixture f(choices);
-    f.dialog->show_page(OptionsPage::Keys);
-    KeyBox* box = nullptr;
-    for (const auto& c : f.dialog->find("content/page1")->children())
+    std::vector<KeyBox*> key_boxes(const Fixture& f)
     {
-        if (box == nullptr)
-            box = dynamic_cast<KeyBox*>(c.get());
+        std::vector<KeyBox*> boxes;
+        for (const auto& c : f.dialog->find("content/page1")->children())
+        {
+            if (auto* box = dynamic_cast<KeyBox*>(c.get()))
+                boxes.push_back(box);
+        }
+        return boxes;
     }
-    REQUIRE(box != nullptr);
-    f.desktop.set_keyboard_focus(box);
-    KeyboardState keys;
-    keys.presses.push_back({ Key::Enter });
-    f.desktop.update({ }, keys);
-    CHECK(f.dialog->waiting_for_keys());
-    keys.presses = { { Key::F5, false, true } };
-    f.desktop.update({ }, keys);
-    CHECK_FALSE(f.dialog->waiting_for_keys());
-    CHECK(f.dialog->take_developer_keys() == KeyCombo { Key::F5, 0, true, false });
-    CHECK_FALSE(f.dialog->take_developer_keys());
-}
 
-TEST_CASE("without developer keys the keys page has no key box")
+    void press(Fixture& f, KeyPress key)
+    {
+        KeyboardState keys;
+        keys.presses.push_back(std::move(key));
+        f.desktop.update({ }, keys);
+    }
+} // namespace
+
+TEST_CASE("the keys page sets each command's keys")
 {
     Fixture f;
-    for (const auto& c : f.dialog->find("content/page1")->children())
-        CHECK(dynamic_cast<KeyBox*>(c.get()) == nullptr);
+    f.dialog->show_page(OptionsPage::Keys);
+    const auto boxes = key_boxes(f);
+    REQUIRE(boxes.size() == kCommandCount);
+    KeyBox& developer = *boxes[static_cast<std::size_t>(Command::DeveloperWindows)];
+    CHECK(developer.combos == std::vector { KeyCombo { Key::F12 } });
+
+    f.desktop.set_keyboard_focus(&developer);
+    press(f, { Key::Enter });
+    CHECK(f.dialog->waiting_for_keys());
+    press(f, { Key::Escape, true }); // Only Escape alone stops waiting
+    CHECK_FALSE(f.dialog->waiting_for_keys());
+    auto keys = f.dialog->take_keys();
+    REQUIRE(keys);
+    CHECK(keys->keys(Command::DeveloperWindows) == std::vector { KeyCombo { Key::Escape, 0, false, true } });
+    CHECK_FALSE(f.dialog->take_keys());
+
+    // Keys another command had are taken from it, and its box shows that.
+    KeyBox& cancel = *boxes[static_cast<std::size_t>(Command::Cancel)];
+    f.desktop.set_keyboard_focus(&developer);
+    press(f, { Key::Enter });
+    press(f, { Key::Enter });
+    CHECK(developer.combos == std::vector { KeyCombo { Key::Enter } });
+    CHECK(boxes[static_cast<std::size_t>(Command::DefaultButton)]->combos.empty());
+    CHECK(cancel.combos == std::vector { KeyCombo { Key::Escape } });
+    CHECK(f.dialog->take_keys()->keys(Command::DefaultButton).empty());
+}
+
+TEST_CASE("the usual keys button puts every command back")
+{
+    OptionsChoices choices;
+    choices.keys.bind(Command::Copy, { Key::F3 });
+    Fixture f(choices);
+    f.dialog->show_page(OptionsPage::Keys);
+    CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
+    auto* usual = dynamic_cast<Button*>(f.dialog->find("content/page1/usual_keys"));
+    REQUIRE(usual != nullptr);
+    usual->click();
+    f.desktop.update({ });
+    CHECK(f.dialog->take_keys() == KeyMap { });
+    CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos.size() == 2);
 }

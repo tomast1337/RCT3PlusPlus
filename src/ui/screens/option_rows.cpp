@@ -136,18 +136,19 @@ namespace rct3::ui
         return name_label(row, std::move(value), style_.control_x, width_ - style_.control_x, std::move(tip));
     }
 
-    KeyBox& OptionRows::keys(std::u16string name, KeyCombo combo, std::u16string prompt, std::u16string tip)
+    KeyBox& OptionRows::keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip)
     {
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& box = page_.add<KeyBox>("keys" + std::to_string(count_++), combo);
+        auto& box = page_.add<KeyBox>("keys" + std::to_string(count_++), std::move(combos));
         box.skin = style_.key_box;
         box.focused_skin = style_.key_box_focused;
         box.font = style_.font;
         box.text_colour = style_.text_colour;
         box.prompt = std::move(prompt);
         box.tooltip = std::move(tip);
-        row.parts.push_back({ &box, style_.control_x, style_.control_width, 0 });
+        // To the right edge: a command can have two combinations.
+        row.parts.push_back({ &box, style_.control_x, width_ - style_.control_x - style_.left, 0 });
         return box;
     }
 

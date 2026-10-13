@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options_dialog.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace rct3::ui
@@ -28,27 +29,10 @@ namespace rct3::ui
         constexpr std::string_view kCurrencyBefore = "Money";   ///< + number + "a": what goes before amounts
         constexpr std::string_view kNoKeyChange = "GameOptionsDialog_NoKeyBindingHelp";
 
-        // The keys the interface answers to, by what they do. Ours, in English until they have keys of
-        // their own in a string table.
-        struct KeyLine
-        {
-            std::u16string_view action;
-            std::u16string_view keys;
-        };
-        constexpr std::array<KeyLine, 12> kKeyLines = { {
-            { u"Close the window", u"Escape" },
-            { u"Default button", u"Enter" },
-            { u"Next control", u"Tab" },
-            { u"Previous control", u"Shift+Tab" },
-            { u"Next page", u"Ctrl+Tab, Ctrl+Page Down" },
-            { u"Previous page", u"Ctrl+Shift+Tab, Ctrl+Page Up" },
-            { u"Copy", u"Ctrl+C, Ctrl+Insert" },
-            { u"Cut", u"Ctrl+X, Shift+Delete" },
-            { u"Paste", u"Ctrl+V, Shift+Insert" },
-            { u"Select all text", u"Ctrl+A" },
-            { u"Move by a word", u"Ctrl+Left, Ctrl+Right" },
-            { u"Last menu", u"Escape" },
-        } };
+        constexpr std::u16string_view kPressKeys = u"Press keys...";
+        constexpr std::u16string_view kNoKeys = u"None";
+        constexpr std::u16string_view kKeysTip = u"Click, then press the keys: F1 to F12, Escape, Enter, Tab, Page Up, Page Down or Insert, with Ctrl or Shift if wanted, or Ctrl with a letter or digit. Escape alone keeps the keys.";
+        constexpr std::u16string_view kUsualKeys = u"Usual keys";
 
         struct DetailRow
         {
@@ -90,6 +74,7 @@ namespace rct3::ui
         , style_(style)
         , options_(options)
         , choices_(std::move(choices))
+        , keys_(choices_.keys)
     {
         title = strings.get(kTitle);
         Widget& body = content();
@@ -163,14 +148,24 @@ namespace rct3::ui
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
     {
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
-        const std::u16string fixed = str(strings, kNoKeyChange);
-        for (const KeyLine& line : kKeyLines)
-            rows.text(std::u16string(line.action), std::u16string(line.keys), fixed);
-        if (choices_.developer_keys)
+        // Ours, in English until they have names in a string table.
+        for (const CommandInfo& info : commands_table())
         {
-            rows.section();
-            developer_keys_ = &rows.keys(u"Developer windows", *choices_.developer_keys, u"Press keys...", u"Click, then press F1 to F12 or Ctrl with a letter or digit, with Shift if wanted. Escape keeps the keys.");
+            if (info.command == Command::DeveloperWindows)
+                rows.section();
+            KeyBox& box = rows.keys(std::u16string(info.label), keys_.keys(info.command), std::u16string(kPressKeys), std::u16string(kKeysTip));
+            box.none = kNoKeys;
+            key_boxes_.at(static_cast<std::size_t>(info.command)) = &box;
         }
+        rows.section();
+        rows.text(u"Move by a word", u"Ctrl+Left, Ctrl+Right", str(strings, kNoKeyChange));
+        rows.update();
+
+        usual_keys_ = &page.add<Button>("usual_keys", style_.button);
+        usual_keys_->text = kUsualKeys;
+        usual_keys_->font = style_.rows.font;
+        usual_keys_->text_inset = style_.button_inset;
+        usual_keys_->placement = top_left(style_.page_width - style_.button_width - style_.rows.left, rows.height() + style_.rows.section_gap, style_.button_width, style_.button_height);
     }
 
     void OptionsDialog::build_graphics(Widget& page, const StringTable& strings)
@@ -300,14 +295,38 @@ namespace rct3::ui
         return std::exchange(picked_screen_size_, std::nullopt);
     }
 
-    std::optional<KeyCombo> OptionsDialog::take_developer_keys()
+    std::optional<KeyMap> OptionsDialog::take_keys()
     {
-        return std::exchange(picked_developer_keys_, std::nullopt);
+        return std::exchange(picked_keys_, std::nullopt);
     }
 
     bool OptionsDialog::waiting_for_keys() const
     {
-        return developer_keys_ != nullptr && developer_keys_->waiting();
+        return std::ranges::any_of(key_boxes_, [](const KeyBox* box) { return box != nullptr && box->waiting(); });
+    }
+
+    void OptionsDialog::update_keys()
+    {
+        bool changed = false;
+        for (std::size_t i = 0; i < kCommandCount; ++i)
+        {
+            if (key_boxes_[i]->take_change())
+            {
+                // Takes the keys from any other command too.
+                keys_.set_keys(static_cast<Command>(i), key_boxes_[i]->combos);
+                changed = true;
+            }
+        }
+        if (usual_keys_->take_click())
+        {
+            keys_.reset();
+            changed = true;
+        }
+        if (!changed)
+            return;
+        for (std::size_t i = 0; i < kCommandCount; ++i)
+            key_boxes_[i]->combos = keys_.keys(static_cast<Command>(i));
+        picked_keys_ = keys_;
     }
 
     void OptionsDialog::update(const UpdateContext& context)
@@ -327,8 +346,7 @@ namespace rct3::ui
         }
         if (language_ != nullptr && language_->take_change() && language_->selected())
             picked_language_ = choices_.languages.at(*language_->selected());
-        if (developer_keys_ != nullptr && developer_keys_->take_change())
-            picked_developer_keys_ = developer_keys_->combo;
+        update_keys();
         if (resolution_->take_change() && resolution_->selected())
             picked_screen_size_ = *resolution_->selected();
 

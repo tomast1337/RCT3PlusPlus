@@ -2,12 +2,10 @@
 #include "config/settings.hpp"
 
 #include "config/flag.hpp"
+#include "config/text_file.hpp"
 #include "strings/ascii.hpp"
 
 #include <charconv>
-#include <fstream>
-#include <sstream>
-#include <system_error>
 
 namespace rct3::config
 {
@@ -22,7 +20,6 @@ namespace rct3::config
             { Setting::SkipIntro, "skip_intro", "Start without the logos (yes/no). --no-intro skips them too.", "no" },
             { Setting::InterfaceScale, "interface_scale", "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
             { Setting::Language, "language", "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
-            { Setting::DeveloperKeys, "developer_windows_key", "Keys that show and hide the developer windows (profiler, log): a function key or a letter or digit with Ctrl, with Ctrl and Shift if wanted, e.g. F12 or Ctrl+Shift+D.", "F12" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.
@@ -121,16 +118,10 @@ namespace rct3::config
 
     std::expected<Settings, std::string> Settings::load(const fs::path& path, std::vector<SettingsProblem>* problems)
     {
-        std::error_code ec;
-        if (!fs::exists(path, ec))
-            return Settings { };
-        std::ifstream in(path, std::ios::binary);
-        // Opening a folder succeeds on some systems, so check what it is too.
-        if (!in || !fs::is_regular_file(path, ec))
-            return std::unexpected("cannot read " + path.string());
-        std::ostringstream text;
-        text << in.rdbuf();
-        return parse(text.str(), problems);
+        auto text = read_text_file(path);
+        if (!text)
+            return std::unexpected(text.error());
+        return *text ? parse(**text, problems) : Settings { };
     }
 
     std::optional<std::string_view> Settings::get(Setting setting) const
@@ -209,24 +200,15 @@ namespace rct3::config
 
     std::expected<void, std::string> Settings::save(const fs::path& path) const
     {
-        std::error_code ec;
-        if (path.has_parent_path())
-            fs::create_directories(path.parent_path(), ec);
-        if (ec)
-            return std::unexpected("cannot create " + path.parent_path().string() + ": " + ec.message());
-        // Written beside it first, so a failed write leaves the old file whole.
-        fs::path temporary = path;
-        temporary += ".new";
-        {
-            std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
-            const std::string data = text();
-            if (!out || !out.write(data.data(), static_cast<std::streamsize>(data.size())))
-                return std::unexpected("cannot write " + temporary.string());
-        }
-        fs::rename(temporary, path, ec);
-        if (ec)
-            return std::unexpected("cannot replace " + path.string() + ": " + ec.message());
-        return { };
+        return write_text_file(path, text());
+    }
+
+    std::optional<fs::path> config_file_path(const Environment& env, std::string_view name)
+    {
+        const auto settings = settings_path(env);
+        if (!settings || !settings->has_parent_path())
+            return std::nullopt;
+        return settings->parent_path() / name;
     }
 
     std::optional<fs::path> settings_path(const Environment& env)

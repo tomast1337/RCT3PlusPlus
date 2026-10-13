@@ -4,8 +4,10 @@
 // the last update, in the order it happened, with the system's key repeat already applied. Keys go to the
 // widget with the keyboard focus first, then up through its parents until one uses them (see Desktop).
 //
-// The clipboard keys arrive as their own presses, whatever keys made them, and a paste carries the
-// clipboard's text with it. Text copied the other way comes out of Desktop::take_clipboard().
+// The keys the user binds to commands (see key_map.hpp) arrive as the presses the interface knows them by:
+// whatever keys the user chose for closing a window arrive as Escape, and the clipboard commands as their
+// own presses, a paste carrying the clipboard's text with it. Text copied the other way comes out of
+// Desktop::take_clipboard().
 //
 // An input method, as used to type Chinese or Japanese, composes text over several key presses before the
 // user confirms it. What it is composing is part of the state (KeyboardState::composition) and is shown at
@@ -36,12 +38,13 @@ namespace rct3::ui
         Enter,
         Backspace,
         Delete,
+        Insert,
         Space,     ///< Also arrives as a typed ' '
         Character, ///< Typed text: `character` holds it
         Shortcut,  ///< A letter or digit key with Control held: `character` holds it, lower case
-        Copy,      ///< Control+C or Control+Insert
-        Cut,       ///< Control+X or Shift+Delete
-        Paste,     ///< Control+V or Shift+Insert: `text` holds what the clipboard had
+        Copy,      ///< The copy command (see key_map.hpp)
+        Cut,       ///< The cut command
+        Paste,     ///< The paste command: `text` holds what the clipboard had
         F1,        ///< The function keys, F1 to F12 in order
         F2,
         F3,

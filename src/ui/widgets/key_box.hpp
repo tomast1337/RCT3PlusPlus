@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Shows a key combination and lets the user set another: a click, or Enter or Space while it has the
-// keyboard focus, makes it wait for keys, showing `prompt`. The next combination that can be bound (see
-// key_combo.hpp) becomes its value; Escape, or losing the focus, stops waiting and keeps the old one. While
-// waiting it takes every key but Tab, so the keys pressed do nothing else in the interface.
+// Shows the key combinations a command is on and lets the user set another: a click, or Enter or Space
+// while it has the keyboard focus, makes it wait for keys, showing `prompt`. The next combination that can be
+// bound (see key_combo.hpp) becomes its only one; Escape alone, or losing the focus, stops waiting and keeps
+// the old ones. While waiting it takes every key, Tab too, so the keys pressed do nothing else; the owner
+// should then give it the keys as pressed, not as a key map turns them into commands.
 #pragma once
 
 #include "ui/key_combo.hpp"
 #include "ui/widget.hpp"
 
 #include <string>
+#include <vector>
 
 namespace rct3::ui
 {
@@ -17,12 +19,13 @@ namespace rct3::ui
     class KeyBox : public Widget
     {
     public:
-        KeyBox(std::string name, KeyCombo combo);
+        KeyBox(std::string name, std::vector<KeyCombo> combos);
 
-        KeyCombo combo;
+        std::vector<KeyCombo> combos;
         std::string skin;         ///< Stretched behind the text; none when empty
         std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
         std::u16string prompt;    ///< Shown while waiting for keys
+        std::u16string none;      ///< Shown when there are no combinations
         FontRole font = FontRole::Small;
         Color text_colour { 0, 0, 0, 255 };
         Color disabled_text_colour { 127, 127, 127, 255 };

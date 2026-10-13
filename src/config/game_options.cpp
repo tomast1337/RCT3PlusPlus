@@ -2,13 +2,11 @@
 #include "config/game_options.hpp"
 
 #include "config/settings.hpp"
+#include "config/text_file.hpp"
 
 #include <algorithm>
 #include <charconv>
 #include <cmath>
-#include <fstream>
-#include <sstream>
-#include <system_error>
 
 namespace rct3::config
 {
@@ -201,15 +199,10 @@ namespace rct3::config
 
     std::expected<GameOptions, std::string> GameOptions::load(const fs::path& path, std::vector<GameOptionsProblem>* problems)
     {
-        std::error_code ec;
-        if (!fs::exists(path, ec))
-            return GameOptions { };
-        std::ifstream in(path, std::ios::binary);
-        if (!in || !fs::is_regular_file(path, ec))
-            return std::unexpected("cannot read " + path.string());
-        std::ostringstream text;
-        text << in.rdbuf();
-        return parse(text.str(), problems);
+        auto text = read_text_file(path);
+        if (!text)
+            return std::unexpected(text.error());
+        return *text ? parse(**text, problems) : GameOptions { };
     }
 
     float GameOptions::get(GameOption option) const
@@ -243,32 +236,12 @@ namespace rct3::config
 
     std::expected<void, std::string> GameOptions::save(const fs::path& path) const
     {
-        std::error_code ec;
-        if (path.has_parent_path())
-            fs::create_directories(path.parent_path(), ec);
-        if (ec)
-            return std::unexpected("cannot create " + path.parent_path().string() + ": " + ec.message());
-        // Written beside it first, so a failed write leaves the old file whole.
-        fs::path temporary = path;
-        temporary += ".new";
-        {
-            std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
-            const std::string data = text();
-            if (!out || !out.write(data.data(), static_cast<std::streamsize>(data.size())))
-                return std::unexpected("cannot write " + temporary.string());
-        }
-        fs::rename(temporary, path, ec);
-        if (ec)
-            return std::unexpected("cannot replace " + path.string() + ": " + ec.message());
-        return { };
+        return write_text_file(path, text());
     }
 
     std::optional<fs::path> game_options_path(const Environment& env)
     {
-        const auto settings = settings_path(env);
-        if (!settings || !settings->has_parent_path())
-            return std::nullopt;
-        return settings->parent_path() / kFileName;
+        return config_file_path(env, kFileName);
     }
 
 } // namespace rct3::config

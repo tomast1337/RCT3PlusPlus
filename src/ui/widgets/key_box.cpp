@@ -8,9 +8,9 @@
 namespace rct3::ui
 {
 
-    KeyBox::KeyBox(std::string name, KeyCombo combo)
+    KeyBox::KeyBox(std::string name, std::vector<KeyCombo> combos)
         : Widget(std::move(name))
-        , combo(combo)
+        , combos(std::move(combos))
     {
     }
 
@@ -37,18 +37,16 @@ namespace rct3::ui
             waiting_ = true;
             return true;
         }
-        if (key.key == Key::Tab)
-            return false;
-        if (key.key == Key::Escape)
+        if (key.key == Key::Escape && !key.control && !key.shift)
         {
             waiting_ = false;
         }
         else if (const auto made = key_combo(key))
         {
             waiting_ = false;
-            if (*made != combo)
+            if (combos != std::vector { *made })
             {
-                combo = *made;
+                combos = { *made };
                 ++changes_;
             }
         }
@@ -74,8 +72,10 @@ namespace rct3::ui
         std::u16string shown = prompt;
         if (!waiting_)
         {
-            const std::string text = to_string(combo);
-            shown.assign(text.begin(), text.end());
+            std::string text;
+            for (const KeyCombo& c : combos)
+                text += (text.empty() ? "" : ", ") + to_string(c);
+            shown = text.empty() ? none : std::u16string(text.begin(), text.end());
         }
         if (context.list.push_clip(box))
         {

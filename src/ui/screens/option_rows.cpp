@@ -73,6 +73,11 @@ namespace rct3::ui
         return d;
     }
 
+    float OptionRows::slider_height() const
+    {
+        return style_.slider_inset > 0 ? style_.row_height - 2 * style_.slider_inset : 0;
+    }
+
     Slider& OptionRows::level(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
@@ -83,7 +88,7 @@ namespace rct3::ui
         s.maximum = info.maximum;
         s.step = info.step;
         s.tooltip = std::move(tip);
-        row.parts.push_back({ &s, style_.control_x, style_.control_width, 0 });
+        row.parts.push_back({ &s, style_.control_x, style_.control_width, slider_height() });
         row.bindings.push_back({ option, Kind::Level, &s });
         set_control(row.bindings.back());
         return s;
@@ -116,7 +121,7 @@ namespace rct3::ui
             s.minimum = info.minimum;
             s.maximum = info.maximum;
             s.step = info.step;
-            row.parts.push_back({ &s, x, kColumnWidth, 0 });
+            row.parts.push_back({ &s, x, kColumnWidth, slider_height() });
             row.bindings.push_back({ option, Kind::Level, &s });
             set_control(row.bindings.back());
         }

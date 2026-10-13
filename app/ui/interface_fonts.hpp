@@ -23,12 +23,14 @@ namespace rct3::ui
     {
         std::string language;
         std::optional<TrueTypeFile> fallback;
-        std::map<int, FontSet> sets; ///< By set width, as loaded
-        UiTextures pages;            ///< Of every loaded set
+        std::map<int, FontSet> sets;  ///< By set width, as loaded
+        std::map<int, FontSet> mixed; ///< By set width: the fixed set's fonts with that set's scaled ones
+        UiTextures pages;             ///< Of every loaded set
     };
 
-    /// The fonts of the set for an interface `view_width` units wide, loading the set first if needed. A
-    /// set that cannot be loaded is reported once and left empty, so its text is not drawn.
+    /// The fonts for an interface `view_width` units wide: the fixed set's, with the scaled roles from the set
+    /// for the width, loading the sets first if needed. A set that cannot be loaded is reported once and left
+    /// empty, so its text is not drawn.
     [[nodiscard]] const FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width);
 
     /// Loads one set: every font of its overlay that fills a role.

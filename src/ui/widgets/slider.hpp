@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A horizontal slider: a thumb on a rail picks a value between `minimum` and `maximum`. Pressing the thumb
-// drags it; pressing the rail elsewhere first puts the thumb's centre there, then drags it from there.
+// drags it; pressing the rail elsewhere first puts the thumb's centre there, then drags it from there. Drawn
+// as a bar instead, it fills from the left as far as the value, and a press anywhere sets the value there.
 //
 // Pressing the slider gives it the keyboard focus. Then Left and Down lower the value by a step, Right and
 // Up raise it, Page Down and Page Up move a tenth of the range, and Home and End go to the ends. The wheel
@@ -27,6 +28,9 @@ namespace rct3::ui
         float rail_thickness = 3;
         float thumb_width = 18;
         float thumb_height = 13;
+        bool bar = false; ///< A filled bar with no thumb, over the slider's whole rectangle; give thumb_width 0
+        Color bar_colour { 68, 199, 255, 255 };
+        Color bar_back_colour { 127, 127, 127, 255 };
     };
 
     class Slider : public Widget

@@ -2,6 +2,9 @@
 //
 // The fonts the interface draws with, by the role a widget asks for rather than by face or size, so a
 // language or resolution can swap the whole set.
+//
+// Windows and their controls keep one size of text on every screen, as the game's do; the scaled roles
+// grow with the screen, for the full-screen menus.
 #pragma once
 
 #include "ui/font.hpp"
@@ -21,9 +24,11 @@ namespace rct3::ui
         Medium,
         Large,
         AllScripts, ///< Has the glyphs of every language's own name, for a list of languages
+        ScaledSmall,
+        ScaledLarge,
     };
 
-    inline constexpr std::size_t kFontRoleCount = 5;
+    inline constexpr std::size_t kFontRoleCount = 7;
 
     class FontSet
     {

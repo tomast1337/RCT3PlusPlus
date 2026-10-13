@@ -15,6 +15,7 @@
 #include <optional>
 #include <random>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace rct3::scene
@@ -28,6 +29,9 @@ namespace rct3::scene
         std::vector<audio::SoundBuffer> releases;
         std::minstd_rand random;
     };
+
+    /// The names of the files in the game's music folder that it can play, sorted; nothing without the folder.
+    [[nodiscard]] std::vector<std::string> music_files(const config::GameInstall& install);
 
     /// Picks the run's track, which moves the menu music's cycle on in `options`, and starts it.
     [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed);

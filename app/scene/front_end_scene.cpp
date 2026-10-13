@@ -2,9 +2,11 @@
 #include "scene/front_end_scene.hpp"
 
 #include "logging/log.hpp"
+#include "scene/menu_audio.hpp"
 #include "ui/game_style.hpp"
 #include "ui/scale.hpp"
 
+#include <algorithm>
 #include <array>
 #include <string_view>
 #include <utility>
@@ -19,6 +21,9 @@ namespace rct3::scene
 
         /// The newest logo comes with its own skins.
         constexpr std::array<std::string_view, 1> kMoreSkins = { "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl" };
+
+        /// What the options show for the zoomed-out park's music, as the game does at first.
+        constexpr std::string_view kFirstBackgroundMusic = "Summer Air.wma";
 
         float scale_for(const render::Device& device, const FrontEndScene& scene)
         {
@@ -66,6 +71,10 @@ namespace rct3::scene
         front.choices.screen_sizes = std::move(setup.screen_sizes);
         front.choices.screen_size = setup.screen_size;
         front.choices.keys = std::move(setup.keys);
+        front.choices.background_music = music_files(install);
+        const auto shown = std::ranges::find(front.choices.background_music, kFirstBackgroundMusic);
+        if (shown != front.choices.background_music.end())
+            front.choices.background_track = static_cast<std::size_t>(shown - front.choices.background_music.begin());
         front.open_options = setup.reload;
         front.settled = setup.reload;
         scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style() }, *scene.assets.strings, scene.live->options, std::move(front));

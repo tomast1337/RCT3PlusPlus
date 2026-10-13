@@ -42,6 +42,7 @@ namespace rct3::ui
         float control_x = 200;     ///< Where controls start
         float control_width = 160; ///< Of drop-downs and sliders
         float number_width = 70;   ///< Of number fields
+        float slider_inset = 0;    ///< Sliders are this much shorter than the row at the top and bottom
         float row_height = 18;
         float row_gap = 3;
         float section_gap = 12;
@@ -137,6 +138,7 @@ namespace rct3::ui
         Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip);
         void set_control(const Binding& b);
         [[nodiscard]] bool holds(const OptionIs& c) const;
+        [[nodiscard]] float slider_height() const; // 0: the row's
 
         Widget& page_;
         float width_;

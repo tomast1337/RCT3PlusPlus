@@ -28,6 +28,7 @@ namespace rct3::ui
         constexpr std::string_view kLanguageName = "Language_"; ///< + the game's name: the language in its own script
         constexpr std::string_view kCurrencyBefore = "Money";   ///< + number + "a": what goes before amounts
         constexpr std::string_view kNoKeyChange = "GameOptionsDialog_NoKeyBindingHelp";
+        constexpr std::string_view kNoMusic = "AttractionViewDialogNoMusic";
 
         constexpr std::u16string_view kPressKeys = u"Press keys...";
         constexpr std::u16string_view kNoKeys = u"None";
@@ -77,11 +78,13 @@ namespace rct3::ui
         , keys_(choices_.keys)
     {
         title = strings.get(kTitle);
+        icon = style.icon;
         Widget& body = content();
 
         caption_ = &body.add<Label>("caption", std::u16string { }, style.caption_font);
         caption_->style.vertical = Align::Centre;
-        caption_->placement = top_left(0, 0, style.tabs_x, style.tab_size);
+        caption_->style.colour = style.caption_colour;
+        caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.caption_height);
         for (std::size_t i = 0; i < kOptionsPageCount; ++i)
         {
             auto& tab = body.add<Button>("tab" + std::to_string(i), std::string(kTabs[i].icon));
@@ -102,6 +105,20 @@ namespace rct3::ui
         show_page(OptionsPage::General);
         for (const auto& rows : rows_)
             rows->update();
+        fit_page();
+    }
+
+    void OptionsDialog::fit_page()
+    {
+        // The window wraps the open page, as the game's do.
+        float bottom = 0;
+        for (const auto& child : pages_.at(static_cast<std::size_t>(page_))->children())
+        {
+            if (child->visible)
+                bottom = std::max(bottom, child->placement.offsets.y1);
+        }
+        const Rect& in = style_.window.content_inset;
+        set_height(in.y0 + style_.tab_bar_height + bottom + in.y1);
     }
 
     void OptionsDialog::build_general(Widget& page, const StringTable& strings)
@@ -137,12 +154,25 @@ namespace rct3::ui
         rows.choice(O::TemperatureUnits, str(strings, "GameOptionsDialog_Temperature"), items(strings, { "GameOptionsDialog_Celcius", "GameOptionsDialog_Fahrenheit" }));
         rows.level(O::Brightness, str(strings, "GameOptionsDialog_Brightness"));
         rows.section();
+        rows.tick(O::LiveContent, str(strings, "GameOptionsDialog_EnableLiveContent"), str(strings, "GameOptionsDialog_EnableLiveContent_TT"));
+        rows.section();
         rows.level(O::GameVolume, str(strings, "GameOptionsDialog_SetVolumeGame"));
         rows.level(O::MusicVolume, str(strings, "GameOptionsDialog_SetVolumeMusic"));
         rows.level(O::InterfaceVolume, str(strings, "GameOptionsDialog_SetVolumeGUI"));
         rows.section();
         rows.tick(O::ImportMyMusic, str(strings, "GameOptionsDialog_ImportMusic"), str(strings, "GameOptionsDialog_ImportMusicTT"));
         rows.tick(O::CycleMenuMusic, str(strings, "GameOptionsDialog_CycleMusic"), str(strings, "GameOptionsDialog_CycleMusicTT"));
+        if (!choices_.background_music.empty())
+        {
+            rows.section();
+            std::vector<std::u16string> tracks;
+            for (const std::string& name : choices_.background_music)
+                tracks.push_back(ascii(name));
+            tracks.push_back(str(strings, kNoMusic));
+            auto& music = rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"));
+            const std::size_t track = choices_.background_track.value_or(choices_.background_music.size());
+            music.select(std::min(track, choices_.background_music.size()));
+        }
     }
 
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
@@ -353,6 +383,7 @@ namespace rct3::ui
         const float top = graphics_top_->height() + style_.rows.section_gap;
         custom_->visible = options_.choice(O::GraphicsQuality) == config::kCustomQuality;
         custom_->placement = top_left(0, top, style_.page_width, std::min(style_.scroll_height, style_.page_height - top));
+        fit_page();
     }
 
 } // namespace rct3::ui

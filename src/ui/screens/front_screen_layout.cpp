@@ -40,7 +40,9 @@ namespace rct3::ui::front_screen
         const Point button = on_ring(menu_angle(index), kMenuRadius);
         const Point corner { button.x + kLabelBoxOffset.x, button.y + kLabelBoxOffset.y };
         const auto inside = [&](const Rect& part) { return frame.stretched({ corner.x + part.x0, corner.y + part.y0, corner.x + part.x1, corner.y + part.y1 }); };
-        return { inside(kLabelPatch), inside(kLabelText) };
+        const float reach = kLabelEndStep * static_cast<float>(index * index);
+        const Rect end { kLabelBand.x1, kLabelBand.y0, kLabelBand.x1 + reach, kLabelBand.y1 };
+        return { inside(kLabelPatch), inside(kLabelBand), inside(end), inside(kLabelText) };
     }
 
     Rect badge_rect(const Frame& frame, std::size_t index)

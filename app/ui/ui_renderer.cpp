@@ -66,6 +66,8 @@ namespace rct3::ui
         command.indices = *indices;
         command.index_type = render::IndexType::U32;
         command.transform = screen;
+        // Skins and pictures are drawn at many sizes; nearest sampling would drop rows and columns.
+        command.filter = render::Filter::Linear;
         for (const Batch& batch : list.batches())
         {
             command.texture = batch.texture == 0 ? renderer.white : render::TextureHandle { batch.texture };

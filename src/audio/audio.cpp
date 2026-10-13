@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 
@@ -246,9 +247,84 @@ namespace rct3::audio
 
         const ma_data_source_vtable kPcmVtable = { pcm_read, pcm_seek, pcm_format, pcm_cursor, pcm_length, nullptr, 0 };
 
+        // Plays what its owner feeds into a ring buffer: the control thread writes, the audio thread reads.
+        // Running dry plays silence instead of ending, so a late feed is a gap, not the end of the music; the
+        // end comes once the owner has said so and the buffer is empty.
+        struct StreamSource
+        {
+            ma_data_source_base base; // must be first
+            ma_pcm_rb ring;
+            bool ring_ready = false;
+            ma_uint32 channels = 0;
+            ma_uint32 sample_rate = 0;
+            ma_uint64 cursor = 0;
+            std::atomic<bool> ended = false;
+        };
+
+        ma_result stream_read(ma_data_source* ds, void* out, ma_uint64 count, ma_uint64* read)
+        {
+            auto* src = static_cast<StreamSource*>(ds);
+            auto* dst = static_cast<float*>(out);
+            const bool ended = src->ended.load(std::memory_order_acquire);
+            ma_uint64 got = 0;
+            while (got < count)
+            {
+                ma_uint32 n = static_cast<ma_uint32>(std::min<ma_uint64>(count - got, 0xFFFFFFFFu));
+                void* buffer = nullptr;
+                if (ma_pcm_rb_acquire_read(&src->ring, &n, &buffer) != MA_SUCCESS || n == 0)
+                    break;
+                if (dst != nullptr)
+                    std::memcpy(dst + got * src->channels, buffer, static_cast<std::size_t>(n) * src->channels * sizeof(float));
+                ma_pcm_rb_commit_read(&src->ring, n);
+                got += n;
+            }
+            if (got < count && !ended)
+            {
+                if (dst != nullptr)
+                    std::fill(dst + got * src->channels, dst + count * src->channels, 0.0f);
+                got = count;
+            }
+            src->cursor += got;
+            if (read != nullptr)
+                *read = got;
+            return got == 0 && count > 0 ? MA_AT_END : MA_SUCCESS;
+        }
+
+        ma_result stream_seek(ma_data_source*, ma_uint64)
+        {
+            return MA_NOT_IMPLEMENTED;
+        }
+
+        ma_result stream_format(ma_data_source* ds, ma_format* format, ma_uint32* channels, ma_uint32* rate, ma_channel* map, size_t map_cap)
+        {
+            const auto* src = static_cast<const StreamSource*>(ds);
+            *format = ma_format_f32;
+            *channels = src->channels;
+            *rate = src->sample_rate;
+            if (map != nullptr && map_cap > 0)
+                ma_channel_map_init_standard(ma_standard_channel_map_default, map, map_cap, src->channels);
+            return MA_SUCCESS;
+        }
+
+        ma_result stream_cursor(ma_data_source* ds, ma_uint64* cursor)
+        {
+            *cursor = static_cast<const StreamSource*>(ds)->cursor;
+            return MA_SUCCESS;
+        }
+
+        ma_result stream_length(ma_data_source*, ma_uint64* length)
+        {
+            *length = 0; // Not known
+            return MA_NOT_IMPLEMENTED;
+        }
+
+        const ma_data_source_vtable kStreamVtable = { stream_read, stream_seek, stream_format, stream_cursor, stream_length, nullptr, 0 };
+
         struct Voice
         {
             PcmSource source;
+            StreamSource stream;
+            bool streamed = false; // plays `stream`, not `source`
             ma_sound sound;
             std::uint32_t generation = 0; // bumped on every start, so stale handles never match
             bool in_use = false;
@@ -283,9 +359,26 @@ namespace rct3::audio
             if (!v.in_use)
                 return;
             ma_sound_uninit(&v.sound);
-            ma_data_source_uninit(&v.source.base);
-            v.source.data = { };
+            release_source(v);
             v.in_use = false;
+        }
+
+        // The voice's source, once its sound is gone or was never made.
+        static void release_source(Voice& v)
+        {
+            if (v.streamed)
+            {
+                ma_data_source_uninit(&v.stream.base);
+                if (v.stream.ring_ready)
+                    ma_pcm_rb_uninit(&v.stream.ring);
+                v.stream.ring_ready = false;
+            }
+            else
+            {
+                ma_data_source_uninit(&v.source.base);
+                v.source.data = { };
+            }
+            v.streamed = false;
         }
 
         Voice* find(VoiceHandle h)
@@ -303,6 +396,39 @@ namespace rct3::audio
         static bool finished(const Voice& v)
         {
             return ma_sound_at_end(&v.sound) != MA_FALSE;
+        }
+
+        Voice* free_slot()
+        {
+            collect();
+            for (std::size_t i = 0; i < voice_count; ++i)
+            {
+                if (!voices[i].in_use)
+                    return &voices[i];
+            }
+            return nullptr;
+        }
+
+        // Sounds are not spatialised: the engine would otherwise apply listener attenuation on top of pan.
+        // The source reports its own sample rate, so the engine resamples it to the mixing rate.
+        std::expected<VoiceHandle, PlayError> start_voice(Voice& v, ma_data_source* source, const PlayParams& params)
+        {
+            if (ma_sound_init_from_data_source(&engine, source, MA_SOUND_FLAG_NO_SPATIALIZATION, nullptr, &v.sound) != MA_SUCCESS)
+            {
+                release_source(v);
+                return std::unexpected(PlayError::Failed);
+            }
+            v.in_use = true;
+            v.generation = v.generation == 0xFFFFFFFFu ? 1 : v.generation + 1;
+            ma_sound_set_volume(&v.sound, params.volume);
+            ma_sound_set_pan(&v.sound, params.pan);
+            ma_sound_set_pitch(&v.sound, params.pitch);
+            if (ma_sound_start(&v.sound) != MA_SUCCESS)
+            {
+                release(v);
+                return std::unexpected(PlayError::Failed);
+            }
+            return VoiceHandle { static_cast<std::uint32_t>(&v - voices.get()), v.generation };
         }
 
         void collect()
@@ -418,13 +544,7 @@ namespace rct3::audio
             return std::unexpected(PlayError::InvalidParams);
 
         Impl& m = *impl_;
-        m.collect();
-        Voice* slot = nullptr;
-        for (std::size_t i = 0; i < m.voice_count && slot == nullptr; ++i)
-        {
-            if (!m.voices[i].in_use)
-                slot = &m.voices[i];
-        }
+        Voice* slot = m.free_slot();
         if (slot == nullptr)
             return std::unexpected(PlayError::VoiceLimit);
         Voice& v = *slot;
@@ -441,27 +561,80 @@ namespace rct3::audio
         if (ma_data_source_init(&dc, &src.base) != MA_SUCCESS)
             return std::unexpected(PlayError::Failed);
 
-        // Sounds are not spatialised: the engine would otherwise apply listener attenuation on top of pan.
-        // The source reports its own sample rate, so the engine resamples it to the mixing rate.
-        if (ma_sound_init_from_data_source(&m.engine, &src, MA_SOUND_FLAG_NO_SPATIALIZATION, nullptr, &v.sound) != MA_SUCCESS)
+        return m.start_voice(v, &src, params);
+    }
+
+    std::expected<VoiceHandle, PlayError> AudioEngine::play_stream(const StreamFormat& format, const PlayParams& params)
+    {
+        if (format.channels == 0 || format.channels > kMaxChannels || format.sample_rate == 0 || format.sample_rate > kMaxSampleRate)
+            return std::unexpected(PlayError::InvalidBuffer);
+        if (format.buffer_frames == 0 || format.buffer_frames > kMaxStreamFrames)
+            return std::unexpected(PlayError::InvalidBuffer);
+        if (!is_valid(params))
+            return std::unexpected(PlayError::InvalidParams);
+
+        Impl& m = *impl_;
+        Voice* slot = m.free_slot();
+        if (slot == nullptr)
+            return std::unexpected(PlayError::VoiceLimit);
+        Voice& v = *slot;
+
+        StreamSource& src = v.stream;
+        src.channels = format.channels;
+        src.sample_rate = format.sample_rate;
+        src.cursor = 0;
+        src.ended.store(false, std::memory_order_relaxed);
+        if (ma_pcm_rb_init(ma_format_f32, format.channels, format.buffer_frames, nullptr, nullptr, &src.ring) != MA_SUCCESS)
+            return std::unexpected(PlayError::Failed);
+        src.ring_ready = true;
+        ma_data_source_config dc = ma_data_source_config_init();
+        dc.vtable = &kStreamVtable;
+        if (ma_data_source_init(&dc, &src.base) != MA_SUCCESS)
         {
-            ma_data_source_uninit(&src.base);
-            src.data = { };
+            ma_pcm_rb_uninit(&src.ring);
+            src.ring_ready = false;
             return std::unexpected(PlayError::Failed);
         }
+        v.streamed = true;
+        return m.start_voice(v, &src, params);
+    }
 
-        v.in_use = true;
-        v.generation = v.generation == 0xFFFFFFFFu ? 1 : v.generation + 1;
-        ma_sound_set_volume(&v.sound, params.volume);
-        ma_sound_set_pan(&v.sound, params.pan);
-        ma_sound_set_pitch(&v.sound, params.pitch);
+    std::size_t AudioEngine::stream_space(VoiceHandle voice) const
+    {
+        const Voice* v = impl_->find(voice);
+        if (v == nullptr || !v->streamed || v->stream.ended.load(std::memory_order_relaxed))
+            return 0;
+        return ma_pcm_rb_available_write(const_cast<ma_pcm_rb*>(&v->stream.ring));
+    }
 
-        if (ma_sound_start(&v.sound) != MA_SUCCESS)
+    std::size_t AudioEngine::feed(VoiceHandle voice, std::span<const float> samples)
+    {
+        Voice* v = impl_->find(voice);
+        if (v == nullptr || !v->streamed || v->stream.ended.load(std::memory_order_relaxed))
+            return 0;
+        StreamSource& src = v->stream;
+        const std::size_t frames = samples.size() / src.channels;
+        std::size_t done = 0;
+        while (done < frames)
         {
-            Impl::release(v);
-            return std::unexpected(PlayError::Failed);
+            ma_uint32 n = static_cast<ma_uint32>(std::min<std::size_t>(frames - done, 0xFFFFFFFFu));
+            void* buffer = nullptr;
+            if (ma_pcm_rb_acquire_write(&src.ring, &n, &buffer) != MA_SUCCESS || n == 0)
+                break;
+            std::memcpy(buffer, samples.data() + done * src.channels, static_cast<std::size_t>(n) * src.channels * sizeof(float));
+            ma_pcm_rb_commit_write(&src.ring, n);
+            done += n;
         }
-        return VoiceHandle { static_cast<std::uint32_t>(&v - m.voices.get()), v.generation };
+        return done;
+    }
+
+    bool AudioEngine::end_stream(VoiceHandle voice)
+    {
+        Voice* v = impl_->find(voice);
+        if (v == nullptr || !v->streamed)
+            return false;
+        v->stream.ended.store(true, std::memory_order_release);
+        return true;
     }
 
     bool AudioEngine::stop(VoiceHandle voice)

@@ -10,6 +10,9 @@
 //   Playback:  AudioEngine owns the output (an audio device, miniaudio's null backend, or no device at
 //              all) and a fixed number of voices. `play` copies the samples, so the buffer may be
 //              destroyed right away.
+//   Streams:   `play_stream` starts a voice for a sound too long to hold, music for one. Its owner hands it
+//              float frames a little at a time with `feed`, as `stream_space` allows, and says when no more
+//              will come with `end_stream`. A stream that runs dry before its end plays silence and goes on.
 //
 // Backends. `Backend::Default` opens the system's default playback device and, when that fails and
 // `fall_back_to_null` is set, runs on the null backend instead: it consumes and discards audio at
@@ -154,6 +157,16 @@ namespace rct3::audio
 
     [[nodiscard]] const char* to_string(PlayError e) noexcept;
 
+    /// A streamed voice's samples: float, interleaved.
+    struct StreamFormat
+    {
+        std::uint16_t channels = 2;
+        std::uint32_t sample_rate = 44100;
+        std::uint32_t buffer_frames = 44100; ///< How far ahead the owner may feed, 1..kMaxStreamFrames
+    };
+
+    inline constexpr std::uint32_t kMaxStreamFrames = 1u << 22;
+
     class AudioEngine
     {
     public:
@@ -169,6 +182,16 @@ namespace rct3::audio
         /// Starts `buffer` once, from its first frame. Finished voices are collected first, so the cap only
         /// counts sounds that are still playing.
         [[nodiscard]] std::expected<VoiceHandle, PlayError> play(const SoundBuffer& buffer, const PlayParams& params = { });
+
+        /// Starts a voice that plays what `feed` gives it. It goes on, silent when it runs dry, until stopped or
+        /// until end_stream and the frames fed before have played.
+        [[nodiscard]] std::expected<VoiceHandle, PlayError> play_stream(const StreamFormat& format, const PlayParams& params = { });
+        /// Frames `voice` can take now; 0 for a stale handle or a voice that is not a stream.
+        [[nodiscard]] std::size_t stream_space(VoiceHandle voice) const;
+        /// Adds whole frames, channels interleaved, and returns how many it took: at most stream_space().
+        std::size_t feed(VoiceHandle voice, std::span<const float> samples);
+        /// No more frames will come. Returns false for a stale handle or a voice that is not a stream.
+        bool end_stream(VoiceHandle voice);
 
         /// Stops a voice and frees its slot. Returns false for a stale or invalid handle.
         bool stop(VoiceHandle voice);

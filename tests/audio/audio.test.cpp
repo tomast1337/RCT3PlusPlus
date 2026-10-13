@@ -469,3 +469,37 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
     CHECK(out[kF] == doctest::Approx(0.25f));
     CHECK(out[kF + 1] == doctest::Approx(0.25f));
 }
+
+TEST_CASE("a stream plays what it is fed, is silent when dry and ends when told")
+{
+    AudioEngine e = make_engine();
+    REQUIRE_FALSE(e.play_stream({ .channels = 0 }));
+    REQUIRE_FALSE(e.play_stream({ .buffer_frames = 0 }));
+    const auto h = e.play_stream({ .channels = 2, .sample_rate = kRate, .buffer_frames = 512 }, PlayParams { 0.5f, 0.0f, 1.0f });
+    REQUIRE(h.has_value());
+    CHECK(e.stream_space(*h) == 512);
+
+    const std::vector<float> half(2 * 600, 0.5f);
+    CHECK(e.feed(*h, half) == 512); // As much as fits
+    CHECK(e.stream_space(*h) == 0);
+    auto out = render_frames(e, 256);
+    CHECK(out[2 * 100] == doctest::Approx(0.25f));
+    CHECK(e.stream_space(*h) >= 256);
+
+    out = render_frames(e, 1024); // Runs dry
+    CHECK(out[2 * 1000] == 0.0f);
+    CHECK(e.is_playing(*h));
+    CHECK(e.feed(*h, std::span(half).first(2 * 64)) == 64);
+    out = render_frames(e, 1024); // The mixer reads a little ahead, so they come out a little later
+    CHECK(count_nonzero_frames(out) == 64);
+
+    CHECK(e.end_stream(*h));
+    CHECK(e.feed(*h, half) == 0);
+    render_frames(e, 1024);
+    CHECK_FALSE(e.is_playing(*h));
+
+    const auto one_shot = e.play(constant_mono(16384, 64));
+    REQUIRE(one_shot.has_value());
+    CHECK(e.stream_space(*one_shot) == 0); // Not a stream
+    CHECK_FALSE(e.end_stream(*one_shot));
+}

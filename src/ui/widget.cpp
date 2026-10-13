@@ -35,6 +35,13 @@ namespace rct3::ui
             std::rotate(it, it + 1, children_.end());
     }
 
+    void Widget::lower(const Widget& child)
+    {
+        const auto it = std::ranges::find_if(children_, [&](const auto& c) { return c.get() == &child; });
+        if (it != children_.end())
+            std::rotate(children_.begin(), it, it + 1);
+    }
+
     Widget* Widget::find(std::string_view path) const
     {
         const std::size_t slash = path.find('/');

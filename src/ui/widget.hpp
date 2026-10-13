@@ -107,6 +107,8 @@ namespace rct3::ui
         std::unique_ptr<Widget> remove(const Widget& child);
         /// Moves `child` to the end, above its siblings.
         void raise(const Widget& child);
+        /// Moves `child` to the start, under its siblings.
+        void lower(const Widget& child);
 
         /// Follows a path of names separated by '/' down from this widget, e.g. "options/ok".
         [[nodiscard]] Widget* find(std::string_view path) const;

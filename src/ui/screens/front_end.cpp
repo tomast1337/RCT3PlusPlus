@@ -90,6 +90,31 @@ namespace rct3::ui
         desktop_.root().add<CareerDialog>(std::string(kCareersName), style_.careers, strings_);
     }
 
+    CareerBoard& FrontEnd::open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked)
+    {
+        if (CareerDialog* dialog = career_dialog())
+            desktop_.root().remove(*dialog);
+        if (CareerBoard* old = career_board())
+            desktop_.root().remove(*old);
+        screen_->visible = false;
+        ++career_boards_opened_;
+        auto& map = desktop_.root().add<CareerBoard>(std::string(kCareerBoardName), style_.map, strings_, std::move(scenarios), picked);
+        // Under the windows already open, as the front screen was.
+        desktop_.root().lower(map);
+        return map;
+    }
+
+    CareerBoard* FrontEnd::career_board() const
+    {
+        return static_cast<CareerBoard*>(desktop_.root().find(kCareerBoardName));
+    }
+
+    void FrontEnd::ask_quit()
+    {
+        if (question_ == nullptr)
+            question_ = &desktop_.root().add<QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitText)), std::vector<QuestionAnswer> { { std::u16string(strings_.get(kYes)), style_.question.confirm_icon }, { std::u16string(strings_.get(kNo)), style_.question.cancel_icon } });
+    }
+
     void FrontEnd::update()
     {
         while (const auto request = screen_->take_request())
@@ -112,12 +137,23 @@ namespace rct3::ui
                     open_files(request->action, config::UserFolder::NewScenarios);
                     break;
                 case FrontAction::Quit:
-                    if (question_ == nullptr)
-                        question_ = &desktop_.root().add<QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitText)), std::vector<QuestionAnswer> { { std::u16string(strings_.get(kYes)), style_.question.confirm_icon }, { std::u16string(strings_.get(kNo)), style_.question.cancel_icon } });
+                    ask_quit();
                     break;
                 default:
                     unhandled_.push_back(*request);
                     break;
+            }
+        }
+        if (CareerBoard* map = career_board())
+        {
+            if (map->take_quit())
+                ask_quit();
+            if (map->take_menu())
+            {
+                desktop_.root().remove(*map);
+                screen_->visible = true;
+                screen_->open(FrontMenu::Campaigns);
+                screen_->settle();
             }
         }
         if (question_ != nullptr)

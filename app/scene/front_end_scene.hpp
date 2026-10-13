@@ -31,7 +31,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
-        bool open_options = false;
+        bool reload = false; ///< Built again after a language change: no opening animation, options window open
     };
 
     struct FrontEndScene

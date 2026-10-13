@@ -26,6 +26,8 @@ namespace rct3::ui
         , setup_(std::move(setup))
     {
         screen_ = &desktop_.root().add<FrontScreen>(std::string(kScreenName), strings_, setup_.expansions, setup_.choices.language);
+        if (setup_.settled)
+            screen_->settle();
         if (setup_.open_options)
             open_options();
     }

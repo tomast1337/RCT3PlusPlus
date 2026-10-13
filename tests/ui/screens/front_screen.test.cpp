@@ -149,3 +149,15 @@ TEST_CASE("expansions count as installed when the strings name them")
     strings.add("AOP_Name_1", u"Second pack");
     CHECK(named_expansions(strings) == std::array { false, true });
 }
+
+TEST_CASE("a settled screen shows its buttons and labels at once")
+{
+    StringTable strings;
+    strings.add("FrontScreen_Play_TT", u"Play");
+    Desktop desktop;
+    auto& screen = desktop.root().add<FrontScreen>("front", strings, std::array { false, false }, "English");
+    desktop.layout({ 0, 0, 1024, 768 });
+    screen.settle();
+    desktop.update({ });
+    CHECK(screen.label_alpha(0) == 1);
+}

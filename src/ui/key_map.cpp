@@ -38,7 +38,54 @@ namespace rct3::ui
             { C::DeveloperWindows, "developer_windows", u"Developer windows", std::nullopt, { key(K::F12) } },
         } };
 
+        using P = PlayCommand;
+        using G = PlayKeyGroup;
+
+        constexpr KeyCombo letter(char32_t c, bool control = false, bool shift = false)
+        {
+            return { Key::Letter, c, control, shift };
+        }
+
+        const std::array<PlayCommandInfo, kPlayCommandCount> kPlayCommands = { {
+            { P::ExitGame, G::Universal, "exit_game", "KeySetting_Exit", key(K::Escape) },
+            { P::ScreenSnapshot, G::Universal, "screen_snapshot", "KeySetting_TakeScreenSnapshot", key(K::F10) },
+            { P::ScreenMovie, G::Universal, "screen_movie", "KeySetting_TakeScreenMovie", key(K::F11, true, true) },
+            { P::NextCoasterCamType, G::DuringPlay, "next_coaster_cam_type", "KeySetting_RCNextType", letter(U'b') },
+            { P::NextRideCamera, G::DuringPlay, "next_ride_camera", "KeySetting_RCNextCam", letter(U'n') },
+            { P::PreviousRideCamera, G::DuringPlay, "previous_ride_camera", "KeySetting_RCPrevCam", letter(U'm') },
+            { P::NextRide, G::DuringPlay, "next_ride", "KeySetting_RCNextRide", letter(U'n', false, true) },
+            { P::PreviousRide, G::DuringPlay, "previous_ride", "KeySetting_RCPrevRide", letter(U'm', false, true) },
+            { P::ToggleRideCamera, G::DuringPlay, "toggle_ride_camera", "KeySetting_ToggleRideCam", letter(U'c', true) },
+            { P::ResetCamera, G::DuringPlay, "reset_camera", "KeySetting_CamReset", letter(U'r') },
+            { P::MoveLeft, G::DuringPlay, "move_left", "KeySetting_SlideLeft", key(K::Left) },
+            { P::MoveRight, G::DuringPlay, "move_right", "KeySetting_SlideRight", key(K::Right) },
+            { P::MoveLeft2, G::DuringPlay, "move_left_2", "KeySetting_SlideLeft", letter(U'a') },
+            { P::MoveRight2, G::DuringPlay, "move_right_2", "KeySetting_SlideRight", letter(U'd') },
+            { P::MoveForwards, G::DuringPlay, "move_forwards", "KeySetting_SlideForwards", key(K::Up) },
+            { P::MoveBackwards, G::DuringPlay, "move_backwards", "KeySetting_SlideBackwards", key(K::Down) },
+            { P::MoveForwards2, G::DuringPlay, "move_forwards_2", "KeySetting_SlideForwards", letter(U'w') },
+            { P::MoveBackwards2, G::DuringPlay, "move_backwards_2", "KeySetting_SlideBackwards", letter(U's') },
+            { P::ZoomIn, G::DuringPlay, "zoom_in", "KeySetting_SlideUp", key(K::PageUp) },
+            { P::ZoomOut, G::DuringPlay, "zoom_out", "KeySetting_SlideDown", key(K::PageDown) },
+            { P::RotateLeft, G::DuringPlay, "rotate_left", "KeySetting_RotLeft", letter(U'q') },
+            { P::RotateRight, G::DuringPlay, "rotate_right", "KeySetting_RotRight", letter(U'e') },
+            { P::RotateUp, G::DuringPlay, "rotate_up", "KeySetting_RotUp", key(K::Home) },
+            { P::RotateDown, G::DuringPlay, "rotate_down", "KeySetting_RotDown", key(K::End) },
+            { P::TogglePointerLight, G::DuringPlay, "toggle_pointer_light", "KeySetting_TogglePointerLight", letter(U'l', false, true) },
+            { P::RotateIsometric, G::DuringPlay, "rotate_isometric", "KeySetting_RotateIsoCam", key(K::Enter) },
+            { P::ReverseIsometric, G::DuringPlay, "reverse_isometric", "KeySetting_RotateIsoCamReverser", key(K::Enter, false, true) },
+            { P::FlattenTerrainSmooth, G::DuringPlay, "flatten_terrain_smooth", "KeySetting_FlattenTerrainSmooth", std::nullopt, u"Alt+Ctrl" },
+            { P::FlattenTerrain, G::DuringPlay, "flatten_terrain", "KeySetting_FlattenTerrain", std::nullopt, u"Alt" },
+            { P::TogglePause, G::DuringPlay, "toggle_pause", "KeySetting_TogglePaused", letter(U'p') },
+            { P::CloseTopmostWindow, G::DuringPlay, "close_topmost_window", "KeySetting_CloseTopmostWindow", key(K::Backspace) },
+        } };
+
         std::size_t index(Command c)
+        {
+            return static_cast<std::size_t>(c);
+        }
+
+        std::size_t index(PlayCommand c)
         {
             return static_cast<std::size_t>(c);
         }
@@ -71,6 +118,21 @@ namespace rct3::ui
         return kCommands.at(index(command));
     }
 
+    std::span<const PlayCommandInfo> play_commands_table()
+    {
+        return kPlayCommands;
+    }
+
+    const PlayCommandInfo& play_command_info(PlayCommand command)
+    {
+        return kPlayCommands.at(index(command));
+    }
+
+    std::string_view play_key_group_key(PlayKeyGroup group)
+    {
+        return group == PlayKeyGroup::Universal ? "KeyGroup_Universal" : "KeyGroup_DuringPlay";
+    }
+
     KeyMap::KeyMap()
     {
         reset();
@@ -96,8 +158,30 @@ namespace rct3::ui
         keys_.at(index(command)) = std::move(combos);
     }
 
+    const std::optional<KeyCombo>& KeyMap::play_key(PlayCommand command) const
+    {
+        return play_.at(index(command));
+    }
+
+    void KeyMap::bind_play(PlayCommand command, std::optional<KeyCombo> combo)
+    {
+        if (!play_command_info(command).fixed.empty())
+            return;
+        if (combo)
+        {
+            for (auto& other : play_)
+            {
+                if (other == combo)
+                    other.reset();
+            }
+        }
+        play_.at(index(command)) = combo;
+    }
+
     void KeyMap::reset()
     {
+        for (const PlayCommandInfo& info : kPlayCommands)
+            play_.at(index(info.command)) = info.usual;
         for (const CommandInfo& info : kCommands)
         {
             auto& list = keys_.at(index(info.command));
@@ -126,6 +210,16 @@ namespace rct3::ui
         out.keyboard.composition = keyboard.composition;
         for (const KeyPress& press : keyboard.presses)
         {
+            if (const auto played = play_key_combo(press))
+            {
+                for (std::size_t i = 0; i < play_.size(); ++i)
+                {
+                    if (play_[i] == played)
+                        out.play.push_back(static_cast<PlayCommand>(i));
+                }
+            }
+            if (press.key == Key::Letter)
+                continue; // Only for the game: the text it types comes on its own
             const auto combo = key_combo(press);
             const auto command = combo ? command_of(*combo) : std::nullopt;
             if (command)
@@ -153,7 +247,8 @@ namespace rct3::ui
         for (const auto& [name, value] : json->items())
         {
             const auto info = std::ranges::find(kCommands, name, &CommandInfo::name);
-            if (info == kCommands.end())
+            const auto play = std::ranges::find(kPlayCommands, name, &PlayCommandInfo::name);
+            if (info == kCommands.end() && play == kPlayCommands.end())
             {
                 config::report(problems, "unknown command " + name);
                 continue;
@@ -161,6 +256,15 @@ namespace rct3::ui
             if (!value.is_array())
             {
                 config::report(problems, name + ": expected a list of keys");
+                continue;
+            }
+            if (play != kPlayCommands.end())
+            {
+                const auto combo = value.size() == 1 && value[0].is_string() ? parse_play_key_combo(value[0].get<std::string>()) : std::nullopt;
+                if (combo || value.empty())
+                    map.bind_play(play->command, combo);
+                else
+                    config::report(problems, name + ": not one key that can be bound: " + value.dump());
                 continue;
             }
             std::vector<KeyCombo> combos;
@@ -189,6 +293,15 @@ namespace rct3::ui
             config::Json& names = json[info.name] = config::Json::array();
             for (const KeyCombo& combo : list)
                 names.push_back(to_string(combo));
+        }
+        for (const PlayCommandInfo& info : kPlayCommands)
+        {
+            const auto& combo = play_key(info.command);
+            if (combo == usual.play_key(info.command))
+                continue;
+            config::Json& names = json[info.name] = config::Json::array();
+            if (combo)
+                names.push_back(to_string(*combo));
         }
         return config::json_text(json);
     }

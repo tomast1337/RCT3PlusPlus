@@ -11,9 +11,10 @@
 // chosen control mode only.
 //
 // The language and the screen size are not game options: the window offers them and the owner takes the
-// user's choice with take_language() and take_screen_size(). Nor are the keys: the keys page sets the
-// interface's commands on keys the user picks (see key_map.hpp), and the owner takes the new key map with
-// take_keys(). While one of its boxes waits for keys, the owner gives the window the keys as pressed.
+// user's choice with take_language() and take_screen_size(). Nor are the keys: the keys page lists the game's
+// commands as the game groups them, then the interface's, each on the keys the user picks (see key_map.hpp),
+// and the owner takes the new key map with take_keys(). While one of its boxes waits for keys, the owner gives
+// the window the keys as pressed.
 //
 // The layout is ours, after the game's: a 460 unit wide page, names on the left and controls in a column
 // on the right.
@@ -24,6 +25,7 @@
 #include "ui/screens/option_rows.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/panel.hpp"
 #include "ui/widgets/scroll_area.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -60,10 +62,32 @@ namespace rct3::ui
         std::optional<std::size_t> background_track { }; ///< Shown while the player has not chosen; nothing for no music
     };
 
+    /// The keys page: one scrolling list, the commands in groups under blue bars.
+    struct KeyListStyle
+    {
+        float height = 270;
+        Color background { 255, 255, 255, 255 };
+        float top = 10;       ///< Before the first group
+        float group_gap = 10; ///< Above each group's bar
+        float bar_height = 24;
+        float bar_text_inset = 5;
+        Color bar_colour { 35, 132, 191, 255 };
+        Color bar_text_colour { 255, 255, 255, 255 };
+        float row_gap = 2; ///< Above each row
+        float row_height = 18;
+        float name_x = 5;
+        float name_width = 280;
+        float keys_x = 295;
+        float keys_right = 18; ///< Where the keys end, from the list's right
+        float bottom = 5;      ///< After the last row
+        std::string focused;   ///< Skin of a key box waiting for keys
+    };
+
     struct OptionsDialogStyle
     {
         WindowStyle window;
         OptionRowsStyle rows;
+        KeyListStyle keys;
         ScrollBarStyle scroll;
         float page_width = 460;
         float page_height = 330;
@@ -129,6 +153,15 @@ namespace rct3::ui
         {
             return language_;
         }
+        [[nodiscard]] KeyBox& key_box(Command command) const
+        {
+            return *key_boxes_.at(static_cast<std::size_t>(command));
+        }
+        /// Nothing for a game command whose keys cannot be changed.
+        [[nodiscard]] KeyBox* play_key_box(PlayCommand command) const
+        {
+            return play_boxes_.at(static_cast<std::size_t>(command));
+        }
         [[nodiscard]] Dropdown* background_music_list() const
         {
             return music_;
@@ -163,6 +196,7 @@ namespace rct3::ui
         Dropdown* resolution_ = nullptr;
         Dropdown* music_ = nullptr; // The park's: the files, then shuffle, then none
         std::array<KeyBox*, kCommandCount> key_boxes_ { };
+        std::array<KeyBox*, kPlayCommandCount> play_boxes_ { };
         Button* usual_keys_ = nullptr;
         OptionsPage page_ = OptionsPage::General;
         int changes_ = 0;

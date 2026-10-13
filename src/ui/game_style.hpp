@@ -256,6 +256,7 @@ namespace rct3::ui::game_skins
         s.rows.spinner = spinner_style();
         s.rows.key_box = kListBox;
         s.rows.key_box_focused = kListBoxFocused;
+        s.keys.focused = kListBoxFocused; // A blue outline
         s.scroll = scroll_bar_style(Orientation::Vertical);
         s.button = kTextButton;
         s.button_inset = kLozengeInset;

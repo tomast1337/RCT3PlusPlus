@@ -4,7 +4,9 @@
 // window (once; asking again brings it to the front), and Quit asks first. Loading a sandbox park or a
 // custom scenario, or starting a new custom scenario, opens the window that loads games on the folder the
 // game keeps those in; the owner fills it with the folder's files and acts on what the user picks there.
-// A game's career button opens the window that picks a career of that game, which the owner fills too. What needs more than the
+// A game's career button opens the window that picks a career of that game, which the owner fills too;
+// the owner opens the career map in place of the front screen once a career is loaded, and the map's
+// return to the main menu brings the front screen back on the menu of games. What needs more than the
 // interface goes to the owner: quitting, a new language or screen size, the options to save once their
 // window has closed, and the menu choices nothing handles yet.
 //
@@ -15,6 +17,7 @@
 #include "config/game_options.hpp"
 #include "config/user_data.hpp"
 #include "ui/desktop.hpp"
+#include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/front_screen.hpp"
@@ -35,6 +38,7 @@ namespace rct3::ui
         QuestionBoxStyle question;
         FileDialogStyle files;
         CareerDialogStyle careers;
+        CareerBoardStyle map;
     };
 
     struct FrontEndSetup
@@ -83,6 +87,16 @@ namespace rct3::ui
         {
             return career_dialogs_opened_;
         }
+        /// Shows the career map of `scenarios` in place of the front screen, `picked` first, and closes the
+        /// window picking a career.
+        CareerBoard& open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked);
+        /// The career map, while it is shown.
+        [[nodiscard]] CareerBoard* career_board() const;
+        /// Counts the career maps opened, so the owner tells a new one from the last.
+        [[nodiscard]] std::size_t career_boards_opened() const
+        {
+            return career_boards_opened_;
+        }
         /// Counts the windows loading a game opened, so the owner tells a new one from the last.
         [[nodiscard]] std::size_t file_dialogs_opened() const
         {
@@ -109,11 +123,13 @@ namespace rct3::ui
         static constexpr std::string_view kQuestionName = "quit";
         static constexpr std::string_view kFilesName = "load_game";
         static constexpr std::string_view kCareersName = "careers";
+        static constexpr std::string_view kCareerBoardName = "career_board";
 
     private:
         void open_options();
         void open_files(FrontAction action, config::UserFolder folder);
         void open_careers(int pack);
+        void ask_quit();
 
         Desktop& desktop_;
         FrontEndStyle style_;
@@ -127,6 +143,7 @@ namespace rct3::ui
         std::size_t file_dialogs_opened_ = 0;
         int career_pack_ = 0;
         std::size_t career_dialogs_opened_ = 0;
+        std::size_t career_boards_opened_ = 0;
         bool options_open_ = false;
         bool options_closed_ = false;
         bool quit_ = false;

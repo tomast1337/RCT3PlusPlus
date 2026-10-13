@@ -10,7 +10,6 @@ namespace rct3::ui
     {
 
         constexpr std::string_view kScreenName = "front";
-        constexpr std::string_view kQuitTitle = "FrontScreen_Title_ConfirmExit";
         constexpr std::string_view kQuitText = "FrontScreen_Message_ConfirmExit";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
@@ -59,7 +58,7 @@ namespace rct3::ui
                     break;
                 case FrontAction::Quit:
                     if (question_ == nullptr)
-                        question_ = &desktop_.root().add<QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitTitle)), std::u16string(strings_.get(kQuitText)), std::vector<std::u16string> { std::u16string(strings_.get(kYes)), std::u16string(strings_.get(kNo)) });
+                        question_ = &desktop_.root().add<QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitText)), std::vector<QuestionAnswer> { { std::u16string(strings_.get(kYes)), style_.question.confirm_icon }, { std::u16string(strings_.get(kNo)), style_.question.cancel_icon } });
                     break;
                 default:
                     unhandled_.push_back(*request);

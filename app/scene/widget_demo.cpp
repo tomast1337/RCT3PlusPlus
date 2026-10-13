@@ -276,7 +276,7 @@ namespace rct3::scene
                         (*top)->close();
                 }
                 if (choice->menu == kWindowMenu && choice->item == kCloseAllItem && demo.question == nullptr)
-                    demo.question = &demo.desktop.root().add<ui::QuestionBox>("question", skins::question_box_style(), u"Close all", u"Close every window? A new one opens in their place.", std::vector<std::u16string> { u"Yes", u"No" });
+                    demo.question = &demo.desktop.root().add<ui::QuestionBox>("question", skins::question_box_style(), u"Close every window? A new one opens in their place.", std::vector<ui::QuestionAnswer> { { u"Yes", std::string(skins::kConfirmIcon) }, { u"No", std::string(skins::kCancelIcon) } });
                 if (choice->menu == kScaleMenu)
                 {
                     demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<float>(choice->item));

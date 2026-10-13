@@ -18,7 +18,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob test --sanitize          # AddressSanitizer + UBSan
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
 ./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
-./nob run                      # graphical viewer: Vulkan triangle + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
+./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
 ./nob fetch                    # optional downloads into downloads/: the fallback font (GNU Unifont)

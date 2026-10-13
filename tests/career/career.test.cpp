@@ -97,3 +97,16 @@ TEST_CASE("fitting to a changed list keeps progress by id, and keeps what is no 
     CHECK(c.scenarios[0].id == "Hill");
     CHECK(c.current == 0);
 }
+
+TEST_CASE("a locked scenario says what it waits for")
+{
+    Career c = new_career("A", 1, ids(9));
+    CHECK(lock(c, 0).kind == Lock::Kind::Open);
+    CHECK(lock(c, 3).kind == Lock::Kind::Levels);
+    CHECK(lock(c, 3).levels == 1);
+    CHECK(lock(c, 5).levels == 3);
+    CHECK(lock(c, 7).kind == Lock::Kind::Entrepreneur);
+    CHECK(lock(c, 8).kind == Lock::Kind::Tycoon);
+    complete(c, 0, ScenarioStatus::Apprentice, 1);
+    CHECK(lock(c, 5).levels == 2);
+}

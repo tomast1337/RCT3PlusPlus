@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// rct3++ viewer: a window, a test scene drawn through the render device and a Dear ImGui overlay. With
+// rct3++ viewer: a window, the interface drawn through the render device and a Dear ImGui overlay. With
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins.
 //
@@ -27,7 +27,6 @@
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/startup_screen.hpp"
-#include "scene/test_scene.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
 #include "ui/language.hpp"
@@ -301,12 +300,6 @@ int main(int argc, char** argv)
     }
     log.info("rendering with {} on {}", render::backend_name(backend), device->device_name());
 
-    auto scene = rct3::scene::create_test_scene(*device);
-    if (!scene)
-    {
-        log.critical("test scene: {}", scene.error());
-        return 1;
-    }
     auto ui_demo = rct3::scene::create_ui_demo(*device);
     if (!ui_demo)
     {
@@ -485,7 +478,6 @@ int main(int argc, char** argv)
                     }
                     else
                     {
-                        rct3::scene::draw_test_scene(*device, *scene, now);
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (front)
@@ -523,7 +515,6 @@ int main(int argc, char** argv)
     if (front)
         rct3::scene::destroy_front_end_scene(*device, *front);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);
-    rct3::scene::destroy_test_scene(*device, *scene);
     device->shutdown();
     return status;
 }

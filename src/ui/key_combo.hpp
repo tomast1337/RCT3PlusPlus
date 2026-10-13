@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// A key with the modifiers held for it, as the user binds it to a command: a function key (F1 to F12) with
-// or without Control and Shift, or a letter or digit with Control (and Shift if wanted). Other keys are not
-// bound, so a binding never takes keys that type text or move around the interface.
+// A key with the modifiers held for it, as the user binds it to a command. These can be bound:
 //
-// Written as the keys joined by '+', modifiers first: "F12", "Shift+F3", "Ctrl+Shift+D". Reading ignores
-// case and spaces, and takes "Control" for "Ctrl".
+// - the function keys (F1 to F12), Escape, Enter, Tab, Page Up, Page Down and Insert, with or without
+//   Control and Shift;
+// - Delete and Backspace with Control or Shift;
+// - a letter or digit with Control, and Shift if wanted.
+//
+// Other keys are not bound, so a binding never takes the keys that type text or move the caret.
+//
+// Written as the keys joined by '+', modifiers first: "F12", "Shift+Tab", "Ctrl+Page Down", "Ctrl+Shift+D".
+// Reading ignores case and spaces, and takes "Control" for "Ctrl", "Esc" for "Escape" and "PgUp" and "PgDn"
+// for the page keys.
 #pragma once
 
 #include "ui/keyboard.hpp"

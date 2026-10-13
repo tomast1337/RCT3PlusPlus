@@ -31,8 +31,8 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
-        std::optional<ui::KeyCombo> developer_keys; ///< Offered in the options window when set
-        bool reload = false;                        ///< Built again after a language change: no opening animation, options window open
+        ui::KeyMap keys;     ///< In use, for the options window to change
+        bool reload = false; ///< Built again after a language change: no opening animation, options window open
     };
 
     struct FrontEndScene
@@ -60,7 +60,7 @@ namespace rct3::scene
         std::optional<bool> fullscreen;
         std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
-        std::optional<ui::KeyCombo> developer_keys;
+        std::optional<ui::KeyMap> keys;
     };
 
     [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);

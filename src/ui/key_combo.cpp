@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/key_combo.hpp"
 
+#include <array>
 #include <cctype>
 #include <vector>
 
@@ -10,11 +11,37 @@ namespace rct3::ui
     namespace
     {
 
-        constexpr int kFunctionKeys = 12;
-
-        bool is_function(Key key)
+        struct KeyName
         {
-            return key >= Key::F1 && key <= Key::F12;
+            Key key;
+            std::string_view name;
+            bool needs_modifier = false; ///< Only bound with Control or Shift held
+        };
+        constexpr std::array<KeyName, 21> kKeyNames = { {
+            { Key::Escape, "Escape" }, { Key::Enter, "Enter" }, { Key::Tab, "Tab" }, { Key::PageUp, "Page Up" }, { Key::PageDown, "Page Down" }, { Key::Insert, "Insert" }, { Key::Delete, "Delete", true }, { Key::Backspace, "Backspace", true }, { Key::F1, "F1" }, { Key::F2, "F2" }, { Key::F3, "F3" }, { Key::F4, "F4" }, { Key::F5, "F5" }, { Key::F6, "F6" }, { Key::F7, "F7" }, { Key::F8, "F8" }, { Key::F9, "F9" }, { Key::F10, "F10" }, { Key::F11, "F11" }, { Key::F12, "F12" }, { Key::Shortcut, "" },
+        } };
+
+        // Other names read for the same keys.
+        struct Alias
+        {
+            std::string_view alias;
+            Key key;
+        };
+        constexpr std::array<Alias, 4> kAliases = { {
+            { "esc", Key::Escape },
+            { "pgup", Key::PageUp },
+            { "pgdn", Key::PageDown },
+            { "ins", Key::Insert },
+        } };
+
+        const KeyName* find_key(Key key)
+        {
+            for (const KeyName& k : kKeyNames)
+            {
+                if (k.key == key)
+                    return &k;
+            }
+            return nullptr;
         }
 
         bool is_bindable_character(char32_t c)
@@ -22,7 +49,8 @@ namespace rct3::ui
             return (c >= U'a' && c <= U'z') || (c >= U'0' && c <= U'9');
         }
 
-        std::string lower(std::string_view s)
+        /// Lower case, without spaces.
+        std::string folded(std::string_view s)
         {
             std::string out;
             for (const char c : s)
@@ -37,11 +65,16 @@ namespace rct3::ui
 
     std::optional<KeyCombo> key_combo(const KeyPress& press)
     {
-        if (is_function(press.key))
-            return KeyCombo { press.key, 0, press.control, press.shift };
-        if (press.key == Key::Shortcut && press.control && is_bindable_character(press.character))
-            return KeyCombo { Key::Shortcut, press.character, true, press.shift };
-        return std::nullopt;
+        if (press.key == Key::Shortcut)
+        {
+            if (press.control && is_bindable_character(press.character))
+                return KeyCombo { Key::Shortcut, press.character, true, press.shift };
+            return std::nullopt;
+        }
+        const KeyName* k = find_key(press.key);
+        if (k == nullptr || (k->needs_modifier && !press.control && !press.shift))
+            return std::nullopt;
+        return KeyCombo { press.key, 0, press.control, press.shift };
     }
 
     bool matches(const KeyCombo& combo, const KeyPress& press)
@@ -62,9 +95,9 @@ namespace rct3::ui
             const char32_t c = combo.character;
             out += static_cast<char>(c >= U'a' && c <= U'z' ? c - U'a' + U'A' : c);
         }
-        else
+        else if (const KeyName* k = find_key(combo.key))
         {
-            out += "F" + std::to_string(static_cast<int>(combo.key) - static_cast<int>(Key::F1) + 1);
+            out += k->name;
         }
         return out;
     }
@@ -72,7 +105,7 @@ namespace rct3::ui
     std::optional<KeyCombo> parse_key_combo(std::string_view text)
     {
         std::vector<std::string> parts;
-        const std::string all = lower(text);
+        const std::string all = folded(text);
         std::size_t start = 0;
         while (start <= all.size())
         {
@@ -97,19 +130,25 @@ namespace rct3::ui
         {
             press.key = Key::Shortcut;
             press.character = static_cast<char32_t>(last[0]);
+            return key_combo(press);
         }
-        else if (last.size() <= 3 && last[0] == 'f' && std::isdigit(static_cast<unsigned char>(last[1])) != 0)
+        for (const KeyName& k : kKeyNames)
         {
-            const int n = std::stoi(last.substr(1));
-            if (n < 1 || n > kFunctionKeys || last[1] == '0')
-                return std::nullopt;
-            press.key = static_cast<Key>(static_cast<int>(Key::F1) + n - 1);
+            if (k.key != Key::Shortcut && folded(k.name) == last)
+            {
+                press.key = k.key;
+                return key_combo(press);
+            }
         }
-        else
+        for (const Alias& a : kAliases)
         {
-            return std::nullopt;
+            if (a.alias == last)
+            {
+                press.key = a.key;
+                return key_combo(press);
+            }
         }
-        return key_combo(press);
+        return std::nullopt;
     }
 
 } // namespace rct3::ui

@@ -34,7 +34,6 @@ namespace rct3::config
         SkipIntro,      ///< skip_intro: start without the logos
         InterfaceScale, ///< interface_scale: auto, or how many pixels per interface unit
         Language,       ///< language: the interface language, by the game's name for it; unset picks one
-        DeveloperKeys,  ///< developer_windows_key: the keys that show and hide the developer windows
 
         Count_, ///< Number of settings; not a setting
     };
@@ -100,6 +99,9 @@ namespace rct3::config
     /// Where the settings file is: RCT3PP_SETTINGS, else the user's configuration folder (XDG_CONFIG_HOME,
     /// ~/.config, or APPDATA on Windows) + rct3pp/settings.ini. Nothing when no folder is known.
     [[nodiscard]] std::optional<std::filesystem::path> settings_path(const Environment& env);
+
+    /// Another configuration file, `name`, in the settings file's folder.
+    [[nodiscard]] std::optional<std::filesystem::path> config_file_path(const Environment& env, std::string_view name);
 
     /// The interface scale a value asks for: nothing for "auto" or empty (choose from the window size), else
     /// a whole number from 1 to 8. Anything else is an error.

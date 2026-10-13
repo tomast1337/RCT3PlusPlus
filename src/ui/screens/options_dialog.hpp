@@ -11,14 +11,16 @@
 // chosen control mode only.
 //
 // The language and the screen size are not game options: the window offers them and the owner takes the
-// user's choice with take_language() and take_screen_size(). The keys page lists the keys the interface
-// uses, which cannot be changed yet, and the keys that show the developer windows, which can.
+// user's choice with take_language() and take_screen_size(). Nor are the keys: the keys page sets the
+// interface's commands on keys the user picks (see key_map.hpp), and the owner takes the new key map with
+// take_keys(). While one of its boxes waits for keys, the owner gives the window the keys as pressed.
 //
 // The layout is ours, after the game's: a 460 unit wide page, names on the left and controls in a column
 // on the right.
 #pragma once
 
 #include "config/game_options.hpp"
+#include "ui/key_map.hpp"
 #include "ui/screens/option_rows.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -49,9 +51,9 @@ namespace rct3::ui
         std::vector<std::string> languages; ///< Installed, by the game's names; the row shows with two or more
         std::string language;               ///< The one in use
         std::vector<ScreenSize> screen_sizes;
-        std::optional<std::size_t> screen_size;     ///< The one in use, if it is in the list
-        std::vector<int> anti_aliasing_levels { };  ///< Offered after "none", e.g. 2, 4 and 8 samples
-        std::optional<KeyCombo> developer_keys { }; ///< Offered on the keys page when set
+        std::optional<std::size_t> screen_size;    ///< The one in use, if it is in the list
+        std::vector<int> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
+        KeyMap keys { };                           ///< In use; the keys page changes a copy
     };
 
     struct OptionsDialogStyle
@@ -67,6 +69,10 @@ namespace rct3::ui
         float tab_bar_height = 26;
         float scroll_height = 230; ///< Of the custom graphics settings
         FontRole caption_font = FontRole::Medium;
+        std::string button; ///< Skin family of the text buttons
+        Rect button_inset;  ///< Of their text; see Button::text_inset
+        float button_width = 110;
+        float button_height = 22;
     };
 
     enum class OptionsPage : std::uint8_t
@@ -97,8 +103,8 @@ namespace rct3::ui
         [[nodiscard]] std::optional<std::string> take_language();
         /// The index into OptionsChoices::screen_sizes the user picked, once.
         [[nodiscard]] std::optional<std::size_t> take_screen_size();
-        /// The keys the user set for the developer windows, once.
-        [[nodiscard]] std::optional<KeyCombo> take_developer_keys();
+        /// The key map with the keys the user set, once after each change.
+        [[nodiscard]] std::optional<KeyMap> take_keys();
         /// True while a key box waits for keys, which should then do nothing else.
         [[nodiscard]] bool waiting_for_keys() const;
 
@@ -122,10 +128,12 @@ namespace rct3::ui
         void build_keys(Widget& page, const StringTable& strings);
         void build_graphics(Widget& page, const StringTable& strings);
         void build_camera(Widget& page, const StringTable& strings);
+        void update_keys();
 
         OptionsDialogStyle style_;
         config::GameOptions& options_;
         OptionsChoices choices_;
+        KeyMap keys_;
         std::array<Widget*, kOptionsPageCount> pages_ { };
         std::array<Button*, kOptionsPageCount> tabs_ { };
         std::array<std::u16string, kOptionsPageCount> captions_;
@@ -135,12 +143,13 @@ namespace rct3::ui
         ScrollArea* custom_ = nullptr;
         Dropdown* language_ = nullptr;
         Dropdown* resolution_ = nullptr;
-        KeyBox* developer_keys_ = nullptr;
+        std::array<KeyBox*, kCommandCount> key_boxes_ { };
+        Button* usual_keys_ = nullptr;
         OptionsPage page_ = OptionsPage::General;
         int changes_ = 0;
         std::optional<std::string> picked_language_;
         std::optional<std::size_t> picked_screen_size_;
-        std::optional<KeyCombo> picked_developer_keys_;
+        std::optional<KeyMap> picked_keys_;
     };
 
 } // namespace rct3::ui

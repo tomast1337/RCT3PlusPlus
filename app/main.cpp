@@ -29,7 +29,7 @@
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
-#include "ui/key_combo.hpp"
+#include "ui/key_map.hpp"
 #include "ui/language.hpp"
 
 #include <algorithm>
@@ -274,16 +274,20 @@ int main(int argc, char** argv)
     else
         log.warning("settings: {}", parsed.error());
 
-    // The developer windows start hidden; these keys show and hide them.
-    const auto developer_keys_setting = [&] {
-        const std::string_view text = settings.get(config::Setting::DeveloperKeys).value_or(std::string_view { });
-        if (const auto keys = rct3::ui::parse_key_combo(text))
-            return *keys;
-        const std::string_view fallback = config::settings_table()[static_cast<std::size_t>(config::Setting::DeveloperKeys)].default_value;
-        log.warning("settings: developer_windows_key {}: not keys that can be bound; using {}", text, fallback);
-        return rct3::ui::parse_key_combo(fallback).value_or(rct3::ui::KeyCombo { });
-    };
-    rct3::ui::KeyCombo developer_keys = developer_keys_setting();
+    // The keys the user set for the interface's commands.
+    const auto keys_file = config::config_file_path(env, rct3::ui::kKeyMapFile);
+    rct3::ui::KeyMap key_map;
+    if (keys_file)
+    {
+        std::vector<rct3::ui::KeyMapProblem> problems;
+        if (auto loaded = rct3::ui::KeyMap::load(*keys_file, &problems))
+            key_map = std::move(*loaded);
+        else
+            log.warning("keys: {}", loaded.error());
+        for (const auto& p : problems)
+            log.warning("keys: {}:{}: {}", keys_file->string(), p.line, p.message);
+    }
+    // The developer windows start hidden; a command shows and hides them.
     bool developer_windows = false;
 
     // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
@@ -386,7 +390,7 @@ int main(int argc, char** argv)
                 setup.screen_size = setup.screen_sizes.size();
             setup.screen_sizes.push_back({ s.width, s.height });
         }
-        setup.developer_keys = developer_keys;
+        setup.keys = key_map;
         setup.reload = reload;
         auto loaded = rct3::scene::create_front_end_scene(*device, *install, std::move(setup));
         if (loaded)
@@ -415,11 +419,14 @@ int main(int argc, char** argv)
             if (*requests.screen_size < sizes.size())
                 window->set_size(sizes[*requests.screen_size]);
         }
-        if (requests.developer_keys)
+        if (requests.keys)
         {
-            developer_keys = *requests.developer_keys;
-            settings.set(config::Setting::DeveloperKeys, rct3::ui::to_string(developer_keys));
-            save_settings();
+            key_map = std::move(*requests.keys);
+            if (keys_file)
+            {
+                if (auto saved = key_map.save(*keys_file); !saved)
+                    log.warning("keys: {}", saved.error());
+            }
         }
         if (requests.language)
         {
@@ -458,14 +465,20 @@ int main(int argc, char** argv)
                         if (startup->sequence.finished())
                             phase = Phase::Loading;
                     }
-                    // The developer windows' keys, unless the interface is waiting for keys to bind; they
-                    // then do nothing else.
+                    // The keys as the commands they are bound to, unless the interface is waiting for keys
+                    // to bind: it then gets them as pressed, and they do nothing else.
                     rct3::ui::KeyboardState keys = window->keyboard();
                     if (!(front && rct3::scene::front_end_waiting_for_keys(*front)))
                     {
-                        const auto toggles = std::ranges::count_if(keys.presses, [&](const rct3::ui::KeyPress& k) { return rct3::ui::matches(developer_keys, k); });
+                        auto translated = key_map.translate(keys);
+                        keys = std::move(translated.keyboard);
+                        const auto toggles = std::ranges::count(translated.commands, rct3::ui::Command::DeveloperWindows);
                         developer_windows = developer_windows != (toggles % 2 == 1);
-                        std::erase_if(keys.presses, [&](const rct3::ui::KeyPress& k) { return rct3::ui::matches(developer_keys, k); });
+                        for (auto& k : keys.presses)
+                        {
+                            if (k.key == rct3::ui::Key::Paste)
+                                k.text = window->clipboard();
+                        }
                     }
                     if (phase == Phase::Running && developer_windows)
                     {

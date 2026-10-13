@@ -7,18 +7,20 @@ using namespace rct3::ui;
 
 TEST_CASE("key combinations read and write the same way")
 {
-    for (const char* text : { "F1", "F12", "Shift+F3", "Ctrl+F5", "Ctrl+Shift+F10", "Ctrl+D", "Ctrl+Shift+D", "Ctrl+7" })
+    for (const char* text : { "F1", "F12", "Shift+F3", "Ctrl+F5", "Ctrl+Shift+F10", "Ctrl+D", "Ctrl+Shift+D", "Ctrl+7", "Escape", "Enter", "Shift+Tab", "Ctrl+Page Down", "Ctrl+Insert", "Shift+Delete" })
     {
         const auto combo = parse_key_combo(text);
         REQUIRE_MESSAGE(combo, text);
         CHECK(to_string(*combo) == text);
     }
     CHECK(parse_key_combo(" control + shift + f12 ") == KeyCombo { Key::F12, 0, true, true });
+    CHECK(parse_key_combo("ctrl+pgdn") == KeyCombo { Key::PageDown, 0, true, false });
+    CHECK(parse_key_combo("Esc") == KeyCombo { Key::Escape });
 }
 
 TEST_CASE("only keys that do not type or move can be bound")
 {
-    for (const char* text : { "", "D", "Shift+D", "F0", "F13", "F01", "Alt+F4", "Ctrl+", "Ctrl+Home", "Ctrl+;" })
+    for (const char* text : { "", "D", "Shift+D", "F0", "F13", "F01", "Alt+F4", "Ctrl+", "Ctrl+Home", "Ctrl+;", "Delete", "Backspace", "Space", "Left" })
         CHECK_MESSAGE(!parse_key_combo(text), text);
     CHECK_FALSE(key_combo({ Key::Home, false, true }));
     CHECK_FALSE(key_combo({ Key::Character, false, false, U'd' }));

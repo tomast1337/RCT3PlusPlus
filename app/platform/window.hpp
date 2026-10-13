@@ -62,6 +62,8 @@ namespace rct3::platform
             return collected_->keyboard;
         }
 
+        /// What the system clipboard holds, if it is text.
+        [[nodiscard]] std::u16string clipboard() const;
         /// Puts `text` on the system clipboard.
         void set_clipboard(std::u16string_view text);
 

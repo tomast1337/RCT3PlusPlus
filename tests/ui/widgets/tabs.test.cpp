@@ -77,7 +77,7 @@ TEST_CASE("clicking a tab shows its page")
     }
 }
 
-TEST_CASE("control with tab or page keys turns the pages")
+TEST_CASE("control with tab turns the pages")
 {
     Fixture f;
     Widget& inside = f.pages[0]->add<Widget>("inside");
@@ -87,9 +87,9 @@ TEST_CASE("control with tab or page keys turns the pages")
     CHECK(f.tabs.take_change());
     f.key(Key::Tab, true, true);
     CHECK(f.tabs.current() == 0);
-    f.key(Key::PageUp, false, true);
+    f.key(Key::Tab, true, true);
     CHECK(f.tabs.current() == 2); // Round to the last
-    f.key(Key::PageDown, false, true);
+    f.key(Key::Tab, false, true);
     CHECK(f.tabs.current() == 0);
 }
 

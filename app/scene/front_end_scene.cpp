@@ -47,13 +47,13 @@ namespace rct3::scene
         scene.options_file = std::move(setup.options_file);
         if (scene.options_file)
         {
-            std::vector<config::GameOptionsProblem> problems;
+            std::vector<config::FileProblem> problems;
             if (auto loaded = config::GameOptions::load(*scene.options_file, &problems))
                 scene.live->options = std::move(*loaded);
             else
                 log.warning("options: {}", loaded.error());
             for (const auto& problem : problems)
-                log.warning("{}:{}: {}", scene.options_file->string(), problem.line, problem.message);
+                log.warning("{}: {}", scene.options_file->string(), problem.message);
         }
 
         ui::Desktop& desktop = scene.live->desktop;

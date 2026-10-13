@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The user's settings: a small text file of `name = value` lines that the program reads at startup. Every
-// setting is registered once in the table in settings.cpp (name, description, default), and code refers to
-// it by its Setting id, never by a string. Lines starting with '#' are comments.
+// The user's settings: a JSON object of names and values in the user's data folder (user_data.hpp) that
+// the program reads at startup. Every setting is registered once in the table in settings.cpp (name, kind,
+// description, default), and code refers to it by its Setting id, never by a string.
 //
-// What the user sets, in order of precedence: the command line, then an environment variable where one
-// exists, then this file, then the default. The program only reads the file; `rct3pp --write-settings`
-// writes it out with every setting and its description. Values already there and lines naming settings it
-// does not know are kept; other comments are not.
+// A setting is text, on or off (true or false), or the interface scale ("auto" or a whole number); null
+// leaves it at its default. What the user sets, in order of precedence: the command line, then an
+// environment variable where one exists, then this file, then the default. The program writes the file
+// when the user changes a setting in the interface, and `rct3pp --write-settings` writes it with every
+// setting; settings it does not know are kept.
 //
 // Adding a setting: add a Setting id, add its row to the table, then read it through a Settings value.
 #pragma once
 
-#include "config/environment.hpp"
+#include "config/text_file.hpp"
 
 #include <array>
 #include <cstddef>
@@ -23,6 +24,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::config
@@ -40,10 +42,18 @@ namespace rct3::config
 
     inline constexpr std::size_t kSettingCount = static_cast<std::size_t>(Setting::Count_);
 
+    enum class SettingKind : std::uint8_t
+    {
+        Text,
+        Flag,  ///< true or false; text that flag_value() reads works too
+        Scale, ///< "auto" or a whole number
+    };
+
     struct SettingInfo
     {
         Setting setting;
         std::string_view name;
+        SettingKind kind;
         std::string_view description;
         std::string_view default_value; ///< Empty: unset
     };
@@ -53,25 +63,18 @@ namespace rct3::config
 
     [[nodiscard]] std::string_view setting_name(Setting setting);
 
-    /// A line of the file that could not be used.
-    struct SettingsProblem
-    {
-        std::size_t line = 0; ///< From 1
-        std::string message;
-    };
-
     class Settings
     {
     public:
         /// Every setting at its default.
         Settings() = default;
 
-        /// Reads settings from file text. Bad lines are reported and skipped; the rest still apply.
-        [[nodiscard]] static Settings parse(std::string_view text, std::vector<SettingsProblem>* problems = nullptr);
+        /// Reads settings from file text. Bad values are reported and skipped; the rest still apply.
+        [[nodiscard]] static Settings parse(std::string_view text, std::vector<FileProblem>* problems = nullptr);
 
         /// Reads the file at `path`. A file that is not there gives the defaults; one that cannot be read is
         /// an error.
-        [[nodiscard]] static std::expected<Settings, std::string> load(const std::filesystem::path& path, std::vector<SettingsProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<Settings, std::string> load(const std::filesystem::path& path, std::vector<FileProblem>* problems = nullptr);
 
         /// The value set in the file, or the default; nothing when neither gives one.
         [[nodiscard]] std::optional<std::string_view> get(Setting setting) const;
@@ -84,8 +87,8 @@ namespace rct3::config
         /// An empty value unsets it, so the default applies again.
         void set(Setting setting, std::string_view value);
 
-        /// The file text: every setting with its description, commented out when it is at its default, then
-        /// the lines this version did not know, unchanged.
+        /// The file text: every setting, null when at its default, then the settings this version did not
+        /// know, unchanged.
         [[nodiscard]] std::string text() const;
 
         /// Writes text() to `path`, creating its folder.
@@ -93,15 +96,8 @@ namespace rct3::config
 
     private:
         std::array<std::optional<std::string>, kSettingCount> values_;
-        std::vector<std::string> unknown_; // Lines naming settings this version does not have
+        std::vector<std::pair<std::string, std::string>> unknown_; // Settings this version does not have: name, JSON value
     };
-
-    /// Where the settings file is: RCT3PP_SETTINGS, else the user's configuration folder (XDG_CONFIG_HOME,
-    /// ~/.config, or APPDATA on Windows) + rct3pp/settings.ini. Nothing when no folder is known.
-    [[nodiscard]] std::optional<std::filesystem::path> settings_path(const Environment& env);
-
-    /// Another configuration file, `name`, in the settings file's folder.
-    [[nodiscard]] std::optional<std::filesystem::path> config_file_path(const Environment& env, std::string_view name);
 
     /// The interface scale a value asks for: nothing for "auto" or empty (choose from the window size), else
     /// a whole number from 1 to 8. Anything else is an error.

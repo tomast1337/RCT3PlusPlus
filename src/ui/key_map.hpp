@@ -13,10 +13,12 @@
 // The arrow keys, Home, End, Backspace and Delete, and Control with the arrows to move by a word, are not
 // commands: they always do what they do.
 //
-// Kept in a file as "name = keys" lines, the keys written as in key_combo.hpp and separated by commas; only
-// commands whose keys differ from the usual ones are written, and "name =" leaves a command without keys.
+// Kept in a file in the user's data folder (user_data.hpp): a JSON object with a list of keys for each
+// command whose keys differ from the usual ones, written as in key_combo.hpp, e.g. "next_page": ["F6",
+// "Ctrl+N"]. An empty list leaves a command without keys.
 #pragma once
 
+#include "config/text_file.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/keyboard.hpp"
 
@@ -73,12 +75,6 @@ namespace rct3::ui
     [[nodiscard]] std::span<const CommandInfo> commands_table();
     [[nodiscard]] const CommandInfo& command_info(Command command);
 
-    struct KeyMapProblem
-    {
-        std::size_t line = 0; ///< From 1
-        std::string message;
-    };
-
     class KeyMap
     {
     public:
@@ -101,10 +97,10 @@ namespace rct3::ui
         };
         [[nodiscard]] Translated translate(const KeyboardState& keyboard) const;
 
-        [[nodiscard]] static KeyMap parse(std::string_view text, std::vector<KeyMapProblem>* problems = nullptr);
+        [[nodiscard]] static KeyMap parse(std::string_view text, std::vector<config::FileProblem>* problems = nullptr);
         [[nodiscard]] std::string text() const;
         /// A file that is not there gives the usual keys.
-        [[nodiscard]] static std::expected<KeyMap, std::string> load(const std::filesystem::path& path, std::vector<KeyMapProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<KeyMap, std::string> load(const std::filesystem::path& path, std::vector<config::FileProblem>* problems = nullptr);
         [[nodiscard]] std::expected<void, std::string> save(const std::filesystem::path& path) const;
 
         friend bool operator==(const KeyMap&, const KeyMap&) = default;
@@ -112,8 +108,5 @@ namespace rct3::ui
     private:
         std::array<std::vector<KeyCombo>, kCommandCount> keys_;
     };
-
-    /// The file the key map is kept in, beside the settings file.
-    inline constexpr std::string_view kKeyMapFile = "keys.ini";
 
 } // namespace rct3::ui

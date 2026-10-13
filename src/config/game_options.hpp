@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The options the player changes in the game's options dialog: money and units, sound levels, camera
-// behaviour and graphics detail. They are kept apart from the program's settings (settings.hpp), in
-// options.ini beside the settings file, written whenever the dialog closes.
+// behaviour and graphics detail. They are kept apart from the program's settings (settings.hpp), in their
+// own file in the user's data folder (user_data.hpp), written whenever the dialog closes.
 //
 // Every option is a number with a range, registered once in the table in game_options.cpp: on/off options
-// are 0 or 1, choices count from 0, levels are any value in their range or whole steps of it. The file has
-// one `name = value` line per option that differs from its default; lines it does not understand are
-// reported and skipped.
+// are 0 or 1, choices count from 0, levels are any value in their range or whole steps of it. The file is a
+// JSON object holding the options that differ from their defaults (true and false read as 1 and 0); values
+// it does not understand are reported and skipped.
 //
 // Many options have no effect yet: they are kept so the dialog shows what the player chose.
 #pragma once
 
-#include "config/environment.hpp"
+#include "config/text_file.hpp"
 
 #include <array>
 #include <cstddef>
@@ -144,22 +144,15 @@ namespace rct3::config
 
     inline constexpr int kCustomQuality = 5;
 
-    /// A line of the file that could not be used.
-    struct GameOptionsProblem
-    {
-        std::size_t line = 0; ///< From 1
-        std::string message;
-    };
-
     class GameOptions
     {
     public:
         /// Every option at its default.
         GameOptions();
 
-        [[nodiscard]] static GameOptions parse(std::string_view text, std::vector<GameOptionsProblem>* problems = nullptr);
+        [[nodiscard]] static GameOptions parse(std::string_view text, std::vector<FileProblem>* problems = nullptr);
         /// Reads the file at `path`. A file that is not there gives the defaults.
-        [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::vector<GameOptionsProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::vector<FileProblem>* problems = nullptr);
 
         [[nodiscard]] float get(GameOption option) const;
         [[nodiscard]] bool flag(GameOption option) const
@@ -183,8 +176,5 @@ namespace rct3::config
     private:
         std::array<float, kGameOptionCount> values_ { };
     };
-
-    /// options.ini in the folder of the settings file; nothing when that has no folder.
-    [[nodiscard]] std::optional<std::filesystem::path> game_options_path(const Environment& env);
 
 } // namespace rct3::config

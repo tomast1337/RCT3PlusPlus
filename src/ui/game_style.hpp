@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ui/font_set.hpp"
+#include "ui/screens/options_dialog.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/list_box.hpp"
@@ -189,6 +190,21 @@ namespace rct3::ui::game_skins
         s.button_inset = kLozengeInset;
         s.width = 320;
         s.height = 180;
+        return s;
+    }
+
+    /// The options window: tick boxes, lists, sliders and number fields as everywhere else, in rows 18 units
+    /// high (ours, to fit the small font).
+    [[nodiscard]] inline OptionsDialogStyle options_dialog_style()
+    {
+        OptionsDialogStyle s;
+        s.window = window_style();
+        s.rows.tick_box = kTickbox;
+        s.rows.tick = kTick;
+        s.rows.dropdown = dropdown_style();
+        s.rows.slider = slider_style();
+        s.rows.spinner = spinner_style();
+        s.scroll = scroll_bar_style(Orientation::Vertical);
         return s;
     }
 

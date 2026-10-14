@@ -185,20 +185,27 @@ namespace rct3::park
         if (!found)
             return { };
         std::string key = found->first + ":" + std::string(name);
-        if (tried_images_.contains(key))
-            return images_.contains(key) ? key : std::string();
-        tried_images_.emplace(key, true);
+        if (tried_pictures_.contains(key))
+            return pictures_.contains(key) ? key : std::string();
+        tried_pictures_.emplace(key, true);
         const ovl::FlexiTexture* texture = texture_in(*found->second, name);
         if (texture == nullptr || texture->frames.empty())
             return { };
         const std::size_t frame = texture->sequence.empty() ? 0 : texture->sequence.front();
         if (frame >= texture->frames.size())
             return { };
-        auto image = ovl::decode_flexi_frame(texture->frames[frame]);
-        if (!image)
+        auto picture = palette_image(texture->frames[frame], texture->flags);
+        if (!picture)
             return { };
-        images_.emplace(key, std::move(*image));
+        pictures_.emplace(key, std::move(*picture));
         return key;
+    }
+
+    void ModelLoader::set_texture(ModelPart& part, std::string_view name, std::string_view near)
+    {
+        part.texture = texture_key(name, near);
+        const auto picture = pictures_.find(part.texture);
+        part.slots = picture != pictures_.end() ? picture->second.slots : 0;
     }
 
     std::optional<ObjectModel> ModelLoader::load(std::string_view symbol, std::string_view overlay)
@@ -233,7 +240,7 @@ namespace rct3::park
                     for (const ovl::ShapeMesh& mesh : shape->meshes)
                     {
                         model.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
-                        model.parts.back().texture = texture_key(mesh.texture, file->first);
+                        set_texture(model.parts.back(), mesh.texture, file->first);
                     }
                 }
                 else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
@@ -245,7 +252,7 @@ namespace rct3::park
                     for (const ovl::BoneMesh& mesh : shape->meshes)
                     {
                         model.parts.push_back(part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); }));
-                        model.parts.back().texture = texture_key(mesh.texture, file->first);
+                        set_texture(model.parts.back(), mesh.texture, file->first);
                     }
                 }
                 else

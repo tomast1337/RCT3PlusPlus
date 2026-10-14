@@ -83,7 +83,7 @@ namespace rct3::scene
         }
 
         /// The models of the park's objects, by model key, and the pictures they use.
-        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, park::ModelImages& images)
+        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, park::ModelPictures& pictures)
         {
             const std::vector<std::string> folders = object_folders(install, objects);
             const std::vector<std::string_view> views(folders.begin(), folders.end());
@@ -99,7 +99,7 @@ namespace rct3::scene
                 if (auto model = loader.load(o.symbol, o.overlay))
                     models.emplace(std::move(key), std::move(*model));
             }
-            images = loader.images();
+            pictures = loader.pictures();
             return models;
         }
 
@@ -242,8 +242,8 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
-        park::ModelImages object_images;
-        const park::ObjectModels models = load_models(install, world->objects, object_images);
+        park::ModelPictures object_pictures;
+        const park::ObjectModels models = load_models(install, world->objects, object_pictures);
         const park::ObjectMesh objects = park::object_mesh(world->objects, models, scene.grid);
         scene.object_batches = objects.batches;
         if (!objects.indices.empty())
@@ -270,7 +270,7 @@ namespace rct3::scene
         if (!see_through)
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
-        auto object_textures = ui::upload_textures(device, object_images);
+        auto object_textures = ui::upload_textures(device, park::paint_batches(objects.batches, object_pictures));
         if (!object_textures)
             return fail(object_textures.error());
         scene.object_textures = std::move(*object_textures);

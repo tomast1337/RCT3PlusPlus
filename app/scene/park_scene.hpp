@@ -101,7 +101,6 @@ namespace rct3::scene
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
         save::CalendarDate date;             ///< The park's, for the bar
-        float day_fraction = 0.5f;           ///< Through the park's day, for the bar's time
         std::optional<std::int64_t> cash;    ///< None when the park's money never runs out
         std::optional<float> temperature;    ///< Degrees Celsius
         ui::ParkBarValues bar;               ///< What the bar shows; money, temperature and date are written each frame

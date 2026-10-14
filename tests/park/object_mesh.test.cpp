@@ -84,3 +84,40 @@ TEST_CASE("a model is kept by its overlay and symbol")
 {
     CHECK(model_key(object("Tree", 0)) == "Things/Things|Tree");
 }
+
+TEST_CASE("objects in other colours get their own batches and paintings")
+{
+    ModelPart wall = triangle("bricks", PartBlend::Opaque);
+    wall.slots = 0b001;
+    ObjectModels models;
+    ObjectModel model;
+    model.parts = { wall };
+    models.emplace("Things/Things|Wall", model);
+
+    save::PlacedObject grey = object("Wall", 0);
+    grey.colours = { 1, 27, 4 };
+    save::PlacedObject same = object("Wall", 1);
+    same.colours = { 1, 5, 9 }; // Only slot 0 is used, so this paints alike
+    save::PlacedObject red = object("Wall", 1);
+    red.colours = { 27, 27, 1 };
+    const std::vector<save::PlacedObject> objects { grey, same, red };
+    const ObjectMesh m = object_mesh(objects, models, flat());
+    REQUIRE(m.batches.size() == 2);
+    CHECK(m.batches[0].texture == "bricks#1,0,0");
+    CHECK(m.batches[0].picture == "bricks");
+    CHECK(m.batches[0].count == 6);
+    CHECK(m.batches[1].texture == "bricks#27,0,0");
+
+    PaletteImage picture;
+    picture.width = 1;
+    picture.height = 1;
+    picture.indices = { 1 + kFlexiFullShade };
+    picture.slots = 0b001;
+    ModelPictures pictures;
+    pictures.emplace("bricks", picture);
+    const auto painted = paint_batches(m.batches, pictures);
+    REQUIRE(painted.size() == 2);
+    const ovl::RgbaImage& r = painted.at("bricks#27,0,0");
+    const Rgb want = flexi_colour(27);
+    CHECK(r.pixels == std::vector<std::uint8_t> { want.r, want.g, want.b, 255 });
+}

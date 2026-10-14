@@ -24,6 +24,7 @@
 #include "config/user_data.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
+#include "math/hex_colour.hpp"
 #include "platform/window.hpp"
 #include "profiling/profiler.hpp"
 #include "render/backend.hpp"
@@ -47,6 +48,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -116,6 +118,13 @@ namespace
 
     // Recent log entries, coloured like the console. The ring is polled with a sequence cursor, so each frame
     // only copies what is new.
+    /// An ImGui colour from hex text; see math/hex_colour.hpp.
+    consteval ImVec4 im_hex(std::string_view text)
+    {
+        const glm::vec4 c = rct3::unit(rct3::hex(text));
+        return { c.x, c.y, c.z, c.w };
+    }
+
     void draw_log_window()
     {
         namespace logging = rct3::logging;
@@ -150,7 +159,7 @@ namespace
         ImGui::Separator();
 
         static constexpr std::array<ImVec4, 5> kColors = {
-            ImVec4(0.55f, 0.55f, 0.55f, 1), ImVec4(0.40f, 0.85f, 0.40f, 1), ImVec4(0.95f, 0.80f, 0.25f, 1), ImVec4(0.95f, 0.35f, 0.35f, 1), ImVec4(1.00f, 0.55f, 0.55f, 1),
+            im_hex("#8c8c8c"), im_hex("#66d966"), im_hex("#f2cc40"), im_hex("#f25959"), im_hex("#ff8c8c"),
         };
         ImGui::BeginChild("lines", { 0, 0 }, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
         for (const auto& e : shown)
@@ -608,7 +617,7 @@ int main(int argc, char** argv)
                 });
                 prof::section("Draw", [&] {
                     device->begin_frame();
-                    device->begin_pass({ .clear_color = park ? rct3::scene::kParkSky : rct3::render::Color { 0.05f, 0.06f, 0.08f, 1.0f } });
+                    device->begin_pass({ .clear_color = park ? rct3::scene::kParkSky : rct3::render::hex("#0d0f14") });
                     if (phase == Phase::Intro)
                     {
                         rct3::scene::draw_startup_logo(*device, *startup);

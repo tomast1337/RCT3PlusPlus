@@ -26,7 +26,7 @@ namespace rct3::ui
 
     struct TextStyle
     {
-        Color colour { 0, 0, 0, 255 };
+        Color colour = hex("#000000");
         Align horizontal = Align::Start;
         Align vertical = Align::Start;
         bool wrap = false;

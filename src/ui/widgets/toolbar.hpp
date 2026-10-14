@@ -17,7 +17,7 @@ namespace rct3::ui
     {
         std::string background; ///< Stretched behind the buttons; none when empty
         std::string button;     ///< Family base name for the buttons (see SkinLibrary)
-        Color separator_colour { 0, 0, 0, 60 };
+        Color separator_colour = hex("#0000003c");
         Rect padding { 4, 4, 4, 4 }; ///< Between the edges and the buttons
         float button_size = 30;      ///< Buttons are squares
         float gap = 4;               ///< Between buttons

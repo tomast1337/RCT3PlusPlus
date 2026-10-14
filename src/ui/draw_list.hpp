@@ -10,9 +10,12 @@
 // pixels so that point-sampled skins land on the pixel grid. Output and clip() are in pixels.
 #pragma once
 
+#include "math/hex_colour.hpp"
+
 #include <array>
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace rct3::ui
@@ -27,7 +30,14 @@ namespace rct3::ui
         bool operator==(const Color&) const = default;
     };
 
-    inline constexpr Color kWhite { };
+    /// The colour `text` ("#rrggbb" or "#rrggbbaa") names; see math/hex_colour.hpp.
+    consteval Color hex(std::string_view text)
+    {
+        const HexColour c = rct3::hex(text);
+        return { c.r, c.g, c.b, c.a };
+    }
+
+    inline constexpr Color kWhite = hex("#ffffff");
 
     /// Axis-aligned rectangle from (x0, y0) to (x1, y1). Empty when x1 <= x0 or y1 <= y0.
     struct Rect

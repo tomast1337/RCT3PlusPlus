@@ -38,10 +38,10 @@ namespace rct3::ui
         std::string background;     ///< Stretched behind the rows
         std::string highlight_skin; ///< Behind the highlighted row; the colour is filled when empty
         std::string tick;           ///< Before checked rows; a filled square when empty
-        Color highlight_colour { 90, 168, 230, 255 };
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
-        Color separator_colour { 0, 0, 0, 60 };
+        Color highlight_colour = hex("#5aa8e6");
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
+        Color separator_colour = hex("#0000003c");
         FontRole font = FontRole::Small;
         Rect padding { 6, 6, 6, 6 }; ///< Between the edges and the rows
         float row_height = 18;

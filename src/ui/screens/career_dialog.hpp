@@ -52,9 +52,9 @@ namespace rct3::ui
         std::string no_picture; ///< Shown for a career without a picture
         std::string name_box_focused;
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color hover_colour { 36, 132, 190, 255 };
-        std::array<Color, 2> row_colours { Color { 239, 232, 239, 255 }, Color { 255, 255, 255, 255 } };
+        Color text_colour = hex("#000000");
+        Color hover_colour = hex("#2484be");
+        std::array<Color, 2> row_colours { hex("#efe8ef"), hex("#ffffff") };
 
         float width = 380;
         float subtitle_height = 21; ///< Band above the list for the line saying what to do

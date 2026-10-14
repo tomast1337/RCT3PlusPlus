@@ -97,7 +97,7 @@ namespace rct3::ui
         std::array<std::string, 3> hats; ///< Apprentice, entrepreneur, tycoon
         std::string no_picture;          ///< For a scenario without a large picture
         QuestionBoxStyle question;
-        Color text_colour { 0, 0, 0, 255 };
+        Color text_colour = hex("#000000");
     };
 
     /// One scenario as the map shows it.

@@ -28,9 +28,9 @@ namespace rct3::ui
         std::string background;     ///< Stretched behind the rows; none when empty
         std::string focused;        ///< Instead of the background while the list has the keyboard focus
         std::string selection_skin; ///< Stretched behind the selected row; the colour is filled when empty
-        Color selection_colour { 90, 168, 230, 255 };
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
+        Color selection_colour = hex("#5aa8e6");
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
         FontRole font = FontRole::Small;
         float row_height = 18;
         Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the rows and bar; fixed when the list is made

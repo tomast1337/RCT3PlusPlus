@@ -41,15 +41,15 @@ namespace rct3::ui
         std::string skin;         ///< Stretched behind the text; none when empty
         std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
-        Color caret_colour { 0, 0, 0, 255 };
-        Color selection_colour { 0, 127, 255, 80 };
-        Color composition_colour { 0, 127, 255, 51 }; ///< Behind text being composed
-        Rect padding { 3, 2, 3, 2 };                  ///< Between the edges and the text
-        std::size_t max_length = 0;                   ///< In characters; 0 for no limit
-        std::u16string allowed;                       ///< Characters that may be typed; any printable one when empty
-        bool upper_case = false;                      ///< Typed letters a to z become capitals
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
+        Color caret_colour = hex("#000000");
+        Color selection_colour = hex("#007fff50");
+        Color composition_colour = hex("#007fff33"); ///< Behind text being composed
+        Rect padding { 3, 2, 3, 2 };                 ///< Between the edges and the text
+        std::size_t max_length = 0;                  ///< In characters; 0 for no limit
+        std::u16string allowed;                      ///< Characters that may be typed; any printable one when empty
+        bool upper_case = false;                     ///< Typed letters a to z become capitals
 
         [[nodiscard]] std::size_t caret() const
         {

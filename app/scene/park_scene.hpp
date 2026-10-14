@@ -45,7 +45,7 @@ namespace rct3::scene
     };
 
     /// Behind the ground, until there is a sky.
-    inline constexpr render::Color kParkSky { 0.55f, 0.70f, 0.85f, 1 };
+    inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
 
     struct ParkScene
     {

@@ -29,11 +29,11 @@ namespace rct3::ui
         std::string button; ///< Skin family of the answer buttons
         Rect button_inset;  ///< Of the text of answers without an icon; see Button::text_inset
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color hover_colour { 36, 132, 190, 255 }; ///< Of the hovered answer's name
-        float min_width = 282;                    ///< Of the window
-        float text_width = 239;                   ///< Where the text wraps
-        float margin = 8;                         ///< Around the text and the buttons, inside the content
+        Color text_colour = hex("#000000");
+        Color hover_colour = hex("#2484be"); ///< Of the hovered answer's name
+        float min_width = 282;               ///< Of the window
+        float text_width = 239;              ///< Where the text wraps
+        float margin = 8;                    ///< Around the text and the buttons, inside the content
         float button_size = 30;
         float text_button_width = 70; ///< Of answers without an icon
         float button_gap = 8;

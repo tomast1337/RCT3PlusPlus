@@ -30,8 +30,8 @@ namespace rct3::ui
         std::u16string prompt;    ///< Shown while waiting for keys
         std::u16string none;      ///< Shown when there are no combinations
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
         Rect padding { 3, 2, 3, 2 }; ///< Between the edges and the text
         bool game_key = false;       ///< Takes a game key (see key_combo.hpp)
 

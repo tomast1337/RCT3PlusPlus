@@ -66,13 +66,13 @@ namespace rct3::ui
     struct KeyListStyle
     {
         float height = 270;
-        Color background { 255, 255, 255, 255 };
+        Color background = hex("#ffffff");
         float top = 10;       ///< Before the first group
         float group_gap = 10; ///< Above each group's bar
         float bar_height = 24;
         float bar_text_inset = 5;
-        Color bar_colour { 35, 132, 191, 255 };
-        Color bar_text_colour { 255, 255, 255, 255 };
+        Color bar_colour = hex("#2384bf");
+        Color bar_text_colour = hex("#ffffff");
         float row_gap = 2; ///< Above each row
         float row_height = 18;
         float name_x = 5;
@@ -100,7 +100,7 @@ namespace rct3::ui
         float caption_height = 20;
         float scroll_height = 230; ///< Of the custom graphics settings
         FontRole caption_font = FontRole::Small;
-        Color caption_colour { 0x24, 0x84, 0xBE, 255 };
+        Color caption_colour = hex("#2484be");
         std::string icon;   ///< In the window's corner
         std::string button; ///< Skin family of the text buttons
         Rect button_inset;  ///< Of their text; see Button::text_inset

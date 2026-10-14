@@ -34,7 +34,7 @@ namespace rct3::scene
                 for (std::uint32_t x = 0; x < 16; ++x)
                 {
                     const std::uint32_t edge = std::min({ x, y, 15 - x, 15 - y });
-                    const ui::Color c = edge == 0 ? ui::Color { 20, 24, 30, 255 } : edge == 1 ? ui::Color { 150, 170, 200, 255 } : edge < 4 ? ui::Color { 70, 90, 120, 255 } : ui::Color { 40, 48, 60, 215 };
+                    const ui::Color c = edge == 0 ? ui::hex("#14181e") : edge == 1 ? ui::hex("#96aac8") : edge < 4 ? ui::hex("#465a78") : ui::hex("#28303cd7");
                     put(pixels, x, y, c);
                 }
             }
@@ -45,7 +45,7 @@ namespace rct3::scene
                     const bool rim = x == 0 || x == 15 || y == 16 || y == 23;
                     const bool cap = x < 3 || x > 12;
                     const auto shade = static_cast<std::uint8_t>(255 - (y - 16) * 12);
-                    put(pixels, x, y, rim ? ui::Color { 30, 30, 30, 255 } : cap ? ui::Color { shade, shade, shade, 255 } : ui::Color { shade, shade, 220, 255 });
+                    put(pixels, x, y, rim ? ui::hex("#1e1e1e") : cap ? ui::Color { shade, shade, shade, 255 } : ui::Color { shade, shade, 220, 255 });
                 }
             }
             return pixels;
@@ -110,7 +110,7 @@ namespace rct3::scene
         list.pop_clip();
 
         // Buttons: one skin, the state shown by the tint, as the original changes looks without new pixels.
-        constexpr std::array<ui::Color, 3> kTints = { { { 255, 255, 255, 255 }, { 255, 230, 150, 255 }, { 170, 170, 170, 255 } } };
+        constexpr std::array<ui::Color, 3> kTints = { ui::hex("#ffffff"), ui::hex("#ffe696"), ui::hex("#aaaaaa") };
         const float button_width = (area.width() - 16) / 3;
         for (std::size_t i = 0; i < kTints.size(); ++i)
         {

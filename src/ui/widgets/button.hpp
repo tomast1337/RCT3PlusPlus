@@ -29,8 +29,8 @@ namespace rct3::ui
         float icon_scale = 1; ///< Of the icon's own size
         std::u16string text;
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
         Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow
         bool toggle = false;
         bool on = false;         ///< Toggles only

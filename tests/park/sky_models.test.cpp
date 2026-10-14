@@ -26,3 +26,19 @@ TEST_CASE("a glowing picture keeps the see-through parts it had")
     glowing(image);
     CHECK(image.pixels[3] == 100);
 }
+
+TEST_CASE("the horizon band is the row of the dome's picture at its foot")
+{
+    LoadedSky sky;
+    sky.models.dome.texture = "dome";
+    sky.models.dome.vertices = { { { 0, 10, 0 }, { }, { 0.5f, 0.1f } }, { { 10, 0, 0 }, { }, { 0.5f, 0.9f } } };
+    // Two columns, two rows: the foot (v = 0.9) is the lower row.
+    sky.images["dome"] = { 2, 2, { 10, 20, 30, 255, 40, 50, 60, 255, 255, 0, 0, 255, 0, 255, 0, 255 } };
+    const std::vector<glm::vec4> band = horizon_band(sky);
+    REQUIRE(band.size() == 2);
+    CHECK(band[0] == glm::vec4(1, 0, 0, 1));
+    CHECK(band[1] == glm::vec4(0, 1, 0, 1));
+
+    sky.images.clear();
+    CHECK(horizon_band(sky).empty());
+}

@@ -141,22 +141,24 @@ namespace rct3::park
         return sky;
     }
 
-    std::optional<glm::vec4> horizon_colour(const LoadedSky& sky, float day)
+    std::vector<glm::vec4> horizon_band(const LoadedSky& sky)
     {
         const SkyShape& dome = sky.models.dome;
         const auto image = sky.images.find(dome.texture);
         if (dome.vertices.empty() || image == sky.images.end() || image->second.width == 0 || image->second.height == 0)
-            return std::nullopt;
+            return { };
         const ovl::RgbaImage& picture = image->second;
         const auto lowest = std::ranges::min_element(dome.vertices, { }, [](const ModelVertex& v) { return v.position.y; });
-        const auto texel = [](float t, std::uint32_t size) {
-            const float wrapped = t - std::floor(t);
-            return std::min(static_cast<std::uint32_t>(wrapped * static_cast<float>(size)), size - 1);
-        };
-        const std::size_t at = (static_cast<std::size_t>(texel(lowest->uv.y, picture.height)) * picture.width + texel(day, picture.width)) * 4;
-        if (at + 3 >= picture.pixels.size())
-            return std::nullopt;
-        return glm::vec4(picture.pixels[at], picture.pixels[at + 1], picture.pixels[at + 2], 255) / 255.0f;
+        const float down = lowest->uv.y - std::floor(lowest->uv.y);
+        const auto row = std::min(static_cast<std::size_t>(down * static_cast<float>(picture.height)), static_cast<std::size_t>(picture.height) - 1);
+        const std::size_t start = row * picture.width * 4;
+        if (start + static_cast<std::size_t>(picture.width) * 4 > picture.pixels.size())
+            return { };
+        std::vector<glm::vec4> band;
+        band.reserve(picture.width);
+        for (std::size_t at = start; at < start + static_cast<std::size_t>(picture.width) * 4; at += 4)
+            band.push_back(glm::vec4(picture.pixels[at], picture.pixels[at + 1], picture.pixels[at + 2], 255) / 255.0f);
+        return band;
     }
 
 } // namespace rct3::park

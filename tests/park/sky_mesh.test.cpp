@@ -55,6 +55,18 @@ TEST_CASE("the dome reads one column of its picture, for the time of day")
     CHECK(m.vertices[m.indices[1]].uv.y == doctest::Approx(1));
 }
 
+TEST_CASE("a fading look is the dome again in its column, drawn over the other")
+{
+    const ObjectMesh m = sky_mesh(sky(), { .radius = 1, .day = 0.1f, .faded_day = 0.7f, .fade = 0.25f });
+    REQUIRE(m.batches.size() == 4);
+    CHECK(m.batches[1].texture == "dome");
+    CHECK(m.batches[1].blend == PartBlend::Blended);
+    const GroundVertex& v = m.vertices[m.indices[m.batches[1].first]];
+    CHECK(v.uv.x == doctest::Approx(0.7f));
+    CHECK(v.colour.a == doctest::Approx(0.25f));
+    CHECK(m.vertices[m.indices[m.batches[0].first]].uv.x == doctest::Approx(0.1f));
+}
+
 TEST_CASE("stars show only at night, and clouds drift in two layers")
 {
     const ObjectMesh day = sky_mesh(sky(), { .radius = 1 });

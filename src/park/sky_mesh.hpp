@@ -44,14 +44,17 @@ namespace rct3::park
     struct SkyView
     {
         glm::vec3 eye { 0.0f };
-        float radius = 1;          ///< How far the farthest point of the sky is from the eye
-        float day = kMiddayColumn; ///< Column of the colour picture
-        float night = 0;           ///< 0 by day, up to 1 when the stars show fully
-        float time = 0;            ///< Seconds, for the clouds' drift
+        float radius = 1;                ///< How far the farthest point of the sky is from the eye
+        float day = kMiddayColumn;       ///< Column of the colour picture
+        float faded_day = kMiddayColumn; ///< Column of a look fading out over it
+        float fade = 0;                  ///< How much of the fading look still shows, 0 for none
+        float night = 0;                 ///< 0 by day, up to 1 when the stars show fully
+        float time = 0;                  ///< Seconds, for the clouds' drift
     };
 
-    /// The sky seen from `view`, in drawing order: the coloured dome (opaque), then stars and milky way when
-    /// it is night, then both cloud layers (blended). Shapes without vertices are left out.
+    /// The sky seen from `view`, in drawing order: the coloured dome (opaque), the dome again in the fading
+    /// look while one fades out, then stars and milky way when it is night, then both cloud layers (blended).
+    /// Shapes without vertices are left out.
     [[nodiscard]] ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view);
 
 } // namespace rct3::park

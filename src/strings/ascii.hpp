@@ -19,4 +19,14 @@ namespace rct3::strings
         return std::ranges::equal(a, b, [](char x, char y) { return ascii_lower(x) == ascii_lower(y); });
     }
 
+    /// Orders strings as if both were in lower case; for maps whose keys are found whatever their case.
+    struct LessIgnoringCase
+    {
+        using is_transparent = void;
+        [[nodiscard]] constexpr bool operator()(std::string_view a, std::string_view b) const noexcept
+        {
+            return std::ranges::lexicographical_compare(a, b, [](char x, char y) { return ascii_lower(x) < ascii_lower(y); });
+        }
+    };
+
 } // namespace rct3::strings

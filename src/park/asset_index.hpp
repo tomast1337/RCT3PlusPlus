@@ -5,11 +5,14 @@
 // some name files that do not exist, whose assets live in other files of the same folder. An asset's
 // visuals, shapes and textures are named by symbol alone and often sit in other files nearby, and the same
 // name can be used by unrelated files elsewhere. So the index keeps every overlay's symbols and, for a
-// name in several files, picks the one nearest to where the asking file lives.
+// name in several files, picks the one nearest to where the asking file lives. Names are matched whatever
+// their case: an item can ask for its visual spelled differently from how the visual's own file stores it.
 //
 // An overlay can also name other overlays it takes assets from, such as a shared folder of textures
 // elsewhere in the game. The index remembers those names so the caller can find and add the files.
 #pragma once
+
+#include "strings/ascii.hpp"
 
 #include <filesystem>
 #include <map>
@@ -57,7 +60,7 @@ namespace rct3::park
 
     private:
         std::filesystem::path root_;
-        std::map<std::string, std::vector<std::string>, std::less<>> symbols_;
+        std::map<std::string, std::vector<std::string>, strings::LessIgnoringCase> symbols_;
         std::map<std::string, std::string, std::less<>> overlays_; ///< By lower-case path
         std::set<std::string, std::less<>> references_;            ///< Lower-case paths named by indexed overlays
     };

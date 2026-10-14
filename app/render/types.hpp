@@ -169,6 +169,12 @@ namespace rct3::render
         /// As Textured, but pixels under half opacity are discarded and the rest drawn opaque, so cut-out
         /// pictures (leaves, fences) can write depth without hiding what is behind their holes.
         TexturedCutout,
+        /// As Textured, with location 3 the surface normal (Float3, any length), and the result lit by
+        /// `DrawCommand::light`. Positions and normals are in world space. Both sides of a surface are lit,
+        /// each as seen from the eye; a zero normal is lit as facing up from either side.
+        Lit,
+        /// Lit, with TexturedCutout's holes.
+        LitCutout,
     };
 
     enum class Topology : std::uint8_t
@@ -214,6 +220,17 @@ namespace rct3::render
         float clear_depth = 1.0f;
     };
 
+    /// The light the Lit shaders shade with. Directions point towards the light; colours are linear and may go
+    /// above 1.
+    struct SceneLight
+    {
+        glm::vec3 sun_direction { 0.0f, 1.0f, 0.0f };
+        glm::vec3 sun { 0.0f };    ///< On a surface facing the sun
+        glm::vec3 sky { 1.0f };    ///< From above, on a surface facing up
+        glm::vec3 ground { 0.0f }; ///< From below, on a surface facing down
+        glm::vec3 eye { 0.0f };    ///< Where the scene is seen from, in world space
+    };
+
     /// One draw. With `indices` set, `count` and `first` count indices, otherwise vertices.
     struct DrawCommand
     {
@@ -228,6 +245,7 @@ namespace rct3::render
         TextureHandle texture;          ///< For shaders that sample one
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
+        SceneLight light; ///< For the Lit shaders
     };
 
     /// Counters for one finished frame.

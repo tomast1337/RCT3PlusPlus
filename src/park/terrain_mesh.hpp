@@ -3,8 +3,8 @@
 // The park's ground as triangles: two per tile over its four corner heights, walls where a tile's edge
 // stands higher or lower than its neighbour's (cliffs), and the water bodies' surfaces. The ground is
 // grouped into batches by what it is painted with, a land surface or a cliff face, so each batch draws with
-// one texture. The ground is lit by a fixed sun, smoothly across tiles that meet at the same height; cliffs
-// stay sharp.
+// one texture. Each vertex carries the normal the ground is lit by, smooth across tiles that meet at the same
+// height; cliffs stay sharp.
 //
 // Land surfaces fade into each other across a tile: at each corner every surface of the tiles touching it
 // shows in proportion to how many of them have it. A tile is drawn once per surface touching its corners,
@@ -24,12 +24,15 @@
 namespace rct3::park
 {
 
-    /// Position, shade and texture coordinate: what a textured draw takes.
+    /// Position, colour, texture coordinate and the normal the light falls on: what a textured draw takes.
+    /// The normal need not be of unit length. Zero, for things with no one facing (pictures standing in for
+    /// trees, the far mountains, water), is lit as if it faced up from wherever it is seen.
     struct GroundVertex
     {
         glm::vec3 position { 0.0f };
         glm::vec4 colour { 1.0f };
         glm::vec2 uv { 0.0f };
+        glm::vec3 normal { 0.0f };
     };
 
     /// Position and colour, for an untextured draw.
@@ -79,7 +82,7 @@ namespace rct3::park
     /// which is how much of that surface shows there.
     [[nodiscard]] float surface_share(const save::TerrainGrid& grid, int x, int z, std::uint8_t surface);
 
-    /// The normal (any length) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
+    /// The normal (any length, pointing up) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
     /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
     /// across tiles and stays sharp where a cliff splits it.
     [[nodiscard]] glm::vec3 ground_normal(const save::TerrainGrid& grid, int col, int row, int corner);

@@ -21,6 +21,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
+./nob test -j 4                # at most 4 compilers at once (NOB_JOBS=4 does the same); default one per core
 ./nob fetch                    # optional downloads into downloads/: the fallback font (GNU Unifont)
 build/debug/ovl-dump "/path/to/Main.common.ovl"
 build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound item (omit the name to list them)

@@ -10,6 +10,7 @@
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
+#include "ui/screens/park_bar.hpp"
 #include "ui/screens/tutorial_picker.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -368,6 +369,23 @@ namespace rct3::ui::game_skins
         s.font = FontRole::Small;
         s.delay = 0.5f;
         s.padding = { kLozengeInset.x0 + 4, kLozengeInset.y0 + 4, kLozengeInset.x1 + 4, kLozengeInset.y1 + 4 };
+        return s;
+    }
+
+    /// The bar along the top of the park view.
+    [[nodiscard]] inline ParkBarStyle park_bar_style()
+    {
+        ParkBarStyle s;
+        s.left_frame = "Top_WindowFrame_Left";
+        s.divider = "Top_WindowFrame_Middle";
+        s.right_frame = "Top_WindowFrame_Right";
+        s.objective_icon = kApprenticeHat;
+        s.speed_icons = { "Top_Pause", "Top_Play", "Top_FastForward", "Top_SuperFastForward" };
+        s.picked_speed_icons = { "Top_PauseSelected", "Top_PlaySelected", "Top_FastForwardSelected", "Top_SuperFastForwardSelected" };
+        s.thumb_down = "Top_ThumbsDown";
+        s.thumb_up = "Top_ThumbsUp";
+        s.weather_icons = { "IconSun", "IconCloudWithSun", "IconCloud", "IconLightRain", "IconHeavyRain", "IconThunderstorm", "IconSnow" };
+        s.forecast_arrow = "IconWeatherArrow";
         return s;
     }
 

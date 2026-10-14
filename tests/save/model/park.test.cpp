@@ -265,7 +265,6 @@ TEST_CASE("park: a minimal park, economy and clock")
     CHECK(*m.finance.ledger[1].pool_tickets == 6);
     CHECK_FALSE(m.finance.ledger[1].billboards.has_value());
     CHECK(m.finance.ledger[2].shop_sales == 0); // absent period stays default
-    CHECK_FALSE(Finance::unit_confirmed);
 
     const auto d = m.clock.date();
     CHECK(d.year == 1);

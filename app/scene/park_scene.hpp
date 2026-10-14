@@ -100,7 +100,9 @@ namespace rct3::scene
         float clock = 0;                     ///< Seconds the park has been shown
         save::CalendarDate date;             ///< The park's, for the bar
         float day_fraction = 0.5f;           ///< Through the park's day, for the bar's time
-        ui::ParkBarValues bar;               ///< What the bar shows besides the date
+        std::optional<std::int64_t> cash;    ///< None when the park's money never runs out
+        std::optional<float> temperature;    ///< Degrees Celsius
+        ui::ParkBarValues bar;               ///< What the bar shows; money, temperature and date are written each frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;
@@ -116,7 +118,7 @@ namespace rct3::scene
     /// Its random numbers come from `seed`: the same park and seed give the same park.
     [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed);
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 
     /// True once the player has confirmed leaving.
     [[nodiscard]] bool take_park_leave(ParkScene& scene);

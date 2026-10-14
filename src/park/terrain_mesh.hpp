@@ -43,6 +43,8 @@ namespace rct3::park
     {
         Surface, ///< A land surface, by its index in the terrain types
         Cliff,   ///< A cliff face, likewise
+        PathA,   ///< A ground path's first picture, by its style's index in the park
+        PathB,   ///< Its second picture
     };
 
     /// A run of `count` indices from `first` painted with one surface or cliff face.

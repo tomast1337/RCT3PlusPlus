@@ -12,6 +12,23 @@
 namespace rct3::park
 {
 
+    float surface_share(const save::TerrainGrid& g, int x, int z, std::uint8_t surface)
+    {
+        int touching = 0;
+        int with = 0;
+        for (int row = z - 1; row <= z; ++row)
+        {
+            for (int col = x - 1; col <= x; ++col)
+            {
+                if (!g.contains(col, row))
+                    continue;
+                ++touching;
+                with += g.at(col, row).surface == surface ? 1 : 0;
+            }
+        }
+        return touching > 0 ? static_cast<float>(with) / static_cast<float>(touching) : 0;
+    }
+
     namespace
     {
 
@@ -53,24 +70,6 @@ namespace rct3::park
                 }
             }
         };
-
-        /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it.
-        float surface_share(const save::TerrainGrid& g, int x, int z, std::uint8_t surface)
-        {
-            int touching = 0;
-            int with = 0;
-            for (int row = z - 1; row <= z; ++row)
-            {
-                for (int col = x - 1; col <= x; ++col)
-                {
-                    if (!g.contains(col, row))
-                        continue;
-                    ++touching;
-                    with += g.at(col, row).surface == surface ? 1 : 0;
-                }
-            }
-            return touching > 0 ? static_cast<float>(with) / static_cast<float>(touching) : 0;
-        }
 
         /// A tile's ground, once per surface at its corners, lowest index first. Each layer goes over the
         /// ones before it with an opacity that leaves every corner showing its surfaces in proportion: the
@@ -118,35 +117,6 @@ namespace rct3::park
             return { g.world_x(col + dc), g.at(col, row).corners.at(static_cast<std::size_t>(c)), g.world_z(row + dr) };
         }
 
-        /// The normal of a tile's ground at its corner `c`: the area-weighted sum of the faces of every tile
-        /// meeting at that grid point at the same height, so the ground shades smoothly across tiles and
-        /// stays sharp where a cliff splits it.
-        glm::vec3 smooth_normal(const save::TerrainGrid& g, int col, int row, int c)
-        {
-            const int x = col + c % 2;
-            const int z = row + c / 2;
-            const float height = g.at(col, row).corners.at(static_cast<std::size_t>(c));
-            glm::vec3 sum { 0.0f };
-            for (int r = z - 1; r <= z; ++r)
-            {
-                for (int q = x - 1; q <= x; ++q)
-                {
-                    if (!g.contains(q, r))
-                        continue;
-                    const int k = (x - q) + 2 * (z - r); // That grid point as the neighbour's corner
-                    if (std::abs(g.at(q, r).corners.at(static_cast<std::size_t>(k)) - height) >= kFlat)
-                        continue;
-                    const std::array<glm::vec3, 4> p { corner(g, q, r, 0), corner(g, q, r, 1), corner(g, q, r, 2), corner(g, q, r, 3) };
-                    // Triangles (0, 1, 2) and (3, 2, 1): corners 1 and 2 are in both.
-                    if (k != 3)
-                        sum += glm::cross(p[1] - p[0], p[2] - p[0]);
-                    if (k != 0)
-                        sum += glm::cross(p[2] - p[3], p[1] - p[3]);
-                }
-            }
-            return sum;
-        }
-
         /// The wall between two edges that share their ends in plan: ours (a0, a1) and the neighbour's
         /// (b0, b1). Nothing when they meet.
         void edge_wall(Builder& b, glm::vec3 a0, glm::vec3 a1, glm::vec3 b0, glm::vec3 b1, std::uint8_t cliff_a, std::uint8_t cliff_b, bool along_x)
@@ -159,6 +129,32 @@ namespace rct3::park
         }
 
     } // namespace
+
+    glm::vec3 ground_normal(const save::TerrainGrid& g, int col, int row, int c)
+    {
+        const int x = col + c % 2;
+        const int z = row + c / 2;
+        const float height = g.at(col, row).corners.at(static_cast<std::size_t>(c));
+        glm::vec3 sum { 0.0f };
+        for (int r = z - 1; r <= z; ++r)
+        {
+            for (int q = x - 1; q <= x; ++q)
+            {
+                if (!g.contains(q, r))
+                    continue;
+                const int k = (x - q) + 2 * (z - r); // That grid point as the neighbour's corner
+                if (std::abs(g.at(q, r).corners.at(static_cast<std::size_t>(k)) - height) >= kFlat)
+                    continue;
+                const std::array<glm::vec3, 4> p { corner(g, q, r, 0), corner(g, q, r, 1), corner(g, q, r, 2), corner(g, q, r, 3) };
+                // Triangles (0, 1, 2) and (3, 2, 1): corners 1 and 2 are in both.
+                if (k != 3)
+                    sum += glm::cross(p[1] - p[0], p[2] - p[0]);
+                if (k != 0)
+                    sum += glm::cross(p[2] - p[3], p[1] - p[3]);
+            }
+        }
+        return sum;
+    }
 
     TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water)
     {
@@ -177,7 +173,7 @@ namespace rct3::park
                 low = std::min(low, cell.min_height());
                 high = std::max(high, cell.max_height());
                 const std::array<glm::vec3, 4> c { corner(grid, col, row, 0), corner(grid, col, row, 1), corner(grid, col, row, 2), corner(grid, col, row, 3) };
-                const std::array<glm::vec3, 4> n { smooth_normal(grid, col, row, 0), smooth_normal(grid, col, row, 1), smooth_normal(grid, col, row, 2), smooth_normal(grid, col, row, 3) };
+                const std::array<glm::vec3, 4> n { ground_normal(grid, col, row, 0), ground_normal(grid, col, row, 1), ground_normal(grid, col, row, 2), ground_normal(grid, col, row, 3) };
                 ground_layers(b, grid, col, row, c, n);
                 if (grid.contains(col + 1, row))
                     edge_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false);
@@ -217,6 +213,25 @@ namespace rct3::park
         mesh.low = { grid.world_x(0), low, grid.world_z(0) };
         mesh.high = { grid.world_x(grid.width), high, grid.world_z(grid.height) };
         return mesh;
+    }
+
+    void add_ground(TerrainMesh& mesh, const TerrainMesh& more)
+    {
+        if (more.indices.empty())
+            return;
+        const bool had = !mesh.indices.empty();
+        const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
+        const auto first = static_cast<std::uint32_t>(mesh.indices.size());
+        mesh.vertices.insert(mesh.vertices.end(), more.vertices.begin(), more.vertices.end());
+        for (const std::uint32_t i : more.indices)
+            mesh.indices.push_back(base + i);
+        for (GroundBatch batch : more.batches)
+        {
+            batch.first += first;
+            mesh.batches.push_back(batch);
+        }
+        mesh.low = had ? glm::min(mesh.low, more.low) : more.low;
+        mesh.high = had ? glm::max(mesh.high, more.high) : more.high;
     }
 
 } // namespace rct3::park

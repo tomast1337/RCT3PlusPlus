@@ -3,7 +3,8 @@
 // The park's ground as triangles: two per tile over its four corner heights, walls where a tile's edge
 // stands higher or lower than its neighbour's (cliffs), and the water bodies' surfaces. The ground is
 // grouped into batches by what it is painted with, a land surface or a cliff face, so each batch draws with
-// one texture. Every triangle is flat-shaded by a fixed sun.
+// one texture. The ground is lit by a fixed sun, smoothly across tiles that meet at the same height; cliffs
+// stay sharp.
 //
 // Land surfaces fade into each other across a tile: at each corner every surface of the tiles touching it
 // shows in proportion to how many of them have it. A tile is drawn once per surface touching its corners,
@@ -70,5 +71,17 @@ namespace rct3::park
     inline constexpr glm::vec4 kWaterColour = unit(hex("#336b8ca6"));
 
     [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water);
+
+    /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
+    /// which is how much of that surface shows there.
+    [[nodiscard]] float surface_share(const save::TerrainGrid& grid, int x, int z, std::uint8_t surface);
+
+    /// The normal (any length) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
+    /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
+    /// across tiles and stays sharp where a cliff splits it.
+    [[nodiscard]] glm::vec3 ground_normal(const save::TerrainGrid& grid, int col, int row, int corner);
+
+    /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
+    void add_ground(TerrainMesh& mesh, const TerrainMesh& more);
 
 } // namespace rct3::park

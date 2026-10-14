@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A park played: its ground drawn in 3D under a camera the player moves, and the interface over it. For now
-// it shows the ground, water and placed objects of a park file and, for a tutorial park, the window that
-// leads through the tutorial. Leaving the tutorial asks first; the owner then goes back to the front end.
+// it shows the ground, water and placed objects of a park file, the land round it and the sky and, for a
+// tutorial park, the window that leads through the tutorial. Leaving the tutorial asks first; the owner then goes back to the front end.
 //
 // The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
 // both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the

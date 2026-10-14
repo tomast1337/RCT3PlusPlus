@@ -197,6 +197,7 @@ namespace
         kTime,
         kCamera,
         kQueueLine,
+        kGroundSurface,
     };
 
     Attr u8a(const char* n)
@@ -254,6 +255,7 @@ namespace
             { "GameTime", { f32a("DayNightTime"), f32a("Time"), f32a("ZeroTime") } },
             { "MainCamera", { { "Or", "orientation", 12, { } }, { "Pos", "vector3", 12, { } } } },
             { "QueueLine", { refa("HeadTile"), i32a("QueueSize"), refa("RideInstance"), i32a("StationIndex") } },
+            { "QueueTypeGroundSurface", { colours("Colours"), refa("QueueType") } },
         };
     }
 
@@ -748,6 +750,23 @@ TEST_CASE("load_world: surface style names resolve")
     REQUIRE(l->world->paths.size() == 1);
     CHECK(l->world->paths[0].surface_ref == 60);
     CHECK(l->world->paths[0].surface_name == "Style_A");
+    CHECK_FALSE(l->world->paths[0].surface_colours.has_value());
+}
+
+TEST_CASE("load_world: a queue's ground surface names its style through the queue type, and keeps its colours")
+{
+    Bytes style;
+    style.text(u"Queue_A");
+    Bytes ground;
+    ground.i32(20).i32(1).i32(5).u64(61);
+    Bytes p;
+    p.u8(0).u8(0).u8(0).u8(0).u64(60).u8(0);
+    const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), { kSurface, 61, style }, { kGroundSurface, 60, ground }, { kPathPlain, 9, p } });
+    REQUIRE(l->world);
+    REQUIRE(l->world->paths.size() == 1);
+    CHECK(l->world->paths[0].surface_name == "Queue_A");
+    REQUIRE(l->world->paths[0].surface_colours.has_value());
+    CHECK(*l->world->paths[0].surface_colours == std::array<std::int32_t, 3> { 20, 1, 5 });
 }
 
 TEST_CASE("load_world: older scenery layout without a height adjust")

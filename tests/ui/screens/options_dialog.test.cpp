@@ -60,6 +60,30 @@ TEST_CASE("the custom graphics settings show only with the custom quality")
     CHECK(f.dialog->custom_graphics().visible);
 }
 
+TEST_CASE("the scenic page sets the surroundings whatever the quality level")
+{
+    Fixture f;
+    f.options.set(O::GraphicsQuality, 2); // Not custom
+    f.dialog->tab(OptionsPage::Scenic).click();
+    f.desktop.update({ });
+    CHECK(f.dialog->page() == OptionsPage::Scenic);
+    Widget* page = f.dialog->find("content/page3");
+    REQUIRE(page != nullptr);
+    const bool sky = f.options.flag(O::Sky);
+    const bool clouds = f.options.flag(O::Clouds);
+    const bool trees = f.options.flag(O::Trees3D);
+    for (const auto& c : page->children())
+    {
+        if (auto* tick = dynamic_cast<Tickbox*>(c.get()); tick != nullptr && tick->visible)
+            tick->on_key({ Key::Space });
+    }
+    f.desktop.update({ });
+    CHECK(f.options.flag(O::Sky) != sky);
+    CHECK(f.options.flag(O::Clouds) != clouds);
+    CHECK(f.options.flag(O::Trees3D) != trees);
+    CHECK_FALSE(f.options.flag(O::Fullscreen));
+}
+
 TEST_CASE("the language list shows with two languages, each by its own name")
 {
     Fixture one({ { "English" }, "English", { }, std::nullopt, { } });
@@ -106,8 +130,8 @@ TEST_CASE("the park's music is picked from the files, shuffled or none, and kept
 TEST_CASE("controls change the options at once")
 {
     Fixture f;
-    // The first control on the general page is the full screen tick box.
-    Widget* page = f.dialog->find("content/page0");
+    // The first tick box on the graphics page is full screen.
+    Widget* page = f.dialog->find("content/page2");
     REQUIRE(page != nullptr);
     Tickbox* fullscreen = nullptr;
     for (const auto& c : page->children())

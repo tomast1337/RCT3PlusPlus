@@ -2,6 +2,7 @@
 #include "ui/skin.hpp"
 
 #include <algorithm>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -88,6 +89,12 @@ namespace rct3::ui
         {
             layout.xs = { static_cast<float>(skin.coordinates[0]), static_cast<float>(skin.coordinates[2]) };
             layout.ys = { static_cast<float>(skin.coordinates[1]), static_cast<float>(skin.coordinates[3]) };
+            layout.mirror_x = layout.xs[0] > layout.xs[1];
+            layout.mirror_y = layout.ys[0] > layout.ys[1];
+            if (layout.mirror_x)
+                std::swap(layout.xs[0], layout.xs[1]);
+            if (layout.mirror_y)
+                std::swap(layout.ys[0], layout.ys[1]);
         }
         else
         {
@@ -122,10 +129,12 @@ namespace rct3::ui
             {
                 if (layout.kind == ovl::GuiSkinKind::Frame && row == 1 && column == 1)
                     continue;
-                out.items[out.count++] = {
-                    { xs.target[column].from, ys.target[row].from, xs.target[column].to, ys.target[row].to },
-                    { xs.source[column].from / texture_width, ys.source[row].from / texture_height, xs.source[column].to / texture_width, ys.source[row].to / texture_height },
-                };
+                Rect uv { xs.source[column].from / texture_width, ys.source[row].from / texture_height, xs.source[column].to / texture_width, ys.source[row].to / texture_height };
+                if (layout.mirror_x)
+                    std::swap(uv.x0, uv.x1);
+                if (layout.mirror_y)
+                    std::swap(uv.y0, uv.y1);
+                out.items[out.count++] = { { xs.target[column].from, ys.target[row].from, xs.target[column].to, ys.target[row].to }, uv };
             }
         }
         return out;

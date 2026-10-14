@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::park
 {
@@ -66,9 +67,8 @@ namespace rct3::park
         return { c.r, c.g, c.b };
     }
 
-    Rgb flexi_shade(std::size_t index, std::size_t shade)
+    Rgb flexi_shade(Rgb c, std::size_t shade)
     {
-        const Rgb c = flexi_colour(index);
         shade = std::min(shade, kFlexiShades - 1);
         float keep = 1;  // Share of the colour
         float white = 0; // Share of white added
@@ -90,7 +90,7 @@ namespace rct3::park
     {
         FlexiColours out { };
         for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
-            out[k] = stored[k] >= 0 && static_cast<std::size_t>(stored[k]) < kFlexiColourCount ? static_cast<std::uint8_t>(stored[k]) : 0;
+            out[k] = flexi_colour(stored[k] >= 0 && static_cast<std::size_t>(stored[k]) < kFlexiColourCount ? static_cast<std::size_t>(stored[k]) : 0);
         return out;
     }
 
@@ -124,7 +124,7 @@ namespace rct3::park
         for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
         {
             if ((slots & (1u << k)) == 0)
-                colours[k] = 0;
+                colours[k] = { };
         }
         return colours;
     }
@@ -160,9 +160,8 @@ namespace rct3::park
         if ((slots & 7u) == 0)
             return name;
         const FlexiColours used = used_colours(slots, colours);
-        name += "#";
-        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
-            name += (k > 0 ? "," : "") + std::to_string(used[k]);
+        for (const Rgb& c : used)
+            name += std::format("#{:02x}{:02x}{:02x}", c.r, c.g, c.b);
         return name;
     }
 

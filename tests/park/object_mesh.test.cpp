@@ -100,13 +100,20 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     same.colours = { 1, 5, 9 }; // Only slot 0 is used, so this paints alike
     save::PlacedObject red = object("Wall", 1);
     red.colours = { 27, 27, 1 };
-    const std::vector<save::PlacedObject> objects { grey, same, red };
-    const ObjectMesh m = object_mesh(objects, models, flat());
-    REQUIRE(m.batches.size() == 2);
-    CHECK(m.batches[0].texture == "bricks#1,0,0");
-    CHECK(m.batches[0].picture == "bricks");
-    CHECK(m.batches[0].count == 6);
-    CHECK(m.batches[1].texture == "bricks#27,0,0");
+    red.id = 2;
+    save::PlacedObject custom = object("Wall", 1);
+    custom.id = 3;
+    const std::vector<save::PlacedObject> objects { grey, same, red, custom };
+    const ColourOverrides overrides { { 3, { Rgb { 0x12, 0x34, 0x56 }, Rgb { 1, 1, 1 }, Rgb { } } } };
+    const ObjectMesh m = object_mesh(objects, models, flat(), overrides);
+    // Grey is colour 1, red colour 27; batches come in name order.
+    REQUIRE(m.batches.size() == 3);
+    CHECK(m.batches[0].texture == "bricks#123456#000000#000000");
+    CHECK(m.batches[0].colours == FlexiColours { Rgb { 0x12, 0x34, 0x56 }, Rgb { }, Rgb { } });
+    CHECK(m.batches[1].texture == painted_name("bricks", 0b001, flexi_colours({ 1, 0, 0 })));
+    CHECK(m.batches[1].picture == "bricks");
+    CHECK(m.batches[1].count == 6);
+    CHECK(m.batches[2].texture == painted_name("bricks", 0b001, flexi_colours({ 27, 0, 0 })));
 
     PaletteImage picture;
     picture.width = 1;
@@ -116,8 +123,8 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     ModelPictures pictures;
     pictures.emplace("bricks", picture);
     const auto painted = paint_batches(m.batches, pictures);
-    REQUIRE(painted.size() == 2);
-    const ovl::RgbaImage& r = painted.at("bricks#27,0,0");
+    REQUIRE(painted.size() == 3);
     const Rgb want = flexi_colour(27);
-    CHECK(r.pixels == std::vector<std::uint8_t> { want.r, want.g, want.b, 255 });
+    CHECK(painted.at(m.batches[2].texture).pixels == std::vector<std::uint8_t> { want.r, want.g, want.b, 255 });
+    CHECK(painted.at(m.batches[0].texture).pixels == std::vector<std::uint8_t> { 0x12, 0x34, 0x56, 255 });
 }

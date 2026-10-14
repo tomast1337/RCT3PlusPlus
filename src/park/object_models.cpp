@@ -208,7 +208,17 @@ namespace rct3::park
         part.slots = picture != pictures_.end() ? picture->second.slots : 0;
     }
 
-    std::optional<ObjectModel> ModelLoader::load(std::string_view symbol, std::string_view overlay)
+    std::optional<std::size_t> level_at(const ObjectModel& model, float distance, float scale)
+    {
+        for (std::size_t i = 0; i < model.levels.size(); ++i)
+        {
+            if (distance <= model.levels[i].distance * scale)
+                return i;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<ObjectModel> ModelLoader::load(std::string_view symbol, std::string_view overlay, bool modelled_plants)
     {
         const std::string hint = index_.overlay(overlay).value_or(std::string(overlay));
         const auto item_file = files_->holding(tagged(symbol, kItemTag), hint);
@@ -219,50 +229,74 @@ namespace rct3::park
             return std::nullopt;
         const std::string near = item_file->first;
 
+        // The visuals that can be read, with the file each is in.
+        std::vector<std::pair<const ovl::SceneryVisual*, std::string>> visuals;
         for (const std::string_view visual_name : item->visuals)
         {
             const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near);
             if (!visual_file)
                 continue;
-            const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name);
-            if (visual == nullptr)
-                continue;
-            for (const ovl::SceneryVisualLod& lod : visual->lods)
-            {
-                ObjectModel model;
-                model.positioning = item->positioning;
-                if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
-                {
-                    const auto file = files_->holding(tagged(lod.static_shape, kStaticTag), visual_file->first);
-                    const ovl::StaticShape* shape = file ? static_in(*file->second, lod.static_shape) : nullptr;
-                    if (shape == nullptr)
-                        continue;
-                    for (const ovl::ShapeMesh& mesh : shape->meshes)
-                    {
-                        model.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
-                        set_texture(model.parts.back(), mesh.texture, file->first);
-                    }
-                }
-                else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
-                {
-                    const auto file = files_->holding(tagged(lod.bone_shape, kBoneTag), visual_file->first);
-                    const ovl::BoneShape* shape = file ? bone_in(*file->second, lod.bone_shape) : nullptr;
-                    if (shape == nullptr)
-                        continue;
-                    for (const ovl::BoneMesh& mesh : shape->meshes)
-                    {
-                        model.parts.push_back(part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); }));
-                        set_texture(model.parts.back(), mesh.texture, file->first);
-                    }
-                }
-                else
-                {
-                    continue;
-                }
-                return model;
-            }
+            if (const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name))
+                visuals.emplace_back(visual, visual_file->first);
         }
-        return std::nullopt;
+        if (visuals.empty())
+            return std::nullopt;
+        const auto& [visual, visual_path] = modelled_plants ? visuals.back() : visuals.front();
+
+        ObjectModel model;
+        model.positioning = item->positioning;
+        for (const ovl::SceneryVisualLod& lod : visual->lods)
+        {
+            ModelLevel level;
+            level.distance = lod.distance;
+            if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
+            {
+                const auto file = files_->holding(tagged(lod.static_shape, kStaticTag), visual_path);
+                const ovl::StaticShape* shape = file ? static_in(*file->second, lod.static_shape) : nullptr;
+                if (shape == nullptr)
+                    continue;
+                for (const ovl::ShapeMesh& mesh : shape->meshes)
+                {
+                    level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
+                    set_texture(level.parts.back(), mesh.texture, file->first);
+                }
+            }
+            else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+            {
+                const auto file = files_->holding(tagged(lod.bone_shape, kBoneTag), visual_path);
+                const ovl::BoneShape* shape = file ? bone_in(*file->second, lod.bone_shape) : nullptr;
+                if (shape == nullptr)
+                    continue;
+                for (const ovl::BoneMesh& mesh : shape->meshes)
+                {
+                    level.parts.push_back(part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); }));
+                    set_texture(level.parts.back(), mesh.texture, file->first);
+                }
+            }
+            else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::Billboard))
+            {
+                if (lod.width <= 0 || lod.height <= 0)
+                    continue;
+                Billboard board;
+                board.width = lod.width;
+                board.height = lod.height;
+                // The level gives u0, u1, v0, v1 with v0 at the foot of the picture.
+                board.uv_min = { lod.texcoords[0], lod.texcoords[3] };
+                board.uv_max = { lod.texcoords[1], lod.texcoords[2] };
+                board.texture = texture_key(lod.texture, visual_path);
+                const auto picture = pictures_.find(board.texture);
+                board.slots = picture != pictures_.end() ? picture->second.slots : 0;
+                level.billboard = std::move(board);
+            }
+            else
+            {
+                continue;
+            }
+            model.levels.push_back(std::move(level));
+        }
+        if (model.levels.empty())
+            return std::nullopt;
+        return model;
     }
 
 } // namespace rct3::park

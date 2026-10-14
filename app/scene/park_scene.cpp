@@ -83,7 +83,7 @@ namespace rct3::scene
         }
 
         /// The models of the park's objects, by model key, and the pictures they use.
-        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, park::ModelPictures& pictures)
+        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ModelPictures& pictures)
         {
             const std::vector<std::string> folders = object_folders(install, objects);
             const std::vector<std::string_view> views(folders.begin(), folders.end());
@@ -96,7 +96,7 @@ namespace rct3::scene
                 std::string key = park::model_key(o);
                 if (!tried.emplace(key, true).second)
                     continue;
-                if (auto model = loader.load(o.symbol, o.overlay))
+                if (auto model = loader.load(o.symbol, o.overlay, modelled_plants))
                     models.emplace(std::move(key), std::move(*model));
             }
             pictures = loader.pictures();
@@ -116,6 +116,61 @@ namespace rct3::scene
         template<typename T> std::expected<render::BufferHandle, std::string> upload(render::Device& device, render::BufferUsage usage, const std::vector<T>& items, std::string_view label)
         {
             return device.create_buffer({ usage, std::as_bytes(std::span(items)), label });
+        }
+
+        /// Paints and uploads the pictures of `batches` the scene does not have yet.
+        void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches)
+        {
+            std::vector<park::ObjectBatch> missing;
+            for (const park::ObjectBatch& batch : batches)
+            {
+                if (!scene.object_textures.contains(batch.texture))
+                    missing.push_back(batch);
+            }
+            if (missing.empty())
+                return;
+            auto uploaded = ui::upload_textures(device, park::paint_batches(missing, scene.pictures));
+            if (!uploaded)
+            {
+                logging::logger("park").warning("object pictures: {}", uploaded.error());
+                return;
+            }
+            scene.object_textures.merge(*uploaded);
+        }
+
+        /// Builds the object buffers again when an object's level differs from the one they hold.
+        void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye)
+        {
+            park::ObjectLevels levels = park::object_levels(scene.objects, scene.models, scene.anchors, eye);
+            if (levels == scene.levels && scene.object_indices)
+                return;
+            for (render::BufferHandle& b : { std::ref(scene.object_vertices), std::ref(scene.object_indices) })
+            {
+                if (b)
+                    device.destroy_buffer(b);
+                b = { };
+            }
+            scene.levels = std::move(levels);
+            scene.since_rebuild = 0;
+            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels);
+            scene.object_batches = mesh.batches;
+            add_textures(device, scene, mesh.batches);
+            if (mesh.indices.empty())
+                return;
+            auto vertices = upload(device, render::BufferUsage::Vertex, mesh.vertices, "object vertices");
+            auto indices = upload(device, render::BufferUsage::Index, mesh.indices, "object indices");
+            if (!vertices || !indices)
+            {
+                logging::logger("park").warning("object buffers: {}", !vertices ? vertices.error() : indices.error());
+                if (vertices)
+                    device.destroy_buffer(*vertices);
+                if (indices)
+                    device.destroy_buffer(*indices);
+                scene.object_batches.clear();
+                return;
+            }
+            scene.object_vertices = *vertices;
+            scene.object_indices = *indices;
         }
 
         float scale_for(const render::Device& device, const ParkScene& scene)
@@ -170,7 +225,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const std::filesystem::path& path)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path)
     {
         const auto log = logging::logger("park");
         const auto bytes = read_file(path);
@@ -242,21 +297,9 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
-        park::ModelPictures object_pictures;
-        const park::ObjectModels models = load_models(install, world->objects, object_pictures);
-        const park::ObjectMesh objects = park::object_mesh(world->objects, models, scene.grid);
-        scene.object_batches = objects.batches;
-        if (!objects.indices.empty())
-        {
-            auto object_vertices = upload(device, render::BufferUsage::Vertex, objects.vertices, "object vertices");
-            if (!object_vertices)
-                return fail(object_vertices.error());
-            scene.object_vertices = *object_vertices;
-            auto object_indices = upload(device, render::BufferUsage::Index, objects.indices, "object indices");
-            if (!object_indices)
-                return fail(object_indices.error());
-            scene.object_indices = *object_indices;
-        }
+        scene.models = load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.pictures);
+        scene.objects = std::move(world->objects);
+        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid);
         const render::VertexLayout object_layout { sizeof(park::GroundVertex), kGroundAttributes };
         auto solid = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .label = "objects" });
         if (!solid)
@@ -270,10 +313,7 @@ namespace rct3::scene
         if (!see_through)
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
-        auto object_textures = ui::upload_textures(device, park::paint_batches(objects.batches, object_pictures));
-        if (!object_textures)
-            return fail(object_textures.error());
-        scene.object_textures = std::move(*object_textures);
+        refresh_objects(device, scene, park::eye(scene.camera));
 
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
@@ -282,7 +322,10 @@ namespace rct3::scene
             scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::question_box_style(), strings, std::move(**tutorial));
         scene.desktop->tooltip_style = skins::tooltip_style();
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
-        log.info("{} objects drawn, {} without a model, {} models, {} pictures, {} triangles", objects.placed, objects.missing, models.size(), scene.object_textures.size(), objects.indices.size() / 3);
+        const auto drawn = std::ranges::count_if(scene.levels, [](std::int8_t l) { return l != park::kNotDrawn; });
+        const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
+        const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
+        log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
         return scene;
     }
 
@@ -310,6 +353,12 @@ namespace rct3::scene
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over = desktop.update(pointer, keys, { elapsed, scene.current_fonts });
         move_camera(scene, input, over, elapsed);
+        const glm::vec3 viewer = park::eye(scene.camera);
+        scene.since_rebuild += elapsed;
+        if (scene.since_rebuild >= kObjectRebuildInterval)
+            refresh_objects(device, scene, viewer);
+        scene.billboards = park::billboard_mesh(scene.objects, scene.models, scene.anchors, scene.levels, viewer);
+        add_textures(device, scene, scene.billboards.batches);
 
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
@@ -366,6 +415,29 @@ namespace rct3::scene
         }
         if (scene.object_indices)
             draw_objects(false);
+        if (!scene.billboards.indices.empty())
+        {
+            const auto vertices = device.allocate_transient(std::as_bytes(std::span(scene.billboards.vertices)));
+            const auto indices = device.allocate_transient(std::as_bytes(std::span(scene.billboards.indices)));
+            if (vertices && indices)
+            {
+                for (const park::ObjectBatch& batch : scene.billboards.batches)
+                {
+                    const auto texture = scene.object_textures.find(batch.texture);
+                    render::DrawCommand draw;
+                    draw.pipeline = scene.cutout_pipeline;
+                    draw.vertices = *vertices;
+                    draw.indices = *indices;
+                    draw.index_type = render::IndexType::U32;
+                    draw.first = batch.first;
+                    draw.count = batch.count;
+                    draw.transform = transform;
+                    draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                    draw.filter = render::Filter::Linear;
+                    device.draw(draw);
+                }
+            }
+        }
         if (scene.water_count > 0)
         {
             render::DrawCommand draw;

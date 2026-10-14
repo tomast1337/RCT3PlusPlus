@@ -493,7 +493,7 @@ int main(int argc, char** argv)
         }
         if (requests.tutorial)
         {
-            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, *requests.tutorial);
+            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, *requests.tutorial);
             if (loaded)
             {
                 park = std::move(*loaded);

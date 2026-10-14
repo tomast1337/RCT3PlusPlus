@@ -8,6 +8,8 @@
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
+#include "park/path_supports.hpp"
+#include "park/queue_fences.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
 #include "save/model/tutorial.hpp"
@@ -88,24 +90,24 @@ namespace rct3::scene
         }
 
         /// The models of the park's objects, by model key, and the pictures they use.
-        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ModelPictures& pictures)
+        /// Adds the models of `objects` that `models` does not have yet, and their pictures.
+        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures)
         {
             const std::vector<std::string> folders = object_folders(install, objects);
             const std::vector<std::string_view> views(folders.begin(), folders.end());
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
             park::ModelLoader loader(index);
-            park::ObjectModels models;
             std::map<std::string, bool, std::less<>> tried;
             for (const save::PlacedObject& o : objects)
             {
                 std::string key = park::model_key(o);
-                if (!tried.emplace(key, true).second)
+                if (models.contains(key) || !tried.emplace(key, true).second)
                     continue;
                 if (auto model = loader.load(o.symbol, o.overlay, modelled_plants))
                     models.emplace(std::move(key), std::move(*model));
             }
-            pictures = loader.pictures();
-            return models;
+            for (const auto& [key, picture] : loader.pictures())
+                pictures.try_emplace(key, picture);
         }
 
         std::expected<std::vector<std::byte>, std::string> read_file(const std::filesystem::path& path)
@@ -396,8 +398,31 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
-        scene.models = load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.pictures);
+        load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
+        {
+            // What a park does not keep but builds when it loads: supports under raised paths and railings along queues.
+            std::vector<save::PlacedObject> built;
+            if (const auto found = install.find(std::string(park::kSupportOverlay) + ".common.ovl"))
+            {
+                if (const auto sets = park::load_support_sets(*found))
+                    built = park::path_supports(world->paths, scene.objects, scene.models, scene.grid, *sets);
+                else
+                    log.warning("supports: {}", sets.error());
+            }
+            std::uint64_t last_id = 0;
+            for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(built) })
+            {
+                for (const save::PlacedObject& o : list)
+                    last_id = std::max(last_id, o.id);
+            }
+            const std::size_t supports = built.size();
+            std::vector<save::PlacedObject> fences = park::queue_fences(world->paths, last_id);
+            log.info("{} supports, {} queue railings", supports, fences.size());
+            built.insert(built.end(), std::make_move_iterator(fences.begin()), std::make_move_iterator(fences.end()));
+            load_models(install, built, false, scene.models, scene.pictures);
+            scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
+        }
         if (options.flag(config::GameOption::OffMapTrees))
         {
             random::RandomState scenery = random::stream(seed, random::RandomStream::Scenery);

@@ -695,6 +695,8 @@ namespace rct3::save
                 q.start_direction = byte_or(o.find(names::kPathStartDir));
                 q.end_direction = byte_or(o.find(names::kPathEndDir));
                 q.fence_ref = get_ref(fence).value_or(0);
+                q.fence_symbol = res.symbol(q.fence_ref);
+                q.fence_overlay = res.overlay(q.fence_ref);
                 q.queue_line_ref = get_ref(line).value_or(0);
                 if (const Value* c = o.find(names::kPathFenceColours); c && c->kind() == ValueKind::Struct)
                 {

@@ -239,7 +239,7 @@ namespace
         for (const auto& a : { u8a("SlopeType"), i32a("BaseHeight"), i32a("QuantisedHeight"), refa("SceneryItem") })
             flying.push_back(a);
         auto queue = flying;
-        for (const auto& a : { u8a("StartDirection"), u8a("EndDirection"), colours("FenceFlexiColours"), refa("QueueLine") })
+        for (const auto& a : { u8a("StartDirection"), u8a("EndDirection"), colours("FenceFlexiColours"), refa("QueueLine"), refa("FenceEntry") })
             queue.push_back(a);
         return {
             { "RCT3Terrain", { { "EngineTerrain", "GE_Terrain", 0, { } }, { "SkirtTrees", "SkirtTrees", 0, { } }, { "BlockingScenery", "BlockingScenery", 0, { } } } },
@@ -273,7 +273,7 @@ namespace
         return { kWater, id, p };
     }
 
-    Obj path_obj(std::uint32_t cls, std::uint64_t id, std::uint8_t col, std::uint8_t row, std::uint8_t kind, std::uint64_t scenery = 0, std::int32_t base = -1, std::int32_t quant = 0, std::uint8_t slope = 0)
+    Obj path_obj(std::uint32_t cls, std::uint64_t id, std::uint8_t col, std::uint8_t row, std::uint8_t kind, std::uint64_t scenery = 0, std::int32_t base = -1, std::int32_t quant = 0, std::uint8_t slope = 0, std::uint64_t fence = 0)
     {
         Bytes p;
         p.u8(col).u8(255).u8(kind).u8(row).u64(0).u8(255);
@@ -281,7 +281,7 @@ namespace
         {
             p.u8(slope).i32(base).i32(quant).u64(scenery);
             if (cls == kPathQueue)
-                p.u8(1).u8(2).i32(7).i32(0).i32(0).u64(500);
+                p.u8(1).u8(2).i32(7).i32(0).i32(0).u64(500).u64(fence);
         }
         return { cls, id, p };
     }
@@ -645,7 +645,7 @@ TEST_CASE("load_world: a complete synthetic save")
             { kSurface, 60, surface },
             { kPathPlain, 200, path_obj(kPathPlain, 200, 1, 0, 0).payload },
             path_obj(kPathFlying, 201, 2, 1, 1, 400, -1, 4, 1),
-            path_obj(kPathQueue, 210, 0, 1, 2, 0, 12, 0, 3),
+            path_obj(kPathQueue, 210, 0, 1, 2, 0, 12, 0, 3, 70),
             { kQueueLine, 500, queue_line },
             entry_obj(70, u"Tree_01"),
             scenery_obj(300, 1, 1, 6, 70, 300, true, 2),
@@ -691,6 +691,9 @@ TEST_CASE("load_world: a complete synthetic save")
     CHECK(q.queue->end_direction == 2);
     CHECK(q.queue->fence_colours[0] == 7);
     CHECK(q.queue->queue_line_ref == 500);
+    CHECK(q.queue->fence_ref == 70);
+    CHECK(q.queue->fence_symbol == "Tree_01");
+    CHECK(q.queue->fence_overlay == "Scenery/Trees");
 
     REQUIRE(w.queue_lines.size() == 1);
     CHECK(w.queue_lines[0].head_ref == 210);

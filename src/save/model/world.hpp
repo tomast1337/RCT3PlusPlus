@@ -226,6 +226,8 @@ namespace rct3::save
         std::uint8_t start_direction = 0;
         std::uint8_t end_direction = 0;
         std::uint64_t fence_ref = 0;
+        std::string fence_symbol;  ///< Asset symbol of the fence along the queue's sides, empty when it does not resolve
+        std::string fence_overlay; ///< Overlay holding it, as PlacedObject::overlay
         std::array<std::int32_t, 3> fence_colours { };
         std::uint64_t queue_line_ref = 0;
     };

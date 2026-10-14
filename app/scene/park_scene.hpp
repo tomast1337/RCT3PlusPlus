@@ -11,6 +11,7 @@
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
 
+#include "config/game_options.hpp"
 #include "park/camera.hpp"
 #include "park/object_mesh.hpp"
 #include "park/terrain_mesh.hpp"
@@ -44,6 +45,9 @@ namespace rct3::scene
         bool zoom_out_key = false;
     };
 
+    /// The object buffers are built again at most this often, in seconds, while the view moves.
+    inline constexpr float kObjectRebuildInterval = 0.25f;
+
     /// Behind the ground, until there is a sky.
     inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
 
@@ -60,9 +64,16 @@ namespace rct3::scene
         render::PipelineHandle water_pipeline;
         ui::UiTextures ground_textures;
         render::TextureHandle blank; ///< For ground without a picture
+        std::vector<save::PlacedObject> objects;
+        park::ObjectModels models;
+        park::ModelPictures pictures; ///< For painting the batches new levels bring
+        std::vector<glm::vec3> anchors;
+        park::ObjectLevels levels; ///< Those the object buffers hold
+        float since_rebuild = 0;   ///< Seconds since the object buffers were last built
         std::vector<park::ObjectBatch> object_batches;
         render::BufferHandle object_vertices;
         render::BufferHandle object_indices;
+        park::ObjectMesh billboards;                 ///< Built again each frame, as they turn to face the eye
         render::PipelineHandle object_pipeline;      ///< Opaque parts
         render::PipelineHandle cutout_pipeline;      ///< Parts with holes
         render::PipelineHandle see_through_pipeline; ///< Blended parts, drawn last without writing depth
@@ -78,8 +89,8 @@ namespace rct3::scene
         bool leave = false;
     };
 
-    /// Loads the park file at `path`. The strings must outlive the scene.
-    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const std::filesystem::path& path);
+    /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
+    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path);
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 

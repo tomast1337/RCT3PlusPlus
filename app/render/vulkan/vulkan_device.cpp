@@ -21,6 +21,26 @@ namespace rct3::render::vulkan
     namespace
     {
 
+        // What every shader finds in its push constants (app/shaders): the draw's transform, then the light of
+        // the Lit shaders with the eye in the w of the first three. 128 bytes is all a device must offer.
+        struct PushBlock
+        {
+            glm::mat4 transform;
+            glm::vec4 sun_direction;
+            glm::vec4 sun;
+            glm::vec4 sky;
+            glm::vec4 ground;
+        };
+        static_assert(sizeof(PushBlock) == 128);
+
+        constexpr VkShaderStageFlags kPushStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        PushBlock push_block(const DrawCommand& command)
+        {
+            const SceneLight& l = command.light;
+            return { command.transform, glm::vec4(l.sun_direction, l.eye.x), glm::vec4(l.sun, l.eye.y), glm::vec4(l.sky, l.eye.z), glm::vec4(l.ground, 0.0f) };
+        }
+
         void check_imgui(VkResult result)
         {
             if (result != VK_SUCCESS)
@@ -497,7 +517,7 @@ namespace rct3::render::vulkan
         check(vkCreateCommandPool(device_, &pool, nullptr, &upload_pool_), "vkCreateCommandPool");
     }
 
-    // All pipelines share one layout: a push constant block with the draw's transform, then a texture set
+    // All pipelines share one layout: a push constant block with the draw's transform and light, then a texture set
     // and a sampler set that only textured shaders read. Also creates the pool those sets come from.
     void VulkanDevice::create_pipeline_layout()
     {
@@ -530,8 +550,8 @@ namespace rct3::render::vulkan
         check(vkCreateDescriptorPool(device_, &pool, nullptr, &descriptor_pool_), "vkCreateDescriptorPool");
 
         VkPushConstantRange push { };
-        push.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        push.size = sizeof(glm::mat4);
+        push.stageFlags = kPushStages;
+        push.size = sizeof(PushBlock);
 
         const VkDescriptorSetLayout sets[] = { texture_set_layout_, sampler_set_layout_ };
         VkPipelineLayoutCreateInfo layout { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -743,7 +763,8 @@ namespace rct3::render::vulkan
 
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->second.pipeline);
-        vkCmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof command.transform, &command.transform);
+        const PushBlock block = push_block(command);
+        vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
         if (command.texture)
         {
             const auto texture = textures_.find(command.texture.id);

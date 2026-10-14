@@ -21,6 +21,7 @@
 #include "random/generator.hpp"
 #include "render/device.hpp"
 #include "save/model/park.hpp"
+#include "simulation/day_clock.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
@@ -96,6 +97,7 @@ namespace rct3::scene
         ui::UiTextures sky_textures;
         render::PipelineHandle sky_pipeline; ///< Drawn first, behind everything, without depth
         render::Color horizon = kParkSky;    ///< What shows below the sky
+        std::vector<glm::vec4> horizon_band; ///< Of the sky's picture, for the horizon at each time of day
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
         save::CalendarDate date;             ///< The park's, for the bar
@@ -103,6 +105,8 @@ namespace rct3::scene
         std::optional<std::int64_t> cash;    ///< None when the park's money never runs out
         std::optional<float> temperature;    ///< Degrees Celsius
         ui::ParkBarValues bar;               ///< What the bar shows; money, temperature and date are written each frame
+        simulation::DayClock day;            ///< The park's time of day
+        render::SceneLight light;            ///< What the day clock shows, for this frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

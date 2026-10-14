@@ -46,8 +46,9 @@ TEST_CASE("each tile is two triangles, batched by its surface")
     CHECK(m.low.x == doctest::Approx(-8));
     CHECK(m.high.x == doctest::Approx(4));
     CHECK(m.high.z == doctest::Approx(12));
-    // Flat ground faces the sun's height alone; every vertex the same shade.
-    CHECK(m.vertices[0].colour.r == doctest::Approx(m.vertices[5].colour.r));
+    // Flat ground faces straight up at every vertex.
+    CHECK(glm::normalize(m.vertices[0].normal).y == doctest::Approx(1));
+    CHECK(glm::normalize(m.vertices[5].normal).y == doctest::Approx(1));
 }
 
 TEST_CASE("surfaces fade into each other across the tiles next to them")
@@ -113,7 +114,8 @@ TEST_CASE("a grid whose cells do not match its size makes nothing")
 TEST_CASE("ground shades smoothly where tiles meet, and sharply at cliffs")
 {
     // Flat at 0, a slope up to 4, then flat at `top`.
-    // Shades of the ground vertices at grid point x = 0 (where the slope meets the top), z = 4, height y.
+    // How far up the ground vertices face at grid point x = 0 (where the slope meets the top), z = 4, height
+    // y: 1 for flat ground, less on a slope.
     const auto shades_at = [](float top, float x, float y) {
         save::TerrainGrid g = flat(3, 1);
         g.cells[1].corners = { 0, 4, 0, 4 };
@@ -128,7 +130,7 @@ TEST_CASE("ground shades smoothly where tiles meet, and sharply at cliffs")
             {
                 const GroundVertex& v = m.vertices[m.indices[i]];
                 if (v.position.x == doctest::Approx(x) && v.position.y == doctest::Approx(y) && v.position.z == doctest::Approx(4))
-                    shades.push_back(v.colour.r);
+                    shades.push_back(glm::normalize(v.normal).y);
             }
         }
         return shades;

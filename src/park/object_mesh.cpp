@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
-#include "park/lighting.hpp"
 #include "park/object_placement.hpp"
 
 #include <utility>
@@ -113,10 +112,9 @@ namespace rct3::park
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
                 for (const ModelVertex& v : part.vertices)
                 {
-                    const float s = sunlight(turn * v.normal);
                     glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
                     at.y += glm::dot(glm::vec2(at.x, at.z) - anchor, rise);
-                    run.vertices.push_back({ at, { s, s, s, 1 }, v.uv });
+                    run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, turn * v.normal });
                 }
                 for (const std::uint32_t i : part.indices)
                     run.indices.push_back(base + i);
@@ -129,8 +127,6 @@ namespace rct3::park
 
     ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
     {
-        // Lit as a surface facing up, so turning round a tree does not change its shade.
-        const float s = sunlight({ 0, 1, 0 });
         ObjectMesh mesh;
         std::map<Key, Run> runs;
         for (std::size_t index = 0; index < objects.size() && index < levels.size() && index < anchors.size(); ++index)
@@ -157,7 +153,9 @@ namespace rct3::park
             run.picture = board->texture;
             run.colours = used_colours(board->slots, colours);
             const auto first = static_cast<std::uint32_t>(run.vertices.size());
-            const glm::vec4 shade { s, s, s, 1 };
+            // Without a normal, so it is lit as a surface facing up and turning round a tree does not change its
+            // shade.
+            const glm::vec4 shade { 1.0f };
             run.vertices.push_back({ base - right + up, shade, board->uv_min });
             run.vertices.push_back({ base + right + up, shade, { board->uv_max.x, board->uv_min.y } });
             run.vertices.push_back({ base + right, shade, board->uv_max });

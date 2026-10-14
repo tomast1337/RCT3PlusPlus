@@ -26,6 +26,13 @@ namespace
     const std::uint32_t kTexturedCutoutFrag[] =
 #include "textured_cutout.frag.inc"
         ;
+    const std::uint32_t kLitVert[] =
+#include "lit.vert.inc"
+        ;
+    const std::uint32_t kLitFrag[] =
+#include "lit.frag.inc"
+        ;
+
 } // namespace
 
 namespace rct3::render::vulkan
@@ -38,6 +45,7 @@ namespace rct3::render::vulkan
         {
             std::span<const std::uint32_t> vertex;
             std::span<const std::uint32_t> fragment;
+            bool cutout = false; ///< The fragment stage's specialisation constant 0
         };
 
         ShaderCode shader_code(Shader shader)
@@ -50,6 +58,10 @@ namespace rct3::render::vulkan
                     return { kTexturedVert, kTexturedFrag };
                 case Shader::TexturedCutout:
                     return { kTexturedVert, kTexturedCutoutFrag };
+                case Shader::Lit:
+                    return { kLitVert, kLitFrag };
+                case Shader::LitCutout:
+                    return { kLitVert, kLitFrag, true };
             }
             return { };
         }
@@ -355,6 +367,10 @@ namespace rct3::render::vulkan
             stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             stages[1].module = frag;
             stages[1].pName = "main";
+            const VkBool32 cutout = code.cutout ? VK_TRUE : VK_FALSE;
+            const VkSpecializationMapEntry entry { 0, 0, sizeof cutout };
+            const VkSpecializationInfo specialisation { 1, &entry, sizeof cutout, &cutout };
+            stages[1].pSpecializationInfo = &specialisation;
 
             VkVertexInputBindingDescription binding { 0, desc.layout.stride, VK_VERTEX_INPUT_RATE_VERTEX };
             std::array<VkVertexInputAttributeDescription, kMaxVertexAttributes> attributes { };

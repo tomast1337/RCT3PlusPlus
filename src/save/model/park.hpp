@@ -13,7 +13,7 @@
 //  - Enumerated values are kept as integers. Values this code has no name for are never an error.
 //  - An object reference that is null or whose target is not in the file means "none" (nullopt / skipped).
 //  - A float used as "unset" with a negative sentinel becomes nullopt (see GameClock).
-//  - Money is an integer. Its unit is NOT confirmed; see Finance::unit_confirmed.
+//  - Money is an integer count of hundredths of the currency unit.
 #pragma once
 
 #include "save/save_file.hpp"
@@ -165,10 +165,6 @@ namespace rct3::save
 
     struct Finance
     {
-        /// Not confirmed against any display routine; amounts are most likely hundredths of the currency unit.
-        /// Callers must not format them as currency without settling that.
-        static constexpr bool unit_confirmed = false;
-
         std::int32_t cash = 0;
         std::int32_t loan = 0;
         std::int32_t max_loan = 0;
@@ -180,7 +176,14 @@ namespace rct3::save
         std::int32_t rights_sell_cost = 0; ///< Stored negative
         std::int32_t average_guest_cash = 0;
         std::int32_t average_guest_bank_funds = 0;
-        std::uint32_t flags = 0; ///< Raw, meaning unresolved
+        std::uint32_t flags = 0; ///< Raw; only kUnlimitedCash is known
+
+        /// Set in parks where money never runs out, as in sandbox ones.
+        static constexpr std::uint32_t kUnlimitedCash = 1u << 0;
+        [[nodiscard]] bool unlimited() const noexcept
+        {
+            return (flags & kUnlimitedCash) != 0;
+        }
 
         Series cash_less_loan, company_value, expenditure, income, park_value, share_price, weekly_profit;
 

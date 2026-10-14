@@ -19,8 +19,10 @@
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
+#include "ui/money_text.hpp"
 #include "ui/scale.hpp"
 #include "ui/screens/tutorial_guide.hpp"
+#include "ui/temperature_text.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
@@ -52,6 +54,8 @@ namespace rct3::scene
 
         constexpr std::string_view kGuideName = "tutorial";
         constexpr std::string_view kBarName = "bar";
+        constexpr std::string_view kUnlimitedCash = "Cash_Unlimited";
+        constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
         constexpr std::string_view kYes = "SMB_Label_Yes";
@@ -474,6 +478,8 @@ namespace rct3::scene
         {
             if (model->has_clock)
                 scene.date = model->clock.date();
+            if (model->has_finance && !model->finance.unlimited())
+                scene.cash = model->finance.cash;
             if (model->has_park)
             {
                 if (const auto guests = model->park.guests_in_park.latest())
@@ -488,6 +494,7 @@ namespace rct3::scene
         }
         if (world->weather)
         {
+            scene.temperature = world->weather->temperature;
             scene.bar.weather = world->weather->type;
             scene.bar.forecast = world->weather->forecast;
         }
@@ -507,7 +514,7 @@ namespace rct3::scene
         return scene;
     }
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
@@ -550,6 +557,10 @@ namespace rct3::scene
             // The game writes its times with am and pm in English only.
             const bool twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             const auto minutes = static_cast<std::int32_t>(std::lround(scene.day_fraction * 24 * 60));
+            const ui::Currency money = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
+            scene.bar.money = scene.cash ? ui::money_text(money, *scene.cash) : std::u16string(assets.strings->get(kUnlimitedCash));
+            if (scene.temperature)
+                scene.bar.temperature = ui::temperature_text(*scene.temperature, options.choice(config::GameOption::TemperatureUnits) == kFahrenheit);
             scene.bar.date = ui::park_bar_date(*assets.strings, scene.date.month, scene.date.year + 1, minutes, twelve_hour);
             bar->show(scene.bar);
         }

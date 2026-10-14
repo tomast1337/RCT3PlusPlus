@@ -12,7 +12,8 @@
 // the matching quarter of that cell. A tile whose four quarters all want the same cell is drawn whole.
 //
 // A raised or sloping path beside a tile counts as path there when one of its ends sits on the ground at
-// the edge they share, so a ground path runs on into the foot of a slope.
+// the edge they share, so a ground path runs on into the foot of a slope. So does a queue on the ground
+// that is open towards the tile.
 //
 // Pictures and cells (u across, v down):
 //
@@ -70,6 +71,7 @@ namespace rct3::park
         std::vector<std::string> styles;                  ///< System names, in the order first met
         std::vector<std::int16_t> tiles;                  ///< Row by row: index into styles, or kNoPath
         std::map<std::size_t, std::vector<float>> raised; ///< By tile index: heights the raised paths there end at
+        std::map<std::size_t, std::uint8_t> queues;       ///< By tile index: ground queue's open sides, bit per TileSide
     };
 
     inline constexpr std::int16_t kNoPath = -1;
@@ -88,8 +90,8 @@ namespace rct3::park
     [[nodiscard]] bool has_ground_path(const GroundPathMap& map, int col, int row) noexcept;
 
     /// True when the path on tile (col, row) carries on onto the tile (dc, dr) beside it (one step along x
-    /// or z): a ground path is there, or a raised path there ends level with this tile's ground at their
-    /// shared edge.
+    /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
+    /// ends level with this tile's ground at their shared edge.
     [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, int col, int row, int dc, int dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.

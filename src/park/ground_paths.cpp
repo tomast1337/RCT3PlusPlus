@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground_paths.hpp"
 
+#include "park/ground_queues.hpp"
 #include "park/lighting.hpp"
 
 #include <algorithm>
@@ -74,6 +75,16 @@ namespace rct3::park
             if (!grid.contains(p.col, p.row))
                 continue;
             const std::size_t at = static_cast<std::size_t>(p.row) * static_cast<std::size_t>(map.width) + p.col;
+            if (is_ground_queue(p))
+            {
+                auto& sides = map.queues[at];
+                for (const std::uint8_t d : { p.queue->start_direction, p.queue->end_direction })
+                {
+                    if (const auto side = side_of(d))
+                        sides = static_cast<std::uint8_t>(sides | 1u << static_cast<unsigned>(*side));
+                }
+                continue;
+            }
             if (p.elevation)
             {
                 // Which end the stored height is at is not needed: either end may meet the ground.
@@ -112,7 +123,15 @@ namespace rct3::park
             return true;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
             return false;
-        const auto found = map.raised.find(static_cast<std::size_t>(row + dr) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col + dc));
+        const std::size_t there = static_cast<std::size_t>(row + dr) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col + dc);
+        if (const auto queue = map.queues.find(there); queue != map.queues.end())
+        {
+            // The neighbour's side facing back towards this tile.
+            const TileSide facing = dc > 0 ? TileSide::Left : dc < 0 ? TileSide::Right : dr > 0 ? TileSide::Back : TileSide::Front;
+            if ((queue->second & 1u << static_cast<unsigned>(facing)) != 0)
+                return true;
+        }
+        const auto found = map.raised.find(there);
         if (found == map.raised.end())
             return false;
         // This tile's two corners on the shared edge.

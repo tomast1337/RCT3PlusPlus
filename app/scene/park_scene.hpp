@@ -14,6 +14,7 @@
 #include "config/game_options.hpp"
 #include "park/camera.hpp"
 #include "park/object_mesh.hpp"
+#include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/desktop.hpp"
@@ -48,8 +49,10 @@ namespace rct3::scene
     /// The object buffers are built again at most this often, in seconds, while the view moves.
     inline constexpr float kObjectRebuildInterval = 0.25f;
 
-    /// Behind the ground, until there is a sky.
+    /// Behind the ground when the sky cannot be read.
     inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
+    /// How far the sky is drawn from the eye: inside the camera's far limit.
+    inline constexpr float kSkyRadius = park::kFar * 0.9f;
 
     struct ParkScene
     {
@@ -78,6 +81,12 @@ namespace rct3::scene
         render::PipelineHandle cutout_pipeline;      ///< Parts with holes
         render::PipelineHandle see_through_pipeline; ///< Blended parts, drawn last without writing depth
         ui::UiTextures object_textures;
+        park::SkyModels sky;
+        park::ObjectMesh sky_mesh; ///< Built again each frame round the eye
+        ui::UiTextures sky_textures;
+        render::PipelineHandle sky_pipeline; ///< Drawn first, behind everything, without depth
+        render::Color horizon = kParkSky;    ///< What shows below the sky
+        float clock = 0;                     ///< Seconds the park has been shown
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;
@@ -96,6 +105,9 @@ namespace rct3::scene
 
     /// True once the player has confirmed leaving.
     [[nodiscard]] bool take_park_leave(ParkScene& scene);
+
+    /// The colour to clear to before drawing the park.
+    [[nodiscard]] render::Color park_background(const ParkScene& scene);
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
 

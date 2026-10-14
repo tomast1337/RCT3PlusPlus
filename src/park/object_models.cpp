@@ -8,6 +8,7 @@
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace rct3::park
@@ -246,6 +247,9 @@ namespace rct3::park
         ObjectModel model;
         model.positioning = item->positioning;
         model.sway = visual->sway;
+        model.support_group = item->group;
+        if (!item->squares.empty())
+            model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
         for (const ovl::SceneryVisualLod& lod : visual->lods)
         {
             ModelLevel level;

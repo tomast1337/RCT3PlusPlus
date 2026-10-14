@@ -617,7 +617,7 @@ int main(int argc, char** argv)
                 });
                 prof::section("Draw", [&] {
                     device->begin_frame();
-                    device->begin_pass({ .clear_color = park ? rct3::scene::kParkSky : rct3::render::hex("#0d0f14") });
+                    device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : rct3::render::hex("#0d0f14") });
                     if (phase == Phase::Intro)
                     {
                         rct3::scene::draw_startup_logo(*device, *startup);

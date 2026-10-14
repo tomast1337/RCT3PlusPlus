@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/terrain_mesh.hpp"
 
+#include "park/lighting.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -13,20 +15,12 @@ namespace rct3::park
     namespace
     {
 
-        const glm::vec3 kSun = glm::normalize(glm::vec3(-0.4f, 1.0f, -0.3f));
-        constexpr float kAmbient = 0.45f; ///< Light on a face turned away from the sun
-
         using Key = std::pair<GroundPaint, std::uint8_t>;
         using Triangle = std::array<glm::vec3, 3>;
 
         float shade(const Triangle& t)
         {
-            const glm::vec3 n = glm::cross(t[1] - t[0], t[2] - t[0]);
-            const float length = glm::length(n);
-            if (length <= 0)
-                return 1;
-            const float lit = std::abs(glm::dot(n / length, kSun));
-            return kAmbient + (1 - kAmbient) * lit;
+            return sunlight(glm::cross(t[1] - t[0], t[2] - t[0]));
         }
 
         /// Collects triangles per paint, then lays them out batch by batch.

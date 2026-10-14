@@ -356,14 +356,11 @@ namespace
         if (!mkdir_p(gen_dir))
             return false;
 
-        for (const auto& shader : find_files("app/shaders", ".vert"))
+        // Stages compile on their own: a program may share another's vertex stage.
+        for (const char* ext : { ".vert", ".frag" })
         {
-            for (const char* ext : { ".vert", ".frag" })
+            for (const auto& source : find_files("app/shaders", ext))
             {
-                fs::path source = shader;
-                source.replace_extension(ext);
-                if (!fs::exists(source))
-                    continue;
                 const fs::path output = gen_dir / (source.filename().string() + ".inc");
                 if (!needs_rebuild(output, std::array<fs::path, 1> { source }))
                     continue;

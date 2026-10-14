@@ -29,15 +29,18 @@ namespace rct3::ui
         constexpr std::string_view kCurrencyBefore = "Money";   ///< + number + "a": what goes before amounts
         constexpr std::string_view kNoKeyChange = "GameOptionsDialog_NoKeyBindingHelp";
         constexpr std::string_view kKeyChange = "GameOptionsDialog_KeyBindingHelp";
-        constexpr std::string_view kKeySettingPrefix = "KeySetting_"; ///< Of the game commands' names
-        constexpr std::u16string_view kInterfaceKeys = u"Interface";  ///< Ours: the group of our commands
+        constexpr std::string_view kKeySettingPrefix = "KeySetting_";       ///< Of the game commands' names
+        constexpr std::string_view kInterfaceKeys = "Rct3pp_InterfaceKeys"; ///< Ours: the group of our commands
         constexpr std::string_view kNoMusic = "AttractionViewDialogNoMusic";
 
-        constexpr std::u16string_view kPressKeys = u"Press keys...";
-        constexpr std::u16string_view kNoKeys = u"None";
-        constexpr std::u16string_view kKeysTip = u"Click, then press the keys: F1 to F12, Escape, Enter, Tab, Page Up, Page Down or Insert, with Ctrl or Shift if wanted, or Ctrl with a letter or digit. Escape alone keeps the keys.";
-        constexpr std::u16string_view kUsualKeys = u"Usual keys";
-        constexpr std::u16string_view kShuffle = u"Shuffle"; ///< Ours: a track at random each time
+        // Ours, from our translations (translation_file.hpp).
+        constexpr std::string_view kPressKeys = "Rct3pp_PressKeys";
+        constexpr std::string_view kNoKeys = "Rct3pp_NoKeys";
+        constexpr std::string_view kKeysTip = "Rct3pp_KeysTip";
+        constexpr std::string_view kUsualKeys = "Rct3pp_UsualKeys";
+        constexpr std::string_view kShuffle = "Rct3pp_Shuffle"; ///< A track at random each time
+        constexpr std::string_view kMoveByWord = "Rct3pp_MoveByWord";
+        constexpr std::string_view kMoveByWordKeys = "Rct3pp_MoveByWordKeys";
 
         struct DetailRow
         {
@@ -172,7 +175,7 @@ namespace rct3::ui
             std::vector<std::u16string> tracks;
             for (const std::string& name : choices_.background_music)
                 tracks.push_back(ascii(name));
-            tracks.emplace_back(kShuffle);
+            tracks.push_back(str(strings, kShuffle));
             tracks.push_back(str(strings, kNoMusic));
             music_ = &rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"));
             show_background_music();
@@ -286,23 +289,23 @@ namespace rct3::ui
             }
         }
 
-        // Ours, in English until they have names in a string table.
-        bar(std::u16string(kInterfaceKeys));
+        // Ours.
+        bar(str(strings, kInterfaceKeys));
         for (const CommandInfo& info : commands_table())
         {
             KeyBox& b = box(keys_.keys(info.command));
-            b.prompt = kPressKeys;
-            b.none = kNoKeys;
-            b.tooltip = kKeysTip;
+            b.prompt = str(strings, kPressKeys);
+            b.none = str(strings, kNoKeys);
+            b.tooltip = str(strings, kKeysTip);
             key_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
-            row(std::u16string(info.label), b);
+            row(str(strings, info.label_key), b);
         }
-        row(u"Move by a word", fixed(u"Ctrl+Left, Ctrl+Right"));
+        row(str(strings, kMoveByWord), fixed(str(strings, kMoveByWordKeys)));
         auto& end = list.add<Widget>("end");
         end.placement = top_left(0, y, 1, k.bottom);
 
         usual_keys_ = &page.add<Button>("usual_keys", style_.button);
-        usual_keys_->text = kUsualKeys;
+        usual_keys_->text = str(strings, kUsualKeys);
         usual_keys_->font = style_.rows.font;
         usual_keys_->text_inset = style_.button_inset;
         usual_keys_->placement = top_left(style_.page_width - style_.button_width - style_.rows.left, k.height + style_.rows.section_gap, style_.button_width, style_.button_height);

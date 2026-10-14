@@ -25,17 +25,17 @@ namespace rct3::ui
         }
 
         const std::array<CommandInfo, kCommandCount> kCommands = { {
-            { C::Cancel, "cancel", u"Close, cancel, go back", CommandPress { K::Escape }, { key(K::Escape) } },
-            { C::DefaultButton, "default_button", u"Default button", CommandPress { K::Enter }, { key(K::Enter) } },
-            { C::NextControl, "next_control", u"Next control", CommandPress { K::Tab }, { key(K::Tab) } },
-            { C::PreviousControl, "previous_control", u"Previous control", CommandPress { K::Tab, true }, { key(K::Tab, false, true) } },
-            { C::NextPage, "next_page", u"Next page", CommandPress { K::Tab, false, true }, { key(K::Tab, true), key(K::PageDown, true) } },
-            { C::PreviousPage, "previous_page", u"Previous page", CommandPress { K::Tab, true, true }, { key(K::Tab, true, true), key(K::PageUp, true) } },
-            { C::Copy, "copy", u"Copy", CommandPress { K::Copy }, { control(U'c'), key(K::Insert, true) } },
-            { C::Cut, "cut", u"Cut", CommandPress { K::Cut }, { control(U'x'), key(K::Delete, false, true) } },
-            { C::Paste, "paste", u"Paste", CommandPress { K::Paste }, { control(U'v'), key(K::Insert, false, true) } },
-            { C::SelectAll, "select_all", u"Select all text", CommandPress { K::Shortcut, false, true, U'a' }, { control(U'a') } },
-            { C::DeveloperWindows, "developer_windows", u"Developer windows", std::nullopt, { key(K::F12) } },
+            { C::Cancel, "cancel", "Rct3pp_Command_Cancel", CommandPress { K::Escape }, { key(K::Escape) } },
+            { C::DefaultButton, "default_button", "Rct3pp_Command_DefaultButton", CommandPress { K::Enter }, { key(K::Enter) } },
+            { C::NextControl, "next_control", "Rct3pp_Command_NextControl", CommandPress { K::Tab }, { key(K::Tab) } },
+            { C::PreviousControl, "previous_control", "Rct3pp_Command_PreviousControl", CommandPress { K::Tab, true }, { key(K::Tab, false, true) } },
+            { C::NextPage, "next_page", "Rct3pp_Command_NextPage", CommandPress { K::Tab, false, true }, { key(K::Tab, true), key(K::PageDown, true) } },
+            { C::PreviousPage, "previous_page", "Rct3pp_Command_PreviousPage", CommandPress { K::Tab, true, true }, { key(K::Tab, true, true), key(K::PageUp, true) } },
+            { C::Copy, "copy", "Rct3pp_Command_Copy", CommandPress { K::Copy }, { control(U'c'), key(K::Insert, true) } },
+            { C::Cut, "cut", "Rct3pp_Command_Cut", CommandPress { K::Cut }, { control(U'x'), key(K::Delete, false, true) } },
+            { C::Paste, "paste", "Rct3pp_Command_Paste", CommandPress { K::Paste }, { control(U'v'), key(K::Insert, false, true) } },
+            { C::SelectAll, "select_all", "Rct3pp_Command_SelectAll", CommandPress { K::Shortcut, false, true, U'a' }, { control(U'a') } },
+            { C::DeveloperWindows, "developer_windows", "Rct3pp_Command_DeveloperWindows", std::nullopt, { key(K::F12) } },
         } };
 
         using P = PlayCommand;

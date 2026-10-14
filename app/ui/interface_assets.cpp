@@ -5,6 +5,7 @@
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/skin_set.hpp"
+#include "ui/translation_file.hpp"
 #include "ui/truetype_font.hpp"
 
 #include <utility>
@@ -78,6 +79,8 @@ namespace rct3::ui
         // The main overlay has the strings every language shares, such as the languages' own names.
         if (auto shared = StringTable::load(*main_ovl))
             assets.strings->merge(*shared);
+        // Ours fill in what the game's tables lack.
+        assets.strings->merge(own_strings(language));
         return assets;
     }
 

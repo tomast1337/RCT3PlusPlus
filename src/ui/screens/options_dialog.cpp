@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options_dialog.hpp"
 
+#include "ui/money_text.hpp"
+
 #include <algorithm>
 #include <utility>
 
@@ -27,7 +29,6 @@ namespace rct3::ui
 
         constexpr std::string_view kTitle = "GameOptionsDialog_Title";
         constexpr std::string_view kLanguageName = "Language_"; ///< + the game's name: the language in its own script
-        constexpr std::string_view kCurrencyBefore = "Money";   ///< + number + "a": what goes before amounts
         constexpr std::string_view kNoKeyChange = "GameOptionsDialog_NoKeyBindingHelp";
         constexpr std::string_view kKeyChange = "GameOptionsDialog_KeyBindingHelp";
         constexpr std::string_view kKeySettingPrefix = "KeySetting_";       ///< Of the game commands' names
@@ -156,8 +157,8 @@ namespace rct3::ui
         const int last_currency = static_cast<int>(config::game_option_info(O::Currency).maximum);
         for (int n = 0; n <= last_currency; ++n)
         {
-            const std::string key = std::string(kCurrencyBefore) + std::to_string(n);
-            std::u16string sign = trimmed(str(strings, key + "a") + str(strings, key + "b"));
+            const Currency c = currency(strings, n);
+            std::u16string sign = trimmed(c.before + c.after);
             currencies.push_back(sign.empty() ? ascii(std::to_string(n + 1)) : std::move(sign));
         }
         rows.choice(O::Currency, str(strings, "GameOptionsDialog_Currency"), std::move(currencies));

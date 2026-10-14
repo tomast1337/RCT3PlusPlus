@@ -213,7 +213,7 @@ namespace rct3::scene
         }
 
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.
-        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, ParkScene& scene)
+        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, ParkScene& scene)
         {
             const auto log = logging::logger("park");
             const auto found = install.find(park::kSkyFile);
@@ -235,6 +235,11 @@ namespace rct3::scene
             if (const auto horizon = park::horizon_colour(*sky, park::kMiddayColumn))
                 scene.horizon = { horizon->x, horizon->y, horizon->z, horizon->w };
             scene.sky = std::move(sky->models);
+            // Without the sky, the clear colour stands in for it; without clouds, the sky is clear.
+            if (!options.flag(config::GameOption::Sky))
+                scene.sky.dome = scene.sky.stars = scene.sky.milky_way = { };
+            if (!options.flag(config::GameOption::Clouds))
+                scene.sky.clouds = { };
             const render::VertexLayout layout { sizeof(park::GroundVertex), kGroundAttributes };
             auto pipeline = device.create_pipeline({ .shader = render::Shader::Textured, .layout = layout, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "sky" });
             if (!pipeline)
@@ -373,7 +378,7 @@ namespace rct3::scene
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
         refresh_objects(device, scene, park::eye(scene.camera));
-        if (auto sky = load_sky(device, install, scene); !sky)
+        if (auto sky = load_sky(device, install, options, scene); !sky)
             return fail(sky.error());
 
         auto tutorial = save::load_tutorial(*file);

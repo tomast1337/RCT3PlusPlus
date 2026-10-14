@@ -36,17 +36,46 @@ namespace
 
 TEST_CASE("each tile is two triangles, batched by its surface")
 {
-    save::TerrainGrid g = flat(3, 2);
-    g.cells[4].surface = 7;
+    const save::TerrainGrid g = flat(3, 2);
     const TerrainMesh m = terrain_mesh(g, { });
-    CHECK(count(m, GroundPaint::Surface, 0) == 5 * 6);
-    CHECK(count(m, GroundPaint::Surface, 7) == 6);
+    CHECK(count(m, GroundPaint::Surface, 0) == 6 * 6);
     CHECK(m.indices.size() == 6 * 6);
+    for (const GroundVertex& v : m.vertices)
+        CHECK(v.colour.a == doctest::Approx(1));
     CHECK(m.low.x == doctest::Approx(-8));
     CHECK(m.high.x == doctest::Approx(4));
     CHECK(m.high.z == doctest::Approx(12));
     // Flat ground faces the sun's height alone; every vertex the same shade.
     CHECK(m.vertices[0].colour.r == doctest::Approx(m.vertices[5].colour.r));
+}
+
+TEST_CASE("surfaces fade into each other across the tiles next to them")
+{
+    // Two tiles side by side: surface 0, then surface 7.
+    save::TerrainGrid g = flat(2, 1);
+    g.cells[1].surface = 7;
+    const TerrainMesh m = terrain_mesh(g, { });
+    // Both tiles touch both surfaces, so each is drawn twice.
+    CHECK(count(m, GroundPaint::Surface, 0) == 2 * 6);
+    CHECK(count(m, GroundPaint::Surface, 7) == 2 * 6);
+    REQUIRE(m.batches.at(0).index == 0); // Lowest first
+
+    // The second layer covers half of the first on the shared edge and nothing on the far edges.
+    const GroundBatch& top = m.batches.at(1);
+    for (std::uint32_t i = top.first; i < top.first + top.count; ++i)
+    {
+        const GroundVertex& v = m.vertices[m.indices[i]];
+        if (v.position.x == doctest::Approx(-8))
+            CHECK(v.colour.a == doctest::Approx(0));
+        else if (v.position.x == doctest::Approx(-4))
+            CHECK(v.colour.a == doctest::Approx(0.5f));
+        else
+            CHECK(v.colour.a == doctest::Approx(1));
+    }
+    // The first layer is opaque everywhere.
+    const GroundBatch& bottom = m.batches.at(0);
+    for (std::uint32_t i = bottom.first; i < bottom.first + bottom.count; ++i)
+        CHECK(m.vertices[m.indices[i]].colour.a == doctest::Approx(1));
 }
 
 TEST_CASE("a tile raised above its neighbours gets walls painted with its cliff face")

@@ -170,7 +170,7 @@ namespace rct3::scene
             scene.water_count = static_cast<std::uint32_t>(mesh.water.size());
         }
 
-        auto ground = device.create_pipeline({ .shader = render::Shader::Textured, .layout = { sizeof(park::GroundVertex), kGroundAttributes }, .label = "ground" });
+        auto ground = device.create_pipeline({ .shader = render::Shader::Textured, .layout = { sizeof(park::GroundVertex), kGroundAttributes }, .blend = render::BlendMode::Alpha, .label = "ground" });
         if (!ground)
             return fail(ground.error());
         scene.ground_pipeline = *ground;

@@ -24,6 +24,7 @@
 #include "ui/language.hpp"
 #include "ui/money_text.hpp"
 #include "ui/scale.hpp"
+#include "ui/screens/tool_column.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/temperature_text.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -57,6 +58,7 @@ namespace rct3::scene
 
         constexpr std::string_view kGuideName = "tutorial";
         constexpr std::string_view kBarName = "bar";
+        constexpr std::string_view kToolsName = "tools";
         constexpr std::string_view kUnlimitedCash = "Cash_Unlimited";
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
@@ -529,6 +531,7 @@ namespace rct3::scene
             scene.bar.weather = world->weather->type;
             scene.bar.forecast = world->weather->forecast;
         }
+        scene.desktop->root().add<ui::ToolColumn>(std::string(kToolsName), skins::tool_column_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
 
         auto tutorial = save::load_tutorial(*file);
@@ -601,6 +604,9 @@ namespace rct3::scene
             scene.bar.date = ui::park_bar_date(*assets.strings, scene.date.month, scene.date.year + 1, minutes, twelve_hour);
             bar->show(scene.bar);
         }
+        // Only leaving works yet; the other tools open their menus once those exist.
+        if (auto* tools = static_cast<ui::ToolColumn*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)
+            ask_leave(scene, *assets.strings);
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))

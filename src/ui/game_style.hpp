@@ -11,6 +11,7 @@
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/screens/tool_column.hpp"
 #include "ui/screens/tutorial_picker.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -386,6 +387,15 @@ namespace rct3::ui::game_skins
         s.thumb_up = "Top_ThumbsUp";
         s.weather_icons = { "IconSun", "IconCloudWithSun", "IconCloud", "IconLightRain", "IconHeavyRain", "IconThunderstorm", "IconSnow" };
         s.forecast_arrow = "IconWeatherArrow";
+        return s;
+    }
+
+    /// The large buttons up the left of the park view.
+    [[nodiscard]] inline ToolColumnStyle tool_column_style()
+    {
+        ToolColumnStyle s;
+        s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
+        s.career_leave_icon = "File_CareerMap";
         return s;
     }
 

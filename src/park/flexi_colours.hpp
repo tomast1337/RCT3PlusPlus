@@ -4,7 +4,7 @@
 // the other 255 into three runs of 85 shades, light to dark, one per colour slot: entries 1 to 85 for the
 // first slot, 86 to 170 for the second, 171 to 255 for the third. The art paints them in blue, magenta and
 // yellow. A placed object picks one of 32 colours for each slot, and the slot's run is replaced by that
-// colour's shades.
+// colour's shades. Painting takes any colour, not only those 32, so an object can be given others.
 //
 // The game's own 32 colours are not stored in any data file. These are ours: a colour for each index,
 // chosen to read like the one the game shows there (index 27 a deep red, for instance), and shades made
@@ -40,15 +40,15 @@ namespace rct3::park
         friend bool operator==(const Rgb&, const Rgb&) = default;
     };
 
-    /// The colour picked for each slot, as indices below kFlexiColourCount.
-    using FlexiColours = std::array<std::uint8_t, kFlexiSlotCount>;
+    /// The colour each slot is painted in.
+    using FlexiColours = std::array<Rgb, kFlexiSlotCount>;
 
-    /// Colour `index` (taken modulo the count).
+    /// Colour `index` of the 32 (taken modulo the count).
     [[nodiscard]] Rgb flexi_colour(std::size_t index);
-    /// Shade `shade` (0 the lightest, kFlexiShades - 1 the darkest) of colour `index`.
-    [[nodiscard]] Rgb flexi_shade(std::size_t index, std::size_t shade);
+    /// Shade `shade` (0 the lightest, kFlexiShades - 1 the darkest) of `colour`.
+    [[nodiscard]] Rgb flexi_shade(Rgb colour, std::size_t shade);
 
-    /// An object's stored colour picks as indices, out-of-range values made 0.
+    /// The colours an object's stored picks name; a pick out of range is the first colour.
     [[nodiscard]] FlexiColours flexi_colours(const std::array<std::int32_t, kFlexiSlotCount>& stored);
 
     /// One frame of a flexi texture kept as palette indices, so it can be painted in any colours.
@@ -65,7 +65,7 @@ namespace rct3::park
     /// `frame` as a palette image whose recoloured slots are `slots`. Nothing when the frame is malformed.
     [[nodiscard]] std::optional<PaletteImage> palette_image(const ovl::FlexiFrame& frame, std::uint32_t slots);
 
-    /// `colours` with the picks of slots `image` does not recolour cleared, so equal paintings compare equal.
+    /// `colours` with those of slots not in `slots` made black, so equal paintings compare equal.
     [[nodiscard]] FlexiColours used_colours(std::uint32_t slots, FlexiColours colours);
 
     /// The picture with each recoloured slot's run replaced by the picked colour's shades.

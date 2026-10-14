@@ -49,19 +49,22 @@ TEST_CASE("a colour's shades run from pale through the colour to dark")
 {
     for (std::size_t c = 0; c < kFlexiColourCount; ++c)
     {
-        CHECK(flexi_shade(c, kFlexiFullShade) == flexi_colour(c));
+        const Rgb colour = flexi_colour(c);
+        CHECK(flexi_shade(colour, kFlexiFullShade) == colour);
         for (std::size_t s = 1; s < kFlexiShades; ++s)
-            CHECK(brightness(flexi_shade(c, s)) <= brightness(flexi_shade(c, s - 1)));
-        CHECK(brightness(flexi_shade(c, 0)) > brightness(flexi_colour(c)));
+            CHECK(brightness(flexi_shade(colour, s)) <= brightness(flexi_shade(colour, s - 1)));
+        CHECK(brightness(flexi_shade(colour, 0)) > brightness(colour));
     }
-    CHECK(flexi_shade(3, 1000) == flexi_shade(3, kFlexiShades - 1));
+    const Rgb any { 12, 200, 99 }; // Not one of the 32
+    CHECK(flexi_shade(any, kFlexiFullShade) == any);
+    CHECK(flexi_shade(any, 1000) == flexi_shade(any, kFlexiShades - 1));
     CHECK(flexi_colour(kFlexiColourCount + 2) == flexi_colour(2));
 }
 
-TEST_CASE("stored colour picks out of range become the first colour")
+TEST_CASE("stored colour picks name colours; out of range is the first")
 {
-    CHECK(flexi_colours({ 5, -1, 32 }) == FlexiColours { 5, 0, 0 });
-    CHECK(flexi_colours({ 31, 0, 12 }) == FlexiColours { 31, 0, 12 });
+    CHECK(flexi_colours({ 5, -1, 32 }) == FlexiColours { flexi_colour(5), flexi_colour(0), flexi_colour(0) });
+    CHECK(flexi_colours({ 31, 0, 12 }) == FlexiColours { flexi_colour(31), flexi_colour(0), flexi_colour(12) });
 }
 
 TEST_CASE("frames keep their indices and are painted per slot")
@@ -75,14 +78,15 @@ TEST_CASE("frames keep their indices and are painted per slot")
     CHECK(image->alpha == std::vector<std::uint8_t> { 255, 7 });
 
     // Index 200 lies in the third slot's run, at shade 200 - 171.
-    const ovl::RgbaImage painted = paint(*image, { 0, 0, 17 });
-    const Rgb shade = flexi_shade(17, 200 - 1 - 2 * kFlexiShades);
+    const Rgb orange { 250, 120, 10 };
+    const ovl::RgbaImage painted = paint(*image, { Rgb { }, Rgb { }, orange });
+    const Rgb shade = flexi_shade(orange, 200 - 1 - 2 * kFlexiShades);
     CHECK(painted.pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, shade.r, shade.g, shade.b, 7 });
 
     // Without that slot the texture's own colour stays.
     const auto plain = palette_image(frame.view(false), 0b011);
     REQUIRE(plain);
-    CHECK(paint(*plain, { 4, 4, 17 }).pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, 55, 0, 200, 255 });
+    CHECK(paint(*plain, { orange, orange, orange }).pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, 55, 0, 200, 255 });
 }
 
 TEST_CASE("malformed frames are refused")
@@ -101,7 +105,8 @@ TEST_CASE("malformed frames are refused")
 
 TEST_CASE("painted names tell colourings apart only by the slots used")
 {
-    CHECK(painted_name("t", 0, { 1, 2, 3 }) == "t");
-    CHECK(painted_name("t", 0b101, { 1, 2, 3 }) == "t#1,0,3");
-    CHECK(used_colours(0b010, { 1, 2, 3 }) == FlexiColours { 0, 2, 0 });
+    const FlexiColours colours { Rgb { 1, 2, 3 }, Rgb { 255, 16, 0 }, Rgb { 0xab, 0xcd, 0xef } };
+    CHECK(painted_name("t", 0, colours) == "t");
+    CHECK(painted_name("t", 0b101, colours) == "t#010203#000000#abcdef");
+    CHECK(used_colours(0b010, colours) == FlexiColours { Rgb { }, Rgb { 255, 16, 0 }, Rgb { } });
 }

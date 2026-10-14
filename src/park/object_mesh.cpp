@@ -76,7 +76,7 @@ namespace rct3::park
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -102,6 +102,9 @@ namespace rct3::park
             const glm::mat4 transform = object_transform(object, static_cast<Positioning>(model->second.positioning), grid);
             const glm::mat3 turn { transform };
             const FlexiColours colours = colours_of(object, overrides);
+            const auto lean = leans.find(object.id);
+            const glm::vec2 rise = lean != leans.end() ? lean->second : glm::vec2(0.0f);
+            const glm::vec2 anchor { transform[3].x, transform[3].z };
             for (const ModelPart& part : shown.parts)
             {
                 Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours) }];
@@ -111,7 +114,9 @@ namespace rct3::park
                 for (const ModelVertex& v : part.vertices)
                 {
                     const float s = sunlight(turn * v.normal);
-                    run.vertices.push_back({ glm::vec3(transform * glm::vec4(v.position, 1.0f)), { s, s, s, 1 }, v.uv });
+                    glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
+                    at.y += glm::dot(glm::vec2(at.x, at.z) - anchor, rise);
+                    run.vertices.push_back({ at, { s, s, s, 1 }, v.uv });
                 }
                 for (const std::uint32_t i : part.indices)
                     run.indices.push_back(base + i);

@@ -73,6 +73,7 @@ namespace rct3::save
             constexpr std::string_view kEntryOverlay = "OVERLAYFILENAME";
             constexpr std::string_view kEntrySystemName = "SystemName";
             constexpr std::string_view kEntryQueueType = "QueueType";
+            constexpr std::string_view kSurfaceColours = "Colours";
 
             constexpr std::string_view kWeatherClass = "Weather";
             constexpr std::string_view kSkyClass = "Sky";
@@ -579,6 +580,25 @@ namespace rct3::save
                 });
             }
 
+            // The colours a queue ground surface picks, when the surface is one.
+            std::optional<std::array<std::int32_t, 3>> surface_colours(std::uint64_t ref)
+            {
+                if (ref == 0)
+                    return std::nullopt;
+                if (const auto it = colours_.find(ref); it != colours_.end())
+                    return it->second;
+                std::optional<std::array<std::int32_t, 3>> out;
+                if (const auto* obj = index_.find(ref))
+                {
+                    if (const auto d = decode_object(file_, *obj))
+                    {
+                        if (const Value* c = d->find(names::kSurfaceColours); c && c->kind() == ValueKind::Struct)
+                            out = std::array<std::int32_t, 3> { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
+                    }
+                }
+                return colours_.emplace(ref, out).first->second;
+            }
+
         private:
             static std::string text_of(const DecodedObject& o, std::string_view attr)
             {
@@ -609,6 +629,7 @@ namespace rct3::save
             std::unordered_map<std::uint64_t, std::string> symbols_;
             std::unordered_map<std::uint64_t, std::string> overlays_;
             std::unordered_map<std::uint64_t, std::string> surfaces_;
+            std::unordered_map<std::uint64_t, std::optional<std::array<std::int32_t, 3>>> colours_;
         };
 
         PathKind path_kind_of(std::uint8_t raw) noexcept
@@ -650,6 +671,7 @@ namespace rct3::save
             t.surface_variant = byte_or(o.find(names::kPathVariant));
             t.surface_ref = get_ref(o.find(names::kPathSurface)).value_or(0);
             t.surface_name = res.surface(t.surface_ref);
+            t.surface_colours = res.surface_colours(t.surface_ref);
 
             const Value* slope = o.find(names::kPathSlope);
             const Value* quant = o.find(names::kPathQuantised);

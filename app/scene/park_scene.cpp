@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
 #include "park/ground_paths.hpp"
+#include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
@@ -319,6 +320,8 @@ namespace rct3::scene
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
+        const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
+        park::add_ground(mesh, queues.mesh);
         const park::TerrainMesh surroundings = park::surrounding_land(scene.grid);
         park::add_ground(mesh, surroundings);
         scene.batches = mesh.batches;
@@ -372,6 +375,16 @@ namespace rct3::scene
                 log.warning("{}: {}", name, missing.error());
             else if (*missing > 0)
                 log.warning("{}: {} ground pictures missing", name, *missing);
+        }
+        for (std::size_t i = 0; i < queues.paintings.size(); ++i)
+        {
+            const std::string name = park::queue_texture_file(queues.paintings[i].style);
+            const auto found = install.find(name);
+            const auto added = found ? park::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
+            if (!added)
+                log.warning("{}: {}", name, added.error());
+            else if (!*added)
+                log.warning("{}: no ground picture", name);
         }
         auto textures = ui::upload_textures(device, images);
         if (!textures)

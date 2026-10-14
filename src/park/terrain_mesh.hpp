@@ -45,6 +45,7 @@ namespace rct3::park
         Cliff,   ///< A cliff face, likewise
         PathA,   ///< A ground path's first picture, by its style's index in the park
         PathB,   ///< Its second picture
+        Queue,   ///< A ground queue's picture, by its painting's index in the park
     };
 
     /// A run of `count` indices from `first` painted with one surface or cliff face.

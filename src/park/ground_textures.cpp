@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground_textures.hpp"
 
+#include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/terrain_type.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
+#include "park/flexi_colours.hpp"
 
 #include <format>
 #include <limits>
@@ -32,6 +34,8 @@ namespace rct3::park
                 return "path A " + std::to_string(index);
             case GroundPaint::PathB:
                 return "path B " + std::to_string(index);
+            case GroundPaint::Queue:
+                return "queue " + std::to_string(index);
             case GroundPaint::Surface:
                 break;
         }
@@ -69,6 +73,35 @@ namespace rct3::park
             }
         }
         return missing;
+    }
+
+    std::string queue_texture_file(std::string_view style)
+    {
+        return std::format("Queue/{0}/{0}_Texture.common.ovl", style);
+    }
+
+    std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index)
+    {
+        auto overlay = ovl::Overlay::load(path);
+        if (!overlay)
+            return std::unexpected(std::string(ovl::to_string(overlay.error())));
+        const std::string name = "Ground" + painting.style;
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        {
+            if (part == nullptr)
+                continue;
+            for (const ovl::FlexiTextureItem& item : ovl::read_flexi_textures(*overlay, *part))
+            {
+                if (item.name != name || !item.texture || item.texture->frames.empty())
+                    continue;
+                const auto picture = palette_image(item.texture->frames.front(), item.texture->flags);
+                if (!picture)
+                    continue;
+                images.insert_or_assign(ground_key(GroundPaint::Queue, index), paint(*picture, flexi_colours(painting.colours)));
+                return true;
+            }
+        }
+        return false;
     }
 
     std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)

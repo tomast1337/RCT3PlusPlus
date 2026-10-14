@@ -208,6 +208,9 @@ namespace rct3::save
 
     inline constexpr std::uint8_t kNoDirection = 255;
 
+    /// The stored slope of a queue laid on the ground, following the terrain instead of a height of its own.
+    inline constexpr std::uint8_t kSlopeOnGround = 3;
+
     /// Extra data stored by elevated paths and queues.
     struct PathElevation
     {
@@ -237,9 +240,10 @@ namespace rct3::save
         std::uint8_t direction = kNoDirection; ///< Quarter turns 0..3, or kNoDirection
         std::uint8_t surface_variant = 0;      ///< Stored as 0, 1 or 255
         std::uint64_t surface_ref = 0;
-        std::string surface_name;               ///< System name of the surface style, empty when unresolved
-        std::optional<PathElevation> elevation; ///< Present for elevated paths and queues
-        std::optional<PathQueueInfo> queue;     ///< Present for queues
+        std::string surface_name;                                   ///< System name of the surface style, empty when unresolved
+        std::optional<std::array<std::int32_t, 3>> surface_colours; ///< Picked colours of a queue's ground surface
+        std::optional<PathElevation> elevation;                     ///< Present for elevated paths and queues
+        std::optional<PathQueueInfo> queue;                         ///< Present for queues
     };
 
     struct QueueLine

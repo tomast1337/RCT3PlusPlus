@@ -2,7 +2,9 @@
 #include "scene/park_scene.hpp"
 
 #include "logging/log.hpp"
+#include "park/asset_index.hpp"
 #include "park/ground_textures.hpp"
+#include "park/object_models.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -18,6 +20,7 @@
 #include <cstddef>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -58,6 +61,47 @@ namespace rct3::scene
             { 0, render::VertexFormat::Float3, offsetof(park::WaterVertex, position) },
             { 1, render::VertexFormat::Float4, offsetof(park::WaterVertex, colour) },
         } };
+
+        /// The top folders of the install that the park's objects come from, as they are spelled on disk.
+        std::vector<std::string> object_folders(const config::GameInstall& install, std::span<const save::PlacedObject> objects)
+        {
+            std::vector<std::string> folders;
+            for (const save::PlacedObject& o : objects)
+            {
+                const std::string_view overlay = o.overlay;
+                const std::string_view top = overlay.substr(0, overlay.find_first_of("/\\"));
+                if (top.empty() || top.size() == overlay.size())
+                    continue;
+                const auto found = install.find(top);
+                if (!found)
+                    continue;
+                std::string name = found->filename().string();
+                if (std::ranges::find(folders, name) == folders.end())
+                    folders.push_back(std::move(name));
+            }
+            return folders;
+        }
+
+        /// The models of the park's objects, by model key, and the pictures they use.
+        park::ObjectModels load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, park::ModelImages& images)
+        {
+            const std::vector<std::string> folders = object_folders(install, objects);
+            const std::vector<std::string_view> views(folders.begin(), folders.end());
+            const park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
+            park::ModelLoader loader(index);
+            park::ObjectModels models;
+            std::map<std::string, bool, std::less<>> tried;
+            for (const save::PlacedObject& o : objects)
+            {
+                std::string key = park::model_key(o);
+                if (!tried.emplace(key, true).second)
+                    continue;
+                if (auto model = loader.load(o.symbol, o.overlay))
+                    models.emplace(std::move(key), std::move(*model));
+            }
+            images = loader.images();
+            return models;
+        }
 
         std::expected<std::vector<std::byte>, std::string> read_file(const std::filesystem::path& path)
         {
@@ -198,6 +242,39 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
+        park::ModelImages object_images;
+        const park::ObjectModels models = load_models(install, world->objects, object_images);
+        const park::ObjectMesh objects = park::object_mesh(world->objects, models, scene.grid);
+        scene.object_batches = objects.batches;
+        if (!objects.indices.empty())
+        {
+            auto object_vertices = upload(device, render::BufferUsage::Vertex, objects.vertices, "object vertices");
+            if (!object_vertices)
+                return fail(object_vertices.error());
+            scene.object_vertices = *object_vertices;
+            auto object_indices = upload(device, render::BufferUsage::Index, objects.indices, "object indices");
+            if (!object_indices)
+                return fail(object_indices.error());
+            scene.object_indices = *object_indices;
+        }
+        const render::VertexLayout object_layout { sizeof(park::GroundVertex), kGroundAttributes };
+        auto solid = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .label = "objects" });
+        if (!solid)
+            return fail(solid.error());
+        scene.object_pipeline = *solid;
+        auto cutout = device.create_pipeline({ .shader = render::Shader::TexturedCutout, .layout = object_layout, .label = "object cut-outs" });
+        if (!cutout)
+            return fail(cutout.error());
+        scene.cutout_pipeline = *cutout;
+        auto see_through = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" });
+        if (!see_through)
+            return fail(see_through.error());
+        scene.see_through_pipeline = *see_through;
+        auto object_textures = ui::upload_textures(device, object_images);
+        if (!object_textures)
+            return fail(object_textures.error());
+        scene.object_textures = std::move(*object_textures);
+
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
             log.warning("tutorial: {}", save::to_string(tutorial.error()));
@@ -205,6 +282,7 @@ namespace rct3::scene
             scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::question_box_style(), strings, std::move(**tutorial));
         scene.desktop->tooltip_style = skins::tooltip_style();
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
+        log.info("{} objects drawn, {} without a model, {} models, {} pictures, {} triangles", objects.placed, objects.missing, models.size(), scene.object_textures.size(), objects.indices.size() / 3);
         return scene;
     }
 
@@ -250,6 +328,26 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         const glm::mat4 transform = park::view_projection(scene.camera, aspect(device));
+        const auto draw_objects = [&](bool see_through) {
+            for (const park::ObjectBatch& batch : scene.object_batches)
+            {
+                if ((batch.blend == park::PartBlend::Blended) != see_through)
+                    continue;
+                const auto texture = scene.object_textures.find(batch.texture);
+                render::DrawCommand draw;
+                draw.pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
+                draw.vertices = { scene.object_vertices };
+                draw.indices = { scene.object_indices };
+                draw.index_type = render::IndexType::U32;
+                draw.first = batch.first;
+                draw.count = batch.count;
+                draw.transform = transform;
+                draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                draw.filter = render::Filter::Linear;
+                draw.address = render::AddressMode::Repeat;
+                device.draw(draw);
+            }
+        };
         for (const park::GroundBatch& batch : scene.batches)
         {
             const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
@@ -266,6 +364,8 @@ namespace rct3::scene
             draw.address = render::AddressMode::Repeat;
             device.draw(draw);
         }
+        if (scene.object_indices)
+            draw_objects(false);
         if (scene.water_count > 0)
         {
             render::DrawCommand draw;
@@ -275,6 +375,8 @@ namespace rct3::scene
             draw.transform = transform;
             device.draw(draw);
         }
+        if (scene.object_indices)
+            draw_objects(true);
 
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
@@ -286,17 +388,18 @@ namespace rct3::scene
 
     void destroy_park_scene(render::Device& device, ParkScene& scene)
     {
-        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.water })
+        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.water, scene.object_vertices, scene.object_indices })
         {
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);
         }
         ui::destroy_textures(device, scene.ground_textures);
+        ui::destroy_textures(device, scene.object_textures);
         if (scene.blank)
             device.destroy_texture(scene.blank);
         scene = { };

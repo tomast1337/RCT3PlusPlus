@@ -158,6 +158,9 @@ namespace rct3::render
         /// Inputs: location 0 position (Float2 or Float3), location 1 colour (Float4 or UByte4Norm), location 2
         /// texture coordinate (Float2). Output: texture sample times colour. Needs `DrawCommand::texture`.
         Textured,
+        /// As Textured, but pixels under half opacity are discarded and the rest drawn opaque, so cut-out
+        /// pictures (leaves, fences) can write depth without hiding what is behind their holes.
+        TexturedCutout,
     };
 
     enum class Topology : std::uint8_t

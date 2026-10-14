@@ -260,6 +260,9 @@ namespace rct3::save
         std::uint64_t id = 0;
         std::uint64_t definition_ref = 0; ///< Database entry that names the asset
         std::string symbol;               ///< Asset symbol from that entry, empty when it does not resolve
+        /// The overlay that holds the asset, from the same entry: a path relative to the game's folder, without
+        /// the ".common.ovl" ending, with either kind of slash; empty when it does not resolve.
+        std::string overlay;
         std::int32_t col = 0;
         std::int32_t row = 0;
         std::optional<std::int32_t> base_height; ///< Whole-unit base height; empty when stored as unset

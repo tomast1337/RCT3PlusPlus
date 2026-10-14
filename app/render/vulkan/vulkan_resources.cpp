@@ -23,6 +23,9 @@ namespace
     const std::uint32_t kTexturedFrag[] =
 #include "textured.frag.inc"
         ;
+    const std::uint32_t kTexturedCutoutFrag[] =
+#include "textured_cutout.frag.inc"
+        ;
 } // namespace
 
 namespace rct3::render::vulkan
@@ -45,6 +48,8 @@ namespace rct3::render::vulkan
                     return { kVertexColorVert, kVertexColorFrag };
                 case Shader::Textured:
                     return { kTexturedVert, kTexturedFrag };
+                case Shader::TexturedCutout:
+                    return { kTexturedVert, kTexturedCutoutFrag };
             }
             return { };
         }

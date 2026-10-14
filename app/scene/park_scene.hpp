@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A park played: its ground drawn in 3D under a camera the player moves, and the interface over it. For now
-// it shows the ground and water of a park file and, for a tutorial park, the window that leads through the
-// tutorial. Leaving the tutorial asks first; the owner then goes back to the front end.
+// it shows the ground, water and placed objects of a park file and, for a tutorial park, the window that
+// leads through the tutorial. Leaving the tutorial asks first; the owner then goes back to the front end.
 //
 // The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
 // both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the
@@ -12,6 +12,7 @@
 #pragma once
 
 #include "park/camera.hpp"
+#include "park/object_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/desktop.hpp"
@@ -59,6 +60,13 @@ namespace rct3::scene
         render::PipelineHandle water_pipeline;
         ui::UiTextures ground_textures;
         render::TextureHandle blank; ///< For ground without a picture
+        std::vector<park::ObjectBatch> object_batches;
+        render::BufferHandle object_vertices;
+        render::BufferHandle object_indices;
+        render::PipelineHandle object_pipeline;      ///< Opaque parts
+        render::PipelineHandle cutout_pipeline;      ///< Parts with holes
+        render::PipelineHandle see_through_pipeline; ///< Blended parts, drawn last without writing depth
+        ui::UiTextures object_textures;
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

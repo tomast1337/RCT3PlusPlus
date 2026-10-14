@@ -388,7 +388,7 @@ namespace rct3::ui
         }
         back_->visible = current_ != FrontMenu::Main;
         for (std::size_t i = 0; i < badges_.size(); ++i)
-            badges_[i].widget->placement = placed(fs::badge_rect(frame, i), rect());
+            badges_[i].widget->placement = placed(fs::badge_rect(frame, badges_.size() - 1 - i), rect());
 
         // The help lines follow the pointer; without a button under it, the menu's name.
         help_title_ = strings_.get(front_menu(current_).title_key);

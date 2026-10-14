@@ -52,10 +52,14 @@ namespace rct3::platform
             float x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
             float y = 0;
             bool left = false;
+            bool right = false;
+            bool middle = false;
             float wheel_x = 0; ///< Notches turned sideways since the last poll_events, positive to the left
             float wheel_y = 0; ///< Notches turned since the last poll_events, positive away from the user
         };
         [[nodiscard]] Pointer pointer() const;
+        /// Whether `key` is held down now; for keys that act for as long as they are held.
+        [[nodiscard]] bool held(ui::Key key) const;
         /// Keys pressed and text typed since the last poll_events, in order.
         [[nodiscard]] const ui::KeyboardState& keyboard() const
         {

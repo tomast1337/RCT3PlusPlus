@@ -1,0 +1,305 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "scene/park_scene.hpp"
+
+#include "logging/log.hpp"
+#include "park/ground_textures.hpp"
+#include "save/model/tutorial.hpp"
+#include "save/model/world.hpp"
+#include "save/save_file.hpp"
+#include "save/value.hpp"
+#include "ui/game_style.hpp"
+#include "ui/scale.hpp"
+#include "ui/screens/tutorial_guide.hpp"
+#include "ui/widgets/question_box.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <fstream>
+#include <iterator>
+#include <span>
+#include <string_view>
+#include <utility>
+
+namespace rct3::scene
+{
+
+    namespace
+    {
+
+        namespace skins = ui::game_skins;
+
+        /// The game's ground pictures; the later file adds the expansion's.
+        constexpr std::array<std::string_view, 2> kGroundFiles = {
+            "terrain/RCT3/Terrain_RCT3.common.ovl",
+            "terrain/CT/Terrain_CT.common.ovl",
+        };
+
+        constexpr std::string_view kGuideName = "tutorial";
+        constexpr std::string_view kQuestionName = "leave_tutorial";
+        constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
+        constexpr std::string_view kYes = "SMB_Label_Yes";
+        constexpr std::string_view kNo = "SMB_Label_No";
+
+        // How far the controls move the camera.
+        constexpr float kDragPan = 0.0025f; ///< Per pixel, times the distance
+        constexpr float kDragTurn = 0.006f; ///< Radians per pixel
+        constexpr float kKeyPan = 0.8f;     ///< Per second, times the distance
+        constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
+        constexpr float kKeyZoom = 2.5f;    ///< Times per second
+
+        constexpr std::array<render::VertexAttribute, 3> kGroundAttributes = { {
+            { 0, render::VertexFormat::Float3, offsetof(park::GroundVertex, position) },
+            { 1, render::VertexFormat::Float4, offsetof(park::GroundVertex, colour) },
+            { 2, render::VertexFormat::Float2, offsetof(park::GroundVertex, uv) },
+        } };
+        constexpr std::array<render::VertexAttribute, 2> kWaterAttributes = { {
+            { 0, render::VertexFormat::Float3, offsetof(park::WaterVertex, position) },
+            { 1, render::VertexFormat::Float4, offsetof(park::WaterVertex, colour) },
+        } };
+
+        std::expected<std::vector<std::byte>, std::string> read_file(const std::filesystem::path& path)
+        {
+            std::ifstream in(path, std::ios::binary);
+            if (!in)
+                return std::unexpected("cannot open " + path.string());
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto bytes = std::as_bytes(std::span(raw));
+            return std::vector<std::byte>(bytes.begin(), bytes.end());
+        }
+
+        template<typename T> std::expected<render::BufferHandle, std::string> upload(render::Device& device, render::BufferUsage usage, const std::vector<T>& items, std::string_view label)
+        {
+            return device.create_buffer({ usage, std::as_bytes(std::span(items)), label });
+        }
+
+        float scale_for(const render::Device& device, const ParkScene& scene)
+        {
+            return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale);
+        }
+
+        float aspect(const render::Device& device)
+        {
+            const render::Extent e = device.extent();
+            return e.height > 0 ? static_cast<float>(e.width) / static_cast<float>(e.height) : 1.0f;
+        }
+
+        void ask_leave(ParkScene& scene, const ui::StringTable& strings)
+        {
+            if (scene.desktop->root().find(kQuestionName) != nullptr)
+                return;
+            const ui::QuestionBoxStyle style = skins::question_box_style();
+            scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+        }
+
+        void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, float elapsed)
+        {
+            const ui::Point p = input.pointer.position;
+            const float dx = p.x - scene.last_pointer.x;
+            const float dy = p.y - scene.last_pointer.y;
+            scene.last_pointer = p;
+
+            // A drag starts away from the windows and goes on wherever the pointer then goes.
+            const bool turn = input.middle || (input.right && input.pointer.down);
+            const bool drag = input.right && !turn;
+            scene.turning = turn && (scene.turning || !over_interface);
+            scene.dragging = drag && (scene.dragging || !over_interface);
+
+            park::ParkCamera c = scene.camera;
+            if (scene.turning)
+                c = park::turned(c, dx * kDragTurn, dy * kDragTurn);
+            else if (scene.dragging)
+                c = park::panned(c, -dx * kDragPan * c.distance, dy * kDragPan * c.distance);
+            if (!over_interface && input.pointer.wheel.y != 0)
+                c = park::zoomed(c, std::pow(kWheelZoom, input.pointer.wheel.y));
+
+            const float step = kKeyPan * c.distance * elapsed;
+            const float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);
+            const float forward = (input.up_key ? step : 0) - (input.down_key ? step : 0);
+            if (right != 0 || forward != 0)
+                c = park::panned(c, right, forward);
+            if (input.zoom_in_key != input.zoom_out_key)
+                c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed));
+            scene.camera = park::on_ground(c, scene.grid);
+        }
+
+    } // namespace
+
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const std::filesystem::path& path)
+    {
+        const auto log = logging::logger("park");
+        const auto bytes = read_file(path);
+        if (!bytes)
+            return std::unexpected(bytes.error());
+        const auto file = save::read_save(*bytes, { .verify_checksum = false });
+        if (!file)
+            return std::unexpected(std::string(save::to_string(file.error())));
+        const save::ObjectIndex index(*file);
+        auto world = save::load_world(*file, index);
+        if (!world)
+            return std::unexpected(std::string(save::to_string(world.error())));
+        if (world->terrain.empty())
+            return std::unexpected("the park has no ground");
+
+        ParkScene scene;
+        scene.grid = std::move(world->terrain);
+        scene.camera = park::overview(scene.grid);
+        const park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
+        scene.batches = mesh.batches;
+
+        // Built one by one; whatever fails leaves the rest for destroy_park_scene.
+        const auto fail = [&](std::string message) -> std::expected<ParkScene, std::string> {
+            destroy_park_scene(device, scene);
+            return std::unexpected(std::move(message));
+        };
+        auto vertices = upload(device, render::BufferUsage::Vertex, mesh.vertices, "ground vertices");
+        if (!vertices)
+            return fail(vertices.error());
+        scene.ground_vertices = *vertices;
+        auto indices = upload(device, render::BufferUsage::Index, mesh.indices, "ground indices");
+        if (!indices)
+            return fail(indices.error());
+        scene.ground_indices = *indices;
+        if (!mesh.water.empty())
+        {
+            auto water = upload(device, render::BufferUsage::Vertex, mesh.water, "water");
+            if (!water)
+                return fail(water.error());
+            scene.water = *water;
+            scene.water_count = static_cast<std::uint32_t>(mesh.water.size());
+        }
+
+        auto ground = device.create_pipeline({ .shader = render::Shader::Textured, .layout = { sizeof(park::GroundVertex), kGroundAttributes }, .label = "ground" });
+        if (!ground)
+            return fail(ground.error());
+        scene.ground_pipeline = *ground;
+        auto water = device.create_pipeline({ .shader = render::Shader::VertexColor, .layout = { sizeof(park::WaterVertex), kWaterAttributes }, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water" });
+        if (!water)
+            return fail(water.error());
+        scene.water_pipeline = *water;
+
+        park::GroundImages images;
+        for (const std::string_view name : kGroundFiles)
+        {
+            const auto found = install.find(name);
+            if (!found)
+                continue;
+            if (const auto added = park::add_ground_images(images, *found); !added)
+                log.warning("{}: {}", name, added.error());
+        }
+        auto textures = ui::upload_textures(device, images);
+        if (!textures)
+            return fail(textures.error());
+        scene.ground_textures = std::move(*textures);
+        constexpr std::array<std::byte, 4> kWhite { std::byte { 255 }, std::byte { 255 }, std::byte { 255 }, std::byte { 255 } };
+        auto blank = device.create_texture({ 1, 1, render::TextureFormat::Rgba8, kWhite, "blank ground" });
+        if (!blank)
+            return fail(blank.error());
+        scene.blank = *blank;
+
+        auto tutorial = save::load_tutorial(*file);
+        if (!tutorial)
+            log.warning("tutorial: {}", save::to_string(tutorial.error()));
+        else if (*tutorial)
+            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::question_box_style(), strings, std::move(**tutorial));
+        scene.desktop->tooltip_style = skins::tooltip_style();
+        log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
+        return scene;
+    }
+
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
+    {
+        const float scale = scale_for(device, scene);
+        const render::Extent extent = device.extent();
+        ui::Desktop& desktop = *scene.desktop;
+        desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
+
+        // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
+        // answers it.
+        const bool asking = desktop.root().find(kQuestionName) != nullptr;
+        ui::KeyboardState keys = keyboard;
+        if (!asking)
+        {
+            const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
+            if (!escape.empty())
+                ask_leave(scene, *assets.strings);
+            keys.presses.erase(escape.begin(), escape.end());
+        }
+
+        ui::PointerState pointer = input.pointer;
+        pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
+        scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
+        const bool over = desktop.update(pointer, keys, { elapsed, scene.current_fonts });
+        move_camera(scene, input, over, elapsed);
+
+        if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
+            ask_leave(scene, *assets.strings);
+        if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))
+        {
+            if (const auto answer = question->take_answer())
+                scene.leave = scene.leave || *answer == 0;
+        }
+    }
+
+    bool take_park_leave(ParkScene& scene)
+    {
+        return std::exchange(scene.leave, false);
+    }
+
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        const glm::mat4 transform = park::view_projection(scene.camera, aspect(device));
+        for (const park::GroundBatch& batch : scene.batches)
+        {
+            const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+            render::DrawCommand draw;
+            draw.pipeline = scene.ground_pipeline;
+            draw.vertices = { scene.ground_vertices };
+            draw.indices = { scene.ground_indices };
+            draw.index_type = render::IndexType::U32;
+            draw.first = batch.first;
+            draw.count = batch.count;
+            draw.transform = transform;
+            draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+            draw.filter = render::Filter::Linear;
+            draw.address = render::AddressMode::Repeat;
+            device.draw(draw);
+        }
+        if (scene.water_count > 0)
+        {
+            render::DrawCommand draw;
+            draw.pipeline = scene.water_pipeline;
+            draw.vertices = { scene.water };
+            draw.count = scene.water_count;
+            draw.transform = transform;
+            device.draw(draw);
+        }
+
+        scene.list.clear();
+        scene.list.set_scale(scale_for(device, scene));
+        static const ui::FontSet kNoFonts;
+        ui::DrawContext context { scene.list, assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts };
+        scene.desktop->draw(context);
+        ui::render_draw_list(device, assets.renderer, scene.list);
+    }
+
+    void destroy_park_scene(render::Device& device, ParkScene& scene)
+    {
+        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.water })
+        {
+            if (b)
+                device.destroy_buffer(b);
+        }
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline })
+        {
+            if (p)
+                device.destroy_pipeline(p);
+        }
+        ui::destroy_textures(device, scene.ground_textures);
+        if (scene.blank)
+            device.destroy_texture(scene.blank);
+        scene = { };
+    }
+
+} // namespace rct3::scene

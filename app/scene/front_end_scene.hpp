@@ -61,8 +61,10 @@ namespace rct3::scene
         std::unique_ptr<Live> live = std::make_unique<Live>();
         const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::DrawList list;
-        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
-        bool fullscreen = false;    ///< As last applied
+        std::optional<float> scale;                    ///< Chosen interface scale; nothing picks one from the window height
+        bool fullscreen = false;                       ///< As last applied
+        std::size_t tutorials_seen = 0;                ///< The front end's count of tutorial menus when last checked
+        std::optional<std::filesystem::path> tutorial; ///< The tutorial park to start, until taken
     };
 
     /// Things the scene wants done to the window or the program.
@@ -73,6 +75,7 @@ namespace rct3::scene
         std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
         std::optional<ui::KeyMap> keys;
+        std::optional<std::filesystem::path> tutorial; ///< A tutorial park to play
     };
 
     [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);

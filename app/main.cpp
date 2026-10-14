@@ -29,6 +29,7 @@
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/menu_audio.hpp"
+#include "scene/park_scene.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
@@ -348,6 +349,7 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
+    std::optional<rct3::scene::ParkScene> park; ///< Played over the front end, which lends it the interface
     bool quit = false;
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.
@@ -480,6 +482,17 @@ int main(int argc, char** argv)
                     log.warning("keys: {}", saved.error());
             }
         }
+        if (requests.tutorial)
+        {
+            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, *requests.tutorial);
+            if (loaded)
+            {
+                park = std::move(*loaded);
+                park->scale = scale;
+            }
+            else
+                log.warning("{}: {}", requests.tutorial->string(), loaded.error());
+        }
         if (requests.language)
         {
             settings.set(config::Setting::Language, *requests.language);
@@ -538,7 +551,34 @@ int main(int argc, char** argv)
                         draw_log_window();
                         ImGui::ShowDemoWindow();
                     }
-                    if (phase == Phase::Running && (widgets || front))
+                    if (phase == Phase::Running && park && front)
+                    {
+                        const auto p = window->pointer();
+                        rct3::scene::ParkInput input;
+                        input.pointer = { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
+                        input.right = p.right && input.pointer.present;
+                        input.middle = p.middle && input.pointer.present;
+                        if (!ImGui::GetIO().WantCaptureKeyboard)
+                        {
+                            input.left_key = window->held(rct3::ui::Key::Left);
+                            input.right_key = window->held(rct3::ui::Key::Right);
+                            input.up_key = window->held(rct3::ui::Key::Up);
+                            input.down_key = window->held(rct3::ui::Key::Down);
+                            input.zoom_in_key = window->held(rct3::ui::Key::PageUp);
+                            input.zoom_out_key = window->held(rct3::ui::Key::PageDown);
+                        }
+                        const rct3::ui::KeyboardState no_keys;
+                        rct3::scene::update_park_scene(*device, *park, front->assets, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta));
+                        auto sounds = park->desktop->take_sounds();
+                        if (audio && menu_audio)
+                            rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds);
+                        if (rct3::scene::take_park_leave(*park))
+                        {
+                            rct3::scene::destroy_park_scene(*device, *park);
+                            park.reset();
+                        }
+                    }
+                    else if (phase == Phase::Running && (widgets || front))
                     {
                         // The developer windows come first: where they want the pointer, the game does not get it.
                         const auto p = window->pointer();
@@ -568,7 +608,7 @@ int main(int argc, char** argv)
                 });
                 prof::section("Draw", [&] {
                     device->begin_frame();
-                    device->begin_pass({ .clear_color = { 0.05f, 0.06f, 0.08f, 1.0f } });
+                    device->begin_pass({ .clear_color = park ? rct3::scene::kParkSky : rct3::render::Color { 0.05f, 0.06f, 0.08f, 1.0f } });
                     if (phase == Phase::Intro)
                     {
                         rct3::scene::draw_startup_logo(*device, *startup);
@@ -581,6 +621,8 @@ int main(int argc, char** argv)
                     {
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
+                        else if (park && front)
+                            rct3::scene::draw_park_scene(*device, *park, front->assets);
                         else if (front)
                             rct3::scene::draw_front_end_scene(*device, *front);
                         else
@@ -615,6 +657,8 @@ int main(int argc, char** argv)
         rct3::scene::destroy_startup_screen(*device, *startup);
     if (widgets)
         rct3::scene::destroy_widget_demo(*device, *widgets);
+    if (park)
+        rct3::scene::destroy_park_scene(*device, *park);
     if (front)
         rct3::scene::destroy_front_end_scene(*device, *front);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);

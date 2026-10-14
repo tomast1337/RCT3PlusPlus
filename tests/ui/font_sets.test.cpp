@@ -33,6 +33,6 @@ TEST_CASE("only some roles follow the screen")
 {
     CHECK(scaled_role(FontRole::Small) == FontRole::ScaledSmall);
     CHECK(scaled_role(FontRole::Large) == FontRole::ScaledLarge);
-    CHECK_FALSE(scaled_role(FontRole::Medium));
+    CHECK(scaled_role(FontRole::Medium) == FontRole::ScaledMedium);
     CHECK_FALSE(scaled_role(FontRole::AllScripts));
 }

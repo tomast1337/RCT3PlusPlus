@@ -36,7 +36,7 @@ namespace rct3::ui
         std::string key_box; ///< Skins of the key boxes
         std::string key_box_focused;
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
+        Color text_colour = hex("#000000");
         float left = 5;            ///< Where names start
         float indent = 10;         ///< More for rows under another
         float control_x = 200;     ///< Where controls start

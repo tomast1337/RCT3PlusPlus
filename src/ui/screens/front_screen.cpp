@@ -91,8 +91,8 @@ namespace rct3::ui
 
         constexpr float kDisabledAlpha = 0.6f;
         constexpr float kDisabledBoxAlpha = 0.5f; // A disabled button's box and name
-        constexpr Color kLabelColour { 0, 0, 0, 255 };
-        constexpr Color kHelpColour { 0, 0, 0, 255 };
+        constexpr Color kLabelColour = hex("#000000");
+        constexpr Color kHelpColour = hex("#000000");
 
         class FrontBadge : public Widget
         {

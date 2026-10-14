@@ -26,10 +26,10 @@ namespace rct3::ui
         std::string field;             ///< Behind the selected text
         std::string focused;           ///< Instead of `field` while the list has the keyboard focus
         std::string opener;            ///< Family base name for the arrow on the right (see SkinLibrary)
-        Color fill { 0, 0, 0, 0 };     ///< Behind the field skin, if any
+        Color fill = hex("#00000000"); ///< Behind the field skin, if any
         bool opener_in_corner = false; ///< The arrow in the top-right corner instead of inset and centred
-        Color text_colour { 0, 0, 0, 255 };
-        Color disabled_text_colour { 127, 127, 127, 255 };
+        Color text_colour = hex("#000000");
+        Color disabled_text_colour = hex("#7f7f7f");
         FontRole font = FontRole::Small;
         float opener_width = 16; ///< The arrow is a square this wide at the right edge, centred vertically
         float text_indent = 5;

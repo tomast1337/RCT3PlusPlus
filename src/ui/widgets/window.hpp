@@ -45,10 +45,10 @@ namespace rct3::ui
         Point title_button_margin { 10, 6 }; ///< From the top-right corner
         FontRole title_font = FontRole::Medium;
         Rect title_box { 12, 2, 40, 20 }; ///< Title text: left inset, top, right inset, bottom; tops and bottoms from the top edge
-        Color title_colour { 0, 0, 0, 255 };
-        float resize_band = 6;             ///< Inside each edge of a resizable window, the part that drags it
-        float resize_corner = 16;          ///< Along each edge from a corner, the part that drags both edges
-        Color grip_colour { 0, 0, 0, 96 }; ///< Marks in the bottom-right corner of a resizable window
+        Color title_colour = hex("#000000");
+        float resize_band = 6;                ///< Inside each edge of a resizable window, the part that drags it
+        float resize_corner = 16;             ///< Along each edge from a corner, the part that drags both edges
+        Color grip_colour = hex("#00000060"); ///< Marks in the bottom-right corner of a resizable window
     };
 
     class Window : public Widget

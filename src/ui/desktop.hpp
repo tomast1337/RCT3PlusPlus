@@ -107,7 +107,7 @@ namespace rct3::ui
         void draw(DrawContext& context) const;
 
         TooltipStyle tooltip_style;
-        Color modal_shade { 0, 0, 0, 96 }; ///< Over what a modal widget shuts out
+        Color modal_shade = hex("#00000060"); ///< Over what a modal widget shuts out
         [[nodiscard]] const Tooltip& tooltip() const
         {
             return tooltip_;

@@ -23,14 +23,14 @@ namespace rct3::ui
     {
         std::string rail;  ///< Stretched along the track; a line of `rail_colour` when empty
         std::string thumb; ///< Family base name (see SkinLibrary), drawn at thumb_size
-        Color rail_colour { 40, 110, 170, 255 };
-        Color thumb_colour { 60, 170, 60, 255 }; ///< When there is no thumb skin
+        Color rail_colour = hex("#286eaa");
+        Color thumb_colour = hex("#3caa3c"); ///< When there is no thumb skin
         float rail_thickness = 3;
         float thumb_width = 18;
         float thumb_height = 13;
         bool bar = false; ///< A filled bar with no thumb, over the slider's whole rectangle; give thumb_width 0
-        Color bar_colour { 68, 199, 255, 255 };
-        Color bar_back_colour { 127, 127, 127, 255 };
+        Color bar_colour = hex("#44c7ff");
+        Color bar_back_colour = hex("#7f7f7f");
     };
 
     class Slider : public Widget

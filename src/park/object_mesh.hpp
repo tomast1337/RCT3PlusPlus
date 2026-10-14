@@ -38,11 +38,13 @@ namespace rct3::park
     };
 
     using ObjectModels = std::map<std::string, ObjectModel, std::less<>>;
+    /// Colours to paint some objects in instead of the ones they picked, by object id.
+    using ColourOverrides = std::map<std::uint64_t, FlexiColours>;
 
     /// The key `object`'s model is kept by: its overlay and its symbol.
     [[nodiscard]] std::string model_key(const save::PlacedObject& object);
 
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const ColourOverrides& overrides = { });
 
     /// The painted pictures `batches` draw with, by their names. Batches whose picture is missing get none.
     [[nodiscard]] std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);

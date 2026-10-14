@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The park's placed objects as one mesh: every visible object's model moved to where it stands, lit by
-// the same fixed sun as the ground, and grouped into batches by picture, colours and blending. Batches come
-// opaque first, then cut-out, then see-through, which is the order to draw them in.
+// The park's placed objects as meshes: every visible object's model, at the level of detail its distance
+// from the viewer calls for, moved to where it stands, lit by the same fixed sun as the ground, and grouped
+// into batches by picture, colours and blending. Batches come opaque first, then cut-out, then
+// see-through, which is the order to draw them in. Shapes and billboards are built apart: shapes only
+// change when an object's level does, billboards whenever the viewer moves.
 #pragma once
 
 #include "park/object_models.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
+#include <cstdint>
 #include <map>
 #include <span>
 #include <string>
@@ -41,10 +44,26 @@ namespace rct3::park
     /// Colours to paint some objects in instead of the ones they picked, by object id.
     using ColourOverrides = std::map<std::uint64_t, FlexiColours>;
 
+    /// The level each object is drawn at, by its index; kNotDrawn for hidden objects, objects without a model
+    /// and objects too far away.
+    using ObjectLevels = std::vector<std::int8_t>;
+    inline constexpr std::int8_t kNotDrawn = -1;
+
     /// The key `object`'s model is kept by: its overlay and its symbol.
     [[nodiscard]] std::string model_key(const save::PlacedObject& object);
 
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const ColourOverrides& overrides = { });
+    /// Where each object's model origin lands in the park, by index.
+    [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+
+    /// The level of each object seen from `eye`, with the models' distances times `scale`.
+    [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
+
+    /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
+    /// its finest level). Billboard levels are left out.
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { });
+
+    /// The billboards of the objects at `levels`, each standing on its anchor and turned to face `eye`.
+    [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });
 
     /// The painted pictures `batches` draw with, by their names. Batches whose picture is missing get none.
     [[nodiscard]] std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);

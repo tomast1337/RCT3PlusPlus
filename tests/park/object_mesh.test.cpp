@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -46,9 +47,9 @@ TEST_CASE("objects are placed and batched by blending, then picture")
 {
     ObjectModels models;
     ObjectModel tree;
-    tree.parts = { triangle("leaves", PartBlend::Cutout), triangle("bark", PartBlend::Opaque) };
+    tree.levels = { { 100, { triangle("leaves", PartBlend::Cutout), triangle("bark", PartBlend::Opaque) }, { } } };
     ObjectModel glass;
-    glass.parts = { triangle("glass", PartBlend::Blended), triangle("bark", PartBlend::Opaque) };
+    glass.levels = { { 100, { triangle("glass", PartBlend::Blended), triangle("bark", PartBlend::Opaque) }, { } } };
     models.emplace("Things/Things|Tree", tree);
     models.emplace("Things/Things|Glass", glass);
 
@@ -91,7 +92,7 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     wall.slots = 0b001;
     ObjectModels models;
     ObjectModel model;
-    model.parts = { wall };
+    model.levels = { { 100, { wall }, { } } };
     models.emplace("Things/Things|Wall", model);
 
     save::PlacedObject grey = object("Wall", 0);
@@ -105,7 +106,7 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     custom.id = 3;
     const std::vector<save::PlacedObject> objects { grey, same, red, custom };
     const ColourOverrides overrides { { 3, { Rgb { 0x12, 0x34, 0x56 }, Rgb { 1, 1, 1 }, Rgb { } } } };
-    const ObjectMesh m = object_mesh(objects, models, flat(), overrides);
+    const ObjectMesh m = object_mesh(objects, models, flat(), { }, overrides);
     // Grey is colour 1, red colour 27; batches come in name order.
     REQUIRE(m.batches.size() == 3);
     CHECK(m.batches[0].texture == "bricks#123456#000000#000000");
@@ -127,4 +128,84 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     const Rgb want = flexi_colour(27);
     CHECK(painted.at(m.batches[2].texture).pixels == std::vector<std::uint8_t> { want.r, want.g, want.b, 255 });
     CHECK(painted.at(m.batches[0].texture).pixels == std::vector<std::uint8_t> { 0x12, 0x34, 0x56, 255 });
+}
+
+namespace
+{
+    /// A finely modelled item up to 10 units away, a coarse one up to 50, and a billboard up to 200.
+    ObjectModel three_levels()
+    {
+        ObjectModel m;
+        Billboard board;
+        board.texture = "flat";
+        board.width = 2;
+        board.height = 3;
+        board.uv_min = { 0.25f, 0.0f };
+        board.uv_max = { 0.75f, 1.0f };
+        m.levels = { { 10, { triangle("fine", PartBlend::Opaque) }, { } }, { 50, { triangle("coarse", PartBlend::Opaque) }, { } }, { 200, { }, board } };
+        return m;
+    }
+} // namespace
+
+TEST_CASE("a level is the first that reaches as far as the viewer")
+{
+    const ObjectModel m = three_levels();
+    CHECK(level_at(m, 0) == 0u);
+    CHECK(level_at(m, 10) == 0u);
+    CHECK(level_at(m, 11) == 1u);
+    CHECK(level_at(m, 199) == 2u);
+    CHECK_FALSE(level_at(m, 201));
+    CHECK(level_at(m, 15, 2) == 0u);
+}
+
+TEST_CASE("objects are drawn at the level their distance calls for")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Tree", three_levels());
+    save::PlacedObject near = object("Tree", 0);
+    save::PlacedObject hidden = object("Tree", 0);
+    hidden.hidden = true;
+    const std::vector<save::PlacedObject> objects { near, object("Rock", 0), hidden };
+    const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
+    REQUIRE(anchors.size() == 3);
+    CHECK(anchors[0] == glm::vec3(2, 0, 2));
+
+    CHECK(object_levels(objects, models, anchors, { 2, 5, 2 }) == ObjectLevels { 0, kNotDrawn, kNotDrawn });
+    CHECK(object_levels(objects, models, anchors, { 2, 0, 32 }) == ObjectLevels { 1, kNotDrawn, kNotDrawn });
+    CHECK(object_levels(objects, models, anchors, { 2, 0, 102 }) == ObjectLevels { 2, kNotDrawn, kNotDrawn });
+    CHECK(object_levels(objects, models, anchors, { 2, 0, 502 }) == ObjectLevels { kNotDrawn, kNotDrawn, kNotDrawn });
+
+    const ObjectMesh coarse = object_mesh(objects, models, flat(), ObjectLevels { 1, kNotDrawn, kNotDrawn });
+    REQUIRE(coarse.batches.size() == 1);
+    CHECK(coarse.batches[0].texture == "coarse");
+    CHECK(object_mesh(objects, models, flat(), ObjectLevels { 2, kNotDrawn, kNotDrawn }).indices.empty());
+    CHECK(object_mesh(objects, models, flat()).batches[0].texture == "fine");
+}
+
+TEST_CASE("billboards stand on their anchor facing the viewer")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Tree", three_levels());
+    const std::vector<save::PlacedObject> objects { object("Tree", 0) };
+    const std::vector<glm::vec3> anchors { { 2, 1, 2 } };
+    const ObjectMesh m = billboard_mesh(objects, models, anchors, ObjectLevels { 2 }, { 2, 1, 100 });
+    REQUIRE(m.batches.size() == 1);
+    CHECK(m.batches[0].blend == PartBlend::Cutout);
+    CHECK(m.batches[0].texture == "flat");
+    CHECK(m.placed == 1);
+    REQUIRE(m.vertices.size() == 4);
+    REQUIRE(m.indices.size() == 6);
+    // Seen from +Z the quad spans X, two wide and three tall, the top at the picture's top.
+    float low = 1e9f, high = -1e9f;
+    for (const GroundVertex& v : m.vertices)
+    {
+        CHECK(v.position.z == doctest::Approx(2));
+        low = std::min(low, v.position.x);
+        high = std::max(high, v.position.x);
+        CHECK((v.position.y == doctest::Approx(1) || v.position.y == doctest::Approx(4)));
+        CHECK((v.uv.y == 0.0f) == (v.position.y == doctest::Approx(4)));
+    }
+    CHECK(low == doctest::Approx(1));
+    CHECK(high == doctest::Approx(3));
+    CHECK(billboard_mesh(objects, models, anchors, ObjectLevels { 1 }, { 2, 1, 100 }).vertices.empty());
 }

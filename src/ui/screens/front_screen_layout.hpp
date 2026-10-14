@@ -74,6 +74,10 @@ namespace rct3::ui::front_screen
     inline constexpr std::size_t kMaxMenuEntries = 5;
     [[nodiscard]] float menu_angle(std::size_t index);
 
+    /// How much a round button grows under the pointer, times its size, and how fast, in sizes a second.
+    inline constexpr float kSwellFactor = 1.46f;
+    inline constexpr float kSwellRate = 5;
+
     /// Back and Quit, side by side on a smaller circle.
     inline constexpr float kSmallRadius = 520;
     inline constexpr std::array<float, 2> kSmallAngles = { 4.02f, 4.1f };

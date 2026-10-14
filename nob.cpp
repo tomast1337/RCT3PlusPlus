@@ -12,6 +12,9 @@
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
 //
+// -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
+// without it, NOB_JOBS does the same, and by default there is one per core.
+//
 // Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
 // CLANGFORMAT and CLANGTIDY override the clang-format and clang-tidy binaries.
 #include "nob.hpp"
@@ -36,6 +39,7 @@ namespace
         std::string cxx;
         std::vector<std::string> compile_flags;
         std::vector<std::string> link_flags;
+        std::size_t jobs = 1; // Compilers run at once
 
         [[nodiscard]] fs::path out_dir() const
         {
@@ -51,10 +55,21 @@ namespace
         }
     };
 
-    Config make_config(bool release, bool sanitize, bool fuzz)
+    // How many compilers run at once: `-j N` on the command line, else NOB_JOBS, else one per core.
+    std::size_t job_count(int asked)
+    {
+        if (asked > 0)
+            return static_cast<std::size_t>(asked);
+        if (const char* env = std::getenv("NOB_JOBS"); env && std::atoi(env) > 0)
+            return static_cast<std::size_t>(std::atoi(env));
+        return std::max<std::size_t>(1, std::thread::hardware_concurrency());
+    }
+
+    Config make_config(bool release, bool sanitize, bool fuzz, std::size_t jobs)
     {
         const char* cxx = std::getenv("CXX");
         Config c;
+        c.jobs = jobs;
         c.cxx = cxx ? cxx : "g++";
         c.compile_flags = { "-std=c++26", "-Wall", "-Wextra", "-Wpedantic", "-Isrc", "-isystem", "third_party" };
 
@@ -115,7 +130,7 @@ namespace
     // Compiles sources in parallel. Objects are rebuilt when the source or any header is newer.
     bool compile(const Config& cfg, const std::vector<fs::path>& sources, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
-        Procs procs;
+        Procs procs(cfg.jobs);
         bool ok = true;
         for (const auto& source : sources)
         {
@@ -130,6 +145,7 @@ namespace
             if (!needs_rebuild(object, deps))
                 continue;
 
+            procs.make_room();
             if (auto pid = start(cmd))
                 procs.add(*pid);
             else
@@ -520,7 +536,7 @@ namespace
     // Runs clang-tidy over our library, tool and fuzz sources using the compile database written by the build.
     // The checks come from .clang-tidy. The files are split across the available cores. CLANGTIDY overrides
     // the binary.
-    bool run_tidy()
+    bool run_tidy(std::size_t jobs)
     {
         std::vector<fs::path> files;
         for (const char* dir : { "src", "tools", "fuzz" })
@@ -534,7 +550,6 @@ namespace
             return false;
         }
         const char* binary = std::getenv("CLANGTIDY");
-        const std::size_t jobs = std::max<std::size_t>(1, std::thread::hardware_concurrency());
         const std::size_t chunk = (files.size() + jobs - 1) / jobs;
         std::vector<std::future<bool>> pending;
         for (std::size_t begin = 0; begin < files.size(); begin += chunk)
@@ -645,6 +660,7 @@ int main(int argc, char** argv)
     std::vector<std::string> test_args;
     std::string fuzz_target;
     int fuzz_seconds = 30;
+    int jobs = 0;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -655,6 +671,10 @@ int main(int argc, char** argv)
             sanitize = true;
         else if (arg == "--seconds" && i + 1 < argc)
             fuzz_seconds = std::atoi(argv[++i]);
+        else if ((arg == "-j" || arg == "--jobs") && i + 1 < argc)
+            jobs = std::atoi(argv[++i]);
+        else if (arg.starts_with("-j") && arg.size() > 2)
+            jobs = std::atoi(argv[i] + 2);
         else if (arg == "--filter" && i + 1 < argc)
             test_args.push_back(std::format("-tc=*{}*", argv[++i]));
         else if (arg == "--")
@@ -671,7 +691,7 @@ int main(int argc, char** argv)
         else
         {
             log(Level::Error,
-                "unknown argument '{}'. usage: ./nob [build|test|clean] [--release] [--sanitize] "
+                "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [-j N] "
                 "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch",
                 arg);
             return 2;
@@ -693,7 +713,7 @@ int main(int argc, char** argv)
 
     if (command == "fuzz")
     {
-        const Config cfg = make_config(false, false, true);
+        const Config cfg = make_config(false, false, true, job_count(jobs));
         std::vector<fs::path> targets;
         if (!build_fuzz(cfg, targets))
             return 1;
@@ -707,7 +727,7 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    const Config cfg = make_config(release, sanitize, false);
+    const Config cfg = make_config(release, sanitize, false, job_count(jobs));
 
     if (command == "app" || command == "run")
     {
@@ -725,7 +745,7 @@ int main(int argc, char** argv)
     if (!build_all(cfg))
         return 1;
     if (command == "tidy")
-        return run_tidy() ? 0 : 1;
+        return run_tidy(job_count(jobs)) ? 0 : 1;
     if (command != "test")
         return 0;
 

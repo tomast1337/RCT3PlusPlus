@@ -119,9 +119,25 @@ namespace nob
     }
 
     /// Processes running in parallel. `wait_all` always reaps every one, so a failure never leaves zombies.
+    /// At most `limit` run at once (0 for no limit): `add` first waits for the oldest when that many run.
     class Procs
     {
     public:
+        explicit Procs(std::size_t limit = 0)
+            : limit_(limit)
+        {
+        }
+
+        /// Waits until another process may start; call before starting it.
+        void make_room()
+        {
+            while (limit_ != 0 && pids_.size() >= limit_)
+            {
+                ok_ = wait(pids_.front()) && ok_;
+                pids_.erase(pids_.begin());
+            }
+        }
+
         void add(Proc pid)
         {
             pids_.push_back(pid);
@@ -129,15 +145,18 @@ namespace nob
 
         [[nodiscard]] bool wait_all()
         {
-            bool ok = true;
+            bool ok = ok_;
             for (Proc pid : pids_)
                 ok = wait(pid) && ok;
             pids_.clear();
+            ok_ = true;
             return ok;
         }
 
     private:
+        std::size_t limit_ = 0;
         std::vector<Proc> pids_;
+        bool ok_ = true;
     };
 
     /// True when `output` is missing or older than any input. A missing input counts as "rebuild".

@@ -6,6 +6,7 @@
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
 
+#include <format>
 #include <limits>
 
 namespace rct3::park
@@ -23,7 +24,51 @@ namespace rct3::park
 
     std::string ground_key(GroundPaint paint, std::uint8_t index)
     {
-        return (paint == GroundPaint::Cliff ? "cliff " : "surface ") + std::to_string(index);
+        switch (paint)
+        {
+            case GroundPaint::Cliff:
+                return "cliff " + std::to_string(index);
+            case GroundPaint::PathA:
+                return "path A " + std::to_string(index);
+            case GroundPaint::PathB:
+                return "path B " + std::to_string(index);
+            case GroundPaint::Surface:
+                break;
+        }
+        return "surface " + std::to_string(index);
+    }
+
+    std::string path_texture_file(std::string_view style)
+    {
+        return std::format("Path/{0}/{0}_Texture.common.ovl", style);
+    }
+
+    std::expected<std::size_t, std::string> add_path_images(GroundImages& images, const std::filesystem::path& path, std::string_view style, std::uint8_t index)
+    {
+        auto overlay = ovl::Overlay::load(path);
+        if (!overlay)
+            return std::unexpected(std::string(ovl::to_string(overlay.error())));
+        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        std::size_t missing = 2;
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        {
+            if (part == nullptr)
+                continue;
+            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            {
+                for (const GroundPaint paint : { GroundPaint::PathA, GroundPaint::PathB })
+                {
+                    if (!item.texture || item.name != std::format("Path_{}_Ground{}", style, paint == GroundPaint::PathA ? 'A' : 'B'))
+                        continue;
+                    if (auto image = pixels.first_frame(*item.texture))
+                    {
+                        images.insert_or_assign(ground_key(paint, index), std::move(*image));
+                        --missing;
+                    }
+                }
+            }
+        }
+        return missing;
     }
 
     std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)

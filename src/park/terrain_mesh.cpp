@@ -28,12 +28,15 @@ namespace rct3::park
         {
             std::map<Key, std::vector<GroundVertex>> by_paint;
 
-            void ground(Key key, const Triangle& t, const std::array<float, 3>& alpha)
+            /// A ground triangle, each corner lit by its own (smoothed) normal.
+            void ground(Key key, const Triangle& t, const std::array<glm::vec3, 3>& normals, const std::array<float, 3>& alpha)
             {
-                const float s = shade(t);
                 auto& out = by_paint[key];
                 for (std::size_t i = 0; i < t.size(); ++i)
+                {
+                    const float s = sunlight(normals[i]);
                     out.push_back({ t[i], { s, s, s, alpha[i] }, { t[i].x / kTextureSpan, t[i].z / kTextureSpan } });
+                }
             }
 
             /// A wall running along x or along z, which picks where the texture's u comes from.
@@ -72,7 +75,7 @@ namespace rct3::park
         /// A tile's ground, once per surface at its corners, lowest index first. Each layer goes over the
         /// ones before it with an opacity that leaves every corner showing its surfaces in proportion: the
         /// first is opaque, and a later one covers its share of all the layers so far.
-        void ground_layers(Builder& b, const save::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c)
+        void ground_layers(Builder& b, const save::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c, const std::array<glm::vec3, 4>& n)
         {
             std::array<std::uint8_t, 16> surfaces { };
             std::size_t count = 0;
@@ -103,8 +106,8 @@ namespace rct3::park
                 if (i > 0 && std::ranges::all_of(alpha, [](float a) { return a <= 0; }))
                     continue;
                 const Key key { GroundPaint::Surface, surfaces[i] };
-                b.ground(key, { c[0], c[1], c[2] }, { alpha[0], alpha[1], alpha[2] });
-                b.ground(key, { c[3], c[2], c[1] }, { alpha[3], alpha[2], alpha[1] });
+                b.ground(key, { c[0], c[1], c[2] }, { n[0], n[1], n[2] }, { alpha[0], alpha[1], alpha[2] });
+                b.ground(key, { c[3], c[2], c[1] }, { n[3], n[2], n[1] }, { alpha[3], alpha[2], alpha[1] });
             }
         }
 
@@ -113,6 +116,35 @@ namespace rct3::park
             const int dc = c % 2;
             const int dr = c / 2;
             return { g.world_x(col + dc), g.at(col, row).corners.at(static_cast<std::size_t>(c)), g.world_z(row + dr) };
+        }
+
+        /// The normal of a tile's ground at its corner `c`: the area-weighted sum of the faces of every tile
+        /// meeting at that grid point at the same height, so the ground shades smoothly across tiles and
+        /// stays sharp where a cliff splits it.
+        glm::vec3 smooth_normal(const save::TerrainGrid& g, int col, int row, int c)
+        {
+            const int x = col + c % 2;
+            const int z = row + c / 2;
+            const float height = g.at(col, row).corners.at(static_cast<std::size_t>(c));
+            glm::vec3 sum { 0.0f };
+            for (int r = z - 1; r <= z; ++r)
+            {
+                for (int q = x - 1; q <= x; ++q)
+                {
+                    if (!g.contains(q, r))
+                        continue;
+                    const int k = (x - q) + 2 * (z - r); // That grid point as the neighbour's corner
+                    if (std::abs(g.at(q, r).corners.at(static_cast<std::size_t>(k)) - height) >= kFlat)
+                        continue;
+                    const std::array<glm::vec3, 4> p { corner(g, q, r, 0), corner(g, q, r, 1), corner(g, q, r, 2), corner(g, q, r, 3) };
+                    // Triangles (0, 1, 2) and (3, 2, 1): corners 1 and 2 are in both.
+                    if (k != 3)
+                        sum += glm::cross(p[1] - p[0], p[2] - p[0]);
+                    if (k != 0)
+                        sum += glm::cross(p[2] - p[3], p[1] - p[3]);
+                }
+            }
+            return sum;
         }
 
         /// The wall between two edges that share their ends in plan: ours (a0, a1) and the neighbour's
@@ -145,7 +177,8 @@ namespace rct3::park
                 low = std::min(low, cell.min_height());
                 high = std::max(high, cell.max_height());
                 const std::array<glm::vec3, 4> c { corner(grid, col, row, 0), corner(grid, col, row, 1), corner(grid, col, row, 2), corner(grid, col, row, 3) };
-                ground_layers(b, grid, col, row, c);
+                const std::array<glm::vec3, 4> n { smooth_normal(grid, col, row, 0), smooth_normal(grid, col, row, 1), smooth_normal(grid, col, row, 2), smooth_normal(grid, col, row, 3) };
+                ground_layers(b, grid, col, row, c, n);
                 if (grid.contains(col + 1, row))
                     edge_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false);
                 if (grid.contains(col, row + 1))

@@ -6,6 +6,7 @@
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/sky_models.hpp"
+#include "park/surrounding_land.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -308,7 +309,8 @@ namespace rct3::scene
         ParkScene scene;
         scene.grid = std::move(world->terrain);
         scene.camera = park::overview(scene.grid);
-        const park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
+        park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
+        park::add_ground(mesh, park::surrounding_land(scene.grid));
         scene.batches = mesh.batches;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.

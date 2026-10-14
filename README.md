@@ -37,6 +37,12 @@ loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend w
 The game's music is Windows Media Audio, decoded by [FFmpeg's WMA decoder](third_party/ffmpeg_wma/)
 (LGPL-2.1-or-later), vendored on its own and built into the binary.
 
+Files under `assets/` are built into every binary with `#embed`, so rct3++ ships as one file. Among them
+are our own translations, `assets/lang/<Language>.json`, for text the game's string tables lack: a JSON
+object of strings, nested objects joining their names with `_` (`{"Rct3pp": {"UsualKeys": "Usual keys"}}`
+gives `Rct3pp_UsualKeys`). A language without a file, or a key a file lacks, uses English. Strings may name
+values in braces, `{count} guests`, filled in when shown.
+
 Text the game's fonts cannot draw (Greek, Cyrillic, arrows and other signs) falls back to
 [GNU Unifont](https://unifoundry.com/unifont/), rendered with the vendored [stb_truetype](third_party/stb/).
 The font is not in the repository: `./nob fetch` downloads a pinned release into `downloads/` and checks

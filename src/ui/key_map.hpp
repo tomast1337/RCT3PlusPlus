@@ -75,7 +75,7 @@ namespace rct3::ui
     {
         Command command;
         std::string_view name;                        ///< In the file
-        std::u16string_view label;                    ///< Shown to the user
+        std::string_view label_key;                   ///< Of its name in our translations
         std::optional<CommandPress> press;            ///< Nothing for a command of the program
         std::array<std::optional<KeyCombo>, 2> usual; ///< The keys it starts with
     };

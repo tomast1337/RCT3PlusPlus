@@ -40,6 +40,42 @@ namespace rct3::park
 
     } // namespace
 
+    std::optional<std::string> referenced_overlay(std::string_view from, std::string_view reference)
+    {
+        std::vector<std::string_view> steps;
+        const auto walk = [&](std::string_view path, bool keep_last) {
+            while (!path.empty())
+            {
+                const std::size_t cut = path.find_first_of("/\\");
+                const std::string_view step = path.substr(0, cut);
+                path = cut == std::string_view::npos ? std::string_view { } : path.substr(cut + 1);
+                if (!keep_last && cut == std::string_view::npos)
+                    break; // The file's own name: references start from its folder
+                if (step.empty() || step == ".")
+                    continue;
+                if (step == "..")
+                {
+                    if (steps.empty())
+                        return false;
+                    steps.pop_back();
+                    continue;
+                }
+                steps.push_back(step);
+            }
+            return true;
+        };
+        if (reference.empty() || !walk(from, false) || !walk(reference, true) || steps.empty())
+            return std::nullopt;
+        std::string out;
+        for (const std::string_view step : steps)
+        {
+            if (!out.empty())
+                out += '/';
+            out += step;
+        }
+        return out;
+    }
+
     AssetIndex AssetIndex::scan(const std::filesystem::path& root, std::span<const std::string_view> folders)
     {
         AssetIndex index;
@@ -50,27 +86,50 @@ namespace rct3::park
             for (auto it = std::filesystem::recursive_directory_iterator(root / folder, error); !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
             {
                 const std::string name = it->path().filename().string();
-                if (!it->is_regular_file(error) || name.size() <= kCommonEnding.size() || !name.ends_with(kCommonEnding))
-                    continue;
-                auto overlay = ovl::Overlay::load(it->path());
-                if (!overlay)
-                    continue;
-                std::string path = it->path().lexically_relative(root).generic_string();
-                path.resize(path.size() - kCommonEnding.size());
-                for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
-                {
-                    if (part == nullptr)
-                        continue;
-                    for (const ovl::Symbol& symbol : part->symbols)
-                    {
-                        if (symbol.is_pointer && !symbol.name.empty())
-                            index.add(symbol.name, path);
-                    }
-                }
-                index.overlays_.emplace(lower(path), path);
+                if (it->is_regular_file(error) && name.size() > kCommonEnding.size() && name.ends_with(kCommonEnding))
+                    index.add_file(it->path());
             }
         }
         return index;
+    }
+
+    bool AssetIndex::add_file(const std::filesystem::path& file)
+    {
+        auto overlay = ovl::Overlay::load(file);
+        if (!overlay)
+            return false;
+        std::string path = file.lexically_relative(root_).generic_string();
+        if (path.size() <= kCommonEnding.size() || path.starts_with(".."))
+            return false;
+        path.resize(path.size() - kCommonEnding.size());
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        {
+            if (part == nullptr)
+                continue;
+            for (const ovl::Symbol& symbol : part->symbols)
+            {
+                if (symbol.is_pointer && !symbol.name.empty())
+                    add(symbol.name, path);
+            }
+            for (const std::string& reference : part->file.header.external_refs)
+            {
+                if (auto named = referenced_overlay(path, reference))
+                    references_.insert(lower(*named));
+            }
+        }
+        overlays_.emplace(lower(path), path);
+        return true;
+    }
+
+    std::vector<std::string> AssetIndex::missing_references() const
+    {
+        std::vector<std::string> out;
+        for (const std::string& reference : references_)
+        {
+            if (!overlays_.contains(reference))
+                out.push_back(reference);
+        }
+        return out;
     }
 
     void AssetIndex::add(std::string_view symbol, std::string_view path)

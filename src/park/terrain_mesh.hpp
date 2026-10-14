@@ -5,6 +5,11 @@
 // grouped into batches by what it is painted with, a land surface or a cliff face, so each batch draws with
 // one texture. Every triangle is flat-shaded by a fixed sun.
 //
+// Land surfaces fade into each other across a tile: at each corner every surface of the tiles touching it
+// shows in proportion to how many of them have it. A tile is drawn once per surface touching its corners,
+// and the vertex alpha says how much of what is below each layer covers. The batches come lowest surface
+// first and must be drawn in order, with alpha blending and depth tests that pass on equal depth.
+//
 // World units throughout: X along the columns, Z along the rows, Y up.
 #pragma once
 

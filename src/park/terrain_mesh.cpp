@@ -34,12 +34,12 @@ namespace rct3::park
         {
             std::map<Key, std::vector<GroundVertex>> by_paint;
 
-            void ground(Key key, const Triangle& t)
+            void ground(Key key, const Triangle& t, const std::array<float, 3>& alpha)
             {
                 const float s = shade(t);
                 auto& out = by_paint[key];
-                for (const glm::vec3& p : t)
-                    out.push_back({ p, { s, s, s, 1 }, { p.x / kTextureSpan, p.z / kTextureSpan } });
+                for (std::size_t i = 0; i < t.size(); ++i)
+                    out.push_back({ t[i], { s, s, s, alpha[i] }, { t[i].x / kTextureSpan, t[i].z / kTextureSpan } });
             }
 
             /// A wall running along x or along z, which picks where the texture's u comes from.
@@ -56,6 +56,63 @@ namespace rct3::park
                 }
             }
         };
+
+        /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it.
+        float surface_share(const save::TerrainGrid& g, int x, int z, std::uint8_t surface)
+        {
+            int touching = 0;
+            int with = 0;
+            for (int row = z - 1; row <= z; ++row)
+            {
+                for (int col = x - 1; col <= x; ++col)
+                {
+                    if (!g.contains(col, row))
+                        continue;
+                    ++touching;
+                    with += g.at(col, row).surface == surface ? 1 : 0;
+                }
+            }
+            return touching > 0 ? static_cast<float>(with) / static_cast<float>(touching) : 0;
+        }
+
+        /// A tile's ground, once per surface at its corners, lowest index first. Each layer goes over the
+        /// ones before it with an opacity that leaves every corner showing its surfaces in proportion: the
+        /// first is opaque, and a later one covers its share of all the layers so far.
+        void ground_layers(Builder& b, const save::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c)
+        {
+            std::array<std::uint8_t, 16> surfaces { };
+            std::size_t count = 0;
+            for (int dr = -1; dr <= 1; ++dr)
+            {
+                for (int dc = -1; dc <= 1; ++dc)
+                {
+                    if (!g.contains(col + dc, row + dr))
+                        continue;
+                    const std::uint8_t s = g.at(col + dc, row + dr).surface;
+                    if (std::find(surfaces.begin(), surfaces.begin() + static_cast<std::ptrdiff_t>(count), s) == surfaces.begin() + static_cast<std::ptrdiff_t>(count))
+                        surfaces[count++] = s;
+                }
+            }
+            std::sort(surfaces.begin(), surfaces.begin() + static_cast<std::ptrdiff_t>(count));
+
+            std::array<float, 4> so_far { };
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                std::array<float, 4> alpha { };
+                for (int k = 0; k < 4; ++k)
+                {
+                    const auto ku = static_cast<std::size_t>(k);
+                    const float share = surface_share(g, col + k % 2, row + k / 2, surfaces[i]);
+                    so_far[ku] += share;
+                    alpha[ku] = i == 0 ? 1 : (so_far[ku] > 0 ? share / so_far[ku] : 0);
+                }
+                if (i > 0 && std::ranges::all_of(alpha, [](float a) { return a <= 0; }))
+                    continue;
+                const Key key { GroundPaint::Surface, surfaces[i] };
+                b.ground(key, { c[0], c[1], c[2] }, { alpha[0], alpha[1], alpha[2] });
+                b.ground(key, { c[3], c[2], c[1] }, { alpha[3], alpha[2], alpha[1] });
+            }
+        }
 
         glm::vec3 corner(const save::TerrainGrid& g, int col, int row, int c)
         {
@@ -94,9 +151,7 @@ namespace rct3::park
                 low = std::min(low, cell.min_height());
                 high = std::max(high, cell.max_height());
                 const std::array<glm::vec3, 4> c { corner(grid, col, row, 0), corner(grid, col, row, 1), corner(grid, col, row, 2), corner(grid, col, row, 3) };
-                const Key surface { GroundPaint::Surface, cell.surface };
-                b.ground(surface, { c[0], c[1], c[2] });
-                b.ground(surface, { c[3], c[2], c[1] });
+                ground_layers(b, grid, col, row, c);
                 if (grid.contains(col + 1, row))
                     edge_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false);
                 if (grid.contains(col, row + 1))

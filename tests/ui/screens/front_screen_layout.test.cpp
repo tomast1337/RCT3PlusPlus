@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front_screen_layout.hpp"
 
+#include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -62,6 +63,15 @@ TEST_CASE("badges sit below the circle's centre, each further round clockwise")
     CHECK(first.width() == doctest::Approx(kBadgeSize));
     CHECK(first.y0 > kRingCentre.y);
     CHECK(second.x0 < first.x0); // Clockwise from below-right goes left
+
+    // On a wider, taller screen the corner moves out, but the badge keeps its size.
+    const Frame wide = frame_for({ 0, 0, 2 * kDesignWidth, 1.5f * kDesignHeight });
+    const Rect moved = badge_rect(wide, 0);
+    CHECK(moved.width() == doctest::Approx(kBadgeSize));
+    CHECK(moved.height() == doctest::Approx(kBadgeSize));
+    CHECK(moved.x0 == std::floor(moved.x0)); // Snapped
+    CHECK(std::abs(moved.x0 - 2 * first.x0) <= 2);
+    CHECK(std::abs(moved.y1 - 1.5f * first.y1) <= 2);
 }
 
 TEST_CASE("buttons ease round first, then out, and arrive")

@@ -45,15 +45,18 @@ namespace rct3::ui::front_screen
         return { inside(kLabelPatch), inside(kLabelBand), inside(end), inside(kLabelText) };
     }
 
-    Rect badge_rect(const Frame& frame, std::size_t index)
+    Rect badge_rect(const Frame& frame, std::size_t slot)
     {
         // Turning by a positive angle with y down goes clockwise on the screen.
         const float length = std::hypot(kBadgeFirstDirection.x, kBadgeFirstDirection.y);
         const float x = kBadgeFirstDirection.x / length;
         const float y = kBadgeFirstDirection.y / length;
-        const float turn = kBadgeStep * static_cast<float>(index + 1);
+        const float turn = kBadgeStep * static_cast<float>(slot + 1);
         const Point corner { kRingCentre.x + kBadgeRadius * (x * std::cos(turn) - y * std::sin(turn)), kRingCentre.y + kBadgeRadius * (x * std::sin(turn) + y * std::cos(turn)) };
-        return frame.stretched({ corner.x, corner.y - kBadgeSize, corner.x + kBadgeSize, corner.y });
+        const Point at = frame.at(corner);
+        const float x0 = std::floor(at.x);
+        const float y1 = std::floor(at.y);
+        return { x0, y1 - kBadgeSize, x0 + kBadgeSize, y1 };
     }
 
     bool ease(Polar& current, const Polar& goal, float elapsed)

@@ -104,13 +104,15 @@ namespace rct3::ui::front_screen
     };
     [[nodiscard]] LabelBox label_box(const Frame& frame, std::size_t index);
 
-    /// The badges of installed expansion packs: 100 units square, their lower-left corners on a circle
-    /// below and right of the buttons' centre, each turned a little further clockwise than the last.
+    /// The badges of installed expansion packs, in slots: their lower-left corners on a circle below and
+    /// right of the buttons' centre, each slot turned a little further clockwise than the last. The corner
+    /// moves with the screen, snapped to whole units, but the badge keeps its size; the last pack
+    /// installed takes the first slot.
     inline constexpr float kBadgeSize = 100;
     inline constexpr float kBadgeRadius = 475;
     inline constexpr Point kBadgeFirstDirection { 0.7f, 1 }; ///< Turned by one step for the first badge
     inline constexpr float kBadgeStep = 0.28f;
-    [[nodiscard]] Rect badge_rect(const Frame& frame, std::size_t index);
+    [[nodiscard]] Rect badge_rect(const Frame& frame, std::size_t slot);
 
     // How the menu buttons fly in. Each button moves on the circle by angle and radius, easing towards
     // where its menu wants it: on its place on the ring when its menu is open, twice as far out when its

@@ -13,7 +13,7 @@ namespace rct3::ui
 
     struct FocusMarkStyle
     {
-        Color colour { 0, 0, 0, 160 };
+        Color colour = hex("#000000a0");
         float thickness = 1;
         float outset = 2; ///< From the widget's edges outwards
     };

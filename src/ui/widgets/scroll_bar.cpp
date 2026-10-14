@@ -15,8 +15,8 @@ namespace rct3::ui
             return o == Orientation::Vertical ? Rect { across0, start, across1, end } : Rect { start, across0, end, across1 };
         }
 
-        constexpr Color kHeldTint { 190, 190, 190, 255 };
-        constexpr Color kIdleTint { 255, 255, 255, 128 };
+        constexpr Color kHeldTint = hex("#bebebe");
+        constexpr Color kIdleTint = hex("#ffffff80");
 
     } // namespace
 

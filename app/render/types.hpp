@@ -10,6 +10,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "math/hex_colour.hpp"
 
 #include <compare>
 #include <cstddef>
@@ -33,6 +34,13 @@ namespace rct3::render
         float b = 0;
         float a = 1;
     };
+
+    /// The colour `text` ("#rrggbb" or "#rrggbbaa") names, as floats; see math/hex_colour.hpp.
+    consteval Color hex(std::string_view text)
+    {
+        const glm::vec4 c = unit(rct3::hex(text));
+        return { c.x, c.y, c.z, c.w };
+    }
 
     // Handles are opaque ids owned by the device that created them. Id 0 is never issued, so a
     // value-initialised handle means "none".
@@ -202,7 +210,7 @@ namespace rct3::render
     struct PassDesc
     {
         bool clear = true; ///< Without it, the pass keeps what earlier passes of the frame drew
-        Color clear_color { 0, 0, 0, 1 };
+        Color clear_color = hex("#000000");
         float clear_depth = 1.0f;
     };
 

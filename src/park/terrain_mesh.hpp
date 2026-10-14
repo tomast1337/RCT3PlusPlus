@@ -14,6 +14,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "math/hex_colour.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -66,7 +67,7 @@ namespace rct3::park
     inline constexpr float kTextureSpan = 16;
     /// Height differences smaller than this make no wall.
     inline constexpr float kFlat = 0.001f;
-    inline constexpr glm::vec4 kWaterColour { 0.20f, 0.42f, 0.55f, 0.65f };
+    inline constexpr glm::vec4 kWaterColour = unit(hex("#336b8ca6"));
 
     [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water);
 

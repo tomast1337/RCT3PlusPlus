@@ -20,7 +20,7 @@ namespace rct3::ui
     {
         std::string skin; ///< Stretched behind the text
         FontRole font = FontRole::Small;
-        Color colour { 0, 0, 0, 255 };
+        Color colour = hex("#000000");
         float delay = 0.5f;          ///< Seconds the pointer must rest before the tooltip shows
         float still_distance = 0.1f; ///< Movement up to this many units still counts as resting
         Rect padding { 4, 4, 4, 4 }; ///< Between the box edges and the text

@@ -59,10 +59,10 @@ namespace rct3::ui
         std::string name_box;
         std::string name_box_focused;
         FontRole font = FontRole::Small;
-        Color text_colour { 0, 0, 0, 255 };
-        Color line_colour { 36, 132, 190, 255 }; ///< Of a row's lines and the hovered button's name
-        Color selected_colour { 239, 232, 239, 255 };
-        Color faded_colour { 255, 255, 255, 255 }; ///< What the end of the reading fades to
+        Color text_colour = hex("#000000");
+        Color line_colour = hex("#2484be"); ///< Of a row's lines and the hovered button's name
+        Color selected_colour = hex("#efe8ef");
+        Color faded_colour = hex("#ffffff"); ///< What the end of the reading fades to
 
         float width = 410;
         float height = 296;

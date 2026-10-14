@@ -155,7 +155,7 @@ namespace rct3::ui::game_skins
     {
         SliderStyle s;
         s.thumb = kSliderThumb;
-        s.rail_colour = { 20, 100, 160, 255 };
+        s.rail_colour = hex("#1464a0");
         s.rail_thickness = 4;
         s.thumb_width = 18;
         s.thumb_height = 13;

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <doctest/doctest.h>
 
 using namespace rct3::random;

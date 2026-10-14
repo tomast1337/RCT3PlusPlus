@@ -4,6 +4,10 @@
 # compiler, so the jobs run inside the official gcc:15 Docker image instead of installing a
 # toolchain on the host. The nob build script is bootstrapped from source in each job.
 #
+# A checkout has no objects, so every run compiles everything. ccache, kept between runs with
+# actions/cache (one cache per job, so the sanitizer flags never share entries), turns that into
+# compiling only what changed. Pull requests read the caches that runs on main saved.
+#
 # Follow-ups, deliberately not covered yet: the Vulkan/GLFW viewer build, the libFuzzer
 # targets (these need Clang), and a Windows runner.
 name: ci
@@ -32,13 +36,36 @@ jobs:
       matrix:
         include:
           - name: build and test
-            test_flags: ""
+            cache: plain
+            flags: ""
+          # The tools are built and linked by the plain job already; this one only needs the tests.
           - name: build and test (ASan + UBSan)
-            test_flags: "--sanitize"
+            cache: sanitize
+            flags: "--sanitize --no-tools"
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Install ccache
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends ccache
+          # g++ and gcc links to ccache, found first on the path; ccache then runs the image's compilers.
+          # (Debian's own /usr/lib/ccache only links the compilers Debian packages, not the image's.)
+          mkdir -p /opt/ccache
+          ln -s /usr/bin/ccache /opt/ccache/g++
+          ln -s /usr/bin/ccache /opt/ccache/gcc
+          echo "/opt/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=$PWD/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=400M" >> "$GITHUB_ENV"
+
+      - name: Restore the compiler cache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.cache }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.cache }}-
 
       - name: Compiler version
         run: g++ --version
@@ -47,10 +74,13 @@ jobs:
         run: g++ -std=c++26 -o nob nob.cpp
 
       - name: Build
-        run: ./nob build ${{ matrix.test_flags }}
+        run: |
+          ccache --zero-stats
+          ./nob build ${{ matrix.flags }}
+          ccache --show-stats
 
       - name: Test
-        run: ./nob test ${{ matrix.test_flags }}
+        run: ./nob test ${{ matrix.flags }}
 
   # Formatting and static analysis. The tool versions are pinned from PyPI so the result does not depend on
   # what the base image ships: formatting differs between clang-format releases, so a floating version

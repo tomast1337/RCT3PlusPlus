@@ -1,0 +1,25 @@
+{
+    "Rct3pp": {
+        "InterfaceKeys": "Interface",
+        "PressKeys": "Press keys...",
+        "NoKeys": "None",
+        "KeysTip": "Click, then press the keys: F1 to F12, Escape, Enter, Tab, Page Up, Page Down or Insert, with Ctrl or Shift if wanted, or Ctrl with a letter or digit. Escape alone keeps the keys.",
+        "UsualKeys": "Usual keys",
+        "Shuffle": "Shuffle",
+        "MoveByWord": "Move by a word",
+        "MoveByWordKeys": "Ctrl+Left, Ctrl+Right",
+        "Command": {
+            "Cancel": "Close, cancel, go back",
+            "DefaultButton": "Default button",
+            "NextControl": "Next control",
+            "PreviousControl": "Previous control",
+            "NextPage": "Next page",
+            "PreviousPage": "Previous page",
+            "Copy": "Copy",
+            "Cut": "Cut",
+            "Paste": "Paste",
+            "SelectAll": "Select all text",
+            "DeveloperWindows": "Developer windows"
+        }
+    }
+}

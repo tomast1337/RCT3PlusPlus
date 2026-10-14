@@ -33,35 +33,54 @@ namespace rct3::park
 
         /// Prefix of the sky's texture keys, so they never meet other pictures' names.
         constexpr std::string_view kKeyPrefix = "sky:";
+        constexpr std::string_view kMountainShape = "Mountains";
+
+        std::string key(std::string_view picture)
+        {
+            return std::string(kKeyPrefix) + std::string(picture);
+        }
+
+        /// Adds `mesh`'s vertices and whole triangles to `out`.
+        void add_mesh(SkyShape& out, const ovl::ShapeMesh& mesh)
+        {
+            const auto base = static_cast<std::uint32_t>(out.vertices.size());
+            for (std::size_t i = 0; i < mesh.vertex_count; ++i)
+            {
+                const auto v = mesh.vertex(i);
+                out.vertices.push_back({ { v.position[0], v.position[1], v.position[2] }, { v.normal[0], v.normal[1], v.normal[2] }, { v.texcoord[0], v.texcoord[1] } });
+            }
+            for (std::size_t i = 0; i + 2 < mesh.index_count; i += 3)
+            {
+                const std::array<std::uint32_t, 3> t { mesh.index(i), mesh.index(i + 1), mesh.index(i + 2) };
+                if (t[0] >= mesh.vertex_count || t[1] >= mesh.vertex_count || t[2] >= mesh.vertex_count)
+                    continue;
+                for (const std::uint32_t k : t)
+                    out.indices.push_back(base + k);
+            }
+        }
+
+        SkyShape mesh_of(const ovl::ShapeMesh& mesh, std::string key)
+        {
+            SkyShape out;
+            out.texture = std::move(key);
+            add_mesh(out, mesh);
+            return out;
+        }
 
         SkyShape shape_of(const ovl::StaticShape& shape, std::string key)
         {
             SkyShape out;
             out.texture = std::move(key);
             for (const ovl::ShapeMesh& mesh : shape.meshes)
-            {
-                const auto base = static_cast<std::uint32_t>(out.vertices.size());
-                for (std::size_t i = 0; i < mesh.vertex_count; ++i)
-                {
-                    const auto v = mesh.vertex(i);
-                    out.vertices.push_back({ { v.position[0], v.position[1], v.position[2] }, { v.normal[0], v.normal[1], v.normal[2] }, { v.texcoord[0], v.texcoord[1] } });
-                }
-                for (std::size_t i = 0; i + 2 < mesh.index_count; i += 3)
-                {
-                    const std::array<std::uint32_t, 3> t { mesh.index(i), mesh.index(i + 1), mesh.index(i + 2) };
-                    if (t[0] >= mesh.vertex_count || t[1] >= mesh.vertex_count || t[2] >= mesh.vertex_count)
-                        continue;
-                    for (const std::uint32_t k : t)
-                        out.indices.push_back(base + k);
-                }
-            }
+                add_mesh(out, mesh);
             return out;
         }
 
     } // namespace
 
-    std::expected<LoadedSky, std::string> load_sky(const std::filesystem::path& path)
+    std::expected<LoadedSky, std::string> load_sky(const std::filesystem::path& path, std::string_view theme)
     {
+        const std::array<std::string, 2> panels = mountain_pictures(theme);
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
@@ -77,18 +96,23 @@ namespace rct3::park
                 for (const SkyPart& p : kParts)
                 {
                     if (item.shape && item.name == p.shape)
-                        sky.models.*p.slot = shape_of(*item.shape, std::string(kKeyPrefix) + std::string(p.picture));
+                        sky.models.*p.slot = shape_of(*item.shape, key(p.picture));
+                }
+                if (item.shape && item.name == kMountainShape)
+                {
+                    for (std::size_t m = 0; m < sky.mountains.size() && m < item.shape->meshes.size(); ++m)
+                        sky.mountains[m] = mesh_of(item.shape->meshes[m], key(panels[m]));
                 }
             }
             for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
             {
-                for (const SkyPart& p : kParts)
-                {
-                    if (!item.texture || item.name != p.picture)
-                        continue;
-                    if (auto image = pixels.first_frame(*item.texture))
-                        sky.images.insert_or_assign(std::string(kKeyPrefix) + std::string(p.picture), std::move(*image));
-                }
+                if (!item.texture)
+                    continue;
+                const bool wanted = std::ranges::any_of(kParts, [&](const SkyPart& p) { return item.name == p.picture; }) || std::ranges::find(panels, item.name) != panels.end();
+                if (!wanted)
+                    continue;
+                if (auto image = pixels.first_frame(*item.texture))
+                    sky.images.insert_or_assign(key(item.name), std::move(*image));
             }
         }
         return sky;

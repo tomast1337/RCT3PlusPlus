@@ -292,7 +292,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed)
     {
         const auto log = logging::logger("park");
         const auto bytes = read_file(path);
@@ -310,6 +310,9 @@ namespace rct3::scene
 
         ParkScene scene;
         scene.grid = std::move(world->terrain);
+        scene.seed = seed;
+        scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
+        log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
         const park::TerrainMesh surroundings = park::surrounding_land(scene.grid);

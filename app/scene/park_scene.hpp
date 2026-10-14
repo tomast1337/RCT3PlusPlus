@@ -16,6 +16,7 @@
 #include "park/object_mesh.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
+#include "random/generator.hpp"
 #include "render/device.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
@@ -57,6 +58,8 @@ namespace rct3::scene
     struct ParkScene
     {
         save::TerrainGrid grid;
+        std::uint64_t seed = 0;
+        random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         park::ParkCamera camera;
         std::vector<park::GroundBatch> batches;
         render::BufferHandle ground_vertices;
@@ -100,7 +103,8 @@ namespace rct3::scene
     };
 
     /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
-    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path);
+    /// Its random numbers come from `seed`: the same park and seed give the same park.
+    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed);
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 

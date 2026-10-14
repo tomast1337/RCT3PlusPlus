@@ -3,14 +3,15 @@
 // The 3D models of the things placed in a park. An asset's scenery item lists its visuals; a visual lists
 // levels of detail, each a static shape, a bone shape or a flat billboard. Trees list a billboard visual
 // first and the modelled one after it. The model is the first level of the first visual that has a shape,
-// with a bone shape in its resting pose. Each of its parts is painted with one texture, by name.
+// with a bone shape in its resting pose. Each of its parts is painted with one texture, by name; its
+// picture is kept as palette indices, as a placed object may recolour it (see flexi_colours.hpp).
 //
 // The models' coordinates are the game's: Y up, the ground at 0, a full-tile item centred on its tile.
 #pragma once
 
 #include "math/glm.hpp"
-#include "ovl/texture_image.hpp"
 #include "park/asset_index.hpp"
+#include "park/flexi_colours.hpp"
 
 #include <cstdint>
 #include <map>
@@ -45,7 +46,8 @@ namespace rct3::park
 
     struct ModelPart
     {
-        std::string texture; ///< Key of the part's picture, empty for none
+        std::string texture;     ///< Key of the part's picture, empty for none
+        std::uint32_t slots = 0; ///< Colour slots the picture recolours (bit k: slot k)
         PartBlend blend = PartBlend::Opaque;
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
@@ -57,7 +59,7 @@ namespace rct3::park
         std::vector<ModelPart> parts;
     };
 
-    using ModelImages = std::map<std::string, ovl::RgbaImage, std::less<>>;
+    using ModelPictures = std::map<std::string, PaletteImage, std::less<>>;
 
     /// Loads models through an asset index, reading each overlay once. Keep it while loading a park's models,
     /// then drop it to free the files.
@@ -74,9 +76,9 @@ namespace rct3::park
         [[nodiscard]] std::optional<ObjectModel> load(std::string_view symbol, std::string_view overlay);
 
         /// The pictures the loaded models' parts name, by key.
-        [[nodiscard]] const ModelImages& images() const
+        [[nodiscard]] const ModelPictures& pictures() const
         {
-            return images_;
+            return pictures_;
         }
 
     private:
@@ -84,10 +86,11 @@ namespace rct3::park
 
         const AssetIndex& index_;
         std::unique_ptr<Files> files_;
-        ModelImages images_;
-        std::map<std::string, bool, std::less<>> tried_images_;
+        ModelPictures pictures_;
+        std::map<std::string, bool, std::less<>> tried_pictures_;
 
         std::string texture_key(std::string_view name, std::string_view near);
+        void set_texture(ModelPart& part, std::string_view name, std::string_view near);
     };
 
 } // namespace rct3::park

@@ -209,3 +209,24 @@ TEST_CASE("billboards stand on their anchor facing the viewer")
     CHECK(high == doctest::Approx(3));
     CHECK(billboard_mesh(objects, models, anchors, ObjectLevels { 1 }, { 2, 1, 100 }).vertices.empty());
 }
+
+TEST_CASE("a leaning object's points rise with their distance from its anchor")
+{
+    ObjectModels models;
+    ObjectModel panel;
+    panel.levels = { { 100, { triangle("rail", PartBlend::Opaque) }, { } } };
+    models.emplace("Things/Things|Rail", panel);
+    const std::vector<save::PlacedObject> objects { object("Rail", 0) };
+    const Leans leans { { 1, glm::vec2(0.25f, 0.5f) } };
+    const ObjectMesh m = object_mesh(objects, models, flat(), { }, { }, leans);
+    REQUIRE(m.vertices.size() == 3);
+    const glm::vec3 anchor = m.vertices[0].position;
+    for (const GroundVertex& v : m.vertices)
+    {
+        const float level = v.position.y - 0.25f * (v.position.x - anchor.x) - 0.5f * (v.position.z - anchor.z);
+        CHECK((level == doctest::Approx(0.0f) || level == doctest::Approx(1.0f)));
+    }
+    CHECK(m.vertices[2].position.y == doctest::Approx(0.5f * (m.vertices[2].position.z - anchor.z)));
+    CHECK(m.vertices[2].position.y != doctest::Approx(0.0f));
+    CHECK(m.vertices[1].position.y == doctest::Approx(1.0f)); // Straight above the anchor: not moved
+}

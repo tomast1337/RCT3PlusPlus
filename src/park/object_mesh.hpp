@@ -43,6 +43,9 @@ namespace rct3::park
     using ObjectModels = std::map<std::string, ObjectModel, std::less<>>;
     /// Colours to paint some objects in instead of the ones they picked, by object id.
     using ColourOverrides = std::map<std::uint64_t, FlexiColours>;
+    /// How much some objects' shapes rise per park unit along x and z away from their anchors, by object
+    /// id, so a straight piece such as a fence panel follows a slope. Upright lines stay upright.
+    using Leans = std::map<std::uint64_t, glm::vec2>;
 
     /// The level each object is drawn at, by its index; kNotDrawn for hidden objects, objects without a model
     /// and objects too far away.
@@ -59,8 +62,8 @@ namespace rct3::park
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
-    /// its finest level). Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { });
+    /// its finest level), leaning those in `leans`. Billboard levels are left out.
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { });
 
     /// The billboards of the objects at `levels`, each standing on its anchor and turned to face `eye`.
     [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });

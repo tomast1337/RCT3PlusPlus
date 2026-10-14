@@ -75,6 +75,7 @@ namespace rct3::scene
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
         park::ModelPictures pictures; ///< For painting the batches new levels bring
+        park::Leans leans;            ///< Of the built pieces that follow a slope
         std::vector<glm::vec3> anchors;
         park::ObjectLevels levels; ///< Those the object buffers hold
         float since_rebuild = 0;   ///< Seconds since the object buffers were last built

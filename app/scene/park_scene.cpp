@@ -175,7 +175,7 @@ namespace rct3::scene
             }
             scene.levels = std::move(levels);
             scene.since_rebuild = 0;
-            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels);
+            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels, { }, scene.leans);
             scene.object_batches = mesh.batches;
             add_textures(device, scene, mesh.batches);
             if (mesh.indices.empty())
@@ -433,9 +433,10 @@ namespace rct3::scene
                     last_id = std::max(last_id, o.id);
             }
             const std::size_t supports = built.size();
-            std::vector<save::PlacedObject> fences = park::queue_fences(world->paths, last_id);
-            log.info("{} supports, {} queue railings", supports, fences.size());
-            built.insert(built.end(), std::make_move_iterator(fences.begin()), std::make_move_iterator(fences.end()));
+            park::QueueFences fences = park::queue_fences(world->paths, scene.grid, last_id);
+            log.info("{} supports, {} queue railings", supports, fences.pieces.size());
+            built.insert(built.end(), std::make_move_iterator(fences.pieces.begin()), std::make_move_iterator(fences.pieces.end()));
+            scene.leans = std::move(fences.leans);
             load_models(install, built, false, scene.models, scene.pictures);
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
         }

@@ -22,11 +22,12 @@ namespace rct3::park
             SkyShape SkyModels::* slot;
             std::string_view shape;
             std::string_view picture;
+            bool glows = false; ///< Its picture is light on black, with no see-through parts of its own
         };
 
         constexpr std::array<SkyPart, 4> kParts { {
             { &SkyModels::dome, "SkySphere", "SkyColour" },
-            { &SkyModels::stars, "StarSphere", "Stars" },
+            { &SkyModels::stars, "StarSphere", "Stars", true },
             { &SkyModels::milky_way, "MilkyWay", "Milkyway" },
             { &SkyModels::clouds, "Clouds", "Clouds" },
         } };
@@ -78,6 +79,23 @@ namespace rct3::park
 
     } // namespace
 
+    void glowing(ovl::RgbaImage& image)
+    {
+        for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
+        {
+            std::uint8_t* p = &image.pixels[i];
+            const std::uint8_t brightest = std::max({ p[0], p[1], p[2] });
+            if (brightest == 0)
+            {
+                p[3] = 0;
+                continue;
+            }
+            for (int c = 0; c < 3; ++c)
+                p[c] = static_cast<std::uint8_t>(p[c] * 255 / brightest);
+            p[3] = static_cast<std::uint8_t>(p[3] * brightest / 255);
+        }
+    }
+
     std::expected<LoadedSky, std::string> load_sky(const std::filesystem::path& path, std::string_view theme)
     {
         const std::array<std::string, 2> panels = mountain_pictures(theme);
@@ -108,11 +126,16 @@ namespace rct3::park
             {
                 if (!item.texture)
                     continue;
-                const bool wanted = std::ranges::any_of(kParts, [&](const SkyPart& p) { return item.name == p.picture; }) || std::ranges::find(panels, item.name) != panels.end();
+                const auto part_of = std::ranges::find(kParts, item.name, &SkyPart::picture);
+                const bool wanted = part_of != kParts.end() || std::ranges::find(panels, item.name) != panels.end();
                 if (!wanted)
                     continue;
                 if (auto image = pixels.first_frame(*item.texture))
+                {
+                    if (part_of != kParts.end() && part_of->glows)
+                        glowing(*image);
                     sky.images.insert_or_assign(key(item.name), std::move(*image));
+                }
             }
         }
         return sky;

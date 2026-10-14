@@ -32,6 +32,15 @@ TEST_CASE("skins are found by name")
     CHECK(SkinRef { }.size() == std::array<float, 2> { 0, 0 });
 }
 
+TEST_CASE("skins are found whatever the case of their name")
+{
+    SkinLibrary skins;
+    skins.add("Obj_Rides_RollerCoasters", skin(2, 40, 40));
+    REQUIRE(skins.find("Obj_Rides_Rollercoasters"));
+    CHECK(skins.find("obj_rides_rollercoasters")->texture == 2);
+    CHECK_FALSE(skins.find("Obj_Rides_Roller"));
+}
+
 TEST_CASE("state lookups fall back to the nearest member of the family")
 {
     SkinLibrary skins;

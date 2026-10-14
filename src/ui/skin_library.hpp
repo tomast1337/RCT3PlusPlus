@@ -9,6 +9,7 @@
 // and finally to the base name itself.
 #pragma once
 
+#include "strings/ascii.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/skin.hpp"
 
@@ -49,6 +50,8 @@ namespace rct3::ui
     public:
         void add(std::string name, const SkinRef& skin);
 
+        /// Whatever the case of `name`: the game finds its pictures that way, and its text names some of
+        /// them in another case than their own.
         [[nodiscard]] const SkinRef* find(std::string_view name) const;
 
         /// The family member for `state`, or the nearest one that exists, or the skin named `base`.
@@ -60,7 +63,7 @@ namespace rct3::ui
         }
 
     private:
-        std::map<std::string, SkinRef, std::less<>> skins_;
+        std::map<std::string, SkinRef, strings::LessIgnoringCase> skins_;
     };
 
     /// Draws `skin` stretched over `rect`. Nothing when `skin` is null, so a missing skin leaves a gap

@@ -96,12 +96,19 @@ namespace rct3::ui
     {
     public:
         using Button::Button;
+        /// Draw the picture at its own size times icon_scale, centred and growing with the face, instead
+        /// of filling the face.
+        bool icon_own_size = false;
+
         /// The front screen's buttons click as the pointer passes over them, as in the game.
         [[nodiscard]] bool clicks_on_hover() const override
         {
             return true;
         }
         void draw(DrawContext& context) const override;
+
+    protected:
+        void draw_icon(DrawContext& context, Color tint) const;
     };
 
     /// The front screen's artwork, shared with the screens that stand in for it: the bands and the bottom
@@ -149,6 +156,8 @@ namespace rct3::ui
         /// The name shown in the box beside button `index`, and how far it has faded in (0 to 1).
         [[nodiscard]] std::u16string_view label(std::size_t index) const;
         [[nodiscard]] float label_alpha(std::size_t index) const;
+        /// Puts other lines of help along the bottom until the next update, for what is shown over the screen.
+        void show_help(std::u16string title, std::u16string text);
         /// The two lines of help along the bottom.
         [[nodiscard]] std::u16string_view help_title() const
         {

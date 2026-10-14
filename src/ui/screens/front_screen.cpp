@@ -89,7 +89,6 @@ namespace rct3::ui
         constexpr std::string_view kExpansionName = "AOP_Name_";
         constexpr std::string_view kExpansionInstalled = "AOP_InstalledMessage";
 
-        constexpr float kSwellFactor = 1.46f; ///< How big a picture grows under the pointer
         constexpr float kDisabledAlpha = 0.6f;
         constexpr float kDisabledBoxAlpha = 0.5f; // A disabled button's box and name
         constexpr Color kLabelColour { 0, 0, 0, 255 };
@@ -154,8 +153,25 @@ namespace rct3::ui
         const SkinState s = state();
         const Color tint = s == SkinState::Disabled ? faded(kWhite, kDisabledAlpha) : kWhite;
         draw_skin(context.list, context.skins.find(skin), rect(), s == SkinState::Pressed ? kPressedTint : tint);
-        if (!icon.empty())
-            draw_skin(context.list, context.skins.find(icon), face(), tint);
+        draw_icon(context, tint);
+    }
+
+    void FrontButton::draw_icon(DrawContext& context, Color tint) const
+    {
+        const SkinRef* picture = icon.empty() ? nullptr : context.skins.find(icon);
+        if (picture == nullptr)
+            return;
+        const Rect r = face();
+        if (!icon_own_size)
+        {
+            draw_skin(context.list, picture, r, tint);
+            return;
+        }
+        const auto [w, h] = picture->size();
+        const float k = icon_scale * (rect().width() > 0 ? r.width() / rect().width() : 1);
+        const float cx = (r.x0 + r.x1) / 2;
+        const float cy = (r.y0 + r.y1) / 2;
+        draw_skin(context.list, picture, { cx - w * k / 2, cy - h * k / 2, cx + w * k / 2, cy + h * k / 2 }, tint);
     }
 
     void draw_front_bands(DrawContext& context, const fs::Frame& frame)
@@ -268,6 +284,12 @@ namespace rct3::ui
         return i < label_alpha_.size() ? label_alpha_[i] : 0;
     }
 
+    void FrontScreen::show_help(std::u16string title, std::u16string text)
+    {
+        help_title_ = std::move(title);
+        help_text_ = std::move(text);
+    }
+
     bool FrontScreen::on_key(const KeyPress& key)
     {
         if (key.key == Key::Escape && current_ != FrontMenu::Main)
@@ -346,7 +368,7 @@ namespace rct3::ui
                 mb.arrived = fs::ease(mb.at, goal(menu, i), context.elapsed);
                 const Rect r = fs::button_rect(frame, fs::on_ring(mb.at.angle, mb.at.radius), fs::kMenuButtonSize);
                 mb.button->placement = placed(r, rect());
-                mb.button->swell = size * (kSwellFactor - 1) / 2;
+                mb.button->swell = size * (fs::kSwellFactor - 1) / 2;
                 const bool open = menu == current_ || (current_ != FrontMenu::Main && menu == front_menu(current_).parent);
                 mb.button->visible = open || !mb.arrived;
                 if (menu == current_ && mb.arrived && i < labels_.size())

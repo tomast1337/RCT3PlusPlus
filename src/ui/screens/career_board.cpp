@@ -51,27 +51,16 @@ namespace rct3::ui
         public:
             using FrontButton::FrontButton;
             std::string mark;
-            float icon_size = 0; ///< Times the picture's own size, before growing
 
             void draw(DrawContext& context) const override
             {
                 const Rect r = face();
-                const float w = r.width();
-                const float grown = rect().width() > 0 ? w / rect().width() : 1;
                 draw_skin(context.list, context.skins.find(skin), r, state() == SkinState::Pressed ? kPressedTint : kWhite);
-                if (const SkinRef* picture = context.skins.find(icon))
-                {
-                    const auto [iw, ih] = picture->size();
-                    const float k = icon_size * grown * scale;
-                    const float cx = (r.x0 + r.x1) / 2;
-                    const float cy = (r.y0 + r.y1) / 2;
-                    draw_skin(context.list, picture, { cx - iw * k / 2, cy - ih * k / 2, cx + iw * k / 2, cy + ih * k / 2 });
-                }
-                const float x = r.x0 + cm::kMarkAt.x * w;
+                draw_icon(context, kWhite);
+                const float x = r.x0 + cm::kMarkAt.x * r.width();
                 const float y = r.y0 + cm::kMarkAt.y * r.height();
-                draw_skin(context.list, context.skins.find(mark), { x, y, x + cm::kMarkSize * w, y + cm::kMarkSize * r.height() });
+                draw_skin(context.list, context.skins.find(mark), { x, y, x + cm::kMarkSize * r.width(), y + cm::kMarkSize * r.height() });
             }
-            float scale = 1; ///< Of the design frame, for the picture's own size
         };
 
         Placement placed(const Rect& r, const Rect& parent)
@@ -128,6 +117,7 @@ namespace rct3::ui
         {
             auto& b = add<ScenarioButton>("scenario" + std::to_string(i), style_.scenario_button, scenarios_[i].info.icon);
             b.mark = mark_of(style_, scenarios_[i].status);
+            b.icon_own_size = true;
             b.enabled = career::is_open(scenarios_[i].status);
             buttons_.push_back(&b);
         }
@@ -277,11 +267,10 @@ namespace rct3::ui
             const float size = cm::kScenarioSize * (picked ? cm::kPickedFactor : 1);
             auto& b = static_cast<ScenarioButton&>(*buttons_[i]);
             b.placement = placed(fs::button_rect(frame, fs::on_ring(cm::scenario_angle(i), cm::kScenarioRadius), size), rect());
-            const float swell = picked ? cm::kPickedSwell : cm::kSwell;
+            const float swell = picked ? cm::kPickedSwell : fs::kSwellFactor;
             b.swell = size * frame.round * (swell - 1) / 2;
-            b.swell_time = (swell - 1) / cm::kSwellRate;
-            b.icon_size = picked ? cm::kPickedIconScale : cm::kIconScale;
-            b.scale = frame.round;
+            b.swell_time = (swell - 1) / fs::kSwellRate;
+            b.icon_scale = (picked ? cm::kPickedIconScale : cm::kIconScale) * frame.round;
         }
 
         // The panel holds the name, then the description, then the buttons; a long description pushes the
@@ -313,8 +302,8 @@ namespace rct3::ui
             small[i]->placement = placed(fs::button_rect(frame, fs::on_ring(cm::kSmallAngles.at(i), fs::kSmallRadius), fs::kSmallButtonSize), rect());
         for (FrontButton* b : { new_, resume_, load_, menu_, quit_ })
         {
-            b->swell = button * (cm::kSwell - 1) / 2;
-            b->swell_time = (cm::kSwell - 1) / cm::kSwellRate;
+            b->swell = button * (fs::kSwellFactor - 1) / 2;
+            b->swell_time = (fs::kSwellFactor - 1) / fs::kSwellRate;
         }
     }
 

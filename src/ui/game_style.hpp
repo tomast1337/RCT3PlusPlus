@@ -10,6 +10,7 @@
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/options_dialog.hpp"
+#include "ui/screens/tutorial_picker.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/list_box.hpp"
@@ -62,6 +63,8 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kPadlockLocked = "GUI2PadlockLocked";
     inline constexpr std::string_view kPadlockOpen = "GUI2PadlockUnlocked";
     inline constexpr std::string_view kNoScenarioPicture = "FrontScreen_PeopleUT";
+    inline constexpr std::string_view kStartTutorialIcon = "GUI2_TutorialForward";
+    inline constexpr std::array<std::string_view, 4> kQuarterCircles = { "FrontScreen_QuarterCircle_TL", "FrontScreen_QuarterCircle_TR", "FrontScreen_QuarterCircle_BL", "FrontScreen_QuarterCircle_BR" };
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
     inline constexpr std::string_view kListBox = "EditBox_NoFocus";
@@ -342,6 +345,17 @@ namespace rct3::ui::game_skins
         s.unlocked = kPadlockOpen;
         s.hats = { std::string(kApprenticeHat), std::string(kEntrepreneurHat), std::string(kTycoonHat) };
         s.no_picture = kNoScenarioPicture;
+        return s;
+    }
+
+    /// The tutorials' menu on the front screen's buttons and white disc.
+    [[nodiscard]] inline TutorialPickerStyle tutorial_picker_style()
+    {
+        TutorialPickerStyle s;
+        s.button = kMenuCircle;
+        s.start_icon = kStartTutorialIcon;
+        for (std::size_t i = 0; i < kQuarterCircles.size(); ++i)
+            s.quarters.at(i) = kQuarterCircles[i];
         return s;
     }
 

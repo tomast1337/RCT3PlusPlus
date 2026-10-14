@@ -109,6 +109,27 @@ namespace rct3::ui
         return static_cast<CareerBoard*>(desktop_.root().find(kCareerBoardName));
     }
 
+    TutorialPicker* FrontEnd::tutorial_picker() const
+    {
+        return static_cast<TutorialPicker*>(desktop_.root().find(kTutorialsName));
+    }
+
+    void FrontEnd::open_tutorials(int pack)
+    {
+        if (TutorialPicker* open = tutorial_picker())
+        {
+            if (pack == tutorial_pack_)
+                return;
+            desktop_.root().remove(*open);
+        }
+        tutorial_pack_ = pack;
+        ++tutorial_pickers_opened_;
+        auto& menu = desktop_.root().add<TutorialPicker>(std::string(kTutorialsName), style_.tutorials, strings_, tutorials(strings_, pack, setup_.expansions));
+        // Part of the screen, under any window open over it.
+        desktop_.root().lower(menu);
+        desktop_.root().lower(*screen_);
+    }
+
     void FrontEnd::ask_quit()
     {
         if (question_ == nullptr)
@@ -127,6 +148,9 @@ namespace rct3::ui
                 case FrontAction::Campaign:
                     open_careers(request->pack);
                     break;
+                case FrontAction::Tutorial:
+                    open_tutorials(request->pack);
+                    break;
                 case FrontAction::LoadSandbox:
                     open_files(request->action, config::UserFolder::Parks);
                     break;
@@ -143,6 +167,13 @@ namespace rct3::ui
                     unhandled_.push_back(*request);
                     break;
             }
+        }
+        if (TutorialPicker* menu = tutorial_picker())
+        {
+            if (screen_->current() != FrontMenu::Tutorials || !screen_->visible)
+                desktop_.root().remove(*menu);
+            else if (auto help = menu->help())
+                screen_->show_help(std::move((*help)[0]), std::move((*help)[1]));
         }
         if (CareerBoard* map = career_board())
         {

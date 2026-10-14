@@ -12,7 +12,7 @@ namespace
 {
     FrontEndStyle style()
     {
-        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style(), game_skins::career_board_style() };
+        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style(), game_skins::career_board_style(), game_skins::tutorial_picker_style() };
     }
 
     struct Fixture
@@ -176,4 +176,36 @@ TEST_CASE("the career map stands in for the front screen, and going back shows t
     CHECK(f.front.career_board() == nullptr);
     CHECK(f.front.screen().visible);
     CHECK(f.front.screen().current() == FrontMenu::Campaigns);
+}
+
+TEST_CASE("a game's tutorial button shows its tutorials until the menu of games is left")
+{
+    FrontEndSetup setup;
+    setup.expansions = { true, true };
+    Fixture f(setup);
+    f.strings.add("TutorialList_Name1", u"Looking round");
+    f.strings.add("Tutorial_AOP0_List_Name1", u"Pools");
+    f.strings.add("Tutorial_AOP0_List_Name2", u"Slides");
+    f.front.screen().open(FrontMenu::Tutorials);
+    f.step();
+    f.press(f.front.screen().button(FrontMenu::Tutorials, 0));
+    REQUIRE(f.front.tutorial_picker() != nullptr);
+    CHECK(f.front.tutorial_picker()->size() == 1);
+    CHECK(f.front.tutorial_pickers_opened() == 1);
+    CHECK_FALSE(f.front.take_unhandled());
+
+    // Under the screen's windows: the screen first, then the menu.
+    CHECK(f.desktop.root().children().at(1).get() == f.front.tutorial_picker());
+
+    f.press(f.front.screen().button(FrontMenu::Tutorials, 0));
+    CHECK(f.front.tutorial_pickers_opened() == 1);
+    f.press(f.front.screen().button(FrontMenu::Tutorials, 1));
+    CHECK(f.front.tutorial_pack() == 1);
+    REQUIRE(f.front.tutorial_picker() != nullptr);
+    CHECK(f.front.tutorial_picker()->size() == 2);
+    CHECK(f.front.tutorial_pickers_opened() == 2);
+
+    f.front.screen().back();
+    f.step();
+    CHECK(f.front.tutorial_picker() == nullptr);
 }

@@ -6,7 +6,9 @@
 // game keeps those in; the owner fills it with the folder's files and acts on what the user picks there.
 // A game's career button opens the window that picks a career of that game, which the owner fills too;
 // the owner opens the career map in place of the front screen once a career is loaded, and the map's
-// return to the main menu brings the front screen back on the menu of games. What needs more than the
+// return to the main menu brings the front screen back on the menu of games. A game's tutorial button
+// shows that game's tutorials over the screen until another game's is pressed or the menu of games is
+// left; the owner says which tutorials' parks are there and starts the one taken. What needs more than the
 // interface goes to the owner: quitting, a new language or screen size, the options to save once their
 // window has closed, and the menu choices nothing handles yet.
 //
@@ -22,6 +24,7 @@
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/options_dialog.hpp"
+#include "ui/screens/tutorial_picker.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <array>
@@ -39,6 +42,7 @@ namespace rct3::ui
         FileDialogStyle files;
         CareerDialogStyle careers;
         CareerBoardStyle map;
+        TutorialPickerStyle tutorials;
     };
 
     struct FrontEndSetup
@@ -97,6 +101,18 @@ namespace rct3::ui
         {
             return career_boards_opened_;
         }
+        /// The tutorials shown over the screen, while they are.
+        [[nodiscard]] TutorialPicker* tutorial_picker() const;
+        /// The game whose tutorials they are: 0 the original, then each expansion.
+        [[nodiscard]] int tutorial_pack() const
+        {
+            return tutorial_pack_;
+        }
+        /// Counts the tutorial menus opened, so the owner tells a new one from the last.
+        [[nodiscard]] std::size_t tutorial_pickers_opened() const
+        {
+            return tutorial_pickers_opened_;
+        }
         /// Counts the windows loading a game opened, so the owner tells a new one from the last.
         [[nodiscard]] std::size_t file_dialogs_opened() const
         {
@@ -124,11 +140,13 @@ namespace rct3::ui
         static constexpr std::string_view kFilesName = "load_game";
         static constexpr std::string_view kCareersName = "careers";
         static constexpr std::string_view kCareerBoardName = "career_board";
+        static constexpr std::string_view kTutorialsName = "tutorials";
 
     private:
         void open_options();
         void open_files(FrontAction action, config::UserFolder folder);
         void open_careers(int pack);
+        void open_tutorials(int pack);
         void ask_quit();
 
         Desktop& desktop_;
@@ -144,6 +162,8 @@ namespace rct3::ui
         int career_pack_ = 0;
         std::size_t career_dialogs_opened_ = 0;
         std::size_t career_boards_opened_ = 0;
+        int tutorial_pack_ = 0;
+        std::size_t tutorial_pickers_opened_ = 0;
         bool options_open_ = false;
         bool options_closed_ = false;
         bool quit_ = false;

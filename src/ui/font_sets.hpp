@@ -63,6 +63,8 @@ namespace rct3::ui
         {
             case FontRole::Small:
                 return FontRole::ScaledSmall;
+            case FontRole::Medium:
+                return FontRole::ScaledMedium;
             case FontRole::Large:
                 return FontRole::ScaledLarge;
             default:

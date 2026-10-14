@@ -46,11 +46,9 @@ namespace rct3::ui
         /// Where a scenario's mark goes, in fractions of its button: from the left, from the top, and its size.
         inline constexpr Point kMarkAt { 0.341f, 0.441f };
         inline constexpr float kMarkSize = 0.5f;
-        /// How much a button grows under the pointer, times its size: the picked scenario, the rest; and how
-        /// fast, in sizes a second.
+        /// How much the picked scenario grows under the pointer, times its size; the rest grow as the front
+        /// screen's buttons do.
         inline constexpr float kPickedSwell = 1.05f;
-        inline constexpr float kSwell = 1.46f;
-        inline constexpr float kSwellRate = 5;
 
         /// The panel: its sides, its top, and the least it reaches down; a long description takes it lower.
         inline constexpr float kPanelLeft = 15;

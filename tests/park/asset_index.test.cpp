@@ -53,3 +53,14 @@ TEST_CASE("referenced overlays that are not indexed are missing")
     CHECK(index.missing_references().empty());
     CHECK_FALSE(index.add_file("Nowhere/None.common.ovl"));
 }
+
+TEST_CASE("a symbol is found whatever its case")
+{
+    AssetIndex index;
+    index.add("Ramp_Left:svd", "Things/Ramps/Ramp_left");
+    CHECK(index.find("Ramp_left:svd", "Things/Ramps/Stub") == "Things/Ramps/Ramp_left");
+    CHECK(index.find("RAMP_LEFT:SVD", "Elsewhere") == "Things/Ramps/Ramp_left");
+    index.add("ramp_left:svd", "Other/Ramps/Ramp_left");
+    CHECK(index.symbol_count() == 1);
+    CHECK(index.find("Ramp_Left:svd", "Other/Ramps/Stub") == "Other/Ramps/Ramp_left");
+}

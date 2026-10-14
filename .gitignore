@@ -24,3 +24,4 @@ local/
 
 # Dear ImGui writes window layout here when the viewer runs.
 imgui.ini
+.ccache/

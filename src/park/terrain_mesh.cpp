@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/terrain_mesh.hpp"
 
-#include "park/lighting.hpp"
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -35,9 +33,9 @@ namespace rct3::park
         using Key = std::pair<GroundPaint, std::uint8_t>;
         using Triangle = std::array<glm::vec3, 3>;
 
-        float shade(const Triangle& t)
+        glm::vec3 facing(const Triangle& t)
         {
-            return sunlight(glm::cross(t[1] - t[0], t[2] - t[0]));
+            return glm::cross(t[1] - t[0], t[2] - t[0]);
         }
 
         /// Collects triangles per paint, then lays them out batch by batch.
@@ -45,14 +43,13 @@ namespace rct3::park
         {
             std::map<Key, std::vector<GroundVertex>> by_paint;
 
-            /// A ground triangle, each corner lit by its own (smoothed) normal.
+            /// A ground triangle, each corner with its own (smoothed) normal.
             void ground(Key key, const Triangle& t, const std::array<glm::vec3, 3>& normals, const std::array<float, 3>& alpha)
             {
                 auto& out = by_paint[key];
                 for (std::size_t i = 0; i < t.size(); ++i)
                 {
-                    const float s = sunlight(normals[i]);
-                    out.push_back({ t[i], { s, s, s, alpha[i] }, { t[i].x / kTextureSpan, t[i].z / kTextureSpan } });
+                    out.push_back({ t[i], { 1, 1, 1, alpha[i] }, { t[i].x / kTextureSpan, t[i].z / kTextureSpan }, normals[i] });
                 }
             }
 
@@ -63,10 +60,10 @@ namespace rct3::park
                 const Triangle b { quad[0], quad[2], quad[3] };
                 for (const Triangle& t : { a, b })
                 {
-                    const float s = shade(t);
+                    const glm::vec3 normal = facing(t);
                     auto& out = by_paint[key];
                     for (const glm::vec3& p : t)
-                        out.push_back({ p, { s, s, s, 1 }, { (along_x ? p.x : p.z) / kTextureSpan, -p.y / kTextureSpan } });
+                        out.push_back({ p, glm::vec4(1.0f), { (along_x ? p.x : p.z) / kTextureSpan, -p.y / kTextureSpan }, normal });
                 }
             }
         };
@@ -146,11 +143,11 @@ namespace rct3::park
                 if (std::abs(g.at(q, r).corners.at(static_cast<std::size_t>(k)) - height) >= kFlat)
                     continue;
                 const std::array<glm::vec3, 4> p { corner(g, q, r, 0), corner(g, q, r, 1), corner(g, q, r, 2), corner(g, q, r, 3) };
-                // Triangles (0, 1, 2) and (3, 2, 1): corners 1 and 2 are in both.
+                // Triangles (0, 1, 2) and (3, 2, 1): corners 1 and 2 are in both. Crossed so they point up.
                 if (k != 3)
-                    sum += glm::cross(p[1] - p[0], p[2] - p[0]);
+                    sum += glm::cross(p[2] - p[0], p[1] - p[0]);
                 if (k != 0)
-                    sum += glm::cross(p[2] - p[3], p[1] - p[3]);
+                    sum += glm::cross(p[1] - p[3], p[2] - p[3]);
             }
         }
         return sum;

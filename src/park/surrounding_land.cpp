@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/surrounding_land.hpp"
 
-#include "park/lighting.hpp"
-
 #include <algorithm>
 #include <array>
 #include <map>
@@ -241,7 +239,7 @@ namespace rct3::park
             for (std::size_t i = 0; i < n; ++i)
             {
                 const std::array<std::size_t, 4> q { at(k, i), at(k, i + 1), at(k + 1, i), at(k + 1, i + 1) };
-                const glm::vec3 face = glm::cross(points[q[2]] - points[q[0]], points[q[1]] - points[q[0]]);
+                const glm::vec3 face = glm::cross(points[q[1]] - points[q[0]], points[q[2]] - points[q[0]]); // Pointing up
                 for (const std::size_t p : q)
                     normals[p] += face;
             }
@@ -270,9 +268,8 @@ namespace rct3::park
                 const float f = fade(distances[p / n]);
                 const float cover = 1 - f * above[p];
                 const float alpha = cover > 0 ? std::clamp(f * share[p] / cover, 0.0f, 1.0f) : 0;
-                const float s = sunlight(normals[p]);
                 const glm::vec3& q = points[p];
-                mesh.vertices.push_back({ q, { s, s, s, alpha }, { q.x / kTextureSpan, q.z / kTextureSpan } });
+                mesh.vertices.push_back({ q, { 1, 1, 1, alpha }, { q.x / kTextureSpan, q.z / kTextureSpan }, normals[p] });
             }
             GroundBatch batch { GroundPaint::Surface, surface, static_cast<std::uint32_t>(mesh.indices.size()), 0 };
             for (std::size_t k = 0; k + 1 < rings; ++k)

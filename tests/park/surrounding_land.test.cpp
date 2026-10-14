@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/surrounding_land.hpp"
 
-#include "park/lighting.hpp"
-
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -104,9 +102,14 @@ TEST_CASE("the land at the edge is lit as the park's ground there")
     cell(g, 0, 0).corners = { 0, 4, 0, 4 }; // A slope rising along X
     const TerrainMesh m = surrounding_land(g);
     REQUIRE_FALSE(m.vertices.empty());
-    const float lit = m.vertices[0].colour.r;
-    CHECK(lit == doctest::Approx(sunlight(ground_normal(g, 0, 0, 0))));
-    CHECK(lit != doctest::Approx(sunlight({ 0, 1, 0 })));
+    const glm::vec3 lit = glm::normalize(m.vertices[0].normal);
+    const glm::vec3 there = glm::normalize(ground_normal(g, 0, 0, 0));
+    CHECK(lit.x == doctest::Approx(there.x));
+    CHECK(lit.y == doctest::Approx(there.y));
+    CHECK(lit.z == doctest::Approx(there.z));
+    CHECK(lit.y < 0.99f);
+    for (const GroundVertex& v : m.vertices)
+        CHECK(v.normal.y > 0);
 }
 
 TEST_CASE("an empty map has no land round it")

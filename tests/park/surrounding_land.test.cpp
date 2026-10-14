@@ -132,3 +132,24 @@ TEST_CASE("land added to the ground follows it")
     CHECK(ground.low.x == doctest::Approx(-kSurroundReach));
     CHECK(ground.high.y == doctest::Approx(1));
 }
+
+TEST_CASE("the land's height is found between its points")
+{
+    save::TerrainGrid g = flat(4, 4, 2);
+    cell(g, 0, 0).corners = { 6, 6, 6, 6 }; // The corner tile stands higher
+    const LandRings rings = land_rings(g);
+    REQUIRE(rings.points == 16);
+    CHECK(rings.heights.size() == rings.points * rings.distances.size());
+    // On the map, or past the land: nothing.
+    CHECK_FALSE(land_height(rings, g, 8, 8));
+    CHECK_FALSE(land_height(rings, g, -kSurroundReach - 1, 8));
+    // Right by the edge: at the high tile's corner, an eighth of the way on to the next corner, and away.
+    CHECK(*land_height(rings, g, 0, -0.001f) == doctest::Approx(6).epsilon(0.01));
+    CHECK(*land_height(rings, g, 0.5f, -0.001f) == doctest::Approx(5.5f).epsilon(0.01));
+    CHECK(*land_height(rings, g, 12, -0.001f) == doctest::Approx(2).epsilon(0.01));
+    // Far out, the mean of the edge.
+    CHECK(*land_height(rings, g, 8, -kSurroundReach + 1) == doctest::Approx(edge_level(g)).epsilon(0.02));
+    // The mesh's points agree with the rings.
+    const TerrainMesh m = surrounding_land(g);
+    CHECK(m.vertices[rings.points + 3].position.y == doctest::Approx(rings.heights[rings.points + 3]));
+}

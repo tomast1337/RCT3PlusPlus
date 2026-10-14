@@ -5,6 +5,7 @@
 #include "park/asset_index.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
+#include "park/off_map_trees.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
 #include "save/model/tutorial.hpp"
@@ -371,6 +372,13 @@ namespace rct3::scene
 
         scene.models = load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.pictures);
         scene.objects = std::move(world->objects);
+        if (options.flag(config::GameOption::OffMapTrees))
+        {
+            random::RandomState scenery = random::stream(seed, random::RandomStream::Scenery);
+            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid), scenery);
+            log.info("{} trees beyond the edge", trees.size());
+            scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
+        }
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid);
         const render::VertexLayout object_layout { sizeof(park::GroundVertex), kGroundAttributes };
         auto solid = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .label = "objects" });

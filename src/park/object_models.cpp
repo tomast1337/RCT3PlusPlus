@@ -7,6 +7,7 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -23,19 +24,23 @@ namespace rct3::park
         constexpr std::string_view kBoneTag = ":bsh";
         constexpr std::string_view kTextureTag = ":ftx";
 
+        /// Entries of an overlay by symbol name, whatever its case: items name visuals, shapes and textures
+        /// without always spelling them as the files that hold them do.
+        template<typename T> using ByName = std::map<std::string_view, T, strings::LessIgnoringCase>;
+
         /// One overlay and what has been read from it, by symbol name. Views point into the overlay.
         struct OpenFile
         {
             ovl::Overlay overlay;
-            std::optional<std::map<std::string_view, ovl::SceneryItem>> items;
-            std::optional<std::map<std::string_view, ovl::SceneryVisual>> visuals;
-            std::optional<std::map<std::string_view, ovl::StaticShape>> statics;
-            std::optional<std::map<std::string_view, ovl::BoneShape>> bones;
-            std::optional<std::map<std::string_view, ovl::FlexiTexture>> textures;
+            std::optional<ByName<ovl::SceneryItem>> items;
+            std::optional<ByName<ovl::SceneryVisual>> visuals;
+            std::optional<ByName<ovl::StaticShape>> statics;
+            std::optional<ByName<ovl::BoneShape>> bones;
+            std::optional<ByName<ovl::FlexiTexture>> textures;
         };
 
         /// Every readable entry of both parts, read the first time it is asked for.
-        template<typename T, typename Read> const std::map<std::string_view, T>& entries(std::optional<std::map<std::string_view, T>>& cache, const ovl::Overlay& overlay, Read&& read)
+        template<typename T, typename Read> const ByName<T>& entries(std::optional<ByName<T>>& cache, const ovl::Overlay& overlay, Read&& read)
         {
             if (!cache)
             {
@@ -54,7 +59,7 @@ namespace rct3::park
             return *cache;
         }
 
-        template<typename T> const T* lookup(const std::map<std::string_view, T>& map, std::string_view name)
+        template<typename T> const T* lookup(const ByName<T>& map, std::string_view name)
         {
             const auto it = map.find(name);
             return it == map.end() ? nullptr : &it->second;

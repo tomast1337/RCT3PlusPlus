@@ -12,9 +12,9 @@
 #include <expected>
 #include <filesystem>
 #include <map>
-#include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rct3::park
 {
@@ -38,8 +38,8 @@ namespace rct3::park
     /// shape or picture that is missing leaves that part of the sky out.
     [[nodiscard]] std::expected<LoadedSky, std::string> load_sky(const std::filesystem::path& path, std::string_view theme);
 
-    /// The colour at the foot of the coloured dome in column `day`, for whatever shows below it. Nothing
-    /// when the dome or its picture is missing.
-    [[nodiscard]] std::optional<glm::vec4> horizon_colour(const LoadedSky& sky, float day);
+    /// The colours along the foot of the coloured dome, one per column of its picture from left to right, for
+    /// whatever shows below it. Empty when the dome or its picture is missing.
+    [[nodiscard]] std::vector<glm::vec4> horizon_band(const LoadedSky& sky);
 
 } // namespace rct3::park

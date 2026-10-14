@@ -64,6 +64,8 @@ namespace rct3::park
         const float night = std::clamp(view.night, 0.0f, 1.0f);
 
         add(mesh, sky.dome, PartBlend::Opaque, view.eye, scale, glm::vec4(1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
+        const glm::vec4 fading { 1.0f, 1.0f, 1.0f, std::clamp(view.fade, 0.0f, 1.0f) };
+        add(mesh, sky.dome, PartBlend::Blended, view.eye, scale, fading, [&](glm::vec2 uv) { return glm::vec2(view.faded_day, uv.y); });
         const glm::vec4 starlight { 1.0f, 1.0f, 1.0f, night };
         const auto same = [](glm::vec2 uv) { return uv; };
         add(mesh, sky.stars, PartBlend::Blended, view.eye, scale, starlight, same);

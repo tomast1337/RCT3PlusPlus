@@ -78,6 +78,8 @@ namespace rct3::park
     {
         std::uint16_t positioning = 0;  ///< How the item sits on its tile (see object_placement.hpp)
         float sway = 0;                 ///< How much it sways in the wind; above 0 for trees and plants only
+        std::string support_group;      ///< The set of supports it stands on, or the set a support belongs to
+        std::int32_t lowest_level = 0;  ///< Lowest level its footprint takes, from its base height
         std::vector<ModelLevel> levels; ///< Finest first, never empty
     };
 

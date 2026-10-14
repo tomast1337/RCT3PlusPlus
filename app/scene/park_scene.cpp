@@ -16,7 +16,9 @@
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
+#include "ui/language.hpp"
 #include "ui/scale.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -30,6 +32,7 @@
 #include <map>
 #include <set>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -48,6 +51,7 @@ namespace rct3::scene
         };
 
         constexpr std::string_view kGuideName = "tutorial";
+        constexpr std::string_view kBarName = "bar";
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
         constexpr std::string_view kYes = "SMB_Label_Yes";
@@ -465,6 +469,30 @@ namespace rct3::scene
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), park::edge_level(scene.grid), scene); !sky)
             return fail(sky.error());
 
+        // What the bar shows of the park as it was saved.
+        if (auto model = save::load_park(*file, index))
+        {
+            if (model->has_clock)
+                scene.date = model->clock.date();
+            if (model->has_park)
+            {
+                if (const auto guests = model->park.guests_in_park.latest())
+                    scene.bar.guests = strings::to_utf16(std::to_string(std::lround(*guests)));
+                if (const auto rating = model->park.rating())
+                    scene.bar.rating = *rating / save::kMaxParkRating;
+            }
+            if (world->time)
+                scene.day_fraction = world->time->day_fraction;
+            else if (model->clock.day_night_phase)
+                scene.day_fraction = *model->clock.day_night_phase;
+        }
+        if (world->weather)
+        {
+            scene.bar.weather = world->weather->type;
+            scene.bar.forecast = world->weather->forecast;
+        }
+        scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
+
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
             log.warning("tutorial: {}", save::to_string(tutorial.error()));
@@ -512,6 +540,19 @@ namespace rct3::scene
         scene.clock += elapsed;
         scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .time = scene.clock });
 
+        if (auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName)))
+        {
+            for (const ui::PlayCommand c : input.commands)
+            {
+                if (c == ui::PlayCommand::TogglePause)
+                    bar->toggle_pause();
+            }
+            // The game writes its times with am and pm in English only.
+            const bool twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
+            const auto minutes = static_cast<std::int32_t>(std::lround(scene.day_fraction * 24 * 60));
+            scene.bar.date = ui::park_bar_date(*assets.strings, scene.date.month, scene.date.year + 1, minutes, twelve_hour);
+            bar->show(scene.bar);
+        }
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))

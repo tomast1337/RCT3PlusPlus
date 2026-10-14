@@ -557,10 +557,12 @@ int main(int argc, char** argv)
                     // The keys as the commands they are bound to, unless the interface is waiting for keys
                     // to bind: it then gets them as pressed, and they do nothing else.
                     rct3::ui::KeyboardState keys = window->keyboard();
+                    std::vector<rct3::ui::PlayCommand> play_commands;
                     if (!(front && rct3::scene::front_end_waiting_for_keys(*front)))
                     {
                         auto translated = key_map.translate(keys);
                         keys = std::move(translated.keyboard);
+                        play_commands = std::move(translated.play);
                         const auto toggles = std::ranges::count(translated.commands, rct3::ui::Command::DeveloperWindows);
                         developer_windows = developer_windows != (toggles % 2 == 1);
                         for (auto& k : keys.presses)
@@ -590,6 +592,7 @@ int main(int argc, char** argv)
                             input.down_key = window->held(rct3::ui::Key::Down);
                             input.zoom_in_key = window->held(rct3::ui::Key::PageUp);
                             input.zoom_out_key = window->held(rct3::ui::Key::PageDown);
+                            input.commands = play_commands;
                         }
                         const rct3::ui::KeyboardState no_keys;
                         rct3::scene::update_park_scene(*device, *park, front->assets, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta));

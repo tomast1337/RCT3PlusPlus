@@ -20,9 +20,12 @@
 #include "park/terrain_mesh.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
+#include "save/model/park.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
+#include "ui/key_map.hpp"
+#include "ui/screens/park_bar.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <expected>
@@ -47,6 +50,7 @@ namespace rct3::scene
         bool down_key = false;
         bool zoom_in_key = false;
         bool zoom_out_key = false;
+        std::vector<ui::PlayCommand> commands; ///< The game's commands bound to the keys pressed
     };
 
     /// The object buffers are built again at most this often, in seconds, while the view moves.
@@ -94,6 +98,9 @@ namespace rct3::scene
         render::Color horizon = kParkSky;    ///< What shows below the sky
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
+        save::CalendarDate date;             ///< The park's, for the bar
+        float day_fraction = 0.5f;           ///< Through the park's day, for the bar's time
+        ui::ParkBarValues bar;               ///< What the bar shows besides the date
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

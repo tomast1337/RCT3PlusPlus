@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "park/mountain_mesh.hpp"
+
+#include <algorithm>
+#include <cmath>
+
+namespace rct3::park
+{
+
+    std::string_view background_theme(std::optional<std::int32_t> stored)
+    {
+        if (stored && *stored >= 0 && static_cast<std::size_t>(*stored) < kBackgroundThemes.size())
+            return kBackgroundThemes[static_cast<std::size_t>(*stored)];
+        return kBackgroundThemes[kDefaultBackground];
+    }
+
+    std::array<std::string, 2> mountain_pictures(std::string_view theme)
+    {
+        const std::string base = "Background" + std::string(theme);
+        return { base + "1", base + "2" };
+    }
+
+    MountainPlace mountain_place(const save::TerrainGrid& grid, float ground)
+    {
+        const float x0 = grid.world_x(0);
+        const float z0 = grid.world_z(0);
+        const float x1 = grid.world_x(grid.width);
+        const float z1 = grid.world_z(grid.height);
+        const float half = std::hypot(x1 - x0, z1 - z0) / 2;
+        return { { (x0 + x1) / 2, ground, (z0 + z1) / 2 }, half + kMountainDistance };
+    }
+
+    ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place)
+    {
+        ObjectMesh mesh;
+        // The ring's own radius: the farthest any of its points is from its upright axis.
+        float reach = 0;
+        for (const SkyShape& shape : shapes)
+        {
+            for (const ModelVertex& v : shape.vertices)
+                reach = std::max(reach, std::hypot(v.position.x, v.position.z));
+        }
+        if (reach <= 0)
+            return mesh;
+        const float scale = place.radius / reach;
+        for (const SkyShape& shape : shapes)
+        {
+            if (shape.vertices.empty() || shape.indices.empty())
+                continue;
+            const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
+            for (const ModelVertex& v : shape.vertices)
+                mesh.vertices.push_back({ place.centre + v.position * scale, glm::vec4(1.0f), v.uv });
+            ObjectBatch batch;
+            batch.texture = shape.texture;
+            batch.picture = shape.texture;
+            batch.blend = PartBlend::Cutout;
+            batch.first = static_cast<std::uint32_t>(mesh.indices.size());
+            for (const std::uint32_t i : shape.indices)
+            {
+                if (i < shape.vertices.size())
+                    mesh.indices.push_back(base + i);
+            }
+            batch.count = static_cast<std::uint32_t>(mesh.indices.size()) - batch.first;
+            mesh.batches.push_back(std::move(batch));
+        }
+        mesh.placed = mesh.batches.empty() ? 0 : 1;
+        return mesh;
+    }
+
+} // namespace rct3::park

@@ -214,7 +214,7 @@ namespace rct3::scene
         }
 
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.
-        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, ParkScene& scene)
+        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, std::string_view theme, float ground, ParkScene& scene)
         {
             const auto log = logging::logger("park");
             const auto found = install.find(park::kSkyFile);
@@ -223,7 +223,7 @@ namespace rct3::scene
                 log.warning("no sky: {} is missing", park::kSkyFile);
                 return { };
             }
-            auto sky = park::load_sky(*found);
+            auto sky = park::load_sky(*found, theme);
             if (!sky)
             {
                 log.warning("sky: {}", sky.error());
@@ -241,6 +241,8 @@ namespace rct3::scene
                 scene.sky.dome = scene.sky.stars = scene.sky.milky_way = { };
             if (!options.flag(config::GameOption::Clouds))
                 scene.sky.clouds = { };
+            if (options.flag(config::GameOption::Mountains))
+                scene.mountains = park::mountain_mesh(sky->mountains, park::mountain_place(scene.grid, ground));
             const render::VertexLayout layout { sizeof(park::GroundVertex), kGroundAttributes };
             auto pipeline = device.create_pipeline({ .shader = render::Shader::Textured, .layout = layout, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "sky" });
             if (!pipeline)
@@ -310,7 +312,8 @@ namespace rct3::scene
         scene.grid = std::move(world->terrain);
         scene.camera = park::overview(scene.grid);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
-        park::add_ground(mesh, park::surrounding_land(scene.grid));
+        const park::TerrainMesh surroundings = park::surrounding_land(scene.grid);
+        park::add_ground(mesh, surroundings);
         scene.batches = mesh.batches;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
@@ -380,7 +383,7 @@ namespace rct3::scene
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
         refresh_objects(device, scene, park::eye(scene.camera));
-        if (auto sky = load_sky(device, install, options, scene); !sky)
+        if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), park::edge_level(scene.grid), scene); !sky)
             return fail(sky.error());
 
         auto tutorial = save::load_tutorial(*file);
@@ -457,6 +460,8 @@ namespace rct3::scene
             // The dome reads one column of its picture, so it must not wrap into the next.
             draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
         }
+        // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
+        draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
         const auto draw_objects = [&](bool see_through) {
             for (const park::ObjectBatch& batch : scene.object_batches)
             {

@@ -29,7 +29,7 @@ namespace rct3::park
         return object.overlay + "|" + object.symbol;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const ColourOverrides& overrides)
     {
         ObjectMesh mesh;
         std::map<Key, Run> runs;
@@ -46,7 +46,8 @@ namespace rct3::park
             ++mesh.placed;
             const glm::mat4 transform = object_transform(object, static_cast<Positioning>(model->second.positioning), grid);
             const glm::mat3 turn { transform };
-            const FlexiColours colours = flexi_colours(object.colours);
+            const auto custom = overrides.find(object.id);
+            const FlexiColours colours = custom != overrides.end() ? custom->second : flexi_colours(object.colours);
             for (const ModelPart& part : model->second.parts)
             {
                 Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours) }];

@@ -89,7 +89,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style(), skins::tutorial_picker_style() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -120,6 +120,18 @@ namespace rct3::scene
             }
             scene.slideshow.show.set_pictures(ui::slideshow_pictures(scene.slideshow_shown ? folders : scene.picture_folders, scene.picture_seed));
         }
+        if (ui::TutorialPicker* picker = scene.live->front->tutorial_picker())
+        {
+            // A new menu: say which tutorials' parks are there.
+            if (scene.live->front->tutorial_pickers_opened() != scene.tutorials_seen)
+            {
+                scene.tutorials_seen = scene.live->front->tutorial_pickers_opened();
+                for (std::size_t i = 0; i < picker->size(); ++i)
+                    picker->set_available(i, scene.assets.install->find(picker->tutorial(i).park).has_value());
+            }
+            if (const auto start = picker->take_start())
+                scene.tutorial = scene.assets.install->find(picker->tutorial(*start).park);
+        }
         if (scene.live->front->take_options_closed())
             save_options(scene);
         while (const auto request = scene.live->front->take_unhandled())
@@ -135,6 +147,7 @@ namespace rct3::scene
         r.screen_size = front.take_screen_size();
         r.language = front.take_language();
         r.keys = front.take_keys();
+        r.tutorial = std::exchange(scene.tutorial, std::nullopt);
         const bool fullscreen = scene.live->options.flag(config::GameOption::Fullscreen);
         if (fullscreen != scene.fullscreen)
         {

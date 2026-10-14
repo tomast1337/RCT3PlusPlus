@@ -235,9 +235,21 @@ namespace rct3::platform
             p.y = static_cast<float>(cy * fh / wh);
         }
         p.left = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        p.right = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        p.middle = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
         p.wheel_x = static_cast<float>(collected_->wheel_x);
         p.wheel_y = static_cast<float>(collected_->wheel_y);
         return p;
+    }
+
+    bool Window::held(ui::Key key) const
+    {
+        for (const int k : { GLFW_KEY_LEFT, GLFW_KEY_RIGHT, GLFW_KEY_UP, GLFW_KEY_DOWN, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN })
+        {
+            if (interface_key(k) == key)
+                return glfwGetKey(window_, k) == GLFW_PRESS;
+        }
+        return false;
     }
 
     void Window::ui_new_frame()

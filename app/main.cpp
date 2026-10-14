@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--frames N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--seed N] [--frames N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --no-vsync        present as fast as possible
@@ -13,6 +13,8 @@
 //   --language NAME   interface language as the game names it, e.g. German or SChinese
 //   --widget-demo     a window of every kind of control instead of the front screen
 //   --no-audio        no sound at all
+//   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
+//                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
@@ -27,6 +29,8 @@
 #include "math/hex_colour.hpp"
 #include "platform/window.hpp"
 #include "profiling/profiler.hpp"
+#include "random/entropy.hpp"
+#include "random/generator.hpp"
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/menu_audio.hpp"
@@ -57,7 +61,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--frames N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--seed N] [--frames N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -221,6 +225,7 @@ int main(int argc, char** argv)
     bool write_settings = false;
     bool widget_demo = false;
     bool sound = true;
+    std::optional<std::uint64_t> seed;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -266,6 +271,16 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--no-audio") == 0)
         {
             sound = false;
+        }
+        else if (std::strcmp(argv[i], "--seed") == 0 && i + 1 < argc)
+        {
+            const auto parsed = rct3::random::parse_seed(argv[++i]);
+            if (!parsed)
+            {
+                std::fprintf(stderr, "%s\n", parsed.error().c_str());
+                return 2;
+            }
+            seed = *parsed;
         }
         else if (std::strcmp(argv[i], "--write-settings") == 0)
         {
@@ -493,7 +508,7 @@ int main(int argc, char** argv)
         }
         if (requests.tutorial)
         {
-            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, *requests.tutorial);
+            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, *requests.tutorial, seed.value_or(rct3::random::fresh_seed()));
             if (loaded)
             {
                 park = std::move(*loaded);

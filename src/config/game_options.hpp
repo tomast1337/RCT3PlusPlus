@@ -94,6 +94,7 @@ namespace rct3::config
         OffMapTrees,
         SimpleTerrain,
         ReflectiveWater,
+        ReflectBackground,
         ReflectTerrain,
         ReflectScenery,
         ReflectPeople,
@@ -102,6 +103,7 @@ namespace rct3::config
         WaterBumps,
         FlowingWaterEnvironment,
         Clouds,
+        Sky, ///< The sky's colours, sun, moon and stars
         Mountains,
         DayNight, ///< 0 instant, 1 blend, 2 cycle
         Bloom,

@@ -7,6 +7,7 @@
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/value.hpp"
 
@@ -134,6 +135,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (world->objects.size() + world->paths.size() > file->objects.size())
         __builtin_trap();
     // ---- world model fuzz block end ----
+    // The tutorial loader takes whatever decodes.
+    if (!rct3::save::load_tutorial(*file))
+        __builtin_trap();
     // --- rides: begin ---
     // The ride loader must accept anything that decodes, with every walk bounded by the input.
     {

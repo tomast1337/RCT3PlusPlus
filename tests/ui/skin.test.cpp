@@ -40,9 +40,29 @@ TEST_CASE("skin coordinates split into lines per kind")
     SUBCASE("bad input is refused")
     {
         CHECK_FALSE(skin_layout(skin(ovl::GuiSkinKind::NinePatch, { 0, 1, 2, 3 })));
-        CHECK_FALSE(skin_layout(skin(ovl::GuiSkinKind::Rect, { 10, 0, 5, 4 })));
+        CHECK_FALSE(skin_layout(skin(ovl::GuiSkinKind::HorizontalThree, { 0, 10, 6, 12, 0, 8 })));
         CHECK_FALSE(skin_layout({ 77, "atlas", { } }));
     }
+}
+
+TEST_CASE("a rectangle given backwards is the picture mirrored")
+{
+    const auto layout = skin_layout(skin(ovl::GuiSkinKind::Rect, { 20, 8, 4, 30 }));
+    REQUIRE(layout);
+    CHECK(layout->mirror_x);
+    CHECK_FALSE(layout->mirror_y);
+    CHECK(layout->xs[0] == 4);
+    CHECK(layout->xs[1] == 20);
+    const SkinPieces pieces = skin_pieces(*layout, { 0, 0, 16, 22 }, 32, 32);
+    REQUIRE(pieces.count == 1);
+    CHECK(pieces.items[0].uv.x0 == doctest::Approx(20.0f / 32));
+    CHECK(pieces.items[0].uv.x1 == doctest::Approx(4.0f / 32));
+    CHECK(pieces.items[0].uv.y0 == doctest::Approx(8.0f / 32));
+
+    const auto upside_down = skin_layout(skin(ovl::GuiSkinKind::Rect, { 4, 30, 20, 8 }));
+    REQUIRE(upside_down);
+    CHECK(upside_down->mirror_y);
+    CHECK(skin_pieces(*upside_down, { 0, 0, 16, 22 }, 32, 32).items[0].uv.y0 == doctest::Approx(30.0f / 32));
 }
 
 TEST_CASE("a nine-patch keeps its corners and stretches the rest")

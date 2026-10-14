@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The game options window, with four pages picked by picture tabs in its top-right corner: general (units,
-// money, sound and language), keys, graphics and camera. The name of the open page shows on the left of
-// the tabs.
+// The game options window, with five pages picked by picture tabs in its top-right corner: general (units,
+// money, sound and language), keys, graphics (the screen, the quality level and its custom settings),
+// scenic (trees, terrain, water, sky and background, whatever the quality level) and camera. The name of
+// the open page shows on the left of the tabs.
 //
 // Every control writes the option it shows as soon as it changes; there is no OK or Cancel, and the owner
 // saves the options once the window has closed. Rows that only matter for some choices appear with them:
@@ -93,7 +94,7 @@ namespace rct3::ui
         float page_height = 330;
         float tab_size = 23;
         float tab_step = 20; ///< The tabs overlap a little, as in the game
-        float tabs_x = 324;  ///< Where the tabs start, from the page's left
+        float tabs_x = 304;  ///< Where the tabs start, from the page's left
         float tab_bar_height = 23;
         float caption_x = 59; ///< Right of the window's icon, under the title
         float caption_width = 160;
@@ -113,6 +114,7 @@ namespace rct3::ui
         General,
         Keys,
         Graphics,
+        Scenic, ///< Ours, after the game's manual: what the park's surroundings show
         Camera,
         Count_,
     };
@@ -178,6 +180,7 @@ namespace rct3::ui
         void update_background_music();
         void build_keys(Widget& page, const StringTable& strings);
         void build_graphics(Widget& page, const StringTable& strings);
+        void build_scenic(Widget& page, const StringTable& strings);
         void build_camera(Widget& page, const StringTable& strings);
         void update_keys();
 

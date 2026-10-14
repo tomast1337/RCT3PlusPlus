@@ -21,6 +21,7 @@ namespace rct3::ui
             { "File_GameOptions_Game", "GameOptionsDialog_GameSettingsTabHelp" },
             { "File_GameOptions_Keyboard", "GameOptionsDialog_KeyBindingsHelp" },
             { "File_GameOptions_Graphics", "GameOptionsDialog_GraphicSettingsTabHelp" },
+            { "File_GameOptions_Scenic", "GameOptionsDialog_ScenicSettingsTabHelp" },
             { "File_GameOptions_Camera", "GameOptionsDialog_CameraSettingsTabHelp" },
         } };
 
@@ -41,6 +42,9 @@ namespace rct3::ui
         constexpr std::string_view kShuffle = "Rct3pp_Shuffle"; ///< A track at random each time
         constexpr std::string_view kMoveByWord = "Rct3pp_MoveByWord";
         constexpr std::string_view kMoveByWordKeys = "Rct3pp_MoveByWordKeys";
+        constexpr std::string_view kCloudsHelp = "Rct3pp_CloudsHelp";
+        constexpr std::string_view kSkyHelp = "Rct3pp_SkyHelp";
+        constexpr std::string_view kMountainsHelp = "Rct3pp_MountainsHelp";
 
         struct DetailRow
         {
@@ -108,7 +112,8 @@ namespace rct3::ui
         build_general(*pages_[0], strings);
         build_keys(*pages_[1], strings);
         build_graphics(*pages_[2], strings);
-        build_camera(*pages_[3], strings);
+        build_scenic(*pages_[3], strings);
+        build_camera(*pages_[4], strings);
         show_page(OptionsPage::General);
         for (const auto& rows : rows_)
             rows->update();
@@ -131,7 +136,6 @@ namespace rct3::ui
     void OptionsDialog::build_general(Widget& page, const StringTable& strings)
     {
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
-        rows.tick(O::Fullscreen, str(strings, "GameOptionsDialog_Fullscreen"));
         if (choices_.languages.size() > 1)
         {
             // Each language by its own name, so it can be found whatever the current one.
@@ -316,6 +320,8 @@ namespace rct3::ui
         OptionRowsStyle top_style = style_.rows;
         top_style.control_x = 170; // The screen sizes are short; the lists sit nearer their names
         auto& top = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, top_style, options_));
+        // With the screen size, not on the general page as in the game.
+        top.tick(O::Fullscreen, str(strings, "GameOptionsDialog_Fullscreen"));
         std::vector<std::u16string> sizes;
         for (const ScreenSize& s : choices_.screen_sizes)
             sizes.push_back(ascii(std::to_string(s.width) + " x " + std::to_string(s.height)));
@@ -351,12 +357,26 @@ namespace rct3::ui
         rows.tick(O::CompressTextures, str(strings, "GameOptionsDialog_TextureCompress"), str(strings, "GameOptionsDialog_TextureCompress_TT"));
         rows.tick(O::AggressiveDepthBias, str(strings, "GameOptionsDialog_AggressiveZBias"), str(strings, "GameOptionsDialog_AggressiveZBiasHelp"));
         rows.level(O::TextureDetail, str(strings, "GameOptionsDialog_TextureLOD"), str(strings, "GameOptionsDialog_TextureLODHelp"));
+        rows.section();
+        rows.tick(O::Bloom, str(strings, "GameOptionsDialog_Bloom"), str(strings, "GameOptionsDialog_Bloom_TT"));
+        rows.tick(O::Refraction, str(strings, "GameOptionsDialog_Refraction"), str(strings, "GameOptionsDialog_Refraction_TT"));
+        rows.tick(O::WaterDroplets, str(strings, "GameOptionsDialog_WaterDroplets"), str(strings, "GameOptionsDialog_WaterDroplets_TT"));
+        rows.indent();
+        rows.shown_when({ O::Refraction, 1 });
+        rows.tick(O::LaserOcclusion, str(strings, "GameOptionsDialog_LaserRayHit"), str(strings, "GameOptionsDialog_LaserRayHit_TT"));
+    }
+
+    void OptionsDialog::build_scenic(Widget& page, const StringTable& strings)
+    {
+        // Ours, after the game's manual: the scenery and surroundings, whatever the quality level.
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
         rows.tick(O::Trees3D, str(strings, "GameOptionsDialog_3DTreesAndPlants"), str(strings, "GameOptionsDialog_3DTreesAndPlantsHelp"));
         rows.tick(O::OffMapTrees, str(strings, "GameOptionsDialog_SkirtTrees"), str(strings, "GameOptionsDialog_SkirtTreesHelp"));
         rows.tick(O::SimpleTerrain, str(strings, "GameOptionsDialog_UntexturedTerrain"), str(strings, "GameOptionsDialog_UntexturedTerrainHelp"));
         rows.section();
         rows.tick(O::ReflectiveWater, str(strings, "GameOptionsDialog_WaterReflect_Enabled"), str(strings, "GameOptionsDialog_WaterReflect_EnabledHelp"));
-        constexpr std::array<std::pair<O, std::string_view>, 5> kReflections = { {
+        constexpr std::array<std::pair<O, std::string_view>, 6> kReflections = { {
+            { O::ReflectBackground, "GameOptionsDialog_WaterReflect_Background" },
             { O::ReflectTerrain, "GameOptionsDialog_WaterReflect_Terrain" },
             { O::ReflectScenery, "GameOptionsDialog_WaterReflect_Scenery" },
             { O::ReflectPeople, "GameOptionsDialog_WaterReflect_People" },
@@ -371,15 +391,11 @@ namespace rct3::ui
         }
         rows.tick(O::WaterBumps, str(strings, "GameOptionsDialog_WaterBump_Enabled"));
         rows.tick(O::FlowingWaterEnvironment, str(strings, "GameOptionsDialog_WaterFlowEnvMapEnabled"));
-        rows.tick(O::Clouds, str(strings, "GameOptionsDialog_CloudsEnabled"));
-        rows.tick(O::Mountains, str(strings, "GameOptionsDialog_DistantMountainsEnabled"));
+        rows.section();
+        rows.tick(O::Clouds, str(strings, "GameOptionsDialog_CloudsEnabled"), str(strings, kCloudsHelp));
+        rows.tick(O::Sky, str(strings, "GameOptionsDialog_SkyEnabled"), str(strings, kSkyHelp));
+        rows.tick(O::Mountains, str(strings, "GameOptionsDialog_DistantMountainsEnabled"), str(strings, kMountainsHelp));
         rows.choice(O::DayNight, str(strings, "GameOptionsDialog_FastDayNightCycle"), items(strings, { "GameOptionsDialog_DNC_Original", "GameOptionsDialog_DNC_Blend", "GameOptionsDialog_DNC_Cycle" }), str(strings, "GameOptionsDialog_FastDayNightCycle_TT"));
-        rows.tick(O::Bloom, str(strings, "GameOptionsDialog_Bloom"), str(strings, "GameOptionsDialog_Bloom_TT"));
-        rows.tick(O::Refraction, str(strings, "GameOptionsDialog_Refraction"), str(strings, "GameOptionsDialog_Refraction_TT"));
-        rows.tick(O::WaterDroplets, str(strings, "GameOptionsDialog_WaterDroplets"), str(strings, "GameOptionsDialog_WaterDroplets_TT"));
-        rows.indent();
-        rows.shown_when({ O::Refraction, 1 });
-        rows.tick(O::LaserOcclusion, str(strings, "GameOptionsDialog_LaserRayHit"), str(strings, "GameOptionsDialog_LaserRayHit_TT"));
     }
 
     void OptionsDialog::build_camera(Widget& page, const StringTable& strings)

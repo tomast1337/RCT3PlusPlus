@@ -82,6 +82,14 @@ namespace rct3::park
             return std::clamp(1 - (distance - kSurroundFadeStart) / (kSurroundReach - kSurroundFadeStart), 0.0f, 1.0f);
         }
 
+        std::vector<float> ring_distances()
+        {
+            std::vector<float> out { 0 };
+            for (float step = kSurroundFirstStep; out.back() < kSurroundReach; step *= kSurroundGrowth)
+                out.push_back(std::min(out.back() + step, kSurroundReach));
+            return out;
+        }
+
         bool whole(const save::TerrainGrid& g)
         {
             return !g.empty() && g.cells.size() == static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height);
@@ -100,6 +108,72 @@ namespace rct3::park
         return sum / static_cast<float>(edge.size());
     }
 
+    LandRings land_rings(const save::TerrainGrid& grid)
+    {
+        LandRings out;
+        if (!whole(grid))
+            return out;
+        const std::vector<EdgePoint> edge = edge_points(grid);
+        out.points = edge.size();
+        out.distances = ring_distances();
+        const float level = edge_level(grid);
+        std::vector<float> heights(out.points);
+        std::ranges::transform(edge, heights.begin(), [&](EdgePoint p) { return edge_height(grid, p); });
+        out.heights.reserve(out.points * out.distances.size());
+        for (std::size_t k = 0; k < out.distances.size(); ++k)
+        {
+            if (k > 0)
+            {
+                heights = smoothed(std::move(heights), kSurroundSmoothing);
+                for (float& h : heights)
+                    h = level + (h - level) * kSurroundKeep;
+            }
+            out.heights.insert(out.heights.end(), heights.begin(), heights.end());
+        }
+        return out;
+    }
+
+    std::optional<float> land_height(const LandRings& rings, const save::TerrainGrid& grid, float x, float z)
+    {
+        if (rings.points == 0 || rings.distances.size() < 2 || !whole(grid))
+            return std::nullopt;
+        const float x0 = grid.world_x(0);
+        const float z0 = grid.world_z(0);
+        const float x1 = grid.world_x(grid.width);
+        const float z1 = grid.world_z(grid.height);
+        // Rings are the map's rectangle grown by the same amount on every side.
+        const float dx = std::max({ x0 - x, x - x1, 0.0f });
+        const float dz = std::max({ z0 - z, z - z1, 0.0f });
+        const float d = std::max(dx, dz);
+        if (d <= 0 || d >= rings.distances.back())
+            return std::nullopt;
+
+        // Where along the edge walk the point is, in grid steps (see edge_points).
+        const auto w = static_cast<float>(grid.width);
+        const auto h = static_cast<float>(grid.height);
+        const float across = (std::clamp(x, x0 - d, x1 + d) - (x0 - d)) / (x1 - x0 + 2 * d) * w;
+        const float down = (std::clamp(z, z0 - d, z1 + d) - (z0 - d)) / (z1 - z0 + 2 * d) * h;
+        float along = 0;
+        if (dz >= dx && z < z0)
+            along = across;
+        else if (dx >= dz && x > x1)
+            along = w + down;
+        else if (dz >= dx && z > z1)
+            along = w + h + (w - across);
+        else
+            along = 2 * w + h + (h - down);
+
+        const auto ring = static_cast<std::size_t>(std::ranges::upper_bound(rings.distances, d) - rings.distances.begin()) - 1;
+        const float t = (d - rings.distances[ring]) / (rings.distances[ring + 1] - rings.distances[ring]);
+        const auto n = rings.points;
+        const auto i = static_cast<std::size_t>(std::floor(along)) % n;
+        const float s = along - std::floor(along);
+        const auto height = [&](std::size_t k, std::size_t p) { return rings.heights[k * n + p % n]; };
+        const float inner = height(ring, i) + (height(ring, i + 1) - height(ring, i)) * s;
+        const float outer = height(ring + 1, i) + (height(ring + 1, i + 1) - height(ring + 1, i)) * s;
+        return inner + (outer - inner) * t;
+    }
+
     TerrainMesh surrounding_land(const save::TerrainGrid& grid)
     {
         TerrainMesh mesh;
@@ -108,9 +182,7 @@ namespace rct3::park
 
         const std::vector<EdgePoint> edge = edge_points(grid);
         const std::size_t n = edge.size();
-        std::vector<float> distances { 0 };
-        for (float step = kSurroundFirstStep; distances.back() < kSurroundReach; step *= kSurroundGrowth)
-            distances.push_back(std::min(distances.back() + step, kSurroundReach));
+        const std::vector<float> distances = ring_distances();
         const std::size_t rings = distances.size();
         const auto at = [&](std::size_t k, std::size_t i) { return k * n + i % n; };
 
@@ -132,37 +204,32 @@ namespace rct3::park
                 share[i] = surface_share(grid, edge[i].x, edge[i].z, surface);
         }
 
-        // Ring by ring: positions, then heights and surfaces from the ring inside.
+        // Heights from the shape; surfaces ring by ring from the ring inside.
+        const LandRings shape = land_rings(grid);
+        for (std::size_t k = 1; k < rings; ++k)
+        {
+            for (auto& [surface, share] : shares)
+            {
+                const std::vector<float> inside = smoothed({ share.begin() + static_cast<std::ptrdiff_t>((k - 1) * n), share.begin() + static_cast<std::ptrdiff_t>(k * n) }, kSurroundSmoothing);
+                const float settled = surface == commonest ? kSurroundSettle : 0;
+                for (std::size_t i = 0; i < n; ++i)
+                    share[at(k, i)] = inside[i] * (1 - kSurroundSettle) + settled;
+            }
+        }
         const float x0 = grid.world_x(0);
         const float z0 = grid.world_z(0);
         const float width = grid.world_x(grid.width) - x0;
         const float depth = grid.world_z(grid.height) - z0;
-        const float level = edge_level(grid);
-        std::vector<float> heights(n);
-        std::ranges::transform(edge, heights.begin(), [&](EdgePoint p) { return edge_height(grid, p); });
         std::vector<glm::vec3> points;
         points.reserve(n * rings);
         for (std::size_t k = 0; k < rings; ++k)
         {
-            if (k > 0)
-            {
-                heights = smoothed(std::move(heights), kSurroundSmoothing);
-                for (float& h : heights)
-                    h = level + (h - level) * kSurroundKeep;
-                for (auto& [surface, share] : shares)
-                {
-                    const std::vector<float> inside = smoothed({ share.begin() + static_cast<std::ptrdiff_t>((k - 1) * n), share.begin() + static_cast<std::ptrdiff_t>(k * n) }, kSurroundSmoothing);
-                    const float settled = surface == commonest ? kSurroundSettle : 0;
-                    for (std::size_t i = 0; i < n; ++i)
-                        share[at(k, i)] = inside[i] * (1 - kSurroundSettle) + settled;
-                }
-            }
             const float d = distances[k];
             for (std::size_t i = 0; i < n; ++i)
             {
                 const float u = static_cast<float>(edge[i].x) / static_cast<float>(grid.width);
                 const float v = static_cast<float>(edge[i].z) / static_cast<float>(grid.height);
-                points.emplace_back(x0 - d + u * (width + 2 * d), heights[i], z0 - d + v * (depth + 2 * d));
+                points.emplace_back(x0 - d + u * (width + 2 * d), shape.heights[at(k, i)], z0 - d + v * (depth + 2 * d));
             }
         }
 

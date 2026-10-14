@@ -3,8 +3,8 @@
 
 #include <algorithm>
 #include <array>
-#include <limits>
 #include <doctest/doctest.h>
+#include <limits>
 
 using namespace rct3::random;
 

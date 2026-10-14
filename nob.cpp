@@ -2,7 +2,7 @@
 //
 // Build script. Bootstrap once with:  g++ -std=c++26 -o nob nob.cpp
 //
-//   ./nob [build|test|clean] [--release] [--sanitize] [--filter TEXT] [-- TEST_ARGS...]
+//   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
@@ -86,7 +86,8 @@ namespace
         {
             c.mode = "asan";
             const std::vector<std::string> san = { "-fsanitize=address,undefined", "-fno-omit-frame-pointer" };
-            c.compile_flags.insert(c.compile_flags.end(), { "-O1", "-g" });
+            // Line tables are all a sanitizer report needs; full debug info only slows the build and the link.
+            c.compile_flags.insert(c.compile_flags.end(), { "-O1", "-g1" });
             c.compile_flags.insert(c.compile_flags.end(), san.begin(), san.end());
             c.link_flags = san;
         }
@@ -368,7 +369,8 @@ namespace
     }
 
     // Library objects, tools (tools/<name>/main.cpp -> build/<mode>/<name>) and the single test binary.
-    bool build_all(const Config& cfg)
+    // Without `tools`, only the library and the tests are built (CI's sanitizer job runs nothing else).
+    bool build_all(const Config& cfg, bool tools = true)
     {
         if (!mkdir_p(cfg.obj_dir()))
             return false;
@@ -386,7 +388,7 @@ namespace
         if (!compile_audio(cfg, headers, audio_objects, database))
             return false;
 
-        for (const auto& main_cpp : find_files("tools", ".cpp"))
+        for (const auto& main_cpp : tools ? find_files("tools", ".cpp") : std::vector<fs::path> { })
         {
             const bool audio = uses_audio(main_cpp);
             std::vector<fs::path> objects = lib_objects;
@@ -657,6 +659,7 @@ int main(int argc, char** argv)
     bool release = false;
     bool sanitize = false;
     bool check = false;
+    bool tools = true;
     std::vector<std::string> test_args;
     std::string fuzz_target;
     int fuzz_seconds = 30;
@@ -669,6 +672,8 @@ int main(int argc, char** argv)
             release = true;
         else if (arg == "--sanitize")
             sanitize = true;
+        else if (arg == "--no-tools")
+            tools = false;
         else if (arg == "--seconds" && i + 1 < argc)
             fuzz_seconds = std::atoi(argv[++i]);
         else if ((arg == "-j" || arg == "--jobs") && i + 1 < argc)
@@ -691,7 +696,7 @@ int main(int argc, char** argv)
         else
         {
             log(Level::Error,
-                "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [-j N] "
+                "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
                 "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch",
                 arg);
             return 2;
@@ -742,7 +747,7 @@ int main(int argc, char** argv)
         return run(run_cmd) ? 0 : 1;
     }
 
-    if (!build_all(cfg))
+    if (!build_all(cfg, tools))
         return 1;
     if (command == "tidy")
         return run_tidy(job_count(jobs)) ? 0 : 1;

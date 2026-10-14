@@ -16,6 +16,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob test                     # build and run tests
 ./nob test --filter header     # only test cases whose name contains "header"
 ./nob test --sanitize          # AddressSanitizer + UBSan
+./nob test --sanitize --no-tools   # the same without building the tools
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
 ./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
 ./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)

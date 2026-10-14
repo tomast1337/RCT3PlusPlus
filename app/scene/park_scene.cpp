@@ -522,10 +522,6 @@ namespace rct3::scene
                 if (const auto rating = model->park.rating())
                     scene.bar.rating = *rating / save::kMaxParkRating;
             }
-            if (world->time)
-                scene.day_fraction = world->time->day_fraction;
-            else if (model->clock.day_night_phase)
-                scene.day_fraction = *model->clock.day_night_phase;
         }
         if (world->weather)
         {
@@ -580,19 +576,24 @@ namespace rct3::scene
         scene.billboards = park::billboard_mesh(scene.objects, scene.models, scene.anchors, scene.levels, viewer);
         add_textures(device, scene, scene.billboards.batches);
         scene.clock += elapsed;
-        simulation::advance(scene.day, elapsed);
-        show_time_of_day(scene, viewer);
-
-        if (auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName)))
+        auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
+        if (bar != nullptr)
         {
             for (const ui::PlayCommand c : input.commands)
             {
                 if (c == ui::PlayCommand::TogglePause)
                     bar->toggle_pause();
             }
+        }
+        // The park's day runs at the speed picked in the bar, and stops while paused.
+        simulation::advance(scene.day, elapsed * (bar != nullptr ? simulation::time_factor(bar->speed()) : 1.0f));
+        show_time_of_day(scene, viewer);
+
+        if (bar != nullptr)
+        {
             // The game writes its times with am and pm in English only.
             const bool twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
-            const auto minutes = static_cast<std::int32_t>(std::lround(scene.day_fraction * 24 * 60));
+            const auto minutes = static_cast<std::int32_t>(std::lround(scene.day.time * save::kMinutesPerDay));
             const ui::Currency money = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
             scene.bar.money = scene.cash ? ui::money_text(money, *scene.cash) : std::u16string(assets.strings->get(kUnlimitedCash));
             if (scene.temperature)

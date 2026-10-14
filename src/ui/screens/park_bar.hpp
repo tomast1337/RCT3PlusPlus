@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The bar along the top of the park view, as the game shows it: a strip of fixed size centred at the top of
+// the screen. Its left part holds the objectives button and the game speed buttons, then the park's money,
+// its guests and its rating between a thumb down and a thumb up; a divider leads to the right part, with
+// the temperature, the weather and its forecast, and the date and time.
+//
+// The bar keeps the game speed the player picked (see simulation/game_speed.hpp); the owner reads it with
+// speed() and toggles the pause for a key with toggle_pause(). Everything else the bar shows is given by the
+// owner with show(), as text ready to draw, so the bar never needs the park itself.
+#pragma once
+
+#include "save/model/world.hpp"
+#include "simulation/game_speed.hpp"
+#include "ui/string_table.hpp"
+#include "ui/widgets/button.hpp"
+#include "ui/widgets/label.hpp"
+#include "ui/widgets/panel.hpp"
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <string>
+
+namespace rct3::ui
+{
+
+    struct ParkBarStyle
+    {
+        std::string left_frame;  ///< Behind the left part
+        std::string divider;     ///< Between the parts
+        std::string right_frame; ///< Behind the right part
+        std::string objective_icon;
+        /// Pause, play, fast and fastest, and the same picked; the picked ones may be missing.
+        std::array<std::string, 4> speed_icons;
+        std::array<std::string, 4> picked_speed_icons;
+        std::string thumb_down;
+        std::string thumb_up;
+        /// One for each kind of weather, in the order of save::WeatherType.
+        std::array<std::string, 7> weather_icons;
+        std::string forecast_arrow;
+        Color text_colour = hex("#ffffff");
+        Color rating_back = hex("#00000080");
+        Color rating_low = hex("#d8402c");  ///< The rating bar's colour at no rating
+        Color rating_high = hex("#4cc23a"); ///< And at the highest
+    };
+
+    /// What the bar shows besides the speed. Empty text leaves its place empty.
+    struct ParkBarValues
+    {
+        std::u16string money;
+        std::u16string guests;
+        std::optional<float> rating; ///< 0 to 1; no bar without one
+        std::u16string temperature;
+        save::WeatherType weather = save::WeatherType::Unknown;
+        /// The weather on its way, shown after an arrow; nothing when it stays the same.
+        std::optional<save::WeatherType> forecast;
+        std::u16string date;
+    };
+
+    namespace park_bar
+    {
+        inline constexpr float kWidth = 678;
+        inline constexpr float kHeight = 26;
+        inline constexpr float kLeftWidth = 300; ///< Of the left part; the divider starts there
+        inline constexpr float kLowerEdge = 3;   ///< The frame's border along the bottom; items centre above it
+    } // namespace park_bar
+
+    /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
+    [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour);
+
+    class ParkBar : public Widget
+    {
+    public:
+        ParkBar(std::string name, ParkBarStyle style, const StringTable& strings);
+
+        [[nodiscard]] simulation::GameSpeed speed() const
+        {
+            return speed_;
+        }
+        void toggle_pause();
+
+        void show(const ParkBarValues& values);
+
+        [[nodiscard]] Button& objective_button() const
+        {
+            return *objective_;
+        }
+        /// Pause, play, fast and fastest.
+        [[nodiscard]] Button& speed_button(std::size_t i) const
+        {
+            return *speeds_.at(i);
+        }
+        [[nodiscard]] const Label& date() const
+        {
+            return *date_;
+        }
+        [[nodiscard]] const Panel& weather() const
+        {
+            return *weather_;
+        }
+        [[nodiscard]] const Panel& forecast() const
+        {
+            return *forecast_;
+        }
+
+        /// The bar stops the pointer, so pressing on it never reaches the park.
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return true;
+        }
+        void update(const UpdateContext& context) override;
+        void draw(DrawContext& context) const override;
+
+    private:
+        void show_speed();
+
+        ParkBarStyle style_;
+        const StringTable& strings_;
+        simulation::GameSpeed speed_;
+        std::optional<float> rating_;
+        Button* objective_ = nullptr;
+        std::array<Button*, 4> speeds_ { };
+        Label* money_ = nullptr;
+        Label* guests_ = nullptr;
+        Panel* rating_area_ = nullptr;
+        Label* temperature_ = nullptr;
+        Panel* weather_ = nullptr;
+        Panel* arrow_ = nullptr;
+        Panel* forecast_ = nullptr;
+        Label* date_ = nullptr;
+    };
+
+} // namespace rct3::ui

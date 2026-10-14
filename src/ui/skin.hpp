@@ -25,10 +25,13 @@ namespace rct3::ui
         std::array<float, 4> ys { };
         std::size_t x_count = 0; ///< 0, 2 or 4
         std::size_t y_count = 0;
+        bool mirror_x = false; ///< Drawn left to right reversed
+        bool mirror_y = false; ///< Drawn upside down
     };
 
-    /// Splits a skin item's coordinates into x and y lines. Nothing for unknown kinds, a coordinate count
-    /// that does not match the kind, or lines that go backwards.
+    /// Splits a skin item's coordinates into x and y lines. A rectangle whose corners are given right to
+    /// left or bottom to top is the same picture mirrored that way. Nothing for unknown kinds, a coordinate
+    /// count that does not match the kind, or lines of other kinds that go backwards.
     [[nodiscard]] std::optional<SkinLayout> skin_layout(const ovl::GuiSkin& skin);
 
     /// The skin as a picture stored with its rows the other way up: y lines are mirrored about the texture

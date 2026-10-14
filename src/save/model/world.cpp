@@ -70,6 +70,7 @@ namespace rct3::save
             constexpr std::string_view kColour1 = "COL1";
             constexpr std::string_view kColour2 = "COL2";
             constexpr std::string_view kEntrySymbol = "SYMBOLNAME";
+            constexpr std::string_view kEntryOverlay = "OVERLAYFILENAME";
             constexpr std::string_view kEntrySystemName = "SystemName";
             constexpr std::string_view kEntryQueueType = "QueueType";
 
@@ -554,6 +555,11 @@ namespace rct3::save
                 return lookup(symbols_, ref, [&](const DecodedObject& o) { return text_of(o, names::kEntrySymbol); });
             }
 
+            const std::string& overlay(std::uint64_t ref)
+            {
+                return lookup(overlays_, ref, [&](const DecodedObject& o) { return text_of(o, names::kEntryOverlay); });
+            }
+
             // System name of a path surface. A queue ground surface names its queue style through one more hop.
             const std::string& surface(std::uint64_t ref)
             {
@@ -601,6 +607,7 @@ namespace rct3::save
             const SaveFile& file_;
             const ObjectIndex& index_;
             std::unordered_map<std::uint64_t, std::string> symbols_;
+            std::unordered_map<std::uint64_t, std::string> overlays_;
             std::unordered_map<std::uint64_t, std::string> surfaces_;
         };
 
@@ -939,7 +946,10 @@ namespace rct3::save
 
         // Asset symbols.
         for (auto& p : m.objects)
+        {
             p.symbol = resolver.symbol(p.definition_ref);
+            p.overlay = resolver.overlay(p.definition_ref);
+        }
         for (auto& t : m.skirt_trees)
         {
             // A skirt tree refers to a placed object, whose own definition names the asset.

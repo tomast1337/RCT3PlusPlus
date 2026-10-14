@@ -248,7 +248,7 @@ namespace
             { "PathTile", path_base },
             { "PathTypeDatabaseEntry", { { "SystemName", "string", 0, { } } } },
             { "SceneryItem", { { "SceneryItemDataField", "struct", data_size, data }, refa("DATABASEENTRY"), refa("Owner"), colours("FlexiColourField"), i32a("BREAKFLAGS"), { "IsHidden", "bool", 1, { } }, { "BehaviourArray", "array", 0, { refa("BehaviourReference") } } } },
-            { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0, { } } } },
+            { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0, { } }, { "OVERLAYFILENAME", "string", 0, { } } } },
             { "Weather", { i32a("Type"), i32a("ForecastType"), f32a("Temperature"), f32a("ThunderTime"), { "FogSetting", "struct", 24, { rgb("FColourValue"), f32a("Far"), f32a("Near"), f32a("ShadowDamper") } } } },
             { "Sky", { i32a("BackgroundSave") } },
             { "GameTime", { f32a("DayNightTime"), f32a("Time"), f32a("ZeroTime") } },
@@ -300,10 +300,11 @@ namespace
         return { kScenery, id, p };
     }
 
-    Obj entry_obj(std::uint64_t id, const std::u16string& symbol)
+    Obj entry_obj(std::uint64_t id, const std::u16string& symbol, const std::u16string& overlay = u"Scenery/Trees")
     {
         Bytes p;
         p.text(symbol);
+        p.text(overlay);
         return { kEntry, id, p };
     }
 
@@ -698,6 +699,7 @@ TEST_CASE("load_world: a complete synthetic save")
     const auto& o = w.objects[0];
     CHECK(o.id == 300);
     CHECK(o.symbol == "Tree_01");
+    CHECK(o.overlay == "Scenery/Trees");
     CHECK(o.col == 1);
     CHECK(o.row == 1);
     CHECK(o.base_height == 6);

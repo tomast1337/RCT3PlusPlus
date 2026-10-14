@@ -2,6 +2,7 @@
 #include "park/terrain_mesh.hpp"
 
 #include <doctest/doctest.h>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -107,4 +108,45 @@ TEST_CASE("a grid whose cells do not match its size makes nothing")
     save::TerrainGrid g = flat(2, 2);
     g.cells.pop_back();
     CHECK(terrain_mesh(g, { }).vertices.empty());
+}
+
+TEST_CASE("ground shades smoothly where tiles meet, and sharply at cliffs")
+{
+    // Flat at 0, a slope up to 4, then flat at `top`.
+    // Shades of the ground vertices at grid point x = 0 (where the slope meets the top), z = 4, height y.
+    const auto shades_at = [](float top, float x, float y) {
+        save::TerrainGrid g = flat(3, 1);
+        g.cells[1].corners = { 0, 4, 0, 4 };
+        g.cells[2].corners = { top, top, top, top };
+        const TerrainMesh m = terrain_mesh(g, { });
+        std::vector<float> shades;
+        for (const GroundBatch& b : m.batches)
+        {
+            if (b.paint != GroundPaint::Surface)
+                continue;
+            for (std::uint32_t i = b.first; i < b.first + b.count; ++i)
+            {
+                const GroundVertex& v = m.vertices[m.indices[i]];
+                if (v.position.x == doctest::Approx(x) && v.position.y == doctest::Approx(y) && v.position.z == doctest::Approx(4))
+                    shades.push_back(v.colour.r);
+            }
+        }
+        return shades;
+    };
+    const float flat_shade = shades_at(4, -8, 0).front(); // Far corner of the first tile, flat all round
+
+    // Where the slope meets the top, both tiles agree on one shade, a mix of flat and sloped.
+    const std::vector<float> joined = shades_at(4, 0, 4);
+    REQUIRE(joined.size() >= 2);
+    for (const float s : joined)
+        CHECK(s == doctest::Approx(joined.front()));
+    CHECK(joined.front() != doctest::Approx(flat_shade));
+
+    // With a cliff up to 8, the top keeps its flat shade and the slope does not borrow it.
+    const std::vector<float> top = shades_at(8, 0, 8);
+    REQUIRE_FALSE(top.empty());
+    CHECK(top.front() == doctest::Approx(flat_shade));
+    const std::vector<float> below = shades_at(8, 0, 4);
+    REQUIRE_FALSE(below.empty());
+    CHECK(below.front() != doctest::Approx(joined.front()));
 }

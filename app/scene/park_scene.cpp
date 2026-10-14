@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iterator>
 #include <map>
+#include <set>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -95,7 +96,22 @@ namespace rct3::scene
         {
             const std::vector<std::string> folders = object_folders(install, objects);
             const std::vector<std::string_view> views(folders.begin(), folders.end());
-            const park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
+            park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
+            // Overlays the scanned ones take assets from, and those they take from in turn.
+            std::set<std::string, std::less<>> tried_files;
+            for (auto missing = index.missing_references(); !missing.empty(); missing = index.missing_references())
+            {
+                bool added = false;
+                for (const std::string& reference : missing)
+                {
+                    if (!tried_files.insert(reference).second)
+                        continue;
+                    if (const auto file = install.find(reference + ".common.ovl"))
+                        added = index.add_file(*file) || added;
+                }
+                if (!added)
+                    break;
+            }
             park::ModelLoader loader(index);
             std::map<std::string, bool, std::less<>> tried;
             for (const save::PlacedObject& o : objects)

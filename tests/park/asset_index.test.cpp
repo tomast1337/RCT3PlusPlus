@@ -37,3 +37,19 @@ TEST_CASE("an overlay hint is matched to the files")
     CHECK_FALSE(index.overlay("Things/Seats/Missing"));
     CHECK(index.file("Things/Seats/Seats") == std::filesystem::path("Things/Seats/Seats.common.ovl"));
 }
+
+TEST_CASE("a reference names an overlay from the referring overlay's folder")
+{
+    CHECK(referenced_overlay("Props/Posts", "..\\Shared\\Paint\\p1") == "Shared/Paint/p1");
+    CHECK(referenced_overlay("Props/Posts", "Near") == "Props/Near");
+    CHECK(referenced_overlay("Props/Deep/Posts", "./../Other/./x") == "Props/Other/x");
+    CHECK_FALSE(referenced_overlay("Props/Posts", "..\\..\\Outside"));
+    CHECK_FALSE(referenced_overlay("Props/Posts", ""));
+}
+
+TEST_CASE("referenced overlays that are not indexed are missing")
+{
+    AssetIndex index;
+    CHECK(index.missing_references().empty());
+    CHECK_FALSE(index.add_file("Nowhere/None.common.ovl"));
+}

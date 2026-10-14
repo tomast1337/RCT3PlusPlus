@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
+#include "park/daylight.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
@@ -10,8 +11,10 @@
 #include "park/off_map_trees.hpp"
 #include "park/path_supports.hpp"
 #include "park/queue_fences.hpp"
+#include "park/sky_look.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
+#include "save/model/park.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -68,14 +71,11 @@ namespace rct3::scene
         constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
         constexpr float kKeyZoom = 2.5f;    ///< Times per second
 
-        constexpr std::array<render::VertexAttribute, 3> kGroundAttributes = { {
+        constexpr std::array<render::VertexAttribute, 4> kGroundAttributes = { {
             { 0, render::VertexFormat::Float3, offsetof(park::GroundVertex, position) },
             { 1, render::VertexFormat::Float4, offsetof(park::GroundVertex, colour) },
             { 2, render::VertexFormat::Float2, offsetof(park::GroundVertex, uv) },
-        } };
-        constexpr std::array<render::VertexAttribute, 2> kWaterAttributes = { {
-            { 0, render::VertexFormat::Float3, offsetof(park::WaterVertex, position) },
-            { 1, render::VertexFormat::Float4, offsetof(park::WaterVertex, colour) },
+            { 3, render::VertexFormat::Float3, offsetof(park::GroundVertex, normal) },
         } };
 
         /// The top folders of the install that the park's objects come from, as they are spelled on disk.
@@ -238,6 +238,7 @@ namespace rct3::scene
                 draw.texture = texture != textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = address_of(batch);
+                draw.light = scene.light;
                 device.draw(draw);
             }
         }
@@ -262,8 +263,7 @@ namespace rct3::scene
             if (!textures)
                 return std::unexpected(textures.error());
             scene.sky_textures = std::move(*textures);
-            if (const auto horizon = park::horizon_colour(*sky, park::kMiddayColumn))
-                scene.horizon = { horizon->x, horizon->y, horizon->z, horizon->w };
+            scene.horizon_band = park::horizon_band(*sky);
             scene.sky = std::move(sky->models);
             // Without the sky, the clear colour stands in for it; without clouds, the sky is clear.
             if (!options.flag(config::GameOption::Sky))
@@ -319,6 +319,35 @@ namespace rct3::scene
             scene.camera = park::on_ground(c, scene.grid);
         }
 
+        /// The park's time of day as its file left it, in the window its mode keeps. A park without opening
+        /// hours keeps the whole day.
+        simulation::DayClock park_day(const save::SaveFile& file, const save::ObjectIndex& index, const save::WorldModel& world, const config::GameOptions& options)
+        {
+            simulation::DayWindow hours;
+            if (const auto park = save::load_park(file, index); park && park->has_park)
+                hours = simulation::opening_hours(park->park.opening_minutes, park->park.closing_minutes);
+            const std::optional<std::int32_t> mode = world.time ? world.time->day_night_mode : std::nullopt;
+            const std::optional<float> time = world.time ? std::optional(world.time->day_fraction) : std::nullopt;
+            return simulation::start_day(time, simulation::day_window(simulation::day_mode(mode), hours), simulation::day_transition(options.choice(config::GameOption::DayNight)));
+        }
+
+        /// The sky and the light as the day clock shows them, with a look that is fading out over them.
+        void show_time_of_day(ParkScene& scene, glm::vec3 viewer)
+        {
+            const simulation::DayClock& day = scene.day;
+            const park::Daylight light = park::mixed(park::daylight(day.shown), park::daylight(day.faded), day.fade);
+            scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground, .eye = viewer };
+            const float column = park::sky_column(day.shown);
+            const float faded = park::sky_column(day.faded);
+            const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
+            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.clock });
+            if (!scene.horizon_band.empty())
+            {
+                const glm::vec4 c = glm::mix(park::band_colour(scene.horizon_band, column), park::band_colour(scene.horizon_band, faded), day.fade);
+                scene.horizon = { c.r, c.g, c.b, c.a };
+            }
+        }
+
     } // namespace
 
     std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed)
@@ -343,6 +372,7 @@ namespace rct3::scene
         scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
+        scene.day = park_day(*file, index, *world, options);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
@@ -367,18 +397,24 @@ namespace rct3::scene
         scene.ground_indices = *indices;
         if (!mesh.water.empty())
         {
-            auto water = upload(device, render::BufferUsage::Vertex, mesh.water, "water");
+            // Drawn lit, without a normal so it is lit as facing up, with the blank picture.
+            std::vector<park::GroundVertex> surface;
+            surface.reserve(mesh.water.size());
+            for (const park::WaterVertex& v : mesh.water)
+                surface.push_back({ v.position, v.colour });
+            auto water = upload(device, render::BufferUsage::Vertex, surface, "water");
             if (!water)
                 return fail(water.error());
             scene.water = *water;
             scene.water_count = static_cast<std::uint32_t>(mesh.water.size());
         }
 
-        auto ground = device.create_pipeline({ .shader = render::Shader::Textured, .layout = { sizeof(park::GroundVertex), kGroundAttributes }, .blend = render::BlendMode::Alpha, .label = "ground" });
+        const render::VertexLayout ground_layout { sizeof(park::GroundVertex), kGroundAttributes };
+        auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
         if (!ground)
             return fail(ground.error());
         scene.ground_pipeline = *ground;
-        auto water = device.create_pipeline({ .shader = render::Shader::VertexColor, .layout = { sizeof(park::WaterVertex), kWaterAttributes }, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water" });
+        auto water = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water" });
         if (!water)
             return fail(water.error());
         scene.water_pipeline = *water;
@@ -456,16 +492,15 @@ namespace rct3::scene
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid);
-        const render::VertexLayout object_layout { sizeof(park::GroundVertex), kGroundAttributes };
-        auto solid = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .label = "objects" });
+        auto solid = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" });
         if (!solid)
             return fail(solid.error());
         scene.object_pipeline = *solid;
-        auto cutout = device.create_pipeline({ .shader = render::Shader::TexturedCutout, .layout = object_layout, .label = "object cut-outs" });
+        auto cutout = device.create_pipeline({ .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" });
         if (!cutout)
             return fail(cutout.error());
         scene.cutout_pipeline = *cutout;
-        auto see_through = device.create_pipeline({ .shader = render::Shader::Textured, .layout = object_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" });
+        auto see_through = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" });
         if (!see_through)
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
@@ -545,7 +580,8 @@ namespace rct3::scene
         scene.billboards = park::billboard_mesh(scene.objects, scene.models, scene.anchors, scene.levels, viewer);
         add_textures(device, scene, scene.billboards.batches);
         scene.clock += elapsed;
-        scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .time = scene.clock });
+        simulation::advance(scene.day, elapsed);
+        show_time_of_day(scene, viewer);
 
         if (auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName)))
         {
@@ -589,7 +625,7 @@ namespace rct3::scene
         if (scene.sky_pipeline)
         {
             // The dome reads one column of its picture, so it must not wrap into the next.
-            draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
+            draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
         }
         // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
         draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
@@ -610,6 +646,7 @@ namespace rct3::scene
                 draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
+                draw.light = scene.light;
                 device.draw(draw);
             }
         };
@@ -627,6 +664,7 @@ namespace rct3::scene
             draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
             draw.filter = render::Filter::Linear;
             draw.address = render::AddressMode::Repeat;
+            draw.light = scene.light;
             device.draw(draw);
         }
         if (scene.object_indices)
@@ -639,6 +677,8 @@ namespace rct3::scene
             draw.vertices = { scene.water };
             draw.count = scene.water_count;
             draw.transform = transform;
+            draw.texture = scene.blank;
+            draw.light = scene.light;
             device.draw(draw);
         }
         if (scene.object_indices)

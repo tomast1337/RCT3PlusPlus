@@ -2,7 +2,6 @@
 #include "park/ground_paths.hpp"
 
 #include "park/ground_queues.hpp"
-#include "park/lighting.hpp"
 
 #include <algorithm>
 #include <array>
@@ -180,8 +179,7 @@ namespace rct3::park
                 {
                     const float u = (k & 1) != 0 ? u1 : u0;
                     const float v = (k & 2) != 0 ? v1 : v0;
-                    const float s = sunlight(on_tile(normals, u, v));
-                    q[static_cast<std::size_t>(k)] = { on_tile(corners, u, v) + glm::vec3(0.0f, kPathLift, 0.0f), { s, s, s, 1 }, cell_uv(cell.cell, u, v) };
+                    q[static_cast<std::size_t>(k)] = { on_tile(corners, u, v) + glm::vec3(0.0f, kPathLift, 0.0f), glm::vec4(1.0f), cell_uv(cell.cell, u, v), on_tile(normals, u, v) };
                 }
                 for (const int k : { 0, 1, 2, 3, 2, 1 })
                     out.push_back(q[static_cast<std::size_t>(k)]);

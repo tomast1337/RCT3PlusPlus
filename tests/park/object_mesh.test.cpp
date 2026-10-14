@@ -75,9 +75,9 @@ TEST_CASE("objects are placed and batched by blending, then picture")
     CHECK(first.position == glm::vec3(2, 0, 2));
     const GroundVertex& second = m.vertices[m.indices[m.batches[0].first + 3]];
     CHECK(second.position == glm::vec3(6, 0, 2));
-    // Lit from above, keeping the picture's coordinates.
-    CHECK(first.colour.a == 1);
-    CHECK(first.colour.r > 0.45f);
+    // Facing as the model's normal turned with the object, keeping the picture's coordinates.
+    CHECK(first.colour == glm::vec4(1.0f));
+    CHECK(glm::length(first.normal) == doctest::Approx(1));
     CHECK(m.vertices[m.indices[1]].uv == glm::vec2(0, 1));
 }
 

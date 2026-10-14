@@ -5,6 +5,7 @@
 #include "park/asset_index.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
+#include "park/sky_models.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -184,6 +185,64 @@ namespace rct3::scene
             return e.height > 0 ? static_cast<float>(e.width) / static_cast<float>(e.height) : 1.0f;
         }
 
+        /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`.
+        void draw_transient(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, auto&& pipeline_of, auto&& address_of)
+        {
+            if (mesh.indices.empty())
+                return;
+            const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
+            const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
+            if (!vertices || !indices)
+                return;
+            for (const park::ObjectBatch& batch : mesh.batches)
+            {
+                const auto texture = textures.find(batch.texture);
+                render::DrawCommand draw;
+                draw.pipeline = pipeline_of(batch);
+                draw.vertices = *vertices;
+                draw.indices = *indices;
+                draw.index_type = render::IndexType::U32;
+                draw.first = batch.first;
+                draw.count = batch.count;
+                draw.transform = transform;
+                draw.texture = texture != textures.end() ? texture->second.handle : scene.blank;
+                draw.filter = render::Filter::Linear;
+                draw.address = address_of(batch);
+                device.draw(draw);
+            }
+        }
+
+        /// The sky from the install, ready to draw; a sky that cannot be read is left out.
+        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, ParkScene& scene)
+        {
+            const auto log = logging::logger("park");
+            const auto found = install.find(park::kSkyFile);
+            if (!found)
+            {
+                log.warning("no sky: {} is missing", park::kSkyFile);
+                return { };
+            }
+            auto sky = park::load_sky(*found);
+            if (!sky)
+            {
+                log.warning("sky: {}", sky.error());
+                return { };
+            }
+            auto textures = ui::upload_textures(device, sky->images);
+            if (!textures)
+                return std::unexpected(textures.error());
+            scene.sky_textures = std::move(*textures);
+            if (const auto horizon = park::horizon_colour(*sky, park::kMiddayColumn))
+                scene.horizon = { horizon->x, horizon->y, horizon->z, horizon->w };
+            scene.sky = std::move(sky->models);
+            const render::VertexLayout layout { sizeof(park::GroundVertex), kGroundAttributes };
+            auto pipeline = device.create_pipeline({ .shader = render::Shader::Textured, .layout = layout, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "sky" });
+            if (!pipeline)
+                return std::unexpected(pipeline.error());
+            scene.sky_pipeline = *pipeline;
+            return { };
+        }
+
         void ask_leave(ParkScene& scene, const ui::StringTable& strings)
         {
             if (scene.desktop->root().find(kQuestionName) != nullptr)
@@ -314,6 +373,8 @@ namespace rct3::scene
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
         refresh_objects(device, scene, park::eye(scene.camera));
+        if (auto sky = load_sky(device, install, scene); !sky)
+            return fail(sky.error());
 
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
@@ -359,6 +420,8 @@ namespace rct3::scene
             refresh_objects(device, scene, viewer);
         scene.billboards = park::billboard_mesh(scene.objects, scene.models, scene.anchors, scene.levels, viewer);
         add_textures(device, scene, scene.billboards.batches);
+        scene.clock += elapsed;
+        scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .time = scene.clock });
 
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
@@ -374,9 +437,19 @@ namespace rct3::scene
         return std::exchange(scene.leave, false);
     }
 
+    render::Color park_background(const ParkScene& scene)
+    {
+        return scene.horizon;
+    }
+
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         const glm::mat4 transform = park::view_projection(scene.camera, aspect(device));
+        if (scene.sky_pipeline)
+        {
+            // The dome reads one column of its picture, so it must not wrap into the next.
+            draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
+        }
         const auto draw_objects = [&](bool see_through) {
             for (const park::ObjectBatch& batch : scene.object_batches)
             {
@@ -415,29 +488,7 @@ namespace rct3::scene
         }
         if (scene.object_indices)
             draw_objects(false);
-        if (!scene.billboards.indices.empty())
-        {
-            const auto vertices = device.allocate_transient(std::as_bytes(std::span(scene.billboards.vertices)));
-            const auto indices = device.allocate_transient(std::as_bytes(std::span(scene.billboards.indices)));
-            if (vertices && indices)
-            {
-                for (const park::ObjectBatch& batch : scene.billboards.batches)
-                {
-                    const auto texture = scene.object_textures.find(batch.texture);
-                    render::DrawCommand draw;
-                    draw.pipeline = scene.cutout_pipeline;
-                    draw.vertices = *vertices;
-                    draw.indices = *indices;
-                    draw.index_type = render::IndexType::U32;
-                    draw.first = batch.first;
-                    draw.count = batch.count;
-                    draw.transform = transform;
-                    draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
-                    draw.filter = render::Filter::Linear;
-                    device.draw(draw);
-                }
-            }
-        }
+        draw_transient(device, scene, scene.billboards, scene.object_textures, transform, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
         if (scene.water_count > 0)
         {
             render::DrawCommand draw;
@@ -465,13 +516,14 @@ namespace rct3::scene
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);
         }
         ui::destroy_textures(device, scene.ground_textures);
         ui::destroy_textures(device, scene.object_textures);
+        ui::destroy_textures(device, scene.sky_textures);
         if (scene.blank)
             device.destroy_texture(scene.blank);
         scene = { };

@@ -77,6 +77,7 @@ namespace rct3::park
     struct ObjectModel
     {
         std::uint16_t positioning = 0;  ///< How the item sits on its tile (see object_placement.hpp)
+        float sway = 0;                 ///< How much it sways in the wind; above 0 for trees and plants only
         std::vector<ModelLevel> levels; ///< Finest first, never empty
     };
 

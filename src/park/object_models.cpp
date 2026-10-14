@@ -245,6 +245,7 @@ namespace rct3::park
 
         ObjectModel model;
         model.positioning = item->positioning;
+        model.sway = visual->sway;
         for (const ovl::SceneryVisualLod& lod : visual->lods)
         {
             ModelLevel level;

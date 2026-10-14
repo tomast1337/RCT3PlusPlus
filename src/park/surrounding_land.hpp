@@ -18,6 +18,9 @@
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
+#include <optional>
+#include <vector>
+
 namespace rct3::park
 {
 
@@ -34,6 +37,21 @@ namespace rct3::park
     inline constexpr int kSurroundSmoothing = 3;
     /// How much of each next ring is the edge's commonest surface rather than the ring inside's mix.
     inline constexpr float kSurroundSettle = 0.35f;
+
+    /// The land's shape without its paint: how far out each ring is, and the height of each of its points.
+    /// Every ring has `points` points, walking round the map as its edge does.
+    struct LandRings
+    {
+        std::size_t points = 0;
+        std::vector<float> distances; ///< Ring by ring, from 0 at the edge out to kSurroundReach
+        std::vector<float> heights;   ///< Ring after ring, `points` each
+    };
+
+    [[nodiscard]] LandRings land_rings(const save::TerrainGrid& grid);
+
+    /// The land's height at world (x, z) beyond the map's edge, between its points. Nothing on the map or
+    /// past the land's reach.
+    [[nodiscard]] std::optional<float> land_height(const LandRings& rings, const save::TerrainGrid& grid, float x, float z);
 
     /// The height the land settles at far out: the mean height round the map's edge.
     [[nodiscard]] float edge_level(const save::TerrainGrid& grid);

@@ -13,19 +13,12 @@
 namespace rct3::ui
 {
 
-    namespace
-    {
-
-        constexpr std::string_view kMainOverlay = "Main.common.ovl";
-
-    } // namespace
-
     std::expected<InterfaceAssets, std::string> load_interface_assets(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font, std::span<const std::string_view> more_skins)
     {
         const auto log = logging::logger("ui");
-        const auto main_ovl = install.find(kMainOverlay);
+        const auto main_ovl = install.find(game_skins::kMainOverlay);
         if (!main_ovl)
-            return std::unexpected(std::string(kMainOverlay) + " not found");
+            return std::unexpected(std::string(game_skins::kMainOverlay) + " not found");
         auto set = load_skin_set(*main_ovl, game_skins::kWholeTextures);
         if (!set)
             return std::unexpected(set.error());

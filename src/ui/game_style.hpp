@@ -35,6 +35,9 @@
 namespace rct3::ui::game_skins
 {
 
+    /// The overlay in the install, relative to its root, that holds the interface's skins.
+    inline constexpr std::string_view kMainOverlay = "Main.common.ovl";
+
     inline constexpr std::string_view kWindowFrame = "GUI2Dialog_Frame";
     inline constexpr std::string_view kWindowFrameUnfocused = "GUI2Dialog_FrameNoFocus";
     inline constexpr std::string_view kWindowBackground = "GUI2Dialog_Background"; ///< A small tile, repeated
@@ -404,10 +407,12 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// The round panel in the bottom-right corner that tells about an attraction.
+    /// The round panel in the bottom-right corner that tells about an attraction. Its frame is drawn in code,
+    /// which panel-look scores against these skins; the skins stay named for falling back to them.
     [[nodiscard]] inline InfoPanelStyle info_panel_style()
     {
         InfoPanelStyle s;
+        s.look = PanelLook::Coded;
         s.disc = "CircularViewSolid";
         s.glass = "CircularViewHollow";
         s.rim = "CircularViewHollowEdgeR";

@@ -88,3 +88,33 @@ TEST_CASE("buttons ease round first, then out, and arrive")
     CHECK(p.angle == goal.angle);
     CHECK(p.radius == goal.radius);
 }
+
+TEST_CASE("on a wide screen the ring round a menu button stays round and the band stretches")
+{
+    const Frame square = frame_for({ 0, 0, kDesignWidth, kDesignHeight });
+    const Frame wide = frame_for({ 0, 0, 2 * kDesignWidth, kDesignHeight });
+    for (std::size_t i = 0; i < kMaxMenuEntries; ++i)
+    {
+        const LabelBox box = label_box(wide, i);
+        CHECK(box.patch.width() == doctest::Approx(box.patch.height()));
+        CHECK(box.patch.width() == doctest::Approx(kLabelPatch.width() * wide.round));
+        // The ring keeps its place round the button.
+        const Rect button = button_rect(wide, on_ring(menu_angle(i), kMenuRadius), kMenuButtonSize);
+        CHECK(box.patch.x0 < button.x0);
+        CHECK(box.patch.x1 > button.x1);
+        CHECK(box.patch.y0 < button.y0);
+        CHECK(box.patch.y1 > button.y1);
+        // The band starts under the ring and reaches twice as far as on the design screen.
+        const LabelBox base = label_box(square, i);
+        CHECK(box.band.x0 < box.patch.x1);
+        CHECK(box.band.x1 == doctest::Approx(2 * base.band.x1));
+        CHECK(box.band.height() == doctest::Approx(base.band.height()));
+        CHECK(box.text.x0 > box.patch.x0);
+        CHECK(box.text.x1 > box.text.x0);
+    }
+    // On the design screen nothing moves.
+    const LabelBox base = label_box(square, 0);
+    const Point p = on_ring(menu_angle(0), kMenuRadius);
+    CHECK(base.patch.x0 == doctest::Approx(p.x + kLabelBoxOffset.x + kLabelPatch.x0));
+    CHECK(base.band.x1 == doctest::Approx(p.x + kLabelBoxOffset.x + kLabelBand.x1));
+}

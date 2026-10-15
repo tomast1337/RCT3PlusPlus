@@ -35,7 +35,8 @@ namespace rct3::ui
         float texture_height = 0;
         std::shared_ptr<const CodedFrame> coded; ///< When set, drawn in place of the picture
 
-        /// The size the skin has in its texture: the size it is drawn at when it is not stretched.
+        /// The size the skin has in its texture: the size it is drawn at when it is not stretched. A coded
+        /// skin with no picture gives the size its frame was measured at.
         [[nodiscard]] std::array<float, 2> size() const;
     };
 

@@ -188,6 +188,13 @@ namespace rct3::ui
         return { right - info_panel::kDisc, bottom - info_panel::kDisc, right, bottom };
     }
 
+    Rect InfoPanel::view() const
+    {
+        const Rect d = disc();
+        const float inset = (info_panel::kDisc - info_panel::kView) / 2;
+        return { d.x0 + inset, d.y0 + inset, d.x1 - inset, d.y1 - inset };
+    }
+
     Rect InfoPanel::strip() const
     {
         const Rect r = rect();
@@ -292,6 +299,8 @@ namespace rct3::ui
         draw_skin(context.list, skin(style_.shadow), shade);
         draw_skin(context.list, skin(style_.rim_shadow), shade);
         draw_skin(context.list, skin(style_.disc), d);
+        if (view_ != 0)
+            context.list.disc_image(view(), view_, { 0, 0, 1, 1 });
         draw_skin(context.list, skin(style_.glass), d, { 255, 255, 255, static_cast<std::uint8_t>(std::lround(style_.glass_alpha * 255)) });
         draw_skin(context.list, skin(style_.rim), d);
     }

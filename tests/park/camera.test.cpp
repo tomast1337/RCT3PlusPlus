@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/camera.hpp"
 
+#include <cmath>
 #include <doctest/doctest.h>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -89,4 +91,25 @@ TEST_CASE("the line of sight through a point of the view passes through what is 
     const Ray middle = view_ray(c, aspect, { 0, 0 });
     const glm::vec3 t = c.target - middle.origin;
     CHECK(glm::length(t - middle.direction * glm::dot(t, middle.direction)) == doctest::Approx(0).epsilon(0.001));
+}
+
+TEST_CASE("framing points looks at their middle from far enough to see them all")
+{
+    const std::vector<glm::vec3> points { { 0, 0, 0 }, { 40, 10, 20 }, { 10, 0, 0 } };
+    const ParkCamera c = framed(points, 0.5f, 0.6f);
+    CHECK(c.target.x == doctest::Approx(20));
+    CHECK(c.target.y == doctest::Approx(5));
+    CHECK(c.target.z == doctest::Approx(10));
+    CHECK(c.yaw == 0.5f);
+    CHECK(c.pitch == 0.6f);
+    // Every corner of the box shows in a square view.
+    const glm::mat4 m = view_projection(c, 1);
+    for (const glm::vec3& p : points)
+    {
+        const glm::vec4 clip = m * glm::vec4(p, 1);
+        CHECK(std::abs(clip.x / clip.w) <= 1);
+        CHECK(std::abs(clip.y / clip.w) <= 1);
+    }
+    // A single point is seen from the nearest the camera goes.
+    CHECK(framed(std::vector<glm::vec3> { { 3, 4, 5 } }, 0, 0.6f).distance == kMinDistance);
 }

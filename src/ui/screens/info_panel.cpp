@@ -411,7 +411,6 @@ namespace rct3::ui
             plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
-            list.shape(shape({ slab.x0, slab.y0 + c.band_height, slab.x1, slab.y0 + c.band_height + c.glow_height }, { }, c.band_glow, c.body));
         }
 
         // The disc: flat where it meets the strip, round on the right.

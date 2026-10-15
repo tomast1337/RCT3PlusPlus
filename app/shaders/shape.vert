@@ -10,6 +10,8 @@ layout(location = 4) in vec4 a_top;
 layout(location = 5) in vec4 a_bottom;
 layout(location = 6) in vec4 a_outline;
 layout(location = 7) in vec4 a_light;
+layout(location = 8) in vec4 a_cut; // Centre of the disc cut out, from the middle; its radius
+layout(location = 9) in vec2 a_fill; // Shares of the height where the fill starts and stops changing
 
 layout(push_constant) uniform Draw {
   mat4 transform;
@@ -22,6 +24,8 @@ layout(location = 3) flat out vec4 v_top;
 layout(location = 4) flat out vec4 v_bottom;
 layout(location = 5) flat out vec4 v_outline;
 layout(location = 6) flat out vec4 v_light;
+layout(location = 7) flat out vec4 v_cut;
+layout(location = 8) flat out vec2 v_fill;
 
 void main() {
   gl_Position = u_draw.transform * vec4(a_position, 0.0, 1.0);
@@ -32,4 +36,6 @@ void main() {
   v_bottom = a_bottom;
   v_outline = a_outline;
   v_light = a_light;
+  v_cut = a_cut;
+  v_fill = a_fill;
 }

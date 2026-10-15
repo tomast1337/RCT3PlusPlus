@@ -129,3 +129,35 @@ TEST_CASE("a shape's colour runs from top to bottom, under its outline and light
         CHECK(shade_shape(s, m, 0, 0).a == 255);
     }
 }
+
+TEST_CASE("a cut takes a disc out of a shape")
+{
+    Shape s = square(20, 0);
+    s.cut_x = 0; // The top-left corner
+    s.cut_y = 0;
+    s.cut_radius = 8;
+    const ShapeMetrics m = shape_metrics(s, 1);
+    // From the middle the cut's centre is at (-10, -10).
+    CHECK(m.cut_x == doctest::Approx(-10));
+    CHECK(m.cut_y == doctest::Approx(-10));
+    CHECK(shape_distance(m, -9, -9) > 0);
+    CHECK(shape_distance(m, -10, 0) == doctest::Approx(0));
+    CHECK(shape_distance(m, 5, 5) == doctest::Approx(-5));
+    // No cut leaves the box whole.
+    CHECK(shape_distance(shape_metrics(square(20, 0), 1), -9, -9) < 0);
+}
+
+TEST_CASE("the fill changes only between its two shares of the height")
+{
+    Shape s = square(20, 0);
+    s.top = kRed;
+    s.bottom = kBlue;
+    s.fill_from = 0.25f;
+    s.fill_to = 0.75f;
+    const ShapeMetrics m = shape_metrics(s, 1);
+    CHECK(shade_shape(s, m, 0, -8) == kRed); // Above the first share
+    CHECK(shade_shape(s, m, 0, 8) == kBlue); // Below the second
+    const Color middle = shade_shape(s, m, 0, 0);
+    CHECK(middle.r == doctest::Approx(128).epsilon(0.02));
+    CHECK(middle.b == doctest::Approx(128).epsilon(0.02));
+}

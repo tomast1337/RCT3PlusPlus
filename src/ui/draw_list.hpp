@@ -81,7 +81,7 @@ namespace rct3::ui
         float v = 0;
     };
 
-    /// The vertex of a shape's quad (shape.hpp), 72 bytes. The shape's measures repeat on each corner so one draw
+    /// The vertex of a shape's quad (shape.hpp), 96 bytes. The shape's measures repeat on each corner so one draw
     /// can hold many shapes. Lengths are in pixels.
     struct ShapeVertex
     {
@@ -94,6 +94,8 @@ namespace rct3::ui
         std::array<std::uint8_t, 4> bottom { };
         std::array<std::uint8_t, 4> outline { };
         std::array<std::uint8_t, 4> light { };
+        std::array<float, 4> cut { };  ///< Centre of the disc cut out, from the shape's middle; its radius; unused
+        std::array<float, 2> fill { }; ///< Shares of the height where the fill starts and stops changing
     };
 
     enum class BatchKind : std::uint8_t

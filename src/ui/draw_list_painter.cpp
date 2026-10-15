@@ -163,7 +163,7 @@ namespace rct3::ui
                 shape.bottom = colour(s.bottom);
                 shape.outline = colour(s.outline);
                 shape.light = colour(s.light);
-                const ShapeMetrics m { s.local[2], s.local[3], { s.radii[0], s.radii[1], s.radii[2], s.radii[3] }, s.edge[0], s.edge[1], s.edge[2], s.edge[3] };
+                const ShapeMetrics m { s.local[2], s.local[3], { s.radii[0], s.radii[1], s.radii[2], s.radii[3] }, s.edge[0], s.edge[1], s.edge[2], s.edge[3], s.fill[0], s.fill[1], s.cut[0], s.cut[1], s.cut[2] };
                 fill_triangle(target, { { { v[0].x, v[0].y }, { v[1].x, v[1].y }, { v[2].x, v[2].y } } }, [&](const std::array<float, 3>& w, int x, int y) {
                     const float lx = v[0].local[0] * w[0] + v[1].local[0] * w[1] + v[2].local[0] * w[2];
                     const float ly = v[0].local[1] * w[0] + v[1].local[1] * w[1] + v[2].local[1] * w[2];

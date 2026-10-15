@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Shapes the interface draws in code instead of from a picture: rounded rectangles, discs and rings with a
-// gradient fill, an outline, a light along the edge and soft edges for shadows. Every pixel works out how far
+// gradient fill, an outline, a light along the edge and soft edges for shadows, optionally with a round bite
+// taken out of them. Every pixel works out how far
 // it lies from the shape's edge (a signed distance, negative inside) and takes its colour from that, so edges
 // stay sharp and smooth at any size.
 //
@@ -36,11 +37,16 @@ namespace rct3::ui
         float ring = 0; ///< When above 0, only a band this wide inside the outline is filled
         Color top = kWhite;
         Color bottom = kWhite; ///< The fill runs from `top` at the top of `rect` to this at the bottom
+        float fill_from = 0;   ///< Share of the height where the fill starts to change from `top`
+        float fill_to = 1;     ///< Share of the height where it has become `bottom`
         Color outline { 0, 0, 0, 0 };
         float outline_width = 0; ///< Along the inside of the edge
         Color light { 0, 0, 0, 0 };
         float light_width = 0; ///< From the edges that face up inwards, fading out: a lit bevel
         float softness = 0;    ///< Across the edge; 0 for a crisp edge, more for a blurred one such as a shadow
+        float cut_x = 0;       ///< Centre of a disc taken out of the shape, in the units of `rect`
+        float cut_y = 0;
+        float cut_radius = 0; ///< 0 for no cut
     };
 
     /// A shape's measures in pixels, as the shader receives them.
@@ -53,6 +59,11 @@ namespace rct3::ui
         float outline_width = 0;
         float light_width = 0;
         float ring = 0;
+        float fill_from = 0;
+        float fill_to = 1;
+        float cut_x = 0; ///< From the middle
+        float cut_y = 0;
+        float cut_radius = 0;
     };
 
     /// `shape` measured in pixels at `scale` pixels per unit.

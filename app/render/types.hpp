@@ -151,7 +151,7 @@ namespace rct3::render
         std::uint32_t offset = 0;
     };
 
-    inline constexpr std::size_t kMaxVertexAttributes = 8;
+    inline constexpr std::size_t kMaxVertexAttributes = 16; ///< The least Vulkan promises
 
     /// One interleaved vertex stream.
     struct VertexLayout

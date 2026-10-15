@@ -18,9 +18,9 @@ namespace rct3::ui
             { 2, render::VertexFormat::Float2, offsetof(Vertex, u) },
         } };
 
-        static_assert(sizeof(ShapeVertex) == 72, "the shape pipeline below describes this layout");
+        static_assert(sizeof(ShapeVertex) == 96, "the shape pipeline below describes this layout");
 
-        constexpr std::array<render::VertexAttribute, 8> kShapeAttributes = { {
+        constexpr std::array<render::VertexAttribute, 10> kShapeAttributes = { {
             { 0, render::VertexFormat::Float2, offsetof(ShapeVertex, x) },
             { 1, render::VertexFormat::Float4, offsetof(ShapeVertex, local) },
             { 2, render::VertexFormat::Float4, offsetof(ShapeVertex, radii) },
@@ -29,6 +29,8 @@ namespace rct3::ui
             { 5, render::VertexFormat::UByte4Norm, offsetof(ShapeVertex, bottom) },
             { 6, render::VertexFormat::UByte4Norm, offsetof(ShapeVertex, outline) },
             { 7, render::VertexFormat::UByte4Norm, offsetof(ShapeVertex, light) },
+            { 8, render::VertexFormat::Float4, offsetof(ShapeVertex, cut) },
+            { 9, render::VertexFormat::Float2, offsetof(ShapeVertex, fill) },
         } };
 
     } // namespace

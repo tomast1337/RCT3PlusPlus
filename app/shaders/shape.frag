@@ -9,6 +9,8 @@ layout(location = 3) flat in vec4 v_top;
 layout(location = 4) flat in vec4 v_bottom;
 layout(location = 5) flat in vec4 v_outline;
 layout(location = 6) flat in vec4 v_light;
+layout(location = 7) flat in vec4 v_cut;
+layout(location = 8) flat in vec2 v_fill;
 layout(location = 0) out vec4 out_color;
 
 float side(float v) { return v < 0.0 ? -1.0 : 1.0; }
@@ -57,12 +59,16 @@ void main() {
   float d = box_distance(p, half_size);
   if (ring > 0.0)
     d = abs(d + ring / 2.0) - ring / 2.0;
+  if (v_cut.z > 0.0)
+    d = max(d, v_cut.z - length(p - v_cut.xy));
   float t = clamp(0.5 - d / max(softness, 1.0), 0.0, 1.0);
   float coverage = softness > 1.0 ? t * t * (3.0 - 2.0 * t) : t;
   if (coverage <= 0.0)
     discard;
 
-  float along = half_size.y > 0.0 ? clamp((p.y + half_size.y) / (2.0 * half_size.y), 0.0, 1.0) : 0.0;
+  float share = half_size.y > 0.0 ? (p.y + half_size.y) / (2.0 * half_size.y) : 0.0;
+  float span = v_fill.y - v_fill.x;
+  float along = clamp(span > 0.0 ? (share - v_fill.x) / span : (share < v_fill.x ? 0.0 : 1.0), 0.0, 1.0);
   vec4 color = mix(v_top, v_bottom, along);
   float inside = -d;
   if (light_width > 0.0)

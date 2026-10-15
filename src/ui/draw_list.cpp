@@ -163,6 +163,8 @@ namespace rct3::ui
         v.bottom = packed(shape.bottom);
         v.outline = packed(shape.outline);
         v.light = packed(shape.light);
+        v.cut = { m.cut_x, m.cut_y, m.cut_radius, 0 };
+        v.fill = { m.fill_from, m.fill_to };
         const auto base = static_cast<std::uint32_t>(shape_vertices_.size());
         for (const auto& [x, y] : { std::pair { visible.x0, visible.y0 }, { visible.x1, visible.y0 }, { visible.x1, visible.y1 }, { visible.x0, visible.y1 } })
         {

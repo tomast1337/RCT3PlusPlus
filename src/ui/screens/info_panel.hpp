@@ -86,6 +86,8 @@ namespace rct3::ui
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
         inline constexpr float kPlotHeight = 64;
+        inline constexpr float kPairValue = 50;  ///< Of the value of a line paired with another on its row
+        inline constexpr float kPairGap = 6;     ///< Between the two half lines of a row
         inline constexpr float kChoiceSize = 22; ///< A choice button
         inline constexpr float kChoiceIconScale = 0.684f;
         inline constexpr float kChoiceRadius = 25; ///< From the tab's middle to its choices'
@@ -98,6 +100,7 @@ namespace rct3::ui
     {
         std::u16string label;
         std::u16string value;
+        bool half = false; ///< Short enough to share its row with the next half line
     };
 
     struct InfoSeries
@@ -115,6 +118,7 @@ namespace rct3::ui
         std::vector<std::u16string> sections;
         std::size_t section = 0; ///< The one shown
         std::vector<InfoLine> lines;
+
         std::u16string note;
         std::vector<InfoSeries> graph;
     };

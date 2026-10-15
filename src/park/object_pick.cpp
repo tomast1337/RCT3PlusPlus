@@ -94,9 +94,9 @@ namespace rct3::park
         return enter;
     }
 
-    std::optional<std::size_t> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted)
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted)
     {
-        std::optional<std::size_t> best;
+        std::optional<PickHit> best;
         float nearest = ground_hit(ray, grid).value_or(kFar);
         std::map<std::string, std::optional<std::pair<glm::vec3, glm::vec3>>, std::less<>> boxes;
         for (std::size_t i = 0; i < objects.size(); ++i)
@@ -122,7 +122,25 @@ namespace rct3::park
             if (const auto t = box_hit(local, box->second->first, box->second->second); t && *t < nearest)
             {
                 nearest = *t;
-                best = i;
+                best = PickHit { i, *t };
+            }
+        }
+        return best;
+    }
+
+    std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::TerrainGrid& grid)
+    {
+        std::optional<PickHit> best;
+        float nearest = ground_hit(ray, grid).value_or(kFar);
+        for (std::size_t i = 0; i < placements.size(); ++i)
+        {
+            // Like objects, a person is moved and turned without being stretched, so distances hold.
+            const glm::mat4 back = glm::inverse(placements[i]);
+            const Ray local { glm::vec3(back * glm::vec4(ray.origin, 1.0f)), glm::vec3(back * glm::vec4(ray.direction, 0.0f)) };
+            if (const auto t = box_hit(local, kPersonLow, kPersonHigh); t && *t < nearest)
+            {
+                nearest = *t;
+                best = PickHit { i, *t };
             }
         }
         return best;

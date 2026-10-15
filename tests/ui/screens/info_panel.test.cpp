@@ -41,7 +41,7 @@ namespace
 
     std::vector<InfoTab> three()
     {
-        return { { "A", u"a", 0, { } }, { "B", u"b", 3, { } }, { "C", u"c", 6, { } } };
+        return { { "A", u"a", 0, { }, false, { } }, { "B", u"b", 3, { }, false, { } }, { "C", u"c", 6, { }, false, { } } };
     }
 } // namespace
 
@@ -217,4 +217,57 @@ TEST_CASE("the round view sits in the middle of the disc")
     CHECK(v.height() == info_panel::kView);
     CHECK(v.x0 + v.x1 == doctest::Approx(d.x0 + d.x1));
     CHECK(v.y0 + v.y1 == doctest::Approx(d.y0 + d.y1));
+}
+
+TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells the colour picked")
+{
+    Fixture f;
+    std::vector<InfoTab> tabs = three();
+    tabs[1].paints = { 4, 9 };
+    f.panel->show(std::move(tabs), 0);
+    f.desktop.update({ });
+    CHECK_FALSE(f.panel->tab(1).toggle);
+    CHECK_FALSE(f.panel->painting());
+
+    f.click(Fixture::middle(f.panel->tab(1).rect()));
+    REQUIRE(f.panel->painting() == 1);
+    REQUIRE(f.panel->palette() != nullptr);
+    ColourPalette& palette = *f.panel->palette();
+    CHECK(palette.count() == game_skins::info_panel_style().palette_count);
+    CHECK(palette.rect().y1 < f.panel->tab(1).rect().y0);
+    CHECK(palette.rect().x1 <= 1000);
+    const std::size_t pot = palette.current() == 4 ? 0 : 1;
+    CHECK(palette.current() == (pot == 0 ? 4U : 9U));
+
+    f.click(Fixture::middle(palette.swatch(21).rect()));
+    const auto paint = f.panel->take_paint();
+    REQUIRE(paint);
+    CHECK(paint->tab == 1);
+    CHECK(paint->pot == pot);
+    CHECK(paint->colour == 21);
+    CHECK_FALSE(f.panel->take_paint());
+    // Picking puts the colours away.
+    CHECK_FALSE(f.panel->painting());
+    CHECK(f.panel->palette() == nullptr);
+}
+
+TEST_CASE("the colours go away when their tab is pressed again, another tab is, or the owner asks")
+{
+    Fixture f;
+    std::vector<InfoTab> tabs = three();
+    tabs[1].paints = { 4 };
+    f.panel->show(std::move(tabs), 0);
+    f.desktop.update({ });
+    const Point paint = Fixture::middle(f.panel->tab(1).rect());
+    f.click(paint);
+    CHECK(f.panel->painting());
+    f.click(paint);
+    CHECK_FALSE(f.panel->painting());
+    f.click(paint);
+    f.click(Fixture::middle(f.panel->tab(2).rect()));
+    CHECK_FALSE(f.panel->painting());
+    f.click(paint);
+    f.panel->close_palette();
+    CHECK_FALSE(f.panel->painting());
+    CHECK_FALSE(f.panel->take_paint());
 }

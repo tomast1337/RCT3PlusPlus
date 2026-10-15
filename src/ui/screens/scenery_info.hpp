@@ -10,6 +10,8 @@
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -30,10 +32,11 @@ namespace rct3::ui
     struct SceneryTabInfo
     {
         SceneryTab tab = SceneryTab::Destroy;
-        int slot = 0;          ///< Its place on the ring
-        std::string_view icon; ///< Skin
-        std::string_view help; ///< String key
-        bool action = false;   ///< Acts at once instead of opening a page
+        int slot = 0;                    ///< Its place on the ring
+        std::string_view icon;           ///< Skin
+        std::string_view help;           ///< String key
+        bool action = false;             ///< Acts at once instead of opening a page
+        std::vector<std::size_t> paints; ///< The colour tab's: the colour in each slot it paints, in turn
     };
 
     /// The prop a page is written about: the asset it is made from and what it does, when it is a bin or a sign.
@@ -42,8 +45,12 @@ namespace rct3::ui
         std::string_view symbol;
         const save::BinState* bin = nullptr;
         const save::SignState* sign = nullptr;
-        std::uint32_t colour_slots = 0; ///< The colour slots its pictures take (bit k: slot k)
+        std::uint32_t colour_slots = 0;          ///< The colour slots its pictures take (bit k: slot k)
+        std::array<std::int32_t, 3> colours { }; ///< The colour picked for each slot, of the 32
     };
+
+    /// The colour slots the colour tab paints, in the order of its pots.
+    [[nodiscard]] std::vector<std::size_t> scenery_paint_slots(const SceneryFacts& facts);
 
     /// The tabs of the prop, in the order of their slots.
     [[nodiscard]] std::vector<SceneryTabInfo> scenery_tabs(const SceneryFacts& facts);

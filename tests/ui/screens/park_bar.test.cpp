@@ -141,3 +141,26 @@ TEST_CASE("the weather shows with its help, and the forecast only when it change
     CHECK(f.bar->forecast().visible);
     CHECK(f.bar->forecast().skin == "IconSnow");
 }
+
+TEST_CASE("the rating's help gives its number, then its parts once a week has been rated")
+{
+    StringTable strings;
+    strings.add("Toolbar_TT_ParkRating", u"Rating:");
+    strings.add("ParkRatingBreakdown_Base", u"Base:");
+    strings.add("ParkRatingBreakdown_NumGuests", u"Guests:");
+    strings.add("ParkRatingBreakdown_HappyGuests", u"Happy:");
+    strings.add("ParkRatingBreakdown_RideUpTime", u"Up:");
+    strings.add("ParkRatingBreakdown_ExcitementIntensity", u"Rides:");
+    strings.add("ParkRatingBreakdown_LitterVomit", u"Litter:");
+    strings.add("ParkRatingBreakdown_Total", u"Total:");
+    CHECK(park_rating_help(strings, 0.4f, std::nullopt) == u"Rating: 400");
+
+    simulation::RatingParts parts;
+    parts.guests = 30;
+    parts.happy_guests = 300;
+    parts.ride_up_time = 40;
+    parts.ride_scores = 50;
+    parts.litter = -20;
+    parts.total = 400;
+    CHECK(park_rating_help(strings, 0.4f, parts) == u"Rating: 400\nGuests: +30\nHappy: +300\nUp: +40\nRides: +50\nLitter: -20\nTotal: 400");
+}

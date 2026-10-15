@@ -17,6 +17,7 @@
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
 #include "save/model/park.hpp"
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
@@ -571,6 +572,10 @@ namespace rct3::scene
         }
         else
             log.warning("rides: {}", save::to_string(rides.error()));
+        if (auto people = save::load_people(*file, index))
+            scene.people = std::move(*people);
+        else
+            log.warning("people: {}", save::to_string(people.error()));
 
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
@@ -780,7 +785,9 @@ namespace rct3::scene
         // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
         const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
         simulation::advance(scene.day, game_seconds);
-        simulation::pass_time(scene.park, game_seconds);
+        // Each new week rates the park again; weeks run through in one frame are rated once.
+        if (simulation::pass_time(scene.park, game_seconds) > 0)
+            simulation::rate_week(scene.park, scene.people, scene.rides);
         simulation::age(scene.park.messages, game_seconds);
         show_time_of_day(scene, viewer);
 

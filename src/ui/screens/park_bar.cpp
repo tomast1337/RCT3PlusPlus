@@ -22,6 +22,15 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 4> kSpeedHelp = { "Playing_PauseHelp", "Playing_PlayHelp", "Playing_FastForwardHelp", "Playing_SuperFastForwardHelp" };
         constexpr std::string_view kGuestsHelp = "Toolbar_TT_GuestsInPark";
         constexpr std::string_view kRatingHelp = "Toolbar_TT_ParkRating";
+        constexpr std::string_view kRatingBase = "ParkRatingBreakdown_Base";
+        constexpr std::string_view kRatingGuests = "ParkRatingBreakdown_NumGuests";
+        constexpr std::string_view kRatingHappy = "ParkRatingBreakdown_HappyGuests";
+        constexpr std::string_view kRatingUpTime = "ParkRatingBreakdown_RideUpTime";
+        constexpr std::string_view kRatingRides = "ParkRatingBreakdown_ExcitementIntensity";
+        constexpr std::string_view kRatingLitter = "ParkRatingBreakdown_LitterVomit";
+        constexpr std::string_view kRatingPenalty = "ParkRatingBreakdown_Penalty";
+        constexpr std::string_view kRatingBonus = "ParkRatingBreakdown_Bonus";
+        constexpr std::string_view kRatingTotal = "ParkRatingBreakdown_Total";
         constexpr std::array<std::string_view, 7> kWeatherHelp = { "WeatherType_Sunny_TT", "WeatherType_SunnyCloudy_TT", "WeatherType_Cloudy_TT", "WeatherType_LightRain_TT", "WeatherType_HeavyRain_TT", "WeatherType_Thunderstorm_TT", "WeatherType_Snowstorm_TT" };
 
         // Where things sit in the bar, left to right: each item's size and the room before it.
@@ -86,6 +95,34 @@ namespace rct3::ui
         return out;
     }
 
+    std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::RatingParts>& parts)
+    {
+        std::u16string out(strings.get(kRatingHelp));
+        out += ascii(std::format(" {}", std::lround(rating * simulation::kMaxRating)));
+        if (!parts)
+            return out;
+        // One line a part, with its sign; parts that only ever take away are left out while they take nothing.
+        const auto line = [&](std::string_view label, std::int32_t value, bool always) {
+            if (!always && value == 0)
+                return;
+            out += u'\n';
+            out += strings.get(label);
+            out += ascii(std::format(" {:+}", value));
+        };
+        line(kRatingBase, parts->base, false);
+        line(kRatingGuests, parts->guests, true);
+        line(kRatingHappy, parts->happy_guests, true);
+        line(kRatingUpTime, parts->ride_up_time, true);
+        line(kRatingRides, parts->ride_scores, true);
+        line(kRatingLitter, parts->litter, false);
+        line(kRatingPenalty, parts->penalty, false);
+        line(kRatingBonus, parts->bonus, false);
+        out += u'\n';
+        out += strings.get(kRatingTotal);
+        out += ascii(std::format(" {}", parts->total));
+        return out;
+    }
+
     ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units)
     {
         ParkBarValues v;
@@ -93,6 +130,8 @@ namespace rct3::ui
         v.money = state.cash ? money_text(units.currency, *state.cash) : std::u16string(strings.get(kUnlimitedCash));
         v.guests = ascii(std::to_string(state.guests));
         v.rating = state.rating;
+        if (state.rating)
+            v.rating_help = park_rating_help(strings, *state.rating, state.rating_parts);
         if (state.temperature)
             v.temperature = temperature_text(*state.temperature, units.fahrenheit);
         v.weather = state.weather;
@@ -163,7 +202,7 @@ namespace rct3::ui
 
         rating_ = values.rating;
         rating_area_->visible = rating_.has_value();
-        rating_area_->tooltip = rating_ ? std::u16string(strings_.get(kRatingHelp)) + ascii(std::format(" {}", std::lround(*rating_ * 1000))) : std::u16string { };
+        rating_area_->tooltip = rating_ ? values.rating_help : std::u16string { };
 
         const bool known = values.weather != save::WeatherType::Unknown;
         weather_->visible = known;

@@ -264,7 +264,10 @@ namespace rct3::save
         float reliability = 100; ///< Percent 0..100
         /// Eight window counters, each 0..20.
         std::array<std::uint8_t, 8> downtime_windows { };
-        /// Downtime percentage derived from the windows: sum * 100 / 160.
+        /// The downtime percentage as saved. It is worked out just before the windows move on by one, so it can
+        /// still include a window the counters no longer hold.
+        std::optional<float> saved_downtime_percent;
+        /// The saved percentage, or when the save has none, one derived from the windows: sum * 100 / 160.
         [[nodiscard]] float downtime_percent() const noexcept;
     };
 

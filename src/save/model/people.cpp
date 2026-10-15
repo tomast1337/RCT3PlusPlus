@@ -307,6 +307,7 @@ namespace rct3::save
             constexpr std::string_view l_state = "LitterState";
             constexpr std::string_view l_create = "CreateTime";
             constexpr std::string_view l_tile = "PathTile";
+            constexpr std::string_view l_flags = "Flags";
         } // namespace at
 
         // ---- tolerant scalar readers over possibly-null attribute values ----
@@ -1066,6 +1067,7 @@ namespace rct3::save
         l.state = static_cast<LitterState>(u8(o.find(at::l_state)));
         l.create_time = f32(o.find(at::l_create));
         l.path_tile = ref(o.find(at::l_tile), index);
+        l.flags = bits32(o.find(at::l_flags));
         return l;
     }
 

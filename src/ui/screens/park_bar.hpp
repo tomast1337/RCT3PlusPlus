@@ -12,6 +12,7 @@
 #pragma once
 
 #include "save/model/world.hpp"
+#include "simulation/park_rating.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/money_text.hpp"
 #include "ui/string_table.hpp"
@@ -55,6 +56,7 @@ namespace rct3::ui
         std::u16string money;
         std::u16string guests;
         std::optional<float> rating; ///< 0 to 1; no bar without one
+        std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
         std::u16string temperature;
         save::WeatherType weather = save::WeatherType::Unknown;
         /// The weather on its way, shown after an arrow; nothing when it stays the same.
@@ -85,6 +87,9 @@ namespace rct3::ui
     };
 
     /// The bar's values for the park's state at `day_time` (a fraction of the day).
+    /// The rating's tooltip: the rating out of the most there is, then a line for each of its parts when known.
+    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::RatingParts>& parts);
+
     [[nodiscard]] ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units);
 
     class ParkBar : public Widget

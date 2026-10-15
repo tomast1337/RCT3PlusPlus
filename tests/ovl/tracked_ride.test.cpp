@@ -3,6 +3,7 @@
 
 #include "record_file.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
@@ -43,7 +44,7 @@ TEST_CASE("version 5 tracked rides give a name, track sections and splines")
     pool.add("Path:spl");
     std::vector<std::byte> bytes;
     put(bytes, { 0xFFFFFFFF, name });
-    bytes.resize(0x124 + 8, std::byte { 0 });
+    bytes.resize(0x130, std::byte { 0 });
     const auto overlay = make_record_overlay(5, pool, "Coaster:trr", bytes, { { 0xD8, "Lift:tks" }, { 0x114, "Path:spl" }, { 0x120, "Path:spl" } });
     const auto items = read_tracked_rides(overlay, overlay.common());
     REQUIRE(items[0].ride.has_value());
@@ -54,4 +55,35 @@ TEST_CASE("version 5 tracked rides give a name, track sections and splines")
     CHECK(r.splines[0] == "Path");
     CHECK(r.splines[3] == "Path");
     CHECK(r.info.name_text.empty());
+}
+
+TEST_CASE("later tracked rides point to their attraction fields")
+{
+    for (const std::uint32_t version : { 4u, 5u })
+    {
+        CAPTURE(version);
+        Pool pool;
+        pool.add("Coaster:trr");
+        pool.add("CoasterName:txt");
+        pool.add("CoasterIcon:gsi");
+        const std::uint32_t skip = version == 4 ? 0x3C : 0x44; // from the pointed-at block to the fields
+        const std::uint32_t block = 0x140;                     // within the record, past its fixed part
+        std::vector<std::byte> bytes(block + skip, std::byte { 0 });
+        put(bytes, { version == 4 ? 512u + 3 : 768u + 3, 0, 0, 0 });
+        bytes.resize(block + skip + 0x28, std::byte { 0 });
+        const std::uint32_t at = pool.base();
+        auto word = [&](std::size_t offset, std::uint32_t value) {
+            std::vector<std::byte> w;
+            put(w, { value });
+            std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));
+        };
+        word(0x12C, at + block);
+        const auto overlay = make_record_overlay(version, pool, "Coaster:trr", bytes, { { block + skip + 4, "CoasterName:txt" }, { block + skip + 0xC, "CoasterIcon:gsi" } });
+        const auto items = read_tracked_rides(overlay, overlay.common());
+        REQUIRE(items[0].ride.has_value());
+        const auto& i = items[0].ride->info;
+        CHECK(i.type_id == 3);
+        CHECK(i.name_text == "CoasterName");
+        CHECK(i.icon == "CoasterIcon");
+    }
 }

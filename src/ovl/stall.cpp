@@ -8,15 +8,33 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "sta";
+        constexpr std::size_t kVersion1Size = 0x28;
+        constexpr std::size_t kLaterSize = 0x2C;      // up to and including the scenery item
+        constexpr std::size_t kGoodsSize = 8;         // a carried-item reference and a price
+        constexpr std::size_t kAttractionSize = 0x28; // the fields shared by all attractions
+        constexpr std::uint32_t kMostGoods = 64;      // far more than any stall sells; guards a bad count
 
-        detail::AttractionLayout layout(std::uint32_t version)
+        // The attraction fields: at the start of version 1 items, in a block of their own that later items
+        // point at. Version 1 items keep the scenery item at 0x30 in some and 0x38 in others, so it is left out.
+        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
+
+        Stall read_later(const AddressSpace& space, const ReferenceIndex& refs, const ItemRecord& record, std::uint32_t version)
         {
-            if (version == 1)
+            Stall stall;
+            const std::uint32_t fields = record.u32(0x24);
+            if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields, kAttractionSize))
+                stall.info = detail::read_attraction(*block, kFields, version);
+            stall.info.style = record.ref(0x28, "sid");
+            const std::uint32_t count = record.u32(0x04);
+            if (count > 0 && count <= kMostGoods)
             {
-                // The scenery item sits at 0x30 in some items and 0x38 in others, so it is left out.
-                return { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
+                if (const auto goods = record.u32(0x08) == 0 ? std::nullopt : ItemRecord::open(space, refs, record.u32(0x08), count * kGoodsSize))
+                {
+                    for (std::uint32_t i = 0; i < count; ++i)
+                        stall.goods.push_back({ goods->ref(i * kGoodsSize, "cid"), goods->i32(i * kGoodsSize + 4) });
+                }
             }
-            return { .style = 0x28 };
+            return stall;
         }
 
     } // namespace
@@ -26,8 +44,7 @@ namespace rct3::ovl
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
         const std::uint32_t version = part.file.header.version;
-        const auto at = layout(version);
-        const std::size_t size = version == 1 ? 0x28 : 0x2C;
+        const std::size_t size = version == 1 ? kVersion1Size : kLaterSize;
 
         std::vector<StallItem> items;
         for (const auto& symbol : part.symbols)
@@ -41,7 +58,10 @@ namespace rct3::ovl
             StallItem item { parts.name, std::nullopt };
             if (const auto record = ItemRecord::open(space, refs, symbol.data, size))
             {
-                item.stall = Stall { detail::read_attraction(*record, at, version) };
+                if (version == 1)
+                    item.stall = Stall { detail::read_attraction(*record, kFields, version), { } };
+                else
+                    item.stall = read_later(space, refs, *record, version);
             }
             items.push_back(item);
         }

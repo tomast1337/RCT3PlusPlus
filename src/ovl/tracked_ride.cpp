@@ -9,7 +9,15 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "trr";
         constexpr std::size_t kHeaderSize = 0x28; // the version 1 fields shared by all attractions
-        constexpr std::size_t kLaterSize = 0x124; // up to and including the last spline slot
+        constexpr std::size_t kLaterSize = 0x130; // up to and including the pointer to the attraction fields
+        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
+
+        /// Later items point at 0x12C to a block whose attraction fields start 0x3C bytes in (version 4) or
+        /// 0x44 bytes in (version 5).
+        std::uint32_t attraction_offset(std::uint32_t version)
+        {
+            return version == 4 ? 0x3C : 0x44;
+        }
 
     } // namespace
 
@@ -33,9 +41,8 @@ namespace rct3::ovl
             {
                 if (const auto record = ItemRecord::open(space, refs, symbol.data, kHeaderSize))
                 {
-                    const detail::AttractionLayout at { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
                     TrackedRide ride;
-                    ride.info = detail::read_attraction(*record, at, version);
+                    ride.info = detail::read_attraction(*record, kFields, version);
                     item.ride = ride;
                 }
             }
@@ -48,6 +55,9 @@ namespace rct3::ovl
                     ride.track_sections[i] = record->ref(0xD4 + i * 4, "tks");
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
+                const std::uint32_t fields = record->u32(0x12C);
+                if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(version), kHeaderSize))
+                    ride.info = detail::read_attraction(*block, kFields, version);
                 item.ride = ride;
             }
             items.push_back(item);

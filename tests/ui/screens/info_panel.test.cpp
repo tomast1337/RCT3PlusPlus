@@ -74,7 +74,7 @@ TEST_CASE("the panel sits in the bottom-right corner, hidden until shown")
     CHECK_FALSE(f.panel->tab(0).on);
     // The pointer goes through beside the disc, but not on it.
     CHECK(f.panel->covers(Fixture::middle(disc)));
-    CHECK_FALSE(f.panel->covers({ disc.x0 + 2, disc.y0 + 2 }));
+    CHECK_FALSE(f.panel->covers({ disc.x1 - 2, disc.y0 + 2 }));
     CHECK_FALSE(f.panel->covers({ 10, 10 }));
 }
 
@@ -109,6 +109,7 @@ TEST_CASE("the strip fits round the page's width beside the disc, and stands ful
     CHECK(strip.width() == info_panel::kPageWidth + info_panel::kStripExtra);
     CHECK(f.panel->body().children().size() == 5);
     CHECK(strip.height() == info_panel::kStripHeight);
+    CHECK(strip.y0 == f.panel->disc().y0);
     // A new page replaces the old one; an empty one has no strip.
     f.panel->show_page({ });
     CHECK(f.panel->body().children().empty());

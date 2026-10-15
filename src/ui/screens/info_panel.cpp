@@ -220,13 +220,13 @@ namespace rct3::ui
 
     Rect InfoPanel::strip() const
     {
-        const Rect r = rect();
         const float width = std::max(body_width_ + info_panel::kStripExtra, info_panel::kStripNarrowest);
         // Always full height, so it stands behind the whole disc however short its content.
         const float height = info_panel::kStripHeight;
-        const float right = disc().x0 + info_panel::kStripOverlap;
-        const float bottom = r.y1 - info_panel::kStripBottom;
-        return { right - width, bottom - height, right, bottom };
+        // Level with the disc's top, so the band along its top runs on into the disc's.
+        const Rect d = disc();
+        const float right = d.x0 + info_panel::kStripOverlap;
+        return { right - width, d.y0, right, d.y0 + height };
     }
 
     void InfoPanel::place()

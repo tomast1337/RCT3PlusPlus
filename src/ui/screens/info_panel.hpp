@@ -76,7 +76,6 @@ namespace rct3::ui
         inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
         inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
         inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
-        inline constexpr float kStripBottom = 6;   ///< From the screen's bottom edge
         inline constexpr float kStripExtra = 31;   ///< Of the strip's width beyond its content's
         inline constexpr float kStripNarrowest = 131;
         inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content

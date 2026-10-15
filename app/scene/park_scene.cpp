@@ -23,6 +23,7 @@
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
+#include "ui/screens/message_drawer.hpp"
 #include "ui/screens/tool_column.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -57,6 +58,7 @@ namespace rct3::scene
         constexpr std::string_view kGuideName = "tutorial";
         constexpr std::string_view kBarName = "bar";
         constexpr std::string_view kToolsName = "tools";
+        constexpr std::string_view kMessagesName = "messages";
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
@@ -540,6 +542,8 @@ namespace rct3::scene
             const auto model = save::load_park(*file, index);
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
         }
+        // Behind the bar, which it hangs from.
+        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings);
         scene.desktop->root().add<ui::ToolColumn>(std::string(kToolsName), skins::tool_column_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
 
@@ -599,9 +603,10 @@ namespace rct3::scene
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
         }
-        // The park's day runs at the speed picked, and stops while paused.
+        // The park's day and its messages' ages run at the speed picked, and stop while paused.
         const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
         simulation::advance(scene.day, game_seconds);
+        simulation::age(scene.park.messages, game_seconds);
         show_time_of_day(scene, viewer);
 
         if (bar != nullptr)
@@ -612,6 +617,11 @@ namespace rct3::scene
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             bar->show(ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units));
+        }
+        if (auto* messages = static_cast<ui::MessageDrawer*>(desktop.root().find(kMessagesName)))
+        {
+            messages->show(ui::drawer_messages(scene.park.messages, *assets.strings));
+            scene.message_alert = scene.message_alert || messages->take_alert();
         }
         // Only leaving works yet; the other tools open their menus once those exist.
         if (auto* tools = static_cast<ui::ToolColumn*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)
@@ -628,6 +638,11 @@ namespace rct3::scene
     bool take_park_leave(ParkScene& scene)
     {
         return std::exchange(scene.leave, false);
+    }
+
+    bool take_park_alert(ParkScene& scene)
+    {
+        return std::exchange(scene.message_alert, false);
     }
 
     render::Color park_background(const ParkScene& scene)

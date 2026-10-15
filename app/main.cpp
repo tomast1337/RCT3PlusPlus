@@ -597,6 +597,8 @@ int main(int argc, char** argv)
                         const rct3::ui::KeyboardState no_keys;
                         rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta));
                         auto sounds = park->desktop->take_sounds();
+                        if (rct3::scene::take_park_alert(*park))
+                            sounds.push_back(rct3::ui::InterfaceSound::Message);
                         if (audio && menu_audio)
                             rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds);
                         if (rct3::scene::take_park_leave(*park))

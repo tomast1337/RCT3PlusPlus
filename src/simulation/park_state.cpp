@@ -26,6 +26,7 @@ namespace rct3::simulation
                 if (const auto rating = park->park.rating())
                     s.rating = *rating / save::kMaxParkRating;
             }
+            s.messages = park_messages(park->messages);
         }
         if (world.weather)
         {

@@ -113,6 +113,7 @@ namespace rct3::scene
         bool turning = false;
         bool dragging = false;
         bool leave = false;
+        bool message_alert = false;
     };
 
     /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
@@ -123,6 +124,9 @@ namespace rct3::scene
 
     /// True once the player has confirmed leaving.
     [[nodiscard]] bool take_park_leave(ParkScene& scene);
+
+    /// True once after new messages came into the park's message drawer.
+    [[nodiscard]] bool take_park_alert(ParkScene& scene);
 
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);

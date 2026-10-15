@@ -2,12 +2,14 @@
 //
 // The park as it runs: the values the game keeps going while the park is shown, started from the saved park.
 // The interface reads them from here instead of from the save, so what it shows is what the park is at now.
-// Today only the game speed changes, by the player's hand; the simulation will move the rest.
+// Today only the game speed (by the player's hand) and the messages' ages change; the simulation will move the
+// rest.
 #pragma once
 
 #include "save/model/park.hpp"
 #include "save/model/world.hpp"
 #include "simulation/game_speed.hpp"
+#include "simulation/park_messages.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -26,6 +28,7 @@ namespace rct3::simulation
         std::optional<save::WeatherType> forecast; ///< The weather on its way
         std::optional<float> temperature;          ///< Degrees Celsius
         GameSpeed speed;
+        ParkMessages messages;
     };
 
     /// The state a saved park starts in. `park` is null when the park's model could not be read.

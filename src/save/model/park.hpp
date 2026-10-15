@@ -368,6 +368,8 @@ namespace rct3::save
         float time = 0.0f;                   ///< Game time units
         std::optional<std::uint64_t> object; ///< Subject object, when the entry kind has one
         std::optional<std::int32_t> panel;
+        std::string object_name;           ///< The subject's name when the message was posted; may be empty
+        std::optional<std::int32_t> award; ///< Award messages: which award
     };
 
     /// Indices 0..count-1 of a ring buffer visited oldest to newest, given the index the next write will use.

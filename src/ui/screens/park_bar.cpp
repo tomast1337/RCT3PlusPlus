@@ -190,6 +190,14 @@ namespace rct3::ui
         }
     }
 
+    bool ParkBar::covers(Point p) const
+    {
+        const Rect r = rect();
+        const float dx = p.x - (r.x0 + park_bar::kLeftWidth + kDividerWidth / 2);
+        const float dy = p.y - r.y1;
+        return dx * dx + dy * dy > park_bar::kNotchRadius * park_bar::kNotchRadius;
+    }
+
     void ParkBar::update(const UpdateContext&)
     {
         const simulation::GameSpeed from = asked_.value_or(speed_);

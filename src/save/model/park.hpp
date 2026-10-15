@@ -38,7 +38,8 @@ namespace rct3::save
     // Series (graphed values)
     // ---------------------------------------------------------------------------------------------------------
 
-    /// A bounded history of samples, oldest first. `capacity` is the ring size the game used (64 for park and
+    /// A bounded history of samples, newest first: the first sample is the value as it is now, the slot the
+    /// game is still filling. `capacity` is the ring size the game used (64 for park and
     /// money series, larger for per-ride series); `samples.size()` may be anything up to it. A series that was
     /// absent from the file is empty with capacity 0.
     struct Series
@@ -54,9 +55,9 @@ namespace rct3::save
         {
             if (samples.empty())
                 return std::nullopt;
-            return samples.back();
+            return samples.front();
         }
-        /// Appends a sample, dropping the oldest ones so that at most `capacity` remain (capacity 0 keeps all).
+        /// Puts a sample in front, dropping the oldest ones so that at most `capacity` remain (capacity 0 keeps all).
         void push(float v);
     };
 
@@ -72,7 +73,7 @@ namespace rct3::save
         ToolbarGate = 1u << 1,        ///< Enables a toolbar button (which one is not recorded here)
         TreesLocked = 1u << 2,        ///< Trees cannot be removed
         LandPurchaseLocked = 1u << 3, ///< Land cannot be bought
-        BreakdownEnabled = 1u << 5,   ///< The rating breakdown text is maintained
+        HarderRating = 1u << 5,       ///< The park's rating starts lower
     };
 
     struct ParkFlags

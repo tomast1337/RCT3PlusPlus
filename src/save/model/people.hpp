@@ -605,6 +605,8 @@ namespace rct3::save
         LitterState state = LitterState::OnGround;
         float create_time = 0;
         PeopleRef path_tile;
+        /// Newer saves only. Bit 5 keeps the piece out of the park's rating; the other bits are not known.
+        std::optional<std::uint32_t> flags;
     };
 
     struct PeopleModel

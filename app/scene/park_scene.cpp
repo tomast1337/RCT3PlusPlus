@@ -834,7 +834,7 @@ namespace rct3::scene
         if (!tutorial)
             log.warning("tutorial: {}", save::to_string(tutorial.error()));
         else if (*tutorial)
-            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::question_box_style(), strings, std::move(**tutorial));
+            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(), strings, std::move(**tutorial));
         scene.desktop->tooltip_style = skins::tooltip_style();
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
         const auto drawn = std::ranges::count_if(scene.levels, [](std::int8_t l) { return l != park::kNotDrawn; });

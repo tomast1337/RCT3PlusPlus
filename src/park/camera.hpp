@@ -49,6 +49,10 @@ namespace rct3::park
 
     /// Slid `right` and `forward` world units over the ground, as the camera faces.
     [[nodiscard]] ParkCamera panned(ParkCamera camera, float right, float forward);
+    /// How hard the pointer at `at` pushes the view towards each edge of a screen `size` across: 0 more than
+    /// `band` in from the edges, rising to 1 at an edge (-1 at the left and the bottom), in X and Y with Y
+    /// down the screen given as forward positive.
+    [[nodiscard]] glm::vec2 edge_push(glm::vec2 at, glm::vec2 size, float band);
     /// Turned by `yaw` and tilted by `pitch` radians, within the tilt's limits.
     [[nodiscard]] ParkCamera turned(ParkCamera camera, float yaw, float pitch);
     /// Brought `factor` times as far, within the limits.

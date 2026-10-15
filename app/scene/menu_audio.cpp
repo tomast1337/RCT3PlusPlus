@@ -49,11 +49,12 @@ namespace rct3::scene
         }
 
         /// Plays what `options` ask for, unless it already plays.
-        void follow_choice(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options)
+        void follow_choice(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, bool in_park)
         {
             if (menu.folder.empty())
                 return;
-            const audio::MenuMusicWish wish = audio::menu_music_wish(options.flag(config::GameOption::ShuffleBackgroundMusic), options.background_music(), menu.files);
+            const audio::MenuMusicWish menu_wish = audio::menu_music_wish(options.flag(config::GameOption::ShuffleBackgroundMusic), options.background_music(), menu.files);
+            const audio::MenuMusicWish wish = in_park ? audio::park_music_wish(menu_wish) : menu_wish;
             if (menu.wish == wish)
                 return;
             menu.wish = wish;
@@ -164,14 +165,14 @@ namespace rct3::scene
         MenuAudio menu;
         menu.random.seed(seed);
         pick_cycle(menu, install, options);
-        follow_choice(engine, menu, options);
+        follow_choice(engine, menu, options, false);
         load_clicks(menu, install);
         return menu;
     }
 
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds)
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park)
     {
-        follow_choice(engine, menu, options);
+        follow_choice(engine, menu, options, in_park);
         if (menu.music)
         {
             const float volume = audio::kMenuMusicLevel * options.get(config::GameOption::MusicVolume);

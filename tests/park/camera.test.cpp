@@ -113,3 +113,16 @@ TEST_CASE("framing points looks at their middle from far enough to see them all"
     // A single point is seen from the nearest the camera goes.
     CHECK(framed(std::vector<glm::vec3> { { 3, 4, 5 } }, 0, 0.6f).distance == kMinDistance);
 }
+
+TEST_CASE("the pointer pushes the view only near the screen's edges, hardest at them")
+{
+    const glm::vec2 size { 800, 600 };
+    CHECK(edge_push({ 400, 300 }, size, 10) == glm::vec2(0, 0));
+    CHECK(edge_push({ 0, 300 }, size, 10) == glm::vec2(-1, 0));
+    CHECK(edge_push({ 799, 300 }, size, 10) == glm::vec2(1, 0));
+    CHECK(edge_push({ 400, 0 }, size, 10) == glm::vec2(0, 1));    // Top: forward
+    CHECK(edge_push({ 400, 599 }, size, 10) == glm::vec2(0, -1)); // Bottom: back
+    CHECK(edge_push({ 5, 300 }, size, 10).x == doctest::Approx(-0.5f));
+    CHECK(edge_push({ 0, 0 }, size, 10) == glm::vec2(-1, 1));
+    CHECK(edge_push({ 0, 0 }, size, 0) == glm::vec2(0, 0));
+}

@@ -92,6 +92,9 @@ namespace rct3::park
         std::vector<ModelLevel> levels;           ///< Finest first, never empty
     };
 
+    /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).
+    [[nodiscard]] std::uint32_t colour_slots(const ObjectModel& model);
+
     /// The level of `model` to draw at `distance`, with every level's distance times `scale`: the first that
     /// reaches that far. Nothing when the item is too far away for all of them.
     [[nodiscard]] std::optional<std::size_t> level_at(const ObjectModel& model, float distance, float scale = 1);

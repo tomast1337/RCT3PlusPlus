@@ -75,6 +75,15 @@ namespace rct3::save
             constexpr std::string_view kEntryQueueType = "QueueType";
             constexpr std::string_view kSurfaceColours = "Colours";
 
+            constexpr std::string_view kBinClass = "LitterBinBehaviour";
+            constexpr std::string_view kSignClass = "SignBehaviour";
+            constexpr std::string_view kBehaviourOwner = "\"SceneryItem\""; ///< The quotes are part of the stored name
+            constexpr std::string_view kBinCapacity = "Capacity";
+            constexpr std::string_view kBinContents = "Contents";
+            constexpr std::string_view kBinEmptied = "LastEmptied";
+            constexpr std::string_view kSignKind = "SignType";
+            constexpr std::string_view kSignText = "UserText";
+
             constexpr std::string_view kWeatherClass = "Weather";
             constexpr std::string_view kSkyClass = "Sky";
             constexpr std::string_view kSkyIndex = "BackgroundSave";
@@ -451,6 +460,8 @@ namespace rct3::save
             Path,
             QueueLine,
             Scenery,
+            Bin,
+            Sign,
             Weather,
             Sky,
             Time,
@@ -497,6 +508,13 @@ namespace rct3::save
         float float_or(const Value* v, float d = 0) noexcept
         {
             return get_float(v).value_or(d);
+        }
+
+        std::string string_or(const Value* v)
+        {
+            if (v && v->kind() == ValueKind::String)
+                return std::string(v->text());
+            return { };
         }
 
         std::uint8_t byte_or(const Value* v, std::uint8_t d = 0) noexcept
@@ -822,6 +840,10 @@ namespace rct3::save
                 kinds[i] = Kind::QueueLine;
             else if (name == names::kSceneryClass)
                 kinds[i] = Kind::Scenery;
+            else if (name == names::kBinClass)
+                kinds[i] = Kind::Bin;
+            else if (name == names::kSignClass)
+                kinds[i] = Kind::Sign;
             else if (name == names::kWeatherClass)
                 kinds[i] = Kind::Weather;
             else if (name == names::kSkyClass)
@@ -941,6 +963,27 @@ namespace rct3::save
                 case Kind::Scenery:
                     m.objects.push_back(read_scenery(o));
                     break;
+                case Kind::Bin:
+                {
+                    BinState b;
+                    b.object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0);
+                    b.capacity = float_or(o.find(names::kBinCapacity));
+                    b.contents = float_or(o.find(names::kBinContents));
+                    // Never emptied is stored as a time before the park began.
+                    if (const auto t = get_float(o.find(names::kBinEmptied)); t && *t >= 0)
+                        b.last_emptied = *t;
+                    m.bins.push_back(b);
+                    break;
+                }
+                case Kind::Sign:
+                {
+                    SignState s;
+                    s.object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0);
+                    s.kind = int_or(o.find(names::kSignKind));
+                    s.text = string_or(o.find(names::kSignText));
+                    m.signs.push_back(std::move(s));
+                    break;
+                }
                 case Kind::Weather:
                     if (singleton(have_weather, o))
                         m.weather = read_weather(o);

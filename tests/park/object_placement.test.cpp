@@ -126,3 +126,24 @@ TEST_CASE("a quarter-tile item goes to its quarter")
     CHECK(p.x == doctest::Approx(3));
     CHECK(p.z == doctest::Approx(3));
 }
+
+TEST_CASE("an item is on the park's land when every tile it covers is owned")
+{
+    save::TerrainGrid g = slope();
+    const auto own = [&](int col, int row, save::TileFlag f) { g.cells[static_cast<std::size_t>(row * g.width + col)].flags = static_cast<std::uint8_t>(f); };
+    own(0, 0, save::TileFlag::Owned);
+    own(1, 0, save::TileFlag::Owned);
+    CHECK(on_owned_land(at(0, 0, 0), { 1, 1 }, g));
+    CHECK(on_owned_land(at(0, 0, 0), { 2, 1 }, g));
+    // Turned a quarter, the same item lies along the rows, onto land not owned.
+    CHECK_FALSE(on_owned_land(at(0, 0, 1), { 2, 1 }, g));
+    // Off the map.
+    CHECK_FALSE(on_owned_land(at(1, 1, 0), { 2, 2 }, g));
+
+    // Land bought only to build over takes things above the ground but not on it.
+    g.cells[2].flags = static_cast<std::uint8_t>(save::TileFlag::Owned) | static_cast<std::uint8_t>(save::TileFlag::RightsOnly);
+    save::PlacedObject raised = at(0, 1, 0);
+    CHECK_FALSE(on_owned_land(raised, { 1, 1 }, g));
+    raised.height_offset = 4;
+    CHECK(on_owned_land(raised, { 1, 1 }, g));
+}

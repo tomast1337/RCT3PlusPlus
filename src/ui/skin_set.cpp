@@ -4,6 +4,7 @@
 #include "ovl/gui_skin.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
+#include "strings/ascii.hpp"
 
 namespace rct3::ui
 {
@@ -15,7 +16,8 @@ namespace rct3::ui
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
 
-        std::map<std::string, ovl::Texture, std::less<>> textures;
+        // Skins do not always spell their picture's name as the picture does.
+        std::map<std::string, ovl::Texture, strings::LessIgnoringCase> textures;
         for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
         {
             if (part == nullptr)

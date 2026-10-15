@@ -69,8 +69,10 @@ namespace rct3::scene
         constexpr std::string_view kToolsName = "tools";
         constexpr std::string_view kMessagesName = "messages";
         constexpr std::string_view kInfoName = "info";
-        constexpr float kViewPitch = 0.5f; ///< Radians down, of the info panel's round view
-        constexpr float kViewTurn = 0.15f; ///< Radians a second the round view turns round its attraction
+        constexpr float kViewPitch = 0.5f;          ///< Radians down, of the info panel's round view
+        constexpr float kViewTurn = 0.15f;          ///< Radians a second the round view turns round its attraction
+        constexpr float kPersonViewDistance = 4.5f; ///< Of the round view's eye from the person it shows
+        constexpr float kPersonViewHeight = 0.9f;   ///< Of the point it looks at, above the person's feet
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
@@ -209,7 +211,7 @@ namespace rct3::scene
             };
             // Colours left for the game to pick are picked here, the same each time for the same park and seed.
             random::RandomState colours = random::stream(seed, random::RandomStream::Effects);
-            const auto add = [&](const save::Person& person) {
+            const auto add = [&](const save::Person& person, bool staff, std::size_t saved) {
                 const save::Appearance& a = person.appearance;
                 if (!a.visible)
                     return;
@@ -239,15 +241,17 @@ namespace rct3::scene
                 shown.saved_time = person.animation.time;
                 shown.speed = person.animation.speed > 0 ? person.animation.speed : 1.0f;
                 shown.walking = person.animation.anim_type == person.animation.walk || person.animation.anim_type == person.animation.alternate_walk;
+                shown.staff = staff;
+                shown.saved = saved;
                 scene.shown_people.push_back(shown);
             };
-            for (const save::Guest& g : scene.people.guests)
+            for (std::size_t i = 0; i < scene.people.guests.size(); ++i)
             {
-                if (g.in_park)
-                    add(g.person);
+                if (scene.people.guests[i].in_park)
+                    add(scene.people.guests[i].person, false, i);
             }
-            for (const save::Staff& s : scene.people.staff)
-                add(s.person);
+            for (std::size_t i = 0; i < scene.people.staff.size(); ++i)
+                add(scene.people.staff[i].person, true, i);
             library.close_files();
             if (auto uploaded = ui::upload_textures(device, library.pictures()))
                 scene.people_textures = std::move(*uploaded);
@@ -857,14 +861,74 @@ namespace rct3::scene
             return ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index].base : nullptr;
         }
 
-        void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
         {
-            if (!scene.shown)
-                return;
+            ui::PersonFacts f;
+            f.people = &scene.people;
+            f.rides = &scene.rides;
+            if (shown >= scene.shown_people.size())
+                return f;
+            const ShownPerson& p = scene.shown_people[shown];
+            if (p.staff && p.saved < scene.people.staff.size())
+                f.staff = &scene.people.staff[p.saved];
+            else if (!p.staff && p.saved < scene.people.guests.size())
+                f.guest = &scene.people.guests[p.saved];
+            return f;
+        }
+
+        ui::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
             ui::InfoUnits units;
             units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
             units.distance = static_cast<ui::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
-            panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, units, scene.info_section));
+            return units;
+        }
+
+        void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            if (scene.shown_person)
+                panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
+            else if (scene.shown)
+                panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
+        }
+
+        /// The round view of a person: looking at them from where the player looks from, turning from there.
+        park::ParkCamera person_view(const ParkScene& scene, std::size_t shown, float yaw)
+        {
+            park::ParkCamera camera;
+            camera.target = glm::vec3(scene.shown_people[shown].pose.world[3]) + glm::vec3(0, kPersonViewHeight, 0);
+            camera.yaw = yaw;
+            camera.pitch = kViewPitch;
+            camera.distance = kPersonViewDistance;
+            return camera;
+        }
+
+        /// Opens the panel on the person `shown` (of the shown people), at the tab last opened on a person if
+        /// they have it.
+        void open_person(ParkScene& scene, ui::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            if (shown >= scene.shown_people.size())
+                return;
+            std::vector<ui::InfoTab> tabs;
+            scene.person_tabs.clear();
+            std::size_t picked = 0;
+            for (const ui::PersonTabInfo& t : ui::person_tabs(scene.shown_people[shown].staff))
+            {
+                if (t.tab == scene.person_tab)
+                    picked = tabs.size();
+                ui::InfoTab& tab = tabs.emplace_back();
+                tab.icon = t.icon;
+                tab.help = assets.strings->get(t.help);
+                tab.slot = t.slot;
+                scene.person_tabs.push_back(t.tab);
+            }
+            scene.person_tab = scene.person_tabs.at(picked);
+            if (scene.shown_person != shown)
+                scene.view_camera = person_view(scene, shown, scene.camera.yaw);
+            scene.shown.reset();
+            scene.shown_person = shown;
+            panel.show(std::move(tabs), picked);
+            show_info_page(scene, panel, assets, options);
         }
 
         /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
@@ -899,7 +963,7 @@ namespace rct3::scene
             if (scene.shown_tabs.at(picked) == ui::AttractionTab::State)
                 picked = 0;
             scene.info_tab = scene.shown_tabs.at(picked);
-            if (scene.shown != ref)
+            if (scene.shown != ref || scene.shown_person)
             {
                 // The view starts from where the player looks from, and turns from there.
                 std::vector<glm::vec3> points;
@@ -911,22 +975,38 @@ namespace rct3::scene
                 }
                 scene.view_camera = park::framed(points, scene.camera.yaw, kViewPitch);
             }
+            scene.shown_person.reset();
             scene.shown = ref;
             panel.show(std::move(tabs), picked);
             show_info_page(scene, panel, assets, options);
         }
 
-        /// The attraction under the pointer at `at`, in interface units on a screen of `size`.
-        std::optional<park::AttractionRef> attraction_at(const ParkScene& scene, ui::Point at, ui::Point size)
+        /// What the pointer is on: an attraction, or a person of the shown people.
+        struct Picked
+        {
+            std::optional<park::AttractionRef> attraction;
+            std::optional<std::size_t> person;
+        };
+
+        /// What is under the pointer at `at`, in interface units on a screen of `size`: the nearer of an
+        /// attraction and a person.
+        Picked picked_at(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             if (size.x <= 0 || size.y <= 0)
-                return std::nullopt;
+                return { };
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto hit = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.attractions.contains(o.id); });
-            if (!hit)
-                return std::nullopt;
-            return scene.attractions.at(scene.objects[*hit].id);
+            const auto object = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.attractions.contains(o.id); });
+            std::vector<glm::mat4> placements;
+            placements.reserve(scene.shown_people.size());
+            for (const ShownPerson& p : scene.shown_people)
+                placements.push_back(p.pose.world);
+            const auto person = park::pick_person(ray, placements, scene.grid);
+            if (person && (!object || person->distance < object->distance))
+                return { .attraction = std::nullopt, .person = person->index };
+            if (object)
+                return { .attraction = scene.attractions.at(scene.objects[object->index].id), .person = std::nullopt };
+            return { };
         }
 
     } // namespace
@@ -969,13 +1049,24 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 if (still && !over)
                 {
-                    if (const auto picked = attraction_at(scene, pointer.position, { screen.width(), screen.height() }))
-                        open_info(scene, *info, *picked, assets, options);
+                    const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
+                    if (picked.person)
+                        open_person(scene, *info, *picked.person, assets, options);
+                    else if (picked.attraction)
+                        open_info(scene, *info, *picked.attraction, assets, options);
                 }
             }
             if (input.right || input.middle)
                 scene.press.reset();
-            if (const auto tab = info->take_picked(); tab && *tab < scene.shown_tabs.size())
+            if (const auto tab = info->take_picked(); tab && scene.shown_person)
+            {
+                if (*tab < scene.person_tabs.size())
+                {
+                    scene.person_tab = scene.person_tabs[*tab];
+                    show_info_page(scene, *info, assets, options);
+                }
+            }
+            else if (tab && *tab < scene.shown_tabs.size())
             {
                 scene.info_tab = scene.shown_tabs[*tab];
                 scene.info_section = 0;
@@ -999,9 +1090,14 @@ namespace rct3::scene
                 }
             }
             if (info->take_closed())
+            {
                 scene.shown.reset();
+                scene.shown_person.reset();
+            }
         }
         scene.view_camera.yaw += kViewTurn * elapsed;
+        if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
+            scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
         const glm::vec3 viewer = park::eye(scene.camera);
         profiling::section("Objects", [&] { refresh_objects(device, scene, viewer, elapsed); });
         if (scene.billboards_eye != viewer)
@@ -1196,7 +1292,7 @@ namespace rct3::scene
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
-        if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && scene.shown)
+        if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         profiling::section("World", [&] { draw_world(device, scene, park::view_projection(scene.camera, aspect(device)), scene.light); });
 

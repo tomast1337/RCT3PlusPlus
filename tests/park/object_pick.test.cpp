@@ -2,12 +2,19 @@
 #include "park/object_pick.hpp"
 
 #include <doctest/doctest.h>
+#include <optional>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::park;
 
 namespace
 {
+    std::optional<std::size_t> index_of(std::optional<PickHit> hit)
+    {
+        return hit.transform([](const PickHit& h) { return h.index; });
+    }
+
     save::TerrainGrid flat(float height)
     {
         save::TerrainGrid g;
@@ -77,13 +84,13 @@ TEST_CASE("the nearest wanted object on the line is picked")
     models.emplace("Things/Things|Cube", cube());
     const std::vector<save::PlacedObject> objects { object(1, 0), object(2, 1) };
     // Tile 1's middle is at x 6.
-    CHECK(pick_object(down_at(6, 2), objects, models, g, { }, any) == 1u);
-    CHECK(pick_object(down_at(2, 2), objects, models, g, { }, any) == 0u);
+    CHECK(index_of(pick_object(down_at(6, 2), objects, models, g, { }, any)) == 1u);
+    CHECK(index_of(pick_object(down_at(2, 2), objects, models, g, { }, any)) == 0u);
     CHECK_FALSE(pick_object(down_at(13, 13), objects, models, g, { }, any));
     // Looking along the row, the nearer one hides the farther.
     const Ray along { { -10, 1, 2 }, { 1, 0, 0 } };
-    CHECK(pick_object(along, objects, models, g, { }, any) == 0u);
-    CHECK(pick_object(along, objects, models, g, { }, [](const save::PlacedObject& o) { return o.id == 2; }) == 1u);
+    CHECK(index_of(pick_object(along, objects, models, g, { }, any)) == 0u);
+    CHECK(index_of(pick_object(along, objects, models, g, { }, [](const save::PlacedObject& o) { return o.id == 2; })) == 1u);
 }
 
 TEST_CASE("ground in front hides an object, and a fitted object is found where it was fitted")
@@ -98,6 +105,23 @@ TEST_CASE("ground in front hides an object, and a fitted object is found where i
     CHECK_FALSE(pick_object(along, objects, models, g, { }, any));
 
     const Fitted fitted { { 1, glm::translate(glm::mat4(1.0f), glm::vec3(10, 0, 10)) } };
-    CHECK(pick_object(down_at(10, 10), objects, models, flat(0), fitted, any) == 0u);
+    CHECK(index_of(pick_object(down_at(10, 10), objects, models, flat(0), fitted, any)) == 0u);
     CHECK_FALSE(pick_object(down_at(6, 2), objects, models, flat(0), fitted, any));
+}
+
+TEST_CASE("the nearest person on the line is picked, unless the ground is in front")
+{
+    const save::TerrainGrid g = flat(0);
+    const std::vector<glm::mat4> people { glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 2)), glm::translate(glm::mat4(1.0f), glm::vec3(6, 0, 2)) };
+    CHECK(index_of(pick_person(down_at(6, 2), people, g)) == 1u);
+    CHECK_FALSE(pick_person(down_at(10, 10), people, g));
+    // Looking along the row at head height, the nearer one hides the farther; the hit is where the box starts.
+    const auto along = pick_person({ { -10, 1.5f, 2 }, { 1, 0, 0 } }, people, g);
+    CHECK(index_of(along) == 0u);
+    CHECK(along.transform([](const PickHit& h) { return h.distance; }).value_or(-1) == doctest::Approx(12 - 0.4f));
+    // Above their heads, nobody.
+    CHECK_FALSE(pick_person({ { -10, 2.5f, 2 }, { 1, 0, 0 } }, people, g));
+    save::TerrainGrid hill = g;
+    hill.cells[0].corners = { 10, 10, 10, 10 };
+    CHECK_FALSE(pick_person({ { -10, 1.5f, 2 }, { 1, 0, 0 } }, people, hill));
 }

@@ -34,6 +34,7 @@
 #include "ui/key_map.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/screens/person_info.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <expected>
@@ -95,9 +96,11 @@ namespace rct3::scene
     struct ShownPerson
     {
         park::PlacedPerson pose;
-        float saved_time = 0; ///< Into its motion, when the park was saved
-        float speed = 1;      ///< How fast its motion plays
-        bool walking = false; ///< Walkers stand still in their stride until people move
+        float saved_time = 0;  ///< Into its motion, when the park was saved
+        float speed = 1;       ///< How fast its motion plays
+        bool walking = false;  ///< Walkers stand still in their stride until people move
+        bool staff = false;    ///< A member of staff rather than a guest
+        std::size_t saved = 0; ///< Of the guests or of the staff in the saved people
     };
 
     struct ParkScene
@@ -162,6 +165,9 @@ namespace rct3::scene
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
         std::size_t info_section = 0;                         ///< Of the open tab's page
+        std::optional<std::size_t> shown_person;              ///< Of shown_people, the one the info panel tells about instead
+        std::vector<ui::PersonTab> person_tabs;               ///< Their tabs in the panel's order
+        ui::PersonTab person_tab = ui::PersonTab::General;    ///< The tab last opened on a person
         park::ParkCamera view_camera;                         ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                    ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                        ///< Across the view's target

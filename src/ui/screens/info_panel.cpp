@@ -148,14 +148,34 @@ namespace rct3::ui
             }
             y += info_panel::kSectionHeight + 2;
         }
+        bool right = false; // Whether the row has a half line on its left, waiting for one on its right
         for (std::size_t i = 0; i < page.lines.size(); ++i)
         {
+            const InfoLine& l = page.lines[i];
+            if (l.half)
+            {
+                const float width = info_panel::kPageWidth / 2 - info_panel::kPairGap;
+                const float x = right ? info_panel::kPageWidth - width : 0;
+                line(std::format("label{}", i), l.label, x, width - info_panel::kPairValue, FontRole::Small);
+                line(std::format("value{}", i), l.value, x + width - info_panel::kPairValue, info_panel::kPairValue, FontRole::Small);
+                if (right)
+                    y += info_panel::kLineHeight;
+                right = !right;
+                continue;
+            }
+            if (right)
+            {
+                y += info_panel::kLineHeight;
+                right = false;
+            }
             // A line without a value is text across the whole page.
-            const float label_width = page.lines[i].value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
-            line(std::format("label{}", i), page.lines[i].label, 0, label_width, FontRole::Small);
-            line(std::format("value{}", i), page.lines[i].value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+            const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
+            line(std::format("label{}", i), l.label, 0, label_width, FontRole::Small);
+            line(std::format("value{}", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
             y += info_panel::kLineHeight;
         }
+        if (right)
+            y += info_panel::kLineHeight;
         if (!page.note.empty())
         {
             line("note", page.note, 0, info_panel::kPageWidth, FontRole::Small);

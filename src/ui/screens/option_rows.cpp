@@ -14,11 +14,12 @@ namespace rct3::ui
 
     } // namespace
 
-    OptionRows::OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options)
+    OptionRows::OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options, std::bitset<config::kGameOptionCount> inert)
         : page_(page)
         , width_(width)
         , style_(std::move(style))
         , options_(options)
+        , inert_(inert)
     {
     }
 
@@ -48,8 +49,7 @@ namespace rct3::ui
         row.parts.push_back({ &box, style_.left, style_.tick_size, style_.tick_size });
         const float text_x = style_.left + style_.tick_size + style_.tick_gap;
         name_label(row, std::move(name), text_x, width_ - text_x, std::move(tip));
-        row.bindings.push_back({ option, Kind::Tick, &box });
-        set_control(row.bindings.back());
+        bind(row, { option, Kind::Tick, &box });
         return box;
     }
 
@@ -57,8 +57,7 @@ namespace rct3::ui
     {
         Dropdown& d = list(std::move(name), std::move(items), std::move(tip));
         Row& row = rows_.back();
-        row.bindings.push_back({ option, Kind::Choice, &d });
-        set_control(row.bindings.back());
+        bind(row, { option, Kind::Choice, &d });
         return d;
     }
 
@@ -71,6 +70,13 @@ namespace rct3::ui
         d.tooltip = std::move(tip);
         row.parts.push_back({ &d, style_.control_x, style_.control_width, 0 });
         return d;
+    }
+
+    void OptionRows::bind(Row& row, const Binding& binding)
+    {
+        row.bindings.push_back(binding);
+        row.inert = row.inert || inert_.test(static_cast<std::size_t>(binding.option));
+        set_control(binding);
     }
 
     float OptionRows::slider_height() const
@@ -89,8 +95,7 @@ namespace rct3::ui
         s.step = info.step;
         s.tooltip = std::move(tip);
         row.parts.push_back({ &s, style_.control_x, style_.control_width, slider_height() });
-        row.bindings.push_back({ option, Kind::Level, &s });
-        set_control(row.bindings.back());
+        bind(row, { option, Kind::Level, &s });
         return s;
     }
 
@@ -105,8 +110,7 @@ namespace rct3::ui
         s.step = std::max(1, static_cast<int>(info.step));
         s.tooltip = std::move(tip);
         row.parts.push_back({ &s, style_.control_x, style_.number_width, 0 });
-        row.bindings.push_back({ option, Kind::Number, &s });
-        set_control(row.bindings.back());
+        bind(row, { option, Kind::Number, &s });
         return s;
     }
 
@@ -122,8 +126,7 @@ namespace rct3::ui
             s.maximum = info.maximum;
             s.step = info.step;
             row.parts.push_back({ &s, x, kColumnWidth, slider_height() });
-            row.bindings.push_back({ option, Kind::Level, &s });
-            set_control(row.bindings.back());
+            bind(row, { option, Kind::Level, &s });
         }
     }
 
@@ -139,6 +142,16 @@ namespace rct3::ui
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
         return name_label(row, std::move(value), style_.control_x, width_ - style_.control_x, std::move(tip));
+    }
+
+    Label& OptionRows::note(std::u16string text, int lines)
+    {
+        Row& row = add_row();
+        row.height = static_cast<float>(std::max(1, lines)) * style_.row_height;
+        Label& label = name_label(row, std::move(text), style_.left, width_ - style_.left, { });
+        label.style.wrap = true;
+        label.style.vertical = Align::Start;
+        return label;
     }
 
     KeyBox& OptionRows::keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip)
@@ -187,6 +200,12 @@ namespace rct3::ui
     {
         if (!rows_.empty())
             rows_.back().enabled = condition;
+    }
+
+    void OptionRows::disable()
+    {
+        if (!rows_.empty())
+            rows_.back().inert = true;
     }
 
     bool OptionRows::holds(const OptionIs& c) const
@@ -270,23 +289,26 @@ namespace rct3::ui
         for (const Row& row : rows_)
         {
             const bool shown = !row.shown || holds(*row.shown);
-            const bool usable = !row.enabled || holds(*row.enabled);
+            const bool usable = !row.inert && (!row.enabled || holds(*row.enabled));
             for (const Part& p : row.parts)
             {
                 p.widget->visible = shown;
                 p.widget->enabled = usable;
+                if (auto* label = dynamic_cast<Label*>(p.widget))
+                    label->style.colour = usable ? style_.text_colour : style_.disabled_colour;
             }
             if (!shown)
                 continue;
             if (!first)
                 y += row.gap_before;
             first = false;
+            const float row_height = row.height > 0 ? row.height : style_.row_height;
             for (const Part& p : row.parts)
             {
-                const float h = p.height > 0 ? p.height : style_.row_height;
-                p.widget->placement = top_left(p.x, y + std::round((style_.row_height - h) / 2), p.width, h);
+                const float h = p.height > 0 ? p.height : row_height;
+                p.widget->placement = top_left(p.x, y + std::round((row_height - h) / 2), p.width, h);
             }
-            y += style_.row_height;
+            y += row_height;
         }
         height_ = y;
         return changed;

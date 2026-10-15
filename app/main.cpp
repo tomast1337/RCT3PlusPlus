@@ -36,6 +36,7 @@
 #include "scene/menu_audio.hpp"
 #include "scene/park_loading.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_windows.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
@@ -491,8 +492,8 @@ int main(int argc, char** argv)
             log.warning("settings: {}", saved.error());
     };
     // What the front end asks of the window, and a new language, which loads it again with its options open.
-    const auto follow_front_end = [&] {
-        const auto requests = rct3::scene::take_front_end_requests(*front);
+    // What the options window asks of the window and the keys, from the front end or over a park.
+    const auto apply_requests = [&](const rct3::scene::FrontEndRequests& requests) {
         quit = quit || requests.quit;
         if (requests.fullscreen)
             window->set_fullscreen(*requests.fullscreen);
@@ -511,6 +512,10 @@ int main(int argc, char** argv)
                     log.warning("keys: {}", saved.error());
             }
         }
+    };
+    const auto follow_front_end = [&] {
+        const auto requests = rct3::scene::take_front_end_requests(*front);
+        apply_requests(requests);
         if (requests.tutorial)
             park_to_load = std::move(requests.tutorial);
         if (requests.language)
@@ -581,7 +586,8 @@ int main(int argc, char** argv)
                     // to bind: it then gets them as pressed, and they do nothing else.
                     rct3::ui::KeyboardState keys = window->keyboard();
                     std::vector<rct3::ui::PlayCommand> play_commands;
-                    if (!(front && rct3::scene::front_end_waiting_for_keys(*front)))
+                    const bool binding = (front && rct3::scene::front_end_waiting_for_keys(*front)) || (park && rct3::scene::park_waiting_for_keys(*park));
+                    if (!binding)
                     {
                         auto translated = key_map.translate(keys);
                         keys = std::move(translated.keyboard);
@@ -611,16 +617,30 @@ int main(int argc, char** argv)
                         input.middle = p.middle && input.pointer.present;
                         if (!ImGui::GetIO().WantCaptureKeyboard)
                         {
-                            input.left_key = window->held(rct3::ui::Key::Left);
-                            input.right_key = window->held(rct3::ui::Key::Right);
-                            input.up_key = window->held(rct3::ui::Key::Up);
-                            input.down_key = window->held(rct3::ui::Key::Down);
-                            input.zoom_in_key = window->held(rct3::ui::Key::PageUp);
-                            input.zoom_out_key = window->held(rct3::ui::Key::PageDown);
+                            // On the keys the player bound to the game's camera commands, unless they are being bound.
+                            using P = rct3::ui::PlayCommand;
+                            const auto held = [&](P a, std::optional<P> b = std::nullopt) {
+                                const auto on = [&](P c) { return !binding && key_map.play_key(c) && window->held(*key_map.play_key(c)); };
+                                return on(a) || (b && on(*b));
+                            };
+                            input.left_key = held(P::MoveLeft, P::MoveLeft2);
+                            input.right_key = held(P::MoveRight, P::MoveRight2);
+                            input.up_key = held(P::MoveForwards, P::MoveForwards2);
+                            input.down_key = held(P::MoveBackwards, P::MoveBackwards2);
+                            input.zoom_in_key = held(P::ZoomIn);
+                            input.zoom_out_key = held(P::ZoomOut);
+                            input.turn_left_key = held(P::RotateLeft);
+                            input.turn_right_key = held(P::RotateRight);
+                            input.tilt_up_key = held(P::RotateUp);
+                            input.tilt_down_key = held(P::RotateDown);
                             input.commands = play_commands;
                         }
                         const rct3::ui::KeyboardState no_keys;
                         prof::section("Park", [&] { rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
+                        rct3::scene::update_park_windows(*park, *front);
+                        apply_requests(rct3::scene::take_park_window_requests(*park, *front));
+                        if (const auto copied = park->desktop->take_clipboard())
+                            window->set_clipboard(*copied);
                         auto sounds = park->desktop->take_sounds();
                         if (rct3::scene::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
@@ -629,6 +649,7 @@ int main(int argc, char** argv)
                         if (rct3::scene::take_park_leave(*park))
                         {
                             const prof::Scope zone("LeavePark");
+                            rct3::scene::close_park_windows(*park, *front);
                             rct3::scene::destroy_park_scene(*device, *park);
                             park.reset();
                         }
@@ -736,7 +757,11 @@ int main(int argc, char** argv)
     if (widgets)
         rct3::scene::destroy_widget_demo(*device, *widgets);
     if (park)
+    {
+        if (front)
+            rct3::scene::close_park_windows(*park, *front);
         rct3::scene::destroy_park_scene(*device, *park);
+    }
     if (front)
         rct3::scene::destroy_front_end_scene(*device, *front);
     rct3::scene::destroy_ui_demo(*device, *ui_demo);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/front_end_scene.hpp"
 
+#include "config/option_effects.hpp"
 #include "logging/log.hpp"
 #include "scene/menu_audio.hpp"
 #include "ui/game_style.hpp"
@@ -33,14 +34,6 @@ namespace rct3::scene
         float scale_for(const render::Device& device, const FrontEndScene& scene)
         {
             return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale);
-        }
-
-        void save_options(const FrontEndScene& scene)
-        {
-            if (!scene.options_file)
-                return;
-            if (auto saved = scene.live->options.save(*scene.options_file); !saved)
-                logging::logger("ui").warning("options: {}", saved.error());
         }
 
     } // namespace
@@ -80,6 +73,7 @@ namespace rct3::scene
         front.choices.screen_sizes = std::move(setup.screen_sizes);
         front.choices.screen_size = setup.screen_size;
         front.choices.keys = std::move(setup.keys);
+        front.choices.inert = config::inert_options();
         front.choices.background_music = music_files(install);
         const auto shown = std::ranges::find(front.choices.background_music, kFirstBackgroundMusic);
         if (shown != front.choices.background_music.end())
@@ -132,7 +126,7 @@ namespace rct3::scene
                 scene.tutorial = scene.assets.install->find(picker->tutorial(*start).park);
         }
         if (scene.live->front->take_options_closed())
-            save_options(scene);
+            save_front_end_options(scene);
         while (const auto request = scene.live->front->take_unhandled())
             logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<int>(request->action), request->pack);
         return over;
@@ -161,6 +155,14 @@ namespace rct3::scene
         return scene.live->front->waiting_for_keys();
     }
 
+    void save_front_end_options(const FrontEndScene& scene)
+    {
+        if (!scene.options_file)
+            return;
+        if (auto saved = scene.live->options.save(*scene.options_file); !saved)
+            logging::logger("ui").warning("options: {}", saved.error());
+    }
+
     void draw_front_end_scene(render::Device& device, FrontEndScene& scene)
     {
         scene.list.clear();
@@ -177,7 +179,7 @@ namespace rct3::scene
     void destroy_front_end_scene(render::Device& device, FrontEndScene& scene)
     {
         if (scene.live && scene.live->front && scene.live->front->options_window() != nullptr)
-            save_options(scene);
+            save_front_end_options(scene);
         destroy_slideshow_view(device, scene.slideshow);
         destroy_save_browser(device, scene.saves);
         destroy_career_browser(device, scene.careers);

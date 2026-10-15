@@ -239,3 +239,60 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
     CHECK(pause->combos == std::vector { KeyCombo { Key::Escape } });
     CHECK_FALSE(f.dialog->take_keys()->play_key(PlayCommand::ExitGame));
 }
+
+TEST_CASE("rows of options nothing acts on show greyed and cannot be used")
+{
+    OptionsChoices choices;
+    choices.inert.set(static_cast<std::size_t>(O::Sky));
+    Fixture f(choices);
+    f.dialog->show_page(OptionsPage::Scenic);
+    f.desktop.update({ });
+    Widget* page = f.dialog->find("content/page3");
+    REQUIRE(page != nullptr);
+    int usable = 0;
+    int greyed = 0;
+    for (const auto& c : page->children())
+    {
+        if (auto* tick = dynamic_cast<Tickbox*>(c.get()); tick != nullptr && tick->visible)
+            ++(tick->enabled ? usable : greyed);
+    }
+    CHECK(greyed == 1);
+    CHECK(usable > 1);
+}
+
+TEST_CASE("the language shows but cannot change when locked")
+{
+    OptionsChoices choices { { "English", "Dutch" }, "English", { }, std::nullopt, { } };
+    choices.language_locked = true;
+    Fixture f(choices);
+    Dropdown* list = f.dialog->language_list();
+    REQUIRE(list != nullptr);
+    CHECK(list->visible);
+    CHECK_FALSE(list->enabled);
+}
+
+TEST_CASE("the camera page says what the mouse does in the chosen mode")
+{
+    Fixture f;
+    f.strings.add("GameOptionsDialog_CameraControlsRightMouse", u"Right:");
+    f.strings.add("GameOptionsDialog_CameraControlsLeftMouse", u"Left:");
+    f.strings.add("GameOptionsDialog_CameraControlsActionMove", u"Move");
+    f.strings.add("GameOptionsDialog_CameraControlsActionRotate", u"Rotate");
+    // The strings are read when the window is made.
+    f.desktop.root().remove(*f.dialog);
+    f.dialog = &f.desktop.root().add<OptionsDialog>("options", game_skins::options_dialog_style(), f.strings, f.options, OptionsChoices { });
+    f.dialog->show_page(OptionsPage::Camera);
+    f.options.set(O::CameraMode, 3); // Normal
+    f.desktop.update({ });
+    CHECK(f.dialog->camera_help(0).text == u"Left:");
+    CHECK(f.dialog->camera_help(1).text == u"Right: Move");
+    f.options.set(O::CameraMode, 1); // Freelook
+    f.desktop.update({ });
+    CHECK(f.dialog->camera_help(1).text == u"Right: Rotate");
+}
+
+TEST_CASE("the graphics page's auto detect shows but does nothing")
+{
+    Fixture f;
+    CHECK_FALSE(f.dialog->auto_detect().enabled);
+}

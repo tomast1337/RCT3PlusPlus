@@ -8,6 +8,7 @@
 #include "ui/font_set.hpp"
 #include "ui/game_frames.hpp"
 #include "ui/panel_look.hpp"
+#include "ui/screens/about_window.hpp"
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
@@ -92,6 +93,9 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kDropdownOpener = "ListBoxOpener"; ///< Family: "ListBoxOpenerDisabled"
     inline constexpr std::string_view kSliderThumb = "LeftRight_SliderArrows";
     inline constexpr std::string_view kOptionsIcon = "File_GameOptions";
+    inline constexpr std::string_view kAutoDetectIcon = "GameOptionsDialog_AutoConfigIcon";
+    inline constexpr std::string_view kAboutIcon = "File_AboutRCT";
+    inline constexpr std::string_view kCreditsIcon = "File_Credits_Stars";
     inline constexpr std::string_view kSpinnerUp = "SpinnerUp"; ///< Family: "SpinnerUpDisabled"
     inline constexpr std::string_view kSpinnerDown = "SpinnerDown";
     inline constexpr std::string_view kScrollUp = "ScrollBar_UpArrow";
@@ -382,6 +386,17 @@ namespace rct3::ui::game_skins
         s.scroll = scroll_bar_style(Orientation::Vertical);
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
+        s.auto_detect_icon = kAutoDetectIcon;
+        return s;
+    }
+
+    /// The about window in the game's frame: the page's name in blue left of two small picture tabs.
+    [[nodiscard]] inline AboutWindowStyle about_window_style()
+    {
+        AboutWindowStyle s;
+        s.window = window_style();
+        s.icon = kAboutIcon;
+        s.credits_icon = kCreditsIcon;
         return s;
     }
 

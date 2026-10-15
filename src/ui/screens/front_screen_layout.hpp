@@ -87,7 +87,8 @@ namespace rct3::ui::front_screen
     [[nodiscard]] Rect button_rect(const Frame& frame, Point centre, float size);
 
     /// The box beside menu button `index` where its label shows, and its parts. The box starts a little up
-    /// and left of the button's centre, so the round patch in it sits behind the button.
+    /// and left of the button's centre, so the round patch in it sits behind the button. The patch and the
+    /// box's height scale by the round scale; the band's far end and the text's stretch across.
     inline constexpr Point kLabelBoxOffset { -47.7f, -52.3f };
     inline constexpr Point kLabelBoxSize { 400, 100 };
     inline constexpr Rect kLabelPatch { 0, 3, 97, 100 }; ///< In the box: a white ring round the button

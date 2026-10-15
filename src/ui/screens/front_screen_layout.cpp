@@ -37,12 +37,22 @@ namespace rct3::ui::front_screen
 
     LabelBox label_box(const Frame& frame, std::size_t index)
     {
-        const Point button = on_ring(menu_angle(index), kMenuRadius);
-        const Point corner { button.x + kLabelBoxOffset.x, button.y + kLabelBoxOffset.y };
-        const auto inside = [&](const Rect& part) { return frame.stretched({ corner.x + part.x0, corner.y + part.y0, corner.x + part.x1, corner.y + part.y1 }); };
+        // The ring round the button is drawn at the round scale, so it stays a circle that hugs the button;
+        // so is the box's height and where the band starts under the ring. Only the band's far end, and the
+        // text's, stretch across the screen with the artwork.
+        const Point design = on_ring(menu_angle(index), kMenuRadius);
+        const Point button = frame.at(design);
+        const Point corner { button.x + kLabelBoxOffset.x * frame.round, button.y + kLabelBoxOffset.y * frame.round };
+        const float far = frame.at({ design.x + kLabelBoxOffset.x, 0 }).x; // The box's left edge, stretched
+        const auto round_x = [&](float x) { return corner.x + x * frame.round; };
+        const auto stretched_x = [&](float x) { return far + x * frame.sx; };
+        const auto y = [&](float v) { return corner.y + v * frame.round; };
         const float reach = kLabelEndStep * static_cast<float>(index * index);
-        const Rect end { kLabelBand.x1, kLabelBand.y0, kLabelBand.x1 + reach, kLabelBand.y1 };
-        return { inside(kLabelPatch), inside(kLabelBand), inside(end), inside(kLabelText) };
+        const Rect patch { round_x(kLabelPatch.x0), y(kLabelPatch.y0), round_x(kLabelPatch.x1), y(kLabelPatch.y1) };
+        const Rect band { round_x(kLabelBand.x0), y(kLabelBand.y0), stretched_x(kLabelBand.x1), y(kLabelBand.y1) };
+        const Rect end { band.x1, band.y0, stretched_x(kLabelBand.x1 + reach), band.y1 };
+        const Rect text { round_x(kLabelText.x0), y(kLabelText.y0), std::max(round_x(kLabelText.x0), stretched_x(kLabelText.x1)), y(kLabelText.y1) };
+        return { patch, band, end, text };
     }
 
     Rect badge_rect(const Frame& frame, std::size_t slot)

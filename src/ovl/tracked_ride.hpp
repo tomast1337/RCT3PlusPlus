@@ -17,8 +17,8 @@ namespace rct3::ovl
 
     struct TrackedRide
     {
-        /// Version 1 files start with the fields shared by all attractions. Later files do not have them in
-        /// this item, so `info` is zero and empty there.
+        /// The fields shared by all attractions: at the start of version 1 items, further on in later ones,
+        /// past the list of track sections.
         AttractionInfo info;
         std::string_view name; ///< Name string stored in the item, version 4 and 5 files only
         /// "tks" items for the four special track sections of the ride, such as its lift hill and station.

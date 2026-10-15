@@ -150,10 +150,49 @@ namespace
         draw_window(context, ui::game_skins::window_style(), view);
     }
 
+    // The front screen's backdrop at its design size, from the three pictures it is drawn with.
+    void draw_front_backdrop(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        namespace fs = ui::front_screen;
+        draw_skin_at(context, fs::kBandTopSkin, { fs::kBandTop });
+        draw_skin_at(context, fs::kBandBottomSkin, { fs::kBandBottom });
+        draw_skin_at(context, fs::kStripRightSkin, { fs::kStripRight });
+    }
+
+    // The white ring's five pieces at their own size, where the front screen puts them.
+    void draw_front_arc(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        namespace fs = ui::front_screen;
+        for (std::size_t i = 0; i < fs::kArcSkins.size(); ++i)
+        {
+            const ui::Point at = fs::kArcPieces.at(i);
+            const ui::Point size = fs::kArcPieceSizes.at(i);
+            draw_skin_at(context, fs::kArcSkins[i], { { at.x, at.y, at.x + size.x, at.y + size.y } });
+        }
+    }
+
+    // A label's band as the menu draws it: the half disc behind the button, then the pointed end stretched to
+    // a few shapes, and at its own size.
+    void draw_label_band(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        namespace fs = ui::front_screen;
+        draw_skin_at(context, fs::kPatchSkin, { { 8, 8, 103, 105 } });
+        draw_skin_at(context, fs::kBandEndSkin, { { 112, 8, 207, 93 }, { 216, 8, 266, 58 }, { 276, 8, 316, 98 }, { 112, 100, 232, 130 } });
+    }
+
+    // The loading bar's two ends at their own size, then twice it, as the bar is drawn on a larger band.
+    void draw_loading_bar(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        namespace ls = ui::loading_screen;
+        draw_skin_at(context, ls::kBarLeft, { { 8, 8, 18, 24 }, { 40, 8, 60, 40 } });
+        draw_skin_at(context, ls::kBarRight, { { 24, 8, 33, 24 }, { 66, 8, 84, 40 } });
+    }
+
     std::vector<PanelCase> panel_cases()
     {
         return {
-            { "info-panel", 520, 175, draw_info_panel }, { "lozenge", 256, 104, draw_lozenges }, { "menu", 298, 146, draw_menus }, { "selected-row", 198, 66, draw_selected_rows }, { "button-face", 170, 52, draw_button_faces }, { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc }, { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window },
+            { "info-panel", 520, 175, draw_info_panel },         { "lozenge", 256, 104, draw_lozenges },        { "menu", 298, 146, draw_menus },         { "selected-row", 198, 66, draw_selected_rows },      { "button-face", 170, 52, draw_button_faces }, { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc },
+            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "front-arc", 1024, 768, draw_front_arc },    { "label-band", 324, 138, draw_label_band },   { "loading-bar", 92, 48, draw_loading_bar },
         };
     }
 

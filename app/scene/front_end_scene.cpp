@@ -88,7 +88,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style(), skins::tutorial_picker_style() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style(), skins::tutorial_picker_style(), skins::front_screen_round() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 

@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace rct3::park
 {
@@ -38,6 +39,9 @@ namespace rct3::park
     /// The nearest object among `objects` for which `wanted` holds that `ray` passes through before it reaches
     /// the ground.
     [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted);
+
+    /// The corners of the box `object` is hit in, in the park; none when it has no model.
+    [[nodiscard]] std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
 
     /// The nearest of the people placed in the park by `placements` (each from their own space) that `ray`
     /// passes through before it reaches the ground.

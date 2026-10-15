@@ -2,6 +2,7 @@
 #include "ui/skin_library.hpp"
 
 #include <span>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -36,6 +37,14 @@ namespace rct3::ui
     void SkinLibrary::add(std::string name, const SkinRef& skin)
     {
         skins_.insert_or_assign(std::move(name), skin);
+    }
+
+    void SkinLibrary::set_coded(std::string_view name, CodedFrame frame)
+    {
+        auto it = skins_.find(name);
+        if (it == skins_.end())
+            it = skins_.emplace(std::string(name), SkinRef { }).first;
+        it->second.coded = std::make_shared<const CodedFrame>(std::move(frame));
     }
 
     const SkinRef* SkinLibrary::find(std::string_view name) const
@@ -89,7 +98,11 @@ namespace rct3::ui
 
     void draw_skin(DrawList& list, const SkinRef* skin, const Rect& rect, Color tint)
     {
-        if (skin != nullptr)
+        if (skin == nullptr)
+            return;
+        if (skin->coded)
+            draw_frame(list, *skin->coded, rect, tint);
+        else
             draw_skin(list, skin->layout, rect, skin->texture, skin->texture_width, skin->texture_height, tint);
     }
 

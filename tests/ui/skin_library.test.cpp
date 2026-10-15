@@ -76,3 +76,30 @@ TEST_CASE("drawing a missing skin draws nothing")
     REQUIRE(list.batches().size() == 1);
     CHECK(list.batches()[0].texture == 4);
 }
+
+TEST_CASE("a skin with a coded frame draws the frame instead of its picture")
+{
+    SkinLibrary skins;
+    skins.add("Frame", skin(1, 30, 20));
+    CodedFrame frame;
+    frame.layers.push_back({ inset_box(0, 0, 0, 0), Shape { }, { } });
+    skins.set_coded("frame", frame); // Whatever the case
+    REQUIRE(skins.find("Frame"));
+    CHECK(skins.find("Frame")->size() == std::array<float, 2> { 30, 20 });
+    DrawList list;
+    draw_skin(list, skins.find("Frame"), { 0, 0, 30, 20 });
+    CHECK(list.vertices().empty());
+    CHECK(list.shape_vertices().size() == 4);
+}
+
+TEST_CASE("a coded frame can stand for a skin the library lacks")
+{
+    SkinLibrary skins;
+    CodedFrame frame;
+    frame.layers.push_back({ inset_box(0, 0, 0, 0), Shape { }, { } });
+    skins.set_coded("Made", frame);
+    REQUIRE(skins.find("Made"));
+    DrawList list;
+    draw_skin(list, skins.find("Made"), { 0, 0, 10, 10 });
+    CHECK(list.shape_vertices().size() == 4);
+}

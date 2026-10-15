@@ -8,6 +8,7 @@
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
+#include "park/object_pick.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/path_supports.hpp"
 #include "park/queue_fences.hpp"
@@ -16,6 +17,7 @@
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
 #include "save/model/park.hpp"
+#include "save/model/rides.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -59,6 +61,9 @@ namespace rct3::scene
         constexpr std::string_view kBarName = "bar";
         constexpr std::string_view kToolsName = "tools";
         constexpr std::string_view kMessagesName = "messages";
+        constexpr std::string_view kInfoName = "info";
+        /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
+        constexpr float kClickSlack = 4;
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
@@ -546,6 +551,14 @@ namespace rct3::scene
         scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings);
         scene.desktop->root().add<ui::ToolColumn>(std::string(kToolsName), skins::tool_column_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
+        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
+        if (auto rides = save::load_rides(*file, index))
+        {
+            scene.rides = std::move(*rides);
+            scene.attractions = park::attraction_objects(scene.rides, scene.objects);
+        }
+        else
+            log.warning("rides: {}", save::to_string(rides.error()));
 
         auto tutorial = save::load_tutorial(*file);
         if (!tutorial)
@@ -560,6 +573,76 @@ namespace rct3::scene
         log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
         return scene;
     }
+
+    namespace
+    {
+
+        ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
+        {
+            ui::AttractionFacts f;
+            if (ref.kind == park::AttractionRef::Kind::Stall)
+            {
+                if (ref.index < scene.rides.stalls.size())
+                {
+                    f.stall = &scene.rides.stalls[ref.index];
+                    f.common = &f.stall->base;
+                }
+            }
+            else if (ref.index < scene.rides.rides.size())
+            {
+                f.ride = &scene.rides.rides[ref.index];
+                f.common = &f.ride->base;
+            }
+            return f;
+        }
+
+        void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            if (!scene.shown)
+                return;
+            ui::InfoUnits units;
+            units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
+            units.distance = static_cast<ui::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
+            panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, units));
+        }
+
+        /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
+        void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            const ui::AttractionFacts f = facts(scene, ref);
+            if (f.common == nullptr)
+                return;
+            const ui::AttractionKind kind = f.stall ? ui::AttractionKind::Stall : ui::attraction_kind(*f.ride);
+            std::vector<ui::InfoTab> tabs;
+            scene.shown_tabs.clear();
+            std::size_t picked = 0;
+            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(kind, f.common->state))
+            {
+                if (t.tab == scene.info_tab)
+                    picked = tabs.size();
+                tabs.push_back({ std::string(t.icon), std::u16string(assets.strings->get(t.help)), t.slot });
+                scene.shown_tabs.push_back(t.tab);
+            }
+            scene.info_tab = scene.shown_tabs.at(picked);
+            scene.shown = ref;
+            panel.show(std::move(tabs), picked);
+            show_info_page(scene, panel, assets, options);
+        }
+
+        /// The attraction under the pointer at `at`, in interface units on a screen of `size`.
+        std::optional<park::AttractionRef> attraction_at(const ParkScene& scene, ui::Point at, ui::Point size)
+        {
+            if (size.x <= 0 || size.y <= 0)
+                return std::nullopt;
+            const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
+            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
+            const auto hit = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.attractions.contains(o.id); });
+            if (!hit)
+                return std::nullopt;
+            return scene.attractions.at(scene.objects[*hit].id);
+        }
+
+    } // namespace
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
@@ -585,6 +668,33 @@ namespace rct3::scene
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over = desktop.update(pointer, keys, { elapsed, scene.current_fonts });
         move_camera(scene, input, over, elapsed);
+        auto* info = static_cast<ui::InfoPanel*>(desktop.root().find(kInfoName));
+        if (info != nullptr)
+        {
+            // A click is the left button pressed and let go over the park without the pointer going far.
+            if (pointer.down && !scene.press && !over && !input.right && !input.middle)
+                scene.press = pointer.position;
+            else if (!pointer.down && scene.press)
+            {
+                const ui::Point from = *std::exchange(scene.press, std::nullopt);
+                const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
+                const ui::Rect screen = desktop.root().rect();
+                if (still && !over)
+                {
+                    if (const auto picked = attraction_at(scene, pointer.position, { screen.width(), screen.height() }))
+                        open_info(scene, *info, *picked, assets, options);
+                }
+            }
+            if (input.right || input.middle)
+                scene.press.reset();
+            if (const auto tab = info->take_picked(); tab && *tab < scene.shown_tabs.size())
+            {
+                scene.info_tab = scene.shown_tabs[*tab];
+                show_info_page(scene, *info, assets, options);
+            }
+            if (info->take_closed())
+                scene.shown.reset();
+        }
         const glm::vec3 viewer = park::eye(scene.camera);
         scene.since_rebuild += elapsed;
         if (scene.since_rebuild >= kObjectRebuildInterval)

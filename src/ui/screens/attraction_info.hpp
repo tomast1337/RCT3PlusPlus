@@ -5,7 +5,8 @@
 // view, finances, thoughts, open-or-close and customers tabs; rides add vehicles, test results, operating
 // mode and maintenance, tracked rides construction and graphs, and stalls their items and extras.
 //
-// A tab whose content is not built yet shows only its title.
+// The open-or-close tab has no page: it offers the states the attraction can be put in. A tab whose content
+// is not built yet shows only its title.
 #pragma once
 
 #include "save/model/rides.hpp"
@@ -88,6 +89,19 @@ namespace rct3::ui
         const save::Stall* stall = nullptr;
     };
 
-    [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units);
+    /// The page of `tab`, at `section` when the page has several.
+    [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
+
+    /// A state the open-or-close tab offers.
+    struct StateChoice
+    {
+        save::AttractionState state = save::AttractionState::Open;
+        std::string_view icon;          ///< Skin
+        std::string_view disabled_icon; ///< Skin when it is the state already
+        std::string_view help;          ///< String key
+    };
+
+    /// The states an attraction of `kind` can be put in: open and closed, and testing for rides.
+    [[nodiscard]] std::vector<StateChoice> state_choices(AttractionKind kind);
 
 } // namespace rct3::ui

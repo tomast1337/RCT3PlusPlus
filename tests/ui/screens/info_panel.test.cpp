@@ -41,7 +41,7 @@ namespace
 
     std::vector<InfoTab> three()
     {
-        return { { "A", u"a", 0 }, { "B", u"b", 3 }, { "C", u"c", 6 } };
+        return { { "A", u"a", 0, { } }, { "B", u"b", 3, { } }, { "C", u"c", 6, { } } };
     }
 } // namespace
 
@@ -112,4 +112,75 @@ TEST_CASE("the strip fits round the page beside the disc")
     // A new page replaces the old one.
     f.panel->show_page({ });
     CHECK(f.panel->body().children().empty());
+}
+
+TEST_CASE("a tab with choices fans them out round itself and tells the one picked")
+{
+    Fixture f;
+    std::vector<InfoTab> tabs = three();
+    tabs[1].choices = { { "Go", u"go", true }, { "Stop", u"stop", false } };
+    f.panel->show(std::move(tabs), 0);
+    f.desktop.update({ });
+    CHECK_FALSE(f.panel->choosing());
+    f.click(Fixture::middle(f.panel->tab(1).rect()));
+    REQUIRE(f.panel->choosing() == 1u);
+    // It is not opened as a page.
+    CHECK_FALSE(f.panel->take_picked());
+    CHECK(f.panel->picked() == 0);
+    CHECK_FALSE(f.panel->choice(1).enabled);
+    const Rect go = f.panel->choice(0).rect();
+    CHECK(go.width() == info_panel::kChoiceSize);
+    f.click(Fixture::middle(go));
+    const auto made = f.panel->take_choice();
+    REQUIRE(made);
+    CHECK(made->first == 1);
+    CHECK(made->second == 0);
+    CHECK_FALSE(f.panel->choosing());
+}
+
+TEST_CASE("choices spread evenly either side of the line out through their tab")
+{
+    const Point one = info_choice_offset(0, 0, 1);
+    CHECK(one.x == -one.y);
+    const Point left = info_choice_offset(0, 0, 3);
+    const Point middle = info_choice_offset(0, 1, 3);
+    const Point right = info_choice_offset(0, 2, 3);
+    CHECK(middle.x == one.x);
+    CHECK(middle.y == one.y);
+    CHECK(left.x == -right.y);
+    CHECK(left.y == -right.x);
+}
+
+TEST_CASE("a page's sections are buttons that ask for another section")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    page.sections = { u"First", u"Second part" };
+    page.section = 1;
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    const Widget* second = f.panel->body().find("section1");
+    const Widget* first = f.panel->body().find("section0");
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    CHECK(second->rect().width() > first->rect().width());
+    f.click(Fixture::middle(first->rect()));
+    CHECK(f.panel->take_section() == 0u);
+
+    // A single section needs no buttons.
+    page.sections = { u"Only" };
+    f.panel->show_page(page);
+    CHECK(f.panel->body().find("section0") == nullptr);
+}
+
+TEST_CASE("a page's graph is plotted with each series named under it")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    page.graph = { { u"Up", { 0, 1, 2 } }, { u"Down", { 2, 1, 0 } } };
+    f.panel->show_page(page);
+    CHECK(f.panel->body().find("graph") != nullptr);
+    CHECK(f.panel->body().find("series1") != nullptr);
 }

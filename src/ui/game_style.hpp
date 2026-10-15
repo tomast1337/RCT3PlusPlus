@@ -16,6 +16,7 @@
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/tool_row.hpp"
+#include "ui/screens/tutorial_guide.hpp"
 #include "ui/screens/tutorial_picker.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/tooltip.hpp"
@@ -75,6 +76,8 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kPadlockOpen = "GUI2PadlockUnlocked";
     inline constexpr std::string_view kNoScenarioPicture = "FrontScreen_PeopleUT";
     inline constexpr std::string_view kStartTutorialIcon = "GUI2_TutorialForward";
+    /// The guide with the mortarboard; the front screen's tutorials button shows it too.
+    inline constexpr std::string_view kTutorialGuide = "FrontScreen_Icon_Tutorial";
     inline constexpr std::array<std::string_view, 4> kQuarterCircles = { "FrontScreen_QuarterCircle_TL", "FrontScreen_QuarterCircle_TR", "FrontScreen_QuarterCircle_BL", "FrontScreen_QuarterCircle_BR" };
     inline constexpr std::string_view kTickbox = "Tickbox_Up";
     inline constexpr std::string_view kTick = "Tickbox_Tick";
@@ -415,6 +418,19 @@ namespace rct3::ui::game_skins
         s.start_icon = kStartTutorialIcon;
         for (std::size_t i = 0; i < kQuarterCircles.size(); ++i)
             s.quarters.at(i) = kQuarterCircles[i];
+        return s;
+    }
+
+    /// The tutorial guide in the large frame: the guide in the corner circle, the step's title on a line under
+    /// the title rule, the page below that.
+    [[nodiscard]] inline TutorialGuideStyle tutorial_guide_style()
+    {
+        TutorialGuideStyle s;
+        s.window = window_style();
+        s.window.content_inset.y0 += s.step_line.y1;
+        s.portrait = kTutorialGuide;
+        s.button = kTextButton;
+        s.button_inset = kLozengeInset;
         return s;
     }
 

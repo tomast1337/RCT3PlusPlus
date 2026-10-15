@@ -33,12 +33,10 @@ namespace rct3::ui
     {
         Color body = hex("#4babe4");      ///< Of the strip below its band
         Color band = hex("#2484be");      ///< Along the top of the strip and the disc
-        Color band_glow = hex("#3998d2"); ///< Of the body just under the band, fading into `body`
         Color disc = hex("#56abe5");      ///< Of the disc and its rim
         Color view_back = hex("#7f7f7f"); ///< In the round view when it shows nothing
         Color shadow = hex("#00000080");
         float band_height = 18;
-        float glow_height = 52; ///< Of the fade under the band
         float corner = 11;      ///< Of the strip's top corners
         float rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
         float strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom

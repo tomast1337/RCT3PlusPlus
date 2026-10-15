@@ -235,7 +235,7 @@ TEST_CASE("park: a minimal park, economy and clock")
 {
     const auto l = load(
         {
-            { "Park", 10, { fstr("Name", "Test Park"), fint("Flags", 0x21), fint("OpeningTimeMinutes", 480), fint("ClosingTimeMinutes", 1200), ffloat("GuestGenerationRate", 0.75f), fgraph("ParkRating", { 400, 500, 650 }), fgraph("GuestsInPark", { 1, 2, 3, 4 }) } },
+            { "Park", 10, { fstr("Name", "Test Park"), fint("Flags", 0x21), fint("OpeningTimeMinutes", 480), fint("ClosingTimeMinutes", 1200), ffloat("GuestGenerationRate", 0.75f), fgraph("ParkRating", { 650, 500, 400 }), fgraph("GuestsInPark", { 1, 2, 3, 4 }) } },
             { "Money", 11, { fint("Cash", 12345), fint("Loan", 100), fint("MaxLoan", 5000), ffloat("InterestRate", 7.5f), fgraph("ParkValue", { 10, 20 }), fledger("MonthlyExpendature", { "ShopSales", "Marketing", "PoolTickets" }, { { 1, 2, 3 }, { 4, 5, 6 } }) } },
             { "GameTime", 12, { ffloat("Time", 2880.0f + 720.0f + 270.0f + 10.0f), ffloat("ZeroTime", 5), ffloat("DayNightTime", 0.25f) } },
         });
@@ -247,14 +247,14 @@ TEST_CASE("park: a minimal park, economy and clock")
 
     CHECK(m.park.name == "Test Park");
     CHECK(m.park.flags.has(ParkFlag::Open));
-    CHECK(m.park.flags.has(ParkFlag::BreakdownEnabled));
+    CHECK(m.park.flags.has(ParkFlag::HarderRating));
     CHECK_FALSE(m.park.flags.has(ParkFlag::TreesLocked));
     CHECK(m.park.opening_minutes == 480);
     CHECK(m.park.guest_generation_rate == 0.75f);
     CHECK(m.park.rating().value() == 650.0f);
     CHECK(m.park.park_rating.capacity == 64);
     REQUIRE(m.park.guests_in_park.samples.size() == 4);
-    CHECK(m.park.guests_in_park.samples[0] == 1.0f); // oldest first
+    CHECK(m.park.guests_in_park.samples[0] == 1.0f); // As in the file, newest first
 
     CHECK(m.finance.cash == 12345);
     CHECK(m.finance.interest_rate_percent == 7.5f);
@@ -431,7 +431,8 @@ TEST_CASE("park: series push drops the oldest beyond capacity")
     for (int i = 1; i <= 5; ++i)
         s.push(static_cast<float>(i));
     REQUIRE(s.samples.size() == 3);
-    CHECK(s.samples.front() == 3.0f);
+    CHECK(s.samples.front() == 5.0f); // Newest first
+    CHECK(s.samples.back() == 3.0f);
     CHECK(s.latest().value() == 5.0f);
     Series unbounded;
     for (int i = 0; i < 100; ++i)

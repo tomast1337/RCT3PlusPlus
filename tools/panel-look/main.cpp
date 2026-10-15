@@ -30,6 +30,7 @@
 #include <expected>
 #include <filesystem>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <string>
@@ -62,7 +63,7 @@ namespace
         std::function<void(ui::DrawContext&, PanelLook, ui::Rect view)> draw;
     };
 
-    // The round panel in a corner, with a page of lines so the strip shows.
+    // The round panel in a corner, with a page of lines so the strip shows. Its style picks the look.
     void draw_info_panel(ui::DrawContext& context, PanelLook look, ui::Rect view)
     {
         ui::InfoPanelStyle style = ui::game_skins::info_panel_style();
@@ -76,10 +77,83 @@ namespace
         panel.draw(context);
     }
 
+    // The other panels take their look from the skins: the coded look gives the library their frames.
+    void draw_skin_at(ui::DrawContext& context, std::string_view skin, std::initializer_list<ui::Rect> rects)
+    {
+        for (const ui::Rect& r : rects)
+            ui::draw_skin(context.list, context.skins.find(skin), r);
+    }
+
+    void draw_lozenges(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // A text button, a tab, a small square button and a tooltip of two lines.
+        draw_skin_at(context, ui::game_skins::kTextButton, { { 8, 8, 128, 34 }, { 140, 8, 200, 32 }, { 212, 8, 242, 38 }, { 8, 48, 248, 96 } });
+    }
+
+    void draw_menus(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        draw_skin_at(context, ui::game_skins::kMenuBackground, { { 8, 8, 168, 138 }, { 180, 8, 290, 70 } });
+    }
+
+    void draw_selected_rows(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // As tall as a list's row, and a menu bar's title.
+        draw_skin_at(context, ui::game_skins::kSelectedRow, { { 8, 8, 168, 26 }, { 8, 34, 68, 52 }, { 80, 34, 190, 58 } });
+    }
+
+    void draw_button_faces(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // At the size of the picture, of the tool row's items, swollen under the pointer, and small.
+        draw_skin_at(context, ui::game_skins::kMenuButtonSmall, { { 8, 8, 40, 41 }, { 50, 8, 82, 40 }, { 92, 8, 128, 44 }, { 138, 8, 162, 32 } });
+    }
+
+    void draw_menu_circles(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        draw_skin_at(context, ui::game_skins::kMenuCircle, { { 8, 8, 86, 88 }, { 100, 8, 160, 68 }, { 170, 8, 210, 48 } });
+    }
+
+    void draw_tutorial_disc(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // The four quarters at half their size, put together into the disc.
+        constexpr float kW = 162;
+        constexpr float kH = 161;
+        const auto& q = ui::game_skins::kQuarterCircles;
+        draw_skin_at(context, q[0], { { 8, 8, 8 + kW, 8 + kH } });
+        draw_skin_at(context, q[1], { { 8 + kW, 8, 8 + 2 * kW, 8 + kH } });
+        draw_skin_at(context, q[2], { { 8, 8 + kH, 8 + kW, 8 + 2 * kH } });
+        draw_skin_at(context, q[3], { { 8 + kW, 8 + kH, 8 + 2 * kW, 8 + 2 * kH } });
+    }
+
+    void draw_message_drawer(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // Pulled down far enough to show the back repeated three times.
+        ui::draw_drawer_frame(context, ui::game_skins::message_drawer_style(), { 8, 8, 8 + ui::message_drawer::kWidth, 155 });
+    }
+
+    void draw_window(ui::DrawContext& context, const ui::WindowStyle& style, ui::Rect view)
+    {
+        ui::Desktop desktop;
+        auto& window = desktop.root().add<ui::Window>("window", style, view.width() - 16, view.height() - 16);
+        window.placement = ui::top_left(8, 8, view.width() - 16, view.height() - 16);
+        desktop.layout(view);
+        // The frame and backgrounds alone: the title button and content are pictures and text either way.
+        window.draw(context);
+    }
+
+    void draw_mini_window(ui::DrawContext& context, PanelLook, ui::Rect view)
+    {
+        draw_window(context, ui::game_skins::mini_window_style(), view);
+    }
+
+    void draw_main_window(ui::DrawContext& context, PanelLook, ui::Rect view)
+    {
+        draw_window(context, ui::game_skins::window_style(), view);
+    }
+
     std::vector<PanelCase> panel_cases()
     {
         return {
-            { "info-panel", 520, 175, draw_info_panel },
+            { "info-panel", 520, 175, draw_info_panel }, { "lozenge", 256, 104, draw_lozenges }, { "menu", 298, 146, draw_menus }, { "selected-row", 198, 66, draw_selected_rows }, { "button-face", 170, 52, draw_button_faces }, { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc }, { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window },
         };
     }
 
@@ -132,9 +206,19 @@ namespace
 
     ovl::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, float scale)
     {
+        // The coded look draws this panel's skins in code, whatever the game's look has them on.
+        ui::SkinLibrary skins = assets.skins;
+        if (look == PanelLook::Coded)
+        {
+            for (ui::game_skins::CodedSkin& coded : ui::game_skins::coded_skins())
+            {
+                if (coded.panel == panel.name)
+                    skins.set_coded(coded.skin, std::move(coded.frame));
+            }
+        }
         ui::DrawList list;
         list.set_scale(scale);
-        ui::DrawContext context { list, assets.skins, assets.fonts };
+        ui::DrawContext context { list, skins, assets.fonts };
         panel.draw(context, look, { 0, 0, panel.width, panel.height });
         auto picture = ui::blank_picture(static_cast<std::uint32_t>(std::lround(panel.width * scale)), static_cast<std::uint32_t>(std::lround(panel.height * scale)), kBackground);
         ui::paint_draw_list(list, assets.textures, picture);
@@ -163,7 +247,7 @@ namespace
             if (id == ids.end())
                 continue;
             const ovl::RgbaImage& image = assets.textures.at(id->second);
-            assets.skins.add(name, { skin.layout, id->second, static_cast<float>(image.width), static_cast<float>(image.height) });
+            assets.skins.add(name, { skin.layout, id->second, static_cast<float>(image.width), static_cast<float>(image.height), nullptr });
         }
         return assets;
     }
@@ -267,7 +351,7 @@ int main(int argc, char** argv)
         }
         const bool over = score.mean > threshold;
         flagged = flagged || over;
-        std::printf("%-14s score %6.2f  far %5.1f%%  over %zu px%s\n", stem.c_str(), score.mean, score.far * 100, score.pixels, over ? "  FLAGGED: keep it on the texture" : "");
+        std::printf("%-15s score %6.2f  far %5.1f%%  over %zu px%s\n", stem.c_str(), score.mean, score.far * 100, score.pixels, over ? "  FLAGGED: keep it on the texture" : "");
     }
     std::printf("pictures in %s (game art: do not commit)\n", out.string().c_str());
     return flagged ? 1 : 0;

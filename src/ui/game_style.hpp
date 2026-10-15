@@ -6,6 +6,8 @@
 #pragma once
 
 #include "ui/font_set.hpp"
+#include "ui/game_frames.hpp"
+#include "ui/panel_look.hpp"
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
@@ -15,6 +17,7 @@
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_picker.hpp"
+#include "ui/skin_library.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/list_box.hpp"
@@ -31,6 +34,7 @@
 #include <array>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace rct3::ui::game_skins
 {
@@ -96,6 +100,54 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kTextButton = "GUI2Swatch_Background";
     /// What the lozenge's border and drop shadow take from each side (ours, measured on the skin).
     inline constexpr Rect kLozengeInset { 3, 2, 5, 5 };
+    inline constexpr std::string_view kDrawerLipLeft = "MessageConsole_Left";
+    inline constexpr std::string_view kDrawerLipRight = "MessageConsole_Right";
+    inline constexpr std::string_view kDrawerBack = "MessageConsole_Top";
+
+    /// A skin that can be drawn in code (game_frames.hpp), the panel it belongs to and whether the game's look
+    /// draws it so. Panels move to code one at a time: tools/panel-look scores each against the pictures, and
+    /// one that does not yet read as the same stays on them.
+    struct CodedSkin
+    {
+        std::string_view skin;
+        std::string_view panel;
+        PanelLook look = PanelLook::Texture;
+        CodedFrame frame;
+    };
+
+    [[nodiscard]] inline std::vector<CodedSkin> coded_skins()
+    {
+        using enum PanelLook;
+        using game_frames::Quarter;
+        return {
+            { kTextButton, "lozenge", Coded, game_frames::lozenge() },
+            { kMenuBackground, "menu", Coded, game_frames::lozenge() },
+            { kSelectedRow, "selected-row", Coded, game_frames::selected_row() },
+            { kMenuButtonSmall, "button-face", Coded, game_frames::button_face() },
+            { kMenuCircle, "menu-circle", Coded, game_frames::menu_circle() },
+            { kQuarterCircles[0], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::TopLeft) },
+            { kQuarterCircles[1], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::TopRight) },
+            { kQuarterCircles[2], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::BottomLeft) },
+            { kQuarterCircles[3], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::BottomRight) },
+            { kDrawerBack, "message-drawer", Coded, game_frames::drawer_back() },
+            { kDrawerLipLeft, "message-drawer", Coded, game_frames::drawer_lip_left() },
+            { kDrawerLipRight, "message-drawer", Coded, game_frames::drawer_lip_right() },
+            { kMiniFrame, "mini-window", Coded, game_frames::mini_window() },
+            { kMiniBackground, "mini-window", Coded, game_frames::mini_window_panel() },
+            { kWindowFrame, "window", Coded, game_frames::window() },
+            { kWindowFrameUnfocused, "window", Coded, game_frames::window() },
+        };
+    }
+
+    /// Has `skins` draw in code every skin whose panel the game's look has moved to code.
+    inline void use_coded_skins(SkinLibrary& skins)
+    {
+        for (CodedSkin& coded : coded_skins())
+        {
+            if (coded.look == PanelLook::Coded)
+                skins.set_coded(coded.skin, std::move(coded.frame));
+        }
+    }
 
     [[nodiscard]] inline WindowStyle window_style()
     {
@@ -399,9 +451,9 @@ namespace rct3::ui::game_skins
     [[nodiscard]] inline MessageDrawerStyle message_drawer_style()
     {
         MessageDrawerStyle s;
-        s.lip_left = "MessageConsole_Left";
-        s.lip_right = "MessageConsole_Right";
-        s.back = "MessageConsole_Top";
+        s.lip_left = kDrawerLipLeft;
+        s.lip_right = kDrawerLipRight;
+        s.back = kDrawerBack;
         s.older = "SquareArrowUp";
         s.newer = "SquareArrowDown";
         return s;

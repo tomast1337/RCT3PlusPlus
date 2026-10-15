@@ -56,6 +56,7 @@ namespace rct3::ui
         }
         assets.textures = std::move(*textures);
         assets.skins = skin_library(set->skins, assets.textures);
+        game_skins::use_coded_skins(assets.skins);
 
         // The language's strings, else English's: a language whose file is missing is shown in English.
         for (const std::string& name : { language, std::string(kDefaultLanguage) })

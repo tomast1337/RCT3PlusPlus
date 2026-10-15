@@ -21,8 +21,8 @@ namespace rct3::ui
         : desktop_(desktop)
         , style_(std::move(style))
         , strings_(strings)
-        , options_(options)
         , setup_(std::move(setup))
+        , options_(desktop, style_.options, strings, options, setup_.choices)
     {
         screen_ = &desktop_.root().add<FrontScreen>(std::string(kScreenName), strings_, setup_.expansions, setup_.choices.language);
         // The career map and the tutorials stand on the front screen's artwork: laid out the same way.
@@ -37,18 +37,12 @@ namespace rct3::ui
 
     OptionsDialog* FrontEnd::options_window() const
     {
-        return static_cast<OptionsDialog*>(desktop_.root().find(kOptionsName));
+        return options_.window();
     }
 
     void FrontEnd::open_options()
     {
-        if (OptionsDialog* open = options_window())
-        {
-            desktop_.root().raise(*open);
-            return;
-        }
-        desktop_.root().add<OptionsDialog>(std::string(kOptionsName), style_.options, strings_, options_, setup_.choices);
-        options_open_ = true;
+        options_.open();
     }
 
     FileDialog* FrontEnd::file_dialog() const
@@ -200,21 +194,7 @@ namespace rct3::ui
             }
         }
 
-        OptionsDialog* dialog = options_window();
-        if (dialog != nullptr)
-        {
-            if (auto language = dialog->take_language())
-                language_ = std::move(language);
-            if (const auto size = dialog->take_screen_size())
-                screen_size_ = size;
-            if (auto keys = dialog->take_keys())
-                keys_ = std::move(keys);
-        }
-        else if (options_open_)
-        {
-            options_open_ = false;
-            options_closed_ = true;
-        }
+        options_.update();
     }
 
     bool FrontEnd::take_quit()
@@ -224,28 +204,27 @@ namespace rct3::ui
 
     bool FrontEnd::take_options_closed()
     {
-        return std::exchange(options_closed_, false);
+        return options_.take_closed();
     }
 
     std::optional<std::string> FrontEnd::take_language()
     {
-        return std::exchange(language_, std::nullopt);
+        return options_.take_language();
     }
 
     std::optional<std::size_t> FrontEnd::take_screen_size()
     {
-        return std::exchange(screen_size_, std::nullopt);
+        return options_.take_screen_size();
     }
 
     std::optional<KeyMap> FrontEnd::take_keys()
     {
-        return std::exchange(keys_, std::nullopt);
+        return options_.take_keys();
     }
 
     bool FrontEnd::waiting_for_keys() const
     {
-        const OptionsDialog* dialog = options_window();
-        return dialog != nullptr && dialog->waiting_for_keys();
+        return options_.waiting_for_keys();
     }
 
     std::optional<FrontRequest> FrontEnd::take_unhandled()

@@ -4,6 +4,7 @@
 #include "ui/money_text.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace rct3::ui
@@ -47,11 +48,47 @@ namespace rct3::ui
         constexpr std::string_view kSkyHelp = "Rct3pp_SkyHelp";
         constexpr std::string_view kMountainsHelp = "Rct3pp_MountainsHelp";
 
-        struct DetailRow
+        constexpr std::string_view kAutoDetect = "AutoDetectLabel";
+        constexpr std::string_view kAutoDetectTip = "GameOptionsDialog_GraphicsDetailLevel";
+
+        // The camera page's help: what each mouse button and the wheel does in each control mode, as the game
+        // tells it. The lines start with the button's name; a button with nothing to do shows only that.
+        enum class CameraAction : std::uint8_t
         {
-            config::DetailPair options;
-            std::string_view key;
+            None,
+            Move,
+            Rotate,
+            RotateAndTilt,
+            Zoom,
+            ZoomAndRotate,
+            Tilt,
         };
+        constexpr std::array<std::string_view, 7> kCameraActionKeys = { "", "GameOptionsDialog_CameraControlsActionMove", "GameOptionsDialog_CameraControlsActionRotate", "GameOptionsDialog_CameraControlsActionRotateAndTilt", "GameOptionsDialog_CameraControlsActionZoom", "GameOptionsDialog_CameraControlsActionZoomAndRotate", "GameOptionsDialog_CameraControlsActionTilt" };
+        constexpr std::array<std::string_view, 5> kCameraButtonKeys = { "GameOptionsDialog_CameraControlsLeftMouse", "GameOptionsDialog_CameraControlsRightMouse", "GameOptionsDialog_CameraControlsBothMouse", "GameOptionsDialog_CameraControlsMiddleMouse", "GameOptionsDialog_CameraControlsMouseWheel" };
+        constexpr std::string_view kCameraKeysInfo = "GameOptionsDialog_CameraControlsKeysInfo";
+
+        using CameraLines = std::array<CameraAction, 5>; ///< Left, right, both, middle, wheel
+        using A = CameraAction;
+        /// The advanced mode, by its "camera controls" number.
+        constexpr std::array<CameraLines, 3> kAdvancedCamera = { {
+            { A::None, A::ZoomAndRotate, A::Move, A::RotateAndTilt, A::Tilt },
+            { A::None, A::Move, A::RotateAndTilt, A::RotateAndTilt, A::Zoom },
+            { A::None, A::RotateAndTilt, A::Move, A::RotateAndTilt, A::Zoom },
+        } };
+        /// The other modes: freelook, isometric, normal.
+        constexpr std::array<CameraLines, 3> kOtherCamera = { {
+            { A::None, A::Rotate, A::None, A::Move, A::None },
+            { A::None, A::Move, A::Rotate, A::None, A::Zoom },
+            { A::None, A::Move, A::Move, A::Rotate, A::Zoom },
+        } };
+        constexpr float kFreelookMode = 1;
+
+        CameraLines camera_lines(int mode, int controls)
+        {
+            if (mode <= 0)
+                return kAdvancedCamera.at(static_cast<std::size_t>(std::clamp(controls, 0, 2)));
+            return kOtherCamera.at(static_cast<std::size_t>(std::min(mode, 3) - 1));
+        }
 
         std::u16string str(const StringTable& strings, std::string_view key)
         {
@@ -136,7 +173,7 @@ namespace rct3::ui
 
     void OptionsDialog::build_general(Widget& page, const StringTable& strings)
     {
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_, choices_.inert));
         if (choices_.languages.size() > 1)
         {
             // Each language by its own name, so it can be found whatever the current one.
@@ -152,6 +189,8 @@ namespace rct3::ui
             const auto at = std::ranges::find(choices_.languages, choices_.language);
             if (at != choices_.languages.end())
                 language_->select(static_cast<std::size_t>(at - choices_.languages.begin()));
+            if (choices_.language_locked)
+                rows.disable();
         }
         std::vector<std::u16string> currencies;
         const int last_currency = static_cast<int>(config::game_option_info(O::Currency).maximum);
@@ -320,7 +359,7 @@ namespace rct3::ui
     {
         OptionRowsStyle top_style = style_.rows;
         top_style.control_x = 170; // The screen sizes are short; the lists sit nearer their names
-        auto& top = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, top_style, options_));
+        auto& top = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, top_style, options_, choices_.inert));
         // With the screen size, not on the general page as in the game.
         top.tick(O::Fullscreen, str(strings, "GameOptionsDialog_Fullscreen"));
         std::vector<std::u16string> sizes;
@@ -332,9 +371,20 @@ namespace rct3::ui
         top.choice(O::GraphicsQuality, str(strings, "QualityVsPerformanceLabel"), items(strings, { "QualityVsPerformance_HighPerformance", "QualityVsPerformance_Performance", "QualityVsPerformance_Balanced", "QualityVsPerformance_Quality", "QualityVsPerformance_HighQuality", "QualityVsPerformance_Custom" }));
         graphics_top_ = &top;
 
+        // The game picks a quality level for the computer here; we cannot tell yet, so it shows unusable.
+        const float icon_x = style_.page_width - style_.auto_detect_right - style_.auto_detect_size;
+        auto_detect_ = &page.add<Button>("auto_detect", std::string { }, style_.auto_detect_icon);
+        auto_detect_->tooltip = str(strings, kAutoDetectTip);
+        auto_detect_->placement = top_left(icon_x, 0, style_.auto_detect_size, style_.auto_detect_size);
+        auto_detect_->enabled = false;
+        auto& detect = page.add<Label>("auto_detect_name", str(strings, kAutoDetect), style_.rows.font);
+        detect.style.colour = style_.rows.disabled_colour;
+        detect.style.horizontal = Align::Centre;
+        detect.placement = top_left(icon_x - style_.auto_detect_size / 2, style_.auto_detect_size, 2 * style_.auto_detect_size, style_.rows.row_height);
+
         // The custom settings scroll below.
         custom_ = &page.add<ScrollArea>("custom", style_.scroll);
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_));
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_, choices_.inert));
         std::vector<std::u16string> samples = { str(strings, "GameOptionsDialog_AntiAliasNone") };
         for (const int level : choices_.anti_aliasing_levels)
             samples.push_back(str(strings, "GameOptionsDialog_AntiAliasLevel") + u" " + ascii(std::to_string(level)));
@@ -370,7 +420,7 @@ namespace rct3::ui
     void OptionsDialog::build_scenic(Widget& page, const StringTable& strings)
     {
         // Ours, after the game's manual: the scenery and surroundings, whatever the quality level.
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_, choices_.inert));
         rows.tick(O::Trees3D, str(strings, "GameOptionsDialog_3DTreesAndPlants"), str(strings, "GameOptionsDialog_3DTreesAndPlantsHelp"));
         rows.tick(O::OffMapTrees, str(strings, "GameOptionsDialog_SkirtTrees"), str(strings, "GameOptionsDialog_SkirtTreesHelp"));
         rows.tick(O::SimpleTerrain, str(strings, "GameOptionsDialog_UntexturedTerrain"), str(strings, "GameOptionsDialog_UntexturedTerrainHelp"));
@@ -401,7 +451,7 @@ namespace rct3::ui
 
     void OptionsDialog::build_camera(Widget& page, const StringTable& strings)
     {
-        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_));
+        auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(page, style_.page_width, style_.rows, options_, choices_.inert));
         rows.tick(O::InvertRideCameraY, str(strings, "GameOptionsDialog_InvertRidecam"), str(strings, "GameOptionsDialog_InvertRidecamTT"));
         rows.tick(O::AllPhotos, str(strings, "GameOptionsDialog_AllowAllPhotos"), str(strings, "GameOptionsDialog_AllowAllPhotosTT"));
         rows.tick(O::PhotoSpotPhotos, str(strings, "GameOptionsDialog_AllowVistaPhotos"), str(strings, "GameOptionsDialog_AllowVistaPhotosTT"));
@@ -426,6 +476,29 @@ namespace rct3::ui
         rows.shown_when({ O::CameraMode, 1 });
         rows.level(O::IsometricRotation, str(strings, "GameOptionsDialog_CamereIsometricRotTolLabel"));
         rows.shown_when({ O::CameraMode, 2 });
+
+        // What the mouse does in the chosen mode; update_camera_help() fills the lines in.
+        rows.section();
+        for (std::size_t i = 0; i < camera_help_.size(); ++i)
+        {
+            camera_buttons_.at(i) = str(strings, kCameraButtonKeys.at(i));
+            camera_help_.at(i) = &rows.note(camera_buttons_.at(i));
+        }
+        for (const std::string_view key : kCameraActionKeys)
+            camera_actions_.push_back(key.empty() ? std::u16string { } : str(strings, key));
+        rows.note(str(strings, kCameraKeysInfo), 2);
+        rows.shown_when({ O::CameraMode, kFreelookMode });
+        update_camera_help();
+    }
+
+    void OptionsDialog::update_camera_help()
+    {
+        const CameraLines lines = camera_lines(static_cast<int>(options_.choice(O::CameraMode)), static_cast<int>(std::lround(options_.get(O::CameraControls))));
+        for (std::size_t i = 0; i < camera_help_.size(); ++i)
+        {
+            const std::u16string& action = camera_actions_.at(static_cast<std::size_t>(lines.at(i)));
+            camera_help_.at(i)->text = action.empty() ? camera_buttons_.at(i) : camera_buttons_.at(i) + u" " + action;
+        }
     }
 
     void OptionsDialog::show_page(OptionsPage page)
@@ -529,6 +602,7 @@ namespace rct3::ui
         update_background_music();
         if (resolution_->take_change() && resolution_->selected())
             picked_screen_size_ = *resolution_->selected();
+        update_camera_help();
 
         const float top = graphics_top_->height() + style_.rows.section_gap;
         custom_->visible = options_.choice(O::GraphicsQuality) == config::kCustomQuality;

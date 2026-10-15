@@ -7,6 +7,7 @@
 #include "platform/glfw_cursors.hpp"
 #include "render/device.hpp"
 #include "ui/cursor.hpp"
+#include "ui/key_combo.hpp"
 #include "ui/keyboard.hpp"
 
 #include <expected>
@@ -64,6 +65,8 @@ namespace rct3::platform
         [[nodiscard]] Pointer pointer() const;
         /// Whether `key` is held down now; for keys that act for as long as they are held.
         [[nodiscard]] bool held(ui::Key key) const;
+        /// Whether the keys of `combo` are held down now, with no other of Control, Shift and Alt.
+        [[nodiscard]] bool held(const ui::KeyCombo& combo) const;
         /// Keys pressed and text typed since the last poll_events, in order.
         [[nodiscard]] const ui::KeyboardState& keyboard() const
         {

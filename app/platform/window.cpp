@@ -259,6 +259,32 @@ namespace rct3::platform
         return false;
     }
 
+    bool Window::held(const ui::KeyCombo& combo) const
+    {
+        const auto down = [&](int k) { return glfwGetKey(window_, k) == GLFW_PRESS; };
+        const bool control = down(GLFW_KEY_LEFT_CONTROL) || down(GLFW_KEY_RIGHT_CONTROL);
+        const bool shift = down(GLFW_KEY_LEFT_SHIFT) || down(GLFW_KEY_RIGHT_SHIFT);
+        const bool alt = down(GLFW_KEY_LEFT_ALT) || down(GLFW_KEY_RIGHT_ALT);
+        if (control != combo.control || shift != combo.shift || alt != combo.alt)
+            return false;
+        if (combo.key == ui::Key::Letter || combo.key == ui::Key::Shortcut)
+        {
+            // By the US layout, as presses are named (see the key callback).
+            const char32_t c = combo.character;
+            if (c >= U'a' && c <= U'z')
+                return down(GLFW_KEY_A + static_cast<int>(c - U'a'));
+            if (c >= U'0' && c <= U'9')
+                return down(GLFW_KEY_0 + static_cast<int>(c - U'0'));
+            return false;
+        }
+        for (int k = GLFW_KEY_SPACE; k <= GLFW_KEY_LAST; ++k)
+        {
+            if (interface_key(k) == combo.key && down(k))
+                return true;
+        }
+        return false;
+    }
+
     void Window::ui_new_frame()
     {
         ImGui_ImplGlfw_NewFrame();

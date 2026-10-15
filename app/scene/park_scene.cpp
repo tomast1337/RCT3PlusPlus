@@ -93,6 +93,7 @@ namespace rct3::scene
         constexpr float kEdgeBand = 12;     ///< Interface units in from a screen edge where the pointer pushes
         constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
         constexpr float kKeyZoom = 2.5f;    ///< Times per second
+        constexpr float kKeyTurn = 1.5f;    ///< Radians per second
 
         constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
 
@@ -557,6 +558,10 @@ namespace rct3::scene
                 c = park::panned(c, right, forward);
             if (input.zoom_in_key != input.zoom_out_key)
                 c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed));
+            const float yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
+            const float pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
+            if (yaw != 0 || pitch != 0)
+                c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed);
             scene.camera = park::on_ground(c, scene.grid);
         }
 
@@ -812,7 +817,7 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery);
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About);
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -1484,6 +1489,8 @@ namespace rct3::scene
                     scene.show_people = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Scenery)
                     scene.show_scenery = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About)
+                    scene.window_requests.push_back(*item);
             }
         }
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())

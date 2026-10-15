@@ -7,7 +7,8 @@
 //
 // Controls tied to an option start at its value, and every update writes what the user changed straight
 // into the options, as the game does: there is no OK or Cancel. Rows not tied to an option leave their
-// controls to the owner.
+// controls to the owner. Rows of options the program does not act on yet (inert) still show, greyed and not
+// usable, so the page reads as the game's does.
 #pragma once
 
 #include "config/game_options.hpp"
@@ -18,6 +19,7 @@
 #include "ui/widgets/spinner.hpp"
 #include "ui/widgets/tickbox.hpp"
 
+#include <bitset>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -37,12 +39,13 @@ namespace rct3::ui
         std::string key_box_focused;
         FontRole font = FontRole::Small;
         Color text_colour = hex("#000000");
-        float left = 5;            ///< Where names start
-        float indent = 10;         ///< More for rows under another
-        float control_x = 200;     ///< Where controls start
-        float control_width = 160; ///< Of drop-downs and sliders
-        float number_width = 70;   ///< Of number fields
-        float slider_inset = 0;    ///< Sliders are this much shorter than the row at the top and bottom
+        Color disabled_colour = hex("#7f7f7f"); ///< Of the names of rows that cannot be used
+        float left = 5;                         ///< Where names start
+        float indent = 10;                      ///< More for rows under another
+        float control_x = 200;                  ///< Where controls start
+        float control_width = 160;              ///< Of drop-downs and sliders
+        float number_width = 70;                ///< Of number fields
+        float slider_inset = 0;                 ///< Sliders are this much shorter than the row at the top and bottom
         float row_height = 18;
         float row_gap = 3;
         float section_gap = 12;
@@ -61,8 +64,8 @@ namespace rct3::ui
     {
     public:
         /// Rows go into `page`, `width` units wide, from its top; controls write to `options`, which must
-        /// outlive the rows.
-        OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options);
+        /// outlive the rows. Rows of the `inert` options cannot be used.
+        OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options, std::bitset<config::kGameOptionCount> inert = { });
 
         Tickbox& tick(config::GameOption option, std::u16string name, std::u16string tip = { });
         Dropdown& choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
@@ -76,6 +79,8 @@ namespace rct3::ui
         Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
         /// A name and a second text in the control column.
         Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
+        /// A line of text across the page, as tall as `lines` rows.
+        Label& note(std::u16string text, int lines = 1);
         /// Key combinations the owner handles; `prompt` shows while it waits for keys.
         KeyBox& keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip = { });
 
@@ -87,6 +92,8 @@ namespace rct3::ui
         void shown_when(OptionIs condition);
         /// The last row is usable only while `condition` holds.
         void enabled_when(OptionIs condition);
+        /// The last row cannot be used at all.
+        void disable();
 
         /// Writes what the user changed into the options, then shows, hides and places the rows. Returns
         /// whether an option changed.
@@ -132,11 +139,14 @@ namespace rct3::ui
             float gap_before = 0;
             std::optional<OptionIs> shown;
             std::optional<OptionIs> enabled;
+            float height = 0; ///< 0: one row's
+            bool inert = false;
         };
 
         Row& add_row();
         Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip);
         void set_control(const Binding& b);
+        void bind(Row& row, const Binding& binding);
         [[nodiscard]] bool holds(const OptionIs& c) const;
         [[nodiscard]] float slider_height() const; // 0: the row's
 
@@ -144,6 +154,7 @@ namespace rct3::ui
         float width_;
         OptionRowsStyle style_;
         config::GameOptions& options_;
+        std::bitset<config::kGameOptionCount> inert_;
         std::vector<Row> rows_;
         float next_gap_ = 0;
         float height_ = 0;

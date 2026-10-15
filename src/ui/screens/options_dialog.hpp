@@ -17,6 +17,10 @@
 // and the owner takes the new key map with take_keys(). While one of its boxes waits for keys, the owner gives
 // the window the keys as pressed.
 //
+// Options the program does not act on yet are listed in OptionsChoices::inert: their rows show, greyed, so the
+// pages read as the game's do. The camera page ends with what the mouse buttons do in the chosen control
+// mode, as the game tells it.
+//
 // The layout is ours, after the game's: a 460 unit wide page, names on the left and controls in a column
 // on the right.
 #pragma once
@@ -31,6 +35,7 @@
 #include "ui/widgets/window.hpp"
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -61,6 +66,8 @@ namespace rct3::ui
         /// options.
         std::vector<std::string> background_music { };
         std::optional<std::size_t> background_track { }; ///< Shown while the player has not chosen; nothing for no music
+        std::bitset<config::kGameOptionCount> inert { }; ///< Options nothing acts on yet: shown, not usable
+        bool language_locked = false;                    ///< The language shows but cannot change, e.g. in a park
     };
 
     /// The keys page: one scrolling list, the commands in groups under blue bars.
@@ -107,6 +114,9 @@ namespace rct3::ui
         Rect button_inset;  ///< Of their text; see Button::text_inset
         float button_width = 110;
         float button_height = 22;
+        std::string auto_detect_icon; ///< On the graphics page, top right
+        float auto_detect_size = 40;
+        float auto_detect_right = 40; ///< From the page's right edge to the icon's
     };
 
     enum class OptionsPage : std::uint8_t
@@ -168,6 +178,15 @@ namespace rct3::ui
         {
             return music_;
         }
+        /// The lines saying what each mouse button does in the chosen camera mode.
+        [[nodiscard]] const Label& camera_help(std::size_t line) const
+        {
+            return *camera_help_.at(line);
+        }
+        [[nodiscard]] Button& auto_detect() const
+        {
+            return *auto_detect_;
+        }
 
         void update(const UpdateContext& context) override;
 
@@ -183,6 +202,7 @@ namespace rct3::ui
         void build_scenic(Widget& page, const StringTable& strings);
         void build_camera(Widget& page, const StringTable& strings);
         void update_keys();
+        void update_camera_help();
 
         OptionsDialogStyle style_;
         config::GameOptions& options_;
@@ -201,6 +221,10 @@ namespace rct3::ui
         std::array<KeyBox*, kCommandCount> key_boxes_ { };
         std::array<KeyBox*, kPlayCommandCount> play_boxes_ { };
         Button* usual_keys_ = nullptr;
+        Button* auto_detect_ = nullptr;
+        std::array<Label*, 5> camera_help_ { };
+        std::array<std::u16string, 5> camera_buttons_; // The help lines' starts
+        std::vector<std::u16string> camera_actions_;   // Each CameraAction's words
         OptionsPage page_ = OptionsPage::General;
         int changes_ = 0;
         std::optional<std::string> picked_language_;

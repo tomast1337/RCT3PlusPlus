@@ -90,6 +90,9 @@ namespace rct3::scene
     /// True while the interface waits for a key combination, which should then do nothing else.
     [[nodiscard]] bool front_end_waiting_for_keys(const FrontEndScene& scene);
 
+    /// Writes the options to the options file, if there is one.
+    void save_front_end_options(const FrontEndScene& scene);
+
     void draw_front_end_scene(render::Device& device, FrontEndScene& scene);
 
     /// Saves the options if their window is still open, and frees the scene.

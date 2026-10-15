@@ -24,6 +24,7 @@
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/options_dialog.hpp"
+#include "ui/screens/options_session.hpp"
 #include "ui/screens/tutorial_picker.hpp"
 #include "ui/widgets/question_box.hpp"
 
@@ -68,6 +69,11 @@ namespace rct3::ui
             return *screen_;
         }
         [[nodiscard]] OptionsDialog* options_window() const;
+        /// The options window and what it offers, e.g. for a park to open its own with the same choices.
+        [[nodiscard]] OptionsSession& options()
+        {
+            return options_;
+        }
         /// The window loading a game, while it is open.
         [[nodiscard]] FileDialog* file_dialog() const;
         /// The folder the window loading a game shows.
@@ -136,7 +142,7 @@ namespace rct3::ui
         /// Menu choices the front end cannot carry out, oldest first.
         [[nodiscard]] std::optional<FrontRequest> take_unhandled();
 
-        static constexpr std::string_view kOptionsName = "options";
+        static constexpr std::string_view kOptionsName = OptionsSession::kName;
         static constexpr std::string_view kQuestionName = "quit";
         static constexpr std::string_view kFilesName = "load_game";
         static constexpr std::string_view kCareersName = "careers";
@@ -153,8 +159,8 @@ namespace rct3::ui
         Desktop& desktop_;
         FrontEndStyle style_;
         const StringTable& strings_;
-        config::GameOptions& options_;
         FrontEndSetup setup_;
+        OptionsSession options_;
         FrontScreen* screen_ = nullptr;
         QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
         config::UserFolder file_folder_ = config::UserFolder::Parks;
@@ -165,12 +171,7 @@ namespace rct3::ui
         std::size_t career_boards_opened_ = 0;
         int tutorial_pack_ = 0;
         std::size_t tutorial_pickers_opened_ = 0;
-        bool options_open_ = false;
-        bool options_closed_ = false;
         bool quit_ = false;
-        std::optional<std::string> language_;
-        std::optional<std::size_t> screen_size_;
-        std::optional<KeyMap> keys_;
         std::vector<FrontRequest> unhandled_;
     };
 

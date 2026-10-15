@@ -8,7 +8,8 @@
 //
 // Unlike the game, the menus follow the music the player picked for the park, as soon as it is picked: a
 // track of the music folder plays that track, shuffling plays one at random, and no music leaves the menus
-// quiet. Only while nothing is picked does the cycle above choose.
+// quiet. Only while nothing is picked does the cycle above choose. In a park the picked music carries on
+// and the cycle's track stops.
 //
 // The menu music plays at half the music volume.
 #pragma once
@@ -64,6 +65,10 @@ namespace rct3::audio
     /// What the menus play for the player's pick of park music: `shuffle` on, else `picked` (empty for no
     /// music, nothing when never picked). A picked track that is not among `files` leaves it to the cycle.
     [[nodiscard]] MenuMusicWish menu_music_wish(bool shuffle, const std::optional<std::string>& picked, std::span<const std::string> files);
+
+    /// What plays while a park is open, for what the menus would play: the player's pick of park music
+    /// carries on, the menus' own cycle falls quiet.
+    [[nodiscard]] MenuMusicWish park_music_wish(const MenuMusicWish& menu);
 
     /// Picks this run's track. `place` is where the cycle stands, nothing when it is off; `files` are the
     /// names in the music folder, matched in any case.

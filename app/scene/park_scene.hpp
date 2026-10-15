@@ -8,7 +8,8 @@
 //
 // The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
 // both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the
-// keyboard. Nothing moves the camera while the pointer is over a window. A click on an attraction opens the
+// keyboard. With the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
+// the camera while the pointer is over a window. A click on an attraction opens the
 // round panel that tells about it.
 //
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
@@ -54,6 +55,7 @@ namespace rct3::scene
         bool down_key = false;
         bool zoom_in_key = false;
         bool zoom_out_key = false;
+        bool in_window = false;                ///< The pointer is over the focused window, so it may push at its edges
         std::vector<ui::PlayCommand> commands; ///< The game's commands bound to the keys pressed
     };
 

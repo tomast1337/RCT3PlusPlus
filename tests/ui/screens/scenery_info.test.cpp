@@ -45,6 +45,21 @@ TEST_CASE("every prop can be pulled down at once, and bins and signs get a tab o
     CHECK_FALSE(both[1].action);
 }
 
+TEST_CASE("a prop that takes colours gets a tab with a pot for each slot it takes")
+{
+    SceneryFacts facts;
+    facts.colour_slots = 0b101;
+    facts.colours = { 3, 8, 40 };
+    CHECK(scenery_paint_slots(facts) == std::vector<std::size_t> { 0, 2 });
+    const auto tabs = scenery_tabs(facts);
+    REQUIRE(tabs.size() == 2);
+    CHECK(tabs[1].tab == SceneryTab::Colour);
+    CHECK(tabs[1].slot == 1);
+    // The third slot's colour is out of the range, so shown as the first.
+    CHECK(tabs[1].paints == std::vector<std::size_t> { 3, 0 });
+    CHECK(tabs[0].paints.empty());
+}
+
 TEST_CASE("a prop is named after its asset, whatever the case of the name")
 {
     const StringTable s = table();

@@ -416,7 +416,24 @@ namespace rct3::ui::game_skins
         s.strip = "CircularPanelDialog";
         s.close_icon = kCloseIcon;
         s.tab_face = kMenuButtonSmall;
-
+        s.paint.pots = { "FlexiColourOnePaintPot", "FlexiColourTwoPaintPots", "FlexiColourThreePaintPots" };
+        s.paint.lit = { {
+            { "FlexiColourOnePaintPotH0", { }, { } },
+            { "FlexiColourTwoPaintPotsH0", "FlexiColourTwoPaintPotsH1", { } },
+            { "FlexiColourThreePaintPotsH0", "FlexiColourThreePaintPotsH1", "FlexiColourThreePaintPotsH2" },
+        } };
+        // Measured on the pot pictures: where each pot's mouth is, in the order the lit pictures light them (top
+        // first when there are three).
+        s.paint.spots = { {
+            { { { 20, 22 }, 18 } },
+            { { { 13, 22 }, 14 }, { { 28, 22 }, 14 } },
+            { { { 20, 14 }, 11 }, { { 13, 27 }, 11 }, { { 27, 27 }, 11 } },
+        } };
+        s.paint.paint_prefix = "Flexicolour_";
+        s.palette.back = "FlexiColourSurround";
+        s.palette.swatch_prefix = "Flexicolour_";
+        s.palette.ring = "FlexiColourHighlightBlue";
+        s.palette.current_ring = "FlexiColourHighlightWhite";
         return s;
     }
 

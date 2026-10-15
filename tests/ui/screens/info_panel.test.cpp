@@ -4,6 +4,7 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -270,4 +271,52 @@ TEST_CASE("the colours go away when their tab is pressed again, another tab is, 
     f.panel->close_palette();
     CHECK_FALSE(f.panel->painting());
     CHECK_FALSE(f.panel->take_paint());
+}
+
+TEST_CASE("the frame is drawn either from the skins or as shapes in code")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    f.panel->set_body_size(info_panel::kPageWidth, 40);
+    f.desktop.update({ });
+    const SkinLibrary skins;
+    const FontSet fonts;
+
+    SUBCASE("in code, only shapes, all within the strip and the disc and their shadows")
+    {
+        InfoPanelStyle style = game_skins::info_panel_style();
+        style.look = PanelLook::Coded;
+        InfoPanel& coded = f.desktop.root().add<InfoPanel>("coded", style);
+        coded.show(three(), 0);
+        coded.set_body_size(info_panel::kPageWidth, 40);
+        f.desktop.update({ });
+        DrawList list;
+        DrawContext context { list, skins, fonts };
+        coded.draw(context);
+        CHECK(list.vertices().empty());
+        REQUIRE_FALSE(list.shape_vertices().empty());
+        const Rect s = coded.strip();
+        const Rect d = coded.disc();
+        // One pixel of smoothing past the shadows.
+        const float reach = info_panel::kShadowOffset + 1;
+        for (const ShapeVertex& v : list.shape_vertices())
+        {
+            CHECK(v.x >= s.x0 - 1);
+            CHECK(v.x <= d.x1 + reach);
+            CHECK(v.y >= std::min(s.y0, d.y0) - 1);
+            CHECK(v.y <= std::max(s.y1, d.y1) + reach);
+        }
+    }
+    SUBCASE("from the skins, no shapes")
+    {
+        InfoPanelStyle style = game_skins::info_panel_style();
+        style.look = PanelLook::Texture;
+        InfoPanel& textured = f.desktop.root().add<InfoPanel>("textured", style);
+        textured.show(three(), 0);
+        f.desktop.update({ });
+        DrawList list;
+        DrawContext context { list, skins, fonts };
+        textured.draw(context);
+        CHECK(list.shape_vertices().empty());
+    }
 }

@@ -10,6 +10,7 @@
 // set_body_size(). Showing other tabs replaces the old ones, so only one thing is ever told about.
 #pragma once
 
+#include "ui/panel_look.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/colour_palette.hpp"
 #include "ui/widgets/line_plot.hpp"
@@ -24,8 +25,29 @@
 namespace rct3::ui
 {
 
+    /// The panel's frame drawn in code: the colours and measures of its shapes, in units. The strip is a slab
+    /// with a round top-left corner and a darker band along its top; the disc is flat on the left, where it
+    /// joins the strip, and round on the right, with the band running on into its top-left corner and a rim
+    /// round the view. Both cast a hard shadow down and to the right.
+    struct CodedInfoPanel
+    {
+        Color body = hex("#4babe4");      ///< Of the strip below its band
+        Color band = hex("#2484be");      ///< Along the top of the strip and the disc
+        Color band_glow = hex("#3998d2"); ///< Of the body just under the band, fading into `body`
+        Color disc = hex("#56abe5");      ///< Of the disc and its rim
+        Color view_back = hex("#7f7f7f"); ///< In the round view when it shows nothing
+        Color shadow = hex("#00000080");
+        float band_height = 18;
+        float glow_height = 52; ///< Of the fade under the band
+        float corner = 11;      ///< Of the strip's top corners
+        float rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
+        float strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom
+    };
+
     struct InfoPanelStyle
     {
+        PanelLook look = PanelLook::Texture; ///< Whether the frame comes from the skins below or from `coded`
+        CodedInfoPanel coded;
         std::string disc;           ///< Behind the view, fully opaque
         std::string glass;          ///< Over the view, faint
         std::string rim;            ///< Round the right of the disc
@@ -256,6 +278,8 @@ namespace rct3::ui
 
     private:
         void place();
+        void draw_skins(DrawContext& context) const;
+        void draw_coded(DrawList& list) const;
         void mark_picked();
         void open_choices(std::size_t tab);
         void close_choices();

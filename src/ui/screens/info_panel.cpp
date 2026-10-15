@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info_panel.hpp"
 
+#include "ui/shape.hpp"
 #include "ui/widgets/label.hpp"
 
 #include <algorithm>
@@ -381,6 +382,56 @@ namespace rct3::ui
     }
 
     void InfoPanel::draw(DrawContext& context) const
+    {
+        if (style_.look == PanelLook::Coded)
+            draw_coded(context.list);
+        else
+            draw_skins(context);
+    }
+
+    void InfoPanel::draw_coded(DrawList& list) const
+    {
+        const CodedInfoPanel& c = style_.coded;
+        const auto shifted = [](Rect r, float by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
+        const auto shape = [](Rect r, Corners corners, Color top, Color bottom) {
+            Shape out;
+            out.rect = r;
+            out.corners = corners;
+            out.top = top;
+            out.bottom = bottom;
+            return out;
+        };
+        const auto plain = [&](Rect r, Corners corners, Color colour) { list.shape(shape(r, corners, colour, colour)); };
+
+        if (body_width_ > 0)
+        {
+            const Rect s = strip();
+            const Rect slab { s.x0, s.y0, s.x1 - c.strip_shadow, s.y1 - c.strip_shadow };
+            const Corners top { c.corner, c.corner, 0, 0 };
+            plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
+            plain(slab, top, c.body);
+            plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
+            list.shape(shape({ slab.x0, slab.y0 + c.band_height, slab.x1, slab.y0 + c.band_height + c.glow_height }, { }, c.band_glow, c.body));
+        }
+
+        // The disc: flat where it meets the strip, round on the right.
+        const Rect d = disc();
+        const float half = d.width() / 2;
+        const Corners flat_left { 0, half, half, 0 };
+        plain(shifted(d, info_panel::kShadowOffset), flat_left, c.shadow);
+        plain(shifted(d, info_panel::kShadowOffset), round_corners(half), c.shadow);
+        plain(d, flat_left, c.disc);
+        plain({ d.x0, d.y0, d.x0 + half, d.y0 + c.band_height }, { }, c.band);
+        Shape rim = shape(d, round_corners(half), c.disc, c.disc);
+        rim.ring = c.rim;
+        list.shape(rim);
+        const Rect back { d.x0 + c.rim, d.y0 + c.rim, d.x1 - c.rim, d.y1 - c.rim };
+        plain(back, round_corners(back.width() / 2), c.view_back);
+        if (view_ != 0)
+            list.disc_image(view(), view_, { 0, 0, 1, 1 });
+    }
+
+    void InfoPanel::draw_skins(DrawContext& context) const
     {
         const auto skin = [&](const std::string& name) { return name.empty() ? nullptr : context.skins.find(name); };
         if (body_width_ > 0)

@@ -184,3 +184,16 @@ TEST_CASE("a page's graph is plotted with each series named under it")
     CHECK(f.panel->body().find("graph") != nullptr);
     CHECK(f.panel->body().find("series1") != nullptr);
 }
+
+TEST_CASE("the round view sits in the middle of the disc")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    f.desktop.update({ });
+    const Rect d = f.panel->disc();
+    const Rect v = f.panel->view();
+    CHECK(v.width() == info_panel::kView);
+    CHECK(v.height() == info_panel::kView);
+    CHECK(v.x0 + v.x1 == doctest::Approx(d.x0 + d.x1));
+    CHECK(v.y0 + v.y1 == doctest::Approx(d.y0 + d.y1));
+}

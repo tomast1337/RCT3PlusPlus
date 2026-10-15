@@ -48,6 +48,27 @@ namespace rct3::park
         return on_ground(c, grid);
     }
 
+    ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch)
+    {
+        ParkCamera c;
+        c.yaw = yaw;
+        c.pitch = pitch;
+        if (points.empty())
+            return c;
+        glm::vec3 low = points.front();
+        glm::vec3 high = points.front();
+        for (const glm::vec3& p : points)
+        {
+            low = glm::min(low, p);
+            high = glm::max(high, p);
+        }
+        c.target = (low + high) / 2.0f;
+        // Far enough that a ball round the box fits inside the view's narrower angle.
+        const float radius = glm::length(high - low) / 2;
+        c.distance = std::clamp(radius / std::sin(kFieldOfView / 2), kMinDistance, kMaxDistance);
+        return c;
+    }
+
     ParkCamera panned(ParkCamera camera, float right, float forward)
     {
         const glm::vec3 ahead { std::sin(camera.yaw), 0, std::cos(camera.yaw) };

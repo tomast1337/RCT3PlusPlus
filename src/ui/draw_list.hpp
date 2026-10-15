@@ -116,6 +116,9 @@ namespace rct3::ui
         /// `uv` is the part of the texture to show, in 0..1 texture coordinates; `tint` multiplies it.
         void image(const Rect& rect, TextureId texture, const Rect& uv, Color tint = kWhite);
         void quad(const Rect& rect, TextureId texture, const Rect& uv, const CornerColors& colors);
+        /// The round part of an image: the ellipse that fits in `rect`, showing the same part of the texture
+        /// image() would. It is not cut by the clip, so it is left out unless it lies wholly inside it.
+        void disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint = kWhite);
 
         /// Narrows drawing to `rect` within the current clip until the matching pop_clip. Returns false when
         /// nothing would be visible, so the caller may skip what it was about to draw (it still has to pop).

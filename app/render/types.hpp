@@ -108,6 +108,9 @@ namespace rct3::render
         TextureFormat format = TextureFormat::Rgba8;
         std::span<const std::byte> pixels;
         std::string_view label;
+        /// A texture passes draw into (PassDesc::target), with its own depth buffer and the screen's colour
+        /// format, so every pipeline can draw into it. It takes no pixels and starts transparent.
+        bool target = false;
     };
 
     [[nodiscard]] constexpr std::size_t texture_bytes(std::uint32_t width, std::uint32_t height, TextureFormat)
@@ -218,6 +221,9 @@ namespace rct3::render
         bool clear = true; ///< Without it, the pass keeps what earlier passes of the frame drew
         Color clear_color = hex("#000000");
         float clear_depth = 1.0f;
+        /// A texture made as a target to draw into instead of the screen. It can be drawn with in later passes
+        /// of the frame, and keeps what was drawn until it is drawn into again.
+        TextureHandle target;
     };
 
     /// The light the Lit shaders shade with. Directions point towards the light; colours are linear and may go

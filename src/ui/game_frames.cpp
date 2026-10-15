@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/game_frames.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace rct3::ui::game_frames
@@ -256,6 +257,176 @@ namespace rct3::ui::game_frames
         f.layers.push_back({ corner_box(kDiscX - kDisc, kDiscY - kDisc, 2 * kDisc, 2 * kDisc), solid(kIconBlue, round_corners(kDisc)), { } });
         // The title rule: a dark line from right of the disc to near the right side, under the title.
         f.layers.push_back({ { { 0, 61 }, { 0, 41 }, { 1, -14 }, { 0, 43 } }, solid(hex("#010101")), { } });
+        return f;
+    }
+
+    namespace
+    {
+
+        // The front screen's backdrop, in design units. Everything is round one centre: the veil runs from
+        // a white band under the ring out to a circle that leaves the left edge blue, the ring lies over the
+        // band, and the strip along the bottom closes it all.
+        constexpr float kCentreX = 735.5f;
+        constexpr float kCentreY = 241.5f;
+        constexpr float kVeilOuter = 660;
+        constexpr float kRingOuter = 441;
+        constexpr float kRingWidth = 22;
+        constexpr float kVeilInner = 442; ///< Inside it, a thinner white band under the ring
+        constexpr float kUnderRingWidth = 19.5f;
+        constexpr Color kUnderRing = hex("#ffffffee");
+        constexpr float kStripTop = 694; ///< A dark line, then the light band
+        constexpr float kStripLight = 696;
+        constexpr float kStripMiddle = 732; ///< A dark line with a thin light one under it
+        constexpr float kStripThin = 737;
+        constexpr float kStripThinEnd = 739;
+        constexpr Rect kTitle { 260.5f, 707, 790, 759 }; ///< The lozenge; its right edge kept from the screen's
+        constexpr Rect kTitleLine { 290, 736, 759, 738 };
+        constexpr Color kBackdropBlue = hex("#2979ad");
+        constexpr Color kVeil = hex("#fbf9f8c0"); // Fine stripes on the pictures, here their average
+        constexpr Color kRingWhite = hex("#f7f3f7");
+        constexpr Color kTitleWhite = hex("#fbf8f5");
+        constexpr Color kBandWhite = hex("#f7f2f2"); // The menu labels' bands
+
+        FrameBox units(const Rect& r)
+        {
+            return corner_box(r.x0, r.y0, r.width(), r.height());
+        }
+
+        // A box running along the strip: its left edge `left` units in, its right `right` units in from the
+        // design's right edge, moved out to the screen's right edge at `screen_right`.
+        FrameBox along_strip(float left, float top, float right, float bottom, float screen_right)
+        {
+            return units({ left, top, screen_right - (1024 - right), bottom });
+        }
+
+        Rect shifted(const Rect& r, float dx, float dy)
+        {
+            return { r.x0 + dx, r.y0 + dy, r.x1 + dx, r.y1 + dy };
+        }
+
+        Rect box_units(const FrameBox& b)
+        {
+            return { b.x0.offset, b.y0.offset, b.x1.offset, b.y1.offset };
+        }
+
+    } // namespace
+
+    CodedFrame front_backdrop(const Rect& screen)
+    {
+        CodedFrame f;
+        f.width = 1024;
+        f.height = 768;
+        // Blue to the left of the centre, outside the veil.
+        const Rect blue { screen.x0 - 1, screen.y0 - 1, kCentreX, kStripTop };
+        Shape left = solid(kBackdropBlue);
+        left.cut_x = kCentreX - blue.x0;
+        left.cut_y = kCentreY - blue.y0;
+        left.cut_radius = kVeilOuter;
+        f.layers.push_back({ units(blue), left, { } });
+        // The veil, as a ring from its outer circle in to the white ring, stopped by the strip.
+        Shape veil = solid(kVeil, round_corners(kVeilOuter));
+        veil.ring = kVeilOuter - kVeilInner;
+        const FrameBox above_strip = units({ screen.x0, screen.y0, screen.x1, kStripTop });
+        f.layers.push_back({ units({ kCentreX - kVeilOuter, kCentreY - kVeilOuter, kCentreX + kVeilOuter, kCentreY + kVeilOuter }), veil, above_strip });
+        Shape under = solid(kUnderRing, round_corners(kVeilInner));
+        under.ring = kUnderRingWidth;
+        f.layers.push_back({ units({ kCentreX - kVeilInner, kCentreY - kVeilInner, kCentreX + kVeilInner, kCentreY + kVeilInner }), under, above_strip });
+        // The strip: dark, with two light bands across it.
+        f.layers.push_back({ units({ screen.x0, kStripTop, screen.x1, std::max(screen.y1, 768.0f) }), solid(kBackdropBlue), { } });
+        f.layers.push_back({ units({ screen.x0, kStripLight, screen.x1, kStripMiddle }), solid(kLineBlue), { } });
+        f.layers.push_back({ units({ screen.x0, kStripThin, screen.x1, kStripThinEnd }), solid(kLineBlue), { } });
+        // The lozenge the help sits on, and the rule between its two lines.
+        f.layers.push_back({ along_strip(kTitle.x0, kTitle.y0, kTitle.x1, kTitle.y1, screen.x1), outlined(kTitleWhite, kBackdropBlue, 2, round_corners(kTitle.height() / 2)), { } });
+        f.layers.push_back({ along_strip(kTitleLine.x0, kTitleLine.y0, kTitleLine.x1, kTitleLine.y1, screen.x1), solid(hex("#000000")), { } });
+        return f;
+    }
+
+    CodedFrame front_arc()
+    {
+        CodedFrame f;
+        f.width = 1024;
+        f.height = 768;
+        Shape ring = solid(kRingWhite, round_corners(kRingOuter));
+        ring.ring = kRingWidth;
+        f.layers.push_back({ units({ kCentreX - kRingOuter, kCentreY - kRingOuter, kCentreX + kRingOuter, kCentreY + kRingOuter }), ring, { } });
+        return f;
+    }
+
+    CodedFrame front_piece(const CodedFrame& whole, const Rect& piece)
+    {
+        CodedFrame f;
+        f.width = piece.width();
+        f.height = piece.height();
+        const Rect inside { 0, 0, piece.width(), piece.height() };
+        for (const FrameLayer& layer : whole.layers)
+        {
+            FrameLayer moved = layer;
+            moved.box = units(shifted(box_units(layer.box), -piece.x0, -piece.y0));
+            Rect clip = inside;
+            if (layer.clip)
+                clip = intersect(clip, shifted(box_units(*layer.clip), -piece.x0, -piece.y0));
+            if (clip.empty())
+                continue;
+            moved.clip = units(clip);
+            f.layers.push_back(moved);
+        }
+        return f;
+    }
+
+    CodedFrame label_patch()
+    {
+        // Measured on a picture 95 by 97 units: a disc 95 across with its right half cut off at 46.
+        CodedFrame f;
+        f.width = 95;
+        f.height = 97;
+        f.layers.push_back({ corner_box(0, 0, 95, 95), solid(kBandWhite, round_corners(47.5f)), corner_box(0, 0, 46, 97) });
+        return f;
+    }
+
+    CodedFrame label_end()
+    {
+        // Measured on a picture 95 by 85 units, the triangle filling its left 85.
+        CodedFrame f;
+        f.width = 95;
+        f.height = 85;
+        FrameLayer triangle { corner_box(0, 0, 85, 85), solid(kBandWhite), { } };
+        triangle.below_diagonal = true;
+        f.layers.push_back(triangle);
+        return f;
+    }
+
+    namespace
+    {
+
+        // The loading bar is a pill 15 units high; each end shows its half, measured on ends 10 and 9 wide.
+        constexpr Color kBarLight = hex("#a5d0f2");
+        constexpr Color kBarRim = hex("#3578ac");
+
+        Shape bar_pill()
+        {
+            // The pictures' edges are soft: a thin rim, blurred into the fill and the background.
+            Shape s = outlined(kBarLight, kBarRim, 1, round_corners(7.5f));
+            s.softness = 1.5f;
+            return s;
+        }
+
+    } // namespace
+
+    CodedFrame bar_end_left()
+    {
+        CodedFrame f;
+        f.width = 10;
+        f.height = 16;
+        f.layers.push_back({ corner_box(0.4f, 1, 30, 15), bar_pill(), corner_box(0, 0, 10, 16) });
+        return f;
+    }
+
+    CodedFrame bar_end_right()
+    {
+        CodedFrame f;
+        f.width = 9;
+        f.height = 16;
+        f.layers.push_back({ corner_box(8.9f - 30, 1, 30, 15), bar_pill(), corner_box(0, 0, 9, 16) });
         return f;
     }
 

@@ -7,13 +7,20 @@
 namespace rct3::ui::front_screen
 {
 
-    Frame frame_for(const Rect& screen)
+    Frame frame_for(const Rect& screen, bool uniform)
     {
         Frame f;
         f.screen = screen;
+        f.origin = { screen.x0, screen.y0 };
         f.sx = screen.width() / kDesignWidth;
         f.sy = screen.height() / kDesignHeight;
         f.round = std::min(f.sx, f.sy);
+        if (uniform)
+        {
+            f.sx = f.round;
+            f.sy = f.round;
+            f.origin.y = screen.y1 - kDesignHeight * f.round;
+        }
         return f;
     }
 

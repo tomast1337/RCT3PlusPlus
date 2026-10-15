@@ -24,6 +24,51 @@ TEST_CASE("the design frame stretches to the screen, round things by the smaller
     CHECK((b.y0 + b.y1) / 2 == doctest::Approx(150));
 }
 
+TEST_CASE("a frame at one scale keeps circles round, the design held to the bottom-left corner")
+{
+    for (const Rect screen : { Rect { 0, 0, 1900, 800 }, Rect { 0, 0, 800, 600 }, Rect { 10, 20, 650, 1000 } })
+    {
+        CAPTURE(screen.width());
+        const Frame f = frame_for(screen, true);
+        CHECK(f.sx == doctest::Approx(f.sy));
+        CHECK(f.sx == doctest::Approx(f.round));
+        const Point corner = f.at({ 0, kDesignHeight });
+        CHECK(corner.x == doctest::Approx(screen.x0));
+        CHECK(corner.y == doctest::Approx(screen.y1));
+        // A button is as wide as it is high, and points on the ring all lie as far from its centre.
+        const Rect b = button_rect(f, on_ring(1, kMenuRadius), 20);
+        CHECK(b.width() == doctest::Approx(b.height()).epsilon(0.05));
+        const Point c = f.at(kRingCentre);
+        for (const float angle : { 0.5f, 2.0f, 3.5f })
+        {
+            const Point p = f.at(on_ring(angle, kMenuRadius));
+            CHECK(std::hypot(p.x - c.x, p.y - c.y) == doctest::Approx(kMenuRadius * f.round));
+        }
+        // The screen's edges in design units hold the whole design and reach past it on the long side.
+        const Rect edges = f.design_screen();
+        CHECK(edges.x0 == doctest::Approx(0));
+        CHECK(edges.y1 == doctest::Approx(kDesignHeight));
+        CHECK(edges.x1 >= kDesignWidth - 0.01f);
+        CHECK(edges.y0 <= 0.01f);
+    }
+}
+
+TEST_CASE("what runs along the strip spans the screen on any frame")
+{
+    const Rect design { 256, 700, 768, 720 };
+    const Frame stretched = frame_for({ 0, 0, 2048, 768 });
+    const Rect a = stretched.strip(design);
+    const Rect b = stretched.stretched(design);
+    CHECK(a.x0 == doctest::Approx(b.x0));
+    CHECK(a.x1 == doctest::Approx(b.x1));
+
+    const Frame uniform = frame_for({ 0, 0, 2048, 768 }, true);
+    const Rect c = uniform.strip(design);
+    CHECK(c.x0 == doctest::Approx(256));
+    CHECK(c.x1 == doctest::Approx(2048 - 256));
+    CHECK(c.height() == doctest::Approx(20));
+}
+
 TEST_CASE("angles turn anticlockwise from the right")
 {
     const Point right = on_ring(0, 100);

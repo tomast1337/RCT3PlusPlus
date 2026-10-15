@@ -98,6 +98,7 @@ namespace rct3::ui
         std::string no_picture;          ///< For a scenario without a large picture
         QuestionBoxStyle question;
         Color text_colour = hex("#000000");
+        bool round = false; ///< The front screen's design at one scale (front_screen_layout.hpp)
     };
 
     /// One scenario as the map shows it.

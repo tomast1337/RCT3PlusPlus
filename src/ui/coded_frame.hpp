@@ -50,6 +50,9 @@ namespace rct3::ui
         /// Its look; `rect` is replaced by the box, and the cut's centre is measured from the box's top-left.
         Shape shape;
         std::optional<FrameBox> clip; ///< When set, the layer only shows inside this
+        /// Keeps only the part of the shape under the line from its box's top-left corner to its bottom-right,
+        /// whatever shape the box is stretched to; this takes the place of the shape's own cut.
+        bool below_diagonal = false;
     };
 
     struct CodedFrame

@@ -34,3 +34,16 @@ TEST_CASE("merging keeps the strings already there")
     CHECK(a.get("Ride") == u"Ride");
     CHECK(a.get("Shop") == u"Shop");
 }
+
+TEST_CASE("a key is found whatever the case of its letters when asked so")
+{
+    StringTable t;
+    t.add("BigWheelName", u"Big wheel");
+    CHECK(t.get("bigwheelname").empty());
+    CHECK(t.get_ignoring_case("bigwheelNAME") == u"Big wheel");
+    CHECK(t.get_ignoring_case("SmallWheelName").empty());
+    StringTable more;
+    more.add("CupName", u"Cup");
+    t.merge(more);
+    CHECK(t.get_ignoring_case("CUPNAME") == u"Cup");
+}

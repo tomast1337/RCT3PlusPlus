@@ -19,6 +19,15 @@ namespace rct3::park
         return camera.target - forward * camera.distance;
     }
 
+    Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at)
+    {
+        const glm::mat4 back = glm::inverse(view_projection(camera, aspect));
+        const glm::vec4 near = back * glm::vec4(at, 0.0f, 1.0f);
+        const glm::vec4 far = back * glm::vec4(at, 1.0f, 1.0f);
+        const glm::vec3 from = glm::vec3(near) / near.w;
+        return { from, glm::normalize(glm::vec3(far) / far.w - from) };
+    }
+
     glm::mat4 view_projection(const ParkCamera& camera, float aspect)
     {
         const glm::mat4 view = glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));

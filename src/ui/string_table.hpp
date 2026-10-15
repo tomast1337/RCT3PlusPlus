@@ -25,6 +25,9 @@ namespace rct3::ui
 
         /// The string for `key`, or an empty view when there is none.
         [[nodiscard]] std::u16string_view get(std::string_view key) const;
+        /// The string for `key` whatever the case of its letters, for keys made from asset names, whose case
+        /// differs from the table's here and there. Of keys that differ only in case, the first added wins.
+        [[nodiscard]] std::u16string_view get_ignoring_case(std::string_view key) const;
         [[nodiscard]] bool contains(std::string_view key) const;
         [[nodiscard]] std::size_t size() const
         {
@@ -33,6 +36,7 @@ namespace rct3::ui
 
     private:
         std::map<std::string, std::u16string, std::less<>> strings_;
+        std::map<std::string, std::string, std::less<>> folded_; ///< Each key by its lower-case spelling
     };
 
 } // namespace rct3::ui

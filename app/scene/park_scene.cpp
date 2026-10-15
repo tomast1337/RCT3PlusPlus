@@ -76,6 +76,7 @@ namespace rct3::scene
         constexpr float kDragPan = 0.0025f; ///< Per pixel, times the distance
         constexpr float kDragTurn = 0.006f; ///< Radians per pixel
         constexpr float kKeyPan = 0.8f;     ///< Per second, times the distance
+        constexpr float kEdgeBand = 12;     ///< Interface units in from a screen edge where the pointer pushes
         constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
         constexpr float kKeyZoom = 2.5f;    ///< Times per second
 
@@ -296,7 +297,7 @@ namespace rct3::scene
             scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         }
 
-        void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, float elapsed)
+        void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, bool edge_scroll, float elapsed)
         {
             const ui::Point p = input.pointer.position;
             const float dx = p.x - scene.last_pointer.x;
@@ -318,8 +319,16 @@ namespace rct3::scene
                 c = park::zoomed(c, std::pow(kWheelZoom, input.pointer.wheel.y));
 
             const float step = kKeyPan * c.distance * elapsed;
-            const float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);
-            const float forward = (input.up_key ? step : 0) - (input.down_key ? step : 0);
+            float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);
+            float forward = (input.up_key ? step : 0) - (input.down_key ? step : 0);
+            if (edge_scroll && input.in_window && !over_interface && !scene.turning && !scene.dragging)
+            {
+                const float scale = scene.scale.value_or(1);
+                const ui::Rect screen = scene.desktop->root().rect();
+                const glm::vec2 push = park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand * scale);
+                right += push.x * step;
+                forward += push.y * step;
+            }
             if (right != 0 || forward != 0)
                 c = park::panned(c, right, forward);
             if (input.zoom_in_key != input.zoom_out_key)
@@ -703,7 +712,7 @@ namespace rct3::scene
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over = desktop.update(pointer, keys, { elapsed, scene.current_fonts });
-        move_camera(scene, input, over, elapsed);
+        move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed);
         auto* info = static_cast<ui::InfoPanel*>(desktop.root().find(kInfoName));
         if (info != nullptr)
         {
@@ -768,9 +777,10 @@ namespace rct3::scene
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
         }
-        // The park's day and its messages' ages run at the speed picked, and stop while paused.
+        // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
         const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
         simulation::advance(scene.day, game_seconds);
+        simulation::pass_time(scene.park, game_seconds);
         simulation::age(scene.park.messages, game_seconds);
         show_time_of_day(scene, viewer);
 

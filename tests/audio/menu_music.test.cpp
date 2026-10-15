@@ -89,3 +89,11 @@ TEST_CASE("the menus follow the music picked for the park")
     // A pick that is gone from the folder leaves it to the cycle.
     CHECK(menu_music_wish(false, std::string("Gone.wma"), files).source == MenuMusicSource::Cycle);
 }
+
+TEST_CASE("in a park the picked music carries on and the menus' cycle stops")
+{
+    CHECK(park_music_wish({ }).source == MenuMusicSource::Silent);
+    CHECK(park_music_wish({ MenuMusicSource::Track, 2 }) == MenuMusicWish { MenuMusicSource::Track, 2 });
+    CHECK(park_music_wish({ MenuMusicSource::Shuffle, 0 }).source == MenuMusicSource::Shuffle);
+    CHECK(park_music_wish({ MenuMusicSource::Silent, 0 }).source == MenuMusicSource::Silent);
+}

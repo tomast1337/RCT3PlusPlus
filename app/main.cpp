@@ -583,6 +583,7 @@ int main(int argc, char** argv)
                         rct3::scene::ParkInput input;
                         input.pointer = { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
                         input.right = p.right && input.pointer.present;
+                        input.in_window = p.inside && input.pointer.present;
                         input.middle = p.middle && input.pointer.present;
                         if (!ImGui::GetIO().WantCaptureKeyboard)
                         {
@@ -600,7 +601,7 @@ int main(int argc, char** argv)
                         if (rct3::scene::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         if (audio && menu_audio)
-                            rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds);
+                            rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true);
                         if (rct3::scene::take_park_leave(*park))
                         {
                             rct3::scene::destroy_park_scene(*device, *park);

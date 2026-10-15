@@ -63,6 +63,13 @@ namespace rct3::audio
         return { };
     }
 
+    MenuMusicWish park_music_wish(const MenuMusicWish& menu)
+    {
+        if (menu.source == MenuMusicSource::Cycle)
+            return { MenuMusicSource::Silent, 0 };
+        return menu;
+    }
+
     bool is_halloween(std::chrono::system_clock::time_point when)
     {
         const std::chrono::year_month_day day { std::chrono::floor<std::chrono::days>(when) };

@@ -6,6 +6,7 @@
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
+#include "ui/screens/loading_screen.hpp"
 
 #include <algorithm>
 #include <array>
@@ -20,12 +21,10 @@ namespace rct3::scene
 
         namespace skins = ui::game_skins;
 
-        /// The newest logo comes with its own skins, and the career map's pictures come in a file per game.
-        constexpr std::array<std::string_view, 4> kMoreSkins = {
-            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl",
-            "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl",
-            "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl",
-            "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl",
+        /// The newest logo comes with its own skins, the career map's pictures come in a file per game, and the
+        /// loading screen shown while a park loads has a file of its own.
+        constexpr std::array<std::string_view, 5> kMoreSkins = {
+            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl", "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl", ui::loading_screen::kSkinFile,
         };
 
         /// What the options show for the zoomed-out park's music, as the game does at first.

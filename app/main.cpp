@@ -34,6 +34,7 @@
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/menu_audio.hpp"
+#include "scene/park_loading.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
@@ -53,6 +54,7 @@
 #include <random>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace
@@ -343,6 +345,8 @@ int main(int argc, char** argv)
     }
 
     const auto device = render::make_device(backend);
+    // Behind everything that does not cover the window.
+    constexpr render::Color kBackground = render::hex("#0d0f14");
     const render::DeviceConfig device_config {
         .window = window->handle(),
         .vsync = vsync,
@@ -373,7 +377,8 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
-    std::optional<rct3::scene::ParkScene> park; ///< Played over the front end, which lends it the interface
+    std::optional<rct3::scene::ParkScene> park;        ///< Played over the front end, which lends it the interface
+    std::optional<std::filesystem::path> park_to_load; ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.
@@ -507,16 +512,7 @@ int main(int argc, char** argv)
             }
         }
         if (requests.tutorial)
-        {
-            auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, *requests.tutorial, seed.value_or(rct3::random::fresh_seed()));
-            if (loaded)
-            {
-                park = std::move(*loaded);
-                park->scale = scale;
-            }
-            else
-                log.warning("{}: {}", requests.tutorial->string(), loaded.error());
-        }
+            park_to_load = std::move(requests.tutorial);
         if (requests.language)
         {
             settings.set(config::Setting::Language, *requests.language);
@@ -525,6 +521,33 @@ int main(int argc, char** argv)
             front.reset();
             load_widgets(true);
         }
+    };
+    // Loads a park while its loading screen shows, as the game does: on this thread, the screen drawn again
+    // as each stage begins. The menus' music goes on meanwhile; the park quiets it once it shows.
+    const auto load_park = [&](const std::filesystem::path& path) {
+        const prof::Scope zone("LoadingScreen");
+        auto shown = rct3::scene::ParkLoadStage::ReadFile; // The frame before loading began drew it
+        const auto report = [&](rct3::scene::ParkLoadStage stage) {
+            window->poll_events();
+            if (audio && menu_audio)
+                rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { });
+            if (stage == shown)
+                return;
+            shown = stage;
+            device->begin_frame();
+            device->begin_pass({ .clear_color = kBackground });
+            rct3::scene::draw_park_loading(*device, front->assets, front->list, stage);
+            device->end_pass();
+            device->end_frame();
+        };
+        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), report);
+        if (loaded)
+        {
+            park = std::move(*loaded);
+            park->scale = scale;
+        }
+        else
+            log.warning("{}: {}", path.string(), loaded.error());
     };
     if (install && !startup)
         load_widgets(false);
@@ -640,7 +663,7 @@ int main(int argc, char** argv)
                 });
                 prof::section("Draw", [&] {
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
-                    device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : rct3::render::hex("#0d0f14") });
+                    device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : kBackground });
                     if (phase == Phase::Intro)
                     {
                         rct3::scene::draw_startup_logo(*device, *startup);
@@ -656,6 +679,8 @@ int main(int argc, char** argv)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (park && front)
                             rct3::scene::draw_park_scene(*device, *park, front->assets);
+                        else if (park_to_load && front)
+                            rct3::scene::draw_park_loading(*device, front->assets, front->list, rct3::scene::ParkLoadStage::ReadFile);
                         else if (front)
                             rct3::scene::draw_front_end_scene(*device, *front);
                         else
@@ -666,6 +691,12 @@ int main(int argc, char** argv)
                         device->end_pass();
                         device->end_frame();
                     });
+                    if (park_to_load && front)
+                    {
+                        load_park(*std::exchange(park_to_load, std::nullopt));
+                        // The park's time starts when it shows, not when it was asked for.
+                        last_time = window->time();
+                    }
                     // The loading screen is on screen now; load while it shows, as the game does.
                     if (phase == Phase::Loading)
                     {

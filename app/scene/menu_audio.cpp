@@ -25,6 +25,7 @@ namespace rct3::scene
         constexpr std::string_view kClickOverlay = "Main.common.ovl";
         constexpr std::array<std::string_view, 3> kPressSounds = { "BClick1", "BClick2", "BClick3" };
         constexpr std::array<std::string_view, 3> kReleaseSounds = { "BRelese1", "BRelese2", "BRelese3" };
+        constexpr std::array<std::string_view, 1> kMessageSounds = { "MessageAlert02" };
 
         void start_music(audio::AudioEngine& engine, MenuAudio& menu, const config::GameInstall& install, config::GameOptions& options)
         {
@@ -90,6 +91,7 @@ namespace rct3::scene
             const auto items = ovl::read_sounds(*overlay, overlay->common());
             menu.presses = sounds_named(items, kPressSounds);
             menu.releases = sounds_named(items, kReleaseSounds);
+            menu.messages = sounds_named(items, kMessageSounds);
             if (menu.presses.empty() || menu.releases.empty())
                 log.warning("click sounds missing from {}", kClickOverlay);
         }
@@ -147,7 +149,20 @@ namespace rct3::scene
         }
         const float clicks = options.get(config::GameOption::InterfaceVolume);
         for (const auto sound : sounds)
-            play_one(engine, sound == ui::InterfaceSound::Press ? menu.presses : menu.releases, menu.random, clicks);
+        {
+            switch (sound)
+            {
+                case ui::InterfaceSound::Press:
+                    play_one(engine, menu.presses, menu.random, clicks);
+                    break;
+                case ui::InterfaceSound::Release:
+                    play_one(engine, menu.releases, menu.random, clicks);
+                    break;
+                case ui::InterfaceSound::Message:
+                    play_one(engine, menu.messages, menu.random, clicks);
+                    break;
+            }
+        }
     }
 
     void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu)

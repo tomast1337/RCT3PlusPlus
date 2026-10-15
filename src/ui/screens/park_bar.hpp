@@ -7,7 +7,8 @@
 //
 // Everything the bar shows is given by the owner with show(), as text ready to draw, so the bar never needs
 // the park itself; park_bar_values() writes it from the park's state. A press on a speed button is a
-// request: the owner takes the speed asked for with take_speed() and puts it in the park's state.
+// request: the owner takes the speed asked for with take_speed() and puts it in the park's state. A notch in
+// the middle of the bar lets the pointer through to the message drawer behind it.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -67,6 +68,9 @@ namespace rct3::ui
         inline constexpr float kHeight = 26;
         inline constexpr float kLeftWidth = 300; ///< Of the left part; the divider starts there
         inline constexpr float kLowerEdge = 3;   ///< The frame's border along the bottom; items centre above it
+        /// The notch in the middle of the bar that lets the pointer through to the message drawer behind it:
+        /// a half disc of this radius up from the bar's bottom edge, centred on the divider.
+        inline constexpr float kNotchRadius = 18;
     } // namespace park_bar
 
     /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
@@ -122,6 +126,8 @@ namespace rct3::ui
         {
             return true;
         }
+        /// Everywhere but the notch.
+        [[nodiscard]] bool covers(Point p) const override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 

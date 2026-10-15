@@ -2,8 +2,9 @@
 //
 // What the menus sound like: the run's menu track (menu_music.hpp) played round and round from the game's
 // music folder, and the buttons' clicks, a press sound and a release sound each picked at random from three
-// in the game's main overlay. The music follows the music volume, the clicks the interface volume; changes
-// are heard at once. Whatever of it the game does not have is left out.
+// in the game's main overlay, along with the alert for a new message in the park. The music follows the
+// music volume, the clicks and the alert the interface volume; changes are heard at once. Whatever of it the
+// game does not have is left out.
 #pragma once
 
 #include "audio/audio.hpp"
@@ -27,6 +28,7 @@ namespace rct3::scene
         float music_volume = -1; // As last set; below 0 before the first update
         std::vector<audio::SoundBuffer> presses;
         std::vector<audio::SoundBuffer> releases;
+        std::vector<audio::SoundBuffer> messages; ///< The park's new message alert
         std::minstd_rand random;
     };
 

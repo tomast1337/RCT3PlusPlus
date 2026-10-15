@@ -3,7 +3,7 @@
 // The sounds the interface asks for, for its owner to play: a click when a button goes down and another when
 // it comes back up over the button. The front screen's buttons also give the press click as the pointer comes
 // over them. Pressing outside an open popup, which closes it, sounds like a release. Opening and closing
-// windows make no sound.
+// windows make no sound. A new message in the park has a sound of its own.
 #pragma once
 
 #include <cstdint>
@@ -15,6 +15,7 @@ namespace rct3::ui
     {
         Press,
         Release,
+        Message, ///< A new message for the player in the park
     };
 
 } // namespace rct3::ui

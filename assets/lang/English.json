@@ -11,6 +11,7 @@
         "CloudsHelp": "Clouds drift across the sky above the park.",
         "SkyHelp": "The sky shows the colours of the time of day, with the sun, the moon and the stars.",
         "MountainsHelp": "Hills and mountains stand far beyond the edges of the park.",
+        "AllItemsShown": "All shown: the park does not say which are available",
         "Command": {
             "Cancel": "Close, cancel, go back",
             "DefaultButton": "Default button",

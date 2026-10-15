@@ -30,6 +30,7 @@
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
 #include "ui/screens/message_drawer.hpp"
+#include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -806,7 +807,13 @@ namespace rct3::scene
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
         scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings).stays_behind = true;
-        scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(), strings);
+        auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(), strings);
+        // Only these menu items do anything yet; the rest show faded until their tools exist.
+        for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
+        {
+            for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery);
+        }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
@@ -996,11 +1003,15 @@ namespace rct3::scene
                 return { };
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto object = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.attractions.contains(o.id); });
+            // What is hidden cannot be clicked.
+            const auto object = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.show_scenery && scene.attractions.contains(o.id); });
             std::vector<glm::mat4> placements;
-            placements.reserve(scene.shown_people.size());
-            for (const ShownPerson& p : scene.shown_people)
-                placements.push_back(p.pose.world);
+            if (scene.show_people)
+            {
+                placements.reserve(scene.shown_people.size());
+                for (const ShownPerson& p : scene.shown_people)
+                    placements.push_back(p.pose.world);
+            }
             const auto person = park::pick_person(ray, placements, scene.grid);
             if (person && (!object || person->distance < object->distance))
                 return { .attraction = std::nullopt, .person = person->index };
@@ -1025,7 +1036,10 @@ namespace rct3::scene
         if (!asking)
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
-            if (!escape.empty())
+            auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName));
+            if (!escape.empty() && tools != nullptr && tools->open_menu())
+                tools->close_menu();
+            else if (!escape.empty())
                 ask_leave(scene, *assets.strings);
             keys.presses.erase(escape.begin(), escape.end());
         }
@@ -1145,9 +1159,18 @@ namespace rct3::scene
             messages->show(ui::drawer_messages(scene.park.messages, *assets.strings));
             scene.message_alert = scene.message_alert || messages->take_alert();
         }
-        // Only leaving works yet; the other tools open their menus once those exist.
-        if (auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)
-            ask_leave(scene, *assets.strings);
+        if (auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName)))
+        {
+            if (tools->take_pressed() == ui::ParkTool::Leave)
+                ask_leave(scene, *assets.strings);
+            if (const auto item = tools->take_item())
+            {
+                if (*item == ui::ToolItem::People)
+                    scene.show_people = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::Scenery)
+                    scene.show_scenery = tools->switched_on(*item);
+            }
+        }
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))
@@ -1225,14 +1248,16 @@ namespace rct3::scene
                     device.draw(draw);
                 }
             });
-            if (scene.object_indices)
+            if (scene.object_indices && scene.show_scenery)
                 profiling::section("Objects", [&] { draw_objects(false); });
-            profiling::section("Billboards", [&] { draw_transient(device, scene, scene.billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            profiling::section("People", [&] {
-                draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
-                for (const park::ObjectMesh& people : scene.moving_people)
-                    draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
-            });
+            if (scene.show_scenery)
+                profiling::section("Billboards", [&] { draw_transient(device, scene, scene.billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+            if (scene.show_people)
+                profiling::section("People", [&] {
+                    draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    for (const park::ObjectMesh& people : scene.moving_people)
+                        draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                });
             if (scene.water_count > 0)
             {
                 const profiling::Scope zone("Water");
@@ -1245,7 +1270,7 @@ namespace rct3::scene
                 draw.light = light;
                 device.draw(draw);
             }
-            if (scene.object_indices)
+            if (scene.object_indices && scene.show_scenery)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 

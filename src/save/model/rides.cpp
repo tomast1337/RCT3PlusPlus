@@ -6,6 +6,7 @@
 #include <limits>
 #include <span>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -216,6 +217,11 @@ namespace rct3::save
             constexpr std::string_view kPieceSegment = "Segment";
             constexpr std::string_view kPiecePlatform = "PlatformPiece";
             constexpr std::string_view kPlatformPiece = "TrackPiece";
+
+            // Placement records and asset entries
+            constexpr std::string_view kPlacedItem = "SceneryItem";
+            constexpr std::string_view kEntrySymbol = "SYMBOLNAME";
+            constexpr std::string_view kEntryOverlay = "OVERLAYFILENAME";
 
             // Trains and cars
             constexpr std::string_view kTrainRide = "TrackedRideInstance";
@@ -573,6 +579,41 @@ namespace rct3::save
 
             // ---- attractions ------------------------------------------------------------------------------------
 
+            /// Where the placement record `oid` puts its object; nothing when it is none or carries no position.
+            std::optional<PlacementSpot> spot_of(ObjectId oid)
+            {
+                const Object* o = oid != 0 ? index_.find(oid) : nullptr;
+                if (!o)
+                    return std::nullopt;
+                const auto d = decode(*o);
+                if (!d)
+                    return std::nullopt;
+                const View f(&d->fields);
+                const View at = f[id::kPlacementField];
+                if (!at.present())
+                    return std::nullopt;
+                PlacementSpot s;
+                s.object = live(f[id::kPlacedItem]);
+                s.col = at[id::kPosX].i32();
+                s.row = at[id::kPosZ].i32();
+                s.height = at[id::kHeight].i32();
+                s.direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer() & 3);
+                return s;
+            }
+
+            /// The symbol and overlay of the asset entry `oid`, both empty when it is none.
+            std::pair<std::string, std::string> asset_of(ObjectId oid)
+            {
+                const Object* o = oid != 0 ? index_.find(oid) : nullptr;
+                if (!o)
+                    return { };
+                const auto d = decode(*o);
+                if (!d)
+                    return { };
+                const View f(&d->fields);
+                return { f[id::kEntrySymbol].text(), f[id::kEntryOverlay].text() };
+            }
+
             void read_common(AttractionCommon& c, const DecodedObject& d, std::string_view symbol_key, std::string_view overlay_key)
             {
                 const View f(&d.fields);
@@ -594,6 +635,7 @@ namespace rct3::save
                 c.time_since_breakdown = f[id::kSinceBreakdown].number(-1);
                 c.time_since_crash = f[id::kSinceCrash].number(-1);
                 c.placement = live(f[id::kPlacement]);
+                c.spot = spot_of(c.placement);
                 c.facing = static_cast<std::uint8_t>(f[id::kDirection].integer());
             }
 
@@ -683,6 +725,8 @@ namespace rct3::save
                     Station s;
                     s.entrance = live(v[id::kEntrance]);
                     s.exit = live(v[id::kExit]);
+                    s.entrance_spot = spot_of(s.entrance);
+                    s.exit_spot = spot_of(s.exit);
                     s.entrance_timer = v[id::kEntranceTimer].number();
                     s.exit_timer = v[id::kExitTimer].number();
                     s.queue_time = v[id::kQueueTime].number();
@@ -781,6 +825,8 @@ namespace rct3::save
                 ride.queue_colours = colours_of(f[id::kQueueColours]);
                 ride.fence = live(f[id::kFence]);
                 ride.override_fence = live(f[id::kOverrideFence]);
+                std::tie(ride.fence_symbol, ride.fence_overlay) = asset_of(ride.fence);
+                std::tie(ride.override_fence_symbol, ride.override_fence_overlay) = asset_of(ride.override_fence);
                 ride.platform_style = f[id::kPlatformStyle].text();
                 ride.platform_type = f[id::kPlatformType].text();
                 read_stations(ride, f);

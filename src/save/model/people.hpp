@@ -268,8 +268,10 @@ namespace rct3::save
         std::uint8_t sub_type = 0; ///< Sex for guests (see Sex), costume variant for entertainers
         std::string name;          ///< Guests: a real name. Staff: a placeholder to be localised.
         PeopleVec3 position;       ///< World position
-        float heading = 0;         ///< Radians, 0..2pi
-        PeopleVec3 lane_offset;    ///< Offset from the path centre line
+        /// Model to world as stored: four rows, the model's x, y and z axes then its position.
+        std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        float heading = 0;      ///< Radians, 0..2pi
+        PeopleVec3 lane_offset; ///< Offset from the path centre line
         PersonState state = PersonState::Decision;
         std::int32_t sub_state = 0;
         PeopleRef state_target;
@@ -609,8 +611,20 @@ namespace rct3::save
         std::optional<std::uint32_t> flags;
     };
 
+    /// One of the sets of meshes people's heads, bodies and legs are picked from, named by the symbol the
+    /// game's character files give it (without its tag).
+    struct PartGroup
+    {
+        PeopleObjectId id = 0;
+        std::string symbol;
+        std::uint8_t section = 0; ///< 0 head, 1 body, 2 legs
+        std::uint8_t sex = 0;
+        std::uint8_t type = 0; ///< Same numbers as PersonType
+    };
+
     struct PeopleModel
     {
+        std::vector<PartGroup> part_groups;
         std::vector<Guest> guests;
         std::vector<Staff> staff;
         std::vector<Animal> animals;
@@ -635,6 +649,7 @@ namespace rct3::save
     [[nodiscard]] std::optional<ShopItem> make_shop_item(const DecodedObject& o, const ObjectIndex& index);
     [[nodiscard]] std::optional<ShopExtra> make_shop_extra(const DecodedObject& o, const ObjectIndex& index);
     [[nodiscard]] std::optional<Litter> make_litter(const DecodedObject& o, const ObjectIndex& index);
+    [[nodiscard]] std::optional<PartGroup> make_part_group(const DecodedObject& o);
 
     /// Builds the model from every object of a people-related class. Fails only if an object cannot be decoded.
     [[nodiscard]] std::expected<PeopleModel, Error> load_people(const SaveFile& file, const ObjectIndex& index);

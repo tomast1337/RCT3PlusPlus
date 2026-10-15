@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Simple skins: small triangle meshes with no bones, used for the faces of people.
+// Simple skins: small triangle meshes in rigid parts, used for people's heads. Each part is carried by one
+// bone of the skeleton that animates the head (see skeleton.hpp): part k by bone k, its vertices and normals
+// given in that bone's own space. A triangle may join corners of two parts, which stretches it as they move.
 #pragma once
 
 #include "ovl/overlay.hpp"
@@ -23,8 +25,8 @@ namespace rct3::ovl
 
     struct SimpleSkin
     {
-        /// One number per part. The same list appears in every skin of a face model, ascending, so it is most
-        /// likely where each part starts in a shared vertex list. Not confirmed.
+        /// One number per part, the same in every skin of a head. They name the part's bone but are not
+        /// needed to find it: parts follow the skeleton's bone order.
         std::vector<std::uint32_t> part_ids;
         /// Vertices of each part. The sum is the vertex count in every item seen.
         std::vector<std::uint32_t> part_vertex_counts;

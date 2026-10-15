@@ -11,11 +11,14 @@
 #include "park/object_pick.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/path_supports.hpp"
+#include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
+#include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
+#include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -33,15 +36,18 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <fstream>
+#include <future>
 #include <iterator>
 #include <map>
 #include <set>
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 namespace rct3::scene
@@ -112,6 +118,7 @@ namespace rct3::scene
         /// Adds the models of `objects` that `models` does not have yet, and their pictures.
         void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures)
         {
+            const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
             const std::vector<std::string_view> views(folders.begin(), folders.end());
             park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
@@ -179,27 +186,201 @@ namespace rct3::scene
             scene.object_textures.merge(*uploaded);
         }
 
-        /// Builds the object buffers again when an object's level differs from the one they hold.
-        void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye)
+        /// How far away people are drawn at each level of detail, finest first; beyond the last they are not.
+        constexpr std::array kPersonDistances { 15.0f, 40.0f, 120.0f };
+        constexpr std::uint8_t kPickColour = 255;
+        constexpr std::string_view kCharacterFolder = "Characters";
+        constexpr std::uint8_t kColourCells = 16;
+
+        /// Reads the models of the park's guests and staff and uploads their pictures.
+        void load_people_models(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::uint64_t seed)
         {
-            park::ObjectLevels levels = park::object_levels(scene.objects, scene.models, scene.anchors, eye);
-            if (levels == scene.levels && scene.object_indices)
+            const profiling::Scope zone("PeopleModels");
+            const auto folder = install.find(kCharacterFolder);
+            if (!folder)
                 return;
+            park::PersonLibrary library(install.root(), folder->filename().string());
+            std::map<save::PeopleObjectId, std::string_view> groups;
+            for (const save::PartGroup& g : scene.people.part_groups)
+                groups.emplace(g.id, g.symbol);
+            const auto set = [&](const save::PeopleRef& ref) -> const park::PartSet* {
+                const auto it = groups.find(ref.id);
+                return it != groups.end() ? library.part_set(it->second) : nullptr;
+            };
+            // Colours left for the game to pick are picked here, the same each time for the same park and seed.
+            random::RandomState colours = random::stream(seed, random::RandomStream::Effects);
+            const auto add = [&](const save::Person& person) {
+                const save::Appearance& a = person.appearance;
+                if (!a.visible)
+                    return;
+                ShownPerson shown;
+                park::PersonLook& look = shown.pose.look;
+                look.swimwear = a.wearing_swimsuit;
+                look.head = set(a.head);
+                look.body = set(a.wearing_swimsuit && !a.swim_body.is_none() ? a.swim_body : a.body);
+                look.legs = set(a.wearing_swimsuit && !a.swim_legs.is_none() ? a.swim_legs : a.legs);
+                if (look.head == nullptr && look.body == nullptr && look.legs == nullptr)
+                    return;
+                for (std::size_t i = 0; i < look.colours.size(); ++i)
+                {
+                    const std::uint8_t saved = a.palettes[i];
+                    look.colours[i] = saved == kPickColour ? static_cast<std::uint8_t>(random::below(colours, kColourCells)) : static_cast<std::uint8_t>(saved % kColourCells);
+                }
+                // All bits set means none were picked yet.
+                if (a.optionals[0] != ~std::uint32_t { 0 })
+                    look.optionals = a.optionals;
+                // Stored a row per axis, which is a column each here.
+                for (glm::length_t c = 0; c < 4; ++c)
+                {
+                    for (glm::length_t r = 0; r < 4; ++r)
+                        shown.pose.world[c][r] = person.world[static_cast<std::size_t>(c * 4 + r)];
+                }
+                shown.pose.motion = person.animation.anim_type >= 0 ? person.animation.anim_type : park::motion::kIdle;
+                shown.saved_time = person.animation.time;
+                shown.speed = person.animation.speed > 0 ? person.animation.speed : 1.0f;
+                shown.walking = person.animation.anim_type == person.animation.walk || person.animation.anim_type == person.animation.alternate_walk;
+                scene.shown_people.push_back(shown);
+            };
+            for (const save::Guest& g : scene.people.guests)
+            {
+                if (g.in_park)
+                    add(g.person);
+            }
+            for (const save::Staff& s : scene.people.staff)
+                add(s.person);
+            library.close_files();
+            if (auto uploaded = ui::upload_textures(device, library.pictures()))
+                scene.people_textures = std::move(*uploaded);
+            else
+                logging::logger("park").warning("people pictures: {}", uploaded.error());
+            logging::logger("park").info("{} people shown, {} pictures", scene.shown_people.size(), library.pictures().size());
+            scene.person_models.emplace(std::move(library));
+        }
+
+        /// Whether a person standing at `at` may be in the view `transform` gives, with room to spare so people
+        /// do not pop in at the edges while the view turns between posings.
+        bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at)
+        {
+            constexpr float kSpare = 1.3f;
+            constexpr float kReach = 2.0f; // About a person's height, in clip units
+            const glm::vec4 clip = transform * glm::vec4(at + glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+            const float edge = clip.w * kSpare + kReach;
+            return clip.w > -kReach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
+        }
+
+        /// Poses the people near enough to see that stand still, or those at `level` that move and may be
+        /// in `view`, as they are at `clock`, at `levels`. Reads only what is set when the park loads besides
+        /// its arguments, so it may run beside the frame.
+        park::ObjectMesh pose_people(const ParkScene& scene, const park::ObjectLevels& levels, float clock, std::optional<std::size_t> level, const glm::mat4& view)
+        {
+            const bool moving = level.has_value();
+            std::vector<park::PlacedPerson> placed;
+            for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
+            {
+                const ShownPerson& shown = scene.shown_people[i];
+                if (levels[i] == park::kNotDrawn || shown.walking == moving)
+                    continue;
+                if (moving && (static_cast<std::size_t>(levels[i]) != *level || !maybe_in_view(view, glm::vec3(shown.pose.world[3]))))
+                    continue;
+                park::PlacedPerson pose = shown.pose;
+                pose.level = static_cast<std::size_t>(levels[i]);
+                pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
+                placed.push_back(pose);
+            }
+            return park::person_mesh(*scene.person_models, placed);
+        }
+
+        /// Whether `build` has finished, without waiting for it.
+        template<typename T> bool ready(const std::future<T>& build)
+        {
+            return build.valid() && build.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        }
+
+        /// Builds the people meshes again as often as they need: the moving ones often, the nearer the more
+        /// often, the still ones when a person's level of detail changes. The still ones are built beside
+        /// the frame, and their levels only taken on with them, so the moving ones keep to the same levels.
+        void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
+        {
+            if (!scene.person_models)
+                return;
+            for (float& since : scene.since_people)
+                since += elapsed;
+            scene.since_people_levels += elapsed;
+            if (ready(scene.people_build))
+            {
+                PeopleBuild built = scene.people_build.get();
+                scene.people_levels = std::move(built.levels);
+                scene.still_people = std::move(built.mesh);
+                scene.since_people = kPeopleRebuildIntervals;
+            }
+            if (scene.since_people_levels >= kObjectRebuildInterval && !scene.people_build.valid())
+            {
+                scene.since_people_levels = 0;
+                park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
+                for (std::size_t i = 0; i < levels.size(); ++i)
+                {
+                    const float distance = glm::distance(eye, glm::vec3(scene.shown_people[i].pose.world[3]));
+                    const auto level = std::ranges::find_if(kPersonDistances, [&](float d) { return distance <= d; });
+                    if (level != kPersonDistances.end())
+                        levels[i] = static_cast<std::int8_t>(level - kPersonDistances.begin());
+                }
+                if (levels != scene.people_levels)
+                {
+                    scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view] {
+                        profiling::register_thread("PeopleWorker");
+                        PeopleBuild built;
+                        built.mesh = profiling::section("Still", [&] { return pose_people(scene, levels, 0, std::nullopt, view); });
+                        built.levels = levels;
+                        profiling::unregister_thread();
+                        return built;
+                    });
+                }
+            }
+            for (std::size_t level = 0; level < park::kPersonLevels; ++level)
+            {
+                if (scene.since_people[level] < kPeopleRebuildIntervals[level])
+                    continue;
+                const profiling::Scope zone("Moving");
+                scene.since_people[level] = 0;
+                scene.moving_people[level] = pose_people(scene, scene.people_levels, scene.clock, level, view);
+            }
+        }
+
+        /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`. Reads only
+        /// what is set when the park loads besides its arguments, so it may run beside the frame.
+        std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::ObjectLevels& shown)
+        {
+            ObjectBuild built;
+            built.levels = profiling::section("Levels", [&] { return park::object_levels(scene.objects, scene.models, scene.anchors, eye); });
+            if (built.levels == shown)
+                return std::nullopt;
+            built.mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, built.levels, { }, scene.leans, scene.fitted); });
+            built.billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, built.levels); });
+            return built;
+        }
+
+        /// Puts `built` in the object buffers.
+        void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+        {
             for (render::BufferHandle& b : { std::ref(scene.object_vertices), std::ref(scene.object_indices) })
             {
                 if (b)
                     device.destroy_buffer(b);
                 b = { };
             }
-            scene.levels = std::move(levels);
-            scene.since_rebuild = 0;
-            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels, { }, scene.leans, scene.fitted);
-            scene.object_batches = mesh.batches;
-            add_textures(device, scene, mesh.batches);
-            if (mesh.indices.empty())
+            scene.levels = std::move(built.levels);
+            scene.object_batches = built.mesh.batches;
+            profiling::section("Textures", [&] {
+                add_textures(device, scene, built.mesh.batches);
+                add_textures(device, scene, built.billboards.mesh.batches);
+            });
+            scene.billboards = std::move(built.billboards);
+            scene.billboards_eye.reset();
+            if (built.mesh.indices.empty())
                 return;
-            auto vertices = upload(device, render::BufferUsage::Vertex, mesh.vertices, "object vertices");
-            auto indices = upload(device, render::BufferUsage::Index, mesh.indices, "object indices");
+            const profiling::Scope zone("Upload");
+            auto vertices = upload(device, render::BufferUsage::Vertex, built.mesh.vertices, "object vertices");
+            auto indices = upload(device, render::BufferUsage::Index, built.mesh.indices, "object indices");
             if (!vertices || !indices)
             {
                 logging::logger("park").warning("object buffers: {}", !vertices ? vertices.error() : indices.error());
@@ -212,6 +393,36 @@ namespace rct3::scene
             }
             scene.object_vertices = *vertices;
             scene.object_indices = *indices;
+        }
+
+        /// Takes on the objects' meshes once built, and looks at their levels again every
+        /// kObjectRebuildInterval, building the meshes again beside the frame when one differs.
+        void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, float elapsed)
+        {
+            if (ready(scene.object_build))
+            {
+                if (auto built = scene.object_build.get())
+                    show_objects(device, scene, std::move(*built));
+            }
+            scene.since_rebuild += elapsed;
+            if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
+                return;
+            scene.since_rebuild = 0;
+            scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels] {
+                profiling::register_thread("ObjectWorker");
+                auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown); });
+                profiling::unregister_thread();
+                return built;
+            });
+        }
+
+        /// Waits for the meshes being built beside the frame, dropping them.
+        void finish_builds(ParkScene& scene)
+        {
+            if (scene.object_build.valid())
+                scene.object_build.wait();
+            if (scene.people_build.valid())
+                scene.people_build.wait();
         }
 
         float scale_for(const render::Device& device, const ParkScene& scene)
@@ -256,6 +467,7 @@ namespace rct3::scene
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.
         std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, std::string_view theme, float ground, ParkScene& scene)
         {
+            const profiling::Scope zone("Sky");
             const auto log = logging::logger("park");
             const auto found = install.find(park::kSkyFile);
             if (!found)
@@ -370,11 +582,12 @@ namespace rct3::scene
 
     std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed)
     {
+        const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
-        const auto bytes = read_file(path);
+        const auto bytes = profiling::section("ReadFile", [&] { return read_file(path); });
         if (!bytes)
             return std::unexpected(bytes.error());
-        const auto file = save::read_save(*bytes, { .verify_checksum = false });
+        const auto file = profiling::section("ParseSave", [&] { return save::read_save(*bytes, { .verify_checksum = false }); });
         if (!file)
             return std::unexpected(std::string(save::to_string(file.error())));
         const save::ObjectIndex index(*file);
@@ -391,7 +604,7 @@ namespace rct3::scene
         log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
         scene.day = park_day(*file, index, *world, options);
-        park::TerrainMesh mesh = park::terrain_mesh(scene.grid, world->water);
+        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water); });
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
@@ -478,9 +691,13 @@ namespace rct3::scene
 
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
+        if (auto rides = save::load_rides(*file, index))
+            scene.rides = std::move(*rides);
+        else
+            log.warning("rides: {}", save::to_string(rides.error()));
         {
-            // What a park does not keep but builds when it loads: supports under raised paths and track, and railings
-            // along queues.
+            // What a park does not keep but builds when it loads: supports under raised paths and track, railings
+            // along queues and fences round rides.
             std::vector<save::PlacedObject> built;
             const auto largest_id = [&] {
                 std::uint64_t last = 0;
@@ -528,6 +745,26 @@ namespace rct3::scene
             log.info("{} supports, {} queue railings", supports, fences.pieces.size());
             built.insert(built.end(), std::make_move_iterator(fences.pieces.begin()), std::make_move_iterator(fences.pieces.end()));
             scene.leans = std::move(fences.leans);
+            std::unordered_map<std::uint64_t, const park::ObjectModel*> object_models;
+            for (const save::PlacedObject& o : scene.objects)
+            {
+                if (const auto found = scene.models.find(park::model_key(o)); found != scene.models.end())
+                    object_models.emplace(o.id, &found->second);
+            }
+            std::size_t ride_fences = 0;
+            for (const save::Ride& ride : scene.rides.rides)
+            {
+                const park::ObjectModel* item = nullptr;
+                if (ride.base.spot)
+                {
+                    if (const auto found = object_models.find(ride.base.spot->object); found != object_models.end())
+                        item = found->second;
+                }
+                std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, largest_id());
+                ride_fences += pieces.size();
+                built.insert(built.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
+            }
+            log.info("{} ride fences", ride_fences);
             load_models(install, built, false, scene.models, scene.pictures);
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
         }
@@ -551,7 +788,10 @@ namespace rct3::scene
         if (!see_through)
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
-        refresh_objects(device, scene, park::eye(scene.camera));
+        profiling::section("ObjectBuffers", [&] {
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }))
+                show_objects(device, scene, std::move(*built));
+        });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), park::edge_level(scene.grid), scene); !sky)
             return fail(sky.error());
 
@@ -565,15 +805,12 @@ namespace rct3::scene
         scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
-        if (auto rides = save::load_rides(*file, index))
+        scene.attractions = park::attraction_objects(scene.rides, scene.objects);
+        if (auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); }))
         {
-            scene.rides = std::move(*rides);
-            scene.attractions = park::attraction_objects(scene.rides, scene.objects);
-        }
-        else
-            log.warning("rides: {}", save::to_string(rides.error()));
-        if (auto people = save::load_people(*file, index))
             scene.people = std::move(*people);
+            load_people_models(device, scene, install, seed);
+        }
         else
             log.warning("people: {}", save::to_string(people.error()));
 
@@ -716,11 +953,12 @@ namespace rct3::scene
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
-        const bool over = desktop.update(pointer, keys, { elapsed, scene.current_fonts });
-        move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed);
+        const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
+        profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
         auto* info = static_cast<ui::InfoPanel*>(desktop.root().find(kInfoName));
         if (info != nullptr)
         {
+            const profiling::Scope zone("InfoPanel");
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -765,12 +1003,15 @@ namespace rct3::scene
         }
         scene.view_camera.yaw += kViewTurn * elapsed;
         const glm::vec3 viewer = park::eye(scene.camera);
-        scene.since_rebuild += elapsed;
-        if (scene.since_rebuild >= kObjectRebuildInterval)
-            refresh_objects(device, scene, viewer);
-        scene.billboards = park::billboard_mesh(scene.objects, scene.models, scene.anchors, scene.levels, viewer);
-        add_textures(device, scene, scene.billboards.batches);
+        profiling::section("Objects", [&] { refresh_objects(device, scene, viewer, elapsed); });
+        if (scene.billboards_eye != viewer)
+        {
+            const profiling::Scope zone("Billboards");
+            park::face_billboards(scene.billboards, viewer);
+            scene.billboards_eye = viewer;
+        }
         scene.clock += elapsed;
+        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
         if (bar != nullptr)
         {
@@ -782,15 +1023,18 @@ namespace rct3::scene
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
         }
-        // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
-        const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
-        simulation::advance(scene.day, game_seconds);
-        // Each new week rates the park again; weeks run through in one frame are rated once.
-        if (simulation::pass_time(scene.park, game_seconds) > 0)
-            simulation::rate_week(scene.park, scene.people, scene.rides);
-        simulation::age(scene.park.messages, game_seconds);
-        show_time_of_day(scene, viewer);
+        profiling::section("Simulation", [&] {
+            // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
+            const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
+            simulation::advance(scene.day, game_seconds);
+            // Each new week rates the park again; weeks run through in one frame are rated once.
+            if (simulation::pass_time(scene.park, game_seconds) > 0)
+                profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides); });
+            simulation::age(scene.park.messages, game_seconds);
+        });
+        profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 
+        const profiling::Scope zone("Bar");
         if (bar != nullptr)
         {
             ui::ParkBarUnits units;
@@ -839,11 +1083,12 @@ namespace rct3::scene
         {
             if (scene.sky_pipeline)
             {
+                const profiling::Scope zone("Sky");
                 // The dome reads one column of its picture, so it must not wrap into the next.
                 draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
             }
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
-            draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+            profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             const auto draw_objects = [&](bool see_through) {
                 for (const park::ObjectBatch& batch : scene.object_batches)
                 {
@@ -865,28 +1110,36 @@ namespace rct3::scene
                     device.draw(draw);
                 }
             };
-            for (const park::GroundBatch& batch : scene.batches)
-            {
-                const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-                render::DrawCommand draw;
-                draw.pipeline = scene.ground_pipeline;
-                draw.vertices = { scene.ground_vertices };
-                draw.indices = { scene.ground_indices };
-                draw.index_type = render::IndexType::U32;
-                draw.first = batch.first;
-                draw.count = batch.count;
-                draw.transform = transform;
-                draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-                draw.filter = render::Filter::Linear;
-                draw.address = render::AddressMode::Repeat;
-                draw.light = light;
-                device.draw(draw);
-            }
+            profiling::section("Ground", [&] {
+                for (const park::GroundBatch& batch : scene.batches)
+                {
+                    const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                    render::DrawCommand draw;
+                    draw.pipeline = scene.ground_pipeline;
+                    draw.vertices = { scene.ground_vertices };
+                    draw.indices = { scene.ground_indices };
+                    draw.index_type = render::IndexType::U32;
+                    draw.first = batch.first;
+                    draw.count = batch.count;
+                    draw.transform = transform;
+                    draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                    draw.filter = render::Filter::Linear;
+                    draw.address = render::AddressMode::Repeat;
+                    draw.light = light;
+                    device.draw(draw);
+                }
+            });
             if (scene.object_indices)
-                draw_objects(false);
-            draw_transient(device, scene, scene.billboards, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                profiling::section("Objects", [&] { draw_objects(false); });
+            profiling::section("Billboards", [&] { draw_transient(device, scene, scene.billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+            profiling::section("People", [&] {
+                draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                for (const park::ObjectMesh& people : scene.moving_people)
+                    draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+            });
             if (scene.water_count > 0)
             {
+                const profiling::Scope zone("Water");
                 render::DrawCommand draw;
                 draw.pipeline = scene.water_pipeline;
                 draw.vertices = { scene.water };
@@ -897,7 +1150,7 @@ namespace rct3::scene
                 device.draw(draw);
             }
             if (scene.object_indices)
-                draw_objects(true);
+                profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 
         /// Draws the attraction the info panel shows into the panel's round view, from its own camera.
@@ -944,9 +1197,10 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && scene.shown)
-            draw_view(device, scene, *info);
-        draw_world(device, scene, park::view_projection(scene.camera, aspect(device)), scene.light);
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
+        profiling::section("World", [&] { draw_world(device, scene, park::view_projection(scene.camera, aspect(device)), scene.light); });
 
+        const profiling::Scope zone("Interface");
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
         static const ui::FontSet kNoFonts;
@@ -957,6 +1211,7 @@ namespace rct3::scene
 
     void destroy_park_scene(render::Device& device, ParkScene& scene)
     {
+        finish_builds(scene);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.water, scene.object_vertices, scene.object_indices })
         {
             if (b)
@@ -969,6 +1224,7 @@ namespace rct3::scene
         }
         ui::destroy_textures(device, scene.ground_textures);
         ui::destroy_textures(device, scene.object_textures);
+        ui::destroy_textures(device, scene.people_textures);
         ui::destroy_textures(device, scene.sky_textures);
         if (scene.blank)
             device.destroy_texture(scene.blank);

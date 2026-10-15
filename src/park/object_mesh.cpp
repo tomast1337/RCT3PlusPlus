@@ -17,6 +17,7 @@ namespace rct3::park
             FlexiColours colours { };
             std::vector<GroundVertex> vertices;
             std::vector<std::uint32_t> indices;
+            std::vector<BillboardStand> stands; ///< Billboard runs only
         };
 
         using Key = std::pair<PartBlend, std::string>;
@@ -136,9 +137,9 @@ namespace rct3::park
         return mesh;
     }
 
-    ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
+    Billboards gather_billboards(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides)
     {
-        ObjectMesh mesh;
+        Billboards boards;
         std::map<Key, Run> runs;
         for (std::size_t index = 0; index < objects.size() && index < levels.size() && index < anchors.size(); ++index)
         {
@@ -150,15 +151,7 @@ namespace rct3::park
             const auto& board = model->second.levels[static_cast<std::size_t>(levels[index])].billboard;
             if (!board)
                 continue;
-            ++mesh.placed;
-            const glm::vec3 base = anchors[index];
-            glm::vec2 facing { eye.x - base.x, eye.z - base.z };
-            if (glm::length(facing) < 1e-4f)
-                facing = { 0, 1 };
-            facing = glm::normalize(facing);
-            const glm::vec3 right = glm::vec3(facing.y, 0, -facing.x) * (board->width / 2);
-            const glm::vec3 up { 0, board->height, 0 };
-
+            ++boards.mesh.placed;
             const FlexiColours colours = colours_of(objects[index], overrides);
             Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours) }];
             run.picture = board->texture;
@@ -167,15 +160,43 @@ namespace rct3::park
             // Without a normal, so it is lit as a surface facing up and turning round a tree does not change its
             // shade.
             const glm::vec4 shade { 1.0f };
-            run.vertices.push_back({ base - right + up, shade, board->uv_min });
-            run.vertices.push_back({ base + right + up, shade, { board->uv_max.x, board->uv_min.y } });
-            run.vertices.push_back({ base + right, shade, board->uv_max });
-            run.vertices.push_back({ base - right, shade, { board->uv_min.x, board->uv_max.y } });
+            run.vertices.push_back({ glm::vec3(0.0f), shade, board->uv_min });
+            run.vertices.push_back({ glm::vec3(0.0f), shade, { board->uv_max.x, board->uv_min.y } });
+            run.vertices.push_back({ glm::vec3(0.0f), shade, board->uv_max });
+            run.vertices.push_back({ glm::vec3(0.0f), shade, { board->uv_min.x, board->uv_max.y } });
             for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u })
                 run.indices.push_back(first + i);
+            run.stands.push_back({ anchors[index], board->width / 2, board->height });
         }
-        bake(runs, mesh);
-        return mesh;
+        for (const auto& [key, run] : runs)
+            boards.stands.insert(boards.stands.end(), run.stands.begin(), run.stands.end());
+        bake(runs, boards.mesh);
+        return boards;
+    }
+
+    void face_billboards(Billboards& boards, const glm::vec3& eye)
+    {
+        for (std::size_t k = 0; k < boards.stands.size() && k * 4 + 3 < boards.mesh.vertices.size(); ++k)
+        {
+            const BillboardStand& stand = boards.stands[k];
+            glm::vec2 facing { eye.x - stand.base.x, eye.z - stand.base.z };
+            const float length = glm::length(facing);
+            facing = length < 1e-4f ? glm::vec2 { 0, 1 } : facing / length;
+            const glm::vec3 right = glm::vec3(facing.y, 0, -facing.x) * stand.half_width;
+            const glm::vec3 up { 0, stand.height, 0 };
+            GroundVertex* corners = &boards.mesh.vertices[k * 4];
+            corners[0].position = stand.base - right + up;
+            corners[1].position = stand.base + right + up;
+            corners[2].position = stand.base + right;
+            corners[3].position = stand.base - right;
+        }
+    }
+
+    ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
+    {
+        Billboards boards = gather_billboards(objects, models, anchors, levels, overrides);
+        face_billboards(boards, eye);
+        return std::move(boards.mesh);
     }
 
     std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures)

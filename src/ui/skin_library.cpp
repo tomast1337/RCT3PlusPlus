@@ -10,7 +10,12 @@ namespace rct3::ui
     std::array<float, 2> SkinRef::size() const
     {
         if (layout.x_count == 0 || layout.y_count == 0)
+        {
+            // A coded frame with no picture behind it: the size it was measured at, if it has one.
+            if (coded != nullptr)
+                return { coded->width, coded->height };
             return { 0, 0 };
+        }
         return { layout.xs[layout.x_count - 1] - layout.xs[0], layout.ys[layout.y_count - 1] - layout.ys[0] };
     }
 

@@ -152,7 +152,17 @@ namespace rct3::ui
     {
         const SkinState s = state();
         const Color tint = s == SkinState::Disabled ? faded(kWhite, kDisabledAlpha) : kWhite;
-        draw_skin(context.list, context.skins.find(skin), rect(), s == SkinState::Pressed ? kPressedTint : tint);
+        // The round picture at one scale, fitted to the button's width, so it stays round when the
+        // picture is not quite square.
+        const SkinRef* picture = context.skins.find(skin);
+        Rect r = rect();
+        if (picture != nullptr)
+        {
+            const auto [w, h] = picture->size();
+            if (w > 0 && h > 0)
+                r.y1 = r.y0 + r.width() * h / w;
+        }
+        draw_skin(context.list, picture, r, s == SkinState::Pressed ? kPressedTint : tint);
         draw_icon(context, tint);
     }
 

@@ -27,6 +27,16 @@ namespace rct3::ui
 
     } // namespace
 
+    tutorial_picker::DiscPlace tutorial_picker::disc_place(const fs::Frame& frame)
+    {
+        const Rect area = frame.stretched(kDiscArea);
+        const float radius = std::max(0.0f, std::min(area.width(), area.height()) / 2);
+        const Point wanted = frame.at(fs::kRingCentre);
+        // A box narrower than the disc (it cannot be, but for safety) centres it rather than clamping past.
+        const auto inside = [radius](float v, float lo, float hi) { return lo + radius <= hi - radius ? std::clamp(v, lo + radius, hi - radius) : (lo + hi) / 2; };
+        return { { inside(wanted.x, area.x0, area.x1), inside(wanted.y, area.y0, area.y1) }, radius / kDiscRadius };
+    }
+
     float tutorial_picker::angle(std::size_t index)
     {
         return kFirstAngle + kAngleStep * static_cast<float>(index);
@@ -91,37 +101,38 @@ namespace rct3::ui
             start_out_ = picked_;
         start_->enabled = picked_ < buttons_.size() && buttons_[picked_]->enabled;
 
-        const fs::Frame frame = fs::frame_for(rect());
-        const float size = tm::kButtonSize * frame.round;
+        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect()));
+        const float size = tm::kButtonSize * disc.scale;
         const auto lay = [&](FrontButton& b, float angle) {
-            const Rect r = fs::button_rect(frame, fs::on_ring(angle, tm::kRadius), tm::kButtonSize);
+            const Point c = disc.at(fs::on_ring(angle, tm::kRadius));
+            const Rect r { c.x - size / 2, c.y - size / 2, c.x + size / 2, c.y + size / 2 };
             b.placement = placed(r, rect());
             b.swell = size * (fs::kSwellFactor - 1) / 2;
             b.swell_time = (fs::kSwellFactor - 1) / fs::kSwellRate;
-            b.icon_scale = frame.round;
+            b.icon_scale = disc.scale;
             return r;
         };
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
             const Rect r = lay(*buttons_[i], tm::angle(i));
-            labels_[i] = { r.x0 + tm::kLabelStart * r.width(), r.y0, r.x1 + tm::kLabelReach * frame.sx, r.y1 };
+            labels_[i] = { r.x0 + tm::kLabelStart * r.width(), r.y0, r.x1 + tm::kLabelReach * disc.scale, r.y1 };
         }
         lay(*start_, tm::kStartAngle);
     }
 
     void TutorialPicker::draw(DrawContext& context) const
     {
-        const fs::Frame frame = fs::frame_for(rect());
-        const Point centre = fs::kRingCentre;
+        // Each quarter at its own size times the disc's one scale, its inner corner on the disc's middle.
+        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect()));
         for (std::size_t q = 0; q < style_.quarters.size(); ++q)
         {
             const SkinRef* skin = context.skins.find(style_.quarters[q]);
             if (skin == nullptr)
                 continue;
             const auto [w, h] = skin->size();
-            const float x = q % 2 == 0 ? centre.x - w : centre.x;
-            const float y = q < 2 ? centre.y - h : centre.y;
-            draw_skin(context.list, skin, frame.stretched({ x, y, x + w, y + h }));
+            const float x = q % 2 == 0 ? disc.centre.x - w * disc.scale : disc.centre.x;
+            const float y = q < 2 ? disc.centre.y - h * disc.scale : disc.centre.y;
+            draw_skin(context.list, skin, { x, y, x + w * disc.scale, y + h * disc.scale });
         }
 
         const Font* name_font = context.fonts.get(FontRole::ScaledMedium);
@@ -139,7 +150,7 @@ namespace rct3::ui
         if (picked_ < tutorials_.size())
         {
             if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
-                draw_text(context.list, *f, tutorials_[picked_].description, frame.stretched(tm::kDescription), { style_.text_colour, Align::Start, Align::Centre, true });
+                draw_text(context.list, *f, tutorials_[picked_].description, disc.rect(tm::kDescription), { style_.text_colour, Align::Start, Align::Centre, true });
         }
     }
 

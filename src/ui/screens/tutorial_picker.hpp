@@ -9,6 +9,7 @@
 #pragma once
 
 #include "ui/screens/front_screen.hpp"
+#include "ui/screens/front_screen_layout.hpp"
 #include "ui/tutorials.hpp"
 
 #include <array>
@@ -22,7 +23,35 @@ namespace rct3::ui
 
     namespace tutorial_picker
     {
-        // In the front screen's 1024 by 768 design frame, y down (front_screen_layout.hpp).
+        // In the front screen's 1024 by 768 design frame, y down (front_screen_layout.hpp). Everything on
+        // the disc is drawn round its centre at one scale, so the disc stays round on any screen.
+
+        /// The disc's radius, and the box it must fit in: right of the arc, clear of the top edge and above
+        /// the badges and the bottom strip. The box stretches with the screen; the disc is as large as fits
+        /// in it, as near the buttons' centre as it can be while staying inside.
+        inline constexpr float kDiscRadius = 324;
+        inline constexpr Rect kDiscArea { 380, 8, 1016, 590 };
+
+        /// Where the disc lands on a screen: its middle, and screen units per design unit.
+        struct DiscPlace
+        {
+            Point centre;
+            float scale = 1;
+
+            /// A design point, measured from the buttons' centre, on the screen.
+            [[nodiscard]] Point at(Point design) const
+            {
+                return { centre.x + (design.x - front_screen::kRingCentre.x) * scale, centre.y + (design.y - front_screen::kRingCentre.y) * scale };
+            }
+            /// A design rectangle on the screen, at the disc's scale.
+            [[nodiscard]] Rect rect(const Rect& design) const
+            {
+                const Point a = at({ design.x0, design.y0 });
+                const Point b = at({ design.x1, design.y1 });
+                return { a.x, a.y, b.x, b.y };
+            }
+        };
+        [[nodiscard]] DiscPlace disc_place(const front_screen::Frame& frame);
 
         /// The tutorials on a circle round the buttons' centre, the first at the top.
         inline constexpr float kRadius = 275;

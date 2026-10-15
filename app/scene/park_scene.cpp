@@ -809,6 +809,7 @@ namespace rct3::scene
         {
             const auto model = save::load_park(*file, index);
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
+            scene.build = start_build_menus(install, model ? &model->content : nullptr);
         }
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
@@ -818,7 +819,7 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load);
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -1492,7 +1493,10 @@ namespace rct3::scene
                     scene.show_scenery = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
+                else
+                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
+            update_build_menus(scene.build, desktop.root());
         }
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);

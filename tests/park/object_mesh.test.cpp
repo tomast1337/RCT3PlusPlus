@@ -210,6 +210,30 @@ TEST_CASE("billboards stand on their anchor facing the viewer")
     CHECK(billboard_mesh(objects, models, anchors, ObjectLevels { 1 }, { 2, 1, 100 }).vertices.empty());
 }
 
+TEST_CASE("gathered billboards turn again to each new viewer")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Tree", three_levels());
+    const std::vector<save::PlacedObject> objects { object("Tree", 0), object("Tree", 1) };
+    const std::vector<glm::vec3> anchors { { 2, 1, 2 }, { 8, 0, 2 } };
+    Billboards boards = gather_billboards(objects, models, anchors, ObjectLevels { 2, 2 });
+    REQUIRE(boards.stands.size() == 2);
+    CHECK(boards.mesh.placed == 2);
+    for (const glm::vec3 eye : { glm::vec3(2, 1, 100), glm::vec3(100, 1, 2) })
+    {
+        face_billboards(boards, eye);
+        const ObjectMesh once = billboard_mesh(objects, models, anchors, ObjectLevels { 2, 2 }, eye);
+        REQUIRE(once.vertices.size() == boards.mesh.vertices.size());
+        for (std::size_t i = 0; i < once.vertices.size(); ++i)
+        {
+            CHECK(boards.mesh.vertices[i].position.x == doctest::Approx(once.vertices[i].position.x));
+            CHECK(boards.mesh.vertices[i].position.z == doctest::Approx(once.vertices[i].position.z));
+        }
+    }
+    // Seen from +X the first board spans Z instead.
+    CHECK(boards.mesh.vertices[0].position.x == doctest::Approx(2));
+}
+
 TEST_CASE("a leaning object's points rise with their distance from its anchor")
 {
     ObjectModels models;

@@ -34,6 +34,7 @@ namespace rct3::save
             constexpr std::string_view shop_item = "ShopItemInstance";
             constexpr std::string_view shop_extra = "ShopExtraInstance";
             constexpr std::string_view litter = "Litter";
+            constexpr std::string_view part_group = "PPGDatabaseEntry";
         } // namespace cls
 
         namespace at
@@ -308,6 +309,11 @@ namespace rct3::save
             constexpr std::string_view l_create = "CreateTime";
             constexpr std::string_view l_tile = "PathTile";
             constexpr std::string_view l_flags = "Flags";
+            // part group
+            constexpr std::string_view pg_symbol = "SymbolName";
+            constexpr std::string_view pg_section = "PartGroup";
+            constexpr std::string_view pg_sex = "PeopleSex";
+            constexpr std::string_view pg_type = "PeopleType";
         } // namespace at
 
         // ---- tolerant scalar readers over possibly-null attribute values ----
@@ -479,6 +485,11 @@ namespace rct3::save
             p.sub_type = u8(get(at::sub_type));
             p.name = str(get(at::name));
             p.position = matrix_position(get(at::world_matrix));
+            if (const Value* world = get(at::world_matrix))
+            {
+                if (const auto f = world->floats(); f.size() == p.world.size())
+                    std::ranges::copy(f, p.world.begin());
+            }
             p.heading = f32(get(at::facing_angle));
             p.lane_offset = vec3(get(at::path_offset));
             p.state = static_cast<PersonState>(i32(get(at::state)));
@@ -1071,6 +1082,19 @@ namespace rct3::save
         return l;
     }
 
+    std::optional<PartGroup> make_part_group(const DecodedObject& o)
+    {
+        if (o.class_name != cls::part_group)
+            return std::nullopt;
+        PartGroup g;
+        g.id = o.id;
+        g.symbol = str(o.find(at::pg_symbol));
+        g.section = u8(o.find(at::pg_section));
+        g.sex = u8(o.find(at::pg_sex));
+        g.type = u8(o.find(at::pg_type));
+        return g;
+    }
+
     // ---- loading ----
 
     std::expected<PeopleModel, Error> load_people(const SaveFile& file, const ObjectIndex& index)
@@ -1089,7 +1113,8 @@ namespace rct3::save
             Carried,
             ShopItem,
             ShopExtra,
-            Litter
+            Litter,
+            PartGroup
         };
         std::vector<Slot> slot(file.classes.size(), Slot::None);
         for (std::size_t i = 0; i < file.classes.size(); ++i)
@@ -1115,6 +1140,8 @@ namespace rct3::save
                 slot[i] = Slot::ShopExtra;
             else if (n == cls::litter)
                 slot[i] = Slot::Litter;
+            else if (n == cls::part_group)
+                slot[i] = Slot::PartGroup;
         }
         for (const auto& obj : file.objects)
         {
@@ -1165,6 +1192,10 @@ namespace rct3::save
                 case Slot::Litter:
                     if (auto l = make_litter(d, index))
                         m.litter.push_back(*l);
+                    break;
+                case Slot::PartGroup:
+                    if (auto g = make_part_group(d))
+                        m.part_groups.push_back(std::move(*g));
                     break;
                 case Slot::None:
                     break;

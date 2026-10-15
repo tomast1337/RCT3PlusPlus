@@ -573,6 +573,7 @@ int main(int argc, char** argv)
                     }
                     if (phase == Phase::Running && developer_windows)
                     {
+                        const prof::Scope zone("DeveloperWindows");
                         draw_profiler_window(*device);
                         draw_log_window();
                         ImGui::ShowDemoWindow();
@@ -596,14 +597,15 @@ int main(int argc, char** argv)
                             input.commands = play_commands;
                         }
                         const rct3::ui::KeyboardState no_keys;
-                        rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta));
+                        prof::section("Park", [&] { rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
                         auto sounds = park->desktop->take_sounds();
                         if (rct3::scene::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         if (audio && menu_audio)
-                            rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true);
+                            prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true); });
                         if (rct3::scene::take_park_leave(*park))
                         {
+                            const prof::Scope zone("LeavePark");
                             rct3::scene::destroy_park_scene(*device, *park);
                             park.reset();
                         }
@@ -626,18 +628,18 @@ int main(int argc, char** argv)
                         }
                         else
                         {
-                            rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, static_cast<float>(delta));
+                            prof::section("FrontEnd", [&] { rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, static_cast<float>(delta)); });
                             if (const auto copied = front->live->desktop.take_clipboard())
                                 window->set_clipboard(*copied);
                             sounds = front->live->desktop.take_sounds();
-                            follow_front_end();
+                            prof::section("FollowFrontEnd", [&] { follow_front_end(); });
                         }
                         if (audio && menu_audio)
-                            rct3::scene::update_menu_audio(*audio, *menu_audio, front ? front->live->options : audio_options, sounds);
+                            prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front ? front->live->options : audio_options, sounds); });
                     }
                 });
                 prof::section("Draw", [&] {
-                    device->begin_frame();
+                    prof::section("BeginFrame", [&] { device->begin_frame(); });
                     device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : rct3::render::hex("#0d0f14") });
                     if (phase == Phase::Intro)
                     {
@@ -649,6 +651,7 @@ int main(int argc, char** argv)
                     }
                     else
                     {
+                        const prof::Scope zone("Scene");
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (park && front)
@@ -658,9 +661,11 @@ int main(int argc, char** argv)
                         else
                             rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     }
-                    device->draw_ui();
-                    device->end_pass();
-                    device->end_frame();
+                    prof::section("DeveloperUi", [&] { device->draw_ui(); });
+                    prof::section("Submit", [&] {
+                        device->end_pass();
+                        device->end_frame();
+                    });
                     // The loading screen is on screen now; load while it shows, as the game does.
                     if (phase == Phase::Loading)
                     {

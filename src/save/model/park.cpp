@@ -746,11 +746,9 @@ namespace rct3::save
 
     void Series::push(float v)
     {
-        samples.push_back(v);
+        samples.insert(samples.begin(), v);
         if (capacity > 0 && samples.size() > capacity)
-        {
-            samples.erase(samples.begin(), samples.begin() + static_cast<std::ptrdiff_t>(samples.size() - capacity));
-        }
+            samples.resize(capacity);
     }
 
     std::int64_t LedgerPeriod::raw_sum() const noexcept

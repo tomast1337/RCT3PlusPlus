@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/rides.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <span>
@@ -129,6 +130,7 @@ namespace rct3::save
             constexpr std::string_view kInspectionInterval = "m_inspectionInterval";
             constexpr std::string_view kReliability = "m_reliability";
             constexpr std::string_view kDowntime = "m_downTimeCounters";
+            constexpr std::string_view kDowntimePercent = "m_downTimePercent";
             constexpr std::string_view kBlockSectioned = "BlockSectionedMode";
             constexpr std::string_view kSyncTrains = "SyncTrains";
             constexpr std::string_view kLeaveIfEnters = "LeaveIfAnotherTrainEntersStation";
@@ -745,6 +747,8 @@ namespace rct3::save
                 b.seat = f[id::kBreakdownSeat].i32(-1);
                 b.inspection_interval = f[id::kInspectionInterval].i32();
                 b.reliability = f[id::kReliability].number(100);
+                if (f[id::kDowntimePercent].present())
+                    b.saved_downtime_percent = std::clamp(f[id::kDowntimePercent].number(), 0.0f, 100.0f);
                 std::size_t i = 0;
                 for (const auto& item : f[id::kDowntime].items())
                 {
@@ -1133,6 +1137,8 @@ namespace rct3::save
 
     float Breakdown::downtime_percent() const noexcept
     {
+        if (saved_downtime_percent)
+            return *saved_downtime_percent;
         int sum = 0;
         for (const auto w : downtime_windows)
             sum += w;

@@ -23,6 +23,8 @@
 #include "park/terrain_mesh.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
+#include "save/model/people.hpp"
+#include "save/model/rides.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
@@ -109,6 +111,7 @@ namespace rct3::scene
         simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
+        save::PeopleModel people;                             ///< Guests, staff and litter as saved; read for the weekly rating
         park::AttractionObjects attractions;                  ///< Which attraction each object belongs to, for clicks
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order

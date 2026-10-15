@@ -316,6 +316,10 @@ TEST_CASE("a minimal guest decodes into typed fields")
     CHECK(p.sub_state == 2);
     CHECK(p.heading == 1.5f);
     CHECK(p.position == PeopleVec3 { 3, 4, 5 });
+    CHECK(p.world[0] == 1.0f);
+    CHECK(p.world[1] == 0.0f);
+    CHECK(p.world[12] == 3.0f);
+    CHECK(p.world[14] == 5.0f);
     CHECK(p.lane_offset == PeopleVec3 { 0.25f, 0, -0.5f });
     CHECK(p.state_target.id == 11);
     CHECK(p.holder.id == 13);
@@ -770,6 +774,26 @@ TEST_CASE("validation reports broken invariants")
     CHECK(has(IssueKind::GroupMemberCountMismatch, 20));
     CHECK(has(IssueKind::HolderOwnerNotPerson, 31));
     CHECK(std::string(to_string(IssueKind::StatOutOfRange)) == "stat-out-of-range");
+}
+
+TEST_CASE("part groups name the sets people are dressed from")
+{
+    Obj g("PPGDatabaseEntry", 7);
+    g.str("SymbolName", u"XY01_BODY").u8("PartGroup", 1).u8("PeopleSex", 1).u8("PeopleType", 2);
+    const auto w = make_world({ g, blank("Ride", 1) });
+    CHECK_FALSE(build(*w, 1, [](const auto& d, const auto&) { return make_part_group(d); }).has_value());
+    const auto group = build(*w, 7, [](const auto& d, const auto&) { return make_part_group(d); });
+    REQUIRE(group);
+    CHECK(group->id == 7);
+    CHECK(group->symbol == "XY01_BODY");
+    CHECK(group->section == 1);
+    CHECK(group->sex == 1);
+    CHECK(group->type == 2);
+
+    const auto model = load_people(w->file, *w->index);
+    REQUIRE(model);
+    REQUIRE(model->part_groups.size() == 1);
+    CHECK(model->part_groups[0].symbol == "XY01_BODY");
 }
 
 TEST_CASE("an empty save gives an empty model")

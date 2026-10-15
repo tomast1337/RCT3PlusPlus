@@ -69,6 +69,14 @@ namespace rct3::ovl
         float priority = 0;        ///< Unconfirmed. 10 in files seen.
     };
 
+    /// SceneryItem::flags bit of rides that stand only on water. They get no fence round them.
+    inline constexpr std::uint32_t kItemWaterOnly = 1u << 16;
+    /// SceneryItem::flags bit of rides fenced round the outline of their solid ground squares rather than round
+    /// their whole rectangle, for footprints that are not filled in.
+    inline constexpr std::uint32_t kItemFenceOutline = 1u << 21;
+    /// SceneryItemSquare::flags bit of solid squares.
+    inline constexpr std::uint32_t kSquareSolid = 0x1;
+
     struct SceneryItem
     {
         /// 0 for the base structure, 1 and 2 for the structures of the first and second expansion.

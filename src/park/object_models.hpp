@@ -83,8 +83,12 @@ namespace rct3::park
         float sway = 0;                               ///< How much it sways in the wind; above 0 for trees and plants only
         std::string support_group;                    ///< The set of supports it stands on, or the set a support belongs to
         std::int32_t lowest_level = 0;                ///< Lowest level its footprint takes, from its base height
-        std::optional<SupportFootprint> supports;     ///< What it asks of the columns under it
-        std::vector<ModelLevel> levels;               ///< Finest first, never empty
+        bool water_only = false;                      ///< A ride that stands only on water
+        /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
+        /// whether it is inside the outline. Empty for every other item.
+        std::vector<bool> fence_outline;
+        std::optional<SupportFootprint> supports; ///< What it asks of the columns under it
+        std::vector<ModelLevel> levels;           ///< Finest first, never empty
     };
 
     /// The level of `model` to draw at `distance`, with every level's distance times `scale`: the first that

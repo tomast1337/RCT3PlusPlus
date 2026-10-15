@@ -19,6 +19,7 @@
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/object_mesh.hpp"
+#include "park/person_mesh.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "random/generator.hpp"
@@ -37,6 +38,7 @@
 
 #include <expected>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
@@ -69,6 +71,35 @@ namespace rct3::scene
     /// How far the sky is drawn from the eye: inside the camera's far limit.
     inline constexpr float kSkyRadius = park::kFar * 0.9f;
 
+    /// The people in motion at each level of detail, finest first, are posed again this often, in seconds: far
+    /// people move too little on screen to need it as often. Only those in view are posed. Those standing
+    /// still are only built again when one's level of detail changes, checked as often as objects' levels.
+    inline constexpr std::array kPeopleRebuildIntervals { 1.0f / 30.0f, 1.0f / 15.0f, 1.0f / 6.0f };
+
+    /// The objects' meshes for new levels, built away from the frame.
+    struct ObjectBuild
+    {
+        park::ObjectLevels levels;
+        park::ObjectMesh mesh;
+        park::Billboards billboards;
+    };
+
+    /// The still people's mesh for new levels, built away from the frame.
+    struct PeopleBuild
+    {
+        park::ObjectLevels levels;
+        park::ObjectMesh mesh;
+    };
+
+    /// A person as the park shows it.
+    struct ShownPerson
+    {
+        park::PlacedPerson pose;
+        float saved_time = 0; ///< Into its motion, when the park was saved
+        float speed = 1;      ///< How fast its motion plays
+        bool walking = false; ///< Walkers stand still in their stride until people move
+    };
+
     struct ParkScene
     {
         save::TerrainGrid grid;
@@ -91,11 +122,16 @@ namespace rct3::scene
         park::Fitted fitted;          ///< Of the built pieces placed off the tile grid
         std::vector<glm::vec3> anchors;
         park::ObjectLevels levels; ///< Those the object buffers hold
-        float since_rebuild = 0;   ///< Seconds since the object buffers were last built
+        float since_rebuild = 0;   ///< Seconds since the levels were last looked at
+        /// Meshes for levels that differ from those shown, while being built. Building only reads what is
+        /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
+        /// goes.
+        std::future<std::optional<ObjectBuild>> object_build;
         std::vector<park::ObjectBatch> object_batches;
         render::BufferHandle object_vertices;
         render::BufferHandle object_indices;
-        park::ObjectMesh billboards;                 ///< Built again each frame, as they turn to face the eye
+        park::Billboards billboards;                 ///< Gathered with the levels, turned whenever the eye moves
+        std::optional<glm::vec3> billboards_eye;     ///< The eye they face, none when not turned yet
         render::PipelineHandle object_pipeline;      ///< Opaque parts
         render::PipelineHandle cutout_pipeline;      ///< Parts with holes
         render::PipelineHandle see_through_pipeline; ///< Blended parts, drawn last without writing depth
@@ -111,7 +147,16 @@ namespace rct3::scene
         simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
-        save::PeopleModel people;                             ///< Guests, staff and litter as saved; read for the weekly rating
+        save::PeopleModel people;                         ///< Guests, staff and litter as saved; read for the weekly rating
+        std::optional<park::PersonLibrary> person_models; ///< Of the park's people
+        std::vector<ShownPerson> shown_people;
+        park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
+        park::ObjectMesh still_people;
+        std::array<park::ObjectMesh, park::kPersonLevels> moving_people; ///< By level of detail
+        std::array<float, park::kPersonLevels> since_people { kPeopleRebuildIntervals };
+        float since_people_levels = kObjectRebuildInterval;
+        std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
+        ui::UiTextures people_textures;
         park::AttractionObjects attractions;                  ///< Which attraction each object belongs to, for clicks
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order

@@ -745,3 +745,46 @@ TEST_CASE("a save without any rides loads an empty model")
     CHECK(w->model.rides.empty());
     CHECK(w->model.stalls.empty());
 }
+
+TEST_CASE("placement records give where an attraction's parts stand, and fence entries their assets")
+{
+    Schema s;
+    const Attr stations = { "RideStations", "list", 0, { ref("Entrance"), ref("Exit") } };
+    s.classes["AnimatedRideInstance"] = { ref("Scenery"), ref("Fence"), ref("OverrideFence"), stations };
+    s.classes["Placement"] = { ref("SceneryItem"), structure("SceneryItemDataField", { i32("POSX"), i32("POSZ"), i32("HEIGHT"), i32("DIRECTION"), i32("CORNER") }) };
+    s.classes["SceneryItem"] = { i32("Unused") };
+    s.classes["SIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
+
+    const auto placement = [](std::uint64_t id, std::uint64_t item, int col, int row, int height, int direction) {
+        Obj p { "Placement", id, { } };
+        p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().u32(static_cast<std::uint32_t>(col)).u32(static_cast<std::uint32_t>(row)).u32(static_cast<std::uint32_t>(height)).u32(static_cast<std::uint32_t>(direction)).u32(0));
+        return p;
+    };
+    Obj ride { "AnimatedRideInstance", 5, { } };
+    ride.r("Scenery", 30).r("Fence", 40).r("OverrideFence", kStale);
+    Bytes list;
+    list.u32(1).u64(31).u64(kStale);
+    ride.raw("RideStations", Bytes().blob(list));
+    Obj fence { "SIDDatabaseEntry", 40, { } };
+    fence.s("SYMBOLNAME", u"Picket:sid").s("OVERLAYFILENAME", u"Fences\\Picket");
+    const auto w = build(s, { ride, placement(30, 50, 12, 9, 3, 1), placement(31, 51, 17, 10, -2, 6), Obj { "SceneryItem", 50, { } }, Obj { "SceneryItem", 51, { } }, fence });
+
+    REQUIRE(w->model.rides.size() == 1);
+    const Ride& r = w->model.rides[0];
+    CHECK(r.kind == RideKind::Flat);
+    REQUIRE(r.base.spot.has_value());
+    CHECK(r.base.spot->object == 50);
+    CHECK(r.base.spot->col == 12);
+    CHECK(r.base.spot->row == 9);
+    CHECK(r.base.spot->height == 3);
+    CHECK(r.base.spot->direction == 1);
+    REQUIRE(r.stations.size() == 1);
+    REQUIRE(r.stations[0].entrance_spot.has_value());
+    CHECK(r.stations[0].entrance_spot->object == 51);
+    CHECK(r.stations[0].entrance_spot->height == -2);
+    CHECK(r.stations[0].entrance_spot->direction == 2); // Only the quarter turn is kept
+    CHECK_FALSE(r.stations[0].exit_spot.has_value());   // A stale reference has no spot
+    CHECK(r.fence_symbol == "Picket:sid");
+    CHECK(r.fence_overlay == "Fences\\Picket");
+    CHECK(r.override_fence_symbol.empty());
+}

@@ -15,9 +15,9 @@
 namespace rct3::ovl
 {
 
-    /// One sample of one channel at one key time: a vector of three floats followed by twelve bytes whose
-    /// layout is not known. The bytes look like six 16-bit values, some of which sit at the ends of the
-    /// signed range, so they are probably a packed rotation.
+    /// One sample of one channel at one key time: where the channel's bone sits, then its turn as the first
+    /// two of its three axes, three signed 16-bit values each with 32767 standing for 1. The third axis is
+    /// the cross product of the first two. Position and axes are relative to the bone it hangs from.
     struct SimpleAnimSample
     {
         std::array<float, 3> vector { };

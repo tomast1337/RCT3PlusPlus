@@ -903,6 +903,7 @@ namespace rct3::scene
                 return f;
             const save::PlacedObject& o = scene.objects[index];
             f.symbol = o.symbol;
+            f.colours = o.colours;
             if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
                 f.colour_slots = park::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
@@ -1027,6 +1028,7 @@ namespace rct3::scene
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
                 tab.action = t.action;
+                tab.paints = t.paints;
                 scene.prop_tabs.push_back(t.tab);
             }
             if (scene.shown_prop != index)
@@ -1144,6 +1146,9 @@ namespace rct3::scene
         if (info != nullptr)
         {
             const profiling::Scope zone("InfoPanel");
+            // Pressing the park puts open colours away without picking.
+            if ((pointer.down || input.right) && !over && info->painting())
+                info->close_palette();
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -1171,6 +1176,13 @@ namespace rct3::scene
                 destroy_prop(scene, *scene.shown_prop);
                 scene.shown_prop.reset();
                 info->hide();
+            }
+            if (const auto paint = info->take_paint(); paint && scene.shown_prop)
+            {
+                // Pot k paints the k-th slot the prop takes; free, as in the game.
+                const std::vector<std::size_t> slots = ui::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
+                if (paint->pot < slots.size())
+                    paint_prop(scene, *scene.shown_prop, slots[paint->pot], static_cast<std::int32_t>(paint->colour));
             }
             if (const auto tab = info->take_picked(); tab && scene.shown_prop)
             {

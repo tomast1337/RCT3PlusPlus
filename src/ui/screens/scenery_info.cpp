@@ -26,6 +26,7 @@ namespace rct3::ui
         constexpr float kPercent = 100;
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
         constexpr int kColourSlot = 1;
+        constexpr std::int32_t kColourCount = 32;
         constexpr int kFirstBehaviourSlot = 2;
 
         std::u16string ascii(std::string_view s)
@@ -35,16 +36,36 @@ namespace rct3::ui
 
     } // namespace
 
+    std::vector<std::size_t> scenery_paint_slots(const SceneryFacts& facts)
+    {
+        std::vector<std::size_t> slots;
+        for (std::size_t s = 0; s < facts.colours.size(); ++s)
+        {
+            if ((facts.colour_slots & (1U << s)) != 0)
+                slots.push_back(s);
+        }
+        return slots;
+    }
+
     std::vector<SceneryTabInfo> scenery_tabs(const SceneryFacts& facts)
     {
-        std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true } };
-        if (facts.colour_slots != 0)
-            tabs.push_back({ SceneryTab::Colour, kColourSlot, "Attraction_Colour", "Scenery_SetFlexiColours", false });
+        std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true, { } } };
+        if (const std::vector<std::size_t> slots = scenery_paint_slots(facts); !slots.empty())
+        {
+            tabs.push_back({ SceneryTab::Colour, kColourSlot, "Attraction_Colour", "Scenery_SetFlexiColours", false, { } });
+            SceneryTabInfo& colour = tabs.back();
+            for (const std::size_t s : slots)
+            {
+                // A colour out of the range is shown as the first.
+                const std::int32_t c = facts.colours.at(s);
+                colour.paints.push_back(c >= 0 && c < kColourCount ? static_cast<std::size_t>(c) : 0);
+            }
+        }
         int slot = kFirstBehaviourSlot;
         if (facts.bin != nullptr)
-            tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false });
+            tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
-            tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false });
+            tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false, { } });
         return tabs;
     }
 

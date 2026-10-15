@@ -11,7 +11,9 @@
 #pragma once
 
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/colour_palette.hpp"
 #include "ui/widgets/line_plot.hpp"
+#include "ui/widgets/paint_button.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -24,14 +26,18 @@ namespace rct3::ui
 
     struct InfoPanelStyle
     {
-        std::string disc;                             ///< Behind the view, fully opaque
-        std::string glass;                            ///< Over the view, faint
-        std::string rim;                              ///< Round the right of the disc
-        std::string shadow;                           ///< Under the disc
-        std::string rim_shadow;                       ///< Under the rim
-        std::string strip;                            ///< Behind a tab's content, stretched in nine parts
-        std::string close_icon;                       ///< On the close button
-        std::string tab_face;                         ///< Behind each tab's icon
+        std::string disc;           ///< Behind the view, fully opaque
+        std::string glass;          ///< Over the view, faint
+        std::string rim;            ///< Round the right of the disc
+        std::string shadow;         ///< Under the disc
+        std::string rim_shadow;     ///< Under the rim
+        std::string strip;          ///< Behind a tab's content, stretched in nine parts
+        std::string close_icon;     ///< On the close button
+        std::string tab_face;       ///< Behind each tab's icon
+        PaintButtonStyle paint;     ///< Of a paint tab; its face is tab_face
+        ColourPaletteStyle palette; ///< Of the colours a paint tab opens
+        std::size_t palette_count = 32;
+        std::size_t palette_columns = 8;
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
         Color picked_section_colour = hex("#ffffff"); ///< Of the shown section's
         float glass_alpha = 0.15f;
@@ -57,6 +63,17 @@ namespace rct3::ui
         int slot = 0;
         std::vector<InfoChoice> choices;
         bool action = false;
+        /// A paint tab's pots, each with its colour; pressing a pot opens colours to pick for it. The tab's icon
+        /// is the pots'.
+        std::vector<std::size_t> paints;
+    };
+
+    /// A colour the player picked for a paint tab's pot.
+    struct InfoPaint
+    {
+        std::size_t tab = 0;
+        std::size_t pot = 0;
+        std::size_t colour = 0;
     };
 
     namespace info_panel
@@ -94,6 +111,8 @@ namespace rct3::ui
         /// Radians either side of the line out from the disc through the tab, for two and for three choices.
         inline constexpr float kTwoChoiceSpread = 0.35f;
         inline constexpr float kThreeChoiceSpread = 0.7f;
+        inline constexpr float kPaletteGap = 4;   ///< Between a paint tab and the colours it opens
+        inline constexpr float kScreenMargin = 4; ///< Kept between the colours and the screen's edges
     } // namespace info_panel
 
     struct InfoLine
@@ -161,6 +180,23 @@ namespace rct3::ui
         {
             return std::exchange(choice_now_, std::nullopt);
         }
+        /// The colour the player picked for a paint tab since the last call.
+        [[nodiscard]] std::optional<InfoPaint> take_paint()
+        {
+            return std::exchange(paint_now_, std::nullopt);
+        }
+        /// The paint tab whose colours are out, if any.
+        [[nodiscard]] std::optional<std::size_t> painting() const
+        {
+            return painting_;
+        }
+        [[nodiscard]] ColourPalette* palette() const
+        {
+            return palette_;
+        }
+        /// Puts the colours away, as when the player presses elsewhere.
+        void close_palette();
+
         /// The tab whose choices are out, if any.
         [[nodiscard]] std::optional<std::size_t> choosing() const
         {
@@ -223,6 +259,7 @@ namespace rct3::ui
         void mark_picked();
         void open_choices(std::size_t tab);
         void close_choices();
+        void open_palette(std::size_t tab, std::size_t pot);
 
         InfoPanelStyle style_;
         std::vector<Button*> tabs_;
@@ -230,6 +267,11 @@ namespace rct3::ui
         std::vector<std::vector<InfoChoice>> tab_choices_;
         std::vector<Button*> choices_;
         std::optional<std::size_t> choosing_;
+        std::vector<PaintButton*> paints_; ///< Of each tab, its pots when it is a paint tab
+        ColourPalette* palette_ = nullptr;
+        std::optional<std::size_t> painting_;
+        std::size_t painting_pot_ = 0;
+        std::optional<InfoPaint> paint_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
         std::optional<std::size_t> section_now_;

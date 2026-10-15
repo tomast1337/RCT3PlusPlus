@@ -111,6 +111,7 @@ namespace rct3::scene
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
+        std::size_t info_section = 0;                         ///< Of the open tab's page
         std::optional<ui::Point> press;                       ///< Where the left button went down over the park, until it is let go
         render::SceneLight light;                             ///< What the day clock shows, for this frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.

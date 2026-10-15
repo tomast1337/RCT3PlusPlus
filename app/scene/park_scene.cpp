@@ -596,6 +596,13 @@ namespace rct3::scene
             return f;
         }
 
+        save::AttractionCommon* attraction_common(ParkScene& scene, park::AttractionRef ref)
+        {
+            if (ref.kind == park::AttractionRef::Kind::Stall)
+                return ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index].base : nullptr;
+            return ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index].base : nullptr;
+        }
+
         void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             if (!scene.shown)
@@ -603,7 +610,7 @@ namespace rct3::scene
             ui::InfoUnits units;
             units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
             units.distance = static_cast<ui::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
-            panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, units));
+            panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, units, scene.info_section));
         }
 
         /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
@@ -620,9 +627,23 @@ namespace rct3::scene
             {
                 if (t.tab == scene.info_tab)
                     picked = tabs.size();
-                tabs.push_back({ std::string(t.icon), std::u16string(assets.strings->get(t.help)), t.slot });
+                ui::InfoTab& tab = tabs.emplace_back();
+                tab.icon = t.icon;
+                tab.help = assets.strings->get(t.help);
+                tab.slot = t.slot;
+                if (t.tab == ui::AttractionTab::State)
+                {
+                    for (const ui::StateChoice& c : ui::state_choices(kind))
+                    {
+                        const bool now = c.state == f.common->state;
+                        tab.choices.push_back({ std::string(now ? c.disabled_icon : c.icon), std::u16string(assets.strings->get(c.help)), !now });
+                    }
+                }
                 scene.shown_tabs.push_back(t.tab);
             }
+            // The open-or-close tab has no page of its own.
+            if (scene.shown_tabs.at(picked) == ui::AttractionTab::State)
+                picked = 0;
             scene.info_tab = scene.shown_tabs.at(picked);
             scene.shown = ref;
             panel.show(std::move(tabs), picked);
@@ -690,7 +711,25 @@ namespace rct3::scene
             if (const auto tab = info->take_picked(); tab && *tab < scene.shown_tabs.size())
             {
                 scene.info_tab = scene.shown_tabs[*tab];
+                scene.info_section = 0;
                 show_info_page(scene, *info, assets, options);
+            }
+            if (const auto section = info->take_section())
+            {
+                scene.info_section = *section;
+                show_info_page(scene, *info, assets, options);
+            }
+            if (const auto choice = info->take_choice(); choice && scene.shown)
+            {
+                // Put in the state picked, then shown again for the state tab's new look.
+                const ui::AttractionFacts f = facts(scene, *scene.shown);
+                const ui::AttractionKind kind = f.stall ? ui::AttractionKind::Stall : ui::attraction_kind(*f.ride);
+                const std::vector<ui::StateChoice> states = ui::state_choices(kind);
+                if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
+                {
+                    common->state = states[choice->second].state;
+                    open_info(scene, *info, *scene.shown, assets, options);
+                }
             }
             if (info->take_closed())
                 scene.shown.reset();

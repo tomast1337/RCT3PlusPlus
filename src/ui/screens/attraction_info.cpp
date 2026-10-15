@@ -3,11 +3,13 @@
 
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/thought_text.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <format>
+#include <span>
 
 namespace rct3::ui
 {
@@ -51,6 +53,28 @@ namespace rct3::ui
         /// The highest rating each word is used up to, then the word for anything higher.
         constexpr std::array<float, 6> kRatingSteps = { 2.55f, 5.11f, 7.67f, 10.23f, 12.79f, 30.0f };
         constexpr std::string_view kRatingWord = "RideRating";
+        /// Thoughts shown at most, the latest first: as many as the page has room for.
+        constexpr std::size_t kThoughtLines = 6;
+
+        constexpr std::array<StateChoice, 3> kStateChoices { {
+            { save::AttractionState::Open, "Attraction_Button_Open", "Attraction_Button_Open_Disabled", "TT_AttractionDialogIconOpenButton" },
+            { save::AttractionState::Testing, "Attraction_Button_Testing", "Attraction_Button_Testing_Disabled", "TT_AttractionDialogIconTestingButton" },
+            { save::AttractionState::Closed, "Attraction_Button_Closed", "Attraction_Button_Closed_Disabled", "TT_AttractionDialogIconClosedButton" },
+        } };
+
+        constexpr std::array<std::string_view, 4> kTestSections = { "RideTest_Basic", "RideTest_Speed", "RideTest_Force", "RideTest_Drop" };
+        enum class TestSection : std::uint8_t
+        {
+            Basic,
+            Speed,
+            Force,
+            Drop,
+        };
+
+        constexpr std::array<std::string_view, 16> kModeNames = {
+            "RideOpModeDialog_OpModeContinuousCircuit", "RideOpModeDialog_OpModePoweredLaunch", "RideOpModeDialog_OpModeReverseInclinedLaunch", "RideOpModeDialog_OpModeBoat",      "RideOpModeDialog_OpModeRace", "RideOpModeDialog_OpModeShuttle", "RideOpModeDialog_OpModeUpwardsLaunch", "RideOpModeDialog_OpModeFreefallDrop", "RideOpModeDialog_OpModeUpAndDown", "RideOpModeDialog_OpModeMiniGolf", "RideOpModeDialog_OpModeSlide", "RideOpModeDialog_OpModeReverseCableLiftHill",
+            "RideOpModeDialog_OpModeWaterTransport",    "RideOpModeDialog_OpModeAquarium",      "RideOpModeDialog_OpModeMultiplePoweredLaunch", "RideOpModeDialog_OpModeLazyRiver",
+        };
 
         constexpr float kGravity = 9.81f;
         constexpr float kKmhPerMs = 3.6f;
@@ -118,6 +142,22 @@ namespace rct3::ui
             return ascii(std::format("{:.2f} (", value)) + rating_word(value, strings) + u")";
         }
 
+        std::u16string force(float acceleration)
+        {
+            return ascii(std::format("{:.2f} g", acceleration / kGravity));
+        }
+
+        std::u16string yes_no(bool value, const StringTable& strings)
+        {
+            return text(strings, value ? "Yes" : "No");
+        }
+
+        /// Seconds, or a dash for none.
+        std::u16string wait(std::int32_t seconds)
+        {
+            return seconds < 0 ? std::u16string(u"-") : ascii(std::format("{} s", seconds));
+        }
+
         std::u16string percent(float value)
         {
             return ascii(std::format("{} %", std::lround(value)));
@@ -173,8 +213,55 @@ namespace rct3::ui
             }
         }
 
-        void tests(InfoPage& page, const save::Ride& ride, const StringTable& strings, const InfoUnits& units)
+        /// Whether a ride's results go past the basic ones: only rides that run along a track and are measured
+        /// over a lap.
+        bool measured(const save::Ride& ride)
         {
+            using enum save::OperatingMode;
+            return ride.kind == save::RideKind::Tracked && ride.mode != Boat && ride.mode != Race && ride.mode != MiniGolf && ride.mode != Aquarium;
+        }
+
+        void tests(InfoPage& page, const save::Ride& ride, std::size_t section, const StringTable& strings, const InfoUnits& units)
+        {
+            if (measured(ride))
+            {
+                for (const std::string_view key : kTestSections)
+                    page.sections.push_back(text(strings, key));
+                page.section = std::min(section, kTestSections.size() - 1);
+            }
+            const auto shown = static_cast<TestSection>(page.section);
+            if (shown != TestSection::Basic)
+            {
+                const auto& lap = ride.stats.last_lap;
+                if (!lap || !lap->valid)
+                {
+                    page.note = text(strings, "AttractionResultsDialogLabel_NoTestResults");
+                    return;
+                }
+                switch (shown)
+                {
+                    case TestSection::Speed:
+                        add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time));
+                        add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length, units.distance));
+                        break;
+                    case TestSection::Force:
+                        add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
+                        add(page, strings, "AttractionResultsDialogLabel_MaxNegativeVerticalG", force(lap->max_negative_vertical));
+                        add(page, strings, "AttractionResultsDialogLabel_MaxLateralG", force(lap->max_lateral));
+                        break;
+                    case TestSection::Drop:
+                        add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time));
+                        add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
+                        add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
+                        break;
+                    case TestSection::Basic:
+                        break;
+                }
+                return;
+            }
             if (!ride.assessment.valid)
                 page.note = text(strings, "AttractionResultsDialogLabel_NotAssessed");
             else
@@ -183,16 +270,67 @@ namespace rct3::ui
                 add(page, strings, "AttractionResultsDialogLabel_Intensity", rating(ride.assessment.intensity, strings));
                 add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(ride.assessment.nausea, strings));
             }
-            const auto& lap = ride.stats.last_lap;
-            if (!lap || !lap->valid)
+        }
+
+        void vehicles(InfoPage& page, const save::Ride& ride, const StringTable& strings)
+        {
+            page.heading = kind_name(ride.base.symbol, strings);
+            if (ride.kind != save::RideKind::Tracked || ride.trains.empty())
+                return;
+            add(page, strings, "AttractionVehicleDialogLabelNumTrains", ascii(std::to_string(ride.trains.size())));
+            add(page, strings, "AttractionVehicleDialogLabelNumCars", ascii(std::to_string(ride.trains.front().cars.size())));
+        }
+
+        void mode(InfoPage& page, const save::Ride& ride, const StringTable& strings, const InfoUnits& units)
+        {
+            const auto m = static_cast<std::size_t>(ride.mode);
+            if (m < kModeNames.size())
+                page.heading = text(strings, kModeNames[m]);
+            if (ride.kind != save::RideKind::Tracked)
+                return;
+            const save::OperatingOptions& o = ride.options;
+            add(page, strings, "RideOpModeDialog_BlockSection", yes_no(o.block_sectioned, strings));
+            add(page, strings, "RideOpModeDialog_SyncStations", yes_no(o.sync_trains, strings));
+            add(page, strings, "RideOpModeDialog_MinWaitTime", wait(o.min_wait));
+            add(page, strings, "RideOpModeDialog_MaxWaitTime", wait(o.max_wait));
+            using enum save::OperatingMode;
+            const bool launched = ride.mode == PoweredLaunch || ride.mode == ReverseInclinedLaunch || ride.mode == UpwardsLaunch || ride.mode == MultiplePoweredLaunch;
+            if (launched)
+                add(page, strings, "RideOpModeDialog_LaunchSpeed", speed(o.launch_speed, units.distance));
+            else if (o.lift_speed > 0)
+                add(page, strings, "RideOpModeDialog_LiftChainSpeed", speed(o.lift_speed, units.distance));
+        }
+
+        void graphs(InfoPage& page, const save::Ride& ride, const StringTable& strings)
+        {
+            const save::RideGraphs& g = ride.graphs;
+            if (g.speed.empty() && g.altitude.empty() && g.vertical_g.empty() && g.lateral_g.empty())
             {
-                if (page.note.empty())
-                    page.note = text(strings, "AttractionResultsDialogLabel_NoTestResults");
+                page.note = text(strings, "AttractionResultsDialogLabel_NoTestResults");
                 return;
             }
-            add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
-            add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length, units.distance));
-            add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time));
+            page.graph = {
+                { text(strings, "Graph_Speed"), g.speed },
+                { text(strings, "Graph_Altitude"), g.altitude },
+                { text(strings, "Graph_VerticalG"), g.vertical_g },
+                { text(strings, "Graph_LateralG"), g.lateral_g },
+            };
+        }
+
+        void thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)
+        {
+            std::vector<const save::ThoughtEntry*> latest;
+            for (const save::ThoughtEntry& t : all)
+                if (t.thought > 0)
+                    latest.push_back(&t);
+            std::ranges::stable_sort(latest, std::ranges::greater { }, &save::ThoughtEntry::time);
+            for (const save::ThoughtEntry* t : latest)
+            {
+                if (page.lines.size() == kThoughtLines)
+                    break;
+                if (std::u16string said = thought_text(strings, t->thought, t->variant, page.title); !said.empty())
+                    page.lines.push_back({ std::move(said), { } });
+            }
         }
 
         void maintenance(InfoPage& page, const save::Ride& ride, const StringTable& strings)
@@ -231,6 +369,17 @@ namespace rct3::ui
             tabs.insert(tabs.end(), kStallTabs.begin(), kStallTabs.end());
         std::ranges::sort(tabs, { }, &AttractionTabInfo::slot);
         return tabs;
+    }
+
+    std::vector<StateChoice> state_choices(AttractionKind kind)
+    {
+        std::vector<StateChoice> out;
+        for (const StateChoice& c : kStateChoices)
+        {
+            if (c.state != save::AttractionState::Testing || kind == AttractionKind::Tracked || kind == AttractionKind::Flat)
+                out.push_back(c);
+        }
+        return out;
     }
 
     AttractionKind attraction_kind(const save::Ride& ride)
@@ -278,7 +427,7 @@ namespace rct3::ui
         return text(strings, std::format("{}{}", kRatingWord, step - kRatingSteps.begin()));
     }
 
-    InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
+    InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, std::size_t section)
     {
         InfoPage page;
         if (f.common == nullptr)
@@ -298,7 +447,23 @@ namespace rct3::ui
                 break;
             case AttractionTab::Tests:
                 if (f.ride)
-                    tests(page, *f.ride, strings, units);
+                    tests(page, *f.ride, section, strings, units);
+                break;
+            case AttractionTab::Vehicles:
+                if (f.ride)
+                    vehicles(page, *f.ride, strings);
+                break;
+            case AttractionTab::Mode:
+                if (f.ride)
+                    mode(page, *f.ride, strings, units);
+                break;
+            case AttractionTab::Graphs:
+                if (f.ride)
+                    graphs(page, *f.ride, strings);
+                break;
+            case AttractionTab::Extras:
+                if (f.stall && f.stall->extras.empty())
+                    page.note = text(strings, "GUITextSymbol_ShopExtras_NoItemsRequireExtras");
                 break;
             case AttractionTab::Maintenance:
                 if (f.ride)
@@ -309,11 +474,12 @@ namespace rct3::ui
                     items(page, *f.stall, strings, units);
                 break;
             case AttractionTab::Thoughts:
-            case AttractionTab::Vehicles:
-            case AttractionTab::Mode:
+                if (f.ride)
+                    thoughts(page, f.ride->thoughts, strings);
+                else if (f.stall)
+                    thoughts(page, f.stall->thoughts, strings);
+                break;
             case AttractionTab::Construction:
-            case AttractionTab::Graphs:
-            case AttractionTab::Extras:
                 break;
         }
         return page;

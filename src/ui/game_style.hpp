@@ -416,6 +416,7 @@ namespace rct3::ui::game_skins
         s.strip = "CircularPanelDialog";
         s.close_icon = kCloseIcon;
         s.tab_face = kMenuButtonSmall;
+
         return s;
     }
 

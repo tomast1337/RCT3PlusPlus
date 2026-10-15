@@ -110,14 +110,98 @@ TEST_CASE("pages are written from the attraction's state")
     ride.stats.last_lap = lap;
     tests = attraction_page(AttractionTab::Tests, f, s, units);
     CHECK(tests.lines[0].value == u"0.25 (Low)");
+    tests = attraction_page(AttractionTab::Tests, f, s, units, 1);
     const auto fastest = std::ranges::find(tests.lines, std::u16string(u"Fastest"), &InfoLine::label);
     REQUIRE(fastest != tests.lines.end());
     CHECK(fastest->value == u"36.0 km/h");
     InfoUnits imperial;
     imperial.distance = DistanceUnits::Imperial;
-    const InfoPage slow = attraction_page(AttractionTab::Tests, f, s, imperial);
+    const InfoPage slow = attraction_page(AttractionTab::Tests, f, s, imperial, 1);
     CHECK(std::ranges::find(slow.lines, std::u16string(u"Fastest"), &InfoLine::label)->value == u"22.4 mph");
 
     ride.breakdown.reliability = 87.4f;
     CHECK(attraction_page(AttractionTab::Maintenance, f, s, units).lines[0].value == u"87 %");
+}
+
+TEST_CASE("rides can be tested as well as opened and closed, other attractions only opened and closed")
+{
+    CHECK(state_choices(AttractionKind::Tracked).size() == 3);
+    CHECK(state_choices(AttractionKind::Flat).size() == 3);
+    const auto stall = state_choices(AttractionKind::Stall);
+    REQUIRE(stall.size() == 2);
+    CHECK(stall[0].state == save::AttractionState::Open);
+    CHECK(stall[1].state == save::AttractionState::Closed);
+    CHECK(state_choices(AttractionKind::Facility).size() == 2);
+}
+
+TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one")
+{
+    StringTable s = table();
+    s.add("RideTest_Force", u"Forces");
+    s.add("AttractionResultsDialogLabel_MaxLateralG", u"Sideways");
+    save::Ride ride;
+    ride.kind = save::RideKind::Tracked;
+    save::TestResults lap;
+    lap.valid = true;
+    lap.max_lateral = 9.81f * 2;
+    ride.stats.last_lap = lap;
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage forces = attraction_page(AttractionTab::Tests, f, s, { }, 2);
+    CHECK(forces.sections.size() == 4);
+    CHECK(forces.section == 2);
+    CHECK(forces.sections[2] == u"Forces");
+    CHECK(std::ranges::find(forces.lines, std::u16string(u"Sideways"), &InfoLine::label)->value == u"2.00 g");
+    // Asking past the last section shows the last.
+    CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 9).section == 3);
+
+    ride.kind = save::RideKind::Flat;
+    CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 2).sections.empty());
+}
+
+TEST_CASE("vehicles, operating mode and graphs are written from the ride")
+{
+    StringTable s = table();
+    s.add("AttractionVehicleDialogLabelNumTrains", u"Trains");
+    s.add("RideOpModeDialog_OpModeShuttle", u"Back and forth");
+    s.add("RideOpModeDialog_MinWaitTime", u"Least wait");
+    s.add("Graph_Speed", u"Speed");
+    save::Ride ride;
+    ride.kind = save::RideKind::Tracked;
+    ride.base.symbol = "SpinnerRide:trr";
+    ride.trains.resize(3);
+    ride.mode = save::OperatingMode::Shuttle;
+    ride.options.min_wait = 12;
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+
+    const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });
+    CHECK(vehicles.heading == u"Spinner");
+    CHECK(vehicles.lines.at(0).label == u"Trains");
+    CHECK(vehicles.lines.at(0).value == u"3");
+
+    const InfoPage mode = attraction_page(AttractionTab::Mode, f, s, { });
+    CHECK(mode.heading == u"Back and forth");
+    CHECK(std::ranges::find(mode.lines, std::u16string(u"Least wait"), &InfoLine::label)->value == u"12 s");
+
+    CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
+    ride.graphs.speed = { 1, 2, 3 };
+    const InfoPage graphs = attraction_page(AttractionTab::Graphs, f, s, { });
+    REQUIRE(graphs.graph.size() == 4);
+    CHECK(graphs.graph[0].name == u"Speed");
+    CHECK(graphs.graph[0].values.size() == 3);
+}
+
+TEST_CASE("the thoughts page shows the latest thoughts about the attraction first")
+{
+    StringTable s = table();
+    s.add("Thought_ImLost1", u"Lost at %NAME%");
+    s.add("Thought_ImTired1", u"Tired");
+    save::Ride ride;
+    ride.base.name = "Big One";
+    ride.thoughts = { { 0, 1, 10, 0 }, { 0, 0, -1, 0 }, { 0, 2, 20, 5 }, { 0, 1, 5, 0 } };
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage page = attraction_page(AttractionTab::Thoughts, f, s, { });
+    REQUIRE(page.lines.size() == 3);
+    CHECK(page.lines[0].label == u"Tired");
+    CHECK(page.lines[1].label == u"Lost at Big One");
+    CHECK(page.lines[0].value.empty());
 }

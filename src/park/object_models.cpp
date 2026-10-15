@@ -214,6 +214,19 @@ namespace rct3::park
         part.slots = picture != pictures_.end() ? picture->second.slots : 0;
     }
 
+    std::uint32_t colour_slots(const ObjectModel& model)
+    {
+        std::uint32_t slots = 0;
+        for (const ModelLevel& level : model.levels)
+        {
+            for (const ModelPart& part : level.parts)
+                slots |= part.slots;
+            if (level.billboard)
+                slots |= level.billboard->slots;
+        }
+        return slots;
+    }
+
     std::optional<std::size_t> level_at(const ObjectModel& model, float distance, float scale)
     {
         for (std::size_t i = 0; i < model.levels.size(); ++i)

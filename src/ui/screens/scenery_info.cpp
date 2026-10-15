@@ -24,7 +24,8 @@ namespace rct3::ui
         constexpr std::string_view kSignOptions = "Sign_Options";
         constexpr std::string_view kNoEntry = "Sign_NoEntry";
         constexpr float kPercent = 100;
-        /// Slot 1 is kept for the colours tab; what a prop does goes on from the next.
+        /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
+        constexpr int kColourSlot = 1;
         constexpr int kFirstBehaviourSlot = 2;
 
         std::u16string ascii(std::string_view s)
@@ -37,6 +38,8 @@ namespace rct3::ui
     std::vector<SceneryTabInfo> scenery_tabs(const SceneryFacts& facts)
     {
         std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true } };
+        if (facts.colour_slots != 0)
+            tabs.push_back({ SceneryTab::Colour, kColourSlot, "Attraction_Colour", "Scenery_SetFlexiColours", false });
         int slot = kFirstBehaviourSlot;
         if (facts.bin != nullptr)
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false });

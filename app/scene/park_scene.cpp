@@ -903,6 +903,8 @@ namespace rct3::scene
                 return f;
             const save::PlacedObject& o = scene.objects[index];
             f.symbol = o.symbol;
+            if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
+                f.colour_slots = park::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
                 f.bin = &*bin;
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
@@ -1038,17 +1040,30 @@ namespace rct3::scene
             show_info_page(scene, panel, assets, options);
         }
 
-        /// Takes the prop `index` out of the park. The objects' meshes are built beside the frame from the
-        /// objects, so the build in hand is dropped and another started without it.
-        void destroy_prop(ParkScene& scene, std::size_t index)
+        /// Changes the object `index` by `change`. The objects' meshes are built beside the frame from the
+        /// objects, so the build in hand is dropped first and another started with the change.
+        template<typename Change> void change_object(ParkScene& scene, std::size_t index, Change&& change)
         {
             if (index >= scene.objects.size())
                 return;
             if (scene.object_build.valid())
                 (void)scene.object_build.get();
-            scene.objects[index].hidden = true;
+            change(scene.objects[index]);
             scene.levels.clear();
             scene.since_rebuild = kObjectRebuildInterval;
+        }
+
+        /// Takes the prop `index` out of the park.
+        void destroy_prop(ParkScene& scene, std::size_t index)
+        {
+            change_object(scene, index, [](save::PlacedObject& o) { o.hidden = true; });
+        }
+
+        /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
+        void paint_prop(ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
+        {
+            if (slot < park::kFlexiSlotCount)
+                change_object(scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
         }
 
         /// Whether the object is a prop the panel can tell about: one of the park's own.

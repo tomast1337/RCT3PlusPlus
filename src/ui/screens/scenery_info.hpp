@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// What the info panel shows about a prop placed in the park: a tab that pulls it down at once, and tabs for
-// what some props do, such as a litter bin's state or a sign's words. A plain prop has no page open; the
+// What the info panel shows about a prop placed in the park: a tab that pulls it down at once, one that picks
+// its colours when it takes any, and tabs for what some props do, such as a litter bin's state or a sign's
+// words. A plain prop has no page open; the
 // strip then only names it.
 #pragma once
 
@@ -21,6 +22,7 @@ namespace rct3::ui
     enum class SceneryTab : std::uint8_t
     {
         Destroy, ///< Pulls the prop down; has no page
+        Colour,  ///< Picks the colours of the parts that take them
         Bin,     ///< How full a litter bin is and when it was emptied
         Sign,    ///< What a sign says
     };
@@ -40,6 +42,7 @@ namespace rct3::ui
         std::string_view symbol;
         const save::BinState* bin = nullptr;
         const save::SignState* sign = nullptr;
+        std::uint32_t colour_slots = 0; ///< The colour slots its pictures take (bit k: slot k)
     };
 
     /// The tabs of the prop, in the order of their slots.

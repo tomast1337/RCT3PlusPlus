@@ -20,8 +20,8 @@
 #include "park/terrain_mesh.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
-#include "save/model/park.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
@@ -101,10 +101,7 @@ namespace rct3::scene
         std::vector<glm::vec4> horizon_band; ///< Of the sky's picture, for the horizon at each time of day
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
-        save::CalendarDate date;             ///< The park's, for the bar
-        std::optional<std::int64_t> cash;    ///< None when the park's money never runs out
-        std::optional<float> temperature;    ///< Degrees Celsius
-        ui::ParkBarValues bar;               ///< What the bar shows; money, temperature and date are written each frame
+        simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
         simulation::DayClock day;            ///< The park's time of day
         render::SceneLight light;            ///< What the day clock shows, for this frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.

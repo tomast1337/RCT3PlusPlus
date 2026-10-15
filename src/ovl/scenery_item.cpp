@@ -92,6 +92,7 @@ namespace rct3::ovl
                 sq.max_height = static_cast<std::int32_t>(u32_at(*raw, at + 8));
                 const std::uint32_t pointer = u32_at(*raw, at + 12);
                 const std::uint32_t mask_count = u32_at(*raw, at + 16);
+                sq.support_kind = mask_count;
                 if (mask_count > kMaxMasks - total_masks)
                     return false;
                 total_masks += mask_count;

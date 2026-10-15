@@ -39,6 +39,12 @@ namespace rct3::park
             }
         }
 
+        glm::mat4 placed(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, const Fitted& fitted)
+        {
+            const auto found = fitted.find(object.id);
+            return found != fitted.end() ? found->second : object_transform(object, positioning, grid);
+        }
+
     } // namespace
 
     std::string model_key(const save::PlacedObject& object)
@@ -46,7 +52,7 @@ namespace rct3::park
         return object.overlay + "|" + object.symbol;
     }
 
-    std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
     {
         std::vector<glm::vec3> anchors;
         anchors.reserve(objects.size());
@@ -54,7 +60,7 @@ namespace rct3::park
         {
             const auto model = models.find(model_key(object));
             const auto positioning = static_cast<Positioning>(model != models.end() ? model->second.positioning : 0);
-            anchors.emplace_back(object_transform(object, positioning, grid)[3]);
+            anchors.emplace_back(placed(object, positioning, grid, fitted)[3]);
         }
         return anchors;
     }
@@ -75,7 +81,7 @@ namespace rct3::park
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -98,8 +104,10 @@ namespace rct3::park
             if (shown.parts.empty())
                 continue;
             ++mesh.placed;
-            const glm::mat4 transform = object_transform(object, static_cast<Positioning>(model->second.positioning), grid);
-            const glm::mat3 turn { transform };
+            const glm::mat4 transform = placed(object, static_cast<Positioning>(model->second.positioning), grid, fitted);
+            // A fitted piece may be stretched: its normals take the inverse transpose to stay square to its faces.
+            const bool stretched = fitted.contains(object.id);
+            const glm::mat3 turn = stretched ? glm::transpose(glm::inverse(glm::mat3 { transform })) : glm::mat3 { transform };
             const FlexiColours colours = colours_of(object, overrides);
             const auto lean = leans.find(object.id);
             const glm::vec2 rise = lean != leans.end() ? lean->second : glm::vec2(0.0f);
@@ -114,7 +122,7 @@ namespace rct3::park
                 {
                     glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
                     at.y += glm::dot(glm::vec2(at.x, at.z) - anchor, rise);
-                    run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, turn * v.normal });
+                    run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, stretched ? glm::normalize(turn * v.normal) : turn * v.normal });
                 }
                 for (const std::uint32_t i : part.indices)
                     run.indices.push_back(base + i);

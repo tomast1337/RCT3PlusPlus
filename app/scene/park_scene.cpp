@@ -14,6 +14,7 @@
 #include "park/sky_look.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
+#include "park/track_supports.hpp"
 #include "save/model/park.hpp"
 #include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
@@ -185,7 +186,7 @@ namespace rct3::scene
             }
             scene.levels = std::move(levels);
             scene.since_rebuild = 0;
-            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels, { }, scene.leans);
+            const park::ObjectMesh mesh = park::object_mesh(scene.objects, scene.models, scene.grid, scene.levels, { }, scene.leans, scene.fitted);
             scene.object_batches = mesh.batches;
             add_textures(device, scene, mesh.batches);
             if (mesh.indices.empty())
@@ -463,23 +464,52 @@ namespace rct3::scene
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
         {
-            // What a park does not keep but builds when it loads: supports under raised paths and railings along queues.
+            // What a park does not keep but builds when it loads: supports under raised paths and track, and railings
+            // along queues.
             std::vector<save::PlacedObject> built;
+            const auto largest_id = [&] {
+                std::uint64_t last = 0;
+                for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(built) })
+                {
+                    for (const save::PlacedObject& o : list)
+                        last = std::max(last, o.id);
+                }
+                return last;
+            };
             if (const auto found = install.find(std::string(park::kSupportOverlay) + ".common.ovl"))
             {
                 if (const auto sets = park::load_support_sets(*found))
+                {
                     built = park::path_supports(world->paths, scene.objects, scene.models, scene.grid, *sets);
+                    // Tops, caps and beams are fitted to the points they join, so their shapes are needed first.
+                    std::vector<save::PlacedObject> sized;
+                    const auto size = [&](const park::SupportPiece& piece) {
+                        save::PlacedObject& o = sized.emplace_back();
+                        o.symbol = piece.symbol;
+                        o.overlay = std::string(park::kSupportOverlay);
+                    };
+                    for (const auto& [group, list] : *sets)
+                    {
+                        for (const park::SupportSet& set : list)
+                        {
+                            for (const auto& piece : { set.top, set.cap })
+                            {
+                                if (piece)
+                                    size(*piece);
+                            }
+                            std::ranges::for_each(set.beams, size);
+                        }
+                    }
+                    load_models(install, sized, false, scene.models, scene.pictures);
+                    park::BuiltSupports columns = park::track_supports(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id());
+                    built.insert(built.end(), std::make_move_iterator(columns.pieces.begin()), std::make_move_iterator(columns.pieces.end()));
+                    scene.fitted = std::move(columns.fitted);
+                }
                 else
                     log.warning("supports: {}", sets.error());
             }
-            std::uint64_t last_id = 0;
-            for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(built) })
-            {
-                for (const save::PlacedObject& o : list)
-                    last_id = std::max(last_id, o.id);
-            }
             const std::size_t supports = built.size();
-            park::QueueFences fences = park::queue_fences(world->paths, scene.grid, last_id);
+            park::QueueFences fences = park::queue_fences(world->paths, scene.grid, largest_id());
             log.info("{} supports, {} queue railings", supports, fences.pieces.size());
             built.insert(built.end(), std::make_move_iterator(fences.pieces.begin()), std::make_move_iterator(fences.pieces.end()));
             scene.leans = std::move(fences.leans);
@@ -493,7 +523,7 @@ namespace rct3::scene
             log.info("{} trees beyond the edge", trees.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
-        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid);
+        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         auto solid = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" });
         if (!solid)
             return fail(solid.error());

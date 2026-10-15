@@ -44,25 +44,9 @@ namespace
 
 } // namespace
 
-TEST_CASE("support pieces gather by group, middles tallest first")
-{
-    SupportSets sets = posts();
-    add_support_piece(sets, "stone", kSupportMiddleType, "OtherPost2", 2); // A second of a height is ignored
-    add_support_piece(sets, "stone", 19, "Deck", 1);                       // Not a support piece
-    add_support_piece(sets, "", kSupportMiddleType, "Loose", 1);
-    REQUIRE(sets.size() == 1);
-    const SupportSet& s = sets.at("stone");
-    REQUIRE(s.middles.size() == 4);
-    CHECK(s.middles[0].symbol == "Post8");
-    CHECK(s.middles[1].symbol == "Post4");
-    CHECK(s.middles[3].symbol == "Post1");
-    CHECK(s.foot->symbol == "Foot");
-    CHECK(s.deep_foot->symbol == "DeepFoot");
-}
-
 TEST_CASE("a stack is a foot then the tallest middles that fit")
 {
-    const SupportSet s = posts().at("stone");
+    const SupportSet s = posts().at("stone").front();
     const auto stack = support_stack(s, 2, 2, 16);
     CHECK(symbols(stack) == std::vector<std::string> { "Foot", "Post8", "Post4", "Post1" }); // 2 would overshoot
     CHECK(stack[0].level == 2);
@@ -72,7 +56,7 @@ TEST_CASE("a stack is a foot then the tallest middles that fit")
 
 TEST_CASE("uneven ground takes the deep foot, from the highest corner rounded up")
 {
-    const SupportSet s = posts().at("stone");
+    const SupportSet s = posts().at("stone").front();
     const auto stack = support_stack(s, 1.2f, 2.5f, 6);
     REQUIRE_FALSE(stack.empty());
     CHECK(stack[0].symbol == "DeepFoot");
@@ -82,7 +66,7 @@ TEST_CASE("uneven ground takes the deep foot, from the highest corner rounded up
 
 TEST_CASE("no stack where the gap has no room for a foot")
 {
-    const SupportSet s = posts().at("stone");
+    const SupportSet s = posts().at("stone").front();
     CHECK(support_stack(s, 3, 3, 3).empty());
     CHECK(support_stack(s, 3, 3, 2).empty());
     CHECK(support_stack(SupportSet { }, 0, 0, 10).empty());

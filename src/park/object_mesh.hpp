@@ -46,6 +46,9 @@ namespace rct3::park
     /// How much some objects' shapes rise per park unit along x and z away from their anchors, by object
     /// id, so a straight piece such as a fence panel follows a slope. Upright lines stay upright.
     using Leans = std::map<std::uint64_t, glm::vec2>;
+    /// The whole transform from model to park of some objects, by object id, for built pieces placed off
+    /// the tile grid, turned any way or stretched (see track_supports.hpp). Others stand by their tile.
+    using Fitted = std::map<std::uint64_t, glm::mat4>;
 
     /// The level each object is drawn at, by its index; kNotDrawn for hidden objects, objects without a model
     /// and objects too far away.
@@ -56,14 +59,14 @@ namespace rct3::park
     [[nodiscard]] std::string model_key(const save::PlacedObject& object);
 
     /// Where each object's model origin lands in the park, by index.
-    [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The level of each object seen from `eye`, with the models' distances times `scale`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { });
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { });
 
     /// The billboards of the objects at `levels`, each standing on its anchor and turned to face `eye`.
     [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });

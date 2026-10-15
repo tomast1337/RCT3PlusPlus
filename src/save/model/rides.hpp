@@ -169,6 +169,16 @@ namespace rct3::save
     /// Three colour slot indices, each 0..31 in valid files (stored values are kept).
     using RideColours = std::array<std::uint8_t, 3>;
 
+    /// Where a placement record puts the object it holds: a tile, a height and a quarter turn.
+    struct PlacementSpot
+    {
+        ObjectId object = 0; ///< The placed scenery object, 0 if none
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t height = 0;    ///< Whole units, as placed objects store it
+        std::uint8_t direction = 0; ///< Quarter turns, 0..3
+    };
+
     /// Counters and history that every attraction (ride or stall) carries.
     struct AttractionCommon
     {
@@ -186,11 +196,12 @@ namespace rct3::save
         float popularity = 0;
         float satisfaction = 0;
         RepairStatus repair_status = RepairStatus::Fine;
-        float time_since_inspection = -1; ///< Seconds; -1 never
-        float time_since_breakdown = -1;  ///< Seconds; -1 never
-        float time_since_crash = -1;      ///< Seconds; -1 never
-        ObjectId placement = 0;           ///< World placement record (stalls, flat rides, facilities), 0 if none
-        std::uint8_t facing = 0;          ///< Quarter turns, 0..3
+        float time_since_inspection = -1;      ///< Seconds; -1 never
+        float time_since_breakdown = -1;       ///< Seconds; -1 never
+        float time_since_crash = -1;           ///< Seconds; -1 never
+        ObjectId placement = 0;                ///< World placement record (stalls, flat rides, facilities), 0 if none
+        std::optional<PlacementSpot> spot { }; ///< Where that record puts its object; absent without one
+        std::uint8_t facing = 0;               ///< Quarter turns, 0..3
     };
 
     /// One of the ten statistics slots. Stored as a ring whose head is not identified, so file order is kept.
@@ -310,6 +321,8 @@ namespace rct3::save
     {
         ObjectId entrance = 0; ///< Placement record; 0 when not built
         ObjectId exit = 0;
+        std::optional<PlacementSpot> entrance_spot { }; ///< Where those records put the entrance and exit
+        std::optional<PlacementSpot> exit_spot { };
         float entrance_timer = 0;
         float exit_timer = 0;
         ObjectId queue_line = 0;      ///< 0 when the line does not exist
@@ -458,6 +471,10 @@ namespace rct3::save
         RideColours car_colours { }, fence_colours { }, queue_colours { };
         ObjectId fence = 0; ///< Fence asset entries, 0 if none
         ObjectId override_fence = 0;
+        /// The asset symbols and overlays those entries name, as PlacedObject::symbol and overlay; empty when the
+        /// entry is none or does not resolve.
+        std::string fence_symbol, fence_overlay;
+        std::string override_fence_symbol, override_fence_overlay;
         std::string platform_style; ///< Tracked rides
         std::string platform_type;
 

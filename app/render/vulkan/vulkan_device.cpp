@@ -22,7 +22,7 @@ namespace rct3::render::vulkan
     {
 
         // What every shader finds in its push constants (app/shaders): the draw's transform, then the light of
-        // the Lit shaders with the eye in the w of the first three. 128 bytes is all a device must offer.
+        // the Lit shaders. 128 bytes is all a device must offer.
         struct PushBlock
         {
             glm::mat4 transform;
@@ -38,7 +38,7 @@ namespace rct3::render::vulkan
         PushBlock push_block(const DrawCommand& command)
         {
             const SceneLight& l = command.light;
-            return { command.transform, glm::vec4(l.sun_direction, l.eye.x), glm::vec4(l.sun, l.eye.y), glm::vec4(l.sky, l.eye.z), glm::vec4(l.ground, 0.0f) };
+            return { command.transform, glm::vec4(l.sun_direction, 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
         }
 
         void check_imgui(VkResult result)

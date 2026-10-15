@@ -14,12 +14,10 @@ layout(push_constant) uniform Draw {
 layout(location = 0) out vec4 v_color;
 layout(location = 1) out vec2 v_uv;
 layout(location = 2) out vec3 v_normal;
-layout(location = 3) out vec3 v_world;
 
 void main() {
   gl_Position = u_draw.transform * vec4(a_position, 1.0);
   v_color = a_color;
   v_uv = a_uv;
   v_normal = a_normal;
-  v_world = a_position;
 }

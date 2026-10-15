@@ -258,6 +258,17 @@ namespace rct3::ui
         }
     }
 
+    void draw_drawer_frame(DrawContext& context, const MessageDrawerStyle& style, const Rect& r)
+    {
+        // The lip along the bottom in two halves, the back repeated above it.
+        const float lip = r.y1 - kLipHeight;
+        draw_skin(context.list, context.skins.find(style.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
+        draw_skin(context.list, context.skins.find(style.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
+        const SkinRef* back = context.skins.find(style.back);
+        for (float y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
+            draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
+    }
+
     void MessageDrawer::draw(DrawContext& context) const
     {
         const Rect r = rect();
@@ -268,13 +279,7 @@ namespace rct3::ui
 
     void MessageDrawer::draw_inside(DrawContext& context, const Rect& r) const
     {
-        // The lip along the bottom in two halves, the back repeated above it.
-        const float lip = r.y1 - kLipHeight;
-        draw_skin(context.list, context.skins.find(style_.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
-        draw_skin(context.list, context.skins.find(style_.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
-        const SkinRef* back = context.skins.find(style_.back);
-        for (float y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
-            draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
+        draw_drawer_frame(context, style_, r);
 
         // The newest message at the bottom, older ones above it.
         const Font* font = context.fonts.get(FontRole::Small);

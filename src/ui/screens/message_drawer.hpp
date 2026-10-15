@@ -63,6 +63,9 @@ namespace rct3::ui
     /// The drawer's messages, oldest first.
     [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings);
 
+    /// The drawer's back and lip over `rect`, the drawer's own rectangle, without its messages.
+    void draw_drawer_frame(DrawContext& context, const MessageDrawerStyle& style, const Rect& rect);
+
     class MessageDrawer : public Widget
     {
     public:

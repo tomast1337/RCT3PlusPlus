@@ -20,14 +20,11 @@
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
-#include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
-#include "ui/money_text.hpp"
 #include "ui/scale.hpp"
 #include "ui/screens/tool_column.hpp"
 #include "ui/screens/tutorial_guide.hpp"
-#include "ui/temperature_text.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
@@ -60,7 +57,6 @@ namespace rct3::scene
         constexpr std::string_view kGuideName = "tutorial";
         constexpr std::string_view kBarName = "bar";
         constexpr std::string_view kToolsName = "tools";
-        constexpr std::string_view kUnlimitedCash = "Cash_Unlimited";
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
@@ -540,26 +536,9 @@ namespace rct3::scene
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), park::edge_level(scene.grid), scene); !sky)
             return fail(sky.error());
 
-        // What the bar shows of the park as it was saved.
-        if (auto model = save::load_park(*file, index))
         {
-            if (model->has_clock)
-                scene.date = model->clock.date();
-            if (model->has_finance && !model->finance.unlimited())
-                scene.cash = model->finance.cash;
-            if (model->has_park)
-            {
-                if (const auto guests = model->park.guests_in_park.latest())
-                    scene.bar.guests = strings::to_utf16(std::to_string(std::lround(*guests)));
-                if (const auto rating = model->park.rating())
-                    scene.bar.rating = *rating / save::kMaxParkRating;
-            }
-        }
-        if (world->weather)
-        {
-            scene.temperature = world->weather->temperature;
-            scene.bar.weather = world->weather->type;
-            scene.bar.forecast = world->weather->forecast;
+            const auto model = save::load_park(*file, index);
+            scene.park = simulation::park_state(model ? &*model : nullptr, *world);
         }
         scene.desktop->root().add<ui::ToolColumn>(std::string(kToolsName), skins::tool_column_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
@@ -612,27 +591,27 @@ namespace rct3::scene
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
         if (bar != nullptr)
         {
-            for (const ui::PlayCommand c : input.commands)
-            {
-                if (c == ui::PlayCommand::TogglePause)
-                    bar->toggle_pause();
-            }
+            if (const auto asked = bar->take_speed())
+                scene.park.speed = *asked;
         }
-        // The park's day runs at the speed picked in the bar, and stops while paused.
-        simulation::advance(scene.day, elapsed * (bar != nullptr ? simulation::time_factor(bar->speed()) : 1.0f));
+        for (const ui::PlayCommand c : input.commands)
+        {
+            if (c == ui::PlayCommand::TogglePause)
+                scene.park.speed = simulation::pause_toggled(scene.park.speed);
+        }
+        // The park's day runs at the speed picked, and stops while paused.
+        const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
+        simulation::advance(scene.day, game_seconds);
         show_time_of_day(scene, viewer);
 
         if (bar != nullptr)
         {
+            ui::ParkBarUnits units;
+            units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
+            units.fahrenheit = options.choice(config::GameOption::TemperatureUnits) == kFahrenheit;
             // The game writes its times with am and pm in English only.
-            const bool twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
-            const auto minutes = static_cast<std::int32_t>(std::lround(scene.day.time * save::kMinutesPerDay));
-            const ui::Currency money = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
-            scene.bar.money = scene.cash ? ui::money_text(money, *scene.cash) : std::u16string(assets.strings->get(kUnlimitedCash));
-            if (scene.temperature)
-                scene.bar.temperature = ui::temperature_text(*scene.temperature, options.choice(config::GameOption::TemperatureUnits) == kFahrenheit);
-            scene.bar.date = ui::park_bar_date(*assets.strings, scene.date.month, scene.date.year + 1, minutes, twelve_hour);
-            bar->show(scene.bar);
+            units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
+            bar->show(ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units));
         }
         // Only leaving works yet; the other tools open their menus once those exist.
         if (auto* tools = static_cast<ui::ToolColumn*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)

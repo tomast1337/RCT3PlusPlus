@@ -3,6 +3,7 @@
 
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
+#include "ui/temperature_text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,6 +17,7 @@ namespace rct3::ui
 
         constexpr std::string_view kMonth = "Month"; ///< Followed by the month's number from 0
         constexpr std::string_view kYear = "Year";
+        constexpr std::string_view kUnlimitedCash = "Cash_Unlimited";
         constexpr std::string_view kObjectiveHelp = "PID_TT_ObjectiveTabPopUp";
         constexpr std::array<std::string_view, 4> kSpeedHelp = { "Playing_PauseHelp", "Playing_PlayHelp", "Playing_FastForwardHelp", "Playing_SuperFastForwardHelp" };
         constexpr std::string_view kGuestsHelp = "Toolbar_TT_GuestsInPark";
@@ -84,6 +86,22 @@ namespace rct3::ui
         return out;
     }
 
+    ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units)
+    {
+        ParkBarValues v;
+        v.speed = state.speed;
+        v.money = state.cash ? money_text(units.currency, *state.cash) : std::u16string(strings.get(kUnlimitedCash));
+        v.guests = ascii(std::to_string(state.guests));
+        v.rating = state.rating;
+        if (state.temperature)
+            v.temperature = temperature_text(*state.temperature, units.fahrenheit);
+        v.weather = state.weather;
+        v.forecast = state.forecast;
+        const auto minutes = static_cast<std::int32_t>(std::lround(day_time * save::kMinutesPerDay));
+        v.date = park_bar_date(strings, state.date.month, state.date.year + 1, minutes, units.twelve_hour);
+        return v;
+    }
+
     ParkBar::ParkBar(std::string name, ParkBarStyle style, const StringTable& strings)
         : Widget(std::move(name))
         , style_(std::move(style))
@@ -134,14 +152,10 @@ namespace rct3::ui
         show({ });
     }
 
-    void ParkBar::toggle_pause()
-    {
-        speed_ = simulation::pause_toggled(speed_);
-        show_speed();
-    }
-
     void ParkBar::show(const ParkBarValues& values)
     {
+        speed_ = values.speed;
+        show_speed();
         money_->text = values.money;
         guests_->text = values.guests;
         temperature_->text = values.temperature;
@@ -178,14 +192,14 @@ namespace rct3::ui
 
     void ParkBar::update(const UpdateContext&)
     {
+        const simulation::GameSpeed from = asked_.value_or(speed_);
         if (speeds_[0]->take_click())
-            toggle_pause();
+            asked_ = simulation::pause_toggled(from);
         for (std::size_t i = 1; i < speeds_.size(); ++i)
         {
             if (speeds_[i]->take_click())
-                speed_ = simulation::playing(speed_, static_cast<simulation::Speed>(i - 1));
+                asked_ = simulation::playing(from, static_cast<simulation::Speed>(i - 1));
         }
-        show_speed();
     }
 
     void ParkBar::draw(DrawContext& context) const

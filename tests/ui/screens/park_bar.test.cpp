@@ -64,25 +64,61 @@ TEST_CASE("the bar sits centred along the top, its items inside it and in order"
     CHECK(f.bar->speed_button(0).tooltip == u"Halt");
 }
 
-TEST_CASE("the speed buttons pick a speed, and pause keeps it")
+TEST_CASE("the speed buttons ask for a speed, and the bar shows the one it is given")
 {
     Fixture f;
-    CHECK(f.bar->speed() == simulation::GameSpeed { });
+    CHECK_FALSE(f.bar->take_speed());
     f.click(f.bar->speed_button(3));
-    CHECK(f.bar->speed() == simulation::GameSpeed { simulation::Speed::Fastest, false });
+    CHECK(f.bar->take_speed() == simulation::GameSpeed { simulation::Speed::Fastest, false });
+    CHECK_FALSE(f.bar->take_speed());
+    CHECK(f.bar->speed_button(3).icon == "Top_SuperFastForward"); // not shown until given
+
+    ParkBarValues v;
+    v.speed = { simulation::Speed::Fastest, false };
+    f.bar->show(v);
     CHECK(f.bar->speed_button(3).icon == "Top_SuperFastForwardSelected");
     CHECK(f.bar->speed_button(1).icon == "Top_Play");
 
+    // Pause keeps the speed it pauses.
     f.click(f.bar->speed_button(0));
-    CHECK(f.bar->speed().paused);
+    CHECK(f.bar->take_speed() == simulation::GameSpeed { simulation::Speed::Fastest, true });
+    v.speed.paused = true;
+    f.bar->show(v);
     CHECK(f.bar->speed_button(0).icon == "Top_PauseSelected");
     CHECK(f.bar->speed_button(3).icon == "Top_SuperFastForward");
-    f.bar->toggle_pause();
-    CHECK(f.bar->speed() == simulation::GameSpeed { simulation::Speed::Fastest, false });
+}
 
-    f.bar->toggle_pause();
-    f.click(f.bar->speed_button(2));
-    CHECK(f.bar->speed() == simulation::GameSpeed { simulation::Speed::Fast, false });
+TEST_CASE("the bar's values are written from the park's state")
+{
+    StringTable strings;
+    strings.add("Month1", u"April");
+    strings.add("Year", u"Year");
+    strings.add("Cash_Unlimited", u"no limit");
+    simulation::ParkState state;
+    state.cash = -150075;
+    state.guests = 312;
+    state.rating = 0.5f;
+    state.temperature = 30.2f;
+    state.date.month = 1;
+    state.date.year = 2;
+    state.weather = save::WeatherType::Sunny;
+    ParkBarUnits units;
+    units.currency = { u"$", u"", u"." };
+    const ParkBarValues v = park_bar_values(state, 0.75f, strings, units);
+    CHECK(v.money == u"-$1,500.75");
+    CHECK(v.guests == u"312");
+    CHECK(v.rating == 0.5f);
+    CHECK(v.temperature == u"30\u00b0C");
+    CHECK(v.date == u"April, Year 3  6:00 pm");
+    CHECK(v.weather == save::WeatherType::Sunny);
+
+    state.cash.reset();
+    units.fahrenheit = true;
+    units.twelve_hour = false;
+    const ParkBarValues w = park_bar_values(state, 0.75f, strings, units);
+    CHECK(w.money == u"no limit");
+    CHECK(w.temperature == u"86\u00b0F");
+    CHECK(w.date == u"April, Year 3  18:00");
 }
 
 TEST_CASE("the weather shows with its help, and the forecast only when it changes")

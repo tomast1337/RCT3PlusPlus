@@ -5,13 +5,14 @@
 // its guests and its rating between a thumb down and a thumb up; a divider leads to the right part, with
 // the temperature, the weather and its forecast, and the date and time.
 //
-// The bar keeps the game speed the player picked (see simulation/game_speed.hpp); the owner reads it with
-// speed() and toggles the pause for a key with toggle_pause(). Everything else the bar shows is given by the
-// owner with show(), as text ready to draw, so the bar never needs the park itself.
+// Everything the bar shows is given by the owner with show(), as text ready to draw, so the bar never needs
+// the park itself; park_bar_values() writes it from the park's state. A press on a speed button is a
+// request: the owner takes the speed asked for with take_speed() and puts it in the park's state.
 #pragma once
 
 #include "save/model/world.hpp"
-#include "simulation/game_speed.hpp"
+#include "simulation/park_state.hpp"
+#include "ui/money_text.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
@@ -21,6 +22,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -45,9 +47,10 @@ namespace rct3::ui
         Color rating_high = hex("#4cc23a"); ///< And at the highest
     };
 
-    /// What the bar shows besides the speed. Empty text leaves its place empty.
+    /// What the bar shows. Empty text leaves its place empty.
     struct ParkBarValues
     {
+        simulation::GameSpeed speed;
         std::u16string money;
         std::u16string guests;
         std::optional<float> rating; ///< 0 to 1; no bar without one
@@ -69,18 +72,28 @@ namespace rct3::ui
     /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
     [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour);
 
+    /// How the player asked to see amounts, temperatures and times.
+    struct ParkBarUnits
+    {
+        Currency currency;
+        bool fahrenheit = false;
+        bool twelve_hour = true;
+    };
+
+    /// The bar's values for the park's state at `day_time` (a fraction of the day).
+    [[nodiscard]] ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units);
+
     class ParkBar : public Widget
     {
     public:
         ParkBar(std::string name, ParkBarStyle style, const StringTable& strings);
 
-        [[nodiscard]] simulation::GameSpeed speed() const
-        {
-            return speed_;
-        }
-        void toggle_pause();
-
         void show(const ParkBarValues& values);
+        /// The speed a button asked for since the last call, worked out from the speed last shown.
+        [[nodiscard]] std::optional<simulation::GameSpeed> take_speed()
+        {
+            return std::exchange(asked_, std::nullopt);
+        }
 
         [[nodiscard]] Button& objective_button() const
         {
@@ -118,6 +131,7 @@ namespace rct3::ui
         ParkBarStyle style_;
         const StringTable& strings_;
         simulation::GameSpeed speed_;
+        std::optional<simulation::GameSpeed> asked_;
         std::optional<float> rating_;
         Button* objective_ = nullptr;
         std::array<Button*, 4> speeds_ { };

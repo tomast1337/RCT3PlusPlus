@@ -12,7 +12,10 @@ namespace rct3::simulation
         if (park != nullptr)
         {
             if (park->has_clock)
+            {
+                s.time = park->clock.time;
                 s.date = park->clock.date();
+            }
             if (park->has_finance)
             {
                 if (!park->finance.unlimited())
@@ -35,6 +38,14 @@ namespace rct3::simulation
             s.temperature = world.weather->temperature;
         }
         return s;
+    }
+
+    void pass_time(ParkState& state, float seconds)
+    {
+        if (seconds <= 0)
+            return;
+        state.time += seconds / kSecondsPerHour * kCalendarUnitsPerHour;
+        state.date = save::GameClock::split(state.time);
     }
 
 } // namespace rct3::simulation

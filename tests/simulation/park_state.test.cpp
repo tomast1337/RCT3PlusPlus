@@ -46,3 +46,29 @@ TEST_CASE("unlimited money has no amount, and a missing park leaves defaults")
     CHECK(none.weather == save::WeatherType::Unknown);
     CHECK_FALSE(none.temperature);
 }
+
+TEST_CASE("the calendar runs on with game time, a whole day of the clock taking more than a month")
+{
+    save::ParkModel park;
+    park.has_clock = true;
+    park.clock.time = save::GameClock::kUnitsPerMonth * 7 + save::GameClock::kUnitsPerWeek * 3; // Last week of the year
+    simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
+    CHECK(s.date.month == 7);
+    CHECK(s.date.year == 0);
+
+    // A game hour moves the calendar on by its units; the last week runs out and a new year starts.
+    simulation::pass_time(s, simulation::kSecondsPerHour * 4);
+    CHECK(s.date.year == 1);
+    CHECK(s.date.month == 0);
+
+    // A whole day of the clock is longer than a month of the calendar, shorter than two.
+    const float before = s.time;
+    simulation::pass_time(s, simulation::kSecondsPerHour * simulation::kHoursPerDay);
+    CHECK(s.time - before > save::GameClock::kUnitsPerMonth);
+    CHECK(s.time - before < 2 * save::GameClock::kUnitsPerMonth);
+
+    // Paused, nothing moves.
+    const float paused = s.time;
+    simulation::pass_time(s, 0);
+    CHECK(s.time == paused);
+}

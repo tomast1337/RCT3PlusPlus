@@ -239,6 +239,7 @@ namespace rct3::platform
         p.middle = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
         p.wheel_x = static_cast<float>(collected_->wheel_x);
         p.wheel_y = static_cast<float>(collected_->wheel_y);
+        p.inside = glfwGetWindowAttrib(window_, GLFW_HOVERED) != 0 && glfwGetWindowAttrib(window_, GLFW_FOCUSED) != 0;
         return p;
     }
 

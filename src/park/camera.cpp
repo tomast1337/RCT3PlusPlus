@@ -77,6 +77,19 @@ namespace rct3::park
         return camera;
     }
 
+    glm::vec2 edge_push(glm::vec2 at, glm::vec2 size, float band)
+    {
+        if (band <= 0)
+            return { 0, 0 };
+        const auto push = [band](float from_low, float from_high) {
+            const float low = std::clamp(1 - from_low / band, 0.0f, 1.0f);
+            const float high = std::clamp(1 - from_high / band, 0.0f, 1.0f);
+            return high - low;
+        };
+        // Down the screen is towards the viewer: the top edge pushes forward.
+        return { push(at.x, size.x - 1 - at.x), push(size.y - 1 - at.y, at.y) };
+    }
+
     ParkCamera turned(ParkCamera camera, float yaw, float pitch)
     {
         camera.yaw += yaw;

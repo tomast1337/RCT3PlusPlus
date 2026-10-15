@@ -2,7 +2,8 @@
 //
 // What the menus sound like: the menu music (menu_music.hpp) played round and round from the game's music
 // folder, changed as soon as the player picks other music, and the buttons' clicks, a press sound and a release sound each picked at random from three
-// in the game's main overlay, along with the alert for a new message in the park. The music follows the
+// in the game's main overlay, along with the alert for a new message in the park. In a park only the music
+// the player picked plays. The music follows the
 // music volume, the clicks and the alert the interface volume; changes are heard at once. Whatever of it the
 // game does not have is left out.
 #pragma once
@@ -44,8 +45,9 @@ namespace rct3::scene
     /// Picks the run's track, which moves the menu music's cycle on in `options`, and starts it.
     [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed);
 
-    /// Keeps the music going at the volume of `options` and plays the interface's sounds.
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds);
+    /// Keeps the music going at the volume of `options` and plays the interface's sounds. `in_park` while a
+    /// park is open, which quiets the menus' own music.
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false);
 
     void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu);
 

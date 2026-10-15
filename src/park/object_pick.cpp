@@ -128,6 +128,25 @@ namespace rct3::park
         return best;
     }
 
+    std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    {
+        const auto model = models.find(model_key(object));
+        if (model == models.end() || model->second.levels.empty())
+            return { };
+        const auto box = shape_box(model->second);
+        if (!box)
+            return { };
+        const auto own = fitted.find(object.id);
+        const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(object, static_cast<Positioning>(model->second.positioning), grid, model->second.squares);
+        std::vector<glm::vec3> corners;
+        for (int i = 0; i < 8; ++i)
+        {
+            const glm::vec3 local { (i & 1) != 0 ? box->second.x : box->first.x, (i & 2) != 0 ? box->second.y : box->first.y, (i & 4) != 0 ? box->second.z : box->first.z };
+            corners.emplace_back(transform * glm::vec4(local, 1.0f));
+        }
+        return corners;
+    }
+
     std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::TerrainGrid& grid)
     {
         std::optional<PickHit> best;

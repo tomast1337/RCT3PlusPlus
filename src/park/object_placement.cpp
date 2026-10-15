@@ -22,6 +22,25 @@ namespace rct3::park
         return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
     }
 
+    bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid)
+    {
+        const bool across = (object.rotation & 1) != 0;
+        const std::int32_t span_x = squares[across ? 1 : 0];
+        const std::int32_t span_z = squares[across ? 0 : 1];
+        for (std::int32_t col = object.col; col < object.col + span_x; ++col)
+        {
+            for (std::int32_t row = object.row; row < object.row + span_z; ++row)
+            {
+                if (!grid.contains(col, row))
+                    return false;
+                const save::Ownership own = grid.at(col, row).ownership();
+                if (own != save::Ownership::Owned && (own != save::Ownership::OwnedRights || object.height_offset == 0))
+                    return false;
+            }
+        }
+        return true;
+    }
+
     glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares)
     {
         const glm::vec2 x = turned_x(object.rotation);

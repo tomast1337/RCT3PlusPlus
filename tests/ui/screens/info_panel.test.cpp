@@ -95,7 +95,7 @@ TEST_CASE("picking a tab is told once, and the close button hides the panel")
     CHECK_FALSE(f.panel->take_closed());
 }
 
-TEST_CASE("the strip fits round the page beside the disc")
+TEST_CASE("the strip fits round the page's width beside the disc, and stands full height behind it")
 {
     Fixture f;
     f.panel->show(three(), 0);
@@ -108,10 +108,30 @@ TEST_CASE("the strip fits round the page beside the disc")
     CHECK(strip.x1 == f.panel->disc().x0 + info_panel::kStripOverlap);
     CHECK(strip.width() == info_panel::kPageWidth + info_panel::kStripExtra);
     CHECK(f.panel->body().children().size() == 5);
-    CHECK(strip.height() < info_panel::kStripHeight);
-    // A new page replaces the old one.
+    CHECK(strip.height() == info_panel::kStripHeight);
+    // A new page replaces the old one; an empty one has no strip.
     f.panel->show_page({ });
     CHECK(f.panel->body().children().empty());
+    f.desktop.update({ });
+    CHECK(f.panel->body().rect().width() == 0);
+}
+
+TEST_CASE("an action tab is reported when pressed but never opens, and the panel may open with no tab open")
+{
+    Fixture f;
+    std::vector<InfoTab> tabs = three();
+    tabs[0].action = true;
+    f.panel->show(std::move(tabs), 3);
+    f.desktop.update({ });
+    CHECK_FALSE(f.panel->tab(1).on);
+    const Rect r = f.panel->tab(0).rect();
+    const Point p { (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2 };
+    f.desktop.update({ p, true });
+    f.desktop.update({ p, false });
+    CHECK(f.panel->take_action() == 0u);
+    CHECK_FALSE(f.panel->take_action());
+    CHECK_FALSE(f.panel->take_picked());
+    CHECK_FALSE(f.panel->tab(0).on);
 }
 
 TEST_CASE("a tab with choices fans them out round itself and tells the one picked")

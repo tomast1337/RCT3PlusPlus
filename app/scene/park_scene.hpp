@@ -35,6 +35,7 @@
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/person_info.hpp"
+#include "ui/screens/scenery_info.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <expected>
@@ -168,6 +169,11 @@ namespace rct3::scene
         std::optional<std::size_t> shown_person;              ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;               ///< Their tabs in the panel's order
         ui::PersonTab person_tab = ui::PersonTab::General;    ///< The tab last opened on a person
+        std::vector<save::BinState> bins;                     ///< Of the litter bins among the objects
+        std::vector<save::SignState> signs;                   ///< Of the signs among the objects
+        std::optional<std::size_t> shown_prop;                ///< Of objects, the prop the info panel tells about instead
+        std::vector<ui::SceneryTab> prop_tabs;                ///< Its tabs in the panel's order
+        std::optional<ui::SceneryTab> prop_tab;               ///< Its open tab; none while only its name shows
         bool show_people = true;                              ///< Switched in the view menu
         bool show_scenery = true;                             ///< Objects and rides, switched in the view menu
         park::ParkCamera view_camera;                         ///< Of the info panel's round view, turning slowly round the attraction

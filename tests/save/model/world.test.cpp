@@ -198,6 +198,8 @@ namespace
         kCamera,
         kQueueLine,
         kGroundSurface,
+        kBin,
+        kSign,
     };
 
     Attr u8a(const char* n)
@@ -256,6 +258,8 @@ namespace
             { "MainCamera", { { "Or", "orientation", 12, { } }, { "Pos", "vector3", 12, { } } } },
             { "QueueLine", { refa("HeadTile"), i32a("QueueSize"), refa("RideInstance"), i32a("StationIndex") } },
             { "QueueTypeGroundSurface", { colours("Colours"), refa("QueueType") } },
+            { "LitterBinBehaviour", { refa("\"SceneryItem\""), f32a("Capacity"), f32a("Contents"), f32a("LastEmptied") } },
+            { "SignBehaviour", { refa("\"SceneryItem\""), i32a("SignType"), { "UserText", "string", 0, { } } } },
         };
     }
 
@@ -780,6 +784,30 @@ TEST_CASE("load_world: older scenery layout without a height adjust")
     CHECK_FALSE(l->world->objects[0].height_adjust.has_value());
     CHECK(l->world->objects[0].base_height == 3);
     CHECK(l->world->objects[0].symbol == "Bench");
+}
+
+TEST_CASE("load_world: litter bins and signs keep the object they belong to")
+{
+    const auto l = load(
+        schema(),
+        {
+            terrain_obj(1, make_terrain_3x2()),
+            scenery_obj(300, 0, 0, 3, 0, 300),
+            scenery_obj(301, 1, 0, 3, 0, 301),
+            { kBin, 400, Bytes().u64(300).f32(2.0f).f32(0.5f).f32(-1.0f) },
+            { kBin, 401, Bytes().u64(301).f32(2.0f).f32(0.0f).f32(1234.5f) },
+            { kSign, 402, Bytes().u64(301).i32(0).text(u"Welcome") },
+        });
+    REQUIRE(l->world);
+    REQUIRE(l->world->bins.size() == 2);
+    CHECK(l->world->bins[0].object_ref == 300);
+    CHECK(l->world->bins[0].capacity == 2.0f);
+    CHECK(l->world->bins[0].contents == 0.5f);
+    CHECK_FALSE(l->world->bins[0].last_emptied); // Never emptied
+    CHECK(l->world->bins[1].last_emptied == 1234.5f);
+    REQUIRE(l->world->signs.size() == 1);
+    CHECK(l->world->signs[0].object_ref == 301);
+    CHECK(l->world->signs[0].text == "Welcome");
 }
 
 TEST_CASE("load_world: dangling references resolve to nothing, not errors")

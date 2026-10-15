@@ -49,13 +49,14 @@ namespace rct3::ui
     };
 
     /// A tab: its icon, its help, and its place on the ring. A tab with choices opens them round itself
-    /// when pressed, and is never the open tab.
+    /// when pressed, and an action tab does something at once; neither is ever the open tab.
     struct InfoTab
     {
         std::string icon;
         std::u16string help;
         int slot = 0;
         std::vector<InfoChoice> choices;
+        bool action = false;
     };
 
     namespace info_panel
@@ -78,7 +79,7 @@ namespace rct3::ui
         inline constexpr float kStripBottom = 6;   ///< From the screen's bottom edge
         inline constexpr float kStripExtra = 31;   ///< Of the strip's width beyond its content's
         inline constexpr float kStripNarrowest = 131;
-        inline constexpr float kStripHeight = 130; ///< The tallest a strip grows
+        inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content
         inline constexpr float kBodyLeft = 16;     ///< Of the content, from the strip's left edge
         inline constexpr float kBodyTop = 12;      ///< From the strip's top edge
         inline constexpr float kPageWidth = 310;   ///< Of a page of lines
@@ -133,7 +134,7 @@ namespace rct3::ui
     public:
         InfoPanel(std::string name, InfoPanelStyle style);
 
-        /// Opens the panel with `tabs`, the one at `picked` open.
+        /// Opens the panel with `tabs`, the one at `picked` open; none when `picked` is past them.
         void show(std::vector<InfoTab> tabs, std::size_t picked);
         void hide();
         [[nodiscard]] bool showing() const
@@ -150,6 +151,11 @@ namespace rct3::ui
         [[nodiscard]] std::optional<std::size_t> take_section()
         {
             return std::exchange(section_now_, std::nullopt);
+        }
+        /// The action tab the player pressed since the last call.
+        [[nodiscard]] std::optional<std::size_t> take_action()
+        {
+            return std::exchange(action_now_, std::nullopt);
         }
         /// The choice the player made since the last call, as the tab and the choice's index.
         [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> take_choice()
@@ -182,7 +188,8 @@ namespace rct3::ui
         }
         /// The size of the open tab's content; the strip fits round it.
         void set_body_size(float width, float height);
-        /// Fills the body with `page`: its title, its lines in two columns and its note.
+        /// Fills the body with `page`: its title, its lines in two columns and its note. An empty page hides the
+        /// strip.
         void show_page(const InfoPage& page);
 
         /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.
@@ -231,6 +238,8 @@ namespace rct3::ui
         Widget* body_ = nullptr;
         std::size_t picked_ = 0;
         std::optional<std::size_t> picked_now_;
+        std::optional<std::size_t> action_now_;
+        std::vector<bool> actions_; ///< Of each tab, whether it acts at once
         bool closed_ = false;
         float body_width_ = 0;
         TextureId view_ = 0;

@@ -56,4 +56,8 @@ namespace rct3::park
     /// `squares` tiles along its own X and Z.
     [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 });
 
+    /// Whether the park owns every tile `object` covers, for an item covering `squares` tiles along its own X
+    /// and Z. Land bought only to build over counts for things raised off the ground, not for those on it.
+    [[nodiscard]] bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid);
+
 } // namespace rct3::park

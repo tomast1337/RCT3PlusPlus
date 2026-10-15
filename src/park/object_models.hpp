@@ -79,6 +79,7 @@ namespace rct3::park
     struct ObjectModel
     {
         std::uint16_t positioning = 0;                ///< How the item sits on its tile (see object_placement.hpp)
+        std::uint32_t category = 0;                   ///< What kind of item it is (see item_category.hpp)
         std::array<std::int32_t, 2> squares { 1, 1 }; ///< Tiles it covers along its own X and Z
         float sway = 0;                               ///< How much it sways in the wind; above 0 for trees and plants only
         std::string support_group;                    ///< The set of supports it stands on, or the set a support belongs to

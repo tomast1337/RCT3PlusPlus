@@ -59,7 +59,7 @@ namespace rct3::park
     [[nodiscard]] ParkCamera zoomed(ParkCamera camera, float factor);
     /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
     /// box fills a square view without leaving it.
-    [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch);
+    [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);
     /// Kept over the map, its target on the surface.
     [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid);
 

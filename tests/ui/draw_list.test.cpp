@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/draw_list.hpp"
 
+#include "ui/shape.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -152,4 +154,69 @@ TEST_CASE("a round image is a fan of triangles inside its square, left out when 
     list.disc_image({ 10, 20, 50, 60 }, 7, { 0, 0, 1, 1 });
     CHECK(list.vertices().empty());
     list.pop_clip();
+}
+
+TEST_CASE("a shape becomes a quad of its own vertices, wide enough for its soft edge")
+{
+    DrawList list;
+    Shape s;
+    s.rect = { 10, 20, 30, 40 };
+    s.corners = round_corners(4);
+    s.softness = 2;
+    s.top = kRed;
+    list.shape(s);
+    CHECK(list.vertices().empty());
+    REQUIRE(list.shape_vertices().size() == 4);
+    REQUIRE(list.batches().size() == 1);
+    CHECK(list.batches()[0].kind == BatchKind::Shapes);
+    CHECK(list.batches()[0].index_count == 6);
+    const auto v = list.shape_vertices();
+    // Two units of softness and one pixel of smoothing round the 20 x 20 box.
+    CHECK(v[0].x == 8);
+    CHECK(v[0].y == 18);
+    CHECK(v[2].x == 32);
+    CHECK(v[2].y == 42);
+    CHECK(v[0].local == std::array<float, 4> { -12, -12, 10, 10 });
+    CHECK(v[0].radii == std::array<float, 4> { 4, 4, 4, 4 });
+    CHECK(v[0].edge[0] == 2);
+    CHECK(v[3].top == std::array<std::uint8_t, 4> { 255, 0, 0, 255 });
+}
+
+TEST_CASE("shapes are measured in pixels and cut by the clip like quads")
+{
+    DrawList list;
+    list.set_scale(2);
+    REQUIRE(list.push_clip({ 0, 0, 15, 100 }));
+    Shape s;
+    s.rect = { 10, 10, 20, 20 };
+    list.shape(s);
+    list.pop_clip();
+    const auto v = list.shape_vertices();
+    REQUIRE(v.size() == 4);
+    CHECK(v[1].x == 30);
+    // The point still knows where it lies on the whole shape.
+    CHECK(v[1].local[0] == 0);
+    CHECK(v[1].local[2] == 10);
+}
+
+TEST_CASE("quads and shapes keep painter's order in separate batches")
+{
+    DrawList list;
+    Shape s;
+    s.rect = { 0, 0, 4, 4 };
+    list.fill({ 0, 0, 1, 1 }, kRed);
+    list.shape(s);
+    list.shape(s);
+    list.fill({ 0, 0, 1, 1 }, kBlue);
+    REQUIRE(list.batches().size() == 3);
+    CHECK(list.batches()[0].kind == BatchKind::Quads);
+    CHECK(list.batches()[1].kind == BatchKind::Shapes);
+    CHECK(list.batches()[1].index_count == 12);
+    CHECK(list.indices()[list.batches()[1].first_index + 6] == 4);
+    CHECK(list.batches()[2].kind == BatchKind::Quads);
+    // A shape too small to see, or one cut away, adds nothing.
+    list.clear();
+    list.shape({ });
+    CHECK(list.batches().empty());
+    CHECK(list.shape_vertices().empty());
 }

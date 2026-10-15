@@ -178,6 +178,11 @@ namespace rct3::render
         Lit,
         /// Lit, with TexturedCutout's holes.
         LitCutout,
+        /// A shape of ui/shape.hpp, shaded by its distance from the edge. Inputs: location 0 position (Float2),
+        /// location 1 the point from the shape's middle then the shape's half width and height (Float4), 2 the
+        /// corner radii (Float4), 3 softness, outline width, light width and ring width (Float4), 4 to 7 the
+        /// top, bottom, outline and light colours (UByte4Norm). Lengths in pixels. No texture.
+        Shape,
     };
 
     enum class Topology : std::uint8_t

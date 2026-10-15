@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Draws a ui::DrawList with the render device: the frame's vertices and indices go into per-frame memory,
-// then one draw per batch. Alpha blended, no depth, point sampled, in screen pixels with the origin at the
-// top-left. Quads without a texture sample a 1 x 1 white texture so all batches share one pipeline.
+// then one draw per batch. Alpha blended, no depth, linearly sampled, in screen pixels with the origin at the
+// top-left. Quads without a texture sample a 1 x 1 white texture so all quad batches share one pipeline;
+// shape batches (ui/shape.hpp) draw from the list's shape vertices with the shape pipeline.
 #pragma once
 
 #include "render/device.hpp"
@@ -17,6 +18,7 @@ namespace rct3::ui
     struct UiRenderer
     {
         render::PipelineHandle pipeline;
+        render::PipelineHandle shapes;
         render::TextureHandle white;
     };
 

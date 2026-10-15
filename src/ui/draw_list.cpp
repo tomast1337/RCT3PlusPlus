@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/draw_list.hpp"
 
+#include "ui/shape.hpp"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <numbers>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -44,6 +47,9 @@ namespace rct3::ui
             return { c.r, c.g, c.b, c.a };
         }
 
+        // Two triangles over a quad's corners, clockwise from the top-left.
+        constexpr std::array<std::uint32_t, 6> kQuadCorners = { 0, 1, 2, 0, 2, 3 };
+
     } // namespace
 
     Rect intersect(const Rect& a, const Rect& b)
@@ -54,6 +60,7 @@ namespace rct3::ui
     void DrawList::clear()
     {
         vertices_.clear();
+        shape_vertices_.clear();
         indices_.clear();
         batches_.clear();
         clips_.clear();
@@ -100,11 +107,7 @@ namespace rct3::ui
         vertices_.push_back({ visible.x1, visible.y1, packed(sample(colors, fx1, fy1)), u1, v1 });
         vertices_.push_back({ visible.x0, visible.y1, packed(sample(colors, fx0, fy1)), u0, v1 });
 
-        if (batches_.empty() || batches_.back().texture != texture)
-            batches_.push_back({ texture, static_cast<std::uint32_t>(indices_.size()), 0 });
-        for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u })
-            indices_.push_back(base + i);
-        batches_.back().index_count += 6;
+        add_indices(BatchKind::Quads, texture, base, kQuadCorners);
     }
 
     void DrawList::disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint)
@@ -129,15 +132,55 @@ namespace rct3::ui
             const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / kSides;
             vertices_.push_back(at(0.5f + 0.5f * std::cos(angle), 0.5f + 0.5f * std::sin(angle)));
         }
-        if (batches_.empty() || batches_.back().texture != texture)
-            batches_.push_back({ texture, static_cast<std::uint32_t>(indices_.size()), 0 });
+        std::array<std::uint32_t, 3 * kSides> fan { };
         for (std::uint32_t i = 0; i < kSides; ++i)
         {
-            indices_.push_back(base);
-            indices_.push_back(base + 1 + i);
-            indices_.push_back(base + 1 + (i + 1) % kSides);
+            fan[3 * i] = 0;
+            fan[3 * i + 1] = 1 + i;
+            fan[3 * i + 2] = 1 + (i + 1) % kSides;
         }
-        batches_.back().index_count += 3 * kSides;
+        add_indices(BatchKind::Quads, texture, base, fan);
+    }
+
+    void DrawList::shape(const Shape& shape)
+    {
+        const ShapeMetrics m = shape_metrics(shape, scale_);
+        if (m.half_width <= 0 || m.half_height <= 0)
+            return;
+        const float cx = (shape.rect.x0 + shape.rect.x1) / 2 * scale_;
+        const float cy = (shape.rect.y0 + shape.rect.y1) / 2 * scale_;
+        // Out to whole pixels past the soft edge, so no coloured pixel is cut off.
+        const float margin = shape_margin(m);
+        const Rect full { std::floor(cx - m.half_width - margin), std::floor(cy - m.half_height - margin), std::ceil(cx + m.half_width + margin), std::ceil(cy + m.half_height + margin) };
+        const Rect visible = clips_.empty() ? full : intersect(full, clips_.back());
+        if (visible.empty())
+            return;
+
+        ShapeVertex v;
+        v.radii = { m.corners.top_left, m.corners.top_right, m.corners.bottom_right, m.corners.bottom_left };
+        v.edge = { m.softness, m.outline_width, m.light_width, m.ring };
+        v.top = packed(shape.top);
+        v.bottom = packed(shape.bottom);
+        v.outline = packed(shape.outline);
+        v.light = packed(shape.light);
+        const auto base = static_cast<std::uint32_t>(shape_vertices_.size());
+        for (const auto& [x, y] : { std::pair { visible.x0, visible.y0 }, { visible.x1, visible.y0 }, { visible.x1, visible.y1 }, { visible.x0, visible.y1 } })
+        {
+            v.x = x;
+            v.y = y;
+            v.local = { x - cx, y - cy, m.half_width, m.half_height };
+            shape_vertices_.push_back(v);
+        }
+        add_indices(BatchKind::Shapes, 0, base, kQuadCorners);
+    }
+
+    void DrawList::add_indices(BatchKind kind, TextureId texture, std::uint32_t base, std::span<const std::uint32_t> corners)
+    {
+        if (batches_.empty() || batches_.back().texture != texture || batches_.back().kind != kind)
+            batches_.push_back({ texture, static_cast<std::uint32_t>(indices_.size()), 0, kind });
+        for (const std::uint32_t i : corners)
+            indices_.push_back(base + i);
+        batches_.back().index_count += static_cast<std::uint32_t>(corners.size());
     }
 
     bool DrawList::push_clip(const Rect& rect)

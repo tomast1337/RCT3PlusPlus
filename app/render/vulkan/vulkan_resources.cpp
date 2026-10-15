@@ -32,6 +32,12 @@ namespace
     const std::uint32_t kLitFrag[] =
 #include "lit.frag.inc"
         ;
+    const std::uint32_t kShapeVert[] =
+#include "shape.vert.inc"
+        ;
+    const std::uint32_t kShapeFrag[] =
+#include "shape.frag.inc"
+        ;
 
 } // namespace
 
@@ -62,6 +68,8 @@ namespace rct3::render::vulkan
                     return { kLitVert, kLitFrag };
                 case Shader::LitCutout:
                     return { kLitVert, kLitFrag, true };
+                case Shader::Shape:
+                    return { kShapeVert, kShapeFrag };
             }
             return { };
         }

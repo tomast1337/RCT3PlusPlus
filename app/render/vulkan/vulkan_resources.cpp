@@ -158,6 +158,9 @@ namespace rct3::render::vulkan
     {
         if (texture.set != VK_NULL_HANDLE)
             vkFreeDescriptorSets(device_, descriptor_pool_, 1, &texture.set);
+        vkDestroyImageView(device_, texture.depth_view, nullptr);
+        vkDestroyImage(device_, texture.depth_image, nullptr);
+        vkFreeMemory(device_, texture.depth_memory, nullptr);
         vkDestroyImageView(device_, texture.view, nullptr);
         vkDestroyImage(device_, texture.image, nullptr);
         vkFreeMemory(device_, texture.memory, nullptr);
@@ -199,8 +202,11 @@ namespace rct3::render::vulkan
     {
         if (desc.width == 0 || desc.height == 0)
             return std::unexpected("empty texture");
-        if (desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
+        if (desc.target ? !desc.pixels.empty() : desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
             return std::unexpected("pixel data does not match the texture size");
+        // A target starts as transparent pixels, sent up as any other texture's are.
+        const std::vector<std::byte> clear(desc.target ? texture_bytes(desc.width, desc.height, desc.format) : 0);
+        const std::span<const std::byte> pixels = desc.target ? std::span<const std::byte>(clear) : desc.pixels;
 
         Texture t;
         Buffer staging;
@@ -208,13 +214,13 @@ namespace rct3::render::vulkan
         {
             VkImageCreateInfo image { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             image.imageType = VK_IMAGE_TYPE_2D;
-            image.format = VK_FORMAT_R8G8B8A8_UNORM;
+            image.format = desc.target ? color_format_ : VK_FORMAT_R8G8B8A8_UNORM;
             image.extent = { desc.width, desc.height, 1 };
             image.mipLevels = 1;
             image.arrayLayers = 1;
             image.samples = VK_SAMPLE_COUNT_1_BIT;
             image.tiling = VK_IMAGE_TILING_OPTIMAL;
-            image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (desc.target ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : 0);
             image.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             image.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             check(vkCreateImage(device_, &image, nullptr, &t.image), "vkCreateImage");
@@ -234,10 +240,29 @@ namespace rct3::render::vulkan
             view.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
             check(vkCreateImageView(device_, &view, nullptr, &t.view), "vkCreateImageView");
 
-            staging = make_buffer(desc.pixels.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+            if (desc.target)
+            {
+                t.extent = { desc.width, desc.height };
+                VkImageCreateInfo depth = image;
+                depth.format = kDepthFormat;
+                depth.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                check(vkCreateImage(device_, &depth, nullptr, &t.depth_image), "vkCreateImage");
+                vkGetImageMemoryRequirements(device_, t.depth_image, &needs);
+                alloc.allocationSize = needs.size;
+                alloc.memoryTypeIndex = find_memory_type(needs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                check(vkAllocateMemory(device_, &alloc, nullptr, &t.depth_memory), "vkAllocateMemory");
+                check(vkBindImageMemory(device_, t.depth_image, t.depth_memory, 0), "vkBindImageMemory");
+                VkImageViewCreateInfo depth_view = view;
+                depth_view.image = t.depth_image;
+                depth_view.format = kDepthFormat;
+                depth_view.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
+                check(vkCreateImageView(device_, &depth_view, nullptr, &t.depth_view), "vkCreateImageView");
+            }
+
+            staging = make_buffer(pixels.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
             void* mapped = nullptr;
-            check(vkMapMemory(device_, staging.memory, 0, desc.pixels.size(), 0, &mapped), "vkMapMemory");
-            std::memcpy(mapped, desc.pixels.data(), desc.pixels.size());
+            check(vkMapMemory(device_, staging.memory, 0, pixels.size(), 0, &mapped), "vkMapMemory");
+            std::memcpy(mapped, pixels.data(), pixels.size());
             vkUnmapMemory(device_, staging.memory);
             upload(staging, t, desc.width, desc.height);
             destroy(staging);

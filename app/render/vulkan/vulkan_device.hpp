@@ -73,6 +73,11 @@ namespace rct3::render::vulkan
             VkDeviceMemory memory = VK_NULL_HANDLE;
             VkImageView view = VK_NULL_HANDLE;
             VkDescriptorSet set = VK_NULL_HANDLE;
+            // Targets only: their size and their own depth buffer.
+            VkExtent2D extent { };
+            VkImage depth_image = VK_NULL_HANDLE;
+            VkDeviceMemory depth_memory = VK_NULL_HANDLE;
+            VkImageView depth_view = VK_NULL_HANDLE;
         };
 
         // One block of per-frame memory, mapped for its whole life and registered in buffers_ so draws find it.
@@ -145,6 +150,7 @@ namespace rct3::render::vulkan
 
         DeviceConfig config_;
         State state_ = State::Off;
+        const Texture* pass_target_ = nullptr; // The target the open pass draws into; null for the screen
 
         VkInstance instance_ = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;

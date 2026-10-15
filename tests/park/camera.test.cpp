@@ -70,3 +70,23 @@ TEST_CASE("tilt and distance stay within their limits")
     CHECK(zoomed(c, 100).distance == doctest::Approx(kMaxDistance));
     CHECK(zoomed(c, 0.001f).distance == doctest::Approx(kMinDistance));
 }
+
+TEST_CASE("the line of sight through a point of the view passes through what is drawn there")
+{
+    ParkCamera c;
+    c.target = { 10, 2, 10 };
+    c.yaw = 0.7f;
+    const float aspect = 1.6f;
+    const glm::vec3 thing { 14, 3, 8 };
+    const glm::vec4 clip = view_projection(c, aspect) * glm::vec4(thing, 1);
+    const Ray r = view_ray(c, aspect, { clip.x / clip.w, clip.y / clip.w });
+    CHECK(glm::length(r.direction) == doctest::Approx(1));
+    const glm::vec3 to = thing - r.origin;
+    const float along = glm::dot(to, r.direction);
+    CHECK(along > 0);
+    CHECK(glm::length(to - r.direction * along) == doctest::Approx(0).epsilon(0.001));
+    // Through the middle of the view it passes through the target.
+    const Ray middle = view_ray(c, aspect, { 0, 0 });
+    const glm::vec3 t = c.target - middle.origin;
+    CHECK(glm::length(t - middle.direction * glm::dot(t, middle.direction)) == doctest::Approx(0).epsilon(0.001));
+}

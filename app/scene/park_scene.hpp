@@ -8,12 +8,14 @@
 //
 // The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
 // both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the
-// keyboard. Nothing moves the camera while the pointer is over a window.
+// keyboard. Nothing moves the camera while the pointer is over a window. A click on an attraction opens the
+// round panel that tells about it.
 //
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
 
 #include "config/game_options.hpp"
+#include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/object_mesh.hpp"
 #include "park/sky_mesh.hpp"
@@ -26,6 +28,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
+#include "ui/screens/attraction_info.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/ui_textures.hpp"
 
@@ -103,7 +106,13 @@ namespace rct3::scene
         float clock = 0;                     ///< Seconds the park has been shown
         simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
         simulation::DayClock day;            ///< The park's time of day
-        render::SceneLight light;            ///< What the day clock shows, for this frame
+        save::RideModel rides;
+        park::AttractionObjects attractions;                  ///< Which attraction each object belongs to, for clicks
+        std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
+        std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
+        ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
+        std::optional<ui::Point> press;                       ///< Where the left button went down over the park, until it is let go
+        render::SceneLight light;                             ///< What the day clock shows, for this frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

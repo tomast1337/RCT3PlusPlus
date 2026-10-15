@@ -9,6 +9,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
+#include "ui/screens/info_panel.hpp"
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
@@ -400,6 +401,21 @@ namespace rct3::ui::game_skins
         s.back = "MessageConsole_Top";
         s.older = "SquareArrowUp";
         s.newer = "SquareArrowDown";
+        return s;
+    }
+
+    /// The round panel in the bottom-right corner that tells about an attraction.
+    [[nodiscard]] inline InfoPanelStyle info_panel_style()
+    {
+        InfoPanelStyle s;
+        s.disc = "CircularViewSolid";
+        s.glass = "CircularViewHollow";
+        s.rim = "CircularViewHollowEdgeR";
+        s.shadow = "CircularViewShadow";
+        s.rim_shadow = "CircularViewHollowShadowR";
+        s.strip = "CircularPanelDialog";
+        s.close_icon = kCloseIcon;
+        s.tab_face = kMenuButtonSmall;
         return s;
     }
 

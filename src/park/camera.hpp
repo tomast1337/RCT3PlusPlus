@@ -28,6 +28,17 @@ namespace rct3::park
     inline constexpr float kMaxPitch = 1.5f;
 
     [[nodiscard]] glm::vec3 eye(const ParkCamera& camera);
+
+    /// A half line from `origin` along `direction`, which has length 1.
+    struct Ray
+    {
+        glm::vec3 origin { 0.0f };
+        glm::vec3 direction { 0.0f, 0.0f, 1.0f };
+    };
+
+    /// The line of sight through `at` on the view, from -1 to 1 left to right and bottom to top, for a view
+    /// `aspect` times as wide as it is tall.
+    [[nodiscard]] Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at);
     /// World to clip space for a view `aspect` times as wide as it is tall.
     [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect);
 

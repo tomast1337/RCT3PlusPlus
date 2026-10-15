@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <doctest/doctest.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -76,4 +77,15 @@ TEST_CASE("on 31 October an eerie track plays and the cycle still moves on")
     CHECK(is_halloween(sys_days { year { 2031 } / October / 31 } + hours { 23 }));
     CHECK_FALSE(is_halloween(sys_days { year { 2031 } / October / 30 } + hours { 23 }));
     CHECK_FALSE(is_halloween(sys_days { year { 2031 } / November / 1 }));
+}
+
+TEST_CASE("the menus follow the music picked for the park")
+{
+    const std::vector<std::string> files { "Alpha.wma", "Beta.wma" };
+    CHECK(menu_music_wish(false, std::nullopt, files) == MenuMusicWish { });
+    CHECK(menu_music_wish(false, std::string("beta.WMA"), files) == MenuMusicWish { MenuMusicSource::Track, 1 });
+    CHECK(menu_music_wish(false, std::string(), files).source == MenuMusicSource::Silent);
+    CHECK(menu_music_wish(true, std::string("Beta.wma"), files).source == MenuMusicSource::Shuffle);
+    // A pick that is gone from the folder leaves it to the cycle.
+    CHECK(menu_music_wish(false, std::string("Gone.wma"), files).source == MenuMusicSource::Cycle);
 }

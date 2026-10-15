@@ -7,7 +7,8 @@
 // Worked out from the game's parks: heights are world units (stacked walls and path slopes step by their
 // models' heights). Slope pieces rise along their model's -X, and in a park a run of them climbs along +X
 // when unturned and along +Z with three quarter turns; so the turns go clockwise seen from above and the
-// unturned model faces -X. Drawn this way, paths, coaster track and walls join up. An object with no
+// unturned model faces -X. Drawn this way, paths, coaster track and walls join up. Coaster curves of two
+// by two and three by two tiles, run into from the pieces before them, show where a larger item's tile is. An object with no
 // height above the ground, and not pinned to its stored height, stands on the ground under its anchor;
 // its stored height is the next whole unit up. Edge items sit on the edge their +X faces. Where items on
 // paths and in quarter tiles sit within the tile is a guess from the models' shapes.
@@ -16,6 +17,7 @@
 #include "math/glm.hpp"
 #include "save/model/world.hpp"
 
+#include <array>
 #include <cstdint>
 
 namespace rct3::park
@@ -44,7 +46,14 @@ namespace rct3::park
     /// The direction a model's +X points after `turns` quarter turns, in the park's X and Z.
     [[nodiscard]] glm::vec2 turned_x(std::int32_t turns);
 
-    /// The model-to-park transform of `object`, whose item positions itself as `positioning`.
-    [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid);
+    /// Where the middle of `object`'s footprint is, in tiles from the grid's corner, for an item covering
+    /// `squares` tiles along its own X and Z. The object names the footprint's tile of lowest column and row
+    /// whichever way it turns, and its model is built round the footprint's middle: the middle of a tile
+    /// when both sides are odd, a tile's corner when both are even.
+    [[nodiscard]] glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares);
+
+    /// The model-to-park transform of `object`, whose item positions itself as `positioning` and covers
+    /// `squares` tiles along its own X and Z.
+    [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 });
 
 } // namespace rct3::park

@@ -71,6 +71,9 @@ namespace rct3::ui
         /// For a top-level widget such as a menu: it closes when the pointer presses outside it, and takes
         /// the keyboard focus while it is the top-most (see Desktop).
         bool popup = false;
+        /// For a top-level widget that must stay behind others, as a drawer behind a bar: pressing it does not
+        /// raise it above them.
+        bool stays_behind = false;
         /// For a top-level widget such as a question: while it is shown, the pointer and the keys reach only
         /// it and what is above it, and what is below is shaded (see Desktop).
         bool modal = false;

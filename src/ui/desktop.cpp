@@ -241,7 +241,7 @@ namespace rct3::ui
         if (down && !was_down_ && under != nullptr && under->enabled)
         {
             held_ = under;
-            if (Widget* window = top_level(*root_, under))
+            if (Widget* window = top_level(*root_, under); window != nullptr && !window->stays_behind)
                 root_->raise(*window);
             for (Widget* w = deepest(pointer.position); w != nullptr && focus_ == nullptr; w = w->parent())
             {

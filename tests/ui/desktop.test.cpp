@@ -176,6 +176,20 @@ TEST_CASE("pressing a top-level widget raises it and gives it focus")
     CHECK_FALSE(b.focused());
 }
 
+TEST_CASE("a top-level widget that stays behind is not raised when pressed")
+{
+    Desktop desktop;
+    Probe& a = desktop.root().add<Probe>("a");
+    a.placement = top_left(0, 0, 100, 100);
+    a.stays_behind = true;
+    Probe& b = desktop.root().add<Probe>("b");
+    b.placement = top_left(150, 0, 50, 50);
+    desktop.layout(kView);
+
+    desktop.update(at(10, 10, true));
+    CHECK(desktop.root().children().back().get() == &b);
+}
+
 TEST_CASE("closing widgets are detached after the update")
 {
     Desktop desktop;

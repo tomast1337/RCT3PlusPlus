@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The column of large buttons up the left edge of the park view, as the game shows it: from the bottom up
-// delete, land, paths, scenery, shops, rides and park management, then after half a step's gap the button
-// to leave, files and options, the view controls and the maps. Each shows its icon and, as help, the string
-// named after the icon with "Help" added.
+// The row of large buttons along the bottom of the park view. Unlike the game, which stacks them up the left
+// edge, the row sits in the middle of the bottom edge and stays there as the window changes size. From the
+// left: delete, land, paths, scenery, shops, rides and park management, then after half a step's gap the
+// button to leave, files and options, the view controls and the maps. Each shows its icon and, as help, the
+// string named after the icon with "Help" added.
 //
-// The column keeps a fixed step between buttons on tall screens and packs them closer on short ones, so all
-// of them always fit. The owner hears of a press through take_pressed() and decides what it opens.
+// The row keeps a fixed step between buttons and packs them closer on narrow screens, so all of them always
+// fit. The owner hears of a press through take_pressed() and decides what it opens.
 #pragma once
 
 #include "ui/string_table.hpp"
@@ -22,7 +23,7 @@
 namespace rct3::ui
 {
 
-    /// The column's buttons, bottom to top.
+    /// The row's buttons, left to right.
     enum class ParkTool : std::uint8_t
     {
         Delete,
@@ -39,7 +40,7 @@ namespace rct3::ui
     };
     inline constexpr std::size_t kParkToolCount = 11;
 
-    struct ToolColumnStyle
+    struct ToolRowStyle
     {
         /// Each button's icon in the order of ParkTool; the leave button's is the one to the main menu.
         std::array<std::string, kParkToolCount> icons;
@@ -47,19 +48,19 @@ namespace rct3::ui
         float swell = 2;               ///< Units a button grows by under the pointer (ours)
     };
 
-    namespace tool_column
+    namespace tool_row
     {
-        inline constexpr float kMargin = 8;      ///< From the screen's left and bottom edges to the first button
-        inline constexpr float kButtonSize = 40; ///< And the step between buttons on tall screens
-    } // namespace tool_column
+        inline constexpr float kMargin = 8;      ///< From the screen's bottom edge, and the least from its sides
+        inline constexpr float kButtonSize = 40; ///< And the step between buttons on wide screens
+    } // namespace tool_row
 
-    /// The step between buttons on a screen `height` units tall.
-    [[nodiscard]] float tool_column_step(float height);
+    /// The step between buttons on a screen `width` units wide.
+    [[nodiscard]] float tool_row_step(float width);
 
-    class ToolColumn : public Widget
+    class ToolRow : public Widget
     {
     public:
-        ToolColumn(std::string name, ToolColumnStyle style, const StringTable& strings);
+        ToolRow(std::string name, ToolRowStyle style, const StringTable& strings);
 
         /// In a career the leave button goes back to the career screen instead of the main menu.
         void set_career(bool career);
@@ -76,13 +77,13 @@ namespace rct3::ui
         void update(const UpdateContext& context) override;
 
     private:
-        void place(float height);
+        void place(float width);
 
-        ToolColumnStyle style_;
+        ToolRowStyle style_;
         const StringTable& strings_;
         std::array<Button*, kParkToolCount> buttons_ { };
         std::optional<ParkTool> pressed_;
-        float placed_for_ = -1; ///< The parent height the buttons were last placed for
+        float placed_for_ = -1; ///< The width the buttons were last placed for
     };
 
 } // namespace rct3::ui

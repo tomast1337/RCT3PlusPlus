@@ -71,6 +71,18 @@ TEST_CASE("a tile item stands on the middle of its tile, on the ground")
     CHECK(q.y == doctest::Approx(2.5f));
 }
 
+TEST_CASE("a larger item covers the tiles from its own onwards, its model round their middle")
+{
+    const save::TerrainGrid g = slope();
+    // Three tiles along its X, two along its Z: across the park unturned, along it a quarter turn on.
+    CHECK(footprint_middle(at(1, 0, 0), { 3, 2 }) == glm::vec2(2.5f, 1));
+    CHECK(footprint_middle(at(1, 0, 1), { 3, 2 }) == glm::vec2(2, 1.5f));
+    CHECK(footprint_middle(at(1, 0, 2), { 3, 2 }) == glm::vec2(2.5f, 1));
+    const glm::vec3 p = place(object_transform(at(1, 0, 1), Positioning::Tile, g, { 3, 2 }), { });
+    CHECK(p.x == doctest::Approx(8));
+    CHECK(p.z == doctest::Approx(6));
+}
+
 TEST_CASE("an item raised above the ground or pinned keeps its stored height")
 {
     const save::TerrainGrid g = slope();

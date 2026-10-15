@@ -18,6 +18,8 @@
 #include <expected>
 #include <filesystem>
 #include <map>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -42,6 +44,11 @@ namespace rct3::park
 
     /// Where a queue style's ground picture is, relative to the game's folder.
     [[nodiscard]] std::string queue_texture_file(std::string_view style);
+
+    /// Which of the pictures named `names`, from a queue style's overlay, is its ground: each style names it its
+    /// own way, and keeps beside it a see-through mask whose name ends in ".alpha". The one named "Ground" and
+    /// the style is taken first, else the first that is not a mask. Nothing when all are masks.
+    [[nodiscard]] std::optional<std::size_t> queue_picture(std::span<const std::string_view> names, std::string_view style);
 
     /// Adds the ground picture of `painting`'s queue style, from the overlay at `path`, painted in its colours,
     /// as the picture of the park's painting number `index`. Returns false when the overlay has no such picture.

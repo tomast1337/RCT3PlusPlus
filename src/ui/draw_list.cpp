@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <numbers>
 
 namespace rct3::ui
 {
@@ -104,6 +105,39 @@ namespace rct3::ui
         for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u })
             indices_.push_back(base + i);
         batches_.back().index_count += 6;
+    }
+
+    void DrawList::disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint)
+    {
+        // Enough sides that the edge looks round at the sizes the interface draws.
+        constexpr int kSides = 48;
+        const Rect full = snapped(rect, scale_);
+        if (full.empty())
+            return;
+        if (!clips_.empty())
+        {
+            const Rect& c = clips_.back();
+            if (full.x0 < c.x0 || full.y0 < c.y0 || full.x1 > c.x1 || full.y1 > c.y1)
+                return;
+        }
+        const auto colour = packed(tint);
+        const auto at = [&](float fx, float fy) { return Vertex { lerp(full.x0, full.x1, fx), lerp(full.y0, full.y1, fy), colour, lerp(uv.x0, uv.x1, fx), lerp(uv.y0, uv.y1, fy) }; };
+        const auto base = static_cast<std::uint32_t>(vertices_.size());
+        vertices_.push_back(at(0.5f, 0.5f));
+        for (int i = 0; i < kSides; ++i)
+        {
+            const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / kSides;
+            vertices_.push_back(at(0.5f + 0.5f * std::cos(angle), 0.5f + 0.5f * std::sin(angle)));
+        }
+        if (batches_.empty() || batches_.back().texture != texture)
+            batches_.push_back({ texture, static_cast<std::uint32_t>(indices_.size()), 0 });
+        for (std::uint32_t i = 0; i < kSides; ++i)
+        {
+            indices_.push_back(base);
+            indices_.push_back(base + 1 + i);
+            indices_.push_back(base + 1 + (i + 1) % kSides);
+        }
+        batches_.back().index_count += 3 * kSides;
     }
 
     bool DrawList::push_clip(const Rect& rect)

@@ -129,3 +129,27 @@ TEST_CASE("the scale turns logical units into pixels before rounding")
     list.clear();
     CHECK(list.scale() == 2.5f);
 }
+
+TEST_CASE("a round image is a fan of triangles inside its square, left out when clipped")
+{
+    DrawList list;
+    list.disc_image({ 10, 20, 50, 60 }, 7, { 0, 0, 1, 1 });
+    REQUIRE(list.batches().size() == 1);
+    CHECK(list.batches()[0].texture == 7);
+    CHECK(list.indices().size() % 3 == 0);
+    for (const Vertex& v : list.vertices())
+    {
+        CHECK(v.x >= 10);
+        CHECK(v.x <= 50);
+        CHECK(v.y >= 20);
+        CHECK(v.y <= 60);
+        // The picture is cut the same way: its middle at the middle.
+        CHECK(v.u == doctest::Approx((v.x - 10) / 40));
+        CHECK(v.v == doctest::Approx((v.y - 20) / 40));
+    }
+    list.clear();
+    REQUIRE(list.push_clip({ 0, 0, 30, 100 }));
+    list.disc_image({ 10, 20, 50, 60 }, 7, { 0, 0, 1, 1 });
+    CHECK(list.vertices().empty());
+    list.pop_clip();
+}

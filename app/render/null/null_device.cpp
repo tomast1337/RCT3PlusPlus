@@ -86,7 +86,7 @@ namespace rct3::render::null
         assert(state_ != State::Off);
         if (desc.width == 0 || desc.height == 0)
             return std::unexpected("empty texture");
-        if (desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
+        if (desc.target ? !desc.pixels.empty() : desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
             return std::unexpected("pixel data does not match the texture size");
         const std::uint32_t id = next_id_++;
         textures_.emplace(id, Extent { desc.width, desc.height });

@@ -63,12 +63,14 @@ namespace rct3::ui
         inline constexpr float kDisc = 128;       ///< Width and height of the disc
         inline constexpr float kDiscMargin = 18;  ///< From the screen's right and bottom edges to the disc
         inline constexpr float kShadowOffset = 3; ///< Of the shadows, right and down
-        inline constexpr float kRingRadius = 70;  ///< From the disc's middle to the tabs' middles
-        inline constexpr float kFirstAngle = 45;  ///< Degrees up from the right, of slot 0
-        inline constexpr float kSlotAngle = 30;   ///< Between neighbouring slots, going round to the left
-        inline constexpr float kTabSize = 27;     ///< A tab's face at rest
-        inline constexpr float kTabGrown = 40;    ///< Under the pointer
-        inline constexpr float kIconSize = 40;    ///< Of the tab icons' own pictures
+        /// Across the round view of the thing, centred on the disc, within the disc's plain middle.
+        inline constexpr float kView = 106;
+        inline constexpr float kRingRadius = 70; ///< From the disc's middle to the tabs' middles
+        inline constexpr float kFirstAngle = 45; ///< Degrees up from the right, of slot 0
+        inline constexpr float kSlotAngle = 30;  ///< Between neighbouring slots, going round to the left
+        inline constexpr float kTabSize = 27;    ///< A tab's face at rest
+        inline constexpr float kTabGrown = 40;   ///< Under the pointer
+        inline constexpr float kIconSize = 40;   ///< Of the tab icons' own pictures
         inline constexpr float kCloseSize = 14;
         inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
         inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
@@ -179,7 +181,14 @@ namespace rct3::ui
         /// Fills the body with `page`: its title, its lines in two columns and its note.
         void show_page(const InfoPage& page);
 
+        /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.
+        void show_view(TextureId texture)
+        {
+            view_ = texture;
+        }
         [[nodiscard]] Rect disc() const;
+        /// The square the round view fits in.
+        [[nodiscard]] Rect view() const;
         [[nodiscard]] Rect strip() const;
         [[nodiscard]] Button& tab(std::size_t i) const
         {
@@ -220,6 +229,7 @@ namespace rct3::ui
         std::optional<std::size_t> picked_now_;
         bool closed_ = false;
         float body_width_ = 0;
+        TextureId view_ = 0;
         float body_height_ = 0;
     };
 

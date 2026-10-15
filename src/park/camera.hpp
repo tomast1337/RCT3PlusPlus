@@ -8,6 +8,8 @@
 #include "math/glm.hpp"
 #include "save/model/world.hpp"
 
+#include <span>
+
 namespace rct3::park
 {
 
@@ -51,6 +53,9 @@ namespace rct3::park
     [[nodiscard]] ParkCamera turned(ParkCamera camera, float yaw, float pitch);
     /// Brought `factor` times as far, within the limits.
     [[nodiscard]] ParkCamera zoomed(ParkCamera camera, float factor);
+    /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
+    /// box fills a square view without leaving it.
+    [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch);
     /// Kept over the map, its target on the surface.
     [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid);
 

@@ -62,6 +62,8 @@ namespace rct3::scene
         constexpr std::string_view kToolsName = "tools";
         constexpr std::string_view kMessagesName = "messages";
         constexpr std::string_view kInfoName = "info";
+        constexpr float kViewPitch = 0.5f; ///< Radians down, of the info panel's round view
+        constexpr float kViewTurn = 0.15f; ///< Radians a second the round view turns round its attraction
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
@@ -222,7 +224,7 @@ namespace rct3::scene
         }
 
         /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`.
-        void draw_transient(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, auto&& pipeline_of, auto&& address_of)
+        void draw_transient(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of)
         {
             if (mesh.indices.empty())
                 return;
@@ -244,7 +246,7 @@ namespace rct3::scene
                 draw.texture = texture != textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = address_of(batch);
-                draw.light = scene.light;
+                draw.light = light;
                 device.draw(draw);
             }
         }
@@ -645,6 +647,18 @@ namespace rct3::scene
             if (scene.shown_tabs.at(picked) == ui::AttractionTab::State)
                 picked = 0;
             scene.info_tab = scene.shown_tabs.at(picked);
+            if (scene.shown != ref)
+            {
+                // The view starts from where the player looks from, and turns from there.
+                std::vector<glm::vec3> points;
+                for (std::size_t i = 0; i < scene.objects.size() && i < scene.anchors.size(); ++i)
+                {
+                    const auto owner = scene.attractions.find(scene.objects[i].id);
+                    if (owner != scene.attractions.end() && owner->second == ref)
+                        points.push_back(scene.anchors[i]);
+                }
+                scene.view_camera = park::framed(points, scene.camera.yaw, kViewPitch);
+            }
             scene.shown = ref;
             panel.show(std::move(tabs), picked);
             show_info_page(scene, panel, assets, options);
@@ -734,6 +748,7 @@ namespace rct3::scene
             if (info->take_closed())
                 scene.shown.reset();
         }
+        scene.view_camera.yaw += kViewTurn * elapsed;
         const glm::vec3 viewer = park::eye(scene.camera);
         scene.since_rebuild += elapsed;
         if (scene.since_rebuild >= kObjectRebuildInterval)
@@ -799,70 +814,120 @@ namespace rct3::scene
         return scene.horizon;
     }
 
-    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    namespace
     {
-        const glm::mat4 transform = park::view_projection(scene.camera, aspect(device));
-        if (scene.sky_pipeline)
+        /// The park's ground, objects, water, sky and mountains as `transform` sees them, lit by `light`.
+        void draw_world(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
         {
-            // The dome reads one column of its picture, so it must not wrap into the next.
-            draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
-        }
-        // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
-        draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
-        const auto draw_objects = [&](bool see_through) {
-            for (const park::ObjectBatch& batch : scene.object_batches)
+            if (scene.sky_pipeline)
             {
-                if ((batch.blend == park::PartBlend::Blended) != see_through)
-                    continue;
-                const auto texture = scene.object_textures.find(batch.texture);
+                // The dome reads one column of its picture, so it must not wrap into the next.
+                draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
+            }
+            // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
+            draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+            const auto draw_objects = [&](bool see_through) {
+                for (const park::ObjectBatch& batch : scene.object_batches)
+                {
+                    if ((batch.blend == park::PartBlend::Blended) != see_through)
+                        continue;
+                    const auto texture = scene.object_textures.find(batch.texture);
+                    render::DrawCommand draw;
+                    draw.pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
+                    draw.vertices = { scene.object_vertices };
+                    draw.indices = { scene.object_indices };
+                    draw.index_type = render::IndexType::U32;
+                    draw.first = batch.first;
+                    draw.count = batch.count;
+                    draw.transform = transform;
+                    draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                    draw.filter = render::Filter::Linear;
+                    draw.address = render::AddressMode::Repeat;
+                    draw.light = light;
+                    device.draw(draw);
+                }
+            };
+            for (const park::GroundBatch& batch : scene.batches)
+            {
+                const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
                 render::DrawCommand draw;
-                draw.pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
-                draw.vertices = { scene.object_vertices };
-                draw.indices = { scene.object_indices };
+                draw.pipeline = scene.ground_pipeline;
+                draw.vertices = { scene.ground_vertices };
+                draw.indices = { scene.ground_indices };
                 draw.index_type = render::IndexType::U32;
                 draw.first = batch.first;
                 draw.count = batch.count;
                 draw.transform = transform;
-                draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
-                draw.light = scene.light;
+                draw.light = light;
                 device.draw(draw);
             }
-        };
-        for (const park::GroundBatch& batch : scene.batches)
-        {
-            const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-            render::DrawCommand draw;
-            draw.pipeline = scene.ground_pipeline;
-            draw.vertices = { scene.ground_vertices };
-            draw.indices = { scene.ground_indices };
-            draw.index_type = render::IndexType::U32;
-            draw.first = batch.first;
-            draw.count = batch.count;
-            draw.transform = transform;
-            draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-            draw.filter = render::Filter::Linear;
-            draw.address = render::AddressMode::Repeat;
-            draw.light = scene.light;
-            device.draw(draw);
+            if (scene.object_indices)
+                draw_objects(false);
+            draw_transient(device, scene, scene.billboards, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+            if (scene.water_count > 0)
+            {
+                render::DrawCommand draw;
+                draw.pipeline = scene.water_pipeline;
+                draw.vertices = { scene.water };
+                draw.count = scene.water_count;
+                draw.transform = transform;
+                draw.texture = scene.blank;
+                draw.light = light;
+                device.draw(draw);
+            }
+            if (scene.object_indices)
+                draw_objects(true);
         }
-        if (scene.object_indices)
-            draw_objects(false);
-        draw_transient(device, scene, scene.billboards, scene.object_textures, transform, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
-        if (scene.water_count > 0)
+
+        /// Draws the attraction the info panel shows into the panel's round view, from its own camera.
+        void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel)
         {
-            render::DrawCommand draw;
-            draw.pipeline = scene.water_pipeline;
-            draw.vertices = { scene.water };
-            draw.count = scene.water_count;
-            draw.transform = transform;
-            draw.texture = scene.blank;
-            draw.light = scene.light;
-            device.draw(draw);
+            const float scale = scale_for(device, scene);
+            const auto pixels = static_cast<std::uint32_t>(std::lround(ui::info_panel::kView * scale));
+            if (scene.view_target && scene.view_pixels != pixels)
+            {
+                device.destroy_texture(scene.view_target);
+                scene.view_target = { };
+            }
+            if (!scene.view_target && pixels > 0)
+            {
+                render::TextureDesc desc;
+                desc.width = pixels;
+                desc.height = pixels;
+                desc.target = true;
+                desc.label = "attraction view";
+                if (auto made = device.create_texture(desc))
+                {
+                    scene.view_target = *made;
+                    scene.view_pixels = pixels;
+                }
+            }
+            if (!scene.view_target)
+                return;
+            device.end_pass();
+            render::PassDesc into;
+            into.target = scene.view_target;
+            into.clear_color = scene.horizon;
+            device.begin_pass(into);
+            render::SceneLight light = scene.light;
+            light.eye = park::eye(scene.view_camera);
+            draw_world(device, scene, park::view_projection(scene.view_camera, 1), light);
+            device.end_pass();
+            render::PassDesc back;
+            back.clear = false;
+            device.begin_pass(back);
+            panel.show_view(ui::texture_id(scene.view_target));
         }
-        if (scene.object_indices)
-            draw_objects(true);
+    } // namespace
+
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && scene.shown)
+            draw_view(device, scene, *info);
+        draw_world(device, scene, park::view_projection(scene.camera, aspect(device)), scene.light);
 
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
@@ -889,6 +954,8 @@ namespace rct3::scene
         ui::destroy_textures(device, scene.sky_textures);
         if (scene.blank)
             device.destroy_texture(scene.blank);
+        if (scene.view_target)
+            device.destroy_texture(scene.view_target);
         scene = { };
     }
 

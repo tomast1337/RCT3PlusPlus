@@ -723,29 +723,45 @@ namespace rct3::render::vulkan
     {
         assert(state_ == State::InFrame);
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
+        pass_target_ = nullptr;
+        if (pass.target)
+        {
+            const auto found = textures_.find(pass.target.id);
+            assert(found != textures_.end() && found->second.depth_view != VK_NULL_HANDLE && "pass into a texture that is not a target");
+            if (found != textures_.end() && found->second.depth_view != VK_NULL_HANDLE)
+                pass_target_ = &found->second;
+        }
+        if (pass_target_ != nullptr)
+        {
+            // Drawing waits for the reads of what it last held; its depth starts afresh each time.
+            image_barrier(cmd, pass_target_->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+            constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+            image_barrier(cmd, pass_target_->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT });
+        }
+        const VkExtent2D area = pass_target_ != nullptr ? pass_target_->extent : extent_;
 
         VkRenderingAttachmentInfo color { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        color.imageView = views_[image_index_];
+        color.imageView = pass_target_ != nullptr ? pass_target_->view : views_[image_index_];
         color.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         color.loadOp = pass.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color.clearValue.color = { { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a } };
 
         VkRenderingAttachmentInfo depth { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        depth.imageView = depth_view_;
+        depth.imageView = pass_target_ != nullptr ? pass_target_->depth_view : depth_view_;
         depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-        depth.loadOp = pass.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        depth.loadOp = pass.clear || pass_target_ != nullptr ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         depth.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depth.clearValue.depthStencil = { pass.clear_depth, 0 };
 
         VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
-        rendering.renderArea = { { 0, 0 }, extent_ };
+        rendering.renderArea = { { 0, 0 }, area };
         rendering.layerCount = 1;
         rendering.colorAttachmentCount = 1;
         rendering.pColorAttachments = &color;
         rendering.pDepthAttachment = &depth;
         vkCmdBeginRendering(cmd, &rendering);
-        set_viewport(cmd, extent_);
+        set_viewport(cmd, area);
 
         ++frame_stats_.passes;
         state_ = State::InPass;
@@ -809,7 +825,11 @@ namespace rct3::render::vulkan
     void VulkanDevice::end_pass()
     {
         assert(state_ == State::InPass);
-        vkCmdEndRendering(frames_[frame_index_].commands);
+        const VkCommandBuffer cmd = frames_[frame_index_].commands;
+        vkCmdEndRendering(cmd);
+        if (pass_target_ != nullptr)
+            image_barrier(cmd, pass_target_->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        pass_target_ = nullptr;
         state_ = State::InFrame;
     }
 

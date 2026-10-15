@@ -7,10 +7,11 @@
 // front end.
 //
 // The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
-// both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the
-// keyboard. With the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
+// both) turns and tilts, the wheel zooms, and the keys the player bound to the game's camera commands do the
+// same from the keyboard. With the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
-// round panel that tells about it; a click on open water starts a ripple there.
+// round panel that tells about it; a click on open water starts a ripple there. The Files menu's options and
+// about items are left for the owner to open (park_windows.hpp).
 //
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
@@ -35,9 +36,11 @@
 #include "ui/key_map.hpp"
 #include "ui/park_cursor.hpp"
 #include "ui/screens/attraction_info.hpp"
+#include "ui/screens/options_session.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/person_info.hpp"
 #include "ui/screens/scenery_info.hpp"
+#include "ui/screens/tool_menus.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <expected>
@@ -64,6 +67,10 @@ namespace rct3::scene
         bool down_key = false;
         bool zoom_in_key = false;
         bool zoom_out_key = false;
+        bool turn_left_key = false;
+        bool turn_right_key = false;
+        bool tilt_up_key = false;
+        bool tilt_down_key = false;
         bool in_window = false;                ///< The pointer is over the focused window, so it may push at its edges
         std::vector<ui::PlayCommand> commands; ///< The game's commands bound to the keys pressed
     };
@@ -197,6 +204,8 @@ namespace rct3::scene
         float since_hover_pick = 0;  ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
+        std::vector<ui::ToolItem> window_requests;   ///< Files menu items that open a window the owner opens (park_windows.hpp)
+        std::unique_ptr<ui::OptionsSession> options; ///< The options window over the park, once opened
     };
 
     /// The stages of loading a park, in the order they run.

@@ -40,6 +40,7 @@
 
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <future>
 #include <memory>
 #include <optional>
@@ -193,9 +194,22 @@ namespace rct3::scene
         bool message_alert = false;
     };
 
+    /// The stages of loading a park, in the order they run.
+    enum class ParkLoadStage : std::uint8_t
+    {
+        ReadFile, ///< Reading and taking apart the park file
+        Ground,   ///< The ground, water, paths and queues, and their pictures
+        Objects,  ///< The placed objects' models, and the supports, railings, fences and trees built round them
+        Scene,    ///< What is shown at first: the objects in view, the sky, the people and the interface
+    };
+    inline constexpr std::size_t kParkLoadStages = 4;
+
+    /// Told as each stage begins, so that the owner can show how far loading has got. Loading waits for it.
+    using ParkLoadReport = std::function<void(ParkLoadStage)>;
+
     /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
     /// Its random numbers come from `seed`: the same park and seed give the same park.
-    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed);
+    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const ParkLoadReport& report = { });
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 

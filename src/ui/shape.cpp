@@ -94,6 +94,14 @@ namespace rct3::ui
         m.softness = std::max(shape.softness * scale, 0.0f);
         m.outline_width = std::max(shape.outline_width * scale, 0.0f);
         m.light_width = std::max(shape.light_width * scale, 0.0f);
+        m.fill_from = shape.fill_from;
+        m.fill_to = shape.fill_to;
+        if (shape.cut_radius > 0)
+        {
+            m.cut_x = (shape.cut_x - (shape.rect.x0 + shape.rect.x1) / 2) * scale;
+            m.cut_y = (shape.cut_y - (shape.rect.y0 + shape.rect.y1) / 2) * scale;
+            m.cut_radius = shape.cut_radius * scale;
+        }
         return m;
     }
 
@@ -104,11 +112,14 @@ namespace rct3::ui
         const float qx = std::abs(x) - m.half_width + r;
         const float qy = std::abs(y) - m.half_height + r;
         const float outside = std::hypot(std::max(qx, 0.0f), std::max(qy, 0.0f));
-        const float d = outside + std::min(std::max(qx, qy), 0.0f) - r;
-        if (m.ring <= 0)
-            return d;
+        float d = outside + std::min(std::max(qx, qy), 0.0f) - r;
         // A ring is the band of the box's inside within `ring` of its edge.
-        return std::abs(d + m.ring / 2) - m.ring / 2;
+        if (m.ring > 0)
+            d = std::abs(d + m.ring / 2) - m.ring / 2;
+        // Inside the cut is outside the shape.
+        if (m.cut_radius > 0)
+            d = std::max(d, m.cut_radius - std::hypot(x - m.cut_x, y - m.cut_y));
+        return d;
     }
 
     float shape_coverage(const ShapeMetrics& m, float distance)
@@ -125,7 +136,9 @@ namespace rct3::ui
         const float coverage = shape_coverage(m, d);
         if (coverage <= 0)
             return { 0, 0, 0, 0 };
-        const float along = m.half_height > 0 ? std::clamp((y + m.half_height) / (2 * m.half_height), 0.0f, 1.0f) : 0.0f;
+        const float share = m.half_height > 0 ? (y + m.half_height) / (2 * m.half_height) : 0.0f;
+        const float span = m.fill_to - m.fill_from;
+        const float along = std::clamp(span > 0 ? (share - m.fill_from) / span : share < m.fill_from ? 0.0f : 1.0f, 0.0f, 1.0f);
         Rgba c = mix(unit(shape.top), unit(shape.bottom), along);
         const float inside = -d;
         if (m.light_width > 0)

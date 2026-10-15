@@ -8,6 +8,9 @@
 // Callers work in logical units, origin at the top-left corner, y down. The list's scale turns them into
 // screen pixels, so one layout serves every window size and pixel density; edges are then rounded to whole
 // pixels so that point-sampled skins land on the pixel grid. Output and clip() are in pixels.
+//
+// Shapes drawn in code (shape.hpp) go into a list of their own, with the measures their shader needs; their
+// batches index that list. Batches stay in painter's order whichever list they draw from.
 #pragma once
 
 #include "math/hex_colour.hpp"
@@ -78,12 +81,34 @@ namespace rct3::ui
         float v = 0;
     };
 
+    /// The vertex of a shape's quad (shape.hpp), 72 bytes. The shape's measures repeat on each corner so one draw
+    /// can hold many shapes. Lengths are in pixels.
+    struct ShapeVertex
+    {
+        float x = 0;
+        float y = 0;
+        std::array<float, 4> local { }; ///< From the shape's middle; then its half width and half height
+        std::array<float, 4> radii { }; ///< Of the corners, clockwise from the top-left
+        std::array<float, 4> edge { };  ///< Softness, outline width, light width, ring width
+        std::array<std::uint8_t, 4> top { };
+        std::array<std::uint8_t, 4> bottom { };
+        std::array<std::uint8_t, 4> outline { };
+        std::array<std::uint8_t, 4> light { };
+    };
+
+    enum class BatchKind : std::uint8_t
+    {
+        Quads,  ///< Indices into vertices(), drawn with the batch's texture
+        Shapes, ///< Indices into shape_vertices(), drawn with the shape shader
+    };
+
     /// A run of indices drawn with one texture.
     struct Batch
     {
         TextureId texture = 0;
         std::uint32_t first_index = 0;
         std::uint32_t index_count = 0;
+        BatchKind kind = BatchKind::Quads;
     };
 
     /// Corner colours, clockwise from the top-left.
@@ -94,6 +119,8 @@ namespace rct3::ui
         Color bottom_right;
         Color bottom_left;
     };
+
+    struct Shape;
 
     class DrawList
     {
@@ -119,6 +146,8 @@ namespace rct3::ui
         /// The round part of an image: the ellipse that fits in `rect`, showing the same part of the texture
         /// image() would. It is not cut by the clip, so it is left out unless it lies wholly inside it.
         void disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint = kWhite);
+        /// A shape drawn in code (shape.hpp), cut to the clip like a quad.
+        void shape(const Shape& shape);
 
         /// Narrows drawing to `rect` within the current clip until the matching pop_clip. Returns false when
         /// nothing would be visible, so the caller may skip what it was about to draw (it still has to pop).
@@ -135,13 +164,20 @@ namespace rct3::ui
         {
             return indices_;
         }
+        [[nodiscard]] std::span<const ShapeVertex> shape_vertices() const
+        {
+            return shape_vertices_;
+        }
         [[nodiscard]] std::span<const Batch> batches() const
         {
             return batches_;
         }
 
     private:
+        void add_indices(BatchKind kind, TextureId texture, std::uint32_t base, std::span<const std::uint32_t> corners);
+
         std::vector<Vertex> vertices_;
+        std::vector<ShapeVertex> shape_vertices_;
         std::vector<std::uint32_t> indices_;
         std::vector<Batch> batches_;
         std::vector<Rect> clips_;

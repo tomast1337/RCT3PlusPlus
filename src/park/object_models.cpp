@@ -251,6 +251,7 @@ namespace rct3::park
 
         ObjectModel model;
         model.positioning = item->positioning;
+        model.squares = { static_cast<std::int32_t>(std::max(item->x_squares, 1u)), static_cast<std::int32_t>(std::max(item->z_squares, 1u)) };
         model.sway = visual->sway;
         model.support_group = item->group;
         if (!item->squares.empty())

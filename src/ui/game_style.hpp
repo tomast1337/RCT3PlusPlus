@@ -13,7 +13,7 @@
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
-#include "ui/screens/tool_column.hpp"
+#include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_picker.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -420,10 +420,10 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// The large buttons up the left of the park view.
-    [[nodiscard]] inline ToolColumnStyle tool_column_style()
+    /// The large buttons along the bottom of the park view.
+    [[nodiscard]] inline ToolRowStyle tool_row_style()
     {
-        ToolColumnStyle s;
+        ToolRowStyle s;
         s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
         s.career_leave_icon = "File_CareerMap";
         return s;

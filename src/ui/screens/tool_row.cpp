@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/screens/tool_column.hpp"
+#include "ui/screens/tool_row.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <format>
 
 namespace rct3::ui
@@ -13,12 +14,7 @@ namespace rct3::ui
         constexpr std::string_view kQuitHelp = "File_QuitHelp";
         constexpr std::string_view kCareerHelp = "File_CareerMapHelp";
 
-        // Below this height the buttons close up in proportion to it, and further still on very short screens.
-        constexpr float kRoomyHeight = 700;
-        constexpr float kReferenceHeight = 690;
-        constexpr float kCrampedHeight = 500;
-        constexpr float kCrampedFactor = 0.9f;
-        constexpr float kSmallestStep = 25;
+        constexpr float kSmallestStep = 16;
         constexpr std::size_t kGapAfter = static_cast<std::size_t>(ParkTool::Management); ///< Half a step after it
 
         std::u16string help(const StringTable& strings, std::string_view icon)
@@ -27,22 +23,19 @@ namespace rct3::ui
         }
     } // namespace
 
-    float tool_column_step(float height)
+    float tool_row_step(float width)
     {
-        float step = tool_column::kButtonSize;
-        if (height < kRoomyHeight)
-            step *= height / kReferenceHeight;
-        if (height < kCrampedHeight)
-            step *= kCrampedFactor;
-        return std::max(step, kSmallestStep);
+        // The buttons and the half step's gap, inside the margins.
+        const float steps = static_cast<float>(kParkToolCount) + 0.5f;
+        return std::clamp((width - 2 * tool_row::kMargin) / steps, kSmallestStep, tool_row::kButtonSize);
     }
 
-    ToolColumn::ToolColumn(std::string name, ToolColumnStyle style, const StringTable& strings)
+    ToolRow::ToolRow(std::string name, ToolRowStyle style, const StringTable& strings)
         : Widget(std::move(name))
         , style_(std::move(style))
         , strings_(strings)
     {
-        // The column itself is only a frame for its buttons: it covers the screen and lets the pointer through.
+        // The row itself is only a frame for its buttons: it covers the screen and lets the pointer through.
         placement = fill();
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
@@ -54,33 +47,33 @@ namespace rct3::ui
         set_career(false);
     }
 
-    void ToolColumn::set_career(bool career)
+    void ToolRow::set_career(bool career)
     {
         Button& leave = button(ParkTool::Leave);
         leave.icon = career ? style_.career_leave_icon : style_.icons[static_cast<std::size_t>(ParkTool::Leave)];
         leave.tooltip = strings_.get(career ? kCareerHelp : kQuitHelp);
     }
 
-    void ToolColumn::place(float height)
+    void ToolRow::place(float width)
     {
-        const float step = tool_column_step(height);
-        const float size = std::min(step, tool_column::kButtonSize);
-        float bottom = tool_column::kMargin;
+        const float step = tool_row_step(width);
+        const float span = step * (static_cast<float>(kParkToolCount) + 0.5f);
+        float x = std::floor((width - span) / 2);
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
-            buttons_[i]->placement = bottom_left(tool_column::kMargin, bottom, size, size);
-            buttons_[i]->icon_scale = size / tool_column::kButtonSize;
-            bottom += step;
+            buttons_[i]->placement = bottom_left(x, tool_row::kMargin, step, step);
+            buttons_[i]->icon_scale = step / tool_row::kButtonSize;
+            x += step;
             if (i == kGapAfter)
-                bottom += step / 2;
+                x += step / 2;
         }
-        placed_for_ = height;
+        placed_for_ = width;
     }
 
-    void ToolColumn::update(const UpdateContext&)
+    void ToolRow::update(const UpdateContext&)
     {
-        if (const float height = rect().height(); height != placed_for_)
-            place(height);
+        if (const float width = rect().width(); width != placed_for_)
+            place(width);
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
             if (buttons_[i]->take_click())

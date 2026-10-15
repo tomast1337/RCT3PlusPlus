@@ -26,7 +26,7 @@
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
 #include "ui/screens/message_drawer.hpp"
-#include "ui/screens/tool_column.hpp"
+#include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/widgets/question_box.hpp"
 
@@ -550,8 +550,9 @@ namespace rct3::scene
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
         }
         // Behind the bar, which it hangs from.
-        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings);
-        scene.desktop->root().add<ui::ToolColumn>(std::string(kToolsName), skins::tool_column_style(), strings);
+        // Under the bar, even while it is dragged.
+        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings).stays_behind = true;
+        scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(), strings);
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
         if (auto rides = save::load_rides(*file, index))
@@ -788,7 +789,7 @@ namespace rct3::scene
             scene.message_alert = scene.message_alert || messages->take_alert();
         }
         // Only leaving works yet; the other tools open their menus once those exist.
-        if (auto* tools = static_cast<ui::ToolColumn*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)
+        if (auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName)); tools != nullptr && tools->take_pressed() == ui::ParkTool::Leave)
             ask_leave(scene, *assets.strings);
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);

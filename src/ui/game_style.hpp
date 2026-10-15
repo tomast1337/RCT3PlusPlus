@@ -426,6 +426,7 @@ namespace rct3::ui::game_skins
         ToolRowStyle s;
         s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
         s.career_leave_icon = "File_CareerMap";
+        s.item_face = kMenuButtonSmall;
         return s;
     }
 

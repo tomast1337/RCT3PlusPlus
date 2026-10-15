@@ -168,6 +168,8 @@ namespace rct3::scene
         std::optional<std::size_t> shown_person;              ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;               ///< Their tabs in the panel's order
         ui::PersonTab person_tab = ui::PersonTab::General;    ///< The tab last opened on a person
+        bool show_people = true;                              ///< Switched in the view menu
+        bool show_scenery = true;                             ///< Objects and rides, switched in the view menu
         park::ParkCamera view_camera;                         ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                    ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                        ///< Across the view's target

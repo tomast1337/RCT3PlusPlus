@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path_supports.hpp"
 
-#include "ovl/overlay.hpp"
-#include "ovl/scenery_item.hpp"
 #include "park/ground_queues.hpp"
 #include "park/terrain_mesh.hpp"
 
@@ -13,56 +11,6 @@
 
 namespace rct3::park
 {
-
-    void add_support_piece(SupportSets& sets, std::string_view group, std::uint32_t type, std::string_view symbol, std::int32_t levels)
-    {
-        if (group.empty() || symbol.empty() || levels <= 0)
-            return;
-        if (type != kSupportMiddleType && type != kSupportFootType && type != kSupportDeepFootType)
-            return;
-        auto set = sets.find(group);
-        if (set == sets.end())
-            set = sets.emplace(std::string(group), SupportSet { }).first;
-        SupportPiece piece { std::string(symbol), levels };
-        if (type == kSupportFootType)
-        {
-            if (!set->second.foot)
-                set->second.foot = std::move(piece);
-            return;
-        }
-        if (type == kSupportDeepFootType)
-        {
-            if (!set->second.deep_foot)
-                set->second.deep_foot = std::move(piece);
-            return;
-        }
-        auto& middles = set->second.middles;
-        if (std::ranges::any_of(middles, [&](const SupportPiece& m) { return m.levels == levels; }))
-            return;
-        middles.insert(std::ranges::find_if(middles, [&](const SupportPiece& m) { return m.levels < levels; }), std::move(piece));
-    }
-
-    std::expected<SupportSets, std::string> load_support_sets(const std::filesystem::path& path)
-    {
-        auto overlay = ovl::Overlay::load(path);
-        if (!overlay)
-            return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        SupportSets sets;
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
-        {
-            if (part == nullptr)
-                continue;
-            for (const ovl::SceneryItemEntry& entry : ovl::read_scenery_items(*overlay, *part))
-            {
-                if (!entry.item || entry.item->squares.empty())
-                    continue;
-                const auto& squares = entry.item->squares;
-                const std::int32_t levels = std::ranges::max(squares, { }, &ovl::SceneryItemSquare::max_height).max_height - std::ranges::min(squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
-                add_support_piece(sets, entry.item->group, entry.item->type, entry.name, levels);
-            }
-        }
-        return sets;
-    }
 
     std::vector<StackedPiece> support_stack(const SupportSet& set, float ground_low, float ground_high, std::int32_t top)
     {
@@ -121,13 +69,13 @@ namespace rct3::park
             const auto model = models.find(model_key(*piece->second));
             if (model == models.end())
                 continue;
-            const auto set = sets.find(model->second.support_group);
-            if (set == sets.end())
+            const SupportSet* set = find_support_set(sets, model->second.support_group, kRoundSupport).set;
+            if (set == nullptr)
                 continue;
             const std::int32_t top = *piece->second->base_height + model->second.lowest_level;
-            auto [at, added] = lowest.try_emplace({ p.col, p.row }, Held { piece->second, &set->second, top });
+            auto [at, added] = lowest.try_emplace({ p.col, p.row }, Held { piece->second, set, top });
             if (!added && top < at->second.top)
-                at->second = { piece->second, &set->second, top };
+                at->second = { piece->second, set, top };
         }
 
         std::vector<save::PlacedObject> out;

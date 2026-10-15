@@ -14,6 +14,7 @@
 #include "math/glm.hpp"
 #include "park/asset_index.hpp"
 #include "park/flexi_colours.hpp"
+#include "park/support_footprint.hpp"
 
 #include <cstdint>
 #include <map>
@@ -76,11 +77,12 @@ namespace rct3::park
 
     struct ObjectModel
     {
-        std::uint16_t positioning = 0;  ///< How the item sits on its tile (see object_placement.hpp)
-        float sway = 0;                 ///< How much it sways in the wind; above 0 for trees and plants only
-        std::string support_group;      ///< The set of supports it stands on, or the set a support belongs to
-        std::int32_t lowest_level = 0;  ///< Lowest level its footprint takes, from its base height
-        std::vector<ModelLevel> levels; ///< Finest first, never empty
+        std::uint16_t positioning = 0;            ///< How the item sits on its tile (see object_placement.hpp)
+        float sway = 0;                           ///< How much it sways in the wind; above 0 for trees and plants only
+        std::string support_group;                ///< The set of supports it stands on, or the set a support belongs to
+        std::int32_t lowest_level = 0;            ///< Lowest level its footprint takes, from its base height
+        std::optional<SupportFootprint> supports; ///< What it asks of the columns under it
+        std::vector<ModelLevel> levels;           ///< Finest first, never empty
     };
 
     /// The level of `model` to draw at `distance`, with every level's distance times `scale`: the first that

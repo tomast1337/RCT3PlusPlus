@@ -30,6 +30,12 @@ namespace rct3::ovl
         /// Bit masks, one 32-bit word per entry, usually one. Bit n set means level n is occupied. Empty for
         /// tiles without collision, whose array pointer is null.
         std::vector<std::uint32_t> height_masks;
+        /// The square's last word, read above as the number of mask words. In track pieces and support pieces
+        /// it tells which way a support column under the square faces: 0 none, 1 any way, 2 to 5 one of four
+        /// diagonal turns, 6 and 7 along one axis or the other. In the track and support files checked the
+        /// values pair up that way between track squares and support pieces, and reading them as a count runs
+        /// into the next square's words, so the count reading is likely wrong for those items.
+        std::uint32_t support_kind = 0;
     };
 
     /// A 22-word record from the optional per-item array that follows the footprint. Every record is 88

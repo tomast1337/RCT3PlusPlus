@@ -11,12 +11,10 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
+#include "park/support_sets.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
-#include <expected>
-#include <filesystem>
-#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -24,36 +22,6 @@
 
 namespace rct3::park
 {
-
-    /// Item types of support pieces, as scenery items store them.
-    inline constexpr std::uint32_t kSupportMiddleType = 12;
-    inline constexpr std::uint32_t kSupportFootType = 14;
-    inline constexpr std::uint32_t kSupportDeepFootType = 15;
-
-    /// Where the support pieces are, relative to the game's folder and as PlacedObject::overlay names it.
-    inline constexpr std::string_view kSupportOverlay = "Supports/Supports";
-
-    struct SupportPiece
-    {
-        std::string symbol;
-        std::int32_t levels = 0; ///< How tall it is
-    };
-
-    struct SupportSet
-    {
-        std::vector<SupportPiece> middles; ///< Tallest first, one per height
-        std::optional<SupportPiece> foot;
-        std::optional<SupportPiece> deep_foot; ///< For ground that is not level
-    };
-
-    using SupportSets = std::map<std::string, SupportSet, std::less<>>;
-
-    /// Adds a piece to the set of `group`, by its item type; other types are ignored, and so is a second
-    /// piece of a kind and height the set already has.
-    void add_support_piece(SupportSets& sets, std::string_view group, std::uint32_t type, std::string_view symbol, std::int32_t levels);
-
-    /// The support sets of the overlay at `path`.
-    [[nodiscard]] std::expected<SupportSets, std::string> load_support_sets(const std::filesystem::path& path);
 
     /// One piece of a stack and the level its base stands at.
     struct StackedPiece

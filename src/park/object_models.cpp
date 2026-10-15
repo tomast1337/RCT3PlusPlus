@@ -255,6 +255,7 @@ namespace rct3::park
         model.support_group = item->group;
         if (!item->squares.empty())
             model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
+        model.supports = support_footprint(*item);
         for (const ovl::SceneryVisualLod& lod : visual->lods)
         {
             ModelLevel level;

@@ -43,6 +43,7 @@
 #include "ovl/texture_image.hpp"
 #include "ovl/track_section.hpp"
 #include "ovl/tracked_ride.hpp"
+#include "park/build_catalogue.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
 {
@@ -314,5 +315,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         }
     }
     // --- end mesh conversion ---
+    {
+        // What the build lists offer: rides, shops and scenery with the scenery items they are placed as.
+        std::vector<rct3::park::BuildItem> items;
+        rct3::park::add_build_items(*overlay, "Fuzz/Style", items);
+        sink += items.size();
+    }
     return 0;
 }

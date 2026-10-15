@@ -574,7 +574,7 @@ namespace rct3::scene
         {
             const simulation::DayClock& day = scene.day;
             const park::Daylight light = park::mixed(park::daylight(day.shown), park::daylight(day.faded), day.fade);
-            scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground, .eye = viewer };
+            scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground };
             const float column = park::sky_column(day.shown);
             const float faded = park::sky_column(day.faded);
             const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
@@ -1433,9 +1433,7 @@ namespace rct3::scene
             into.target = scene.view_target;
             into.clear_color = scene.horizon;
             device.begin_pass(into);
-            render::SceneLight light = scene.light;
-            light.eye = park::eye(scene.view_camera);
-            draw_world(device, scene, park::view_projection(scene.view_camera, 1), light);
+            draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light);
             device.end_pass();
             render::PassDesc back;
             back.clear = false;

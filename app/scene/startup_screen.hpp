@@ -2,8 +2,8 @@
 //
 // What the game shows before the front end: the logo sequence, then the loading screen while data loads.
 // Logos fill as much of the window as they can without changing shape, centred on white (their art is
-// dark on transparent). The loading screen is one skin, centred on black at its own size times the
-// interface scale. Placement and background colours are our reading of the art, not taken from the game.
+// dark on transparent). The loading screen is the one shown while a park loads (ui/screens/loading_screen.hpp),
+// without text or bar: the strings and fonts are among what is loading.
 #pragma once
 
 #include "config/game_install.hpp"

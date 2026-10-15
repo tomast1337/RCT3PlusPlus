@@ -588,10 +588,15 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
+        const auto begin = [&](ParkLoadStage stage) {
+            if (report)
+                report(stage);
+        };
+        begin(ParkLoadStage::ReadFile);
         const auto bytes = profiling::section("ReadFile", [&] { return read_file(path); });
         if (!bytes)
             return std::unexpected(bytes.error());
@@ -612,6 +617,7 @@ namespace rct3::scene
         log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
         scene.day = park_day(*file, index, *world, options);
+        begin(ParkLoadStage::Ground);
         park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water); });
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
@@ -697,6 +703,7 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
+        begin(ParkLoadStage::Objects);
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
         scene.bins = std::move(world->bins);
@@ -785,6 +792,7 @@ namespace rct3::scene
             log.info("{} trees beyond the edge", trees.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
+        begin(ParkLoadStage::Scene);
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         auto solid = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" });
         if (!solid)

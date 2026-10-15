@@ -3,6 +3,7 @@
 
 #include "ui/image_set.hpp"
 #include "ui/scale.hpp"
+#include "ui/screens/loading_screen.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -36,7 +37,7 @@ namespace rct3::scene
             screen.logos = std::move(*logos);
 
             // The loading screen is optional: without it the screen stays black.
-            if (const auto path = install.find("gui/LoadingScreen/LoadingScreen.common.ovl"))
+            if (const auto path = install.find(ui::loading_screen::kSkinFile))
             {
                 auto set = ui::load_skin_set(*path);
                 if (!set)
@@ -45,7 +46,7 @@ namespace rct3::scene
                 if (!textures)
                     return std::unexpected(textures.error());
                 screen.loading_textures = std::move(*textures);
-                if (const auto skin = set->skins.find("LoadingScreen"); skin != set->skins.end())
+                if (const auto skin = set->skins.find(std::string(ui::loading_screen::kBand)); skin != set->skins.end())
                     screen.loading = skin->second;
             }
             return { };
@@ -100,21 +101,19 @@ namespace rct3::scene
 
     void draw_loading_screen(render::Device& device, StartupScreen& screen)
     {
-        const ui::Rect view = begin(device, screen.list, screen.scale);
-        screen.list.fill(view, { 0, 0, 0, 255 });
+        // In pixels, like the park's loading screen: the band is fitted to the window.
+        const render::Extent extent = device.extent();
+        screen.list.clear();
+        screen.list.set_scale(1);
+        std::optional<ui::SkinRef> band;
         if (screen.loading)
         {
-            const auto texture = screen.loading_textures.find(screen.loading->texture);
-            const ui::SkinLayout& l = screen.loading->layout;
-            if (texture != screen.loading_textures.end() && l.x_count > 0)
-            {
-                const float w = l.xs[l.x_count - 1] - l.xs[0];
-                const float h = l.ys[l.y_count - 1] - l.ys[0];
-                const float x = std::round((view.width() - w) / 2);
-                const float y = std::round((view.height() - h) / 2);
-                ui::draw_skin(screen.list, l, { x, y, x + w, y + h }, ui::texture_id(texture->second.handle), texture->second.width, texture->second.height);
-            }
+            if (const auto texture = screen.loading_textures.find(screen.loading->texture); texture != screen.loading_textures.end())
+                band = ui::SkinRef { screen.loading->layout, ui::texture_id(texture->second.handle), texture->second.width, texture->second.height };
         }
+        // Nothing to name and no steps to count yet: the strings and fonts are what is being loaded.
+        const ui::loading_screen::Look look { .band = band ? &*band : nullptr };
+        ui::loading_screen::draw(screen.list, { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) }, look, { });
         ui::render_draw_list(device, screen.renderer, screen.list);
     }
 

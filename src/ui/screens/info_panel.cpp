@@ -46,6 +46,8 @@ namespace rct3::ui
     void InfoPanel::show(std::vector<InfoTab> tabs, std::size_t picked)
     {
         close_choices();
+        close_palette();
+        paints_.clear();
         for (Button* b : tabs_)
             (void)remove(*b);
         tabs_.clear();
@@ -54,9 +56,17 @@ namespace rct3::ui
         actions_.clear();
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
-            Button& b = add<Button>(std::format("tab{}", i), style_.tab_face, std::move(tabs[i].icon));
+            PaintButton* paint = nullptr;
+            if (!tabs[i].paints.empty())
+            {
+                PaintButtonStyle look = style_.paint;
+                look.face = style_.tab_face;
+                paint = &add<PaintButton>(std::format("tab{}", i), std::move(look), std::move(tabs[i].paints));
+            }
+            Button& b = paint != nullptr ? *paint : add<Button>(std::format("tab{}", i), style_.tab_face, std::move(tabs[i].icon));
+            paints_.push_back(paint);
             b.tooltip = std::move(tabs[i].help);
-            b.toggle = tabs[i].choices.empty() && !tabs[i].action;
+            b.toggle = tabs[i].choices.empty() && !tabs[i].action && paint == nullptr;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
             b.icon_scale = info_panel::kTabSize / info_panel::kIconSize;
             tabs_.push_back(&b);
@@ -74,6 +84,7 @@ namespace rct3::ui
     void InfoPanel::hide()
     {
         close_choices();
+        close_palette();
         visible = false;
     }
 
@@ -99,6 +110,27 @@ namespace rct3::ui
             (void)remove(*b);
         choices_.clear();
         choosing_.reset();
+    }
+
+    void InfoPanel::open_palette(std::size_t tab, std::size_t pot)
+    {
+        close_palette();
+        PaintButton& pots = *paints_[tab];
+        palette_ = &add<ColourPalette>("palette", style_.palette, style_.palette_count, style_.palette_columns, pots.colours.at(pot));
+        pots.held = pot;
+        painting_ = tab;
+        painting_pot_ = pot;
+        place();
+    }
+
+    void InfoPanel::close_palette()
+    {
+        if (palette_ != nullptr)
+            (void)remove(*palette_);
+        palette_ = nullptr;
+        if (painting_ && *painting_ < paints_.size() && paints_[*painting_] != nullptr)
+            paints_[*painting_]->held.reset();
+        painting_.reset();
     }
 
     void InfoPanel::set_body_size(float width, float height)
@@ -248,6 +280,16 @@ namespace rct3::ui
                 choices_[i]->placement = top_left(middle.x + tab.x + at.x - info_panel::kChoiceSize / 2, middle.y + tab.y + at.y - info_panel::kChoiceSize / 2, info_panel::kChoiceSize, info_panel::kChoiceSize);
             }
         }
+        if (painting_ && palette_ != nullptr)
+        {
+            // Above its tab, as near the tab's middle as the screen allows.
+            const Point size = ColourPalette::size(style_.palette, style_.palette_count, style_.palette_columns);
+            const Point tab = info_tab_offset(slots_[*painting_]);
+            const float m = info_panel::kScreenMargin;
+            const float x = std::clamp(middle.x + tab.x - size.x / 2, m, std::max(m, r.width() - m - size.x));
+            const float y = std::clamp(middle.y + tab.y - info_panel::kTabSize / 2 - info_panel::kPaletteGap - size.y, m, std::max(m, r.height() - m - size.y));
+            palette_->placement = top_left(std::round(x), std::round(y), size.x, size.y);
+        }
         const Rect s = strip();
         body_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0 + info_panel::kBodyTop, body_width_, std::min(body_height_, info_panel::kStripHeight - 2 * info_panel::kBodyTop));
     }
@@ -286,10 +328,33 @@ namespace rct3::ui
                 break;
             }
         }
+        if (palette_ != nullptr && painting_)
+        {
+            if (const auto colour = palette_->take_pick())
+            {
+                paint_now_ = { *painting_, painting_pot_, *colour };
+                paints_[*painting_]->colours.at(painting_pot_) = *colour;
+                close_palette();
+            }
+        }
         for (std::size_t i = 0; i < tabs_.size(); ++i)
         {
+            if (paints_[i] != nullptr)
+            {
+                if (const auto pot = paints_[i]->take_pot())
+                {
+                    close_choices();
+                    // Pressing it again puts the colours away.
+                    if (painting_ == i)
+                        close_palette();
+                    else
+                        open_palette(i, *pot);
+                }
+                continue;
+            }
             if (!tabs_[i]->take_click())
                 continue;
+            close_palette();
             if (!tab_choices_[i].empty())
             {
                 if (choosing_ == i)

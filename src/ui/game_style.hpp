@@ -9,6 +9,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
+#include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/tool_column.hpp"
@@ -387,6 +388,18 @@ namespace rct3::ui::game_skins
         s.thumb_up = "Top_ThumbsUp";
         s.weather_icons = { "IconSun", "IconCloudWithSun", "IconCloud", "IconLightRain", "IconHeavyRain", "IconThunderstorm", "IconSnow" };
         s.forecast_arrow = "IconWeatherArrow";
+        return s;
+    }
+
+    /// The park's messages, hanging from the middle of the bar.
+    [[nodiscard]] inline MessageDrawerStyle message_drawer_style()
+    {
+        MessageDrawerStyle s;
+        s.lip_left = "MessageConsole_Left";
+        s.lip_right = "MessageConsole_Right";
+        s.back = "MessageConsole_Top";
+        s.older = "SquareArrowUp";
+        s.newer = "SquareArrowDown";
         return s;
     }
 

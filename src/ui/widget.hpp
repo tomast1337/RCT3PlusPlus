@@ -150,6 +150,12 @@ namespace rct3::ui
         {
             return false;
         }
+        /// Whether a point in the rectangle stops the pointer, for a widget that takes it: false where the
+        /// widget has a gap that shows what is behind it. All of the rectangle by default.
+        [[nodiscard]] virtual bool covers(Point) const
+        {
+            return true;
+        }
         /// Whether pressing and releasing this widget clicks (interface_sound.hpp), as buttons do.
         [[nodiscard]] virtual bool clicks() const
         {

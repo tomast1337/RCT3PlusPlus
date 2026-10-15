@@ -57,7 +57,7 @@ namespace rct3::ui
                 if (Widget* found = hit_tree(**it, p))
                     return found;
             }
-            return inside && w.takes_pointer() ? const_cast<Widget*>(&w) : nullptr;
+            return inside && w.takes_pointer() && w.covers(p) ? const_cast<Widget*>(&w) : nullptr;
         }
 
         Widget* deepest_tree(const Widget& w, Point p)

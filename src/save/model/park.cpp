@@ -170,6 +170,8 @@ namespace rct3::save
             constexpr std::string_view kMessageTime = "Time";
             constexpr std::string_view kMessageObject = "Object";
             constexpr std::string_view kMessagePanel = "Panel";
+            constexpr std::string_view kMessageObjectName = "ObjectString";
+            constexpr std::string_view kMessageAward = "Type";
 
             // Database entry attributes
             constexpr std::string_view kOverlayFile = "OVERLAYFILENAME";
@@ -729,6 +731,9 @@ namespace rct3::save
                 m.object = ref_of(decoded->find(kMessageObject), index);
                 if (const auto* p = decoded->find(kMessagePanel); is_numeric(p))
                     m.panel = i32_of(p, 0);
+                m.object_name = string_of(decoded->find(kMessageObjectName));
+                if (const auto* a = decoded->find(kMessageAward); is_numeric(a))
+                    m.award = i32_of(a, 0);
                 log.ordered.push_back(std::move(m));
             }
         }

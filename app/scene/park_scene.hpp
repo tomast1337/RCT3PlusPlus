@@ -29,6 +29,7 @@
 #include "save/model/rides.hpp"
 #include "scene/park_water.hpp"
 #include "scene/save_browser.hpp"
+#include "scene/build_menus.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
@@ -158,6 +159,7 @@ namespace rct3::scene
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
         simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
+        BuildMenus build;                    ///< The lists of rides, shops and scenery to build
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
         save::PeopleModel people;                         ///< Guests, staff and litter as saved; read for the weekly rating

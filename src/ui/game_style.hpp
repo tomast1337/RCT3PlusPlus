@@ -9,6 +9,7 @@
 #include "ui/game_frames.hpp"
 #include "ui/panel_look.hpp"
 #include "ui/screens/about_window.hpp"
+#include "ui/screens/build_picker.hpp"
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
@@ -113,6 +114,11 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kDrawerLipLeft = "MessageConsole_Left";
     inline constexpr std::string_view kDrawerLipRight = "MessageConsole_Right";
     inline constexpr std::string_view kDrawerBack = "MessageConsole_Top";
+    // The lists of things to build.
+    inline constexpr std::string_view kPickerButtonStrip = "ObjectSelectionWindow_ButtonContainer";
+    inline constexpr std::string_view kFoldIcon = "GUI2Dialog_MinimiseIcon";
+    inline constexpr std::string_view kOpenHeading = "Box_Minus";
+    inline constexpr std::string_view kClosedHeading = "Box_Plus";
 
     /// A skin that can be drawn in code (game_frames.hpp), the panel it belongs to and whether the game's look
     /// draws it so. Panels move to code one at a time: tools/panel-look scores each against the pictures, and
@@ -561,6 +567,22 @@ namespace rct3::ui::game_skins
         s.tick_box = kTickbox;
         s.tick = kTick;
         s.button = kTextButton;
+        return s;
+    }
+
+    /// The list beside the build menus, on the blue patch.
+    [[nodiscard]] inline BuildPickerStyle build_picker_style()
+    {
+        BuildPickerStyle s;
+        s.background = kSelectedRow; // The same blue patch, stretched over the panel
+        s.button_strip = kPickerButtonStrip;
+        s.title_button = kTitleButton;
+        s.close_icon = kCloseIcon;
+        s.fold_icon = kFoldIcon;
+        s.text_button = kTextButton;
+        s.open_heading = kOpenHeading;
+        s.closed_heading = kClosedHeading;
+        s.scroll_bar = scroll_bar_style(Orientation::Vertical);
         return s;
     }
 

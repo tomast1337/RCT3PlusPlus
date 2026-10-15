@@ -291,6 +291,23 @@ namespace rct3::save
         }
     };
 
+    /// What a litter bin placed in the park holds.
+    struct BinState
+    {
+        std::uint64_t object_ref = 0; ///< The placed object that is the bin
+        float capacity = 0;
+        float contents = 0;                ///< In the same measure as `capacity`
+        std::optional<float> last_emptied; ///< Park time, as the clock counts it; empty when never emptied
+    };
+
+    /// What a sign placed in the park says.
+    struct SignState
+    {
+        std::uint64_t object_ref = 0; ///< The placed object that is the sign
+        std::int32_t kind = 0;        ///< 0 shows `text`; 1 forbids entry
+        std::string text;             ///< Written by the player
+    };
+
     // ---- Environment ---------------------------------------------------------------------------------------
 
     enum class WeatherType : std::int32_t
@@ -397,6 +414,8 @@ namespace rct3::save
         std::vector<PathTile> paths;
         std::vector<QueueLine> queue_lines;
         std::vector<PlacedObject> objects;
+        std::vector<BinState> bins;
+        std::vector<SignState> signs;
         std::optional<Weather> weather;
         std::optional<std::int32_t> sky_background; ///< Background (sky box) index
         std::optional<WorldTime> time;

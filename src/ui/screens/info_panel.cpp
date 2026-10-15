@@ -51,18 +51,20 @@ namespace rct3::ui
         tabs_.clear();
         slots_.clear();
         tab_choices_.clear();
+        actions_.clear();
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
             Button& b = add<Button>(std::format("tab{}", i), style_.tab_face, std::move(tabs[i].icon));
             b.tooltip = std::move(tabs[i].help);
-            b.toggle = tabs[i].choices.empty();
+            b.toggle = tabs[i].choices.empty() && !tabs[i].action;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
             b.icon_scale = info_panel::kTabSize / info_panel::kIconSize;
             tabs_.push_back(&b);
             slots_.push_back(tabs[i].slot);
             tab_choices_.push_back(std::move(tabs[i].choices));
+            actions_.push_back(tabs[i].action);
         }
-        picked_ = tabs_.empty() ? 0 : std::min(picked, tabs_.size() - 1);
+        picked_ = picked;
         mark_picked();
         visible = true;
         closed_ = false;
@@ -197,7 +199,8 @@ namespace rct3::ui
             }
             y += info_panel::kLineHeight;
         }
-        set_body_size(info_panel::kPageWidth, y);
+        // An empty page has no strip.
+        set_body_size(y > 0 ? info_panel::kPageWidth : 0, y);
     }
 
     Rect InfoPanel::disc() const
@@ -219,7 +222,8 @@ namespace rct3::ui
     {
         const Rect r = rect();
         const float width = std::max(body_width_ + info_panel::kStripExtra, info_panel::kStripNarrowest);
-        const float height = std::min(body_height_ + 2 * info_panel::kBodyTop, info_panel::kStripHeight);
+        // Always full height, so it stands behind the whole disc however short its content.
+        const float height = info_panel::kStripHeight;
         const float right = disc().x0 + info_panel::kStripOverlap;
         const float bottom = r.y1 - info_panel::kStripBottom;
         return { right - width, bottom - height, right, bottom };
@@ -295,7 +299,9 @@ namespace rct3::ui
                 continue;
             }
             close_choices();
-            if (i != picked_)
+            if (actions_[i])
+                action_now_ = i;
+            else if (i != picked_)
             {
                 picked_ = i;
                 picked_now_ = i;

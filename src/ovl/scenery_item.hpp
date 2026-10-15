@@ -100,7 +100,7 @@ namespace rct3::ovl
         std::int32_t cost = 0;         ///< Price, never negative in files seen
         std::int32_t removal_cost = 0; ///< Signed: zero, positive and negative values all occur
         std::uint32_t unknown_44 = 0;  ///< 0, 4 or 5. Unconfirmed.
-        std::uint32_t type = 0;        ///< Item category, 0 to 46 seen (some values unused). The meaning of each value is not confirmed here.
+        std::uint32_t type = 0;        ///< Item category, 0 to 46 seen (some values unused); see park/item_category.hpp
 
         std::string_view group;                ///< Support set or group name, may be empty
         std::vector<std::string_view> visuals; ///< "svd" items, one to four

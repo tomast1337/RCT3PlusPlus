@@ -25,6 +25,10 @@ namespace rct3::ui
         , setup_(std::move(setup))
     {
         screen_ = &desktop_.root().add<FrontScreen>(std::string(kScreenName), strings_, setup_.expansions, setup_.choices.language);
+        // The career map and the tutorials stand on the front screen's artwork: laid out the same way.
+        style_.map.round = style_.round;
+        style_.tutorials.round = style_.round;
+        screen_->round = style_.round;
         if (setup_.settled)
             screen_->settle();
         if (setup_.open_options)

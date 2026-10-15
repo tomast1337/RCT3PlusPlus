@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/draw_list_painter.hpp"
 #include "ui/game_style.hpp"
 
 #include <cstddef>
@@ -56,4 +57,74 @@ TEST_CASE("the window frame leaves its middle empty for the window's background"
             ++filled_over_middle;
     }
     CHECK(filled_over_middle == 0);
+}
+
+namespace
+{
+    Color pixel(const rct3::ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y)
+    {
+        const std::uint8_t* p = &image.pixels[(std::size_t { y } * image.width + x) * 4];
+        return { p[0], p[1], p[2], p[3] };
+    }
+} // namespace
+
+TEST_CASE("a layer cut along its diagonal keeps the half below it, however its box is stretched")
+{
+    CodedFrame frame;
+    frame.width = 10;
+    frame.height = 10;
+    FrameLayer layer { corner_box(0, 0, 10, 10), Shape { }, { } };
+    layer.shape.top = hex("#ff0000");
+    layer.shape.bottom = hex("#ff0000");
+    layer.below_diagonal = true;
+    frame.layers.push_back(layer);
+    for (const Rect target : { Rect { 0, 0, 40, 40 }, Rect { 0, 0, 80, 20 }, Rect { 0, 0, 16, 64 } })
+    {
+        CAPTURE(target.width());
+        DrawList list;
+        draw_frame(list, frame, target);
+        const auto w = static_cast<std::uint32_t>(target.width());
+        const auto h = static_cast<std::uint32_t>(target.height());
+        auto picture = blank_picture(w, h, hex("#000000"));
+        paint_draw_list(list, { }, picture);
+        // Well below the line from the top-left to the bottom-right, and well above it.
+        CHECK(pixel(picture, w / 8, h - h / 8 - 1).r == 255);
+        CHECK(pixel(picture, w - w / 8 - 1, h / 8).r == 0);
+        CHECK(pixel(picture, w / 2 - w / 8, h / 2 + h / 8).r == 255);
+        CHECK(pixel(picture, w / 2 + w / 8, h / 2 - h / 8).r == 0);
+    }
+}
+
+TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches the right edge")
+{
+    // A design drawn at a fifth of its size on a screen far wider than it.
+    constexpr float kScale = 0.2f;
+    const Rect screen { 0, 0, 400, 768 * kScale };
+    const Rect design_screen { 0, 0, screen.x1 / kScale, 768 };
+    DrawList list;
+    draw_frame(list, game_frames::front_backdrop(design_screen), { 0, 0, 1024 * kScale, 768 * kScale });
+    for (const ShapeVertex& v : list.shape_vertices())
+    {
+        if (v.edge[3] > 0) // Rings are round
+            CHECK(v.local[2] == doctest::Approx(v.local[3]));
+    }
+    auto picture = blank_picture(400, static_cast<std::uint32_t>(screen.y1), hex("#000000"));
+    paint_draw_list(list, { }, picture);
+    const Color right = pixel(picture, 399, 150);
+    CHECK(right.b > 100);                // The strip's blue, at the far right
+    CHECK(pixel(picture, 2, 2).b > 100); // Blue in the top-left corner
+}
+
+TEST_CASE("each piece of the front backdrop is the whole backdrop cut to that piece")
+{
+    const CodedFrame whole = game_frames::front_backdrop({ 0, 0, 1024, 768 });
+    const CodedFrame piece = game_frames::front_piece(whole, { 512, 513, 1024, 768 });
+    CHECK(piece.width == doctest::Approx(512));
+    CHECK(piece.height == doctest::Approx(255));
+    for (const FrameLayer& layer : piece.layers)
+    {
+        REQUIRE(layer.clip);
+        CHECK(layer.clip->x0.offset >= 0);
+        CHECK(layer.clip->y1.offset <= 255);
+    }
 }

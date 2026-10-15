@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front_screen.hpp"
 
+#include "ui/game_frames.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/text_layout.hpp"
 
@@ -65,15 +66,15 @@ namespace rct3::ui
         } };
 
         // The artwork's skins.
-        constexpr std::string_view kBandTopSkin = "FrontScreen_TopLeft";
-        constexpr std::string_view kBandBottomSkin = "FrontScreen_BottomLeft";
-        constexpr std::string_view kStripRightSkin = "FrontScreen_BottomRight";
+        using fs::kArcSkins;
+        using fs::kBandBottomSkin;
+        using fs::kBandEndSkin;
+        using fs::kBandTopSkin;
+        using fs::kPatchSkin;
+        using fs::kStripRightSkin;
         constexpr std::string_view kLogoSkin = "FrontScreen_RCT3Logo";
         constexpr std::array<std::string_view, 2> kChildrenSkins = { "FrontScreen_FrontEndLogoUT", "FrontScreen_FrontEndLogo" }; ///< The newer picture first
-        constexpr std::array<std::string_view, 5> kArcSkins = { "FrontScreen_OverCircle_P1", "FrontScreen_OverCircle_P2", "FrontScreen_OverCircle_P3", "FrontScreen_OverCircle_P4", "FrontScreen_OverCircle_P5" };
         constexpr std::string_view kButtonSkin = "FrontScreen_IconCircle_New";
-        constexpr std::string_view kPatchSkin = "FrontScreen_IconCircle_Back";
-        constexpr std::string_view kBandEndSkin = "FrontScreen_Triangle";
         constexpr Color kBandColour { 0xF7, 0xF2, 0xF2, 255 };
         constexpr std::string_view kSmallButtonSkin = "MenuButtonSmall";
         constexpr std::string_view kBackIcon = "File_CareerMap";
@@ -186,6 +187,12 @@ namespace rct3::ui
 
     void draw_front_bands(DrawContext& context, const fs::Frame& frame)
     {
+        // Drawn in code, the backdrop is one piece that reaches every edge of the screen, round on any.
+        if (const SkinRef* top = context.skins.find(kBandTopSkin); top != nullptr && top->coded != nullptr)
+        {
+            draw_frame(context.list, game_frames::front_backdrop(frame.design_screen()), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
+            return;
+        }
         draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
         draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
         draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
@@ -193,17 +200,22 @@ namespace rct3::ui
 
     void draw_front_arc(DrawContext& context, const fs::Frame& frame, std::string_view logo)
     {
-        for (std::size_t i = 0; i < kArcSkins.size(); ++i)
-            draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
+        if (const SkinRef* first = context.skins.find(kArcSkins[0]); first != nullptr && first->coded != nullptr)
+            draw_frame(context.list, game_frames::front_arc(), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
+        else
+        {
+            for (std::size_t i = 0; i < kArcSkins.size(); ++i)
+                draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
+        }
         draw_at_size(context, frame, context.skins.find(logo) != nullptr ? logo : kLogoSkin, fs::kLogo);
     }
 
     void draw_front_help(DrawContext& context, const fs::Frame& frame, std::u16string_view title, std::u16string_view text)
     {
         if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
-            draw_text(context.list, *f, title, frame.stretched(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
+            draw_text(context.list, *f, title, frame.strip(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
         if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
-            draw_text(context.list, *f, text, frame.stretched(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
+            draw_text(context.list, *f, text, frame.strip(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
     }
 
     std::string front_logo(std::string_view language)
@@ -345,7 +357,7 @@ namespace rct3::ui
 
     void FrontScreen::update(const UpdateContext& context)
     {
-        const fs::Frame frame = fs::frame_for(rect());
+        const fs::Frame frame = fs::frame_for(rect(), round);
         const float size = fs::kMenuButtonSize * frame.round;
 
         // Clicks first, so a menu opened now starts moving this frame.
@@ -420,7 +432,7 @@ namespace rct3::ui
 
     void FrontScreen::draw(DrawContext& context) const
     {
-        const fs::Frame frame = fs::frame_for(rect());
+        const fs::Frame frame = fs::frame_for(rect(), round);
         draw_front_bands(context, frame);
 
         // The boxes beside the buttons that have arrived: a light band from a white ring behind the button,

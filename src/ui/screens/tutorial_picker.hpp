@@ -76,6 +76,7 @@ namespace rct3::ui
         /// The disc's quarters round the buttons' centre: top left, top right, bottom left, bottom right.
         std::array<std::string, 4> quarters;
         Color text_colour = hex("#000000");
+        bool round = false; ///< The front screen's design at one scale, as the screen under it is laid out
     };
 
     class TutorialPicker : public Widget

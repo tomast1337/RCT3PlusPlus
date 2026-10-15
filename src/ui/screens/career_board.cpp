@@ -260,7 +260,7 @@ namespace rct3::ui
 
     void CareerBoard::layout(const UpdateContext& context)
     {
-        const fs::Frame frame = fs::frame_for(rect());
+        const fs::Frame frame = fs::frame_for(rect(), style_.round);
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
             const bool picked = i == picked_;
@@ -358,7 +358,7 @@ namespace rct3::ui
 
     void CareerBoard::draw(DrawContext& context) const
     {
-        const fs::Frame frame = fs::frame_for(rect());
+        const fs::Frame frame = fs::frame_for(rect(), style_.round);
         draw_front_bands(context, frame);
 
         // The large picture in the bottom-left corner, the front piece over it settling from a little big.

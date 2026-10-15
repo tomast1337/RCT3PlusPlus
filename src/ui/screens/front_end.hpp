@@ -43,6 +43,7 @@ namespace rct3::ui
         CareerDialogStyle careers;
         CareerBoardStyle map;
         TutorialPickerStyle tutorials;
+        bool round = false; ///< The front screen laid out at one scale, for a backdrop drawn in code; sets the map's and tutorials' too
     };
 
     struct FrontEndSetup

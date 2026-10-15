@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Where the parts of the front screen go. The screen is designed for 1024 by 768 units and stretched to the
-// real size: positions and the sizes of pictures scale with width and height separately, so the artwork
-// always covers the screen, while the round buttons scale by the smaller of the two so they stay round.
-// Every measurement below is in that 1024 by 768 frame, y down.
+// Where the parts of the front screen go. The screen is designed for 1024 by 768 units. With the game's
+// pictures the design is stretched to the real size: positions and the sizes of pictures scale with width
+// and height separately, so the artwork always covers the screen, while the round buttons scale by the
+// smaller of the two so they stay round. With the backdrop drawn in code the design scales by that one
+// smaller scale both ways, from the bottom-left corner, so its circles stay round; the shapes then reach
+// on to the screen's other edges themselves. Every measurement below is in that 1024 by 768 frame, y down.
 //
 // The artwork: a blue band down the left, a white arc curving from the top edge round to the bottom right,
 // the game's logo in the top-left corner, two children below the menu (main menu only) and a band along
@@ -30,6 +32,7 @@ namespace rct3::ui::front_screen
     struct Frame
     {
         Rect screen;
+        Point origin;    ///< Where the design's top-left corner lands
         float sx = 1;    ///< Screen units per design unit across
         float sy = 1;    ///< And down
         float round = 1; ///< For things that must stay round: the smaller of the two
@@ -37,7 +40,20 @@ namespace rct3::ui::front_screen
         /// A design point on the screen.
         [[nodiscard]] Point at(Point design) const
         {
-            return { screen.x0 + design.x * sx, screen.y0 + design.y * sy };
+            return { origin.x + design.x * sx, origin.y + design.y * sy };
+        }
+        /// The screen's edges in design units: on a frame that keeps one scale, they can lie past the design.
+        [[nodiscard]] Rect design_screen() const
+        {
+            return { (screen.x0 - origin.x) / sx, (screen.y0 - origin.y) / sy, (screen.x1 - origin.x) / sx, (screen.y1 - origin.y) / sy };
+        }
+        /// Something that runs along the bottom strip: its left edge kept from the screen's left as designed
+        /// and its right edge from the screen's right, so it spans the screen on any frame.
+        [[nodiscard]] Rect strip(const Rect& design) const
+        {
+            const Point a = at({ design.x0, design.y0 });
+            const Point b = at({ design.x1, design.y1 });
+            return { a.x, a.y, screen.x1 - (kDesignWidth - design.x1) * sx, b.y };
         }
         /// A design rectangle on the screen, stretched both ways.
         [[nodiscard]] Rect stretched(const Rect& design) const
@@ -48,7 +64,8 @@ namespace rct3::ui::front_screen
         }
     };
 
-    [[nodiscard]] Frame frame_for(const Rect& screen);
+    /// The design on `screen`: stretched to it, or `uniform`ly at the smaller scale from its bottom-left corner.
+    [[nodiscard]] Frame frame_for(const Rect& screen, bool uniform = false);
 
     // The artwork, as design rectangles. Pictures not given a size here are drawn at their own size in
     // design units from the top-left corner given.
@@ -59,6 +76,8 @@ namespace rct3::ui::front_screen
     inline constexpr Rect kChildren { 0, 310, 384, 694 };
     /// The arc, in five pieces from the top edge down and round to the right edge.
     inline constexpr std::array<Point, 5> kArcPieces = { { { 295, 0 }, { 327, 413 }, { 385, 510 }, { 430, 564 }, { 609, 546 } } };
+    /// Their sizes, as the pictures are drawn.
+    inline constexpr std::array<Point, 5> kArcPieceSizes = { { { 97, 413 }, { 96, 99 }, { 88, 56 }, { 181, 100 }, { 415, 138 } } };
     inline constexpr Rect kHelpTitle { 256, 712, 768, 736 }; ///< The larger line of help, on the bottom strip
     inline constexpr Rect kHelpText { 256, 740, 768, 756 };  ///< The smaller line under it
 

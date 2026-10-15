@@ -101,7 +101,7 @@ namespace rct3::ui
             start_out_ = picked_;
         start_->enabled = picked_ < buttons_.size() && buttons_[picked_]->enabled;
 
-        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect()));
+        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect(), style_.round));
         const float size = tm::kButtonSize * disc.scale;
         const auto lay = [&](FrontButton& b, float angle) {
             const Point c = disc.at(fs::on_ring(angle, tm::kRadius));
@@ -123,7 +123,7 @@ namespace rct3::ui
     void TutorialPicker::draw(DrawContext& context) const
     {
         // Each quarter at its own size times the disc's one scale, its inner corner on the disc's middle.
-        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect()));
+        const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect(), style_.round));
         for (std::size_t q = 0; q < style_.quarters.size(); ++q)
         {
             const SkinRef* skin = context.skins.find(style_.quarters[q]);

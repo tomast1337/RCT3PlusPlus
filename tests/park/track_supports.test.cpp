@@ -114,7 +114,7 @@ namespace
 
 } // namespace
 
-TEST_CASE("a footprint's squares lie round the object's tile and turn with it")
+TEST_CASE("a footprint's squares start at the object's tile and turn with it")
 {
     SupportFootprint f = track_square();
     f.x_squares = 3;
@@ -122,9 +122,9 @@ TEST_CASE("a footprint's squares lie round the object's tile and turn with it")
     save::PlacedObject o;
     o.col = 5;
     o.row = 5;
-    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 4, 5 }, { 5, 5 }, { 6, 5 } });
+    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 5 }, { 6, 5 }, { 7, 5 } });
     o.rotation = 1;
-    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 6 }, { 5, 5 }, { 5, 4 } });
+    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 7 }, { 5, 6 }, { 5, 5 } });
 }
 
 TEST_CASE("a column under track on the ground: deep foot, middles lined up on their heights, top piece")

@@ -7,9 +7,11 @@
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
 #include "park/flexi_colours.hpp"
+#include "strings/ascii.hpp"
 
 #include <format>
 #include <limits>
+#include <vector>
 
 namespace rct3::park
 {
@@ -17,6 +19,7 @@ namespace rct3::park
     namespace
     {
         constexpr std::string_view kCliffPrefix = "Cliff_";
+        constexpr std::string_view kMaskEnding = ".alpha"; ///< Of a see-through mask's name, in any case
     } // namespace
 
     GroundPaint ground_paint(std::string_view terrain_type)
@@ -80,28 +83,51 @@ namespace rct3::park
         return std::format("Queue/{0}/{0}_Texture.common.ovl", style);
     }
 
+    std::optional<std::size_t> queue_picture(std::span<const std::string_view> names, std::string_view style)
+    {
+        const std::string named = std::format("Ground{}", style);
+        std::optional<std::size_t> chosen;
+        for (std::size_t i = 0; i < names.size(); ++i)
+        {
+            const std::string_view n = names[i];
+            if (n.size() >= kMaskEnding.size() && strings::equals_ignoring_case(n.substr(n.size() - kMaskEnding.size()), kMaskEnding))
+                continue;
+            if (n == named)
+                return i;
+            if (!chosen)
+                chosen = i;
+        }
+        return chosen;
+    }
+
     std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const std::string name = "Ground" + painting.style;
+        std::vector<ovl::FlexiTextureItem> items;
+        std::vector<std::string_view> names;
         for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
         {
             if (part == nullptr)
                 continue;
-            for (const ovl::FlexiTextureItem& item : ovl::read_flexi_textures(*overlay, *part))
+            for (ovl::FlexiTextureItem& item : ovl::read_flexi_textures(*overlay, *part))
             {
-                if (item.name != name || !item.texture || item.texture->frames.empty())
+                if (!item.texture || item.texture->frames.empty())
                     continue;
-                const auto picture = palette_image(item.texture->frames.front(), item.texture->flags);
-                if (!picture)
-                    continue;
-                images.insert_or_assign(ground_key(GroundPaint::Queue, index), paint(*picture, flexi_colours(painting.colours)));
-                return true;
+                names.push_back(item.name);
+                items.push_back(std::move(item));
             }
         }
-        return false;
+        const auto at = queue_picture(names, painting.style);
+        if (!at)
+            return false;
+        const ovl::FlexiTexture* chosen = &*items[*at].texture;
+        const auto picture = palette_image(chosen->frames.front(), chosen->flags);
+        if (!picture)
+            return false;
+        images.insert_or_assign(ground_key(GroundPaint::Queue, index), paint(*picture, flexi_colours(painting.colours)));
+        return true;
     }
 
     std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)

@@ -110,8 +110,7 @@ namespace rct3::park
         }
 
         /// Where a spot on `object` lies in the park, in tiles from the grid's corner: the footprint is laid
-        /// out round the middle of the object's tile, its squares and thirds running along the model's -X and
-        /// -Z.
+        /// out round its middle, its squares and thirds running along the model's -X and -Z.
         glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
         {
             const glm::vec2 x = turned_x(object.rotation);
@@ -122,7 +121,7 @@ namespace rct3::park
             };
             const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
             const float v = along(1) - static_cast<float>(footprint.z_squares) / 2;
-            return glm::vec2 { static_cast<float>(object.col) + 0.5f, static_cast<float>(object.row) + 0.5f } - u * x - v * z;
+            return footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
         }
 
         glm::vec3 in_park(const save::TerrainGrid& grid, glm::vec2 tiles, float y)

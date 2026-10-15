@@ -13,12 +13,22 @@ namespace rct3::park
         return kDirections[static_cast<std::size_t>(((turns % 4) + 4) % 4)];
     }
 
-    glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid)
+    glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares)
+    {
+        // A quarter turn either way lays the model's X along the park's Z.
+        const bool across = (object.rotation & 1) != 0;
+        const auto span_x = static_cast<float>(squares[across ? 1 : 0]);
+        const auto span_z = static_cast<float>(squares[across ? 0 : 1]);
+        return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
+    }
+
+    glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares)
     {
         const glm::vec2 x = turned_x(object.rotation);
         const glm::vec2 z { -x.y, x.x }; // The model's +Z, a quarter turn on from its +X
 
-        glm::vec2 anchor { grid.world_x(object.col) + grid.tile_size_x / 2, grid.world_z(object.row) + grid.tile_size_z / 2 };
+        const glm::vec2 middle = footprint_middle(object, squares);
+        glm::vec2 anchor { grid.world_x(0) + middle.x * grid.tile_size_x, grid.world_z(0) + middle.y * grid.tile_size_z };
         switch (positioning)
         {
             case Positioning::Edge:

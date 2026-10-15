@@ -2,6 +2,8 @@
 #include "park/ground_textures.hpp"
 
 #include <doctest/doctest.h>
+#include <string_view>
+#include <vector>
 
 using namespace rct3::park;
 
@@ -18,4 +20,15 @@ TEST_CASE("an overlay that is not there is an error")
     GroundImages images;
     CHECK_FALSE(add_ground_images(images, "no such overlay.ovl").has_value());
     CHECK(images.empty());
+}
+
+TEST_CASE("a queue style's ground is its picture that is not a mask, the one named after it first")
+{
+    const std::vector<std::string_view> own { "Plain.Alpha", "Plain" };
+    CHECK(queue_picture(own, "Other") == 1u);
+    const std::vector<std::string_view> named { "Extra", "GroundSet.alpha", "GroundSet" };
+    CHECK(queue_picture(named, "Set") == 2u);
+    CHECK(queue_picture(named, "Unknown") == 0u);
+    const std::vector<std::string_view> masks { "A.ALPHA" };
+    CHECK_FALSE(queue_picture(masks, "A"));
 }

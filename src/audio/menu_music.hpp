@@ -6,12 +6,17 @@
 // 31 October one of two eerie tracks plays instead, still moving the place on. With cycling off, or when
 // nothing of the list is found, one quiet track plays every time.
 //
+// Unlike the game, the menus follow the music the player picked for the park, as soon as it is picked: a
+// track of the music folder plays that track, shuffling plays one at random, and no music leaves the menus
+// quiet. Only while nothing is picked does the cycle above choose.
+//
 // The menu music plays at half the music volume.
 #pragma once
 
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
@@ -39,6 +44,26 @@ namespace rct3::audio
         std::optional<std::size_t> file; ///< Of the files given, the track's; nothing when it is missing too
         std::optional<int> next_place;   ///< Where the cycle carries on next run; nothing without cycling
     };
+
+    /// Where the menu's music comes from.
+    enum class MenuMusicSource : std::uint8_t
+    {
+        Cycle,   ///< The run's track of the cycle
+        Track,   ///< The track the player picked
+        Shuffle, ///< A track at random
+        Silent,
+    };
+
+    struct MenuMusicWish
+    {
+        MenuMusicSource source = MenuMusicSource::Cycle;
+        std::size_t file = 0; ///< Of the files given, for a picked track
+        friend bool operator==(const MenuMusicWish&, const MenuMusicWish&) = default;
+    };
+
+    /// What the menus play for the player's pick of park music: `shuffle` on, else `picked` (empty for no
+    /// music, nothing when never picked). A picked track that is not among `files` leaves it to the cycle.
+    [[nodiscard]] MenuMusicWish menu_music_wish(bool shuffle, const std::optional<std::string>& picked, std::span<const std::string> files);
 
     /// Picks this run's track. `place` is where the cycle stands, nothing when it is off; `files` are the
     /// names in the music folder, matched in any case.

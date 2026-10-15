@@ -50,6 +50,19 @@ namespace rct3::audio
         return { kQuietMenuTrack, find(kQuietMenuTrack, files), at };
     }
 
+    MenuMusicWish menu_music_wish(bool shuffle, const std::optional<std::string>& picked, std::span<const std::string> files)
+    {
+        if (shuffle)
+            return { MenuMusicSource::Shuffle, 0 };
+        if (!picked)
+            return { };
+        if (picked->empty())
+            return { MenuMusicSource::Silent, 0 };
+        if (const auto file = find(*picked, files))
+            return { MenuMusicSource::Track, *file };
+        return { };
+    }
+
     bool is_halloween(std::chrono::system_clock::time_point when)
     {
         const std::chrono::year_month_day day { std::chrono::floor<std::chrono::days>(when) };

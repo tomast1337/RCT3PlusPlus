@@ -9,8 +9,10 @@ layout(set = 1, binding = 0) uniform sampler u_sampler;
 // render::SceneLight's shadow: the depth seen from the sun, and how it was seen (render/types.hpp).
 layout(set = 2, binding = 0) uniform texture2D u_shadow;
 layout(set = 3, binding = 0) uniform texture2D u_sun_view;
+// Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1.
+layout(set = 4, binding = 0) uniform texture2D u_variation;
 
-// render::SceneLight, packed. sun_direction.w is 1 when the shadow is given.
+// render::SceneLight, packed. sun_direction.w is 1 when the shadow is given, sky.w when the variation is.
 layout(push_constant) uniform Draw {
   mat4 transform;
   vec4 sun_direction;
@@ -60,8 +62,21 @@ float sunlit(vec3 n) {
   return mix(sum / 9.0, 1.0, smoothstep(0.85, 1.0, edge));
 }
 
+// How much lighter or darker the ground is here: three sizes of the noise, widest strongest, so no one size
+// repeats visibly. Features about 240, 100 and 40 world units across.
+const float kVariation = 0.06;
+float variation() {
+  // One tile of the picture holds 8 features.
+  float n = 0.5 * texture(sampler2D(u_variation, u_sampler), v_world.xz / 1920.0).r;
+  n += 0.3 * texture(sampler2D(u_variation, u_sampler), v_world.xz / 800.0 + 0.37).r;
+  n += 0.2 * texture(sampler2D(u_variation, u_sampler), v_world.xz / 320.0 + 0.71).r;
+  return 1.0 + kVariation * (2.0 * n - 1.0);
+}
+
 void main() {
   vec4 color = texture(sampler2D(u_texture, u_sampler), v_uv) * v_color;
+  if (u_draw.sky.w > 0.5)
+    color.rgb *= variation();
   if (kCutout) {
     if (color.a < 0.5)
       discard;

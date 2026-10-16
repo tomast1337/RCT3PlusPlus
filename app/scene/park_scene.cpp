@@ -28,6 +28,7 @@
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "scene/park_management.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
@@ -810,6 +811,8 @@ namespace rct3::scene
             const auto model = save::load_park(*file, index);
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
+            if (model)
+                scene.park_model = *model;
         }
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
@@ -819,7 +822,7 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item));
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -1235,6 +1238,28 @@ namespace rct3::scene
             return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
         }
 
+        ui::ManagementFacts management_facts(const ParkScene& scene)
+        {
+            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides };
+        }
+
+        /// Opens the info panel on what a management window's row is about, if the park shows it.
+        void open_row(ParkScene& scene, ui::InfoPanel& panel, ui::ManagementRow row, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            using Kind = ui::ManagementRow::Kind;
+            if (row.kind == Kind::Ride || row.kind == Kind::Stall)
+            {
+                open_info(scene, panel, { row.kind == Kind::Stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, row.index }, assets, options);
+                return;
+            }
+            const bool staff = row.kind == Kind::Staff;
+            if (!staff && row.kind != Kind::Guest)
+                return;
+            const auto shown = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff == staff && p.saved == row.index; });
+            if (shown != scene.shown_people.end())
+                open_person(scene, panel, static_cast<std::size_t>(shown - scene.shown_people.begin()), assets, options);
+        }
+
         /// What the pointer is on: an attraction, a person of the shown people or a prop of the objects.
         struct Picked
         {
@@ -1308,7 +1333,7 @@ namespace rct3::scene
             auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName));
             if (!escape.empty() && tools != nullptr && tools->open_menu())
                 tools->close_menu();
-            else if (!escape.empty())
+            else if (!escape.empty() && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings);
             keys.presses.erase(escape.begin(), escape.end());
         }
@@ -1507,6 +1532,8 @@ namespace rct3::scene
                     scene.show_scenery = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
+                else if (const auto topic = ui::management_topic(*item))
+                    toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, info_units(assets, options));
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
@@ -1517,6 +1544,8 @@ namespace rct3::scene
             scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
             scene.camera = park::on_ground(scene.camera, scene.grid);
         }
+        if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info != nullptr)
+            open_row(scene, *info, *row, assets, options);
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))

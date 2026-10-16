@@ -86,6 +86,10 @@ namespace rct3::ui
         {
             return true;
         }
+        /// A resize arrow over the edges and corners of a resizable window.
+        [[nodiscard]] CursorKind cursor(Point p) const override;
+        /// The four-way arrow while dragged by the title, the edges' arrow while resized.
+        [[nodiscard]] CursorKind held_cursor(Point p) const override;
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
@@ -110,6 +114,8 @@ namespace rct3::ui
 
         /// The edges a press at `p` takes hold of, as Edge bits; 0 when none.
         [[nodiscard]] std::uint8_t edges_at(Point p) const;
+        /// The resize arrow for a set of Edge bits; the arrow for none.
+        [[nodiscard]] static CursorKind edge_cursor(std::uint8_t edges);
         void resize_to(Point p);
 
         WindowStyle style_;

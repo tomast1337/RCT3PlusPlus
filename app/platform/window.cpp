@@ -3,6 +3,7 @@
 
 #include "backends/imgui_impl_glfw.h"
 #include "imgui.h"
+#include "logging/log.hpp"
 #include "render/backend.hpp"
 #include "strings/unicode.hpp"
 
@@ -116,6 +117,8 @@ namespace rct3::platform
         ImGui::StyleColorsDark();
         // "Other" fits every backend that does not need GLFW to manage an OpenGL context.
         ImGui_ImplGlfw_InitForOther(window, true);
+        // The game sets the cursor itself (set_cursor), from what the developer windows ask for among the rest.
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
         // The game reads the button state once a frame; a click shorter than a frame must still show up.
         glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
         return Window(window, std::move(collected));
@@ -124,6 +127,8 @@ namespace rct3::platform
     Window::Window(Window&& other) noexcept
         : window_(std::exchange(other.window_, nullptr))
         , collected_(std::move(other.collected_))
+        , cursors_(std::move(other.cursors_))
+        , cursor_(other.cursor_)
     {
     }
 
@@ -131,6 +136,7 @@ namespace rct3::platform
     {
         if (window_ == nullptr)
             return;
+        cursors_.reset();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
         glfwDestroyWindow(window_);
@@ -256,6 +262,39 @@ namespace rct3::platform
     void Window::ui_new_frame()
     {
         ImGui_ImplGlfw_NewFrame();
+    }
+
+    void Window::set_cursor(ui::CursorKind kind)
+    {
+        if (!cursors_)
+            return;
+        if (const auto shown = cursor_.set(*cursors_, kind))
+            logging::logger("platform").debug("pointer: {} as {}", ui::cursor_name(kind), ui::standard_cursor_name(*shown));
+    }
+
+    ui::CursorKind Window::developer_cursor()
+    {
+        switch (ImGui::GetMouseCursor())
+        {
+            case ImGuiMouseCursor_TextInput:
+                return ui::CursorKind::Text;
+            case ImGuiMouseCursor_ResizeAll:
+                return ui::CursorKind::Move;
+            case ImGuiMouseCursor_ResizeNS:
+                return ui::CursorKind::ResizeVertical;
+            case ImGuiMouseCursor_ResizeEW:
+                return ui::CursorKind::ResizeHorizontal;
+            case ImGuiMouseCursor_ResizeNESW:
+                return ui::CursorKind::ResizeDiagonalUp;
+            case ImGuiMouseCursor_ResizeNWSE:
+                return ui::CursorKind::ResizeDiagonalDown;
+            case ImGuiMouseCursor_Hand:
+                return ui::CursorKind::Hand;
+            case ImGuiMouseCursor_NotAllowed:
+                return ui::CursorKind::NotAllowed;
+            default:
+                return ui::CursorKind::Arrow;
+        }
     }
 
 } // namespace rct3::platform

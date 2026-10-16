@@ -32,6 +32,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
+#include "ui/park_cursor.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/person_info.hpp"
@@ -192,6 +193,9 @@ namespace rct3::scene
         ui::Point last_pointer;
         bool turning = false;
         bool dragging = false;
+        int zooming = 0;             ///< From the keys: 1 in, -1 out
+        bool hover_pickable = false; ///< A click would open a panel on what is under the pointer
+        float since_hover_pick = 0;  ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
     };
@@ -220,6 +224,9 @@ namespace rct3::scene
 
     /// True once after new messages came into the park's message drawer.
     [[nodiscard]] bool take_park_alert(ParkScene& scene);
+
+    /// The pointer's look over the park this frame (ui/park_cursor.hpp).
+    [[nodiscard]] ui::CursorKind park_scene_cursor(const ParkScene& scene);
 
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);

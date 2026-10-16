@@ -278,7 +278,7 @@ namespace rct3::render
     };
 
     /// How many pictures a draw can take besides DrawCommand::texture.
-    inline constexpr std::size_t kExtraTextures = 4;
+    inline constexpr std::size_t kExtraTextures = 6;
 
     /// One draw. With `indices` set, `count` and `first` count indices, otherwise vertices.
     struct DrawCommand

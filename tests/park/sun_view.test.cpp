@@ -57,4 +57,16 @@ TEST_CASE("shadows reach further round a camera further out")
     CHECK(shadow_radius(10) == doctest::Approx(40));
     CHECK(shadow_radius(100) > shadow_radius(60));
     CHECK(shadow_radius(10000) == doctest::Approx(300));
+    // In steps: a small zoom keeps the size.
+    CHECK(shadow_radius(61) == shadow_radius(62));
+    CHECK(shadow_radius(61) >= 61 * 1.5f);
+}
+
+TEST_CASE("the shadows' sun moves only once it has moved enough")
+{
+    const glm::vec3 kept = glm::normalize(glm::vec3(0.3f, 1, 0));
+    const glm::vec3 near = glm::normalize(glm::vec3(0.301f, 1, 0));
+    const glm::vec3 far = glm::normalize(glm::vec3(0.4f, 1, 0));
+    CHECK(steady_sun(kept, near, 0.01f) == kept);
+    CHECK(steady_sun(kept, far, 0.01f) == far);
 }

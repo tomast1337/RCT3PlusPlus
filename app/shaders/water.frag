@@ -20,6 +20,9 @@ layout(set = 2, binding = 0) uniform texture2D u_reflection;
 layout(set = 3, binding = 0) uniform texture2D u_scene;
 layout(set = 4, binding = 0) uniform texture2D u_scene_depth;
 layout(set = 5, binding = 0) uniform texture2D u_ripples;
+// render::SceneLight's shadow, as the Lit shaders read it (lit.frag).
+layout(set = 6, binding = 0) uniform texture2D u_shadow;
+layout(set = 7, binding = 0) uniform texture2D u_sun_view;
 
 // render::WaterView and render::SceneLight, packed (render/vulkan/vulkan_device.cpp).
 layout(push_constant) uniform Draw {
@@ -42,6 +45,7 @@ const uint kWaves = 4u;
 const uint kFoam = 8u;
 const uint kRipples = 16u;
 const uint kUnderwater = 32u;
+const uint kShadow = 64u;
 
 const float kFresnelBase = 0.02;                     // Reflectance seen straight on, for a refractive index near 1.33
 const float kMirrorLeast = 0.42;                     // The least the mirror shows, looking straight down
@@ -166,6 +170,26 @@ float caustics(vec2 p, float time, float blur) {
 }
 
 // Direction the sunlight travels in under the surface, bent down by entering the water.
+// 1 where the sun reaches the surface at `at`, 0 where something nearer the sun covers it; a 3 by 3 average of
+// the shadow map's texels, as lit.frag reads it.
+float sunlit(vec3 at) {
+  mat4 view = mat4(texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(0, 0), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(1, 0), 0),
+                   texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(2, 0), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(3, 0), 0));
+  vec4 extra = texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(4, 0), 0);
+  vec4 clip = view * vec4(at, 1.0);
+  vec3 p = clip.xyz / clip.w;
+  float edge = max(abs(p.x), abs(p.y));
+  if (edge >= 1.0 || p.z <= 0.0 || p.z >= 1.0)
+    return 1.0;
+  ivec2 size = textureSize(sampler2D(u_shadow, u_sampler), 0);
+  ivec2 texel = ivec2(vec2(0.5 + 0.5 * p.x, 0.5 - 0.5 * p.y) * vec2(size));
+  float sum = 0.0;
+  for (int y = -1; y <= 1; ++y)
+    for (int x = -1; x <= 1; ++x)
+      sum += step(p.z - extra.y * 2.0, texelFetch(sampler2D(u_shadow, u_sampler), clamp(texel + ivec2(x, y), ivec2(0), size - 1), 0).r);
+  return mix(sum / 9.0, 1.0, smoothstep(0.85, 1.0, edge));
+}
+
 vec3 sun_in_water(vec3 to_sun) {
   return refract(-to_sun, vec3(0.0, 1.0, 0.0), 1.0 / kWaterIndex);
 }
@@ -243,7 +267,8 @@ vec3 from_below(vec3 n, vec3 view, float dist, vec2 bend, vec3 sky, vec3 sun, ve
 
 void main() {
   float time = u_draw.eye_time.w;
-  vec3 sun = u_draw.sun_far.rgb;
+  // Shaded water keeps its sky light but loses the sun: no glint, dimmer depths and caustics.
+  vec3 sun = u_draw.sun_far.rgb * (has(kShadow) ? sunlit(v_world) : 1.0);
   vec3 to_sun = normalize(u_draw.sun_dir_near.xyz);
   vec3 sky = u_draw.sky_flags.rgb;
   vec3 body_light = sky + sun * max(to_sun.y, 0.0) * 0.5;

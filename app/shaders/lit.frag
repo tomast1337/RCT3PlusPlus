@@ -41,15 +41,18 @@ float sunlit(vec3 n) {
   mat4 view = mat4(texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(0, 0), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(1, 0), 0),
                    texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(2, 0), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(3, 0), 0));
   vec4 extra = texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(4, 0), 0);
-  // Pushed off the surface along its normal, so it does not shadow itself.
-  vec4 clip = view * vec4(v_world + n * extra.x * 1.5, 1.0);
+  // Pushed off the surface along its normal, and compared with more slack the more the surface leans away from
+  // the sun, so it does not shadow itself: a leaning surface spans several depths within one texel.
+  float facing = clamp(dot(n, u_draw.sun_direction.xyz), 0.05, 1.0);
+  float lean = min(sqrt(1.0 - facing * facing) / facing, 6.0);
+  vec4 clip = view * vec4(v_world + n * extra.x * (1.0 + lean), 1.0);
   vec3 p = clip.xyz / clip.w;
   float edge = max(abs(p.x), abs(p.y));
   if (edge >= 1.0 || p.z <= 0.0 || p.z >= 1.0)
     return 1.0;
   vec2 size = vec2(textureSize(sampler2D(u_shadow, u_sampler), 0));
   vec2 at = vec2(0.5 + 0.5 * p.x, 0.5 - 0.5 * p.y) * size;
-  float depth = p.z - extra.y;
+  float depth = p.z - extra.y * (1.0 + 2.0 * lean);
   float sum = 0.0;
   for (int y = -1; y <= 1; ++y)
     for (int x = -1; x <= 1; ++x)

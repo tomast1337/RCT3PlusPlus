@@ -24,7 +24,16 @@ namespace rct3::park
 
     float shadow_radius(float distance)
     {
-        return std::clamp(distance * 1.5f, 40.0f, 300.0f);
+        constexpr float kLeast = 40;
+        constexpr float kMost = 300;
+        const float wanted = std::clamp(distance * 1.5f, kLeast, kMost);
+        const float steps = std::ceil(4 * std::log2(wanted / kLeast));
+        return std::min(kLeast * std::exp2(steps / 4), kMost);
+    }
+
+    glm::vec3 steady_sun(glm::vec3 kept, glm::vec3 now, float step)
+    {
+        return glm::dot(kept, now) >= std::cos(step) ? kept : now;
     }
 
 } // namespace rct3::park

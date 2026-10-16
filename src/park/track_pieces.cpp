@@ -114,6 +114,21 @@ namespace rct3::park
                 return std::nullopt;
             line.start_side = vec(r.front().position) - vec(l.front().position);
             line.end_side = vec(r.back().position) - vec(l.back().position);
+            if (l.size() == r.size())
+            {
+                constexpr int kPerPart = 8;
+                for (std::size_t i = 0; i + 1 < l.size(); ++i)
+                {
+                    for (int k = 0; k < kPerPart; ++k)
+                    {
+                        const float t = static_cast<float>(k) / kPerPart;
+                        line.path.push_back((vec(ovl::spline_point(left, i, t)) + vec(ovl::spline_point(right, i, t))) / 2.0f);
+                    }
+                }
+                line.path.push_back(line.end);
+            }
+            else
+                line.path = { line.start, line.end };
             return line;
         }
     } // namespace
@@ -338,6 +353,13 @@ namespace rct3::park
             }
         }
         return fit;
+    }
+
+    const PieceShape* shape_named(const PieceCatalogue& catalogue, std::string_view symbol)
+    {
+        const std::string_view name = symbol.substr(0, symbol.find(':'));
+        const auto found = std::ranges::find_if(catalogue.pieces, [&](const PieceShape& p) { return strings::equals_ignoring_case(p.record.name, name); });
+        return found != catalogue.pieces.end() ? &*found : nullptr;
     }
 
 } // namespace rct3::park

@@ -18,9 +18,10 @@ namespace rct3::ovl
     struct SplineNode
     {
         std::array<float, 3> position { };
-        /// Two direction vectors per node. The first is zero at the start of an open spline and the second
-        /// zero at its end, so they are probably the incoming and outgoing tangents of a cubic segment.
-        /// The scale convention is not confirmed.
+        /// Two offsets per node, the first zero at the start of an open spline and the second zero at its
+        /// end. Each segment is a cubic Bezier curve: from a node, through the node plus its `tangent_out`
+        /// and the next node plus its `tangent_in`, to the next node. The stored segment lengths are those
+        /// curves' lengths.
         std::array<float, 3> tangent_in { };
         std::array<float, 3> tangent_out { };
     };
@@ -35,6 +36,10 @@ namespace rct3::ovl
         std::vector<SplineNode> nodes;
         std::vector<float> segment_lengths; ///< Length of each segment between consecutive nodes
     };
+
+    /// The point a fraction `t` (0 to 1) of the way along segment `segment` of `spline`, by the curve's
+    /// parameter rather than its length. Segment must be below `nodes.size() - 1`.
+    [[nodiscard]] std::array<float, 3> spline_point(const Spline& spline, std::size_t segment, float t);
 
     struct SplineItem
     {

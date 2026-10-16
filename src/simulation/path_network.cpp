@@ -29,12 +29,12 @@ namespace rct3::simulation
         return std::nullopt;
     }
 
-    NodeId PathNetwork::add(PathTileSpot tile, bool queue)
+    NodeId PathNetwork::add(PathTileSpot tile, bool queue, std::optional<float> height, std::uint64_t line)
     {
         if (const auto found = find(tile))
             return *found;
         const auto id = static_cast<NodeId>(nodes_.size());
-        nodes_.push_back({ .tile = tile, .queue = queue });
+        nodes_.push_back({ .tile = tile, .queue = queue, .height = height.value_or(static_cast<float>(tile.level) * level_height), .line = line });
         by_tile_.emplace(key(tile.col, tile.row), id);
         for (std::size_t side = 0; side < kSides.size(); ++side)
         {
@@ -64,7 +64,7 @@ namespace rct3::simulation
         float gap = std::numeric_limits<float>::max();
         for (auto it = first; it != last; ++it)
         {
-            const float g = std::abs(static_cast<float>(nodes_[it->second].tile.level) * level_height - at.y);
+            const float g = std::abs(nodes_[it->second].height - at.y);
             if (g < gap)
             {
                 gap = g;
@@ -77,7 +77,7 @@ namespace rct3::simulation
     glm::vec3 PathNetwork::centre(NodeId node) const
     {
         const PathTileSpot& t = nodes_[node].tile;
-        return { origin.x + (static_cast<float>(t.col) + 0.5f) * tile_size, static_cast<float>(t.level) * level_height, origin.y + (static_cast<float>(t.row) + 0.5f) * tile_size };
+        return { origin.x + (static_cast<float>(t.col) + 0.5f) * tile_size, nodes_[node].height, origin.y + (static_cast<float>(t.row) + 0.5f) * tile_size };
     }
 
     std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to) const

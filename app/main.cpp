@@ -222,6 +222,13 @@ namespace
         ImGui::Checkbox("Free camera", &park.free_camera);
         ImGui::SetItemTooltip("No tilt, zoom or map limits, and the camera leaves the ground");
         ImGui::SliderFloat("Haze", &park.haze_rate, 0.0f, 0.003f, "%.5f");
+        if (ImGui::Checkbox("Simulate guests", &park.simulate))
+        {
+            park.people_levels.clear(); // The still people are built again without or with the simulated ones
+            park.since_people_levels = rct3::scene::kObjectRebuildInterval;
+        }
+        ImGui::SetItemTooltip("Guests walk the paths and visit shops; the park as saved is left as it was");
+        ImGui::Text("Simulation tick %llu", static_cast<unsigned long long>(park.sim.tick));
         const rct3::park::ParkCamera& c = park.camera;
         ImGui::Text("Target %.1f %.1f %.1f", static_cast<double>(c.target.x), static_cast<double>(c.target.y), static_cast<double>(c.target.z));
         ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<double>(c.yaw), static_cast<double>(c.pitch), static_cast<double>(c.distance));

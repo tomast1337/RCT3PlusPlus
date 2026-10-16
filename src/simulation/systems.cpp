@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/systems.hpp"
 
+#include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/workers.hpp"
 
@@ -26,6 +27,7 @@ namespace rct3::simulation
         constexpr float kIdleSeconds = 5;               ///< Between thoughts while wandering
         constexpr float kConsumeSeconds = 10;           ///< Spent with what was bought before moving on
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
+        constexpr float kQueueSpacing = 0.25f;          ///< Tiles between guests standing in a queue
 
         float clamp01(float v)
         {
@@ -68,8 +70,8 @@ namespace rct3::simulation
                     continue;
                 if (const auto* shop = r.try_get<Shop>(e))
                     out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price, 0 });
-                else if (const auto* ride = r.try_get<FlatRide>(e))
-                    out.push_back({ e, AttractionKind::FlatRide, Product::Drink, a.entrance, a.price, ride->intensity });
+                else if (const auto* ride = r.try_get<CycleRide>(e))
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price, ride->intensity });
             }
             return out;
         }
@@ -104,7 +106,7 @@ namespace rct3::simulation
                     return found;
             }
             if (mood.nausea < kMaxNausea && random::chance(dice.state, kRideChance))
-                return nearest_offer(paths, at, offers, AttractionKind::FlatRide, Product::Drink, wallet);
+                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet);
             return std::nullopt;
         }
 
@@ -279,19 +281,51 @@ namespace rct3::simulation
                 (shop->product == Product::Drink ? needs.thirst : needs.hunger) = 0;
                 mood.happiness = clamp01(mood.happiness + kTreat);
             }
-            else if (auto* ride = r.try_get<FlatRide>(arrived[i]))
+            else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
+                // In at the far end of the line.
                 ride->queue.push_back(guest);
                 errand = { ErrandKind::Queueing, arrived[i], 0 };
+                r.get<Stride>(guest).along = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
             }
         }
 
-        // 4. Flat rides, in entity order.
-        for (const entt::entity e : sorted(r.view<FlatRide>()))
+        // 4. Rides, in entity order: queues shuffle forward, riders get off, the next ones board.
+        for (const entt::entity e : sorted(r.view<CycleRide>()))
         {
-            auto& ride = r.get<FlatRide>(e);
+            auto& ride = r.get<CycleRide>(e);
             auto& attraction = r.get<Attraction>(e);
-            if (ride.timer > 0 && --ride.timer == 0)
+            if (!ride.line.empty())
+            {
+                const float last = static_cast<float>(ride.line.size() - 1);
+                for (std::size_t k = 0; k < ride.queue.size(); ++k)
+                {
+                    if (!r.valid(ride.queue[k]))
+                        continue;
+                    auto& stride = r.get<Stride>(ride.queue[k]);
+                    const float place_in_line = std::min(static_cast<float>(k) * kQueueSpacing, last);
+                    const float step = stride.speed * dt / paths.tile_size;
+                    stride.along = stride.along > place_in_line ? std::max(stride.along - step, place_in_line) : place_in_line;
+                    // Between the tile behind and the one ahead, facing the front; standing once in place.
+                    const auto behind = static_cast<std::size_t>(std::ceil(stride.along));
+                    const auto ahead = static_cast<std::size_t>(std::floor(stride.along));
+                    const bool moving = stride.along > place_in_line;
+                    stride.from = ride.line[behind];
+                    stride.to = moving ? ride.line[ahead] : ride.line[behind];
+                    stride.progress = static_cast<float>(behind) - stride.along;
+                    auto& pose = r.get<Pose>(ride.queue[k]);
+                    pose.position = glm::mix(paths.centre(ride.line[behind]), paths.centre(ride.line[ahead]), stride.progress);
+                    if (ahead != behind)
+                    {
+                        const glm::vec3 d = paths.centre(ride.line[ahead]) - paths.centre(ride.line[behind]);
+                        pose.heading = std::atan2(d.x, d.z);
+                    }
+                }
+            }
+            // A cycle ends when the ride's time is up, or its train has come round.
+            auto* train = r.try_get<Coaster>(e);
+            const bool finished = train ? drive(*train, dt) : ride.timer > 0 && --ride.timer == 0;
+            if (finished)
             {
                 for (const entt::entity guest : ride.riders)
                 {
@@ -299,13 +333,16 @@ namespace rct3::simulation
                         continue;
                     auto& mood = r.get<Mood>(guest);
                     mood.happiness = clamp01(mood.happiness + ride.excitement * 0.3f);
-                    mood.nausea = clamp01(mood.nausea + ride.intensity * 0.2f);
+                    mood.nausea = clamp01(mood.nausea + ride.nausea * 0.2f);
                     r.get<Errand>(guest) = { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
-                    stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    stop_at(paths, ride.exit != kNoNode ? ride.exit : attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
                 }
                 ride.riders.clear();
             }
-            if (ride.timer == 0 && !ride.queue.empty())
+            // Loads once the first in line has reached the front.
+            // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
+            const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along < 0.5f);
+            if (ride.timer == 0 && !(train && train->running) && at_front)
             {
                 const std::size_t boarding = std::min<std::size_t>(ride.capacity, ride.queue.size());
                 for (std::size_t i = 0; i < boarding; ++i)
@@ -326,7 +363,9 @@ namespace rct3::simulation
                     ride.riders.push_back(guest);
                 }
                 ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
-                if (!ride.riders.empty())
+                if (!ride.riders.empty() && train)
+                    train->running = true;
+                else if (!ride.riders.empty())
                     ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
             }
         }

@@ -93,6 +93,12 @@ namespace rct3::park
         std::vector<bool> fence_outline;
         std::optional<SupportFootprint> supports; ///< What it asks of the columns under it
         std::vector<ModelLevel> levels;           ///< Finest first, never empty
+        /// Of an animated model, the length in seconds of each animation its finest level lists, in the order
+        /// listed; 0 for one that cannot be read. Flat rides list theirs as standing, starting, running and
+        /// stopping.
+        std::vector<float> animation_seconds;
+        /// Places for riders: the most bones named "peep" and a number that any level has.
+        std::uint32_t seats = 0;
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).

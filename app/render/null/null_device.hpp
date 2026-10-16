@@ -44,6 +44,9 @@ namespace rct3::render::null
         void draw(const DrawCommand& command) override;
         void end_pass() override;
         bool copy_screen(TextureHandle target) override;
+        void set_wireframe(bool /*on*/) override
+        {
+        }
         void end_frame() override;
         [[nodiscard]] FrameStats stats() const override
         {

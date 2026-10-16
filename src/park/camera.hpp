@@ -53,10 +53,12 @@ namespace rct3::park
     /// `band` in from the edges, rising to 1 at an edge (-1 at the left and the bottom), in X and Y with Y
     /// down the screen given as forward positive.
     [[nodiscard]] glm::vec2 edge_push(glm::vec2 at, glm::vec2 size, float band);
-    /// Turned by `yaw` and tilted by `pitch` radians, within the tilt's limits.
-    [[nodiscard]] ParkCamera turned(ParkCamera camera, float yaw, float pitch);
-    /// Brought `factor` times as far, within the limits.
-    [[nodiscard]] ParkCamera zoomed(ParkCamera camera, float factor);
+    /// Turned by `yaw` and tilted by `pitch` radians, within the tilt's limits; unless `free`, which only stops
+    /// short of looking straight up or down.
+    [[nodiscard]] ParkCamera turned(ParkCamera camera, float yaw, float pitch, bool free = false);
+    /// Brought `factor` times as far, within the limits; unless `free`, which allows from the near plane to the
+    /// far one.
+    [[nodiscard]] ParkCamera zoomed(ParkCamera camera, float factor, bool free = false);
     /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
     /// box fills a square view without leaving it.
     [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);

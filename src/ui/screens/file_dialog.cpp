@@ -242,13 +242,15 @@ namespace rct3::ui
         return std::u16string(strings_.get(key));
     }
 
-    void FileDialog::set_files(std::vector<std::u16string> files)
+    void FileDialog::set_files(std::vector<std::u16string> files, std::vector<bool> kept)
     {
         for (Row* row : rows_)
             list_->content().remove(*row);
         rows_.clear();
         files_ = std::move(files);
         read_.assign(files_.size(), false);
+        kept_ = std::move(kept);
+        kept_.resize(files_.size(), false);
         selected_.reset();
         last_clicked_.reset();
         renaming_.reset();
@@ -258,10 +260,24 @@ namespace rct3::ui
             row.placement = top_left(0, static_cast<float>(i) * style_.row_height, style_.row_width, style_.row_height);
             row.tooltip = text(kListTip);
             row.box->tooltip = text(kNameTip);
+            row.box->enabled = !kept_[i];
             rows_.push_back(&row);
         }
         since_complete_ = files_.empty() ? 0 : -1;
         show_status();
+    }
+
+    void FileDialog::set_file_name(std::u16string_view name)
+    {
+        if (name_box_ != nullptr)
+            name_box_->text = shown_file_name(name);
+    }
+
+    void FileDialog::set_can_save(bool can)
+    {
+        can_save_ = can;
+        if (mode_ == FileDialogMode::Save)
+            open_->enabled = can;
     }
 
     void FileDialog::set_summary(std::size_t index, const std::optional<save::SaveSummary>& summary, TextureId picture)
@@ -380,6 +396,8 @@ namespace rct3::ui
             }
             return;
         }
+        if (!can_save_)
+            return;
         const std::u16string& name = name_box_->text;
         if (name.empty())
             return ask(Asking::Message, text(kNeedName), true);
@@ -388,11 +406,14 @@ namespace rct3::ui
         if (name.front() == u' ')
             return ask(Asking::Message, text(kNoSpace), true);
         const std::u16string file = with_save_extension(name);
-        const auto existing = std::ranges::find_if(files_, [&](const std::u16string& f) { return same_name(f, file); });
-        if (existing != files_.end())
+        // Kept files are elsewhere: saving writes beside the others and never over them.
+        for (std::size_t i = 0; i < files_.size(); ++i)
         {
-            pending_ = *existing;
-            return ask(Asking::Replace, replaced(text(kReplace), u"%FILENAME%", shown_file_name(*existing)), false);
+            if (!kept(i) && same_name(files_[i], file))
+            {
+                pending_ = files_[i];
+                return ask(Asking::Replace, replaced(text(kReplace), u"%FILENAME%", shown_file_name(files_[i])), false);
+            }
         }
         open_out_ = file;
     }
@@ -457,7 +478,7 @@ namespace rct3::ui
         for (std::size_t i = 0; i < rows_.size(); ++i)
         {
             EditBox& box = *rows_[i]->box;
-            if (!box.take_commit())
+            if (!box.take_commit() || kept(i))
                 continue;
             const std::u16string old_name = shown_file_name(files_[i]);
             if (box.text == old_name)
@@ -477,7 +498,8 @@ namespace rct3::ui
             open_chosen();
         if (cancel_->take_click())
             close();
-        if (delete_->take_click() && selected_)
+        delete_->enabled = !selected_ || !kept(*selected_);
+        if (delete_->take_click() && selected_ && !kept(*selected_))
         {
             pending_ = files_[*selected_];
             ask(Asking::Delete, replaced(text(kDeleteFile), u"%FILENAME%", shown_file_name(pending_)), false);

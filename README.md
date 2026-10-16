@@ -63,6 +63,11 @@ settings (`settings.json`), what the options window sets (`options.json`) and th
 `screenshots/` (JPEG, PNG, BMP or TGA) join the game's own in the slideshow behind the front screen. The files are JSON,
 read with the vendored [JSON for Modern C++](third_party/nlohmann/).
 
+The load window lists the parks in `parks/` (and `scenarios/`, `new_scenarios/`) and then those the original
+game saved, found in its `RCT3` folder in Documents (for a Steam install played through Proton, inside the
+game's Proton prefix), or in `$RCT3PP_GAME_SAVES`. The game's own files are only read, never changed or
+deleted. rct3++ cannot write saves yet, so the save window's Save button stays greyed.
+
 `rct3pp --write-settings` writes the settings file with every setting, including any given on the same
 command line; `null` leaves a setting at its default:
 
@@ -87,6 +92,7 @@ The command line wins over environment variables, which win over the file.
 | `RCT3PP_VALIDATION` | `1` enables the graphics API's validation layer |
 | `RCT3PP_FALLBACK_FONT` | TrueType font for characters the game fonts lack (default `downloads/unifont-15.0.06.ttf`) |
 | `RCT3PP_DATA` | Folder for your settings, keys, screenshots and music, instead of the default one |
+| `RCT3PP_GAME_SAVES` | The original game's folder of your games (`RCT3` in its Documents), when it is not found by itself |
 
 ```
 export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"

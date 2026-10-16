@@ -53,6 +53,7 @@ namespace rct3::scene
         scene.options_file = std::move(setup.options_file);
         scene.careers.data = setup.data;
         scene.saves.data = std::move(setup.data);
+        scene.saves.game_saves = std::move(setup.game_saves);
         if (scene.options_file)
         {
             std::vector<config::FileProblem> problems;
@@ -99,7 +100,9 @@ namespace rct3::scene
         const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
-        update_save_browser(device, scene.saves, *scene.live->front);
+        ui::FrontEnd& front = *scene.live->front;
+        if (auto picked = update_save_browser(device, scene.saves, front.file_dialog(), front.file_dialogs_opened(), front.file_folder()))
+            scene.park_to_play = std::move(picked);
         update_career_browser(device, scene.careers, *scene.live->front, *scene.assets.strings, *scene.assets.install);
         if (scene.careers.slideshow != scene.slideshow_shown)
         {
@@ -123,7 +126,7 @@ namespace rct3::scene
                     picker->set_available(i, scene.assets.install->find(picker->tutorial(i).park).has_value());
             }
             if (const auto start = picker->take_start())
-                scene.tutorial = scene.assets.install->find(picker->tutorial(*start).park);
+                scene.park_to_play = scene.assets.install->find(picker->tutorial(*start).park);
         }
         if (scene.live->front->take_options_closed())
             save_front_end_options(scene);
@@ -140,7 +143,7 @@ namespace rct3::scene
         r.screen_size = front.take_screen_size();
         r.language = front.take_language();
         r.keys = front.take_keys();
-        r.tutorial = std::exchange(scene.tutorial, std::nullopt);
+        r.park = std::exchange(scene.park_to_play, std::nullopt);
         const bool fullscreen = scene.live->options.flag(config::GameOption::Fullscreen);
         if (fullscreen != scene.fullscreen)
         {

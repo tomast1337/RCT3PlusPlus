@@ -17,6 +17,7 @@ namespace rct3::config
             { EnvVar::Validation, "RCT3PP_VALIDATION", "Enable the graphics API's validation layer (1/0)" },
             { EnvVar::FallbackFont, "RCT3PP_FALLBACK_FONT", "TrueType font for characters the game fonts lack (default: the one `./nob fetch` downloads)" },
             { EnvVar::DataFolder, "RCT3PP_DATA", "Folder for the user's configuration, screenshots and music, instead of the default one" },
+            { EnvVar::GameSaves, "RCT3PP_GAME_SAVES", "The original game's folder of the player's games (RCT3 in its Documents), when it is not found by itself" },
             { EnvVar::DataHome, "XDG_DATA_HOME", "Holds rct3pp/, the user's data folder, on Linux and other free systems (default ~/.local/share)", true },
             { EnvVar::Home, "HOME", "The user's home folder, for the default data folder", true },
             { EnvVar::AppData, "APPDATA", "Holds rct3pp/, the user's data folder, on Windows", true },

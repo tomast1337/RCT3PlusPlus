@@ -22,6 +22,7 @@
 #include "config/environment.hpp"
 #include "config/game_install.hpp"
 #include "config/game_options.hpp"
+#include "config/game_saves.hpp"
 #include "config/settings.hpp"
 #include "config/user_data.hpp"
 #include "imgui.h"
@@ -461,6 +462,8 @@ int main(int argc, char** argv)
         setup.fallback_font = fallback_font;
         setup.options_file = user_file(config::UserFile::GameOptions);
         setup.data = data;
+        if (install)
+            setup.game_saves = config::find_game_saves(env, install->root());
         const auto current = window->size();
         for (const auto& s : window->screen_sizes())
         {
@@ -516,8 +519,8 @@ int main(int argc, char** argv)
     const auto follow_front_end = [&] {
         const auto requests = rct3::scene::take_front_end_requests(*front);
         apply_requests(requests);
-        if (requests.tutorial)
-            park_to_load = std::move(requests.tutorial);
+        if (requests.park)
+            park_to_load = std::move(requests.park);
         if (requests.language)
         {
             settings.set(config::Setting::Language, *requests.language);
@@ -637,8 +640,9 @@ int main(int argc, char** argv)
                         }
                         const rct3::ui::KeyboardState no_keys;
                         prof::section("Park", [&] { rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
-                        rct3::scene::update_park_windows(*park, *front);
-                        apply_requests(rct3::scene::take_park_window_requests(*park, *front));
+                        rct3::scene::update_park_windows(*device, *park, *front);
+                        auto park_requests = rct3::scene::take_park_window_requests(*park, *front);
+                        apply_requests(park_requests);
                         if (const auto copied = park->desktop->take_clipboard())
                             window->set_clipboard(*copied);
                         auto sounds = park->desktop->take_sounds();
@@ -646,12 +650,14 @@ int main(int argc, char** argv)
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true); });
-                        if (rct3::scene::take_park_leave(*park))
+                        // Leaving, or loading another park in its place: its loading screen shows next.
+                        if (rct3::scene::take_park_leave(*park) || park_requests.park)
                         {
                             const prof::Scope zone("LeavePark");
-                            rct3::scene::close_park_windows(*park, *front);
+                            rct3::scene::close_park_windows(*device, *park, *front);
                             rct3::scene::destroy_park_scene(*device, *park);
                             park.reset();
+                            park_to_load = std::move(park_requests.park);
                         }
                     }
                     else if (phase == Phase::Running && (widgets || front))
@@ -759,7 +765,7 @@ int main(int argc, char** argv)
     if (park)
     {
         if (front)
-            rct3::scene::close_park_windows(*park, *front);
+            rct3::scene::close_park_windows(*device, *park, *front);
         rct3::scene::destroy_park_scene(*device, *park);
     }
     if (front)

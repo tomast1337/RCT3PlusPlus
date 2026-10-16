@@ -218,3 +218,46 @@ TEST_CASE("file names show without their extension, and get it when saved")
     CHECK(with_save_extension(u"Park") == u"Park.dat");
     CHECK(with_save_extension(u"Park.DAT") == u"Park.DAT");
 }
+
+TEST_CASE("kept files open but are not deleted, renamed or saved over")
+{
+    Fixture f(FileDialogMode::Save);
+    f.dialog->set_files({ u"Mine.dat", u"Theirs.dat" }, { false, true });
+    CHECK_FALSE(f.dialog->kept(0));
+    CHECK(f.dialog->kept(1));
+    CHECK(f.dialog->row_name_box(0).enabled);
+    CHECK_FALSE(f.dialog->row_name_box(1).enabled);
+
+    f.dialog->select(1);
+    f.tick();
+    CHECK_FALSE(f.dialog->delete_button().enabled);
+    f.dialog->delete_button().click();
+    f.tick();
+    CHECK(f.dialog->question() == nullptr);
+    CHECK_FALSE(f.dialog->take_delete());
+
+    // A save of the same name goes beside the kept file, so nothing asks to replace it.
+    f.dialog->open_button().click();
+    f.tick();
+    CHECK(f.dialog->question() == nullptr);
+    CHECK(f.dialog->take_open() == u"Theirs.dat");
+}
+
+TEST_CASE("with saving switched off the save button is greyed and nothing is saved")
+{
+    Fixture f(FileDialogMode::Save);
+    f.dialog->set_files({ });
+    f.dialog->set_file_name(u"Hilltop.dat");
+    CHECK(f.dialog->name_box()->text == u"Hilltop");
+    f.dialog->set_can_save(false);
+    CHECK_FALSE(f.dialog->can_save());
+    CHECK_FALSE(f.dialog->open_button().enabled);
+    f.dialog->open_button().click();
+    f.tick();
+    CHECK(f.dialog->question() == nullptr);
+    CHECK_FALSE(f.dialog->take_open());
+
+    Fixture load;
+    load.dialog->set_can_save(false); // Loading is not saving
+    CHECK(load.dialog->open_button().enabled);
+}

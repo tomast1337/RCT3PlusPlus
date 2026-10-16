@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/save_browser.hpp"
 
+#include "config/game_saves.hpp"
 #include "logging/log.hpp"
 #include "save/summary.hpp"
 #include "strings/unicode.hpp"
@@ -39,23 +40,59 @@ namespace rct3::scene
             browser.pictures.clear();
         }
 
-        /// Lists the folder again and hands the names to the window, which starts reading again.
-        void list(render::Device& device, SaveBrowser& browser, ui::FileDialog& dialog)
+        /// The saves in `folder`, by name.
+        std::vector<fs::path> saves_in(const fs::path& folder)
         {
-            free_pictures(device, browser);
-            browser.files.clear();
-            browser.next = 0;
+            std::vector<fs::path> files;
+            if (folder.empty())
+                return files;
             std::error_code error;
-            for (const auto& entry : fs::directory_iterator(browser.folder, error))
+            for (const auto& entry : fs::directory_iterator(folder, error))
             {
                 if (is_save(entry))
-                    browser.files.push_back(entry.path());
+                    files.push_back(entry.path());
             }
-            std::ranges::sort(browser.files, [](const fs::path& a, const fs::path& b) { return a.filename().u16string() < b.filename().u16string(); });
+            std::ranges::sort(files, [](const fs::path& a, const fs::path& b) { return a.filename().u16string() < b.filename().u16string(); });
+            return files;
+        }
+
+        /// Lists the folders again, ours and then the game's, and hands the names to the window, which starts
+        /// reading again.
+        void list(render::Device& device, SaveBrowser& browser, ui::FileDialog& dialog, const fs::path& game_folder)
+        {
+            free_pictures(device, browser);
+            browser.next = 0;
+            browser.files = saves_in(browser.folder);
+            browser.kept.assign(browser.files.size(), false);
+            for (auto& file : saves_in(game_folder))
+            {
+                browser.files.push_back(std::move(file));
+                browser.kept.push_back(true);
+            }
             std::vector<std::u16string> names;
             for (const auto& file : browser.files)
                 names.push_back(file.filename().u16string());
-            dialog.set_files(std::move(names));
+            dialog.set_files(std::move(names), browser.kept);
+        }
+
+        /// The game's folder for ours, if there is one.
+        fs::path game_folder(const SaveBrowser& browser, config::UserFolder folder)
+        {
+            const auto name = config::game_saves_folder(folder);
+            if (!browser.game_saves || !name)
+                return { };
+            return *browser.game_saves / *name;
+        }
+
+        /// Our file of that name; never one of the game's.
+        std::optional<fs::path> ours(const SaveBrowser& browser, std::u16string_view name)
+        {
+            for (std::size_t i = 0; i < browser.files.size(); ++i)
+            {
+                if (!browser.kept[i] && browser.files[i].filename().u16string() == name)
+                    return browser.files[i];
+            }
+            return std::nullopt;
         }
 
         std::optional<std::vector<std::byte>> read_bytes(const fs::path& path)
@@ -99,71 +136,80 @@ namespace rct3::scene
             dialog.set_summary(index, summary, picture);
         }
 
-        void carry_out(render::Device& device, SaveBrowser& browser, ui::FileDialog& dialog)
+        void carry_out(render::Device& device, SaveBrowser& browser, ui::FileDialog& dialog, const fs::path& game_folder)
         {
             const auto log = logging::logger("ui");
             if (const auto file = dialog.take_delete())
             {
                 std::error_code error;
-                if (!fs::remove(browser.folder / *file, error))
-                    log.warning("saves: deleting {}: {}", strings::to_utf8(*file), error ? error.message() : "not there");
-                list(device, browser, dialog);
+                const auto path = ours(browser, *file);
+                if (!path || !fs::remove(*path, error))
+                    log.warning("saves: deleting {}: {}", strings::to_utf8(*file), error ? error.message() : "not one of ours");
+                list(device, browser, dialog, game_folder);
             }
             if (const auto rename = dialog.take_rename())
             {
-                const fs::path from = browser.folder / rename->first;
+                const auto from = ours(browser, rename->first);
                 const fs::path to = browser.folder / rename->second;
                 std::error_code error;
-                const bool taken = fs::exists(to, error) && !fs::equivalent(from, to, error);
+                const bool taken = !from || (fs::exists(to, error) && !fs::equivalent(*from, to, error));
                 if (!taken)
-                    fs::rename(from, to, error);
+                    fs::rename(*from, to, error);
                 if (taken || error)
                 {
-                    log.warning("saves: renaming {}: {}", from.filename().string(), taken ? "the name is taken" : error.message());
+                    log.warning("saves: renaming {}: {}", strings::to_utf8(rename->first), taken ? "the name is taken" : error.message());
                     dialog.rename_failed();
                 }
                 else
-                    list(device, browser, dialog);
+                    list(device, browser, dialog, game_folder);
             }
         }
 
     } // namespace
 
-    void update_save_browser(render::Device& device, SaveBrowser& browser, ui::FrontEnd& front)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder)
     {
-        ui::FileDialog* dialog = front.file_dialog();
         if (dialog == nullptr)
         {
             free_pictures(device, browser);
             browser.files.clear();
-            return;
+            browser.kept.clear();
+            return std::nullopt;
         }
-        if (browser.opened != front.file_dialogs_opened())
+        const fs::path game = game_folder(browser, folder);
+        if (browser.opened != opened)
         {
-            browser.opened = front.file_dialogs_opened();
+            browser.opened = opened;
             browser.folder.clear();
             if (browser.data)
             {
-                if (auto made = browser.data->make_folder(front.file_folder()))
+                if (auto made = browser.data->make_folder(folder))
                     browser.folder = std::move(*made);
                 else
                     logging::logger("ui").warning("saves: {}", made.error());
             }
-            list(device, browser, *dialog);
+            // Nothing writes a save yet; the window must not offer to.
+            dialog->set_can_save(false);
+            list(device, browser, *dialog, game);
         }
-        if (const auto file = dialog->take_open())
+        if (dialog->take_open())
         {
-            logging::logger("ui").info("saves: loading {} does nothing yet", strings::to_utf8(*file));
-            return;
+            const auto picked = dialog->selected();
+            if (dialog->mode() == ui::FileDialogMode::Load && picked && *picked < browser.files.size())
+                return browser.files[*picked];
+            return std::nullopt;
         }
-        carry_out(device, browser, *dialog);
+        carry_out(device, browser, *dialog, game);
         read_next(device, browser, *dialog);
+        return std::nullopt;
     }
 
     void destroy_save_browser(render::Device& device, SaveBrowser& browser)
     {
         free_pictures(device, browser);
-        browser = { };
+        browser.files.clear();
+        browser.kept.clear();
+        browser.next = 0;
     }
 
 } // namespace rct3::scene

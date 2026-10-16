@@ -621,6 +621,7 @@ namespace rct3::scene
         ParkScene scene;
         scene.grid = std::move(world->terrain);
         scene.seed = seed;
+        scene.file = path;
         scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
@@ -817,7 +818,7 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About);
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load);
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -1489,7 +1490,7 @@ namespace rct3::scene
                     scene.show_people = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Scenery)
                     scene.show_scenery = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About)
+                else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
             }
         }
@@ -1676,6 +1677,7 @@ namespace rct3::scene
     {
         finish_builds(scene);
         destroy_park_water(device, scene.water);
+        destroy_save_browser(device, scene.saves);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.object_vertices, scene.object_indices })
         {
             if (b)

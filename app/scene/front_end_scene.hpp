@@ -33,6 +33,7 @@ namespace rct3::scene
         std::filesystem::path fallback_font;
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::optional<config::UserData> data;              ///< Where the saves and careers are; without it there are none
+        std::optional<std::filesystem::path> game_saves;   ///< The original game's folder of the player's games, if found
         std::vector<ui::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
         ui::KeyMap keys;                                    ///< In use, for the options window to change
@@ -61,10 +62,10 @@ namespace rct3::scene
         std::unique_ptr<Live> live = std::make_unique<Live>();
         const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::DrawList list;
-        std::optional<float> scale;                    ///< Chosen interface scale; nothing picks one from the window height
-        bool fullscreen = false;                       ///< As last applied
-        std::size_t tutorials_seen = 0;                ///< The front end's count of tutorial menus when last checked
-        std::optional<std::filesystem::path> tutorial; ///< The tutorial park to start, until taken
+        std::optional<float> scale;                        ///< Chosen interface scale; nothing picks one from the window height
+        bool fullscreen = false;                           ///< As last applied
+        std::size_t tutorials_seen = 0;                    ///< The front end's count of tutorial menus when last checked
+        std::optional<std::filesystem::path> park_to_play; ///< A tutorial's park or a save picked to load, until taken
     };
 
     /// Things the scene wants done to the window or the program.
@@ -75,7 +76,7 @@ namespace rct3::scene
         std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
         std::optional<ui::KeyMap> keys;
-        std::optional<std::filesystem::path> tutorial; ///< A tutorial park to play
+        std::optional<std::filesystem::path> park; ///< A park to play: a tutorial's, or a save the user loaded
     };
 
     [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);

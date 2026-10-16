@@ -90,12 +90,43 @@ namespace rct3::render::null
             return std::unexpected("pixel data does not match the texture size");
         const std::uint32_t id = next_id_++;
         textures_.emplace(id, Extent { desc.width, desc.height });
+        if (desc.target && desc.readable_depth)
+        {
+            const std::uint32_t depth = next_id_++;
+            textures_.emplace(depth, Extent { desc.width, desc.height });
+            depths_.emplace(id, depth);
+        }
         return TextureHandle { id };
     }
 
     void NullDevice::destroy_texture(TextureHandle texture)
     {
         textures_.erase(texture.id);
+        if (const auto depth = depths_.find(texture.id); depth != depths_.end())
+        {
+            textures_.erase(depth->second);
+            depths_.erase(depth);
+        }
+    }
+
+    void NullDevice::update_texture([[maybe_unused]] TextureHandle texture, std::span<const std::byte>)
+    {
+        assert(state_ == State::InFrame);
+        assert(textures_.contains(texture.id) && "update of an unknown texture");
+    }
+
+    TextureHandle NullDevice::depth_texture(TextureHandle target) const
+    {
+        const auto depth = depths_.find(target.id);
+        return depth != depths_.end() ? TextureHandle { depth->second } : TextureHandle { };
+    }
+
+    bool NullDevice::copy_screen(TextureHandle target)
+    {
+        assert(state_ == State::InFrame);
+        const auto found = textures_.find(target.id);
+        const Extent screen = extent();
+        return found != textures_.end() && depths_.contains(target.id) && found->second.width == screen.width && found->second.height == screen.height;
     }
 
     std::expected<BufferSlice, std::string> NullDevice::allocate_transient(std::span<const std::byte> data)

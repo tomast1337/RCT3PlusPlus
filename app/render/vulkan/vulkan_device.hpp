@@ -10,6 +10,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -41,6 +42,8 @@ namespace rct3::render::vulkan
         void destroy_buffer(BufferHandle buffer) override;
         [[nodiscard]] std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) override;
         void destroy_texture(TextureHandle texture) override;
+        void update_texture(TextureHandle texture, std::span<const std::byte> pixels) override;
+        [[nodiscard]] TextureHandle depth_texture(TextureHandle target) const override;
         [[nodiscard]] std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) override;
         void destroy_pipeline(PipelineHandle pipeline) override;
         [[nodiscard]] std::expected<BufferSlice, std::string> allocate_transient(std::span<const std::byte> data) override;
@@ -49,6 +52,7 @@ namespace rct3::render::vulkan
         void begin_pass(const PassDesc& pass) override;
         void draw(const DrawCommand& command) override;
         void end_pass() override;
+        bool copy_screen(TextureHandle target) override;
         void end_frame() override;
         [[nodiscard]] FrameStats stats() const override
         {
@@ -73,11 +77,16 @@ namespace rct3::render::vulkan
             VkDeviceMemory memory = VK_NULL_HANDLE;
             VkImageView view = VK_NULL_HANDLE;
             VkDescriptorSet set = VK_NULL_HANDLE;
-            // Targets only: their size and their own depth buffer.
             VkExtent2D extent { };
+            TextureFormat format = TextureFormat::Rgba8;
+            bool target = false;
+            // Targets only: their own depth buffer.
             VkImage depth_image = VK_NULL_HANDLE;
             VkDeviceMemory depth_memory = VK_NULL_HANDLE;
             VkImageView depth_view = VK_NULL_HANDLE;
+            // Readable depth only: the id under which the depth is drawn with, an entry that owns nothing but
+            // its own view and set.
+            std::uint32_t depth_id = 0;
         };
 
         // One block of per-frame memory, mapped for its whole life and registered in buffers_ so draws find it.
@@ -92,6 +101,7 @@ namespace rct3::render::vulkan
         {
             VkPipeline pipeline = VK_NULL_HANDLE;
             Topology topology = Topology::Triangles;
+            Shader shader = Shader::VertexColor;
         };
 
         // Objects released once the frame slot that last used them has finished on the GPU.
@@ -146,7 +156,9 @@ namespace rct3::render::vulkan
         void destroy(const Buffer& buffer);
         void destroy(const Texture& texture);
         [[nodiscard]] TransientBlock make_transient_block(VkDeviceSize size);
+        void submit_once(const std::function<void(VkCommandBuffer)>& record);
         void upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height);
+        void make_depth_readable(Texture& texture, std::uint32_t id);
 
         DeviceConfig config_;
         State state_ = State::Off;
@@ -173,7 +185,10 @@ namespace rct3::render::vulkan
         VkDeviceMemory depth_memory_ = VK_NULL_HANDLE;
         VkImageView depth_view_ = VK_NULL_HANDLE;
 
-        // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag).
+        // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag), sets 2 on the extra textures
+        // when the device can bind that many sets.
+        static constexpr std::uint32_t kSetCount = 2 + kExtraTextures;
+        std::uint32_t set_count_ = 2;
         VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
         VkDescriptorSetLayout sampler_set_layout_ = VK_NULL_HANDLE;
         VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;

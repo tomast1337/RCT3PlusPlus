@@ -33,6 +33,8 @@ namespace rct3::render::null
         void destroy_buffer(BufferHandle buffer) override;
         [[nodiscard]] std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) override;
         void destroy_texture(TextureHandle texture) override;
+        void update_texture(TextureHandle texture, std::span<const std::byte> pixels) override;
+        [[nodiscard]] TextureHandle depth_texture(TextureHandle target) const override;
         [[nodiscard]] std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) override;
         void destroy_pipeline(PipelineHandle pipeline) override;
         [[nodiscard]] std::expected<BufferSlice, std::string> allocate_transient(std::span<const std::byte> data) override;
@@ -41,6 +43,7 @@ namespace rct3::render::null
         void begin_pass(const PassDesc& pass) override;
         void draw(const DrawCommand& command) override;
         void end_pass() override;
+        bool copy_screen(TextureHandle target) override;
         void end_frame() override;
         [[nodiscard]] FrameStats stats() const override
         {
@@ -72,6 +75,7 @@ namespace rct3::render::null
         std::unordered_map<std::uint32_t, Buffer> buffers_;
         std::unordered_map<std::uint32_t, Topology> pipelines_;
         std::unordered_map<std::uint32_t, Extent> textures_;
+        std::unordered_map<std::uint32_t, std::uint32_t> depths_; ///< Target id to the id of its readable depth
         // One id stands for all transient memory; its size is the high-water mark of offsets handed out.
         std::uint32_t transient_id_ = 0;
         std::uint64_t transient_used_ = 0;

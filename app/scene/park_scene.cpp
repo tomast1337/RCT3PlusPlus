@@ -643,29 +643,13 @@ namespace rct3::scene
         if (!indices)
             return fail(indices.error());
         scene.ground_indices = *indices;
-        if (!mesh.water.empty())
-        {
-            // Drawn lit, without a normal so it is lit as facing up, with the blank picture.
-            std::vector<park::GroundVertex> surface;
-            surface.reserve(mesh.water.size());
-            for (const park::WaterVertex& v : mesh.water)
-                surface.push_back({ v.position, v.colour });
-            auto water = upload(device, render::BufferUsage::Vertex, surface, "water");
-            if (!water)
-                return fail(water.error());
-            scene.water = *water;
-            scene.water_count = static_cast<std::uint32_t>(mesh.water.size());
-        }
-
         const render::VertexLayout ground_layout { sizeof(park::GroundVertex), kGroundAttributes };
+        if (auto water = create_park_water(device, scene.water, mesh.water, ground_layout); !water)
+            return fail(water.error());
         auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
         if (!ground)
             return fail(ground.error());
         scene.ground_pipeline = *ground;
-        auto water = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water" });
-        if (!water)
-            return fail(water.error());
-        scene.water_pipeline = *water;
 
         park::GroundImages images;
         for (const std::string_view name : kGroundFiles)
@@ -1281,6 +1265,14 @@ namespace rct3::scene
 
     } // namespace
 
+    bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        if (size.x <= 0 || size.y <= 0)
+            return false;
+        const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
+        return ripple_park_water(scene.water, park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
+    }
+
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
         const float scale = scale_for(device, scene);
@@ -1345,6 +1337,8 @@ namespace rct3::scene
                         open_info(scene, *info, *picked.attraction, assets, options);
                     else if (picked.prop)
                         open_prop(scene, *info, *picked.prop, assets, options);
+                    else
+                        ripple_at(scene, pointer.position, { screen.width(), screen.height() });
                 }
             }
             if (input.right || input.middle)
@@ -1440,6 +1434,8 @@ namespace rct3::scene
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
+        scene.water.look = water_look(options);
+        advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
         if (bar != nullptr)
@@ -1516,17 +1512,30 @@ namespace rct3::scene
 
     namespace
     {
-        /// The park's ground, objects, water, sky and mountains as `transform` sees them, lit by `light`.
-        void draw_world(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+        /// Which parts of the world a draw shows: a reflection leaves some out, as the options ask.
+        struct WorldParts
         {
-            if (scene.sky_pipeline)
+            bool background = true; ///< Sky and mountains
+            bool terrain = true;
+            bool scenery = true;
+            bool people = true;
+            bool water = true;
+            bool shaded_water = false; ///< With the water shader, seen from `eye`
+            glm::vec3 eye { 0.0f };
+        };
+
+        /// The park's ground, objects, water, sky and mountains as `transform` sees them, lit by `light`.
+        void draw_world(render::Device& device, ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light, const WorldParts& parts = { })
+        {
+            if (scene.sky_pipeline && parts.background)
             {
                 const profiling::Scope zone("Sky");
                 // The dome reads one column of its picture, so it must not wrap into the next.
                 draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
             }
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
-            profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+            if (parts.background)
+                profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             const auto draw_objects = [&](bool see_through) {
                 for (const park::ObjectBatch& batch : scene.object_batches)
                 {
@@ -1548,48 +1557,39 @@ namespace rct3::scene
                     device.draw(draw);
                 }
             };
-            profiling::section("Ground", [&] {
-                for (const park::GroundBatch& batch : scene.batches)
-                {
-                    const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-                    render::DrawCommand draw;
-                    draw.pipeline = scene.ground_pipeline;
-                    draw.vertices = { scene.ground_vertices };
-                    draw.indices = { scene.ground_indices };
-                    draw.index_type = render::IndexType::U32;
-                    draw.first = batch.first;
-                    draw.count = batch.count;
-                    draw.transform = transform;
-                    draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-                    draw.filter = render::Filter::Linear;
-                    draw.address = render::AddressMode::Repeat;
-                    draw.light = light;
-                    device.draw(draw);
-                }
-            });
-            if (scene.object_indices && scene.show_scenery)
+            if (parts.terrain)
+                profiling::section("Ground", [&] {
+                    for (const park::GroundBatch& batch : scene.batches)
+                    {
+                        const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                        render::DrawCommand draw;
+                        draw.pipeline = scene.ground_pipeline;
+                        draw.vertices = { scene.ground_vertices };
+                        draw.indices = { scene.ground_indices };
+                        draw.index_type = render::IndexType::U32;
+                        draw.first = batch.first;
+                        draw.count = batch.count;
+                        draw.transform = transform;
+                        draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                        draw.filter = render::Filter::Linear;
+                        draw.address = render::AddressMode::Repeat;
+                        draw.light = light;
+                        device.draw(draw);
+                    }
+                });
+            if (scene.object_indices && scene.show_scenery && parts.scenery)
                 profiling::section("Objects", [&] { draw_objects(false); });
-            if (scene.show_scenery)
+            if (scene.show_scenery && parts.scenery)
                 profiling::section("Billboards", [&] { draw_transient(device, scene, scene.billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            if (scene.show_people)
+            if (scene.show_people && parts.people)
                 profiling::section("People", [&] {
                     draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                     for (const park::ObjectMesh& people : scene.moving_people)
                         draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
-            if (scene.water_count > 0)
-            {
-                const profiling::Scope zone("Water");
-                render::DrawCommand draw;
-                draw.pipeline = scene.water_pipeline;
-                draw.vertices = { scene.water };
-                draw.count = scene.water_count;
-                draw.transform = transform;
-                draw.texture = scene.blank;
-                draw.light = light;
-                device.draw(draw);
-            }
-            if (scene.object_indices && scene.show_scenery)
+            if (parts.water)
+                profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
+            if (scene.object_indices && scene.show_scenery && parts.scenery)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 
@@ -1647,7 +1647,14 @@ namespace rct3::scene
     {
         if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
-        profiling::section("World", [&] { draw_world(device, scene, park::view_projection(scene.camera, aspect(device)), scene.light); });
+        const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));
+        const glm::vec3 eye = park::eye(scene.camera);
+        profiling::section("Reflections", [&] {
+            const WaterLook& look = scene.water.look;
+            const WorldParts mirrored { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false };
+            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform) { draw_world(device, scene, transform, scene.light, mirrored); });
+        });
+        profiling::section("World", [&] { draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye }); });
 
         const profiling::Scope zone("Interface");
         scene.list.clear();
@@ -1661,12 +1668,13 @@ namespace rct3::scene
     void destroy_park_scene(render::Device& device, ParkScene& scene)
     {
         finish_builds(scene);
-        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.water, scene.object_vertices, scene.object_indices })
+        destroy_park_water(device, scene.water);
+        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.object_vertices, scene.object_indices })
         {
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.water_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

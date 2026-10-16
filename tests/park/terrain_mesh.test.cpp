@@ -100,7 +100,10 @@ TEST_CASE("water covers the triangles of its bodies at their level")
     const TerrainMesh m = terrain_mesh(g, water);
     REQUIRE(m.water.size() == 6); // The tile off the map is left out
     for (const WaterVertex& v : m.water)
+    {
         CHECK(v.position.y == doctest::Approx(0.5f));
+        CHECK(v.depth == doctest::Approx(1.5f)); // Over ground at -1
+    }
     CHECK(m.water[0].position.x == doctest::Approx(-4));
 }
 

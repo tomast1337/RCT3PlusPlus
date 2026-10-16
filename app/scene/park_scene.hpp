@@ -10,7 +10,7 @@
 // both) turns and tilts, the wheel zooms, and the arrow keys and Page Up and Page Down do the same from the
 // keyboard. With the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
-// round panel that tells about it.
+// round panel that tells about it; a click on open water starts a ripple there.
 //
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
@@ -26,6 +26,7 @@
 #include "render/device.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "scene/park_water.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
@@ -115,10 +116,8 @@ namespace rct3::scene
         std::vector<park::GroundBatch> batches;
         render::BufferHandle ground_vertices;
         render::BufferHandle ground_indices;
-        render::BufferHandle water;
-        std::uint32_t water_count = 0;
         render::PipelineHandle ground_pipeline;
-        render::PipelineHandle water_pipeline;
+        ParkWater water;
         ui::UiTextures ground_textures;
         render::TextureHandle blank; ///< For ground without a picture
         std::vector<save::PlacedObject> objects;
@@ -227,6 +226,10 @@ namespace rct3::scene
 
     /// The pointer's look over the park this frame (ui/park_cursor.hpp).
     [[nodiscard]] ui::CursorKind park_scene_cursor(const ParkScene& scene);
+
+    /// Starts a ripple on the water under `at`, in interface units on a screen of `size`, if water is there. True
+    /// if it did.
+    bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);

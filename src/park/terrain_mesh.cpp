@@ -200,8 +200,9 @@ namespace rct3::park
                 for (const int c : corners)
                 {
                     glm::vec3 p = corner(grid, t.col, t.row, c);
+                    const float depth = std::max(body.level - p.y, 0.0f);
                     p.y = body.level;
-                    mesh.water.push_back({ p, kWaterColour });
+                    mesh.water.push_back({ p, kWaterColour, depth });
                 }
                 high = std::max(high, body.level);
             }

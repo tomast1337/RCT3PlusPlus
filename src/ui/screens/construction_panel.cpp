@@ -137,9 +137,15 @@ namespace rct3::ui
     void ConstructionPanel::restyle()
     {
         for (std::size_t i = 0; i < cp::kCurves; ++i)
+        {
             curves_.at(i)->icon = icon_skin(style_.curves.at(i), view_.curves.at(i));
+            curves_.at(i)->inert = view_.curves.at(i) == IconState::Dis;
+        }
         for (std::size_t i = 0; i < cp::kSlopes; ++i)
+        {
             slopes_.at(i)->icon = icon_skin(style_.slopes.at(i), view_.slopes.at(i));
+            slopes_.at(i)->inert = view_.slopes.at(i) == IconState::Dis;
+        }
         for (std::size_t i = 0; i < cp::kBanks; ++i)
         {
             // The bank pictures have no greyed state: a bank not offered is left out.
@@ -147,7 +153,10 @@ namespace rct3::ui
             banks_.at(i)->visible = view_.banks.at(i) != IconState::Dis;
         }
         if (view_.chain)
+        {
             chain_->icon = icon_skin(style_.chain, *view_.chain);
+            chain_->inert = *view_.chain == IconState::Dis;
+        }
         demolish_->enabled = view_.can_demolish;
         piece_->text = view_.piece;
         cost_->text = view_.cost;

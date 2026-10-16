@@ -34,6 +34,8 @@ namespace rct3::ui
         Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow
         bool toggle = false;
         bool on = false;         ///< Toggles only
+        /// Clicking does nothing now, though the face, whose picture shows it, stays as it is: the pointer says so.
+        bool inert = false;
         float swell = 0;         ///< Units the face grows by on each side while the pointer is over it
         float swell_time = 0.1f; ///< Seconds to grow or shrink fully
 
@@ -55,6 +57,10 @@ namespace rct3::ui
         [[nodiscard]] bool clicks() const override
         {
             return true;
+        }
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return inert ? CursorKind::NotAllowed : CursorKind::Hand;
         }
         [[nodiscard]] bool takes_focus() const override
         {

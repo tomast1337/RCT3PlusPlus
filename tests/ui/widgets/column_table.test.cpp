@@ -121,3 +121,11 @@ TEST_CASE("pressing a row selects it and pressing it again activates it")
     CHECK(f.table.take_activate());
     CHECK(f.table.row_at({ 20, 10 }) == std::nullopt); // The headings are not a row
 }
+
+TEST_CASE("the pointer is a hand over rows and the headings that sort")
+{
+    Fixture f;
+    CHECK(f.table.cursor({ 20, 45 }) == CursorKind::Hand);
+    CHECK(f.table.cursor({ 60, 5 }) == CursorKind::Hand);
+    CHECK(f.table.cursor({ 90, 5 }) == CursorKind::Arrow); // Cannot sort
+}

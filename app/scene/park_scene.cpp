@@ -1722,6 +1722,9 @@ namespace rct3::scene
         pointer.panning = scene.dragging;
         pointer.zooming = scene.zooming;
         pointer.over_pickable = scene.hover_pickable;
+        // While the path panel shows its controls, a click on the ground starts a path there.
+        if (const auto* paths = static_cast<const ui::FootpathPanel*>(scene.desktop->root().find(kFootpathPanelName)); paths != nullptr && paths->showing() && paths->page() == ui::FootpathPage::Controls)
+            pointer.tool = ui::PointerTool::Path;
         return ui::park_cursor(pointer);
     }
 

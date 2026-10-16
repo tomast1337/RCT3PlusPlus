@@ -98,6 +98,7 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] CursorKind cursor(Point p) const override;
         void on_press(Point p) override;
         bool on_wheel(Point notches) override;
         void update(const UpdateContext& context) override;

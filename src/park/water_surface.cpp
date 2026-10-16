@@ -56,6 +56,26 @@ namespace rct3::park
             const glm::vec2 v = p[2] - p[0];
             return std::abs(u.x * v.y - u.y * v.x) / 8; // The view is 2 by 2, and a triangle half the parallelogram
         }
+
+        /// The first vertex of the triangle of `batch` that `at` (x, z) lies in, if any.
+        std::optional<std::uint32_t> triangle_at(const WaterSurface& surface, const WaterBatch& batch, glm::vec2 at)
+        {
+            if (at.x < batch.low.x || at.x > batch.high.x || at.y < batch.low.z || at.y > batch.high.z)
+                return std::nullopt;
+            const auto side = [](glm::vec2 from, glm::vec2 to, glm::vec2 q) { return (to.x - from.x) * (q.y - from.y) - (to.y - from.y) * (q.x - from.x); };
+            for (std::uint32_t i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
+            {
+                const glm::vec2 a { surface.vertices[i].position.x, surface.vertices[i].position.z };
+                const glm::vec2 b { surface.vertices[i + 1].position.x, surface.vertices[i + 1].position.z };
+                const glm::vec2 c { surface.vertices[i + 2].position.x, surface.vertices[i + 2].position.z };
+                const float s0 = side(a, b, at);
+                const float s1 = side(b, c, at);
+                const float s2 = side(c, a, at);
+                if ((s0 >= 0 && s1 >= 0 && s2 >= 0) || (s0 <= 0 && s1 <= 0 && s2 <= 0))
+                    return i;
+            }
+            return std::nullopt;
+        }
     } // namespace
 
     std::vector<float> reflection_levels(const WaterSurface& surface, const glm::mat4& view_projection, glm::vec3 eye, std::size_t count)
@@ -142,26 +162,23 @@ namespace rct3::park
             if (t < 0 || (nearest && t >= *nearest))
                 continue;
             const glm::vec3 at = ray.origin + ray.direction * t;
-            if (at.x < batch.low.x || at.x > batch.high.x || at.z < batch.low.z || at.z > batch.high.z)
-                continue;
-            for (std::uint32_t i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
-            {
-                const glm::vec2 a { surface.vertices[i].position.x, surface.vertices[i].position.z };
-                const glm::vec2 b { surface.vertices[i + 1].position.x, surface.vertices[i + 1].position.z };
-                const glm::vec2 c { surface.vertices[i + 2].position.x, surface.vertices[i + 2].position.z };
-                const glm::vec2 p { at.x, at.z };
-                const auto side = [](glm::vec2 from, glm::vec2 to, glm::vec2 q) { return (to.x - from.x) * (q.y - from.y) - (to.y - from.y) * (q.x - from.x); };
-                const float s0 = side(a, b, p);
-                const float s1 = side(b, c, p);
-                const float s2 = side(c, a, p);
-                if ((s0 >= 0 && s1 >= 0 && s2 >= 0) || (s0 <= 0 && s1 <= 0 && s2 <= 0))
-                {
-                    nearest = t;
-                    break;
-                }
-            }
+            if (triangle_at(surface, batch, { at.x, at.z }))
+                nearest = t;
         }
         return nearest;
+    }
+
+    std::optional<WaterAbove> water_above(const WaterSurface& surface, glm::vec3 point)
+    {
+        // Batches are lowest first, so the first one over the point is the water it is in.
+        for (const WaterBatch& batch : surface.batches)
+        {
+            if (batch.level <= point.y)
+                continue;
+            if (const auto i = triangle_at(surface, batch, { point.x, point.z }))
+                return WaterAbove { batch.level, surface.vertices[*i].colour };
+        }
+        return std::nullopt;
     }
 
 } // namespace rct3::park

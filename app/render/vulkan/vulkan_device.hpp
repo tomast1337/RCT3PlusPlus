@@ -53,6 +53,10 @@ namespace rct3::render::vulkan
         void draw(const DrawCommand& command) override;
         void end_pass() override;
         bool copy_screen(TextureHandle target) override;
+        void set_wireframe(bool on) override
+        {
+            wireframe_ = on;
+        }
         void end_frame() override;
         [[nodiscard]] FrameStats stats() const override
         {
@@ -100,6 +104,7 @@ namespace rct3::render::vulkan
         struct Pipeline
         {
             VkPipeline pipeline = VK_NULL_HANDLE;
+            VkPipeline wire = VK_NULL_HANDLE; ///< The same, outlining triangles; none without line fill
             Topology topology = Topology::Triangles;
             Shader shader = Shader::VertexColor;
         };
@@ -202,6 +207,8 @@ namespace rct3::render::vulkan
         std::uint32_t frame_index_ = 0;
         std::uint32_t image_index_ = 0;
         bool ui_ready_ = false;
+        bool line_fill_ = false; ///< The GPU can outline triangles
+        bool wireframe_ = false;
 
         std::uint32_t next_id_ = 1;
         std::unordered_map<std::uint32_t, Buffer> buffers_;

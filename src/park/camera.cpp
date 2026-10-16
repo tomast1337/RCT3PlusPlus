@@ -90,16 +90,16 @@ namespace rct3::park
         return { push(at.x, size.x - 1 - at.x), push(size.y - 1 - at.y, at.y) };
     }
 
-    ParkCamera turned(ParkCamera camera, float yaw, float pitch)
+    ParkCamera turned(ParkCamera camera, float yaw, float pitch, bool free)
     {
         camera.yaw += yaw;
-        camera.pitch = std::clamp(camera.pitch + pitch, kMinPitch, kMaxPitch);
+        camera.pitch = free ? std::clamp(camera.pitch + pitch, -kMaxPitch, kMaxPitch) : std::clamp(camera.pitch + pitch, kMinPitch, kMaxPitch);
         return camera;
     }
 
-    ParkCamera zoomed(ParkCamera camera, float factor)
+    ParkCamera zoomed(ParkCamera camera, float factor, bool free)
     {
-        camera.distance = std::clamp(camera.distance * factor, kMinDistance, kMaxDistance);
+        camera.distance = free ? std::clamp(camera.distance * factor, kNear, kFar / 2) : std::clamp(camera.distance * factor, kMinDistance, kMaxDistance);
         return camera;
     }
 

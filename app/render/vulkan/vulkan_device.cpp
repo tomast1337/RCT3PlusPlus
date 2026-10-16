@@ -148,7 +148,10 @@ namespace rct3::render::vulkan
             for (auto& [id, t] : textures_)
                 destroy(t);
             for (auto& [id, p] : pipelines_)
+            {
                 vkDestroyPipeline(device_, p.pipeline, nullptr);
+                vkDestroyPipeline(device_, p.wire, nullptr);
+            }
             for (VkSampler s : samplers_)
                 vkDestroySampler(device_, s, nullptr);
             vkDestroyDescriptorPool(device_, descriptor_pool_, nullptr); // Frees every set
@@ -297,6 +300,12 @@ namespace rct3::render::vulkan
         features13.dynamicRendering = VK_TRUE;
         features13.synchronization2 = VK_TRUE;
 
+        VkPhysicalDeviceFeatures supported { };
+        vkGetPhysicalDeviceFeatures(gpu_, &supported);
+        line_fill_ = supported.fillModeNonSolid == VK_TRUE;
+        VkPhysicalDeviceFeatures enabled { };
+        enabled.fillModeNonSolid = supported.fillModeNonSolid;
+
         // The ImGui backend asks for the dynamic rendering extension by name even on Vulkan 1.3.
         const char* extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
         VkDeviceCreateInfo info { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
@@ -305,6 +314,7 @@ namespace rct3::render::vulkan
         info.pQueueCreateInfos = &queue;
         info.enabledExtensionCount = 2;
         info.ppEnabledExtensionNames = extensions;
+        info.pEnabledFeatures = &enabled;
         check(vkCreateDevice(gpu_, &info, nullptr, &device_), "vkCreateDevice");
         vkGetDeviceQueue(device_, queue_family_, 0, &queue_);
     }
@@ -805,7 +815,7 @@ namespace rct3::render::vulkan
             return;
 
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->second.pipeline);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wireframe_ && pipeline->second.wire ? pipeline->second.wire : pipeline->second.pipeline);
         const PushBlock block = push_block(command, pipeline->second.shader);
         vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
         if (command.texture)

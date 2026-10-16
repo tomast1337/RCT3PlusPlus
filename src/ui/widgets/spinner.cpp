@@ -15,11 +15,33 @@ namespace rct3::ui
     {
 
         constexpr std::int64_t kPageSteps = 10;
-        constexpr std::size_t kMaxDigits = 11; ///< Enough for any int with its sign
+        constexpr std::size_t kMaxDigits = 12; ///< Enough for any int with its sign and a point
 
-        std::u16string format(int v)
+        std::u16string format(int v, int decimals)
         {
-            return strings::to_utf16(std::to_string(v));
+            std::string text = std::to_string(std::abs(static_cast<long long>(v)));
+            if (decimals > 0)
+            {
+                const auto places = static_cast<std::size_t>(decimals);
+                if (text.size() <= places)
+                    text.insert(0, places + 1 - text.size(), '0');
+                text.insert(text.size() - places, 1, '.');
+            }
+            return strings::to_utf16(v < 0 ? "-" + text : text);
+        }
+
+        /// `text` with its point taken out and `decimals` places after it, so it reads as a whole number;
+        /// unchanged when it has no point. Empty when it has more places than that.
+        std::string without_point(std::string text, int decimals)
+        {
+            const auto point = text.find('.');
+            if (point == std::string::npos)
+                return text + std::string(static_cast<std::size_t>(std::max(decimals, 0)), '0');
+            const std::size_t places = text.size() - point - 1;
+            if (decimals <= 0 || places > static_cast<std::size_t>(decimals))
+                return { };
+            text.erase(point, 1);
+            return text + std::string(static_cast<std::size_t>(decimals) - places, '0');
         }
 
     } // namespace
@@ -32,7 +54,7 @@ namespace rct3::ui
         field_->skin = style_.field;
         field_->focused_skin = style_.field_focused;
         field_->placement = { { 0, 0, 1, 1 }, { 0, 0, -style_.arrow_width, 0 } };
-        field_->allowed = u"-0123456789";
+        field_->allowed = u"-0123456789.";
         field_->max_length = kMaxDigits;
         show_value();
     }
@@ -46,7 +68,7 @@ namespace rct3::ui
 
     void Spinner::show_value()
     {
-        const std::u16string text = format(value_);
+        const std::u16string text = format(value_, decimals);
         if (field_->text != text)
         {
             field_->text = text;
@@ -77,7 +99,7 @@ namespace rct3::ui
         if (!typing_)
             return;
         typing_ = false;
-        const std::string digits = strings::to_utf8(field_->text);
+        const std::string digits = without_point(strings::to_utf8(field_->text), decimals);
         long long parsed = 0;
         const auto [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), parsed);
         // Anything that is not a whole number puts the old value back.

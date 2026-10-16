@@ -28,6 +28,7 @@ namespace rct3::platform
         int width = 1280;
         int height = 720;
         const char* title = "rct3++";
+        bool headless = false; ///< GLFW's null platform: no display needed, nothing shown
     };
 
     class Window

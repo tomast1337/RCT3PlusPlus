@@ -69,6 +69,7 @@ namespace rct3::platform
 
     std::expected<Window, std::string> Window::open(const WindowConfig& config, render::Backend backend)
     {
+        glfwInitHint(GLFW_PLATFORM, config.headless ? GLFW_PLATFORM_NULL : GLFW_ANY_PLATFORM);
         if (!glfwInit())
             return std::unexpected("cannot initialise GLFW");
         render::set_window_hints(backend);

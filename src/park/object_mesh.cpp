@@ -47,7 +47,7 @@ namespace rct3::park
                 return found->second;
             if (!model)
                 return object_transform(object, Positioning::Tile, grid);
-            return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares);
+            return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
         }
 
     } // namespace
@@ -116,6 +116,8 @@ namespace rct3::park
             const auto lean = leans.find(object.id);
             const glm::vec2 rise = lean != leans.end() ? lean->second : glm::vec2(0.0f);
             const glm::vec2 anchor { transform[3].x, transform[3].z };
+            // Plants, rocks and the like on the ground bend to it: each point keeps its height above the ground.
+            const bool fit = model->second.fits_ground && !stretched && on_ground(object);
             for (const ModelPart& part : shown.parts)
             {
                 Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours) }];
@@ -126,6 +128,11 @@ namespace rct3::park
                 {
                     glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
                     at.y += glm::dot(glm::vec2(at.x, at.z) - anchor, rise);
+                    if (fit)
+                    {
+                        if (const auto ground = grid.height_at(at.x, at.z))
+                            at.y += *ground - transform[3].y;
+                    }
                     run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, stretched ? glm::normalize(turn * v.normal) : turn * v.normal });
                 }
                 for (const std::uint32_t i : part.indices)

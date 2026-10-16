@@ -41,7 +41,12 @@ namespace rct3::park
         return true;
     }
 
-    glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares)
+    bool on_ground(const save::PlacedObject& object)
+    {
+        return !object.base_height || (object.height_offset == 0 && !object.force_absolute_height);
+    }
+
+    glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares, bool ground_height)
     {
         const glm::vec2 x = turned_x(object.rotation);
         const glm::vec2 z { -x.y, x.x }; // The model's +Z, a quarter turn on from its +X
@@ -69,8 +74,7 @@ namespace rct3::park
         }
 
         float y = static_cast<float>(object.base_height.value_or(0));
-        const bool on_ground = !object.base_height || (object.height_offset == 0 && !object.force_absolute_height);
-        if (on_ground)
+        if (!object.base_height || (ground_height && on_ground(object)))
         {
             if (const auto ground = grid.height_at(anchor.x, anchor.y))
                 y = *ground;

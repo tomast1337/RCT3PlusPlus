@@ -40,7 +40,7 @@ namespace rct3::render::vulkan
         {
             const SceneLight& l = command.light;
             if (shader != Shader::Water)
-                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
+                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, command.extra_textures[0] ? 1.0f : 0.0f), glm::vec4(l.ground, 0.0f) };
             const WaterView& w = command.water;
             const bool shadow = l.shadow_map && l.shadow_view;
             const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0));
@@ -816,10 +816,10 @@ namespace rct3::render::vulkan
             // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
             const Shader shader = pipeline->second.shader;
             const bool lit = shader == Shader::Lit || shader == Shader::LitCutout;
-            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 4 : 2;
+            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 5 : 2;
             std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
             if (lit)
-                extras = { command.light.shadow_map, command.light.shadow_view };
+                extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0] };
             else if (shader == Shader::Water)
             {
                 extras[4] = command.light.shadow_map;

@@ -7,6 +7,7 @@
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
+#include "park/ground_variation.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
@@ -664,6 +665,10 @@ namespace rct3::scene
         if (!ground)
             return fail(ground.error());
         scene.ground_pipeline = *ground;
+        const std::vector<std::byte> noise = park::variation_texels();
+        // Without it the ground is drawn plain.
+        if (auto variation = device.create_texture({ .width = park::kVariationSize, .height = park::kVariationSize, .pixels = noise, .label = "ground variation" }))
+            scene.variation = *variation;
 
         park::GroundImages images;
         for (const std::string_view name : kGroundFiles)
@@ -1667,6 +1672,7 @@ namespace rct3::scene
                         draw.filter = render::Filter::Linear;
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
+                        draw.extra_textures[0] = scene.variation;
                         device.draw(draw);
                     }
                     draw_footpath_ghost(device, scene, transform, light);
@@ -1845,8 +1851,11 @@ namespace rct3::scene
         ui::destroy_textures(device, scene.object_textures);
         ui::destroy_textures(device, scene.people_textures);
         ui::destroy_textures(device, scene.sky_textures);
-        if (scene.blank)
-            device.destroy_texture(scene.blank);
+        for (const render::TextureHandle t : { scene.blank, scene.variation })
+        {
+            if (t)
+                device.destroy_texture(t);
+        }
         if (scene.view_target)
             device.destroy_texture(scene.view_target);
         for (const render::TextureHandle t : { scene.shadow_target, scene.shadow_view })

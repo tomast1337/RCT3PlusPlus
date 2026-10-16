@@ -28,6 +28,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "scene/park_water.hpp"
+#include "scene/save_browser.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
@@ -204,8 +205,12 @@ namespace rct3::scene
         float since_hover_pick = 0;  ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
-        std::vector<ui::ToolItem> window_requests;   ///< Files menu items that open a window the owner opens (park_windows.hpp)
-        std::unique_ptr<ui::OptionsSession> options; ///< The options window over the park, once opened
+        std::vector<ui::ToolItem> window_requests;         ///< Files menu items that open a window the owner opens (park_windows.hpp)
+        std::unique_ptr<ui::OptionsSession> options;       ///< The options window over the park, once opened
+        std::filesystem::path file;                        ///< The park file loaded, whose name saving offers
+        SaveBrowser saves;                                 ///< Behind the save and load windows over the park
+        std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
+        std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
     };
 
     /// The stages of loading a park, in the order they run.

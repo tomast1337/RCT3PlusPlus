@@ -29,6 +29,7 @@ namespace rct3::config
         Validation,   ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
         FallbackFont, ///< RCT3PP_FALLBACK_FONT: TrueType font for characters the game fonts lack
         DataFolder,   ///< RCT3PP_DATA: the folder for the user's data, instead of the default one
+        GameSaves,    ///< RCT3PP_GAME_SAVES: the original game's own folder of the player's games
         DataHome,     ///< XDG_DATA_HOME: the user's data folder
         Home,         ///< HOME: the user's home folder
         AppData,      ///< APPDATA: the user's application data folder on Windows

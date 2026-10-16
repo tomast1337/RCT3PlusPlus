@@ -18,6 +18,7 @@
 #include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
 #include "park/sky_models.hpp"
+#include "park/sun_view.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
 #include "profiling/profiler.hpp"
@@ -1493,6 +1494,7 @@ namespace rct3::scene
         }
         scene.clock += elapsed;
         scene.water.look = water_look(options);
+        scene.shadows = options.choice(config::GameOption::Shadows) > 0;
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
@@ -1675,6 +1677,54 @@ namespace rct3::scene
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 
+        constexpr std::uint32_t kShadowTexels = 2048;
+
+        /// Draws the park round the camera from the sun into the shadow map, and gives `scene.light` the map;
+        /// without shadows, or with the sun down, takes it away. Cut-out pictures leave their clear pixels out of
+        /// the map, so leaves and bushes cast their own shapes.
+        void draw_shadow_map(render::Device& device, ParkScene& scene)
+        {
+            scene.light.shadow_map = { };
+            scene.light.shadow_view = { };
+            if (!scene.shadows || scene.light.sun_direction.y <= 0.02f)
+                return;
+            if (!scene.shadow_target)
+            {
+                render::TextureDesc desc;
+                desc.width = kShadowTexels;
+                desc.height = kShadowTexels;
+                desc.target = true;
+                desc.readable_depth = true;
+                desc.label = "shadow map";
+                auto made = device.create_texture(desc);
+                std::vector<std::byte> blank(5 * 16);
+                auto view = device.create_texture({ .width = 5, .height = 1, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow view" });
+                if (!made || !view)
+                {
+                    scene.shadows = false;
+                    return;
+                }
+                scene.shadow_target = *made;
+                scene.shadow_view = *view;
+            }
+            const park::SunView sun = park::sun_view(scene.light.sun_direction, scene.camera.target, park::shadow_radius(scene.camera.distance), kShadowTexels);
+            // The depth bias: about a tenth of a world unit, in the map's depth.
+            const std::array<float, 20> values
+                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
+            device.end_pass();
+            device.update_texture(scene.shadow_view, std::as_bytes(std::span(values)));
+            render::PassDesc into;
+            into.target = scene.shadow_target;
+            device.begin_pass(into);
+            draw_world(device, scene, sun.view_projection, scene.light, { .background = false, .water = false });
+            device.end_pass();
+            render::PassDesc back;
+            back.clear = false;
+            device.begin_pass(back);
+            scene.light.shadow_map = device.depth_texture(scene.shadow_target);
+            scene.light.shadow_view = scene.shadow_view;
+        }
+
         /// Draws the attraction the info panel shows into the panel's round view, from its own camera.
         void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel)
         {
@@ -1734,6 +1784,7 @@ namespace rct3::scene
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));
         const glm::vec3 eye = park::eye(scene.camera);
+        profiling::section("Shadows", [&] { draw_shadow_map(device, scene); });
         profiling::section("Reflections", [&] {
             const WaterLook& look = scene.water.look;
             const WorldParts mirrored { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false };
@@ -1777,6 +1828,11 @@ namespace rct3::scene
             device.destroy_texture(scene.blank);
         if (scene.view_target)
             device.destroy_texture(scene.view_target);
+        for (const render::TextureHandle t : { scene.shadow_target, scene.shadow_view })
+        {
+            if (t)
+                device.destroy_texture(t);
+        }
         scene = { };
     }
 

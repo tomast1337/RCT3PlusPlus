@@ -91,10 +91,10 @@ namespace rct3::ui
     inline constexpr std::size_t kAboutPageCount = static_cast<std::size_t>(AboutPage::Count_);
 
     /// The credits, rolling within their rectangle.
-    class CreditsRoll : public Widget
+    class CreditsScroller : public Widget
     {
     public:
-        CreditsRoll(std::string name, std::vector<CreditLine> lines, const AboutWindowStyle& style);
+        CreditsScroller(std::string name, std::vector<CreditLine> lines, const AboutWindowStyle& style);
 
         /// How far the roll has moved up, in units.
         [[nodiscard]] float offset() const
@@ -133,10 +133,10 @@ namespace rct3::ui
         float length_ = 0;
     };
 
-    class AboutWindow : public Window
+    class GameInfoBox : public Window
     {
     public:
-        AboutWindow(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed);
+        GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed);
 
         [[nodiscard]] AboutPage page() const
         {
@@ -156,7 +156,7 @@ namespace rct3::ui
         {
             return info_;
         }
-        [[nodiscard]] CreditsRoll& credits() const
+        [[nodiscard]] CreditsScroller& credits() const
         {
             return *credits_;
         }
@@ -174,7 +174,7 @@ namespace rct3::ui
         std::array<std::u16string, kAboutPageCount> captions_;
         Label* caption_ = nullptr;
         std::vector<Label*> info_;
-        CreditsRoll* credits_ = nullptr;
+        CreditsScroller* credits_ = nullptr;
         float info_height_ = 0; // Of the info page's lines, as of the last update
         AboutPage page_ = AboutPage::Info;
     };

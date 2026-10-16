@@ -82,7 +82,7 @@ namespace rct3::ui
         return out;
     }
 
-    CreditsRoll::CreditsRoll(std::string name, std::vector<CreditLine> lines, const AboutWindowStyle& style)
+    CreditsScroller::CreditsScroller(std::string name, std::vector<CreditLine> lines, const AboutWindowStyle& style)
         : Widget(std::move(name))
         , lines_(std::move(lines))
         , style_(style)
@@ -90,13 +90,13 @@ namespace rct3::ui
         clip_children = true;
     }
 
-    float CreditsRoll::line_y(const CreditLine& line, float line_height) const
+    float CreditsScroller::line_y(const CreditLine& line, float line_height) const
     {
         // No gap above the first credit: the roll starts with it at the top.
         return static_cast<float>(std::max(0, line.gaps - 1)) * style_.credit_gap + static_cast<float>(line.row) * line_height;
     }
 
-    void CreditsRoll::update(const UpdateContext& context)
+    void CreditsScroller::update(const UpdateContext& context)
     {
         const Font* f = context.fonts != nullptr ? context.fonts->get(style_.font) : nullptr;
         if (f != nullptr && !lines_.empty())
@@ -114,7 +114,7 @@ namespace rct3::ui
             offset_ = 0;
     }
 
-    void CreditsRoll::draw(DrawContext& context) const
+    void CreditsScroller::draw(DrawContext& context) const
     {
         const Font* f = context.fonts.get(style_.font);
         if (f == nullptr)
@@ -146,7 +146,7 @@ namespace rct3::ui
         context.list.pop_clip();
     }
 
-    AboutWindow::AboutWindow(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed)
+    GameInfoBox::GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed)
         : Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
     {
@@ -188,12 +188,12 @@ namespace rct3::ui
         place_info();
 
         random::RandomState random = random::seeded(seed);
-        credits_ = &pages_.at(static_cast<std::size_t>(AboutPage::Credits))->add<CreditsRoll>("roll", credit_lines(strings, packs, random), style);
+        credits_ = &pages_.at(static_cast<std::size_t>(AboutPage::Credits))->add<CreditsScroller>("roll", credit_lines(strings, packs, random), style);
         credits_->placement = fill();
         show_page(AboutPage::Info);
     }
 
-    void AboutWindow::place_info()
+    void GameInfoBox::place_info()
     {
         // Each line under the one before, as tall as it wraps to.
         float y = 0;
@@ -206,7 +206,7 @@ namespace rct3::ui
         info_height_ = std::max(0.0f, y - style_.line_gap);
     }
 
-    void AboutWindow::fit_page()
+    void GameInfoBox::fit_page()
     {
         // The info page as tall as its lines, as the game sizes it to them; the credits at their own height.
         const float page = page_ == AboutPage::Info && info_height_ > 0 ? info_height_ : style_.page_height;
@@ -215,7 +215,7 @@ namespace rct3::ui
         pages_.at(static_cast<std::size_t>(page_))->placement = top_left(0, style_.tab_bar_height, style_.page_width, page);
     }
 
-    void AboutWindow::show_page(AboutPage page)
+    void GameInfoBox::show_page(AboutPage page)
     {
         if (page == AboutPage::Credits && page_ != AboutPage::Credits)
             credits_->restart();
@@ -229,7 +229,7 @@ namespace rct3::ui
         caption_->text = captions_.at(static_cast<std::size_t>(page));
     }
 
-    void AboutWindow::update(const UpdateContext& context)
+    void GameInfoBox::update(const UpdateContext& context)
     {
         Window::update(context);
         for (std::size_t i = 0; i < kAboutPageCount; ++i)

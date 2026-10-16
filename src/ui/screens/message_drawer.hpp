@@ -102,6 +102,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// Pulled up and down anywhere.
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return CursorKind::ResizeVertical;
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;

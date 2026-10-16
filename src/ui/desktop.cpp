@@ -344,7 +344,24 @@ namespace rct3::ui
         layout(view_);
         under = pointer.present ? hit(pointer.position) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
+        cursor_ = pointer_cursor(pointer, under);
         return under != nullptr || held_ != nullptr || (pointer.present && top_modal());
+    }
+
+    std::optional<CursorKind> Desktop::pointer_cursor(const PointerState& pointer, const Widget* under) const
+    {
+        if (!pointer.present)
+            return std::nullopt;
+        if (held_ != nullptr)
+            return held_->held_cursor(pointer.position);
+        if (under != nullptr)
+        {
+            const CursorKind wanted = under->cursor(pointer.position);
+            return wanted != CursorKind::Arrow && !usable(*under) ? CursorKind::NotAllowed : wanted;
+        }
+        if (top_modal())
+            return CursorKind::Arrow;
+        return std::nullopt;
     }
 
     void Desktop::follow_popups()

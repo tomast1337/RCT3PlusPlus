@@ -55,6 +55,33 @@ namespace rct3::ui
         return edges;
     }
 
+    CursorKind Window::edge_cursor(std::uint8_t edges)
+    {
+        const bool horizontal = (edges & (Left | Right)) != 0;
+        const bool vertical = (edges & (Top | Bottom)) != 0;
+        if (horizontal && vertical)
+        {
+            // Top-left and bottom-right run one way, the other two corners the other.
+            const bool down = (edges & Left) != 0 ? (edges & Top) != 0 : (edges & Bottom) != 0;
+            return down ? CursorKind::ResizeDiagonalDown : CursorKind::ResizeDiagonalUp;
+        }
+        if (horizontal)
+            return CursorKind::ResizeHorizontal;
+        return vertical ? CursorKind::ResizeVertical : CursorKind::Arrow;
+    }
+
+    CursorKind Window::cursor(Point p) const
+    {
+        return edge_cursor(edges_at(p));
+    }
+
+    CursorKind Window::held_cursor(Point) const
+    {
+        if (dragging_)
+            return CursorKind::Move;
+        return edge_cursor(edges_);
+    }
+
     void Window::resize_to(Point p)
     {
         const Rect& s = start_rect_;

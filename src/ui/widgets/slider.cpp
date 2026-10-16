@@ -66,6 +66,11 @@ namespace rct3::ui
         return { x, y, x + style.thumb_width, y + style.thumb_height };
     }
 
+    CursorKind Slider::cursor(Point p) const
+    {
+        return !style.bar && contains(thumb(), p) ? CursorKind::Grab : CursorKind::Hand;
+    }
+
     void Slider::on_press(Point p)
     {
         const Rect t = thumb();

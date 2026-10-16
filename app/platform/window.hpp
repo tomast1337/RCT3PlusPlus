@@ -4,11 +4,14 @@
 // created before the render device and destroyed after it.
 #pragma once
 
+#include "platform/glfw_cursors.hpp"
 #include "render/device.hpp"
+#include "ui/cursor.hpp"
 #include "ui/keyboard.hpp"
 
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -100,15 +103,23 @@ namespace rct3::platform
         /// The platform half of starting an ImGui frame; call after the device's `ui_new_frame`.
         void ui_new_frame();
 
+        /// Shows the system's cursor for `kind` over the window, changing it only when the shape changes.
+        void set_cursor(ui::CursorKind kind);
+        /// The cursor the developer windows ask for, while they have the pointer.
+        [[nodiscard]] static ui::CursorKind developer_cursor();
+
     private:
         Window(GLFWwindow* window, std::unique_ptr<Collected> collected)
             : window_(window)
             , collected_(std::move(collected))
+            , cursors_(std::in_place, window)
         {
         }
 
         GLFWwindow* window_ = nullptr;
         std::unique_ptr<Collected> collected_;
+        std::optional<GlfwCursors> cursors_; // Reset before GLFW ends, which frees cursors itself
+        ui::CursorSwitch cursor_;
     };
 
 } // namespace rct3::platform

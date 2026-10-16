@@ -50,6 +50,10 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return CursorKind::Hand;
+        }
         void on_release(Point p, bool inside) override;
         bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;

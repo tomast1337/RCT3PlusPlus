@@ -64,6 +64,12 @@ namespace rct3::ui
         {
             return true;
         }
+        /// An open hand over the thumb, which drags, and a hand over the rest, which moves the thumb there.
+        [[nodiscard]] CursorKind cursor(Point p) const override;
+        [[nodiscard]] CursorKind held_cursor(Point) const override
+        {
+            return CursorKind::Grabbing;
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         bool on_wheel(Point notches) override;

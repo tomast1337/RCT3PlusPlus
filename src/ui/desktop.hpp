@@ -97,6 +97,14 @@ namespace rct3::ui
             return std::exchange(clipboard_, std::nullopt);
         }
 
+        /// The pointer's look as of the last update: what the widget holding the pointer asks for, else the one
+        /// under it ("not allowed" over a disabled widget that would act), else the arrow over what a modal
+        /// widget shuts out. Nothing when the pointer belongs to the 3D view or is not present.
+        [[nodiscard]] std::optional<CursorKind> cursor() const
+        {
+            return cursor_;
+        }
+
         /// The sounds asked for since the last call, in order.
         [[nodiscard]] std::vector<InterfaceSound> take_sounds()
         {
@@ -125,6 +133,7 @@ namespace rct3::ui
         [[nodiscard]] std::optional<std::size_t> top_modal() const;
         /// Takes the keyboard focus from a widget a modal one shuts out.
         void drop_shut_out_focus();
+        [[nodiscard]] std::optional<CursorKind> pointer_cursor(const PointerState& pointer, const Widget* under) const;
 
         std::unique_ptr<Widget> root_ = std::make_unique<Widget>("desktop"); // On the heap so moving keeps parent links
         Rect view_;
@@ -137,6 +146,7 @@ namespace rct3::ui
         std::vector<InterfaceSound> sounds_;
         bool was_down_ = false;
         Tooltip tooltip_;
+        std::optional<CursorKind> cursor_;
     };
 
 } // namespace rct3::ui

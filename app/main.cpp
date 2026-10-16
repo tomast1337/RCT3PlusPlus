@@ -660,6 +660,18 @@ int main(int argc, char** argv)
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front ? front->live->options : audio_options, sounds); });
                     }
+                    // The system's pointer for what it is over or doing: the developer windows' while they have
+                    // it, else the park's or the interface's. The game draws none of its own.
+                    auto cursor = rct3::ui::CursorKind::Arrow;
+                    if (ImGui::GetIO().WantCaptureMouse)
+                        cursor = rct3::platform::Window::developer_cursor();
+                    else if (phase == Phase::Running && park && front)
+                        cursor = rct3::scene::park_scene_cursor(*park);
+                    else if (phase == Phase::Running && widgets)
+                        cursor = widgets->desktop.cursor().value_or(cursor);
+                    else if (phase == Phase::Running && front)
+                        cursor = front->live->desktop.cursor().value_or(cursor);
+                    window->set_cursor(cursor);
                 });
                 prof::section("Draw", [&] {
                     prof::section("BeginFrame", [&] { device->begin_frame(); });

@@ -10,6 +10,7 @@
 // on the desktop before input and drawing use them.
 #pragma once
 
+#include "ui/cursor.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
 #include "ui/keyboard.hpp"
@@ -168,6 +169,18 @@ namespace rct3::ui
         [[nodiscard]] virtual bool clicks_on_hover() const
         {
             return false;
+        }
+        /// The pointer's look while it rests over this widget at `p`, for a widget that takes it: a hand where
+        /// pressing clicks, the arrow elsewhere. The desktop shows "not allowed" instead for a disabled widget
+        /// that asks for anything but the arrow.
+        [[nodiscard]] virtual CursorKind cursor(Point) const
+        {
+            return clicks() ? CursorKind::Hand : CursorKind::Arrow;
+        }
+        /// The pointer's look while this widget holds it, wherever the pointer is: as over it by default.
+        [[nodiscard]] virtual CursorKind held_cursor(Point p) const
+        {
+            return cursor(p);
         }
         virtual void on_press(Point)
         {

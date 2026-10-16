@@ -220,3 +220,28 @@ TEST_CASE("quads and shapes keep painter's order in separate batches")
     CHECK(list.batches().empty());
     CHECK(list.shape_vertices().empty());
 }
+
+TEST_CASE("a polygon is a fan of triangles in its colour, cut to the clip")
+{
+    DrawList list;
+    const std::array<std::array<float, 2>, 4> square { { { 0, 0 }, { 10, 0 }, { 10, 10 }, { 0, 10 } } };
+    list.polygon(square, kRed);
+    REQUIRE(list.vertices().size() == 4);
+    REQUIRE(list.indices().size() == 6);
+    CHECK(list.batches()[0].texture == 0);
+    CHECK(list.vertices()[2].color[0] == 255);
+
+    DrawList clipped;
+    clipped.push_clip({ 5, -5, 20, 20 });
+    clipped.polygon(square, kBlue);
+    clipped.pop_clip();
+    // The left half is cut away: what is left still has four corners, all inside the clip.
+    REQUIRE(clipped.vertices().size() == 4);
+    for (const Vertex& v : clipped.vertices())
+        CHECK(v.x >= 5);
+
+    DrawList outside;
+    outside.push_clip({ 50, 50, 60, 60 });
+    outside.polygon(square, kBlue);
+    CHECK(outside.vertices().empty());
+}

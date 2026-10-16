@@ -838,6 +838,7 @@ namespace rct3::scene
         else if (*tutorial)
             scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(), strings, std::move(**tutorial));
         scene.desktop->tooltip_style = skins::tooltip_style();
+        scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
         const auto drawn = std::ranges::count_if(scene.levels, [](std::int8_t l) { return l != park::kNotDrawn; });
         const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
@@ -1270,6 +1271,16 @@ namespace rct3::scene
             return { .attraction = std::nullopt, .person = std::nullopt, .prop = object->index };
         }
 
+        /// The people as the map draws them.
+        std::vector<park::MapPerson> map_people(const ParkScene& scene)
+        {
+            std::vector<park::MapPerson> people;
+            people.reserve(scene.shown_people.size());
+            for (const ShownPerson& p : scene.shown_people)
+                people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
+            return people;
+        }
+
     } // namespace
 
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size)
@@ -1483,8 +1494,11 @@ namespace rct3::scene
         }
         if (auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName)))
         {
-            if (tools->take_pressed() == ui::ParkTool::Leave)
+            const std::optional<ui::ParkTool> pressed = tools->take_pressed();
+            if (pressed == ui::ParkTool::Leave)
                 ask_leave(scene, *assets.strings);
+            else if (pressed == ui::ParkTool::Map)
+                toggle_park_map(scene.map, desktop, *assets.strings);
             if (const auto item = tools->take_item())
             {
                 if (*item == ui::ToolItem::People)
@@ -1497,6 +1511,11 @@ namespace rct3::scene
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
             update_build_menus(scene.build, desktop.root());
+        }
+        if (const auto picked = update_park_map(device, scene.map, desktop, scene.grid, scene.camera, aspect(device), [&] { return map_people(scene); }, elapsed))
+        {
+            scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
+            scene.camera = park::on_ground(scene.camera, scene.grid);
         }
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
@@ -1692,6 +1711,7 @@ namespace rct3::scene
             if (p)
                 device.destroy_pipeline(p);
         }
+        destroy_park_map(device, scene.map);
         ui::destroy_textures(device, scene.ground_textures);
         ui::destroy_textures(device, scene.object_textures);
         ui::destroy_textures(device, scene.people_textures);

@@ -264,3 +264,27 @@ TEST_CASE("enter clicks the default button and escape the cancel button")
         CHECK(desktop.root().children().empty()); // Escape closed the window instead
     }
 }
+
+TEST_CASE("a background drawn in code is tiled a row at a time, from a whole unit")
+{
+    WindowStyle s = style();
+    s.tile_background = true;
+    s.background_inset = { 0, 0, 0, 0 };
+    SkinLibrary skins;
+    CodedFrame tile;
+    tile.width = 16;
+    tile.height = 16;
+    tile.layers.push_back({ inset_box(0, 0, 0, 0), Shape { }, { } });
+    skins.set_coded("Back", tile);
+
+    Desktop desktop;
+    Window& w = desktop.root().add<Window>("w", s, 200, 100);
+    w.placement = top_left(10, 20.5f, 200, 100);
+    desktop.layout(kView);
+    DrawList list;
+    const FontSet fonts;
+    DrawContext context { list, skins, fonts };
+    w.draw(context);
+    // From 20 to past 120.5: seven rows of one shape each, where tile by tile would take thirteen a row.
+    CHECK(list.shape_vertices().size() == 7 * 4);
+}

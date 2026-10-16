@@ -69,13 +69,6 @@ namespace rct3::scene
             return out;
         }
 
-        const park::PieceShape* shape_named(const park::PieceCatalogue& c, std::string_view symbol)
-        {
-            const std::string_view name = symbol.substr(0, symbol.find(':'));
-            const auto found = std::ranges::find_if(c.pieces, [&](const park::PieceShape& p) { return strings::equals_ignoring_case(p.record.name, name); });
-            return found != c.pieces.end() ? &*found : nullptr;
-        }
-
         /// The open end of the ride's track: past its last piece, unless the track closes on itself.
         std::optional<park::TrackTip> track_tip(const ParkScene& scene, const TrackBuilding& b)
         {
@@ -88,7 +81,7 @@ namespace rct3::scene
             const save::TrackPiece& last = ride.track->pieces.back();
             const auto objects = object_indices(scene);
             const auto object = objects.find(last.scenery);
-            const park::PieceShape* shape = shape_named(*c, last.symbol);
+            const park::PieceShape* shape = park::shape_named(*c, last.symbol);
             if (object == objects.end() || shape == nullptr)
                 return std::nullopt;
             return park::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);

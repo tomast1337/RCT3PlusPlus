@@ -40,21 +40,21 @@ namespace rct3::park
             }
         }
 
-        glm::mat4 placed(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted)
-        {
-            const auto found = fitted.find(object.id);
-            if (found != fitted.end())
-                return found->second;
-            if (!model)
-                return object_transform(object, Positioning::Tile, grid);
-            return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
-        }
-
     } // namespace
 
     std::string model_key(const save::PlacedObject& object)
     {
         return object.overlay + "|" + object.symbol;
+    }
+
+    glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted)
+    {
+        const auto found = fitted.find(object.id);
+        if (found != fitted.end())
+            return found->second;
+        if (!model)
+            return object_transform(object, Positioning::Tile, grid);
+        return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
     }
 
     std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
@@ -64,7 +64,7 @@ namespace rct3::park
         for (const save::PlacedObject& object : objects)
         {
             const auto model = models.find(model_key(object));
-            anchors.emplace_back(placed(object, model != models.end() ? &model->second : nullptr, grid, fitted)[3]);
+            anchors.emplace_back(placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted)[3]);
         }
         return anchors;
     }
@@ -108,7 +108,7 @@ namespace rct3::park
             if (shown.parts.empty())
                 continue;
             ++mesh.placed;
-            const glm::mat4 transform = placed(object, &model->second, grid, fitted);
+            const glm::mat4 transform = placed_transform(object, &model->second, grid, fitted);
             // A fitted piece may be stretched: its normals take the inverse transpose to stay square to its faces.
             const bool stretched = fitted.contains(object.id);
             const glm::mat3 turn = stretched ? glm::transpose(glm::inverse(glm::mat3 { transform })) : glm::mat3 { transform };

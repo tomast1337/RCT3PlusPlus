@@ -24,10 +24,18 @@ namespace rct3::park
         std::size_t slot = 0;
     };
 
+    /// Where a car piece's car is: its ride, and how far along the track the park kept it.
+    struct CarSpot
+    {
+        std::size_t ride = 0;
+        float distance = 0;
+    };
+
     struct RideCars
     {
         std::vector<save::PlacedObject> pieces; ///< Ids after `last_id`; overlay and symbol key the model
         std::vector<CarDesign> designs;         ///< By piece
+        std::vector<CarSpot> spots;             ///< By piece
         Fitted fitted;                          ///< Where each piece stands, by id
     };
 

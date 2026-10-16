@@ -138,3 +138,19 @@ TEST_CASE("spline edge cases")
         CHECK(items[0].spline->segment_lengths.empty());
     }
 }
+
+TEST_CASE("a spline segment is a cubic Bezier curve through its nodes' offsets")
+{
+    rct3::ovl::Spline s;
+    s.nodes.resize(2);
+    s.nodes[0].position = { 0, 0, 0 };
+    s.nodes[0].tangent_out = { 1, 0, 0 };
+    s.nodes[1].position = { 3, 0, 0 };
+    s.nodes[1].tangent_in = { 0, 3, 0 }; // Pulls the middle up
+    CHECK(rct3::ovl::spline_point(s, 0, 0) == std::array<float, 3> { 0, 0, 0 });
+    CHECK(rct3::ovl::spline_point(s, 0, 1) == std::array<float, 3> { 3, 0, 0 });
+    const auto mid = rct3::ovl::spline_point(s, 0, 0.5f);
+    // 3/8 of each inner control point and 1/8 of each end.
+    CHECK(mid[0] == doctest::Approx(0.375f * 1 + 0.375f * 3 + 0.125f * 3));
+    CHECK(mid[1] == doctest::Approx(0.375f * 3));
+}

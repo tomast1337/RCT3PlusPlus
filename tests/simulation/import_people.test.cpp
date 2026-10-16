@@ -27,7 +27,9 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     people.guests.push_back(outside);
 
     simulation::SimWorld world;
-    simulation::import_guests(world, people);
+    const auto made = simulation::import_guests(world, people);
+    REQUIRE(made.size() == 2);
+    CHECK(made[1] == entt::null);
     const auto view = world.registry.view<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet>();
     REQUIRE(view.size_hint() == 1);
     const auto e = view.front();
@@ -35,7 +37,9 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     CHECK(v.age == simulation::AgeGroup::Child);
     CHECK(v.female);
     CHECK(v.name == "Test Guest");
+    CHECK(made[0] == e);
     CHECK(world.registry.get<simulation::Pose>(e).position == glm::vec3 { 10, 2, 30 });
+    CHECK(world.registry.get<simulation::Pose>(e).heading == -1.25f);
     const auto& n = world.registry.get<simulation::Needs>(e);
     CHECK(n.hunger == doctest::Approx(0.25f));
     CHECK(n.thirst == doctest::Approx(0.75f));

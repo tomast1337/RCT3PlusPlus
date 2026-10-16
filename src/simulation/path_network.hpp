@@ -33,6 +33,8 @@ namespace rct3::simulation
     {
         PathTileSpot tile;
         bool queue = false;
+        float height = 0;       ///< World height of the middle of the tile
+        std::uint64_t line = 0; ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
     };
@@ -46,7 +48,8 @@ namespace rct3::simulation
         int max_step = 1;          ///< Most levels between tiles that join; set before adding tiles
 
         /// Adds a path tile and joins it to its neighbours; an existing tile at the same spot is returned instead.
-        NodeId add(PathTileSpot tile, bool queue = false);
+        /// The middle of the tile is at `height`, or at its level when not given; a queue tile belongs to `line`.
+        NodeId add(PathTileSpot tile, bool queue = false, std::optional<float> height = std::nullopt, std::uint64_t line = 0);
 
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {

@@ -30,6 +30,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::park
@@ -75,6 +76,9 @@ namespace rct3::park
         glm::vec3 end_direction { -1, 0, 0 };
         glm::vec3 start_side { 0, 0, 1 };
         glm::vec3 end_side { 0, 0, 1 };
+        /// Points along the middle line from start to end, a few to each part of the rails' splines; just the
+        /// two ends when the rails are split differently.
+        std::vector<glm::vec3> path { };
     };
 
     /// What a section stores about a piece besides its splines.
@@ -119,6 +123,9 @@ namespace rct3::park
     /// The catalogue of the track overlay whose common file is `file`, named `overlay` as a park names it.
     /// Sections whose splines or scenery item are missing are left out.
     [[nodiscard]] std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay);
+
+    /// The piece of `catalogue` a track piece's symbol names, with or without its tag; nothing when not there.
+    [[nodiscard]] const PieceShape* shape_named(const PieceCatalogue& catalogue, std::string_view symbol);
 
     /// The bank the catalogue's pieces count from: that of its stations, in degrees (0 or 180).
     [[nodiscard]] float station_bank(std::span<const PieceRecord> records, std::span<const PieceLine> lines);

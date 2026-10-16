@@ -11,8 +11,9 @@ namespace rct3::park
     {
         constexpr std::string_view kTrainTag = ":rit";
         RideCars out;
-        for (const save::Ride& ride : rides)
+        for (std::size_t r = 0; r < rides.size(); ++r)
         {
+            const save::Ride& ride = rides[r];
             for (const save::Train& train : ride.trains)
             {
                 std::string name = train.symbol;
@@ -29,6 +30,7 @@ namespace rct3::park
                     o.symbol = name + "#" + std::to_string(car.design_slot);
                     o.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
                     out.designs.push_back({ name, static_cast<std::size_t>(car.design_slot) });
+                    out.spots.push_back({ r, car.distance });
                     glm::mat4 placed = glm::translate(glm::mat4(1.0f), { car.position[0], car.position[1], car.position[2] });
                     const glm::vec3 turn { car.orientation[0], car.orientation[1], car.orientation[2] };
                     if (const float angle = glm::length(turn); angle > 1e-6f)

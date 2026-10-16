@@ -5,7 +5,7 @@
 //
 // A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet; one the simulation moves also has
 // an Errand, a Stride and Dice. An attraction is an entity with an Attraction and either a Shop or a
-// FlatRide.
+// CycleRide: a ride that loads its riders, runs for a while and lets them off, flat ride or coaster.
 //
 // Levels are fractions: needs run from 0 (satisfied) to 1 (desperate); mood values from 0 to 1. Times are
 // simulation ticks (see simulation/systems.hpp).
@@ -90,6 +90,7 @@ namespace rct3::simulation
         NodeId to = kNoNode;
         float progress = 0;
         float speed = 1.3f;            ///< World units a second
+        float along = 0;               ///< While queueing, tiles from the front of the line
         std::vector<NodeId> route { }; ///< Nodes still to reach after `to`, when heading somewhere
     };
 
@@ -104,7 +105,7 @@ namespace rct3::simulation
     enum class AttractionKind : std::uint8_t
     {
         Shop,
-        FlatRide,
+        Ride,
     };
 
     struct Attraction
@@ -129,14 +130,19 @@ namespace rct3::simulation
         Product product = Product::Drink;
     };
 
-    struct FlatRide
+    struct CycleRide
     {
-        std::uint32_t capacity = 8;           ///< Guests a cycle
-        std::uint32_t cycle_ticks = 0;        ///< How long a ride lasts
-        std::uint32_t timer = 0;              ///< Ticks left of the cycle running, 0 when stopped
-        float excitement = 0.5f;              ///< How much a ride cheers its riders, 0..1
-        float intensity = 0.3f;               ///< How much it shakes them, 0..1
-        std::vector<entt::entity> queue { };  ///< Guests waiting, first in line first
+        std::uint32_t capacity = 8;          ///< Guests a cycle
+        std::uint32_t cycle_ticks = 0;       ///< How long a ride lasts
+        std::uint32_t timer = 0;             ///< Ticks left of the cycle running, 0 when stopped
+        float excitement = 0.5f;             ///< How much a ride cheers its riders, 0..1
+        float intensity = 0.3f;              ///< How much it shakes them, 0..1
+        float nausea = 0.3f;                 ///< How sick it makes them, 0..1
+        std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
+        /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
+        /// straight in from a path.
+        std::vector<NodeId> line { };
+        NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
         std::vector<entt::entity> riders { }; ///< Guests on the ride now
     };
 

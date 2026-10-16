@@ -19,6 +19,32 @@ namespace rct3::ovl
             return version == 4 ? 0x3C : 0x44;
         }
 
+        /// The ride parameters sit at the start of later items and 0x50 bytes in in version 1 items, after
+        /// the attraction fields; from there the layout is the same.
+        constexpr std::size_t kOperatingSize = 0x110;
+
+        std::optional<RideOperatingDefaults> read_operating(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t version)
+        {
+            const auto r = ItemRecord::open(space, refs, address + (version == 1 ? 0x50 : 0), kOperatingSize);
+            if (!r)
+                return std::nullopt;
+            RideOperatingDefaults d;
+            d.mode = r->u32(0x48);
+            d.allowed_modes = r->u32(0x4C);
+            d.launch_speed = r->real(0x5C);
+            d.lift_speed = r->real(0x64);
+            d.brake_speed = r->real(0x6C);
+            d.block_brake_speed = r->real(0x74);
+            if (const float fixed = r->real(0x7C); fixed > 0)
+                d.fixed_speed = fixed;
+            d.lift_min = r->real(0xF0);
+            d.lift_max = r->real(0xF4);
+            d.cost = r->i32(0xFC);
+            d.launch_min = r->real(0x108);
+            d.launch_max = r->real(0x10C);
+            return d;
+        }
+
     } // namespace
 
     std::vector<TrackedRideItem> read_tracked_rides(const Overlay& overlay, const Part& part)
@@ -43,6 +69,7 @@ namespace rct3::ovl
                 {
                     TrackedRide ride;
                     ride.info = detail::read_attraction(*record, kFields, version);
+                    ride.operating = read_operating(space, refs, symbol.data, version);
                     item.ride = ride;
                 }
             }
@@ -58,6 +85,7 @@ namespace rct3::ovl
                 const std::uint32_t fields = record->u32(0x12C);
                 if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(version), kHeaderSize))
                     ride.info = detail::read_attraction(*block, kFields, version);
+                ride.operating = read_operating(space, refs, symbol.data, version);
                 item.ride = ride;
             }
             items.push_back(item);

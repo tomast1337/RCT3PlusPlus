@@ -94,6 +94,8 @@ namespace rct3::scene
         constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
         constexpr float kKeyZoom = 2.5f;    ///< Times per second
 
+        constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
+
         constexpr std::array<render::VertexAttribute, 4> kGroundAttributes = { {
             { 0, render::VertexFormat::Float3, offsetof(park::GroundVertex, position) },
             { 1, render::VertexFormat::Float4, offsetof(park::GroundVertex, colour) },
@@ -1306,7 +1308,20 @@ namespace rct3::scene
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
+        scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
         auto* info = static_cast<ui::InfoPanel*>(desktop.root().find(kInfoName));
+        // What a click would open, for the pointer's look; not looked at every frame, as picking walks the park.
+        scene.since_hover_pick += elapsed;
+        if (over || !pointer.present || info == nullptr || scene.turning || scene.dragging)
+            scene.hover_pickable = false;
+        else if (scene.since_hover_pick >= kHoverPickInterval)
+        {
+            const profiling::Scope zone("HoverPick");
+            const ui::Rect screen = desktop.root().rect();
+            const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
+            scene.hover_pickable = picked.person || picked.attraction || picked.prop;
+            scene.since_hover_pick = 0;
+        }
         if (info != nullptr)
         {
             const profiling::Scope zone("InfoPanel");
@@ -1616,6 +1631,17 @@ namespace rct3::scene
             panel.show_view(ui::texture_id(scene.view_target));
         }
     } // namespace
+
+    ui::CursorKind park_scene_cursor(const ParkScene& scene)
+    {
+        ui::ParkPointer pointer;
+        pointer.interface = scene.desktop->cursor();
+        pointer.turning = scene.turning;
+        pointer.panning = scene.dragging;
+        pointer.zooming = scene.zooming;
+        pointer.over_pickable = scene.hover_pickable;
+        return ui::park_cursor(pointer);
+    }
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {

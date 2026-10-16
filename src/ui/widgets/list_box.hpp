@@ -73,6 +73,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// A hand over the rows, which pick when pressed.
+        [[nodiscard]] CursorKind cursor(Point p) const override
+        {
+            return row_at(p) ? CursorKind::Hand : CursorKind::Arrow;
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         bool on_wheel(Point notches) override;

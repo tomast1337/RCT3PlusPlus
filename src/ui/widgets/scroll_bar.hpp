@@ -75,6 +75,10 @@ namespace rct3::ui
         {
             return true;
         }
+        /// An open hand over the rider, which drags, a hand over the arrows and the rail, and the arrow with
+        /// nothing to scroll.
+        [[nodiscard]] CursorKind cursor(Point p) const override;
+        [[nodiscard]] CursorKind held_cursor(Point p) const override;
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;

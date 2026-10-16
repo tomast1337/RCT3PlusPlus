@@ -69,6 +69,9 @@ namespace rct3::scene
     /// cannot be read. The selection windows open new rides through this.
     bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
 
+    /// Closes the construction panel and leaves the building idle.
+    void close_track_building(ParkScene& scene);
+
     /// The track overlay of the ride's built pieces, if it has any.
     [[nodiscard]] std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride);
 

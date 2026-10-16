@@ -53,6 +53,9 @@ namespace rct3::scene
     /// Opens the path panel, or closes it when it is open.
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options);
 
+    /// Closes the path panel if it is open.
+    void close_footpath_panel(ParkScene& scene);
+
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);
 

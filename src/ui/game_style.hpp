@@ -13,6 +13,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
+#include "ui/screens/footpath_panel.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/screens/loading_screen.hpp"
@@ -599,6 +600,38 @@ namespace rct3::ui::game_skins
         s.open_heading = kOpenHeading;
         s.closed_heading = kClosedHeading;
         s.scroll_bar = scroll_bar_style(Orientation::Vertical);
+        return s;
+    }
+
+    /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
+    /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable
+    /// look.
+    [[nodiscard]] inline FootpathPanelStyle footpath_panel_style()
+    {
+        FootpathPanelStyle s;
+        s.look = PanelLook::Coded;
+        s.coded = info_panel_style().coded;
+        s.tab_face = kMenuButtonSmall;
+        s.close_icon = kCloseIcon;
+        s.controls_icon = "RideCamGUI_Pin";
+        s.follow_icon = "Guest_Camera";
+        s.paths_icon = "Obj_Paths_Path";
+        s.queues_icon = "Obj_Paths_Queue";
+        s.tab_help = { "PathEditor_EditMode", "PathEditor_CameraFollow", "Obj_Paths_PathHelp", "Obj_Paths_QueueHelp" };
+        // Each turn and slope picture has a usable and an unusable look; the remove picture has only one.
+        const std::array<std::string_view, 8> bases { "AttractionEditor_IconCurveL3", "AttractionEditor_IconCurve0", "AttractionEditor_IconCurveR3", "AttractionEditor_IconSlopeD2", "AttractionEditor_IconSlopeD1", "AttractionEditor_IconSlope0", "AttractionEditor_IconSlopeU1", "AttractionEditor_IconSlopeU2" };
+        for (std::size_t i = 0; i < bases.size(); ++i)
+        {
+            s.usable_icons.at(i) = std::string(bases[i]) + "On";
+            s.unusable_icons.at(i) = std::string(bases[i]) + "Dis";
+        }
+        s.usable_icons.at(8) = "PathEditor_IconDeleteOn";
+        s.unusable_icons.at(8) = s.usable_icons.at(8);
+        s.cut_on_icon = "PathEditor_CutIntoTerrain_on";
+        s.cut_off_icon = "PathEditor_CutIntoTerrain_off";
+        s.control_help = {
+            "Path_Left", "Path_Straight", "Path_Right", "Path_DownwardSteps", "Path_DownwardSlope", "Path_NoSlope", "Path_UpwardSlope", "Path_UpwardSteps", "PathEditor_Delete", "PathEditor_CutIntoTerrain_TT",
+        };
         return s;
     }
 

@@ -28,7 +28,8 @@
 namespace rct3::ovl
 {
     class Overlay;
-}
+    struct SceneryVisual;
+} // namespace rct3::ovl
 
 namespace rct3::park
 {
@@ -116,6 +117,10 @@ namespace rct3::park
         /// its first. Nothing when the item or every level it could show is missing.
         [[nodiscard]] std::optional<ObjectModel> load(std::string_view symbol, std::string_view overlay, bool modelled_plants = true);
 
+        /// The model of car `slot` (0 to 5) of the ride train `train` (its name without the tag), looked for in
+        /// `overlay` first. Nothing when the train, the car or every level of its visual is missing.
+        [[nodiscard]] std::optional<ObjectModel> load_car(std::string_view train, std::string_view overlay, std::size_t slot);
+
         /// The pictures the loaded models' parts name, by key.
         [[nodiscard]] const ModelPictures& pictures() const
         {
@@ -131,6 +136,8 @@ namespace rct3::park
         std::map<std::string, bool, std::less<>> tried_pictures_;
 
         std::string texture_key(std::string_view name, std::string_view near);
+        /// Adds the levels of `visual`, held in the file at `visual_path`, to `model`.
+        void add_levels(ObjectModel& model, const ovl::SceneryVisual& visual, std::string_view visual_path);
         void set_texture(ModelPart& part, std::string_view name, std::string_view near);
     };
 

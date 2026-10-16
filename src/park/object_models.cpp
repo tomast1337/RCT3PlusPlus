@@ -9,6 +9,7 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
+#include "park/item_category.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -287,7 +288,8 @@ namespace rct3::park
         model.supports = support_footprint(*item);
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
-        model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0;
+        // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.
+        model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0 && item->type <= std::to_underlying(ItemCategory::Flowers);
         if ((item->flags & ovl::kItemFenceOutline) != 0 && item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
         {
             // Inside are the solid squares that reach down to the ground.

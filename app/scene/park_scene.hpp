@@ -30,6 +30,7 @@
 #include "save/model/rides.hpp"
 #include "scene/build_menus.hpp"
 #include "scene/park_footpaths.hpp"
+#include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_water.hpp"
 #include "scene/save_browser.hpp"
@@ -131,6 +132,8 @@ namespace rct3::scene
         render::BufferHandle ground_indices;
         render::PipelineHandle ground_pipeline;
         ParkWater water;
+        ParkGlow glow;
+        bool bloom = false; ///< The Bloom option: glow round bright parts
         ui::UiTextures ground_textures;
         render::TextureHandle blank; ///< For ground without a picture
         std::vector<save::PlacedObject> objects;

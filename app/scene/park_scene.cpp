@@ -482,7 +482,7 @@ namespace rct3::scene
         }
 
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.
-        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, std::string_view theme, float ground, ParkScene& scene)
+        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, std::string_view theme, ParkScene& scene)
         {
             const profiling::Scope zone("Sky");
             const auto log = logging::logger("park");
@@ -510,7 +510,7 @@ namespace rct3::scene
             if (!options.flag(config::GameOption::Clouds))
                 scene.sky.clouds = { };
             if (options.flag(config::GameOption::Mountains))
-                scene.mountains = park::mountain_mesh(sky->mountains, park::mountain_place(scene.grid, ground));
+                scene.mountains = park::mountain_mesh(sky->mountains, park::mountain_place(scene.grid, theme));
             const render::VertexLayout layout { sizeof(park::GroundVertex), kGroundAttributes };
             auto pipeline = device.create_pipeline({ .shader = render::Shader::Textured, .layout = layout, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "sky" });
             if (!pipeline)
@@ -816,7 +816,7 @@ namespace rct3::scene
             if (auto built = build_objects(scene, park::eye(scene.camera), { }))
                 show_objects(device, scene, std::move(*built));
         });
-        if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), park::edge_level(scene.grid), scene); !sky)
+        if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)
             return fail(sky.error());
 
         {

@@ -41,7 +41,7 @@ namespace rct3::scene
                 if (front.assets.install && front.assets.install->find(kPackFiles.at(i)))
                     packs.push_back(static_cast<int>(i));
             }
-            root.add<ui::AboutWindow>(std::string(kAboutName), skins::about_window_style(), *front.assets.strings, packs, park.seed);
+            root.add<ui::GameInfoBox>(std::string(kAboutName), skins::about_window_style(), *front.assets.strings, packs, park.seed);
         }
 
         void open_options(ParkScene& park, FrontEndScene& front)

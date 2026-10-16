@@ -63,6 +63,37 @@ namespace rct3::scene
             return pixels;
         }
 
+        /// Draws, with the eye under `water.eye_in`, one quad just past the near plane over the whole view, in
+        /// which the water shader fogs the copied scene by the water each line of sight crosses.
+        void fog_under_water(render::Device& device, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, render::WaterView view)
+        {
+            const glm::mat4 back = glm::inverse(transform);
+            std::array<park::GroundVertex, 6> quad;
+            constexpr std::array<glm::vec2, 6> kCorners { glm::vec2 { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+            for (std::size_t i = 0; i < quad.size(); ++i)
+            {
+                const glm::vec4 near = back * glm::vec4(kCorners[i], 0.0f, 1.0f);
+                // Half again as far as the near plane, so the depth test keeps the quad in front of everything.
+                quad[i] = { .position = view.eye + (glm::vec3(near) / near.w - view.eye) * 1.5f, .colour = water.eye_in->colour, .uv = { water.eye_in->level, 0.0f } };
+            }
+            const auto vertices = device.allocate_transient(std::as_bytes(std::span(quad)));
+            if (!vertices)
+                return;
+            render::DrawCommand draw;
+            draw.pipeline = water.shaded;
+            draw.vertices = *vertices;
+            draw.count = static_cast<std::uint32_t>(quad.size());
+            draw.transform = transform;
+            draw.texture = water.waves;
+            draw.filter = render::Filter::Linear;
+            draw.address = render::AddressMode::Repeat;
+            draw.light = light;
+            draw.extra_textures = { render::TextureHandle { }, water.behind, device.depth_texture(water.behind), water.ripple_texture };
+            draw.water = view;
+            draw.water.underwater = true;
+            device.draw(draw);
+        }
+
         std::span<const std::byte> ripple_bytes(const park::RippleTexels& texels)
         {
             return std::as_bytes(std::span(texels));
@@ -179,13 +210,16 @@ namespace rct3::scene
     {
         water.levels.clear();
         water.have_behind = false;
+        water.eye_in.reset();
         if (!water.vertices || !water.shaded)
             return;
+        water.eye_in = park::water_above(water.surface, eye);
         device.end_pass();
         const park::RippleTexels texels = park::ripple_texels(water.ripples);
         device.update_texture(water.ripple_texture, ripple_bytes(texels));
         const render::Extent screen = device.extent();
-        if (water.look.refraction)
+        // Under water, the scene is fogged from its copy even where the options leave refraction out.
+        if (water.look.refraction || water.eye_in)
             fit_target(device, water.behind, water.behind_size, screen, true, "water behind");
         if (water.look.reflection)
         {
@@ -214,7 +248,7 @@ namespace rct3::scene
         if (!water.vertices)
             return;
         shaded = shaded && water.shaded;
-        if (shaded && water.look.refraction && water.behind)
+        if (shaded && (water.look.refraction || water.eye_in) && water.behind)
         {
             device.end_pass();
             water.have_behind = device.copy_screen(water.behind);
@@ -222,6 +256,21 @@ namespace rct3::scene
             back.clear = false;
             device.begin_pass(back);
         }
+        const auto shaded_view = [&](bool reflection) {
+            return render::WaterView {
+                .eye = eye,
+                .time = time,
+                .near = park::kNear,
+                .far = park::kFar,
+                .reflection = reflection,
+                .refraction = water.have_behind,
+                .waves = water.look.waves,
+                .foam = true,
+                .ripples = park::live_ripples(water.ripples) > 0,
+            };
+        };
+        if (shaded && water.eye_in && water.have_behind)
+            fog_under_water(device, water, transform, light, shaded_view(false));
         for (const park::WaterBatch& batch : water.surface.batches)
         {
             render::DrawCommand draw;
@@ -238,17 +287,7 @@ namespace rct3::scene
             {
                 const auto reflection = park::reflection_for(batch.level, water.levels);
                 draw.extra_textures = { reflection ? water.reflections[*reflection] : render::TextureHandle { }, water.have_behind ? water.behind : render::TextureHandle { }, water.have_behind ? device.depth_texture(water.behind) : render::TextureHandle { }, water.ripple_texture };
-                draw.water = {
-                    .eye = eye,
-                    .time = time,
-                    .near = park::kNear,
-                    .far = park::kFar,
-                    .reflection = reflection.has_value(),
-                    .refraction = water.have_behind,
-                    .waves = water.look.waves,
-                    .foam = true,
-                    .ripples = park::live_ripples(water.ripples) > 0,
-                };
+                draw.water = shaded_view(reflection.has_value());
             }
             else
             {

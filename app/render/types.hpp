@@ -266,6 +266,10 @@ namespace rct3::render
         bool waves = false;      ///< Ruffle the surface with the wave picture
         bool foam = false;       ///< Faint foam in shallows and on ripple crests
         bool ripples = false;    ///< The ripple picture is given
+        /// The eye is under water: the draw is one quad over the view, which fogs and dims the scene behind it
+        /// with the water the line of sight crosses. Its vertices carry the water's colour and, as their depth,
+        /// the height of the surface over the eye.
+        bool underwater = false;
     };
 
     /// How many pictures a draw can take besides DrawCommand::texture.

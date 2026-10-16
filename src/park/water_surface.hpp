@@ -70,4 +70,14 @@ namespace rct3::park
     /// How far along `ray` it first meets the water's surface, if it does.
     [[nodiscard]] std::optional<float> water_hit(const Ray& ray, const WaterSurface& surface);
 
+    /// The water a point is in: the height of the surface over it and the water's colour.
+    struct WaterAbove
+    {
+        float level = 0;
+        glm::vec4 colour { 1.0f };
+    };
+
+    /// The water `point` is under, if it is under any: the eye there sees the park from inside the water.
+    [[nodiscard]] std::optional<WaterAbove> water_above(const WaterSurface& surface, glm::vec3 point);
+
 } // namespace rct3::park

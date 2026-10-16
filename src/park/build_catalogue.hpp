@@ -12,6 +12,10 @@
 // Which list an item goes in follows from a number it carries: the attraction kind for rides and shops,
 // the item category for scenery. Scenery without an icon is never listed, and items flagged as billboards
 // go in the billboard list besides their own.
+//
+// The enclosure and animal lists come from their own folders: "Enclosures" holds the kinds of enclosure
+// fence and the animal shelters, "WildAnimals" the species and the toys. Each species gives one item per
+// animal a park can buy: adult male and female, young male and female.
 #pragma once
 
 #include "ovl/overlay.hpp"
@@ -41,6 +45,8 @@ namespace rct3::park
         TransportRides,
         OtherRides,
         PoolRides,
+        Enclosures, ///< Fences, shelters and toys for animal enclosures
+        Animals,
         // Shops
         FoodShops,
         DrinkShops,
@@ -75,6 +81,19 @@ namespace rct3::park
         FlatRide,    ///< Placed whole: rides without a track and the attractions that stand alone
         Shop,
         Scenery,
+        EnclosureFence, ///< Drawn round an area to make an enclosure
+        Shelter,        ///< A scenery item placed inside an enclosure for its animals
+        AnimalToy,      ///< Put inside an enclosure for the animals to play with
+        Animal,         ///< One animal of a species, bought into an enclosure
+    };
+
+    /// The parts of the enclosure list, in the order it shows them.
+    enum class EnclosurePart : std::uint8_t
+    {
+        None, ///< Items of other lists
+        Fences,
+        Shelters,
+        Toys,
     };
 
     struct BuildItem
@@ -95,6 +114,12 @@ namespace rct3::park
         std::uint32_t width = 0;
         std::uint32_t length = 0;
         std::uint32_t addon = 0; ///< 0 for the base game, else the expansion it came with
+        EnclosurePart part = EnclosurePart::None;
+        /// Animals: the symbol of the shelter their species needs, in any case; empty for other items.
+        std::string needs;
+        /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
+        float strength = 0;
+        float rarity = 0; ///< Animals: from 0, common, to 1, endangered
     };
 
     /// Adds the items `overlay` offers. `path` is where it lies, in BuildItem::overlay's form.
@@ -105,7 +130,9 @@ namespace rct3::park
     [[nodiscard]] std::vector<BuildItem> read_build_catalogue(const std::filesystem::path& root);
 
     /// Which items a park lets the player build, by what it records of each: those it has made available
-    /// and invented, and does not hide. A park that records nothing lets every item be built.
+    /// and invented, and does not hide, and the animal species it has unlocked. A park that records nothing
+    /// lets every item be built, and one that records no species every animal. Enclosure fences, shelters
+    /// and toys are always offered: parks list them without saying whether they may be built.
     class BuildOffer
     {
     public:
@@ -121,6 +148,7 @@ namespace rct3::park
 
     private:
         bool known_ = false;
+        bool species_known_ = false;
         std::set<std::string> offered_; // "overlay|symbol", in lower case
     };
 

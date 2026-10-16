@@ -36,7 +36,7 @@ namespace rct3::save
             constexpr std::string_view kParticlePrefix = "Particle";
             constexpr std::string_view kSceneryEntryClass = "SIDDatabaseEntry";
             constexpr std::string_view kAttractionEntryClass = "AIDDatabaseEntry";
-            constexpr std::string_view kWildStyleEntryClass = "WASDatabaseEntry";
+            constexpr std::string_view kAnimalSpeciesEntryClass = "WASDatabaseEntry";
             // Condition classes are found by owning the slot attribute; these classes give the family.
             constexpr std::array kConditionKinds = {
                 std::pair { std::string_view { "ParkValueCondition" }, ConditionKind::ParkValue },   std::pair { std::string_view { "ParkGuestsCondition" }, ConditionKind::ParkGuests },   std::pair { std::string_view { "ParkRatingCondition" }, ConditionKind::ParkRating },
@@ -179,6 +179,7 @@ namespace rct3::save
             constexpr std::string_view kEntryAvailable = "IsAvailable";
             constexpr std::string_view kEntryHidden = "IsHidden";
             constexpr std::string_view kEntryInvented = "IsInvented";
+            constexpr std::string_view kEntryUnlocked = "ISUNLOCKED";
 
             // Graph storage layout (the value decoder's names for the parts of a graphedValue)
             constexpr std::string_view kGraphCapacity = "capacity";
@@ -619,8 +620,8 @@ namespace rct3::save
                 return AssetKind::Scenery;
             if (cls == names::kAttractionEntryClass)
                 return AssetKind::Attraction;
-            if (cls == names::kWildStyleEntryClass)
-                return AssetKind::WildAreaStyle;
+            if (cls == names::kAnimalSpeciesEntryClass)
+                return AssetKind::AnimalSpecies;
             return AssetKind::Other;
         }
 
@@ -695,6 +696,7 @@ namespace rct3::save
             r.available = bool_of(o.find(kEntryAvailable), false);
             r.hidden = bool_of(o.find(kEntryHidden), false);
             r.invented = bool_of(o.find(kEntryInvented), false);
+            r.unlocked = bool_of(o.find(kEntryUnlocked), false);
             r.id = o.id;
             content.entries.push_back(std::move(r));
         }

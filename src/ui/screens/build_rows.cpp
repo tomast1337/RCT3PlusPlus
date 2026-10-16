@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build_rows.hpp"
 
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 
 #include <algorithm>
@@ -26,7 +27,26 @@ namespace rct3::ui
             "SceneryPlacement_PathEdgeInner", "SceneryPlacement_PathEdgeOuter", "SceneryPlacement_Wall", "SceneryPlacement_QuarterTile", "SceneryPlacement_HalfTile", "SceneryPlacement_PathCenter", "SceneryPlacement_Corner", "SceneryPlacement_PathInternalEdgeOuter",
         };
 
-        /// Rows in name order whatever the case, headings among them by their own names.
+        /// The parts of the enclosure list: the icon and name of each heading, in the order they show.
+        struct PartHeading
+        {
+            park::EnclosurePart part;
+            std::string_view icon;
+            std::string_view text;
+        };
+        constexpr std::array<PartHeading, 3> kEnclosureParts = { {
+            { park::EnclosurePart::Fences, "EnclosureMaster_FenceIcon", "EnclosureMaster_FenceTT" },
+            { park::EnclosurePart::Shelters, "EnclosureMaster_ShelterIcon", "EnclosureMaster_ShelterTT" },
+            { park::EnclosurePart::Toys, "AnimalItems_General_Icon", "EnclosureMaster_ItemsTT" },
+        } };
+
+        constexpr std::string_view kRarity = "WildAnimalRarity";
+        constexpr std::string_view kShelterNeeded = "WildAnimal_ShelterRequired";
+        constexpr std::string_view kShelterName = "%SHELTERNAME%";
+        /// Fences sort by strength; this keeps two places of it.
+        constexpr float kStrengthRank = 100;
+
+        /// Rows by rank, then in name order whatever the case; headings among them by their own.
         void sort_rows(std::vector<PickerRow>& rows)
         {
             const auto lower = [](std::u16string_view s) {
@@ -34,7 +54,7 @@ namespace rct3::ui
                 std::ranges::transform(out, out.begin(), [](char16_t c) { return c >= u'A' && c <= u'Z' ? static_cast<char16_t>(c - u'A' + u'a') : c; });
                 return out;
             };
-            std::ranges::stable_sort(rows, [&](const PickerRow& a, const PickerRow& b) { return lower(a.name) < lower(b.name); });
+            std::ranges::stable_sort(rows, [&](const PickerRow& a, const PickerRow& b) { return a.rank != b.rank ? a.rank < b.rank : lower(a.name) < lower(b.name); });
             for (PickerRow& r : rows)
                 sort_rows(r.children);
         }
@@ -45,7 +65,66 @@ namespace rct3::ui
             return text.empty() ? strings::to_utf16(fallback) : std::u16string(text);
         }
 
+        /// The weakest offered fence at least as strong as `strength`; nothing when none is.
+        const park::BuildItem* fence_for(float strength, std::span<const park::BuildItem> items, const park::BuildOffer& offer)
+        {
+            const park::BuildItem* best = nullptr;
+            for (const park::BuildItem& f : items)
+            {
+                if (f.kind == park::BuildKind::EnclosureFence && f.strength >= strength && offer.offers(f) && (best == nullptr || f.strength < best->strength))
+                    best = &f;
+            }
+            return best;
+        }
+
+        std::u16string name_text(const StringTable& strings, std::string_view key)
+        {
+            return std::u16string(strings.get_ignoring_case(key));
+        }
+
+        /// The name of the shelter called `symbol`, whatever its case; empty when it is not installed.
+        std::string_view shelter_text(std::string_view symbol, std::span<const park::BuildItem> items)
+        {
+            for (const park::BuildItem& s : items)
+            {
+                if (s.kind == park::BuildKind::Shelter && strings::equals_ignoring_case(s.symbol, symbol))
+                    return s.name_text;
+            }
+            return { };
+        }
+
+        /// What a species' heading adds to its name: the fence it needs.
+        std::u16string fence_note(const park::BuildItem& animal, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings)
+        {
+            const park::BuildItem* fence = fence_for(animal.strength, items, offer);
+            return fence == nullptr ? std::u16string { } : u" (" + name_text(strings, fence->name_text) + u")";
+        }
+
+        /// The line under a species' heading: the shelter it needs.
+        std::u16string shelter_note(const park::BuildItem& animal, std::span<const park::BuildItem> items, const StringTable& strings)
+        {
+            const std::string_view shelter = shelter_text(animal.needs, items);
+            if (shelter.empty())
+                return { };
+            std::u16string needs(strings.get(kShelterNeeded));
+            const std::u16string field = strings::to_utf16(kShelterName);
+            if (const auto at = needs.find(field); at != std::u16string::npos)
+                needs.replace(at, field.size(), name_text(strings, shelter));
+            return needs;
+        }
+
     } // namespace
+
+    std::string_view rarity_text(float rarity) noexcept
+    {
+        if (rarity > 0.79f)
+            return "WildAnimalRarity_Endangered";
+        if (rarity > 0.64f)
+            return "WildAnimalRarity_Rare";
+        if (rarity >= 0.40f)
+            return "WildAnimalRarity_Moderate";
+        return "WildAnimalRarity_Common";
+    }
 
     std::optional<park::BuildList> build_list(ToolItem item) noexcept
     {
@@ -68,6 +147,10 @@ namespace rct3::ui
                 return BuildList::OtherRides;
             case ToolItem::PoolRides:
                 return BuildList::PoolRides;
+            case ToolItem::Enclosures:
+                return BuildList::Enclosures;
+            case ToolItem::Animals:
+                return BuildList::Animals;
             case ToolItem::FoodShops:
                 return BuildList::FoodShops;
             case ToolItem::DrinkShops:
@@ -129,7 +212,16 @@ namespace rct3::ui
                     break;
                 case park::BuildKind::Shop:
                 case park::BuildKind::Scenery:
+                case park::BuildKind::Shelter:
                     row.size = placement_text(item, strings);
+                    break;
+                case park::BuildKind::EnclosureFence:
+                    row.rank = static_cast<int>(item.strength * kStrengthRank);
+                    break;
+                case park::BuildKind::AnimalToy:
+                    break;
+                case park::BuildKind::Animal:
+                    row.size = std::u16string(strings.get(kRarity)) + u' ' + std::u16string(strings.get(rarity_text(item.rarity)));
                     break;
             }
             if (item.price > 0)
@@ -137,19 +229,38 @@ namespace rct3::ui
             if (item.addon >= 1 && item.addon <= kBadges)
                 row.badge = std::string(kBadgePrefix) + std::to_string(item.addon - 1);
 
-            if (item.group_icon.empty() && item.group_text.empty())
+            // Enclosure items sit under the heading of their part, in the parts' order.
+            std::string group_icon = item.group_icon;
+            std::string group_text = item.group_text;
+            int heading_rank = 0;
+            for (std::size_t p = 0; p < kEnclosureParts.size(); ++p)
+            {
+                if (kEnclosureParts[p].part == item.part)
+                {
+                    group_icon = kEnclosureParts[p].icon;
+                    group_text = kEnclosureParts[p].text;
+                    heading_rank = static_cast<int>(p);
+                }
+            }
+            if (group_icon.empty() && group_text.empty())
             {
                 rows.push_back(std::move(row));
                 continue;
             }
-            const auto key = std::pair { item.group_icon, item.group_text };
+            const auto key = std::pair { group_icon, group_text };
             auto at = headings.find(key);
             if (at == headings.end())
             {
                 PickerRow heading;
-                heading.name = name_of(strings, item.group_text, item.group_icon);
-                heading.icon = item.group_icon;
+                heading.name = name_of(strings, group_text, group_icon);
+                heading.icon = group_icon;
                 heading.item = i;
+                heading.rank = heading_rank;
+                if (item.kind == park::BuildKind::Animal)
+                {
+                    heading.name += fence_note(item, items, offer, strings);
+                    heading.size = shelter_note(item, items, strings);
+                }
                 at = headings.emplace(key, rows.size()).first;
                 rows.push_back(std::move(heading));
             }

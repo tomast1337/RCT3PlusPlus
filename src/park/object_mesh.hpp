@@ -61,6 +61,9 @@ namespace rct3::park
     [[nodiscard]] std::string model_key(const save::PlacedObject& object);
 
     /// Where each object's model origin lands in the park, by index.
+    /// Where `object` stands in the world, model to world: as `fitted` has it, else as its model places it.
+    [[nodiscard]] glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted = { });
+
     [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The level of each object seen from `eye`, with the models' distances times `scale`.

@@ -4,11 +4,18 @@
 // walking on those paths.
 #pragma once
 
+#include "park/object_models.hpp"
+#include "park/track_course.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/coaster.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstddef>
+#include <functional>
+#include <optional>
+#include <span>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -19,6 +26,35 @@ namespace rct3::simulation
     /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
     /// many were added. Call after import_paths.
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides);
+
+    /// How many a ride carries at once and how long one ride lasts.
+    struct RideTiming
+    {
+        std::uint32_t seats = 0;
+        float seconds = 0;
+    };
+
+    /// The timing of a flat ride from its model: its seats, and its animations' lengths in the order the model
+    /// lists them (standing, starting, running, stopping), the running one played `loops` times. Nothing when
+    /// the model has no seats or too few animations.
+    [[nodiscard]] std::optional<RideTiming> flat_ride_timing(std::span<const float> animation_seconds, std::uint32_t seats, std::int32_t loops);
+
+    /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it
+    /// stands as among `objects`, found by `model_of`; nothing for other rides and those without a usable model.
+    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of);
+
+    /// The coaster model's view of `ride` on `course`: heights along it, its chains and stations, and the
+    /// ride's speeds and first train's length as its park keeps them. Nothing unless the course goes round and
+    /// has a station; shuttles, slides and open water are left to their timing.
+    [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
+
+    /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
+    /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in
+    /// `rides.rides`. A coaster with its track in `coasters` at its place runs its train round it; one without
+    /// is timed by its last test lap. Either carries all its seats. Excitement, intensity and nausea are the
+    /// saved ratings; for a ride the park has not rated, those of its last test or of a test run on its track
+    /// (simulation/ratings.hpp). Call after import_paths.
+    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { });
 
     /// Sets every guest standing on a path walking; returns how many. Call after import_paths.
     std::size_t start_guests(SimWorld& world);

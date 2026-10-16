@@ -25,12 +25,22 @@ namespace rct3::simulation
 
     Sandbox& Sandbox::path(glm::ivec2 from, glm::ivec2 to, int level)
     {
+        return lay(from, to, level, 0);
+    }
+
+    Sandbox& Sandbox::queue(glm::ivec2 from, glm::ivec2 to, int level)
+    {
+        return lay(from, to, level, ++lines_);
+    }
+
+    Sandbox& Sandbox::lay(glm::ivec2 from, glm::ivec2 to, int level, std::uint64_t line)
+    {
         if (from.x != to.x && from.y != to.y)
             throw std::invalid_argument("a sandbox path runs along a column or a row");
         const glm::ivec2 step { glm::sign(to.x - from.x), glm::sign(to.y - from.y) };
         for (glm::ivec2 at = from;; at += step)
         {
-            world_.paths.add({ at.x, at.y, level });
+            world_.paths.add({ at.x, at.y, level }, line != 0, std::nullopt, line);
             if (at == to)
                 break;
         }
@@ -50,8 +60,11 @@ namespace rct3::simulation
     {
         auto& r = world_.registry;
         const entt::entity e = r.create();
-        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::FlatRide, .name = std::move(name), .entrance = node(entrance, level), .price = price });
-        r.emplace<FlatRide>(e, FlatRide { .capacity = setup.capacity, .cycle_ticks = ticks(setup.cycle_seconds), .excitement = setup.excitement, .intensity = setup.intensity });
+        std::vector<NodeId> line;
+        for (const glm::ivec2 tile : setup.line)
+            line.push_back(node(tile, level));
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = std::move(name), .entrance = line.empty() ? node(entrance, level) : line.back(), .price = price });
+        r.emplace<CycleRide>(e, CycleRide { .capacity = setup.capacity, .cycle_ticks = ticks(setup.cycle_seconds), .excitement = setup.excitement, .intensity = setup.intensity, .nausea = setup.nausea, .line = std::move(line), .exit = setup.exit ? node(*setup.exit, level) : kNoNode });
         return e;
     }
 

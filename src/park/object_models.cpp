@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_models.hpp"
 
+#include "ovl/bone_anim.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
@@ -25,6 +26,7 @@ namespace rct3::park
         constexpr std::string_view kVisualTag = ":svd";
         constexpr std::string_view kStaticTag = ":shs";
         constexpr std::string_view kBoneTag = ":bsh";
+        constexpr std::string_view kAnimTag = ":ban";
         constexpr std::string_view kTextureTag = ":ftx";
         constexpr std::string_view kTrainTag = ":rit";
         constexpr std::string_view kCarTag = ":ric";
@@ -41,6 +43,7 @@ namespace rct3::park
             std::optional<ByName<ovl::SceneryVisual>> visuals;
             std::optional<ByName<ovl::StaticShape>> statics;
             std::optional<ByName<ovl::BoneShape>> bones;
+            std::optional<ByName<ovl::BoneAnim>> anims;
             std::optional<ByName<ovl::FlexiTexture>> textures;
             std::optional<ByName<ovl::RideTrain>> trains;
             std::optional<ByName<ovl::RideCar>> cars;
@@ -128,7 +131,7 @@ namespace rct3::park
                 auto overlay = ovl::Overlay::load(index.file(path));
                 std::unique_ptr<OpenFile> file;
                 if (overlay)
-                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { }, { }, { } });
+                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { }, { }, { }, { } });
                 it = open.emplace(std::string(path), std::move(file)).first;
             }
             return it->second.get();
@@ -175,6 +178,18 @@ namespace rct3::park
         {
             return lookup(entries(f.bones, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::BoneShape>(ovl::read_bone_shapes(o, p), &ovl::BoneShapeItem::shape); }), name);
         }
+        const ovl::BoneAnim* anim_in(OpenFile& f, std::string_view name)
+        {
+            return lookup(entries(f.anims, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::BoneAnim>(ovl::read_bone_anims(o, p), &ovl::BoneAnimItem::anim); }), name);
+        }
+
+        /// Bones named "peep" and a number: where riders sit.
+        std::uint32_t seats_of(const ovl::BoneShape& shape)
+        {
+            constexpr std::string_view kSeat = "peep";
+            return static_cast<std::uint32_t>(std::ranges::count_if(shape.bones, [&](const ovl::Bone& b) { return b.name.size() > kSeat.size() && strings::equals_ignoring_case(b.name.substr(0, kSeat.size()), kSeat) && std::ranges::all_of(b.name.substr(kSeat.size()), [](char c) { return c >= '0' && c <= '9'; }); }));
+        }
+
         const ovl::FlexiTexture* texture_in(OpenFile& f, std::string_view name)
         {
             return lookup(entries(f.textures, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::FlexiTexture>(ovl::read_flexi_textures(o, p), &ovl::FlexiTextureItem::texture); }), name);
@@ -326,6 +341,16 @@ namespace rct3::park
                 const ovl::BoneShape* shape = file ? bone_in(*file->second, lod.bone_shape) : nullptr;
                 if (shape == nullptr)
                     continue;
+                model.seats = std::max(model.seats, seats_of(*shape));
+                if (model.animation_seconds.empty())
+                {
+                    for (const std::string_view name : lod.animations)
+                    {
+                        const auto anim_file = files_->holding(tagged(name, kAnimTag), visual_path);
+                        const ovl::BoneAnim* anim = anim_file ? anim_in(*anim_file->second, name) : nullptr;
+                        model.animation_seconds.push_back(anim != nullptr ? anim->duration : 0.0f);
+                    }
+                }
                 for (const ovl::BoneMesh& mesh : shape->meshes)
                 {
                     level.parts.push_back(part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); }));

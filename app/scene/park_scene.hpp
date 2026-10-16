@@ -21,8 +21,10 @@
 #include "park/camera.hpp"
 #include "park/object_mesh.hpp"
 #include "park/person_mesh.hpp"
+#include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
+#include "park/track_course.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
 #include "save/model/park.hpp"
@@ -37,6 +39,7 @@
 #include "scene/track_building.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
+#include "simulation/sim_world.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
@@ -108,17 +111,19 @@ namespace rct3::scene
     {
         park::ObjectLevels levels;
         park::ObjectMesh mesh;
+        bool simulate = false; ///< Whether it left out the simulated guests
     };
 
     /// A person as the park shows it.
     struct ShownPerson
     {
         park::PlacedPerson pose;
-        float saved_time = 0;  ///< Into its motion, when the park was saved
-        float speed = 1;       ///< How fast its motion plays
-        bool walking = false;  ///< Walkers stand still in their stride until people move
-        bool staff = false;    ///< A member of staff rather than a guest
-        std::size_t saved = 0; ///< Of the guests or of the staff in the saved people
+        float saved_time = 0;            ///< Into its motion, when the park was saved
+        float speed = 1;                 ///< How fast its motion plays
+        bool walking = false;            ///< Walkers stand still in their stride until people move
+        bool staff = false;              ///< A member of staff rather than a guest
+        std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
+        entt::entity guest = entt::null; ///< The simulated guest it shows, for guests the simulation walks
     };
 
     struct ParkScene
@@ -176,8 +181,19 @@ namespace rct3::scene
         save::ParkModel park_model;          ///< As saved: finances, objectives, research; read by the management windows
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
-        save::PeopleModel people;                         ///< Guests, staff and litter as saved; read for the weekly rating
-        std::optional<park::PersonLibrary> person_models; ///< Of the park's people
+        save::PeopleModel people; ///< Guests, staff and litter as saved; read for the weekly rating
+        simulation::SimWorld sim; ///< The paths, shops and guests the simulation runs
+        bool simulate = false;    ///< Developer switch: run the simulation and show its guests
+        float sim_time = 0;       ///< Park seconds the simulation has still to step
+        /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
+        std::vector<save::PlacedObject> cars;
+        std::vector<park::CarSpot> car_spots;                  ///< By car, as the park kept them
+        park::Fitted saved_cars;                               ///< Where the park kept each car, by id
+        park::Fitted car_places;                               ///< Where each car stands now, by id
+        park::ObjectMesh car_mesh;                             ///< At car_places
+        std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose trains go round
+        std::vector<entt::entity> ride_entities;               ///< In the simulation, by ride; null when not there
+        std::optional<park::PersonLibrary> person_models;      ///< Of the park's people
         std::vector<ShownPerson> shown_people;
         park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;

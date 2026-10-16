@@ -92,4 +92,15 @@ namespace rct3::ovl
         return items;
     }
 
+    std::array<float, 3> spline_point(const Spline& spline, std::size_t segment, float t)
+    {
+        const SplineNode& a = spline.nodes[segment];
+        const SplineNode& b = spline.nodes[segment + 1];
+        const float u = 1 - t;
+        std::array<float, 3> out { };
+        for (std::size_t k = 0; k < 3; ++k)
+            out[k] = u * u * u * a.position[k] + 3 * u * u * t * (a.position[k] + a.tangent_out[k]) + 3 * u * t * t * (b.position[k] + b.tangent_in[k]) + t * t * t * b.position[k];
+        return out;
+    }
+
 } // namespace rct3::ovl

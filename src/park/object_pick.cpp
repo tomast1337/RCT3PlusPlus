@@ -114,7 +114,7 @@ namespace rct3::park
             if (!box->second)
                 continue;
             const auto own = fitted.find(o.id);
-            const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(o, static_cast<Positioning>(model->second.positioning), grid, model->second.squares);
+            const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(o, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
             // In the model's own space the box is square to the axes; the transform keeps distances along the
             // line in step, so the hit's distance holds in the park too.
             const glm::mat4 back = glm::inverse(transform);
@@ -137,7 +137,7 @@ namespace rct3::park
         if (!box)
             return { };
         const auto own = fitted.find(object.id);
-        const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(object, static_cast<Positioning>(model->second.positioning), grid, model->second.squares);
+        const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(object, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
         std::vector<glm::vec3> corners;
         for (int i = 0; i < 8; ++i)
         {

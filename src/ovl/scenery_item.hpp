@@ -69,6 +69,11 @@ namespace rct3::ovl
         float priority = 0;        ///< Unconfirmed. 10 in files seen.
     };
 
+    /// SceneryItem::flags bit of items whose shape bends to fit the ground under it (plants, rocks, benches).
+    inline constexpr std::uint32_t kItemFitsGround = 1u << 12;
+    /// SceneryItem::flags bit of items that stand at the ground's height where they are; without it an item
+    /// keeps the whole-unit height the park stored, as walls do.
+    inline constexpr std::uint32_t kItemOnGroundHeight = 1u << 13;
     /// SceneryItem::flags bit of rides that stand only on water. They get no fence round them.
     inline constexpr std::uint32_t kItemWaterOnly = 1u << 16;
     /// SceneryItem::flags bit of rides fenced round the outline of their solid ground squares rather than round

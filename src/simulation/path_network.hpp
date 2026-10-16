@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The footpaths as the simulation walks them: one node per path tile, joined to the path tiles beside it.
+// A tile is a column, a row and a level (height in steps); tiles side by side join when their levels differ
+// by at most `max_step`, which is how slopes join a flat path to a higher one.
+//
+// Nothing is sized to the original game's maps: columns, rows and levels are full integers.
+#pragma once
+
+#include "math/glm.hpp"
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <unordered_map>
+#include <vector>
+
+namespace rct3::simulation
+{
+
+    using NodeId = std::uint32_t;
+    inline constexpr NodeId kNoNode = ~NodeId { 0 };
+
+    struct PathTileSpot
+    {
+        int col = 0;
+        int row = 0;
+        int level = 0;
+        bool operator==(const PathTileSpot&) const = default;
+    };
+
+    struct PathNode
+    {
+        PathTileSpot tile;
+        bool queue = false;
+        /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
+        std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
+    };
+
+    class PathNetwork
+    {
+    public:
+        float tile_size = 4;       ///< World units across a tile
+        float level_height = 1;    ///< World units per level
+        glm::vec2 origin { 0.0f }; ///< World x and z of the corner of tile (0, 0)
+        int max_step = 1;          ///< Most levels between tiles that join; set before adding tiles
+
+        /// Adds a path tile and joins it to its neighbours; an existing tile at the same spot is returned instead.
+        NodeId add(PathTileSpot tile, bool queue = false);
+
+        [[nodiscard]] const std::vector<PathNode>& nodes() const
+        {
+            return nodes_;
+        }
+        [[nodiscard]] std::optional<NodeId> find(PathTileSpot tile) const;
+        /// The path tile whose column and row hold world point `at`, at the level nearest its height.
+        [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;
+        /// The middle of a node's tile in world space.
+        [[nodiscard]] glm::vec3 centre(NodeId node) const;
+
+        /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
+        /// when no walk reaches it. Queues are only entered at `to`, never walked through.
+        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to) const;
+
+    private:
+        static std::uint64_t key(int col, int row);
+        std::vector<PathNode> nodes_;
+        std::unordered_multimap<std::uint64_t, NodeId> by_tile_;
+    };
+
+} // namespace rct3::simulation

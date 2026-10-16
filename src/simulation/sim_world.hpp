@@ -7,6 +7,7 @@
 #pragma once
 
 #include "entt/entt.hpp"
+#include "simulation/path_network.hpp"
 
 #include <cstdint>
 
@@ -16,6 +17,7 @@ namespace rct3::simulation
     struct SimWorld
     {
         entt::registry registry;
+        PathNetwork paths;
         std::uint64_t tick = 0; ///< Simulation steps run so far
         std::uint64_t seed = 0; ///< Randomness of the whole run derives from it
     };

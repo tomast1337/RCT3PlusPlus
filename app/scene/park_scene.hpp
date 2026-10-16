@@ -218,9 +218,9 @@ namespace rct3::scene
         SaveBrowser saves;                                 ///< Behind the save and load windows over the park
         std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
         std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
-        ParkMap map; ///< The map window's pictures and what they show
-        ParkFootpaths footpaths; ///< The path panel's styles and the paths laid with it
-        TrackBuilding building; ///< The construction panel's ride and the piece it would build
+        ParkMap map;                                       ///< The map window's pictures and what they show
+        ParkFootpaths footpaths;                           ///< The path panel's styles and the paths laid with it
+        TrackBuilding building;                            ///< The construction panel's ride and the piece it would build
     };
 
     /// The stages of loading a park, in the order they run.

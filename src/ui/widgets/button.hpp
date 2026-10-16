@@ -33,7 +33,7 @@ namespace rct3::ui
         Color disabled_text_colour = hex("#7f7f7f");
         Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow
         bool toggle = false;
-        bool on = false;         ///< Toggles only
+        bool on = false; ///< Toggles only
         /// Clicking does nothing now, though the face, whose picture shows it, stays as it is: the pointer says so.
         bool inert = false;
         float swell = 0;         ///< Units the face grows by on each side while the pointer is over it

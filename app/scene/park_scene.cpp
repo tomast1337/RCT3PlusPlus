@@ -1503,6 +1503,7 @@ namespace rct3::scene
         scene.clock += elapsed;
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
+        scene.bloom = options.flag(config::GameOption::Bloom);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
@@ -1811,6 +1812,8 @@ namespace rct3::scene
             draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye });
             draw_track_ghost(device, scene, view_projection, scene.light);
         });
+        if (scene.bloom)
+            profiling::section("Glow", [&] { draw_park_glow(device, scene.glow); });
 
         const profiling::Scope zone("Interface");
         scene.list.clear();
@@ -1825,6 +1828,7 @@ namespace rct3::scene
     {
         finish_builds(scene);
         destroy_park_water(device, scene.water);
+        destroy_park_glow(device, scene.glow);
         destroy_save_browser(device, scene.saves);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.object_vertices, scene.object_indices })
         {

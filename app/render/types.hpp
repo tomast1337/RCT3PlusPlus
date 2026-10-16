@@ -196,6 +196,10 @@ namespace rct3::render
         /// corner radii (Float4), 3 softness, outline width, light width and ring width (Float4), 4 to 7 the
         /// top, bottom, outline and light colours (UByte4Norm). Lengths in pixels. No texture.
         Shape,
+        /// For glow round bright parts of the screen. Inputs as Textured. Reads `DrawCommand::texture` four times,
+        /// colour red texels of it out from the point on each diagonal, and gives the average's part above colour
+        /// green, times colour blue, opaque.
+        Glow,
     };
 
     enum class Topology : std::uint8_t
@@ -215,6 +219,7 @@ namespace rct3::render
     {
         Opaque,
         Alpha, ///< Straight (non-premultiplied) alpha
+        Add,   ///< Added to what is there
     };
 
     [[nodiscard]] constexpr std::uint32_t primitive_count(Topology topology, std::uint32_t vertices)

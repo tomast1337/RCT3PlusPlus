@@ -38,6 +38,7 @@ namespace rct3::config
             O::WaterBumps,
             O::Refraction,
             O::Shadows,
+            O::Bloom,
         };
 
     } // namespace

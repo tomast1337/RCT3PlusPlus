@@ -44,6 +44,9 @@ namespace
     const std::uint32_t kWaterFrag[] =
 #include "water.frag.inc"
         ;
+    const std::uint32_t kGlowFrag[] =
+#include "glow.frag.inc"
+        ;
 
 } // namespace
 
@@ -78,6 +81,8 @@ namespace rct3::render::vulkan
                     return { kShapeVert, kShapeFrag };
                 case Shader::Water:
                     return { kWaterVert, kWaterFrag };
+                case Shader::Glow:
+                    return { kTexturedVert, kGlowFrag };
             }
             return { };
         }
@@ -506,6 +511,16 @@ namespace rct3::render::vulkan
                 attachment.colorBlendOp = VK_BLEND_OP_ADD;
                 attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
                 attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            }
+            else if (desc.blend == BlendMode::Add)
+            {
+                attachment.blendEnable = VK_TRUE;
+                attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+                attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+                attachment.colorBlendOp = VK_BLEND_OP_ADD;
+                attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+                attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
                 attachment.alphaBlendOp = VK_BLEND_OP_ADD;
             }
             VkPipelineColorBlendStateCreateInfo blend { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };

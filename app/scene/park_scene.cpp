@@ -542,12 +542,13 @@ namespace rct3::scene
             scene.dragging = drag && (scene.dragging || !over_interface);
 
             park::ParkCamera c = scene.camera;
+            const bool free = scene.free_camera;
             if (scene.turning)
-                c = park::turned(c, dx * kDragTurn, dy * kDragTurn);
+                c = park::turned(c, dx * kDragTurn, dy * kDragTurn, free);
             else if (scene.dragging)
                 c = park::panned(c, -dx * kDragPan * c.distance, dy * kDragPan * c.distance);
             if (!over_interface && input.pointer.wheel.y != 0)
-                c = park::zoomed(c, std::pow(kWheelZoom, input.pointer.wheel.y));
+                c = park::zoomed(c, std::pow(kWheelZoom, input.pointer.wheel.y), free);
 
             const float step = kKeyPan * c.distance * elapsed;
             float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);
@@ -563,12 +564,12 @@ namespace rct3::scene
             if (right != 0 || forward != 0)
                 c = park::panned(c, right, forward);
             if (input.zoom_in_key != input.zoom_out_key)
-                c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed));
+                c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed), free);
             const float yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
             const float pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
             if (yaw != 0 || pitch != 0)
-                c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed);
-            scene.camera = park::on_ground(c, scene.grid);
+                c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
+            scene.camera = free ? c : park::on_ground(c, scene.grid);
         }
 
         /// The park's time of day as its file left it, in the window its mode keeps. A park without opening
@@ -1818,8 +1819,10 @@ namespace rct3::scene
             prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform) { draw_world(device, scene, transform, scene.light, mirrored); });
         });
         profiling::section("World", [&] {
+            device.set_wireframe(scene.wireframe);
             draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye });
             draw_track_ghost(device, scene, view_projection, scene.light);
+            device.set_wireframe(false);
         });
         if (scene.bloom)
             profiling::section("Glow", [&] { draw_park_glow(device, scene.glow); });

@@ -450,6 +450,7 @@ namespace rct3::render::vulkan
         VkShaderModule vert = VK_NULL_HANDLE;
         VkShaderModule frag = VK_NULL_HANDLE;
         VkPipeline pipeline = VK_NULL_HANDLE;
+        VkPipeline wire = VK_NULL_HANDLE;
         try
         {
             vert = make_shader(device_, code.vertex);
@@ -553,9 +554,15 @@ namespace rct3::render::vulkan
             info.pDynamicState = &dynamic;
             info.layout = pipeline_layout_;
             check(vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &info, nullptr, &pipeline), "vkCreateGraphicsPipelines");
+            if (line_fill_ && desc.topology == Topology::Triangles)
+            {
+                raster.polygonMode = VK_POLYGON_MODE_LINE;
+                check(vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &info, nullptr, &wire), "vkCreateGraphicsPipelines");
+            }
         }
         catch (const std::exception& e)
         {
+            vkDestroyPipeline(device_, pipeline, nullptr);
             vkDestroyShaderModule(device_, vert, nullptr);
             vkDestroyShaderModule(device_, frag, nullptr);
             return std::unexpected(e.what());
@@ -564,7 +571,7 @@ namespace rct3::render::vulkan
         vkDestroyShaderModule(device_, frag, nullptr);
 
         const std::uint32_t id = next_id_++;
-        pipelines_.emplace(id, Pipeline { pipeline, desc.topology, desc.shader });
+        pipelines_.emplace(id, Pipeline { pipeline, wire, desc.topology, desc.shader });
         return PipelineHandle { id };
     }
 
@@ -574,6 +581,8 @@ namespace rct3::render::vulkan
         if (it == pipelines_.end())
             return;
         garbage_slot().pipelines.push_back(it->second.pipeline);
+        if (it->second.wire)
+            garbage_slot().pipelines.push_back(it->second.wire);
         pipelines_.erase(it);
     }
 

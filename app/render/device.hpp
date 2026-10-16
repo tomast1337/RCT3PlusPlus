@@ -115,6 +115,8 @@ namespace rct3::render
         /// not fit; it is then left as it was.
         virtual bool copy_screen(TextureHandle target) = 0;
         virtual void end_frame() = 0;
+        /// For debugging: while on, draws of triangles outline them instead of filling them, where the device can.
+        virtual void set_wireframe(bool on) = 0;
 
         /// Counters of the last finished frame.
         [[nodiscard]] virtual FrameStats stats() const = 0;

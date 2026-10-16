@@ -250,8 +250,7 @@ namespace rct3::scene
             return;
         if (panel->showing())
         {
-            panel->hide();
-            scene.footpaths.ghost = { };
+            close_footpath_panel(scene);
             return;
         }
         ParkFootpaths& f = scene.footpaths;
@@ -279,6 +278,13 @@ namespace rct3::scene
         panel->show(std::move(paths), std::move(queues));
         panel->set_chosen(pick_of(f));
         f.dirty = true;
+    }
+
+    void close_footpath_panel(ParkScene& scene)
+    {
+        if (ui::FootpathPanel* panel = panel_of(scene); panel != nullptr && panel->showing())
+            panel->hide();
+        scene.footpaths.ghost = { };
     }
 
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options)

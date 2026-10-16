@@ -636,6 +636,9 @@ namespace rct3::scene
         const park::TerrainMesh surroundings = park::surrounding_land(scene.grid);
         park::add_ground(mesh, surroundings);
         scene.batches = mesh.batches;
+        scene.footpaths.paths = world->paths;
+        scene.footpaths.water = world->water;
+        scene.footpaths.pictured = paths.styles;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
         const auto fail = [&](std::string message) -> std::expected<ParkScene, std::string> {
@@ -826,6 +829,7 @@ namespace rct3::scene
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
+        scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
         if (auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); }))
         {
@@ -1371,7 +1375,8 @@ namespace rct3::scene
                 const ui::Point from = *std::exchange(scene.press, std::nullopt);
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 const ui::Rect screen = desktop.root().rect();
-                if (still && !over)
+                // While the path panel shows its controls, a click on the ground picks where the path starts.
+                if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }))
                 {
                     const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
                     if (picked.person)
@@ -1524,6 +1529,8 @@ namespace rct3::scene
                 ask_leave(scene, *assets.strings);
             else if (pressed == ui::ParkTool::Map)
                 toggle_park_map(scene.map, desktop, *assets.strings);
+            else if (pressed == ui::ParkTool::Paths)
+                toggle_footpath_panel(device, scene, assets, options);
             if (const auto item = tools->take_item())
             {
                 if (*item == ui::ToolItem::People)
@@ -1546,6 +1553,7 @@ namespace rct3::scene
         }
         if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info != nullptr)
             open_row(scene, *info, *row, assets, options);
+        profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))
@@ -1636,6 +1644,7 @@ namespace rct3::scene
                         draw.light = light;
                         device.draw(draw);
                     }
+                    draw_footpath_ghost(device, scene, transform, light);
                 });
             if (scene.object_indices && scene.show_scenery && parts.scenery)
                 profiling::section("Objects", [&] { draw_objects(false); });

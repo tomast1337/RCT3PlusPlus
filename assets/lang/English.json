@@ -12,6 +12,13 @@
         "SkyHelp": "The sky shows the colours of the time of day, with the sun, the moon and the stars.",
         "MountainsHelp": "Hills and mountains stand far beyond the edges of the park.",
         "AllItemsShown": "All shown: the park does not say which are available",
+        "Paths": {
+            "PickStart": "Click the ground to start a path",
+            "NotOwned": "The park does not own this land",
+            "OffMap": "Off the edge of the park",
+            "GroundOnly": "Only flat ground paths for now",
+            "NoQueues": "Queues cannot be laid yet"
+        },
         "Command": {
             "Cancel": "Close, cancel, go back",
             "DefaultButton": "Default button",

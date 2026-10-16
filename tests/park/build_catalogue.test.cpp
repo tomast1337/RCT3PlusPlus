@@ -102,3 +102,65 @@ TEST_CASE("a park offers what it made available and invented")
     CHECK_FALSE(open.known());
     CHECK(open.offers(item("Unlisted")));
 }
+
+TEST_CASE("a species gives an animal item for each animal, under the species")
+{
+    using namespace rct3::test;
+    Pool pool;
+    const std::uint32_t shelter = pool.add("burrow");
+    pool.add("wombat:was");
+    pool.add("WombatName:txt");
+    pool.add("WombatIcon:gsi");
+    pool.add("BigWombat:txt");
+    const std::uint32_t at = pool.base();
+    std::vector<std::byte> bytes;
+    put(bytes, { 0, 0, 0, 0, 0, 0, at + 0x40, 0, 0, 0, 0, 0, shelter, 0, bits(2.0f) });
+    bytes.resize(0x40 + 0x34, std::byte { 0 });
+    std::vector<std::byte> price;
+    put(price, { 900, bits(0.5f) });
+    std::copy(price.begin(), price.end(), bytes.begin() + 0x40 + 0x14);
+    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40 + 0x1C, "BigWombat:txt" } });
+    std::vector<BuildItem> items;
+    add_build_items(overlay, "Wild/Animals", items);
+    REQUIRE(items.size() == 1);
+    const BuildItem& a = items[0];
+    CHECK(a.list == BuildList::Animals);
+    CHECK(a.kind == BuildKind::Animal);
+    CHECK(a.symbol == "wombat");
+    CHECK(a.name_text == "BigWombat");
+    CHECK(a.icon == "WombatIcon"); // the animal has none of its own
+    CHECK(a.group_text == "WombatName");
+    CHECK(a.price == 900);
+    CHECK(a.rarity == doctest::Approx(0.5f));
+    CHECK(a.strength == doctest::Approx(2.0f));
+    CHECK(a.needs == "burrow");
+}
+
+TEST_CASE("a park offers the species it unlocked, and every fence, shelter and toy")
+{
+    rct3::save::RequiredContent content;
+    rct3::save::AssetRequirement open;
+    open.kind = rct3::save::AssetKind::AnimalSpecies;
+    open.overlay_stem = "Wild/Animals";
+    open.symbol = "wombat";
+    open.unlocked = true;
+    rct3::save::AssetRequirement shut = open;
+    shut.symbol = "koala";
+    shut.unlocked = false;
+    content.entries = { open, shut };
+    const BuildOffer offer(content);
+    const auto item = [](BuildKind kind, std::string symbol) {
+        BuildItem i;
+        i.kind = kind;
+        i.overlay = "Wild/Animals";
+        i.symbol = std::move(symbol);
+        return i;
+    };
+    CHECK(offer.offers(item(BuildKind::Animal, "Wombat")));
+    CHECK_FALSE(offer.offers(item(BuildKind::Animal, "koala")));
+    CHECK(offer.offers(item(BuildKind::EnclosureFence, "Rope")));
+    CHECK(offer.offers(item(BuildKind::Shelter, "Den")));
+    CHECK(offer.offers(item(BuildKind::AnimalToy, "Hoop")));
+    // A park that records no species offers them all.
+    CHECK(BuildOffer(rct3::save::RequiredContent { }).offers(item(BuildKind::Animal, "koala")));
+}

@@ -35,7 +35,9 @@ TEST_CASE("menu items open the list of their kind")
     CHECK(build_list(ToolItem::Plants) == BuildList::Trees);
     CHECK(build_list(ToolItem::Buildings) == BuildList::Walls);
     CHECK(build_list(ToolItem::SceneryItems) == BuildList::Props);
-    CHECK_FALSE(build_list(ToolItem::Animals).has_value());
+    CHECK(build_list(ToolItem::Animals) == BuildList::Animals);
+    CHECK(build_list(ToolItem::Enclosures) == BuildList::Enclosures);
+    CHECK_FALSE(build_list(ToolItem::Pools).has_value());
     CHECK_FALSE(build_list(ToolItem::SavedStructures).has_value());
     CHECK_FALSE(build_list(ToolItem::Staff).has_value());
 }
@@ -100,4 +102,78 @@ TEST_CASE("an item without a name string shows its symbol")
     const auto rows = picker_rows(BuildList::Props, items, BuildOffer(), strings, kCoins);
     REQUIRE(rows.size() == 1);
     CHECK(rows[0].name == u"Lamp");
+}
+
+TEST_CASE("animal rarity words")
+{
+    CHECK(rarity_text(0.1f) == "WildAnimalRarity_Common");
+    CHECK(rarity_text(0.4f) == "WildAnimalRarity_Moderate");
+    CHECK(rarity_text(0.7f) == "WildAnimalRarity_Rare");
+    CHECK(rarity_text(0.9f) == "WildAnimalRarity_Endangered");
+}
+
+TEST_CASE("the enclosure list shows fences by strength, then shelters and toys, under their headings")
+{
+    using rct3::park::BuildKind;
+    using rct3::park::EnclosurePart;
+    StringTable strings;
+    strings.add("EnclosureMaster_FenceTT", u"Fences");
+    strings.add("EnclosureMaster_ShelterTT", u"Houses");
+    strings.add("EnclosureMaster_ItemsTT", u"Toys");
+    const auto item = [](std::string symbol, BuildKind kind, EnclosurePart part, float strength) {
+        BuildItem i = scenery(std::move(symbol), BuildList::Enclosures, "");
+        i.kind = kind;
+        i.part = part;
+        i.strength = strength;
+        return i;
+    };
+    const std::vector<BuildItem> items = { item("Hoop", BuildKind::AnimalToy, EnclosurePart::Toys, 0), item("Steel", BuildKind::EnclosureFence, EnclosurePart::Fences, 3), item("Den", BuildKind::Shelter, EnclosurePart::Shelters, 0), item("Rope", BuildKind::EnclosureFence, EnclosurePart::Fences, 1) };
+    const auto rows = picker_rows(BuildList::Enclosures, items, BuildOffer { }, strings, kCoins);
+    REQUIRE(rows.size() == 3);
+    CHECK(rows[0].name == u"Fences");
+    CHECK(rows[1].name == u"Houses");
+    CHECK(rows[2].name == u"Toys");
+    REQUIRE(rows[0].children.size() == 2);
+    CHECK(rows[0].children[0].name == u"Rope");
+    CHECK(rows[0].children[1].name == u"Steel");
+}
+
+TEST_CASE("animals sit under their species, which names the fence and shelter it needs")
+{
+    using rct3::park::BuildKind;
+    StringTable strings;
+    strings.add("Wombat", u"Wombat");
+    strings.add("BigWombat", u"Big wombat");
+    strings.add("RopeName", u"Rope fence");
+    strings.add("SteelName", u"Steel fence");
+    strings.add("BurrowName", u"Burrow");
+    strings.add("WildAnimalRarity", u"Rarity:");
+    strings.add("WildAnimalRarity_Rare", u"Rare");
+    strings.add("WildAnimal_ShelterRequired", u"Needs %SHELTERNAME%");
+    std::vector<BuildItem> items;
+    for (const auto& [symbol, strength] : { std::pair { "Rope", 1.0f }, std::pair { "Steel", 3.0f } })
+    {
+        BuildItem f = scenery(symbol, BuildList::Enclosures, std::string(symbol) + "Name");
+        f.kind = BuildKind::EnclosureFence;
+        f.strength = strength;
+        items.push_back(f);
+    }
+    BuildItem burrow = scenery("burrow", BuildList::Enclosures, "BurrowName");
+    burrow.kind = BuildKind::Shelter;
+    items.push_back(burrow);
+    BuildItem animal = scenery("wombat", BuildList::Animals, "BigWombat", 1200);
+    animal.kind = BuildKind::Animal;
+    animal.group_icon = "WombatIcon";
+    animal.group_text = "Wombat";
+    animal.strength = 2;
+    animal.rarity = 0.7f;
+    animal.needs = "BURROW";
+    items.push_back(animal);
+    const auto rows = picker_rows(BuildList::Animals, items, BuildOffer { }, strings, kCoins);
+    REQUIRE(rows.size() == 1);
+    CHECK(rows[0].name == u"Wombat (Steel fence)");
+    CHECK(rows[0].size == u"Needs Burrow");
+    REQUIRE(rows[0].children.size() == 1);
+    CHECK(rows[0].children[0].name == u"Big wombat");
+    CHECK(rows[0].children[0].size == u"Rarity: Rare");
 }

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/build_catalogue.hpp"
 
+#include "ovl/animal_items.hpp"
+#include "ovl/animal_species.hpp"
 #include "ovl/animated_ride.hpp"
+#include "ovl/enclosure_fence.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
@@ -22,6 +25,12 @@ namespace rct3::park
         constexpr std::string_view kStyleFolder = "Style";
         constexpr std::string_view kStyleOverlay = "Style";
         constexpr std::array<std::string_view, 2> kRideFolders = { "Tracks/Coasters", "Tracks/TrackedRides" };
+        /// Each folder below it holds one kind of enclosure fence, in the overlay named after the folder with
+        /// this ending; the rest of its overlays are the pieces' shapes.
+        constexpr std::string_view kFenceFolder = "Enclosures/Fences";
+        constexpr std::string_view kFenceEnding = "_Stub";
+        /// The overlays of shelters, animal species and toys.
+        constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
         std::string lower(std::string_view s)
         {
@@ -100,6 +109,82 @@ namespace rct3::park
             {
                 item.list = *list;
                 items.push_back(std::move(item));
+            }
+        }
+
+        void add_enclosure_items(const ovl::Overlay& overlay, const ovl::Part& part, std::string_view path, const ByName& placed, std::vector<BuildItem>& items)
+        {
+            const auto item_of = [&](BuildKind kind, std::string_view symbol) {
+                BuildItem item;
+                item.list = kind == BuildKind::Animal ? BuildList::Animals : BuildList::Enclosures;
+                item.kind = kind;
+                item.symbol = symbol;
+                item.overlay = path;
+                return item;
+            };
+            for (const auto& e : ovl::read_enclosure_fences(overlay, part))
+            {
+                if (!e.fence)
+                    continue;
+                BuildItem item = item_of(BuildKind::EnclosureFence, e.name);
+                item.part = EnclosurePart::Fences;
+                item.name_text = e.fence->name_text;
+                item.icon = e.fence->icon;
+                item.price = e.fence->fence_cost;
+                item.strength = e.fence->strength;
+                items.push_back(std::move(item));
+            }
+            // A shelter is listed as the scenery item it is placed as, which parks record.
+            for (const auto& e : ovl::read_shelters(overlay, part))
+            {
+                const auto it = placed.find(e.scenery);
+                if (it == placed.end() || it->second->icon.empty())
+                    continue;
+                const ovl::SceneryItem& s = *it->second;
+                BuildItem item = item_of(BuildKind::Shelter, it->first);
+                item.part = EnclosurePart::Shelters;
+                item.name_text = s.name_text;
+                item.icon = s.icon;
+                item.price = s.cost;
+                item.placement = s.positioning;
+                item.width = s.x_squares;
+                item.length = s.z_squares;
+                item.addon = s.addon;
+                items.push_back(std::move(item));
+            }
+            for (const auto& e : ovl::read_animal_toys(overlay, part))
+            {
+                if (!e.toy)
+                    continue;
+                BuildItem item = item_of(BuildKind::AnimalToy, e.name);
+                item.part = EnclosurePart::Toys;
+                item.name_text = e.toy->name_text;
+                item.description_text = e.toy->description_text;
+                item.icon = e.toy->icon;
+                item.price = e.toy->price;
+                items.push_back(std::move(item));
+            }
+            for (const auto& e : ovl::read_animal_species(overlay, part))
+            {
+                if (!e.species)
+                    continue;
+                const ovl::AnimalSpecies& s = *e.species;
+                for (const auto& v : s.variants)
+                {
+                    if (!v)
+                        continue;
+                    BuildItem item = item_of(BuildKind::Animal, e.name);
+                    item.name_text = v->description_text;
+                    item.description_text = s.description_text;
+                    item.icon = v->icon.empty() ? s.icon : v->icon;
+                    item.price = v->price;
+                    item.group_icon = s.icon;
+                    item.group_text = s.name_text;
+                    item.needs = s.shelter;
+                    item.strength = s.fence_strength;
+                    item.rarity = v->rarity;
+                    items.push_back(std::move(item));
+                }
             }
         }
 
@@ -298,6 +383,7 @@ namespace rct3::park
                 else if (const auto shop = shop_list(info.type_id))
                     items.push_back(attraction_item(*shop, BuildKind::Shop, e.name, path, info, placed_as(info.style, e.name)));
             }
+            add_enclosure_items(overlay, *part, path, placed, items);
             for (const auto& e : ovl::read_stalls(overlay, *part))
             {
                 if (!e.stall)
@@ -350,6 +436,26 @@ namespace rct3::park
                     read_file(root, *named, items);
             }
         }
+        if (const auto fences = find(root, kFenceFolder))
+        {
+            std::vector<std::filesystem::path> files;
+            for (const auto& dir : std::filesystem::directory_iterator(*fences, ec))
+            {
+                if (!dir.is_directory(ec))
+                    continue;
+                const std::string wanted = dir.path().filename().string() + std::string(kFenceEnding);
+                if (const auto file = child(dir.path(), wanted + std::string(kCommonEnding)))
+                    files.push_back(*file);
+            }
+            std::ranges::sort(files);
+            for (const auto& file : files)
+                read_file(root, file, items);
+        }
+        for (const std::string_view overlay : kAnimalOverlays)
+        {
+            if (const auto file = find(root, std::string(overlay) + std::string(kCommonEnding)))
+                read_file(root, *file, items);
+        }
         return items;
     }
 
@@ -358,14 +464,26 @@ namespace rct3::park
     {
         for (const save::AssetRequirement& e : content.entries)
         {
-            if (e.available && e.invented && !e.hidden)
+            const bool species = e.kind == save::AssetKind::AnimalSpecies;
+            species_known_ = species_known_ || species;
+            if (species ? e.unlocked : e.available && e.invented && !e.hidden)
                 offered_.insert(key(e.overlay_stem, e.symbol));
         }
     }
 
     bool BuildOffer::offers(const BuildItem& item) const
     {
-        return !known_ || offered_.contains(key(item.overlay, item.symbol));
+        switch (item.kind)
+        {
+            case BuildKind::Animal:
+                return !species_known_ || offered_.contains(key(item.overlay, item.symbol));
+            case BuildKind::EnclosureFence:
+            case BuildKind::Shelter:
+            case BuildKind::AnimalToy:
+                return true; // parks list these without saying whether they may be built
+            default:
+                return !known_ || offered_.contains(key(item.overlay, item.symbol));
+        }
     }
 
 } // namespace rct3::park

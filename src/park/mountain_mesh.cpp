@@ -20,29 +20,17 @@ namespace rct3::park
         return { base + "1", base + "2" };
     }
 
-    MountainPlace mountain_place(const save::TerrainGrid& grid, float ground)
+    MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme)
     {
-        const float x0 = grid.world_x(0);
-        const float z0 = grid.world_z(0);
-        const float x1 = grid.world_x(grid.width);
-        const float z1 = grid.world_z(grid.height);
-        const float half = std::hypot(x1 - x0, z1 - z0) / 2;
-        return { { (x0 + x1) / 2, ground, (z0 + z1) / 2 }, half + kMountainDistance };
+        const auto at = std::ranges::find(kBackgroundThemes, theme);
+        const float drop = at != kBackgroundThemes.end() ? kMountainDrop[static_cast<std::size_t>(at - kBackgroundThemes.begin())] : 0.0f;
+        return { { (grid.world_x(0) + grid.world_x(grid.width)) / 2, -drop, (grid.world_z(0) + grid.world_z(grid.height)) / 2 }, kMountainScale };
     }
 
     ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place)
     {
         ObjectMesh mesh;
-        // The ring's own radius: the farthest any of its points is from its upright axis.
-        float reach = 0;
-        for (const SkyShape& shape : shapes)
-        {
-            for (const ModelVertex& v : shape.vertices)
-                reach = std::max(reach, std::hypot(v.position.x, v.position.z));
-        }
-        if (reach <= 0)
-            return mesh;
-        const float scale = place.radius / reach;
+        const float scale = place.scale;
         for (const SkyShape& shape : shapes)
         {
             if (shape.vertices.empty() || shape.indices.empty())

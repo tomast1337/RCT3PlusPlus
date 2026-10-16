@@ -37,6 +37,7 @@ namespace rct3::config
             O::ReflectPeople,
             O::WaterBumps,
             O::Refraction,
+            O::Shadows,
         };
 
     } // namespace

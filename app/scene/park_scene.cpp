@@ -15,6 +15,7 @@
 #include "park/path_supports.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
+#include "park/ride_cars.hpp"
 #include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
 #include "park/sky_models.hpp"
@@ -128,7 +129,8 @@ namespace rct3::scene
 
         /// The models of the park's objects, by model key, and the pictures they use.
         /// Adds the models of `objects` that `models` does not have yet, and their pictures.
-        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures)
+        /// With `cars`, the objects are ride cars and these are their designs, by object.
+        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures, std::span<const park::CarDesign> cars = { })
         {
             const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
@@ -151,12 +153,13 @@ namespace rct3::scene
             }
             park::ModelLoader loader(index);
             std::map<std::string, bool, std::less<>> tried;
-            for (const save::PlacedObject& o : objects)
+            for (std::size_t i = 0; i < objects.size(); ++i)
             {
+                const save::PlacedObject& o = objects[i];
                 std::string key = park::model_key(o);
                 if (models.contains(key) || !tried.emplace(key, true).second)
                     continue;
-                if (auto model = loader.load(o.symbol, o.overlay, modelled_plants))
+                if (auto model = i < cars.size() ? loader.load_car(cars[i].train, o.overlay, cars[i].slot) : loader.load(o.symbol, o.overlay, modelled_plants))
                     models.emplace(std::move(key), std::move(*model));
             }
             for (const auto& [key, picture] : loader.pictures())
@@ -781,6 +784,11 @@ namespace rct3::scene
             }
             log.info("{} ride fences", ride_fences);
             load_models(install, built, false, scene.models, scene.pictures);
+            park::RideCars cars = park::ride_cars(scene.rides.rides, largest_id());
+            load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
+            log.info("{} ride cars", cars.pieces.size());
+            scene.fitted.merge(cars.fitted);
+            built.insert(built.end(), std::make_move_iterator(cars.pieces.begin()), std::make_move_iterator(cars.pieces.end()));
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
         }
         if (options.flag(config::GameOption::OffMapTrees))

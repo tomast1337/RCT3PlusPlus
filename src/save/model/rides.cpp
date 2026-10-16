@@ -252,6 +252,7 @@ namespace rct3::save
             constexpr std::string_view kCarStats = "Stats";
             constexpr std::string_view kStatPos = "Pos";
             constexpr std::string_view kStatPosValid = "PosValid";
+            constexpr std::string_view kStatOrient = "Orient";
             constexpr std::string_view kStatPiece = "TrackPiece";
             constexpr std::string_view kFrontWheel = "FrontWheelDistance";
             constexpr std::string_view kRearWheel = "RearWheelDistance";
@@ -1097,6 +1098,11 @@ namespace rct3::save
                             {
                                 car.position[i] = (std::isfinite(pos[i]) && std::fabs(pos[i]) <= kFloatLimit) ? pos[i] : 0.0f;
                             }
+                        }
+                        if (const auto turn = st[id::kStatOrient].floats(); turn.size() == 3)
+                        {
+                            for (std::size_t i = 0; i < 3; ++i)
+                                car.orientation[i] = (std::isfinite(turn[i]) && std::fabs(turn[i]) <= kFloatLimit) ? turn[i] : 0.0f;
                         }
                         car.front_wheel_distance = cf[id::kFrontWheel].number();
                         car.rear_wheel_distance = cf[id::kRearWheel].number();

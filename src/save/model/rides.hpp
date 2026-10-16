@@ -420,6 +420,8 @@ namespace rct3::save
         float rear_wheel_distance = 0;
         std::array<float, 3> position { }; ///< World position in metres (valid when position_valid)
         bool position_valid = false;
+        /// How the car is turned from its model: about this axis, by its length in radians.
+        std::array<float, 3> orientation { };
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;
     };

@@ -4,6 +4,8 @@
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
+#include "ovl/ride_car.hpp"
+#include "ovl/ride_train.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/scenery_visual.hpp"
 #include "ovl/static_shape.hpp"
@@ -23,6 +25,8 @@ namespace rct3::park
         constexpr std::string_view kStaticTag = ":shs";
         constexpr std::string_view kBoneTag = ":bsh";
         constexpr std::string_view kTextureTag = ":ftx";
+        constexpr std::string_view kTrainTag = ":rit";
+        constexpr std::string_view kCarTag = ":ric";
 
         /// Entries of an overlay by symbol name, whatever its case: items name visuals, shapes and textures
         /// without always spelling them as the files that hold them do.
@@ -37,6 +41,8 @@ namespace rct3::park
             std::optional<ByName<ovl::StaticShape>> statics;
             std::optional<ByName<ovl::BoneShape>> bones;
             std::optional<ByName<ovl::FlexiTexture>> textures;
+            std::optional<ByName<ovl::RideTrain>> trains;
+            std::optional<ByName<ovl::RideCar>> cars;
         };
 
         /// Every readable entry of both parts, read the first time it is asked for.
@@ -121,7 +127,7 @@ namespace rct3::park
                 auto overlay = ovl::Overlay::load(index.file(path));
                 std::unique_ptr<OpenFile> file;
                 if (overlay)
-                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { } });
+                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { }, { }, { } });
                 it = open.emplace(std::string(path), std::move(file)).first;
             }
             return it->second.get();
@@ -171,6 +177,14 @@ namespace rct3::park
         const ovl::FlexiTexture* texture_in(OpenFile& f, std::string_view name)
         {
             return lookup(entries(f.textures, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::FlexiTexture>(ovl::read_flexi_textures(o, p), &ovl::FlexiTextureItem::texture); }), name);
+        }
+        const ovl::RideTrain* train_in(OpenFile& f, std::string_view name)
+        {
+            return lookup(entries(f.trains, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::RideTrain>(ovl::read_ride_trains(o, p), &ovl::RideTrainItem::train); }), name);
+        }
+        const ovl::RideCar* car_in(OpenFile& f, std::string_view name)
+        {
+            return lookup(entries(f.cars, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::RideCar>(ovl::read_ride_cars(o, p), &ovl::RideCarItem::car); }), name);
         }
 
     } // namespace
@@ -278,7 +292,15 @@ namespace rct3::park
             for (const ovl::SceneryItemSquare& square : item->squares)
                 model.fence_outline.push_back((square.flags & ovl::kSquareSolid) != 0 && square.min_height <= 0);
         }
-        for (const ovl::SceneryVisualLod& lod : visual->lods)
+        add_levels(model, *visual, visual_path);
+        if (model.levels.empty())
+            return std::nullopt;
+        return model;
+    }
+
+    void ModelLoader::add_levels(ObjectModel& model, const ovl::SceneryVisual& visual, std::string_view visual_path)
+    {
+        for (const ovl::SceneryVisualLod& lod : visual.lods)
         {
             ModelLevel level;
             level.distance = lod.distance;
@@ -327,6 +349,25 @@ namespace rct3::park
             }
             model.levels.push_back(std::move(level));
         }
+    }
+
+    std::optional<ObjectModel> ModelLoader::load_car(std::string_view train, std::string_view overlay, std::size_t slot)
+    {
+        const std::string hint = index_.overlay(overlay).value_or(std::string(overlay));
+        const auto train_file = files_->holding(tagged(train, kTrainTag), hint);
+        const ovl::RideTrain* found = train_file ? train_in(*train_file->second, train) : nullptr;
+        if (found == nullptr || slot >= found->cars.size() || found->cars[slot].empty())
+            return std::nullopt;
+        const auto car_file = files_->holding(tagged(found->cars[slot], kCarTag), train_file->first);
+        const ovl::RideCar* car = car_file ? car_in(*car_file->second, found->cars[slot]) : nullptr;
+        if (car == nullptr)
+            return std::nullopt;
+        const auto visual_file = files_->holding(tagged(car->visual, kVisualTag), car_file->first);
+        const ovl::SceneryVisual* visual = visual_file ? visual_in(*visual_file->second, car->visual) : nullptr;
+        if (visual == nullptr)
+            return std::nullopt;
+        ObjectModel model;
+        add_levels(model, *visual, visual_file->first);
         if (model.levels.empty())
             return std::nullopt;
         return model;

@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     simulation::SimWorld world;
     world.seed = seed;
     simulation::import_paths(world, *world_model);
-    simulation::import_guests(world, *people);
+    const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
@@ -196,10 +196,11 @@ int main(int argc, char** argv)
             std::printf("height gap to saved guests: median %.3f, 90%% %.3f, max %.3f\n", gaps[gaps.size() / 2], gaps[gaps.size() * 9 / 10], gaps.back());
     }
     const std::size_t walking = simulation::start_guests(world);
+    const std::size_t parties = simulation::import_parties(world, *people, guests);
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             std::printf("stall %s sells %s\n", stall.base.name.c_str(), item.name.c_str());
-    std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu\n", world.paths.nodes().size(), shops, ride_count, walking);
+    std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu  parties %zu\n", world.paths.nodes().size(), shops, ride_count, walking, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();
@@ -247,7 +248,7 @@ int main(int argc, char** argv)
         const char* sells = !shop ? "ride" : shop->product == simulation::Product::Drink ? "drink" : "food";
         std::printf("  %-28s %-5s customers %5u  income %8.2f\n", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100);
     }
-    std::array<std::size_t, 4> doing { };
+    std::array<std::size_t, 6> doing { };
     double happiness = 0;
     double thirst = 0;
     double hunger = 0;
@@ -261,6 +262,6 @@ int main(int argc, char** argv)
         ++count;
     }
     if (count > 0)
-        std::printf("guests: wandering %zu heading %zu queueing %zu riding %zu  happiness %.2f thirst %.2f hunger %.2f\n", doing[0], doing[1], doing[2], doing[3], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
+        std::printf("guests: wandering %zu heading %zu queueing %zu riding %zu following %zu waiting %zu  happiness %.2f thirst %.2f hunger %.2f\n", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
     return 0;
 }

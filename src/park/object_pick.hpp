@@ -35,6 +35,25 @@ namespace rct3::park
     /// The box a person is hit in, in their own space: standing at the origin, head up along y.
     inline constexpr glm::vec3 kPersonLow { -0.4f, 0.0f, -0.4f };
     inline constexpr glm::vec3 kPersonHigh { 0.4f, 1.9f, 0.4f };
+    /// Farther than this from a person's feet, a line misses their box whichever way they face.
+    inline constexpr float kPersonReach = 2.0f;
+
+    /// The box an object is hit in, worked out once: in the object's own space, the way back there from the
+    /// park, and a box square to the park's axes round it for a quick first look.
+    struct PickBox
+    {
+        std::size_t index = 0; ///< Of the object
+        glm::mat4 back { 1.0f };
+        glm::vec3 low { 0.0f }, high { 0.0f };
+        glm::vec3 park_low { 0.0f }, park_high { 0.0f };
+    };
+
+    /// The boxes of those of `objects` that have a model with a shape.
+    [[nodiscard]] std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+
+    /// The nearest of `boxes` for whose object `wanted` holds (by index) that `ray` passes through before it
+    /// reaches the ground.
+    [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted);
 
     /// The nearest object among `objects` for which `wanted` holds that `ray` passes through before it reaches
     /// the ground.

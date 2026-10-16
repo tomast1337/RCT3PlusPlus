@@ -4,7 +4,8 @@
 // write them in parallel and the park file can store them field by field.
 //
 // A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet; one the simulation moves also has
-// an Errand, a Stride and Dice. An attraction is an entity with an Attraction and either a Shop or a
+// an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own.
+// An attraction is an entity with an Attraction and either a Shop or a
 // CycleRide: a ride that loads its riders, runs for a while and lets them off, flat ride or coaster.
 //
 // Levels are fractions: needs run from 0 (satisfied) to 1 (desperate); mood values from 0 to 1. Times are
@@ -43,7 +44,9 @@ namespace rct3::simulation
     struct Pose
     {
         glm::vec3 position { 0.0f };
-        float heading = 0; ///< Radians round the vertical, 0 along +Z
+        float heading = 0;      ///< Radians round the vertical, 0 along +Z
+        glm::vec3 was { 0.0f }; ///< Position when the last step began, to draw the entity between steps
+        float was_heading = 0;
     };
 
     struct Needs
@@ -74,6 +77,8 @@ namespace rct3::simulation
         Heading,   ///< Walking to `target`
         Queueing,  ///< In the queue of the ride `target`
         Riding,    ///< On the ride `target`
+        Following, ///< Walking beside their party's leader, who chooses where to go
+        Waiting,   ///< For the rest of their party to come off a ride, walking to its exit first
     };
 
     struct Errand
@@ -83,13 +88,30 @@ namespace rct3::simulation
         std::uint32_t rest = 0;           ///< Ticks until the guest next considers what to do
     };
 
+    /// Guests going round the park together, such as a family. The leader chooses where to go for all of
+    /// them, by the most pressing needs among them; the others walk beside. At a ride some may stay out and
+    /// wait by its exit for the rest.
+    struct Party
+    {
+        entt::entity leader = entt::null;
+        std::vector<entt::entity> members { }; ///< The leader among them
+    };
+
+    struct Member
+    {
+        entt::entity party = entt::null;
+    };
+
     /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.
     struct Stride
     {
         NodeId from = kNoNode;
         NodeId to = kNoNode;
         float progress = 0;
-        float speed = 1.3f;            ///< World units a second
+        float speed = 1.3f; ///< World units a second
+        /// How far off the tiles' middles, along x and z, the guest walks at `from` and at `to`, so people
+        /// spread over the path instead of keeping to one line.
+        glm::vec2 lane_from { 0.0f }, lane_to { 0.0f };
         float along = 0;               ///< While queueing, tiles from the front of the line
         std::vector<NodeId> route { }; ///< Nodes still to reach after `to`, when heading somewhere
     };

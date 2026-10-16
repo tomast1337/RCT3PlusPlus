@@ -19,7 +19,9 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     CHECK(r.get<Needs>(guest).thirst < 0.05f);
     CHECK(r.get<Wallet>(guest).cash == 850);
     CHECK(r.get<Attraction>(stand).income == 150);
-    CHECK(glm::distance(r.get<Pose>(guest).position, park.world().paths.centre(r.get<Attraction>(stand).entrance)) < 0.01f);
+    // On the stand's tile, wherever on it they walked.
+    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
+    CHECK(std::max(std::abs(off.x), std::abs(off.z)) <= kLaneReach + 0.01f);
     // Nine tiles of four units at 1.3 a second, give or take the first thought.
     CHECK(park.world().tick < ticks(40));
 }
@@ -209,4 +211,69 @@ TEST_CASE("a coaster's riders get off when its train comes round, not after the 
     CHECK(r.get<Coaster>(ride).running);
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 15));
     CHECK_FALSE(r.get<Coaster>(ride).running);
+}
+
+TEST_CASE("guests spread over the path but keep on it")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 12, 0 });
+    const auto guest = park.guest({ 0, 0 });
+    auto& r = park.world().registry;
+    float widest = 0;
+    for (int i = 0; i < 400; ++i)
+    {
+        park.run(1);
+        const float side = std::abs(r.get<Pose>(guest).position.z - park.world().paths.centre(0).z);
+        CHECK(side <= kLaneReach + 0.001f);
+        widest = std::max(widest, side);
+    }
+    CHECK(widest > 0.5f); // Not along one line
+}
+
+TEST_CASE("between steps a pose is drawn part way, turning the short way round")
+{
+    const Pose pose { .position = { 4, 0, 0 }, .heading = 3.0f, .was = { 0, 0, 0 }, .was_heading = -3.0f };
+    const Pose half = between_steps(pose, 0.5f);
+    CHECK(half.position.x == doctest::Approx(2));
+    CHECK(std::cos(half.heading) == doctest::Approx(-1).epsilon(0.01)); // Through pi, not through 0
+}
+
+TEST_CASE("a party walks together, goes where its neediest wants, and each buys for themselves")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 100);
+    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
+    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 1000 });
+    park.party({ parent, child });
+    auto& r = park.world().registry;
+    for (int i = 0; i < 20; ++i)
+    {
+        park.run(1);
+        CHECK(r.get<Stride>(child).to == r.get<Stride>(parent).to);
+    }
+    CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
+    CHECK(r.get<Needs>(child).thirst < 0.05f);
+    CHECK(r.get<Wallet>(child).cash == 900);
+    CHECK(r.get<Wallet>(parent).cash == 1000); // Not thirsty, so bought nothing
+}
+
+TEST_CASE("party members who stay off a ride wait by its exit, and all go on together after")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 20, .exit = glm::ivec2 { 3, 0 } });
+    const auto leader = park.guest({ 6, 0 });
+    const auto queasy = park.guest({ 6, 0 }, { .nausea = 0.9f }); // Too sick to ride
+    park.party({ leader, queasy });
+    auto& r = park.world().registry;
+    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    CHECK(r.get<Errand>(leader).kind == ErrandKind::Riding);
+    CHECK(r.get<Errand>(queasy).kind == ErrandKind::Waiting);
+    park.run_seconds(10);
+    CHECK(r.get<Stride>(queasy).to == park.world().paths.nearest({ 12, 0, 0 })); // Walked to the exit tile
+    CHECK(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Following; }, 30));
+    CHECK(r.get<Errand>(leader).kind == ErrandKind::Wandering);
+    CHECK(r.get<Attraction>(ride).customers == 1);
 }

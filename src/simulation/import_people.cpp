@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 
 #include <algorithm>
+#include <unordered_map>
 
 namespace rct3::simulation
 {
@@ -43,12 +44,47 @@ namespace rct3::simulation
             const entt::entity e = r.create();
             out[i] = e;
             r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::Sex::Female), p.name, std::uint64_t { 0 });
-            r.emplace<Pose>(e, glm::vec3 { p.position.x, p.position.y, p.position.z }, -p.heading); // The original turns the other way
+            const glm::vec3 at { p.position.x, p.position.y, p.position.z };
+            r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea);
             r.emplace<Wallet>(e, std::int64_t { g.cash.current });
         }
         return out;
+    }
+
+    std::size_t import_parties(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests)
+    {
+        entt::registry& r = world.registry;
+        std::unordered_map<save::PeopleObjectId, entt::entity> by_id;
+        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+            if (guests[i] != entt::null)
+                by_id.emplace(people.guests[i].person.id, guests[i]);
+        std::size_t made = 0;
+        for (const save::GuestGroup& group : people.groups)
+        {
+            Party party;
+            for (const save::PeopleRef ref : group.members)
+            {
+                const auto found = by_id.find(ref.id);
+                if (ref && found != by_id.end() && r.all_of<Errand>(found->second) && !r.all_of<Member>(found->second) && std::ranges::find(party.members, found->second) == party.members.end())
+                    party.members.push_back(found->second);
+            }
+            if (party.members.size() < 2)
+                continue;
+            const auto leader = by_id.find(group.leader.id);
+            party.leader = leader != by_id.end() && std::ranges::find(party.members, leader->second) != party.members.end() ? leader->second : party.members.front();
+            const entt::entity e = r.create();
+            for (const entt::entity m : party.members)
+            {
+                r.emplace<Member>(m, e);
+                if (auto& errand = r.get<Errand>(m); m != party.leader && errand.kind == ErrandKind::Wandering)
+                    errand = { ErrandKind::Following, entt::null, 0 };
+            }
+            r.emplace<Party>(e, std::move(party));
+            ++made;
+        }
+        return made;
     }
 
 } // namespace rct3::simulation

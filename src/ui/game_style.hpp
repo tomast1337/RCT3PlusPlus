@@ -153,6 +153,7 @@ namespace rct3::ui::game_skins
             { kMiniBackground, "mini-window", Coded, game_frames::mini_window_panel() },
             { kWindowFrame, "window", Coded, game_frames::window() },
             { kWindowFrameUnfocused, "window", Coded, game_frames::window() },
+            { kWindowBackground, "window-background", Coded, game_frames::window_background() },
             { front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandTop) },
             { front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandBottom) },
             { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kStripRight) },

@@ -61,6 +61,7 @@ namespace rct3::ui
         std::u16string price;            ///< Second line; empty when the item has no price
         std::string badge;               ///< Skin in the right-hand corner, if any
         std::size_t item = 0;            ///< The owner's number for the item
+        int rank = 0;                    ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
     };
 

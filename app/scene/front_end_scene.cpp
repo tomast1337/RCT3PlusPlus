@@ -25,8 +25,8 @@ namespace rct3::scene
         /// The newest logo comes with its own skins, the career map's pictures come in a file per game, the
         /// loading screen shown while a park loads has a file of its own, and the icons of the rides, shops and
         /// scenery the park's build lists show have three.
-        constexpr std::array<std::string_view, 8> kMoreSkins = {
-            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl", "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl", ui::loading_screen::kSkinFile, "RideIcons/RideIcons.common.ovl", "Style/ShopsIcons.common.ovl", "Style/SceneryIcons.common.ovl",
+        constexpr std::array<std::string_view, 10> kMoreSkins = {
+            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl", "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl", ui::loading_screen::kSkinFile, "RideIcons/RideIcons.common.ovl", "Style/ShopsIcons.common.ovl", "Style/SceneryIcons.common.ovl", "Enclosures/EnclosureIcons.common.ovl", "WildAnimals/WildAnimals.common.ovl",
         };
 
         /// What the options show for the zoomed-out park's music, as the game does at first.

@@ -568,7 +568,9 @@ TEST_CASE("park: required content, overlay stems and particle skipping")
     CHECK_FALSE(c.entries[0].hidden);
     CHECK(c.entries[1].kind == AssetKind::Attraction);
     CHECK(c.entries[1].overlay_stem == "rides/Mock");
-    CHECK(c.entries[2].kind == AssetKind::WildAreaStyle);
+    CHECK(c.entries[2].kind == AssetKind::AnimalSpecies);
+    CHECK(c.entries[2].unlocked);
+    CHECK_FALSE(c.entries[0].unlocked);
     CHECK(c.invented_count() == 1);
     CHECK(l->model.particle_objects == 3);
 }

@@ -20,6 +20,9 @@ namespace rct3::ui
     /// The list a build menu item opens; nothing for items that open none.
     [[nodiscard]] std::optional<park::BuildList> build_list(ToolItem item) noexcept;
 
+    /// The string key of the word for an animal's rarity, from 0 (common) to 1 (endangered).
+    [[nodiscard]] std::string_view rarity_text(float rarity) noexcept;
+
     /// What a large row says under a piece of scenery's name: how it sits on the grid, or its footprint.
     [[nodiscard]] std::u16string placement_text(const park::BuildItem& item, const StringTable& strings);
 

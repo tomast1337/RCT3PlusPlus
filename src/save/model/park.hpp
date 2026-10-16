@@ -391,9 +391,9 @@ namespace rct3::save
     enum class AssetKind : std::uint8_t
     {
         Other,
-        Scenery,    ///< Scenery pieces and track sections
-        Attraction, ///< Rides, stalls, facilities
-        WildAreaStyle,
+        Scenery,       ///< Scenery pieces and track sections
+        Attraction,    ///< Rides, stalls, facilities
+        AnimalSpecies, ///< Zoo animals; these record only whether the park has unlocked them
     };
 
     /// One database entry of the save: an installed overlay and a symbol within it, plus the research flags.
@@ -406,6 +406,7 @@ namespace rct3::save
         bool available = false;
         bool hidden = false;
         bool invented = false;
+        bool unlocked = false; ///< Animal species only
         std::uint64_t id = 0;
     };
 

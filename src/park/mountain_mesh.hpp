@@ -31,18 +31,22 @@ namespace rct3::park
     /// Names of the two pictures of `theme`, for mesh 0 and mesh 1.
     [[nodiscard]] std::array<std::string, 2> mountain_pictures(std::string_view theme);
 
-    /// Beyond the map's farthest corner from its middle, how far the ring stands, in world units.
-    inline constexpr float kMountainDistance = 900;
+    /// How many times its own size the ring is drawn, whatever the map's size.
+    inline constexpr float kMountainScale = 4;
+
+    /// How far below height 0 each theme's ring stands, in kBackgroundThemes order, so its land meets the
+    /// park's.
+    inline constexpr std::array<float, 8> kMountainDrop { 10, 80, 0, 10, 0, 0, 30, 30 };
 
     struct MountainPlace
     {
         glm::vec3 centre { 0.0f }; ///< The ring's middle; the shape's height 0 lands at its height
-        float radius = 1;          ///< How far the ring's panels are from the centre
+        float scale = 1;           ///< Times the shape's own size
     };
 
-    /// Where the ring stands round `grid`: on the middle of the map at the height `ground`, out beyond its
-    /// corners by kMountainDistance.
-    [[nodiscard]] MountainPlace mountain_place(const save::TerrainGrid& grid, float ground);
+    /// Where the ring of `theme` stands round `grid`: on the middle of the map, at kMountainScale, its height 0
+    /// the theme's kMountainDrop below the park's.
+    [[nodiscard]] MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme);
 
     /// The ring placed at `place`, both meshes as cut-out batches. Empty when the shapes are.
     [[nodiscard]] ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place);

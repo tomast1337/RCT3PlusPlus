@@ -117,6 +117,13 @@ namespace rct3::ui
         return true;
     }
 
+    CursorKind ColumnTable::cursor(Point p) const
+    {
+        // A hand over the rows, which select, and over the headings that sort.
+        const auto heading = heading_at(p);
+        return (heading && columns[*heading].sortable) || (!heading && row_at(p)) ? CursorKind::Hand : CursorKind::Arrow;
+    }
+
     void ColumnTable::on_press(Point p)
     {
         if (const auto heading = heading_at(p))

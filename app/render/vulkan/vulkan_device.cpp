@@ -42,7 +42,7 @@ namespace rct3::render::vulkan
             if (shader != Shader::Water)
                 return { command.transform, glm::vec4(l.sun_direction, 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
             const WaterView& w = command.water;
-            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0));
+            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0));
             return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
         }
 

@@ -64,7 +64,7 @@ float sunlit(vec3 n) {
 
 // How much lighter or darker the ground is here: three sizes of the noise, widest strongest, so no one size
 // repeats visibly. Features about 240, 100 and 40 world units across.
-const float kVariation = 0.06;
+const float kVariation = 0.15;
 float variation() {
   // One tile of the picture holds 8 features.
   float n = 0.5 * texture(sampler2D(u_variation, u_sampler), v_world.xz / 1920.0).r;

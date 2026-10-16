@@ -188,7 +188,7 @@ namespace rct3::render::vulkan
         // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag), sets 2 on the extra textures
         // when the device can bind that many sets.
         static constexpr std::uint32_t kSetCount = 2 + kExtraTextures;
-        std::uint32_t set_count_ = 2;
+        std::uint32_t set_count_ = 4;
         VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
         VkDescriptorSetLayout sampler_set_layout_ = VK_NULL_HANDLE;
         VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;

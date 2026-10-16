@@ -178,8 +178,8 @@ namespace rct3::render
         /// pictures (leaves, fences) can write depth without hiding what is behind their holes.
         TexturedCutout,
         /// As Textured, with location 3 the surface normal (Float3, any length), and the result lit by
-        /// `DrawCommand::light`. Positions and normals are in world space. Both sides of a surface are lit
-        /// as its normal says; a zero normal is lit as facing up.
+        /// `DrawCommand::light`, sunlight held back where the light's shadow map says. Positions and normals are
+        /// in world space. Both sides of a surface are lit as its normal says; a zero normal is lit as facing up.
         Lit,
         /// Lit, with TexturedCutout's holes.
         LitCutout,
@@ -252,6 +252,11 @@ namespace rct3::render
         glm::vec3 sun { 0.0f };    ///< On a surface facing the sun
         glm::vec3 sky { 1.0f };    ///< From above, on a surface facing up
         glm::vec3 ground { 0.0f }; ///< From below, on a surface facing down
+        /// The sun's shadow: the depth of a target drawn from the sun, and a 5 by 1 Rgba32Float texture of how it
+        /// was drawn: the world-to-map transform's four columns, then texel size in world units and depth bias in
+        /// map depth. Without both, nothing is in shadow.
+        TextureHandle shadow_map;
+        TextureHandle shadow_view;
     };
 
     /// What the Water shader needs besides its light and pictures.

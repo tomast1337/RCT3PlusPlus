@@ -59,6 +59,7 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
+#include <format>
 #include <optional>
 #include <random>
 #include <string>
@@ -110,33 +111,120 @@ namespace
     void draw_profiler_window(const rct3::render::Device& device)
     {
         ImGui::SetNextWindowPos({ 12, 12 }, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize({ 460, 260 }, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize({ 560, 420 }, ImGuiCond_FirstUseEver);
         ImGui::Begin("Profiler");
         const rct3::render::FrameStats stats = device.stats();
         ImGui::Text("%.1f fps", static_cast<double>(ImGui::GetIO().Framerate));
         ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives));
         ImGui::Text("%llu bytes of per-frame vertex data", static_cast<unsigned long long>(stats.transient_bytes));
-        if (ImGui::BeginTable("scopes", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+        // The graph shows the picked scope's recent frames; clicking a row picks another.
+        static std::string graphed = "[Main] Frame";
+        const std::vector<rct3::profiling::ScopeStats> scopes = rct3::profiling::stats();
+        if (const auto it = std::ranges::find(scopes, graphed, &rct3::profiling::ScopeStats::name); it != scopes.end() && !it->history.empty())
         {
-            ImGui::TableSetupColumn("scope");
+            const std::vector<float> history(it->history.begin(), it->history.end());
+            const std::string label = std::format("{}: {:.2f} ms, peak {:.2f}", graphed, it->last, it->period_max);
+            ImGui::PlotLines("##graph", history.data(), static_cast<int>(history.size()), 0, label.c_str(), 0.0f, static_cast<float>(it->period_max * 1.2), { ImGui::GetContentRegionAvail().x, 80 });
+        }
+        // Scopes as a tree: "[Thread] A/B" goes under "[Thread] A". Sibling rows sort by the picked column.
+        std::vector<std::vector<std::size_t>> children(scopes.size() + 1); // The last list holds the roots
+        for (std::size_t i = 0; i < scopes.size(); ++i)
+        {
+            const std::string& name = scopes[i].name;
+            const std::size_t slash = name.rfind('/');
+            const auto parent = slash == std::string::npos ? scopes.end() : std::ranges::find(scopes, std::string_view(name).substr(0, slash), &rct3::profiling::ScopeStats::name);
+            children[parent == scopes.end() ? scopes.size() : static_cast<std::size_t>(parent - scopes.begin())].push_back(i);
+        }
+        constexpr ImGuiTableFlags kTable = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortTristate | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        if (ImGui::BeginTable("scopes", 6, kTable))
+        {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("scope", ImGuiTableColumnFlags_NoHide, 3.0f);
             ImGui::TableSetupColumn("last ms");
-            ImGui::TableSetupColumn("avg ms");
-            ImGui::TableSetupColumn("p95 ms");
+            ImGui::TableSetupColumn("avg ms", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending);
+            ImGui::TableSetupColumn("p95 ms", ImGuiTableColumnFlags_PreferSortDescending);
+            ImGui::TableSetupColumn("peak ms", ImGuiTableColumnFlags_PreferSortDescending);
+            ImGui::TableSetupColumn("% parent", ImGuiTableColumnFlags_PreferSortDescending);
             ImGui::TableHeadersRow();
-            for (const auto& s : rct3::profiling::stats())
-            {
+
+            const ImGuiTableSortSpecs* sort = ImGui::TableGetSortSpecs();
+            const int column = sort != nullptr && sort->SpecsCount > 0 ? sort->Specs[0].ColumnIndex : -1;
+            const bool descending = column >= 0 && sort->Specs[0].SortDirection == ImGuiSortDirection_Descending;
+            const auto value = [&](std::size_t i) {
+                const auto& s = scopes[i];
+                switch (column)
+                {
+                    case 1:
+                        return s.last;
+                    case 2:
+                        return s.average;
+                    case 3:
+                        return s.p95;
+                    case 4:
+                        return s.period_max;
+                    default:
+                        return s.average; // "% parent" orders siblings like the average
+                }
+            };
+            const auto draw = [&](this const auto& self, std::size_t i, double parent_ms) -> void {
+                const auto& s = scopes[i];
+                std::vector<std::size_t> kids = children[i];
+                if (column == 0)
+                    std::ranges::sort(kids, [&](std::size_t x, std::size_t y) { return descending ? scopes[y].name < scopes[x].name : scopes[x].name < scopes[y].name; });
+                else if (column > 0)
+                    std::ranges::sort(kids, [&](std::size_t x, std::size_t y) { return descending ? value(y) < value(x) : value(x) < value(y); });
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::TextUnformatted(s.name.c_str());
+                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_DefaultOpen;
+                if (kids.empty())
+                    flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                if (s.name == graphed)
+                    flags |= ImGuiTreeNodeFlags_Selected;
+                const std::size_t slash = s.name.rfind('/');
+                const char* label = slash == std::string::npos ? s.name.c_str() : s.name.c_str() + slash + 1;
+                const bool open = ImGui::TreeNodeEx(s.name.c_str(), flags, "%s", label);
+                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+                    graphed = s.name;
+                for (const double ms : { s.last, s.average, s.p95, s.period_max })
+                {
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.3f", ms);
+                }
                 ImGui::TableNextColumn();
-                ImGui::Text("%.3f", s.last);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", s.average);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", s.p95);
-            }
+                // Over 100%, the scope ran in only some frames (loading, say) and the averages do not compare.
+                if (parent_ms > 0 && s.average <= parent_ms)
+                    ImGui::Text("%.0f%%", 100 * s.average / parent_ms);
+                if (open && !kids.empty())
+                {
+                    for (const std::size_t k : kids)
+                        self(k, s.average);
+                    ImGui::TreePop();
+                }
+            };
+            std::vector<std::size_t> roots = children[scopes.size()];
+            if (column > 0)
+                std::ranges::sort(roots, [&](std::size_t x, std::size_t y) { return descending ? value(y) < value(x) : value(x) < value(y); });
+            else if (column == 0 && descending)
+                std::ranges::reverse(roots);
+            for (const std::size_t r : roots)
+                draw(r, 0);
             ImGui::EndTable();
         }
+        ImGui::End();
+    }
+
+    // Switches for looking into the park while it runs.
+    void draw_debug_window(rct3::scene::ParkScene& park)
+    {
+        ImGui::SetNextWindowPos({ 584, 12 }, ImGuiCond_FirstUseEver);
+        ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Checkbox("Wireframe", &park.wireframe);
+        ImGui::Checkbox("Free camera", &park.free_camera);
+        ImGui::SetItemTooltip("No tilt, zoom or map limits, and the camera leaves the ground");
+        ImGui::SliderFloat("Haze", &park.haze_rate, 0.0f, 0.003f, "%.5f");
+        const rct3::park::ParkCamera& c = park.camera;
+        ImGui::Text("Target %.1f %.1f %.1f", static_cast<double>(c.target.x), static_cast<double>(c.target.y), static_cast<double>(c.target.z));
+        ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<double>(c.yaw), static_cast<double>(c.pitch), static_cast<double>(c.distance));
         ImGui::End();
     }
 
@@ -668,7 +756,8 @@ int main(int argc, char** argv)
                         const prof::Scope zone("DeveloperWindows");
                         draw_profiler_window(*device);
                         draw_log_window();
-                        ImGui::ShowDemoWindow();
+                        if (park)
+                            draw_debug_window(*park);
                     }
                     if (phase == Phase::Running && park && front)
                     {

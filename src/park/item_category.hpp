@@ -12,6 +12,8 @@ namespace rct3::park
     enum class ItemCategory : std::uint32_t
     {
         Tree = 0,
+        Shrub = 2,
+        Flowers = 3,
         SmallScenery = 7,
         MediumScenery = 8,
         Animatronic = 10,

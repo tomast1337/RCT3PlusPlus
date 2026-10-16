@@ -91,6 +91,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// Pressing or dragging aims the camera at a point.
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return CursorKind::Crosshair;
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_hover(Point p) override;

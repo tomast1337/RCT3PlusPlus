@@ -204,3 +204,11 @@ TEST_CASE("buttons without a swell keep their face")
     f.desktop.update(at(5, 5), later);
     CHECK(f.button.face() == f.button.rect());
 }
+
+TEST_CASE("an inert button shows the pointer it does nothing")
+{
+    Button b("b", "skin");
+    CHECK(b.cursor({ }) == CursorKind::Hand);
+    b.inert = true;
+    CHECK(b.cursor({ }) == CursorKind::NotAllowed);
+}

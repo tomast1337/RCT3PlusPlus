@@ -129,6 +129,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// Moving while dragged by its title, as a window does.
+        [[nodiscard]] CursorKind held_cursor(Point p) const override
+        {
+            return grab_ ? CursorKind::Move : cursor(p);
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;

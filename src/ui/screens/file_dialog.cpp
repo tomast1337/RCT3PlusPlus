@@ -153,6 +153,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// A hand over the row, which picks the file.
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return CursorKind::Hand;
+        }
         void on_release(Point, bool inside) override
         {
             if (inside)

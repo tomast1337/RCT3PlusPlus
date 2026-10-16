@@ -313,15 +313,16 @@ namespace rct3::scene
                 scene.object_textures.merge(*uploaded);
         }
 
-        void close(ParkScene& scene)
-        {
-            scene.building.ride.reset();
-            scene.building.ghost.reset();
-            scene.building.ghost_mesh = { };
-            if (ui::Widget* panel = scene.desktop->root().find(kPanelName))
-                panel->close();
-        }
     } // namespace
+
+    void close_track_building(ParkScene& scene)
+    {
+        scene.building.ride.reset();
+        scene.building.ghost.reset();
+        scene.building.ghost_mesh = { };
+        if (ui::Widget* panel = scene.desktop->root().find(kPanelName))
+            panel->close();
+    }
 
     std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride)
     {
@@ -375,7 +376,7 @@ namespace rct3::scene
             return;
         if (panel->take_closed())
         {
-            close(scene);
+            close_track_building(scene);
             return;
         }
         const park::PieceCatalogue* c = catalogue(b);

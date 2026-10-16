@@ -16,6 +16,10 @@
 // Clicking a row picks it, and puts its name in the save box; clicking it again soon after opens it. Saving
 // checks the name first, as the game does: it may not be empty or start with a dot or a space, gets ".dat"
 // when it lacks it, and replacing a file in the list asks first. Deleting and renaming ask too.
+//
+// Files the owner marks as kept (another program's, say) show and open but cannot be deleted, renamed or
+// saved over. Saving can be switched off as a whole, when the owner has no way to write the file: the
+// window still shows the folder and the name, its save button greyed.
 #pragma once
 
 #include "save/summary.hpp"
@@ -95,7 +99,21 @@ namespace rct3::ui
         FileDialog(std::string name, const FileDialogStyle& style, const StringTable& strings, FileDialogMode mode, bool twelve_hour);
 
         /// The folder's files, by name with their extension, in the order to show. Starts reading again.
-        void set_files(std::vector<std::u16string> files);
+        /// `kept[i]` true marks file i as one the window must not delete, rename or save over; missing
+        /// entries count as false.
+        void set_files(std::vector<std::u16string> files, std::vector<bool> kept = { });
+        /// Puts `name` in the save box, without ".dat". Nothing when loading.
+        void set_file_name(std::u16string_view name);
+        /// Whether saving can happen; when not, the save button is greyed and nothing is saved.
+        void set_can_save(bool can);
+        [[nodiscard]] bool can_save() const
+        {
+            return can_save_;
+        }
+        [[nodiscard]] bool kept(std::size_t index) const
+        {
+            return index < kept_.size() && kept_[index];
+        }
         /// What file `index` holds, read: nothing when it is not a save; `picture` 0 for none. The texture
         /// stays the owner's, used until the files are set again or the window goes.
         void set_summary(std::size_t index, const std::optional<save::SaveSummary>& summary, TextureId picture);
@@ -182,6 +200,8 @@ namespace rct3::ui
         std::vector<std::u16string> files_;
         std::vector<Row*> rows_;
         std::vector<bool> read_;
+        std::vector<bool> kept_;
+        bool can_save_ = true;
         std::optional<std::size_t> selected_;
         ScrollArea* list_ = nullptr;
         Label* status_ = nullptr;

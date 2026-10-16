@@ -2,7 +2,9 @@
 #include "scene/park_windows.hpp"
 
 #include "ui/game_style.hpp"
+#include "ui/language.hpp"
 #include "ui/screens/about_window.hpp"
+#include "ui/screens/file_dialog.hpp"
 
 #include <array>
 #include <memory>
@@ -19,6 +21,9 @@ namespace rct3::scene
         namespace skins = ui::game_skins;
 
         constexpr std::string_view kAboutName = "about";
+        constexpr std::string_view kFilesName = "park_files";
+        /// The folder the park's games are saved to and loaded from: the sandbox parks, as in the game.
+        constexpr config::UserFolder kFilesFolder = config::UserFolder::Parks;
         /// An add-on pack is installed when its files are; numbered as the game numbers them.
         constexpr std::array<std::string_view, 2> kPackFiles = { "ContentPacks/ContentPack0000.common.ovl", "ContentPacks/ContentPack0001.common.ovl" };
 
@@ -51,9 +56,33 @@ namespace rct3::scene
             park.options->open();
         }
 
+        ui::FileDialog* file_dialog(const ParkScene& park)
+        {
+            return static_cast<ui::FileDialog*>(park.desktop->root().find(kFilesName));
+        }
+
+        void open_files(ParkScene& park, const FrontEndScene& front, ui::FileDialogMode mode)
+        {
+            ui::Widget& root = park.desktop->root();
+            if (ui::FileDialog* shown = file_dialog(park))
+            {
+                if (shown->mode() == mode && !shown->closing())
+                {
+                    root.raise(*shown);
+                    return;
+                }
+                root.remove(*shown);
+            }
+            park.saves.data = front.saves.data;
+            park.saves.game_saves = front.saves.game_saves;
+            ++park.file_windows_opened;
+            auto& dialog = root.add<ui::FileDialog>(std::string(kFilesName), skins::file_dialog_style(), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
+            dialog.set_file_name(park.file.filename().u16string());
+        }
+
     } // namespace
 
-    void update_park_windows(ParkScene& park, FrontEndScene& front)
+    void update_park_windows(render::Device& device, ParkScene& park, FrontEndScene& front)
     {
         for (const ui::ToolItem item : std::exchange(park.window_requests, { }))
         {
@@ -61,7 +90,13 @@ namespace rct3::scene
                 open_about(park, front);
             else if (item == ui::ToolItem::Options)
                 open_options(park, front);
+            else if (item == ui::ToolItem::Save)
+                open_files(park, front, ui::FileDialogMode::Save);
+            else if (item == ui::ToolItem::Load)
+                open_files(park, front, ui::FileDialogMode::Load);
         }
+        if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, kFilesFolder))
+            park.park_to_load = std::move(picked);
         if (!park.options)
             return;
         park.options->update();
@@ -72,6 +107,7 @@ namespace rct3::scene
     FrontEndRequests take_park_window_requests(ParkScene& park, FrontEndScene& front)
     {
         FrontEndRequests r;
+        r.park = std::exchange(park.park_to_load, std::nullopt);
         if (park.options)
         {
             ui::OptionsChoices& shared = front.live->front->options().choices();
@@ -96,8 +132,9 @@ namespace rct3::scene
         return park.options != nullptr && park.options->waiting_for_keys();
     }
 
-    void close_park_windows(ParkScene& park, FrontEndScene& front)
+    void close_park_windows(render::Device& device, ParkScene& park, FrontEndScene& front)
     {
+        destroy_save_browser(device, park.saves);
         if (!park.options)
             return;
         park.options->close();

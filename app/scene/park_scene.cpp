@@ -1474,7 +1474,10 @@ namespace rct3::scene
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
         {
             if (const auto overlay = ride_track_overlay(scene, asked->index))
-                (void)open_track_building(scene, asked->index, *overlay, assets);
+            {
+                if (open_track_building(scene, asked->index, *overlay, assets))
+                    close_footpath_panel(scene); // One tool panel at the bottom left at a time
+            }
         }
         profiling::section("TrackBuilding", [&] { update_track_building(device, scene, assets, options.choice(config::GameOption::Currency)); });
         scene.view_camera.yaw += kViewTurn * elapsed;
@@ -1537,7 +1540,10 @@ namespace rct3::scene
             else if (pressed == ui::ParkTool::Map)
                 toggle_park_map(scene.map, desktop, *assets.strings);
             else if (pressed == ui::ParkTool::Paths)
+            {
+                close_track_building(scene); // One tool panel at the bottom left at a time
                 toggle_footpath_panel(device, scene, assets, options);
+            }
             if (const auto item = tools->take_item())
             {
                 if (*item == ui::ToolItem::People)

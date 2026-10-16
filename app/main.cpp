@@ -4,18 +4,22 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--seed N] [--frames N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
+//   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
 //   --language NAME   interface language as the game names it, e.g. German or SChinese
 //   --widget-demo     a window of every kind of control instead of the front screen
-//   --no-audio        no sound at all
+//   --no-audio        no sound at all; kept by --write-settings
+//   --audio           sound for this run, even when the settings turn it off
+//   --park FILE       load this park save straight away
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
+//   --seconds N       exit after N seconds of real time
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
 //                     (config/settings.hpp) and the environment variables read (config/environment.hpp)
@@ -46,6 +50,7 @@
 
 #include <algorithm>
 #include <array>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -65,7 +70,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--seed N] [--frames N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -80,6 +85,14 @@ namespace
         std::printf("\nenvironment:\n");
         for (const auto& var : rct3::config::env_vars())
             std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data());
+    }
+
+    // Set by SIGINT and SIGTERM, so a long run ends through the normal shutdown.
+    volatile std::sig_atomic_t g_stop_requested = 0;
+
+    extern "C" void request_stop(int)
+    {
+        g_stop_requested = 1;
     }
 
     // Any key or click the developer windows did not take skips the logos.
@@ -228,13 +241,32 @@ int main(int argc, char** argv)
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
-    bool sound = true;
+    bool headless = false;
+    std::optional<bool> sound_this_run;
+    double max_seconds = -1;
+    std::optional<std::filesystem::path> park_file;
     std::optional<std::uint64_t> seed;
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
         {
             max_frames = std::atoi(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
+        {
+            max_seconds = std::atof(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--headless") == 0)
+        {
+            headless = true;
+        }
+        else if (std::strcmp(argv[i], "--park") == 0 && i + 1 < argc)
+        {
+            park_file = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--audio") == 0)
+        {
+            sound_this_run = true;
         }
         else if (std::strcmp(argv[i], "--renderer") == 0 && i + 1 < argc)
         {
@@ -274,7 +306,7 @@ int main(int argc, char** argv)
         }
         else if (std::strcmp(argv[i], "--no-audio") == 0)
         {
-            sound = false;
+            settings.set(config::Setting::NoAudio, "yes");
         }
         else if (std::strcmp(argv[i], "--seed") == 0 && i + 1 < argc)
         {
@@ -318,7 +350,13 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    const bool intro = !settings.flag(config::Setting::SkipIntro);
+    if (headless)
+    {
+        backend = render::Backend::Null;
+        vsync = false;
+    }
+    const bool sound = !headless && sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));
+    const bool intro = !headless && !settings.flag(config::Setting::SkipIntro);
     std::optional<float> scale;
     if (const auto parsed = config::parse_interface_scale(settings.get(config::Setting::InterfaceScale).value_or(std::string_view { })))
         scale = *parsed;
@@ -339,7 +377,7 @@ int main(int argc, char** argv)
     else
         log.warning("{}", config::describe(install.error()));
 
-    auto window = rct3::platform::Window::open({ }, backend);
+    auto window = rct3::platform::Window::open({ .headless = headless }, backend);
     if (!window)
     {
         log.critical("{}", window.error());
@@ -379,8 +417,8 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
-    std::optional<rct3::scene::ParkScene> park;        ///< Played over the front end, which lends it the interface
-    std::optional<std::filesystem::path> park_to_load; ///< Asked for this frame; its loading screen shows first
+    std::optional<rct3::scene::ParkScene> park;                    ///< Played over the front end, which lends it the interface
+    std::optional<std::filesystem::path> park_to_load = park_file; ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.
@@ -564,9 +602,15 @@ int main(int argc, char** argv)
     try
     {
         prof::register_thread("Main");
-        double last_time = window->time();
-        for (int frame = 0; !window->should_close() && !quit && frame != max_frames; ++frame)
+        std::signal(SIGINT, request_stop);
+        std::signal(SIGTERM, request_stop);
+        const double start_time = window->time();
+        double last_time = start_time;
+        int frame = 0;
+        for (; !window->should_close() && !quit && frame != max_frames && g_stop_requested == 0; ++frame)
         {
+            if (max_seconds >= 0 && window->time() - start_time >= max_seconds)
+                break;
             window->poll_events();
 
             const double now = window->time();
@@ -748,6 +792,8 @@ int main(int argc, char** argv)
             });
             prof::capture_frame();
         }
+        const double ran = window->time() - start_time;
+        log.info("ran {} frames in {:.1f} s, {:.2f} ms a frame{}", frame, ran, frame > 0 ? 1000 * ran / frame : 0.0, g_stop_requested != 0 ? ", stopped by a signal" : "");
     }
     catch (const std::exception& e)
     {

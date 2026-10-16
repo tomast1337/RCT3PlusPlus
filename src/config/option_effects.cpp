@@ -30,6 +30,13 @@ namespace rct3::config
             O::Sky,
             O::Mountains,
             O::DayNight,
+            O::ReflectiveWater, // The water
+            O::ReflectBackground,
+            O::ReflectTerrain,
+            O::ReflectScenery,
+            O::ReflectPeople,
+            O::WaterBumps,
+            O::Refraction,
         };
 
     } // namespace

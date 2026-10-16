@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The park's paths as the player lays them: the path panel (ui/screens/footpath_panel.hpp) opened from the
+// tool row, the styles it offers, and the paths laid with it. Laying changes the park's paths in memory and
+// builds the ground again so they show at once; the piece the controls would lay next is drawn faintly over its
+// tile, tinted when it cannot be laid there.
+//
+// The styles and their pictures are read from the install the first time the panel opens.
+#pragma once
+
+#include "park/footpath_builder.hpp"
+#include "park/path_styles.hpp"
+#include "park/terrain_mesh.hpp"
+#include "render/device.hpp"
+#include "save/model/world.hpp"
+#include "ui/interface_assets.hpp"
+#include "ui/screens/footpath_panel.hpp"
+
+#include <cstddef>
+#include <glm/glm.hpp>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace rct3::config
+{
+    class GameOptions;
+}
+
+namespace rct3::scene
+{
+
+    struct ParkScene;
+
+    /// The widget's name on the park's desktop.
+    inline constexpr std::string_view kFootpathPanelName = "footpaths";
+
+    struct ParkFootpaths
+    {
+        std::vector<park::PathStyle> styles; ///< Path styles, then queue styles; read when the panel first opens
+        bool loaded = false;
+        std::optional<std::size_t> style; ///< Of styles, the one chosen
+        park::FootpathBuilder builder;
+        std::vector<save::PathTile> paths; ///< The park's paths as they are now
+        save::WaterLayer water;            ///< To build the ground again with
+        /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
+        std::vector<std::string> pictured;
+        park::TerrainMesh ghost; ///< The next piece, drawn over the ground
+        bool dirty = false;      ///< The next piece changed, so the ghost is built again
+        std::u16string notice;   ///< Why the last piece was not laid, until the next control
+    };
+
+    /// Opens the path panel, or closes it when it is open.
+    void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options);
+
+    /// Acts on what the player did in the panel since the last frame, and shows the result.
+    void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);
+
+    /// Whether a click on the park at `at` (interface units, on a view `size` across) went to the path panel:
+    /// while it shows its controls, a click on the ground picks where the path starts.
+    bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size);
+
+    /// Draws the next piece over the ground.
+    void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+
+} // namespace rct3::scene

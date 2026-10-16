@@ -48,6 +48,9 @@ namespace rct3::ui::game_frames
 
     /// The window frame: the blue band with a ring cut round the icon's disc, thin grey sides, a drop shadow.
     [[nodiscard]] CodedFrame window();
+    /// What the window's content sits on: white with two faint pink lines in every four, running across. One
+    /// tile of it, 16 units square; the window repeats it down its body.
+    [[nodiscard]] CodedFrame window_background();
 
     // The front screen's backdrop, in its 1024 by 768 design (front_screen_layout.hpp): round its circle's
     // centre a white veil, blue outside it to the left, and along the bottom the striped blue strip with the

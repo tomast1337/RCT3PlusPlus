@@ -233,6 +233,25 @@ namespace rct3::ui::game_frames
         return f;
     }
 
+    CodedFrame window_background()
+    {
+        constexpr float kTile = 16;
+        constexpr float kPeriod = 4; // Rows from one pair of lines to the next
+        constexpr Color kLine = hex("#fff7ff");
+        constexpr Color kDeeperLine = hex("#fff4ff"); // The second line of each pair
+        CodedFrame f;
+        f.width = kTile;
+        f.height = kTile;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), solid(kWhite), { } });
+        for (int pair = 0; pair < static_cast<int>(kTile / kPeriod); ++pair)
+        {
+            const float y = static_cast<float>(pair) * kPeriod;
+            f.layers.push_back({ corner_box(0, y + 1, kTile, 1), solid(kLine), { } });
+            f.layers.push_back({ corner_box(0, y + 2, kTile, 1), solid(kDeeperLine), { } });
+        }
+        return f;
+    }
+
     CodedFrame mini_window_panel()
     {
         CodedFrame f;

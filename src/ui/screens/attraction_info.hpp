@@ -68,6 +68,9 @@ namespace rct3::ui
     /// kind and its number.
     [[nodiscard]] std::u16string attraction_name(const save::AttractionCommon& attraction, const StringTable& strings);
 
+    /// Open, testing, closed or broken down, in words.
+    [[nodiscard]] std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings);
+
     /// The word for a rating of `value` (excitement, intensity or nausea): low, medium, high and so on.
     [[nodiscard]] std::u16string rating_word(float value, const StringTable& strings);
 

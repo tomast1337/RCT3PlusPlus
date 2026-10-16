@@ -177,13 +177,25 @@ namespace rct3::save
         std::int32_t rights_sell_cost = 0; ///< Stored negative
         std::int32_t average_guest_cash = 0;
         std::int32_t average_guest_bank_funds = 0;
-        std::uint32_t flags = 0; ///< Raw; only kUnlimitedCash is known
+        std::uint32_t flags = 0; ///< Raw; the bits below are the known ones
 
         /// Set in parks where money never runs out, as in sandbox ones.
         static constexpr std::uint32_t kUnlimitedCash = 1u << 0;
         [[nodiscard]] bool unlimited() const noexcept
         {
             return (flags & kUnlimitedCash) != 0;
+        }
+        /// Set where the player may not change the entrance fee.
+        static constexpr std::uint32_t kEntranceFeeFixed = 1u << 1;
+        /// Set where rides charge nothing.
+        static constexpr std::uint32_t kFreeRides = 1u << 2;
+        [[nodiscard]] bool entrance_fee_fixed() const noexcept
+        {
+            return (flags & kEntranceFeeFixed) != 0;
+        }
+        [[nodiscard]] bool free_rides() const noexcept
+        {
+            return (flags & kFreeRides) != 0;
         }
 
         Series cash_less_loan, company_value, expenditure, income, park_value, share_price, weekly_profit;

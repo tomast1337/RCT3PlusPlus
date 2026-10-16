@@ -25,6 +25,7 @@
 #include "park/terrain_mesh.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
+#include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "scene/build_menus.hpp"
@@ -161,6 +162,7 @@ namespace rct3::scene
         float clock = 0;                     ///< Seconds the park has been shown
         simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
         BuildMenus build;                    ///< The lists of rides, shops and scenery to build
+        save::ParkModel park_model;          ///< As saved: finances, objectives, research; read by the management windows
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
         save::PeopleModel people;                         ///< Guests, staff and litter as saved; read for the weekly rating

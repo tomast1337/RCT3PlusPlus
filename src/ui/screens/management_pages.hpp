@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// What the park's management windows show: for each window its icon, name, size and tabs, and the page of each
+// tab written from the park as it stands (its saved model, its running state, its people and its attractions).
+//
+// Nothing is made up. A value the park does not keep, or that only the simulation would work out, shows as a
+// dash; a page whose content needs what is not built yet says so in its note.
+#pragma once
+
+#include "save/model/park.hpp"
+#include "save/model/people.hpp"
+#include "save/model/rides.hpp"
+#include "simulation/park_state.hpp"
+#include "ui/screens/attraction_info.hpp"
+#include "ui/screens/management_window.hpp"
+#include "ui/screens/tool_menus.hpp"
+#include "ui/string_table.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string_view>
+#include <vector>
+
+namespace rct3::ui
+{
+
+    /// The management windows, in the order the menu offers them from its button outwards, most used first.
+    enum class ManagementTopic : std::uint8_t
+    {
+        ParkOperations,
+        Finances,
+        Staff,
+        Guests,
+        Attractions,
+        Objectives,
+        Research,
+        Challenges,
+        Count_,
+    };
+    inline constexpr std::size_t kManagementTopicCount = static_cast<std::size_t>(ManagementTopic::Count_);
+
+    /// The window the management menu's `item` opens; none for other items.
+    [[nodiscard]] std::optional<ManagementTopic> management_topic(ToolItem item);
+
+    struct ManagementLayout
+    {
+        std::string_view icon;  ///< Skin in the frame's corner: the menu item's
+        std::string_view title; ///< String key
+        float width = 0;        ///< With the frame
+        float height = 0;
+    };
+
+    [[nodiscard]] ManagementLayout management_layout(ManagementTopic topic);
+
+    /// The tabs of `topic`'s window, with their names.
+    [[nodiscard]] std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings);
+
+    /// What the pages are written from. Any of it may be missing; its values then show as dashes.
+    struct ManagementFacts
+    {
+        const save::ParkModel* park = nullptr; ///< As saved
+        const simulation::ParkState* state = nullptr;
+        const save::PeopleModel* people = nullptr;
+        const save::RideModel* rides = nullptr;
+    };
+
+    /// The page of tab `tab` of `topic`'s window.
+    [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);
+
+    /// What a table row is about: a guest, a member of staff, a ride or a stall, by its index in the park's
+    /// people or attractions. Rows carry it packed in their id.
+    struct ManagementRow
+    {
+        enum class Kind : std::uint8_t
+        {
+            Guest,
+            Staff,
+            Ride,
+            Stall,
+            None, ///< A row about nothing that has an info panel
+        };
+        Kind kind = Kind::None;
+        std::size_t index = 0;
+
+        friend bool operator==(const ManagementRow&, const ManagementRow&) = default;
+    };
+
+    [[nodiscard]] std::size_t management_row_id(ManagementRow row);
+    [[nodiscard]] ManagementRow management_row(std::size_t id);
+
+} // namespace rct3::ui

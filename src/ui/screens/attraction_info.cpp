@@ -516,6 +516,11 @@ namespace rct3::ui
         return AttractionKind::Flat;
     }
 
+    std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings)
+    {
+        return status(attraction, strings);
+    }
+
     std::u16string attraction_name(const save::AttractionCommon& attraction, const StringTable& strings)
     {
         const std::string_view name = attraction.name;

@@ -134,6 +134,9 @@ namespace rct3::scene
         ParkWater water;
         ParkGlow glow;
         bool bloom = false; ///< The Bloom option: glow round bright parts
+        /// How quickly far land fades into haze, per world unit beyond its start. The default leaves the hills
+        /// round the park about half hidden; weather can raise it for misty or rainy days, or set 0 for none.
+        float haze_rate = 0.0004f;
         ui::UiTextures ground_textures;
         render::TextureHandle blank;     ///< For ground without a picture
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)

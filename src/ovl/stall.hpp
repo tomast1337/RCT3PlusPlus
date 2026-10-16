@@ -40,8 +40,9 @@ namespace rct3::ovl
     /// Version 4 and 5 items start with a word of -1, the number of goods and a pointer to them, then a
     /// pointer at 0x24 to the attraction fields and the scenery item at 0x28. The goods follow as pairs of
     /// a carried-item reference and a price, and the attraction fields follow them, laid out as in a version
-    /// 1 item. Version 1 items are read from their start only. Views in the result point into the overlay's
-    /// bytes.
+    /// 1 item. When the pointer to the fields is null, only the type is read, from where the fields would
+    /// follow the goods. Version 1 items are read from their start only. Views in the result point into the
+    /// overlay's bytes.
     [[nodiscard]] std::vector<StallItem> read_stalls(const Overlay& overlay, const Part& part);
 
 } // namespace rct3::ovl

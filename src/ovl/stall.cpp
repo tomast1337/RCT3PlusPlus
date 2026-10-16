@@ -18,14 +18,25 @@ namespace rct3::ovl
         // point at. Version 1 items keep the scenery item at 0x30 in some and 0x38 in others, so it is left out.
         constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
 
-        Stall read_later(const AddressSpace& space, const ReferenceIndex& refs, const ItemRecord& record, std::uint32_t version)
+        Stall read_later(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, const ItemRecord& record, std::uint32_t version)
         {
             Stall stall;
-            const std::uint32_t fields = record.u32(0x24);
-            if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields, kAttractionSize))
-                stall.info = detail::read_attraction(*block, kFields, version);
-            stall.info.style = record.ref(0x28, "sid");
             const std::uint32_t count = record.u32(0x04);
+            const std::uint32_t fields = record.u32(0x24);
+            if (fields != 0)
+            {
+                if (const auto block = ItemRecord::open(space, refs, fields, kAttractionSize))
+                    stall.info = detail::read_attraction(*block, kFields, version);
+            }
+            else if (count <= kMostGoods)
+            {
+                // No pointer to the fields: take at least the type, their first word, from where they follow
+                // the goods in the record, if the record reaches that far.
+                const std::size_t type_at = kLaterSize + count * kGoodsSize;
+                if (const auto whole = ItemRecord::open(space, refs, address, type_at + 4))
+                    stall.info = detail::read_attraction(*whole, { .type_id = static_cast<int>(type_at) }, version);
+            }
+            stall.info.style = record.ref(0x28, "sid");
             if (count > 0 && count <= kMostGoods)
             {
                 if (const auto goods = record.u32(0x08) == 0 ? std::nullopt : ItemRecord::open(space, refs, record.u32(0x08), count * kGoodsSize))
@@ -61,7 +72,7 @@ namespace rct3::ovl
                 if (version == 1)
                     item.stall = Stall { detail::read_attraction(*record, kFields, version), { } };
                 else
-                    item.stall = read_later(space, refs, *record, version);
+                    item.stall = read_later(space, refs, symbol.data, *record, version);
             }
             items.push_back(item);
         }

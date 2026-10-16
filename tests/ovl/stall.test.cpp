@@ -74,3 +74,29 @@ TEST_CASE("a later stall with null pointers gives the scenery item only")
     CHECK(items[0].stall->info.name_text.empty());
     CHECK(items[0].stall->goods.empty());
 }
+
+TEST_CASE("later stalls give their type after the things they sell")
+{
+    Pool pool;
+    pool.add("Drinks:sta");
+    std::vector<std::byte> bytes(0x2C, std::byte { 0 });
+    bytes[0x04] = std::byte { 2 }; // Two things sold, two (item, price) pairs follow
+    put(bytes, { 0, 150, 0, 200 });
+    put(bytes, { 8 + 768 });
+    const auto overlay = make_record_overlay(5, pool, "Drinks:sta", bytes, { });
+    const auto items = read_stalls(overlay, overlay.common());
+    REQUIRE(items[0].stall.has_value());
+    CHECK(items[0].stall->info.type_id == 8);
+}
+
+TEST_CASE("a later stall whose count runs past its block has no type")
+{
+    Pool pool;
+    pool.add("Drinks:sta");
+    std::vector<std::byte> bytes(0x30, std::byte { 0 });
+    bytes[0x04] = std::byte { 40 };
+    const auto overlay = make_record_overlay(4, pool, "Drinks:sta", bytes, { });
+    const auto items = read_stalls(overlay, overlay.common());
+    REQUIRE(items[0].stall.has_value());
+    CHECK(items[0].stall->info.type_id == 0);
+}

@@ -46,6 +46,10 @@ namespace rct3::ui::game_frames
     /// The white panel the small window's content sits on.
     [[nodiscard]] CodedFrame mini_window_panel();
 
+    /// The light blue strip a ring panel's tools sit on, with a thin dark blue edge, square on the left where
+    /// the ring covers it and round on the right, over a drop shadow.
+    [[nodiscard]] CodedFrame curved_strip();
+
     /// The window frame: the blue band with a ring cut round the icon's disc, thin grey sides, a drop shadow.
     [[nodiscard]] CodedFrame window();
     /// What the window's content sits on: white with two faint pink lines in every four, running across. One

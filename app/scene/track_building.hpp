@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Building a tracked ride's track in the park, piece by piece, with the construction panel. The panel offers
+// the pieces of the ride's track overlay that fit the open end of its track; the picked one shows there as
+// a see-through ghost, and building it adds it to the park's objects and to the ride's track in memory.
+// Demolish takes the last piece away, which opens a closed circuit. Nothing is paid and no supports are
+// built under new pieces yet.
+//
+// The scene holds one TrackBuilding; it is idle until a ride is opened in it.
+#pragma once
+
+#include "park/object_mesh.hpp"
+#include "park/object_models.hpp"
+#include "park/track_choice.hpp"
+#include "park/track_pieces.hpp"
+#include "render/device.hpp"
+#include "save/model/world.hpp"
+
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace rct3::park
+{
+    class AssetIndex;
+} // namespace rct3::park
+
+namespace rct3::ui
+{
+    struct InterfaceAssets;
+} // namespace rct3::ui
+
+namespace rct3::scene
+{
+
+    struct ParkScene;
+
+    /// The models of one track overlay's pieces, loaded as they are first shown.
+    struct TrackModels
+    {
+        std::unique_ptr<park::AssetIndex> index;
+        std::unique_ptr<park::ModelLoader> loader;
+
+        TrackModels();
+        ~TrackModels();
+        TrackModels(TrackModels&&) noexcept;
+        TrackModels& operator=(TrackModels&&) noexcept;
+    };
+
+    struct TrackBuilding
+    {
+        std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
+        std::string overlay;             ///< The ride's track overlay, as its objects name it
+        std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
+        std::map<std::string, TrackModels, std::less<>> models;
+        std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit
+        std::vector<park::LaidPiece> candidates;
+        park::TrackChoice choice;
+        std::optional<park::LaidPiece> picked;
+        std::optional<park::PiecePlacement> ghost;
+        park::ObjectMesh ghost_mesh;
+    };
+
+    /// Opens the construction panel on the tracked ride `ride` of the scene's rides, its pieces coming from
+    /// the track overlay `overlay` (as a park names it). False when the ride has no track or the overlay
+    /// cannot be read. The selection windows open new rides through this.
+    bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
+
+    /// The track overlay of the ride's built pieces, if it has any.
+    [[nodiscard]] std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride);
+
+    /// Handles the panel's events. Call once per update after the interface.
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency);
+
+    /// Draws the ghost of the picked piece with `transform` and `light`.
+    void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+
+} // namespace rct3::scene

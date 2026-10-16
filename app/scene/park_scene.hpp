@@ -33,6 +33,7 @@
 #include "scene/park_map_view.hpp"
 #include "scene/park_water.hpp"
 #include "scene/save_browser.hpp"
+#include "scene/track_building.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/desktop.hpp"
@@ -219,6 +220,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
         ParkMap map; ///< The map window's pictures and what they show
         ParkFootpaths footpaths; ///< The path panel's styles and the paths laid with it
+        TrackBuilding building; ///< The construction panel's ride and the piece it would build
     };
 
     /// The stages of loading a park, in the order they run.

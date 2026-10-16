@@ -152,15 +152,21 @@ namespace rct3::ui
             const bool pushed = w > 0 && h > 0;
             if (pushed && context.list.push_clip(back))
             {
-                const int rows = static_cast<int>(std::ceil(back.height() / h));
-                const int columns = static_cast<int>(std::ceil(back.width() / w));
+                // A tile drawn in code is the same all along its rows, so each row of tiles is one, stretched
+                // across: far fewer shapes than tile by tile. Its rows start on a whole unit, so their smoothed
+                // edges meet without a seam.
+                const bool coded = background->coded != nullptr;
+                const float top = coded ? std::floor(back.y0) : back.y0;
+                const int rows = static_cast<int>(std::ceil((back.y1 - top) / h));
+                const int columns = coded ? 1 : static_cast<int>(std::ceil(back.width() / w));
+                const float across = coded ? back.width() : w;
                 for (int row = 0; row < rows; ++row)
                 {
-                    const float y = back.y0 + static_cast<float>(row) * h;
+                    const float y = top + static_cast<float>(row) * h;
                     for (int column = 0; column < columns; ++column)
                     {
                         const float x = back.x0 + static_cast<float>(column) * w;
-                        draw_skin(context.list, background, { x, y, x + w, y + h });
+                        draw_skin(context.list, background, { x, y, x + across, y + h });
                     }
                 }
             }

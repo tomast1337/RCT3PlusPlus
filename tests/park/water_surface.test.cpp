@@ -120,3 +120,19 @@ TEST_CASE("a line of sight meets the nearest water it crosses, not beside it")
     CHECK_FALSE(water_hit({ { 1, 10, 1 }, { 0, 1, 0 } }, s));
     CHECK_FALSE(water_hit({ { 1, 10, 1 }, { 1, 0, 0 } }, s));
 }
+
+TEST_CASE("a point is under the water whose surface stands over it, and nowhere else")
+{
+    std::vector<WaterVertex> water;
+    square(water, 0, 0, 0, 4);
+    square(water, 5, 10, 0, 4);
+    const WaterSurface s = water_surface(water);
+    const auto under = water_above(s, { 1, -0.5f, 1 });
+    REQUIRE(under);
+    CHECK(under->level == doctest::Approx(0));
+    CHECK(under->colour.a == doctest::Approx(0.6f));
+    CHECK(water_above(s, { 11, 4, 1 })->level == doctest::Approx(5));
+    CHECK_FALSE(water_above(s, { 1, 0.5f, 1 }));  // Above the surface
+    CHECK_FALSE(water_above(s, { 6, -0.5f, 1 })); // Below its height but beside the water
+    CHECK_FALSE(water_above(s, { 1, -0.5f, 9 }));
+}

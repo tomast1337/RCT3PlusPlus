@@ -10,7 +10,8 @@
 //
 //   prepare_park_water   between passes: the ripples are sent, the reflections drawn
 //   (the opaque scene)
-//   draw_park_water      the screen is copied, then the water drawn over it
+//   draw_park_water      the screen is copied, then the water drawn over it; with the eye under water the
+//                        copy is first fogged by the water in front of it, and the surface seen from below
 //   (see-through objects, the interface)
 #pragma once
 
@@ -25,6 +26,7 @@
 #include <array>
 #include <expected>
 #include <functional>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -65,7 +67,8 @@ namespace rct3::scene
         bool have_behind = false; ///< The copy this frame worked
         park::Ripples ripples;
         WaterLook look;
-        std::vector<float> levels; ///< With a reflection this frame, by index in `reflections`
+        std::vector<float> levels;              ///< With a reflection this frame, by index in `reflections`
+        std::optional<park::WaterAbove> eye_in; ///< The water the eye is under this frame
     };
 
     /// Makes the water's buffers, pictures and pipelines. `layout` is that of park::GroundVertex.

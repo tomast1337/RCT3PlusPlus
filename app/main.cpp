@@ -4,10 +4,10 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
-//   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos
+//   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos, 60 fps
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
@@ -20,6 +20,7 @@
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
 //   --seconds N       exit after N seconds of real time
+//   --max-fps N       wait between frames so no more than N are drawn a second; 0 for no limit
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
 //                     (config/settings.hpp) and the environment variables read (config/environment.hpp)
@@ -50,6 +51,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
@@ -61,6 +63,7 @@
 #include <random>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -70,7 +73,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -244,6 +247,7 @@ int main(int argc, char** argv)
     bool headless = false;
     std::optional<bool> sound_this_run;
     double max_seconds = -1;
+    std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::uint64_t> seed;
     for (int i = 1; i < argc; ++i)
@@ -255,6 +259,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
         {
             max_seconds = std::atof(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--max-fps") == 0 && i + 1 < argc)
+        {
+            max_fps = std::atof(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--headless") == 0)
         {
@@ -355,6 +363,8 @@ int main(int argc, char** argv)
         backend = render::Backend::Null;
         vsync = false;
     }
+    // Without vsync or a window to show, a headless run would otherwise keep a core busy.
+    const double frame_limit = max_fps.value_or(headless ? 60.0 : 0.0);
     const bool sound = !headless && sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));
     const bool intro = !headless && !settings.flag(config::Setting::SkipIntro);
     std::optional<float> scale;
@@ -611,6 +621,12 @@ int main(int argc, char** argv)
         {
             if (max_seconds >= 0 && window->time() - start_time >= max_seconds)
                 break;
+            if (frame_limit > 0)
+            {
+                const double wait = last_time + 1 / frame_limit - window->time();
+                if (wait > 0)
+                    std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+            }
             window->poll_events();
 
             const double now = window->time();

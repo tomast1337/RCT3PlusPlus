@@ -135,7 +135,8 @@ namespace rct3::scene
         ParkGlow glow;
         bool bloom = false; ///< The Bloom option: glow round bright parts
         ui::UiTextures ground_textures;
-        render::TextureHandle blank; ///< For ground without a picture
+        render::TextureHandle blank;     ///< For ground without a picture
+        render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
         park::ModelPictures pictures; ///< For painting the batches new levels bring

@@ -320,3 +320,40 @@ TEST_CASE("the frame is drawn either from the skins or as shapes in code")
         CHECK(list.shape_vertices().empty());
     }
 }
+
+TEST_CASE("a page's controls tell the changes made to them by their ids")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    InfoControl tick;
+    tick.id = 5;
+    tick.kind = InfoControlKind::Tick;
+    tick.label = u"Wait";
+    InfoControl pots;
+    pots.id = 7;
+    pots.kind = InfoControlKind::Paint;
+    pots.paints = { 3, 4 };
+    page.controls = { tick, pots };
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    REQUIRE(f.panel->control(5) != nullptr);
+    CHECK(f.panel->control(6) == nullptr);
+
+    f.click(Fixture::middle(f.panel->control(5)->rect()));
+    auto change = f.panel->take_change();
+    REQUIRE(change);
+    CHECK(change->id == 5);
+    CHECK(change->value == 1);
+    CHECK_FALSE(f.panel->take_change());
+
+    f.click(Fixture::middle(f.panel->control(7)->rect()));
+    REQUIRE(f.panel->palette() != nullptr);
+    CHECK(f.panel->palette()->rect().y1 < f.panel->control(7)->rect().y0);
+    f.click(Fixture::middle(f.panel->palette()->swatch(21).rect()));
+    change = f.panel->take_change();
+    REQUIRE(change);
+    CHECK(change->id == 7);
+    CHECK(change->value == 21);
+    CHECK(f.panel->palette() == nullptr);
+}

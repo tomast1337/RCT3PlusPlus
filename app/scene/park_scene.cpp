@@ -28,6 +28,7 @@
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
@@ -855,6 +856,24 @@ namespace rct3::scene
     namespace
     {
 
+        /// The first of the attraction's objects that takes colours, and the slots it takes.
+        std::optional<std::pair<std::size_t, std::vector<std::size_t>>> painted_object(const ParkScene& scene, park::AttractionRef ref)
+        {
+            for (std::size_t i = 0; i < scene.objects.size(); ++i)
+            {
+                const auto owner = scene.attractions.find(scene.objects[i].id);
+                if (owner == scene.attractions.end() || owner->second != ref)
+                    continue;
+                const auto model = scene.models.find(park::model_key(scene.objects[i]));
+                ui::SceneryFacts f;
+                f.colours = scene.objects[i].colours;
+                f.colour_slots = model == scene.models.end() ? 0 : park::colour_slots(model->second);
+                if (std::vector<std::size_t> slots = ui::scenery_paint_slots(f); !slots.empty())
+                    return std::pair { i, std::move(slots) };
+            }
+            return std::nullopt;
+        }
+
         ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
         {
             ui::AttractionFacts f;
@@ -870,6 +889,11 @@ namespace rct3::scene
             {
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
+            }
+            if (const auto painted = painted_object(scene, ref))
+            {
+                for (const std::size_t slot : painted->second)
+                    f.colours.push_back(static_cast<std::size_t>(std::max(scene.objects[painted->first].colours.at(slot), 0)));
             }
             return f;
         }
@@ -951,7 +975,8 @@ namespace rct3::scene
             std::vector<ui::InfoTab> tabs;
             scene.person_tabs.clear();
             std::size_t picked = 0;
-            for (const ui::PersonTabInfo& t : ui::person_tabs(scene.shown_people[shown].staff))
+            const ui::PersonFacts f = person_facts(scene, shown);
+            for (const ui::PersonTabInfo& t : ui::person_tabs(f))
             {
                 if (t.tab == scene.person_tab)
                     picked = tabs.size();
@@ -959,8 +984,15 @@ namespace rct3::scene
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
+                // A uniform's pots show the colours the person is drawn in.
+                for (std::size_t pot = 0; pot < t.pots; ++pot)
+                    tab.paints.push_back(scene.shown_people[shown].pose.look.colours.at(ui::kUpperPalette + pot));
+                tab.colours = ui::kUniformColours;
                 scene.person_tabs.push_back(t.tab);
             }
+            // A uniform tab has no page of its own.
+            if (scene.person_tabs.at(picked) == ui::PersonTab::Uniform)
+                picked = 0;
             scene.person_tab = scene.person_tabs.at(picked);
             if (scene.shown_person != shown)
                 scene.view_camera = person_view(scene, shown, scene.camera.yaw);
@@ -989,6 +1021,7 @@ namespace rct3::scene
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
+                tab.action = t.action;
                 if (t.tab == ui::AttractionTab::State)
                 {
                     for (const ui::StateChoice& c : ui::state_choices(kind))
@@ -1074,6 +1107,129 @@ namespace rct3::scene
         {
             if (slot < park::kFlexiSlotCount)
                 change_object(scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
+        }
+
+        /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
+        /// spinner held down keeps stepping; a page that looks different after the change is set up here.
+        void change_attraction(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change)
+        {
+            using enum ui::AttractionControl;
+            save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
+            save::Stall* stall = ref.kind == park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
+            const auto wait_on = [&](std::int32_t& wait, ui::AttractionControl seconds) {
+                ui::Widget* const field = panel.control(ui::control_id(seconds));
+                wait = change.value != 0 ? (field != nullptr ? static_cast<const ui::Spinner*>(field)->value() : 0) : -1;
+                if (field != nullptr)
+                    field->enabled = change.value != 0;
+            };
+            if (change.id == ui::control_id(Colours))
+            {
+                // Every object of the attraction takes the colour in the slot of the pot.
+                const auto painted = painted_object(scene, ref);
+                if (!painted || change.pot >= painted->second.size())
+                    return;
+                const std::size_t slot = painted->second[change.pot];
+                for (std::size_t i = 0; i < scene.objects.size(); ++i)
+                {
+                    const auto owner = scene.attractions.find(scene.objects[i].id);
+                    if (owner != scene.attractions.end() && owner->second == ref)
+                        paint_prop(scene, i, slot, change.value);
+                }
+            }
+            else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
+            {
+                if (const auto item = static_cast<std::size_t>(change.id - ui::control_id(ItemPrice)); item < stall->items.size())
+                    stall->items[item].price = change.value;
+            }
+            else if (ride == nullptr)
+                return;
+            else if (change.id == ui::control_id(Price))
+                ride->ticket_price = change.value;
+            else if (change.id == ui::control_id(Inspection))
+                ride->breakdown.inspection_interval = change.value;
+            else if (change.id == ui::control_id(MinWaitOn))
+                wait_on(ride->options.min_wait, MinWait);
+            else if (change.id == ui::control_id(MaxWaitOn))
+                wait_on(ride->options.max_wait, MaxWait);
+            else if (change.id == ui::control_id(MinWait))
+                ride->options.min_wait = change.value;
+            else if (change.id == ui::control_id(MaxWait))
+                ride->options.max_wait = change.value;
+        }
+
+        /// Lets the people's meshes be changed: the build beside the frame reads them, so it is dropped first,
+        /// and all are built again after.
+        void change_people(ParkScene& scene)
+        {
+            if (scene.people_build.valid())
+                (void)scene.people_build.get();
+            scene.people_levels.clear();
+            scene.since_people_levels = kObjectRebuildInterval;
+            scene.since_people = kPeopleRebuildIntervals;
+        }
+
+        /// Fires the member of staff shown as `shown`: they leave the park at once, as in the game.
+        void fire(ParkScene& scene, std::size_t shown)
+        {
+            change_people(scene);
+            const std::size_t saved = scene.shown_people.at(shown).saved;
+            scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
+            scene.people.staff.erase(scene.people.staff.begin() + static_cast<std::ptrdiff_t>(saved));
+            for (ShownPerson& p : scene.shown_people)
+            {
+                if (p.staff && p.saved > saved)
+                    --p.saved;
+            }
+        }
+
+        /// Writes a change the player made on a person's page into the save. Returns whether the page is to be
+        /// shown again for its new look.
+        bool change_person(ParkScene& scene, std::size_t shown, const ui::InfoChange& change)
+        {
+            using enum ui::PersonControl;
+            if (shown >= scene.shown_people.size())
+                return false;
+            const ShownPerson& p = scene.shown_people[shown];
+            save::Staff* staff = p.staff && p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved] : nullptr;
+            save::Guest* guest = !p.staff && p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved] : nullptr;
+            save::Person* person = staff != nullptr ? &staff->person : guest != nullptr ? &guest->person : nullptr;
+            if (person == nullptr)
+                return false;
+            if (change.id == ui::person_control(Name))
+            {
+                // A blank name keeps the old one.
+                if (change.text.empty())
+                    return true;
+                person->name = strings::to_utf8(change.text);
+                return true;
+            }
+            if (staff == nullptr)
+                return false;
+            if (change.id == ui::person_control(Warn))
+            {
+                staff->warnings = std::min(staff->warnings + 1, ui::kMostWarnings);
+                return true;
+            }
+            if (change.id == ui::person_control(Wage))
+                staff->wage_level = change.value;
+            else if (change.id == ui::person_control(Costume))
+                person->sub_type = static_cast<std::uint8_t>(change.value);
+            else if (change.id >= ui::person_control(Task))
+                staff->task_flags ^= 1 << (change.id - ui::person_control(Task));
+            return false;
+        }
+
+        /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
+        void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
+        {
+            if (shown >= scene.shown_people.size() || ui::kUpperPalette + pot >= park::PersonLook { }.colours.size())
+                return;
+            change_people(scene);
+            ShownPerson& p = scene.shown_people[shown];
+            const auto c = static_cast<std::uint8_t>(colour);
+            p.pose.look.colours.at(ui::kUpperPalette + pot) = c;
+            save::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
+            person->appearance.palettes.at(ui::kUpperPalette + pot) = c;
         }
 
         /// Whether the object is a prop the panel can tell about: one of the park's own.
@@ -1178,14 +1334,33 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
-            if (const auto action = info->take_action(); action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
+            const auto action = info->take_action();
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {
                 // Pulled down at once, as in the game; the panel goes with it.
                 destroy_prop(scene, *scene.shown_prop);
                 scene.shown_prop.reset();
                 info->hide();
             }
-            if (const auto paint = info->take_paint(); paint && scene.shown_prop)
+            if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
+                scene.construct_requested = *scene.shown;
+            if (const auto change = info->take_change(); change && scene.shown)
+                change_attraction(scene, *info, *scene.shown, *change);
+            else if (change && scene.shown_person)
+            {
+                if (change->id == ui::person_control(ui::PersonControl::Sack))
+                {
+                    fire(scene, *scene.shown_person);
+                    scene.shown_person.reset();
+                    info->hide();
+                }
+                else if (change_person(scene, *scene.shown_person, *change))
+                    show_info_page(scene, *info, assets, options);
+            }
+            const auto paint = info->take_paint();
+            if (paint && scene.shown_person)
+                paint_person(scene, *scene.shown_person, paint->pot, paint->colour);
+            if (paint && scene.shown_prop)
             {
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
                 const std::vector<std::size_t> slots = ui::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));

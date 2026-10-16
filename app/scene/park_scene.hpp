@@ -167,21 +167,23 @@ namespace rct3::scene
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
         std::size_t info_section = 0;                         ///< Of the open tab's page
-        std::optional<std::size_t> shown_person;              ///< Of shown_people, the one the info panel tells about instead
-        std::vector<ui::PersonTab> person_tabs;               ///< Their tabs in the panel's order
-        ui::PersonTab person_tab = ui::PersonTab::General;    ///< The tab last opened on a person
-        std::vector<save::BinState> bins;                     ///< Of the litter bins among the objects
-        std::vector<save::SignState> signs;                   ///< Of the signs among the objects
-        std::optional<std::size_t> shown_prop;                ///< Of objects, the prop the info panel tells about instead
-        std::vector<ui::SceneryTab> prop_tabs;                ///< Its tabs in the panel's order
-        std::optional<ui::SceneryTab> prop_tab;               ///< Its open tab; none while only its name shows
-        bool show_people = true;                              ///< Switched in the view menu
-        bool show_scenery = true;                             ///< Objects and rides, switched in the view menu
-        park::ParkCamera view_camera;                         ///< Of the info panel's round view, turning slowly round the attraction
-        render::TextureHandle view_target;                    ///< The round view is drawn into
-        std::uint32_t view_pixels = 0;                        ///< Across the view's target
-        std::optional<ui::Point> press;                       ///< Where the left button went down over the park, until it is let go
-        render::SceneLight light;                             ///< What the day clock shows, for this frame
+        /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
+        std::optional<park::AttractionRef> construct_requested;
+        std::optional<std::size_t> shown_person;           ///< Of shown_people, the one the info panel tells about instead
+        std::vector<ui::PersonTab> person_tabs;            ///< Their tabs in the panel's order
+        ui::PersonTab person_tab = ui::PersonTab::General; ///< The tab last opened on a person
+        std::vector<save::BinState> bins;                  ///< Of the litter bins among the objects
+        std::vector<save::SignState> signs;                ///< Of the signs among the objects
+        std::optional<std::size_t> shown_prop;             ///< Of objects, the prop the info panel tells about instead
+        std::vector<ui::SceneryTab> prop_tabs;             ///< Its tabs in the panel's order
+        std::optional<ui::SceneryTab> prop_tab;            ///< Its open tab; none while only its name shows
+        bool show_people = true;                           ///< Switched in the view menu
+        bool show_scenery = true;                          ///< Objects and rides, switched in the view menu
+        park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
+        render::TextureHandle view_target;                 ///< The round view is drawn into
+        std::uint32_t view_pixels = 0;                     ///< Across the view's target
+        std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
+        render::SceneLight light;                          ///< What the day clock shows, for this frame
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

@@ -2,7 +2,9 @@
 #include "ui/screens/info_panel.hpp"
 
 #include "ui/shape.hpp"
+#include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -49,6 +51,7 @@ namespace rct3::ui
         close_choices();
         close_palette();
         paints_.clear();
+        paint_colours_.clear();
         for (Button* b : tabs_)
             (void)remove(*b);
         tabs_.clear();
@@ -66,6 +69,7 @@ namespace rct3::ui
             }
             Button& b = paint != nullptr ? *paint : add<Button>(std::format("tab{}", i), style_.tab_face, std::move(tabs[i].icon));
             paints_.push_back(paint);
+            paint_colours_.push_back(tabs[i].colours);
             b.tooltip = std::move(tabs[i].help);
             b.toggle = tabs[i].choices.empty() && !tabs[i].action && paint == nullptr;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
@@ -117,7 +121,8 @@ namespace rct3::ui
     {
         close_palette();
         PaintButton& pots = *paints_[tab];
-        palette_ = &add<ColourPalette>("palette", style_.palette, style_.palette_count, style_.palette_columns, pots.colours.at(pot));
+        const std::size_t count = paint_colours_.at(tab) > 0 ? paint_colours_.at(tab) : style_.palette_count;
+        palette_ = &add<ColourPalette>("palette", style_.palette, count, style_.palette_columns, pots.colours.at(pot));
         pots.held = pot;
         painting_ = tab;
         painting_pot_ = pot;
@@ -131,7 +136,22 @@ namespace rct3::ui
         palette_ = nullptr;
         if (painting_ && *painting_ < paints_.size() && paints_[*painting_] != nullptr)
             paints_[*painting_]->held.reset();
+        if (painting_page_ && *painting_page_ < controls_.size())
+            static_cast<PaintButton*>(controls_[*painting_page_].second)->held.reset();
         painting_.reset();
+        painting_page_.reset();
+    }
+
+    void InfoPanel::open_page_palette(std::size_t control, std::size_t pot)
+    {
+        close_palette();
+        close_choices();
+        auto& pots = *static_cast<PaintButton*>(controls_[control].second);
+        palette_ = &add<ColourPalette>("palette", style_.palette, style_.palette_count, style_.palette_columns, pots.colours.at(pot));
+        pots.held = pot;
+        painting_page_ = control;
+        painting_pot_ = pot;
+        place();
     }
 
     void InfoPanel::set_body_size(float width, float height)
@@ -143,14 +163,18 @@ namespace rct3::ui
 
     void InfoPanel::show_page(const InfoPage& page)
     {
+        if (painting_page_)
+            close_palette();
+        controls_.clear();
         while (!body_->children().empty())
             (void)body_->remove(*body_->children().back());
         sections_.clear();
         float y = 0;
-        const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) {
+        const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
             Label& l = body_->add<Label>(std::move(name), text, font);
             l.placement = top_left(x, y, width, info_panel::kLineHeight);
             l.style.colour = style_.text_colour;
+            return l;
         };
         if (!page.title.empty())
         {
@@ -189,10 +213,12 @@ namespace rct3::ui
             const InfoLine& l = page.lines[i];
             if (l.half)
             {
-                const float width = info_panel::kPageWidth / 2 - info_panel::kPairGap;
-                const float x = right ? info_panel::kPageWidth - width : 0;
-                line(std::format("label{}", i), l.label, x, width - info_panel::kPairValue, FontRole::Small);
-                line(std::format("value{}", i), l.value, x + width - info_panel::kPairValue, info_panel::kPairValue, FontRole::Small);
+                // The right column stops short of the page's end, where the ring's tabs reach over it.
+                const float width = (info_panel::kPageWidth - info_panel::kRingReach) / 2 - info_panel::kPairGap;
+                const float x = right ? info_panel::kPageWidth - info_panel::kRingReach - width : 0;
+                // The value at the column's right edge, so a long label keeps the room a short value leaves it.
+                line(std::format("label{}", i), l.label, x, width, FontRole::Small);
+                line(std::format("value{}", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
                 if (right)
                     y += info_panel::kLineHeight;
                 right = !right;
@@ -232,8 +258,142 @@ namespace rct3::ui
             }
             y += info_panel::kLineHeight;
         }
+        for (std::size_t i = 0; i < page.controls.size(); ++i)
+        {
+            const InfoControl& c = page.controls[i];
+            const bool big = c.kind == InfoControlKind::Paint || !c.icon.empty();
+            const float height = big ? info_panel::kPaintSize : info_panel::kControlHeight;
+            Label& label = line(std::format("controllabel{}", i), c.label, 0, 0, FontRole::Small);
+            label.placement = top_left(0, y, c.icon.empty() ? info_panel::kValueColumn : info_panel::kPageWidth, height);
+            label.style.vertical = Align::Centre;
+            const float x = info_panel::kValueColumn;
+            const float width = info_panel::kPageWidth - info_panel::kValueColumn;
+            Widget* w = nullptr;
+            switch (c.kind)
+            {
+                case InfoControlKind::Number:
+                {
+                    Spinner& n = body_->add<Spinner>(std::format("control{}", i), style_.spinner);
+                    n.minimum = c.minimum;
+                    n.maximum = c.maximum;
+                    n.step = c.step;
+                    n.decimals = c.decimals;
+                    n.set_value(c.value);
+                    w = &n;
+                    break;
+                }
+                case InfoControlKind::Choice:
+                {
+                    Dropdown& d = body_->add<Dropdown>(std::format("control{}", i), style_.dropdown);
+                    d.items = c.items;
+                    d.select(c.value >= 0 ? std::optional<std::size_t>(static_cast<std::size_t>(c.value)) : std::nullopt);
+                    w = &d;
+                    break;
+                }
+                case InfoControlKind::Tick:
+                {
+                    Tickbox& t = body_->add<Tickbox>(std::format("control{}", i), style_.tick_box, style_.tick);
+                    t.ticked = c.value != 0;
+                    w = &t;
+                    break;
+                }
+                case InfoControlKind::Button:
+                {
+                    Button& b = body_->add<Button>(std::format("control{}", i), c.icon.empty() ? style_.button : std::string { }, c.icon);
+                    b.text = c.text;
+                    b.font = FontRole::Small;
+                    b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
+                    w = &b;
+                    break;
+                }
+                case InfoControlKind::Text:
+                {
+                    EditBox& e = body_->add<EditBox>(std::format("control{}", i), c.text);
+                    e.skin = style_.spinner.field;
+                    e.focused_skin = style_.spinner.field_focused;
+                    e.max_length = static_cast<std::size_t>(std::max(c.maximum, 0));
+                    w = &e;
+                    break;
+                }
+                case InfoControlKind::Paint:
+                {
+                    PaintButtonStyle look = style_.paint;
+                    look.face = style_.tab_face;
+                    w = &body_->add<PaintButton>(std::format("control{}", i), std::move(look), c.paints);
+                    break;
+                }
+            }
+            float w_width = width;
+            if (c.kind == InfoControlKind::Tick)
+                w_width = info_panel::kTickSize;
+            else if (!c.icon.empty())
+                w_width = info_panel::kPaintSize;
+            else if (c.kind == InfoControlKind::Paint)
+                w_width = info_panel::kPaintSize * static_cast<float>(c.paints.size());
+            else if (c.kind == InfoControlKind::Number)
+                w_width = info_panel::kNumberWidth;
+            // A list takes room from the label's side, for the longest item.
+            float w_x = c.kind == InfoControlKind::Choice ? info_panel::kPageWidth - info_panel::kChoiceWidth : x;
+            // A picture button sits clear of the ring at the end, after its label's long words.
+            if (!c.icon.empty())
+                w_x = info_panel::kPageWidth - info_panel::kRingReach - info_panel::kPaintSize;
+            if (c.kind == InfoControlKind::Choice)
+                w_width = info_panel::kChoiceWidth;
+            const float w_height = c.kind == InfoControlKind::Tick ? info_panel::kTickSize : height;
+            w->placement = top_left(w_x, y + (height - w_height) / 2, w_width, w_height);
+            w->enabled = c.enabled;
+            controls_.emplace_back(c, w);
+            y += height + 1;
+        }
         // An empty page has no strip.
         set_body_size(y > 0 ? info_panel::kPageWidth : 0, y);
+    }
+
+    Widget* InfoPanel::control(int id) const
+    {
+        const auto found = std::ranges::find_if(controls_, [&](const auto& c) { return c.first.id == id; });
+        return found == controls_.end() ? nullptr : found->second;
+    }
+
+    void InfoPanel::read_controls()
+    {
+        for (std::size_t i = 0; i < controls_.size(); ++i)
+        {
+            auto& [c, w] = controls_[i];
+            switch (c.kind)
+            {
+                case InfoControlKind::Number:
+                    if (auto* n = static_cast<Spinner*>(w); n->take_change())
+                        change_now_ = InfoChange { c.id, n->value(), 0, { } };
+                    break;
+                case InfoControlKind::Choice:
+                    if (auto* d = static_cast<Dropdown*>(w); d->take_change() && d->selected())
+                        change_now_ = InfoChange { c.id, static_cast<int>(*d->selected()), 0, { } };
+                    break;
+                case InfoControlKind::Tick:
+                    if (auto* t = static_cast<Tickbox*>(w); t->take_change())
+                        change_now_ = InfoChange { c.id, t->ticked ? 1 : 0, 0, { } };
+                    break;
+                case InfoControlKind::Button:
+                    if (static_cast<Button*>(w)->take_click())
+                        change_now_ = InfoChange { c.id, 0, 0, { } };
+                    break;
+                case InfoControlKind::Text:
+                    if (auto* e = static_cast<EditBox*>(w); e->take_commit())
+                        change_now_ = InfoChange { c.id, 0, 0, e->text };
+                    break;
+                case InfoControlKind::Paint:
+                    if (const auto pot = static_cast<PaintButton*>(w)->take_pot())
+                    {
+                        // Pressing the pot again puts the colours away.
+                        if (painting_page_ == i)
+                            close_palette();
+                        else
+                            open_page_palette(i, *pot);
+                    }
+                    break;
+            }
+        }
     }
 
     Rect InfoPanel::disc() const
@@ -284,11 +444,21 @@ namespace rct3::ui
         if (painting_ && palette_ != nullptr)
         {
             // Above its tab, as near the tab's middle as the screen allows.
-            const Point size = ColourPalette::size(style_.palette, style_.palette_count, style_.palette_columns);
+            const Point size = ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
             const Point tab = info_tab_offset(slots_[*painting_]);
             const float m = info_panel::kScreenMargin;
             const float x = std::clamp(middle.x + tab.x - size.x / 2, m, std::max(m, r.width() - m - size.x));
             const float y = std::clamp(middle.y + tab.y - info_panel::kTabSize / 2 - info_panel::kPaletteGap - size.y, m, std::max(m, r.height() - m - size.y));
+            palette_->placement = top_left(std::round(x), std::round(y), size.x, size.y);
+        }
+        if (painting_page_ && palette_ != nullptr)
+        {
+            // Above the strip, over its pots.
+            const Point size = ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
+            const Rect pots = controls_[*painting_page_].second->rect();
+            const float m = info_panel::kScreenMargin;
+            const float x = std::clamp((pots.x0 + pots.x1) / 2 - r.x0 - size.x / 2, m, std::max(m, r.width() - m - size.x));
+            const float y = std::clamp(strip().y0 - r.y0 - info_panel::kPaletteGap - size.y, m, std::max(m, r.height() - m - size.y));
             palette_->placement = top_left(std::round(x), std::round(y), size.x, size.y);
         }
         const Rect s = strip();
@@ -329,6 +499,17 @@ namespace rct3::ui
                 break;
             }
         }
+        if (palette_ != nullptr && painting_page_)
+        {
+            if (const auto colour = palette_->take_pick())
+            {
+                auto& pots = *static_cast<PaintButton*>(controls_[*painting_page_].second);
+                pots.colours.at(painting_pot_) = *colour;
+                change_now_ = InfoChange { controls_[*painting_page_].first.id, static_cast<int>(*colour), painting_pot_, { } };
+                close_palette();
+            }
+        }
+        read_controls();
         if (palette_ != nullptr && painting_)
         {
             if (const auto colour = palette_->take_pick())

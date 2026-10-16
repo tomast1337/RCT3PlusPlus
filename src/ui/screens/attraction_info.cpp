@@ -34,7 +34,7 @@ namespace rct3::ui
             { AttractionTab::Maintenance, 11, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp" },
         } };
         constexpr std::array<AttractionTabInfo, 2> kTrackTabs { {
-            { AttractionTab::Construction, 7, "Attraction_Construction", "AttractionDetails_ConstructionHelp" },
+            { AttractionTab::Construction, 7, "Attraction_Construction", "AttractionDetails_ConstructionHelp", true },
             { AttractionTab::Graphs, 10, "Attraction_Graphs", "AttractionDetails_GraphsHelp" },
         } };
         constexpr std::array<AttractionTabInfo, 2> kStallTabs { {
@@ -75,6 +75,14 @@ namespace rct3::ui
             "RideOpModeDialog_OpModeContinuousCircuit", "RideOpModeDialog_OpModePoweredLaunch", "RideOpModeDialog_OpModeReverseInclinedLaunch", "RideOpModeDialog_OpModeBoat",      "RideOpModeDialog_OpModeRace", "RideOpModeDialog_OpModeShuttle", "RideOpModeDialog_OpModeUpwardsLaunch", "RideOpModeDialog_OpModeFreefallDrop", "RideOpModeDialog_OpModeUpAndDown", "RideOpModeDialog_OpModeMiniGolf", "RideOpModeDialog_OpModeSlide", "RideOpModeDialog_OpModeReverseCableLiftHill",
             "RideOpModeDialog_OpModeWaterTransport",    "RideOpModeDialog_OpModeAquarium",      "RideOpModeDialog_OpModeMultiplePoweredLaunch", "RideOpModeDialog_OpModeLazyRiver",
         };
+
+        /// The inspection intervals in the order of the maintenance page's list, which is the order the save
+        /// numbers them in.
+        constexpr std::array<std::string_view, 7> kInspectionIntervals = {
+            "RideInspectionIntervalEvery10Mins", "RideInspectionIntervalEvery20Mins", "RideInspectionIntervalEvery30Mins", "RideInspectionIntervalEvery45Mins", "RideInspectionIntervalEveryHour", "RideInspectionIntervalEvery2Hours", "RideInspectionIntervalNever",
+        };
+        constexpr std::array<std::string_view, 2> kModeSections = { "AttractionDetails_RideOpModeHelp", "RideOpModeDialog_WaitFor" };
+        constexpr std::string_view kSoldName = "%NAME%";
 
         constexpr float kGravity = 9.81f;
         constexpr float kKmhPerMs = 3.6f;
@@ -152,12 +160,6 @@ namespace rct3::ui
             return text(strings, value ? "Yes" : "No");
         }
 
-        /// Seconds, or a dash for none.
-        std::u16string wait(std::int32_t seconds)
-        {
-            return seconds < 0 ? std::u16string(u"-") : ascii(std::format("{} s", seconds));
-        }
-
         std::u16string percent(float value)
         {
             return ascii(std::format("{} %", std::lround(value)));
@@ -193,23 +195,94 @@ namespace rct3::ui
             page.lines.push_back({ text(strings, label), std::move(value) });
         }
 
+        /// A line sharing its row with the next such line.
+        void add_half(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
+        {
+            page.lines.push_back({ text(strings, label), std::move(value), true });
+        }
+
+        std::u16string missing()
+        {
+            return std::u16string(kMissingValue);
+        }
+
+        std::u16string count(std::int64_t n)
+        {
+            return ascii(std::to_string(n));
+        }
+
+        /// The pots of the attraction's colours, when it has any.
+        void paints(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
+        {
+            if (f.colours.empty())
+                return;
+            InfoControl c;
+            c.id = control_id(AttractionControl::Colours);
+            c.kind = InfoControlKind::Paint;
+            c.label = text(strings, "AttractionVehicleDialogHelpPaintAttraction");
+            c.paints = f.colours;
+            page.controls.push_back(std::move(c));
+        }
+
+        InfoControl price(int id, std::u16string label, std::int64_t value, int most)
+        {
+            InfoControl c;
+            c.id = id;
+            c.kind = InfoControlKind::Number;
+            c.label = std::move(label);
+            c.value = static_cast<int>(std::clamp<std::int64_t>(value, 0, most));
+            c.maximum = most;
+            c.step = kPriceStep;
+            c.decimals = 2;
+            return c;
+        }
+
         void finances(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
         {
+            // The projections are the game's own reckoning per hour, which the save does not keep.
+            add(page, strings, "AttractionFinancesDialogLabel_Income", missing());
+            add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
             add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
             add(page, strings, f.ride ? "AttractionFinancesDialogLabel_ProjectedRunningCost" : "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
-            if (f.ride && f.ride->ticket_price > 0)
-                add(page, strings, "AttractionFinancesDialogLabel_AdmissionPrice", money_text(units.currency, f.ride->ticket_price));
+            if (f.ride == nullptr)
+                return;
+            const bool ride = f.ride->kind != save::RideKind::Special;
+            if (ride)
+                add(page, strings, "AttractionFinancesDialogLabel_CostPerInspection", missing());
+            page.controls.push_back(price(control_id(AttractionControl::Price), text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
+        }
+
+        std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings)
+        {
+            return item.name.starts_with(kNumbered) || item.name.empty() ? kind_name(stall.base.symbol, strings) : strings::to_utf16(item.name);
         }
 
         void customers(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
-            add(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", ascii(std::to_string(f.common->total_guests)));
+            const save::AttractionCommon& a = *f.common;
+            // Customers an hour and the age are reckoned by the game from its clock; neither is saved.
+            add_half(page, strings, "AttractionCustomersDialogLabel_Customers", missing());
+            add_half(page, strings, "AttractionCustomersDialogLabel_Popularity", percent(a.popularity * kPercent));
+            add_half(page, strings, "AttractionCustomersDialogLabel_Satisfaction", percent(a.satisfaction * kPercent));
+            add_half(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", count(a.total_guests));
+            add_half(page, strings, "AttractionCustomersDialogLabel_AgeYears", missing());
             if (f.ride && !f.ride->stations.empty())
             {
                 float longest = 0;
                 for (const save::Station& s : f.ride->stations)
                     longest = std::max(longest, s.queue_time);
-                add(page, strings, "AttractionCustomersDialogLabel_QueueTime", duration(longest));
+                add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", duration(longest));
+                add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", missing());
+            }
+            if (f.stall == nullptr)
+                return;
+            const std::u16string sold = text(strings, "AttractionCustomersDialogLabel_Sold");
+            for (const save::StallItem& item : f.stall->items)
+            {
+                std::u16string label = sold;
+                if (const auto at = label.find(ascii(kSoldName)); at != std::u16string::npos)
+                    label.replace(at, kSoldName.size(), item_name(item, *f.stall, strings));
+                page.lines.push_back({ std::move(label), count(item.total_sold), true });
             }
         }
 
@@ -272,27 +345,68 @@ namespace rct3::ui
             }
         }
 
-        void vehicles(InfoPage& page, const save::Ride& ride, const StringTable& strings)
+        void vehicles(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
+            const save::Ride& ride = *f.ride;
             page.heading = kind_name(ride.base.symbol, strings);
-            if (ride.kind != save::RideKind::Tracked || ride.trains.empty())
-                return;
-            add(page, strings, "AttractionVehicleDialogLabelNumTrains", ascii(std::to_string(ride.trains.size())));
-            add(page, strings, "AttractionVehicleDialogLabelNumCars", ascii(std::to_string(ride.trains.front().cars.size())));
+            // How many a car or the ride holds is in the ride's kind, not in the save.
+            add(page, strings, "AttractionVehicleDialogLabelCapacity", missing());
+            if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
+            {
+                add(page, strings, "AttractionVehicleDialogLabelNumTrains", count(static_cast<std::int64_t>(ride.trains.size())));
+                add(page, strings, "AttractionVehicleDialogLabelNumCars", count(static_cast<std::int64_t>(ride.trains.front().cars.size())));
+            }
+            paints(page, f, strings);
         }
 
-        void mode(InfoPage& page, const save::Ride& ride, const StringTable& strings, const InfoUnits& units)
+        InfoControl tick(AttractionControl id, std::u16string label, bool on)
+        {
+            InfoControl c;
+            c.id = control_id(id);
+            c.kind = InfoControlKind::Tick;
+            c.label = std::move(label);
+            c.value = on ? 1 : 0;
+            return c;
+        }
+
+        /// A waiting time: its tick, and its seconds while ticked.
+        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::u16string label, std::int32_t value)
+        {
+            page.controls.push_back(tick(on, std::move(label), value >= 0));
+            InfoControl c;
+            c.id = control_id(seconds);
+            c.kind = InfoControlKind::Number;
+            c.value = std::max(value, 0);
+            c.maximum = kMostWait;
+            c.step = kWaitStep;
+            c.enabled = value >= 0;
+            page.controls.push_back(std::move(c));
+        }
+
+        void mode(InfoPage& page, const save::Ride& ride, std::size_t section, const StringTable& strings, const InfoUnits& units)
         {
             const auto m = static_cast<std::size_t>(ride.mode);
+            if (ride.kind != save::RideKind::Tracked)
+            {
+                if (m < kModeNames.size())
+                    page.heading = text(strings, kModeNames[m]);
+                return;
+            }
+            const save::OperatingOptions& o = ride.options;
+            for (const std::string_view key : kModeSections)
+                page.sections.push_back(text(strings, key));
+            page.section = std::min(section, kModeSections.size() - 1);
+            if (page.section == 1)
+            {
+                // The page has room for the four rows only under the sections.
+                wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, text(strings, "RideOpModeDialog_MinWaitTime"), o.min_wait);
+                wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, text(strings, "RideOpModeDialog_MaxWaitTime"), o.max_wait);
+                return;
+            }
             if (m < kModeNames.size())
                 page.heading = text(strings, kModeNames[m]);
-            if (ride.kind != save::RideKind::Tracked)
-                return;
-            const save::OperatingOptions& o = ride.options;
             add(page, strings, "RideOpModeDialog_BlockSection", yes_no(o.block_sectioned, strings));
             add(page, strings, "RideOpModeDialog_SyncStations", yes_no(o.sync_trains, strings));
-            add(page, strings, "RideOpModeDialog_MinWaitTime", wait(o.min_wait));
-            add(page, strings, "RideOpModeDialog_MaxWaitTime", wait(o.max_wait));
             using enum save::OperatingMode;
             const bool launched = ride.mode == PoweredLaunch || ride.mode == ReverseInclinedLaunch || ride.mode == UpwardsLaunch || ride.mode == MultiplePoweredLaunch;
             if (launched)
@@ -340,15 +454,21 @@ namespace rct3::ui
             const float since = ride.base.time_since_inspection;
             add(page, strings, "RideMaintenanceDialogLabel_TimeSinceLastInspection", since < 0 ? std::u16string(u"-") : ascii(std::to_string(std::lround(since / kSecondsPerMinute))));
             add(page, strings, "RideMaintenanceDialogLabel_LastBreakdownType", breakdown(ride.breakdown.last, strings));
+            InfoControl c;
+            c.id = control_id(AttractionControl::Inspection);
+            c.kind = InfoControlKind::Choice;
+            c.label = text(strings, "RideMaintenanceDialogLabel_Inspection");
+            for (const std::string_view key : kInspectionIntervals)
+                c.items.push_back(text(strings, key));
+            const std::int32_t interval = ride.breakdown.inspection_interval;
+            c.value = interval >= 0 && std::cmp_less(interval, kInspectionIntervals.size()) ? interval : -1;
+            page.controls.push_back(std::move(c));
         }
 
-        void items(InfoPage& page, const save::Stall& stall, const StringTable& strings, const InfoUnits& units)
+        void items(InfoPage& page, const save::Stall& stall, const StringTable& strings)
         {
-            for (const save::StallItem& item : stall.items)
-            {
-                std::u16string label = item.name.starts_with(kNumbered) || item.name.empty() ? kind_name(stall.base.symbol, strings) : strings::to_utf16(item.name);
-                page.lines.push_back({ std::move(label), money_text(units.currency, item.price) });
-            }
+            for (std::size_t i = 0; i < stall.items.size(); ++i)
+                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostPrice));
         }
 
     } // namespace
@@ -436,6 +556,11 @@ namespace rct3::ui
         switch (tab)
         {
             case AttractionTab::View:
+                page.note = status(*f.common, strings);
+                // A ride is painted from its vehicles page, as in the game.
+                if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
+                    paints(page, f, strings);
+                break;
             case AttractionTab::State:
                 page.note = status(*f.common, strings);
                 break;
@@ -451,11 +576,11 @@ namespace rct3::ui
                 break;
             case AttractionTab::Vehicles:
                 if (f.ride)
-                    vehicles(page, *f.ride, strings);
+                    vehicles(page, f, strings);
                 break;
             case AttractionTab::Mode:
                 if (f.ride)
-                    mode(page, *f.ride, strings, units);
+                    mode(page, *f.ride, section, strings, units);
                 break;
             case AttractionTab::Graphs:
                 if (f.ride)
@@ -464,6 +589,13 @@ namespace rct3::ui
             case AttractionTab::Extras:
                 if (f.stall && f.stall->extras.empty())
                     page.note = text(strings, "GUITextSymbol_ShopExtras_NoItemsRequireExtras");
+                // shortcut: an extra's name and the words of its levels are not read from the save, so each shows
+                // as missing with its level's number; name them once the extras' assets are read.
+                else if (f.stall)
+                {
+                    for (const save::StallExtra& e : f.stall->extras)
+                        page.lines.push_back({ missing(), count(e.level) });
+                }
                 break;
             case AttractionTab::Maintenance:
                 if (f.ride)
@@ -471,7 +603,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Items:
                 if (f.stall)
-                    items(page, *f.stall, strings, units);
+                    items(page, *f.stall, strings);
                 break;
             case AttractionTab::Thoughts:
                 if (f.ride)

@@ -9,6 +9,7 @@
 #include <array>
 #include <cmath>
 #include <format>
+#include <span>
 #include <utility>
 
 namespace rct3::ui
@@ -16,19 +17,88 @@ namespace rct3::ui
 
     namespace
     {
-        constexpr std::array<PersonTabInfo, 6> kGuestTabs { {
+        constexpr std::array<PersonTabInfo, 7> kGuestTabs { {
             { PersonTab::General, 0, "Guest_Options", "GuestDetails_ViewHelp" },
             { PersonTab::Thoughts, 1, "Guest_Thoughts", "GuestDetails_ThoughtsHelp" },
             { PersonTab::Rides, 2, "Guest_Rides", "GuestDetails_RidesVisitedHelp" },
             { PersonTab::Carrying, 3, "Guest_Carrying", "GuestDetails_CarryingHelp" },
             { PersonTab::Stats, 4, "Guest_Stats", "GuestDetails_StatsHelp" },
             { PersonTab::Cash, 5, "Guest_Cash", "GuestDetails_CashHelp" },
+            { PersonTab::Passport, 6, "Guest_Passport", "GuestDetails_PassportHelp" },
         } };
         constexpr std::array<PersonTabInfo, 3> kStaffTabs { {
             { PersonTab::General, 0, "Staff_InfoIcon", "Staff_Details" },
             { PersonTab::Thoughts, 1, "Guest_Thoughts", "Staff_Thoughts" },
             { PersonTab::Stats, 2, "Guest_Stats", "Staff_Stats" },
         } };
+        constexpr std::string_view kPaintIcon = "Attraction_Colour";
+
+        /// A job's task: its flag bit and words.
+        struct Task
+        {
+            int bit = 0;
+            std::string_view label;
+            std::string_view help;
+        };
+        constexpr std::array<Task, 3> kHandymanTasks { {
+            { 0, "StaffTasks_SweepPaths", "StaffTasks_SweepPathsHelp" },
+            { 1, "StaffTasks_WaterGardens", "StaffTasks_WaterGardensHelp" },
+            { 2, "StaffTasks_EmptyBins", "StaffTasks_EmptyBinsHelp" },
+        } };
+        constexpr std::array<Task, 2> kMechanicTasks { {
+            { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp" },
+            { 1, "StaffTasks_FixRides", "StaffTasks_FixRidesHelp" },
+        } };
+        constexpr std::array<Task, 2> kKeeperTasks { {
+            { 0, "AnimalKeeper_ClearDung", "AnimalKeeper_ClearDungTT" },
+            { 1, "AnimalKeeper_FillTroughs", "AnimalKeeper_FillTroughsTT" },
+        } };
+
+        /// The costumes in the order of an entertainer's saved costume number.
+        constexpr std::array<std::string_view, 7> kCostumes = {
+            "Entertainer_SubType_Panda", "Entertainer_SubType_Elephant", "Entertainer_SubType_PumpkinHead", "Entertainer_SubType_Alien", "Entertainer_SubType_Cowgirl", "Entertainer_SubType_Shark", "Entertainer_SubType_Tiger",
+        };
+
+        std::span<const Task> tasks(save::StaffKind kind)
+        {
+            using enum save::StaffKind;
+            switch (kind)
+            {
+                case Handyman:
+                    return kHandymanTasks;
+                case Mechanic:
+                    return kMechanicTasks;
+                case AnimalKeeper:
+                    return kKeeperTasks;
+                default:
+                    return { };
+            }
+        }
+
+        /// How many clothes the uniform of `kind` has colours for; 0 for none.
+        std::size_t uniform_pots(save::StaffKind kind)
+        {
+            using enum save::StaffKind;
+            switch (kind)
+            {
+                case Handyman:
+                case SecurityGuard:
+                case Entertainer:
+                    return 2;
+                case Mechanic:
+                case AnimalKeeper:
+                    return 1;
+                default:
+                    return 0;
+            }
+        }
+
+        std::string_view uniform_help(save::StaffKind kind)
+        {
+            if (kind == save::StaffKind::Entertainer)
+                return "Staff_Costume_Colours";
+            return uniform_pots(kind) == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours";
+        }
 
         /// The string of each kind of staff's job, in the order of save::StaffKind.
         constexpr std::array<std::string_view, 8> kJobNames = {
@@ -277,25 +347,95 @@ namespace rct3::ui
 
         void staff_stats(InfoPage& page, const save::Staff& s, const StringTable& strings)
         {
-            add(page, strings, "Guest_Happiness", percent(s.happiness));
-            add(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
+            // The day they were hired is not in the save as read.
+            add(page, strings, "Employee_DateHired", std::u16string(kMissingValue));
+            add_half(page, strings, "Guest_Happiness", percent(s.happiness));
+            add_half(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
             if (const auto* w = std::get_if<save::HandymanWork>(&s.work))
             {
-                add(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
-                add(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
-                add(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
-                add(page, strings, "Handyman_GrassMown", count(w->grass_mown));
+                add_half(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
+                add_half(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
+                add_half(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
+                add_half(page, strings, "Handyman_GrassMown", count(w->grass_mown));
             }
             else if (const auto* m = std::get_if<save::MechanicWork>(&s.work))
             {
-                add(page, strings, "Mechanic_RidesInspected", count(m->objects_inspected));
-                add(page, strings, "Mechanic_RidesFixed", count(m->objects_fixed));
+                add_half(page, strings, "Mechanic_RidesInspected", count(m->objects_inspected));
+                add_half(page, strings, "Mechanic_RidesFixed", count(m->objects_fixed));
             }
             else if (const auto* k = std::get_if<save::KeeperWork>(&s.work))
             {
-                add(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
-                add(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
+                add_half(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
+                add_half(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
             }
+            // The money of each level is the job's own, which the save does not hold: the level is shown.
+            InfoControl wage;
+            wage.id = person_control(PersonControl::Wage);
+            wage.kind = InfoControlKind::Number;
+            wage.label = text(strings, "Employee_Wage");
+            wage.value = std::clamp(s.wage_level, 0, 2);
+            wage.maximum = 2;
+            page.controls.push_back(std::move(wage));
+        }
+
+        InfoControl name_control(const PersonFacts& f, const StringTable& strings)
+        {
+            InfoControl name;
+            name.id = person_control(PersonControl::Name);
+            name.kind = InfoControlKind::Text;
+            name.text = person_name(f, strings);
+            name.maximum = kLongestName;
+            return name;
+        }
+
+        void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings)
+        {
+            const save::Staff& s = *f.staff;
+            page.controls.push_back(name_control(f, strings));
+            const auto button = [&](PersonControl id, std::string_view icon, std::string_view help) {
+                InfoControl b;
+                b.id = person_control(id);
+                b.kind = InfoControlKind::Button;
+                b.icon = icon;
+                b.label = text(strings, help);
+                page.controls.push_back(std::move(b));
+            };
+            if (s.kind == save::StaffKind::ParkInspector)
+                return;
+            button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
+            if (s.warnings < kMostWarnings)
+                button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp");
+        }
+
+        void staff_tasks(InfoPage& page, const save::Staff& s, const StringTable& strings)
+        {
+            for (const Task& t : tasks(s.kind))
+            {
+                InfoControl tick;
+                tick.id = person_control(PersonControl::Task, t.bit);
+                tick.kind = InfoControlKind::Tick;
+                tick.label = text(strings, t.label);
+                tick.value = (s.task_flags >> t.bit) & 1;
+                page.controls.push_back(std::move(tick));
+            }
+        }
+
+        void costume(InfoPage& page, const save::Staff& s, const StringTable& strings)
+        {
+            InfoControl c;
+            c.id = person_control(PersonControl::Costume);
+            c.kind = InfoControlKind::Choice;
+            c.label = text(strings, "Entertainer_Costume_Text");
+            for (const std::string_view key : kCostumes)
+                c.items.push_back(text(strings, key));
+            c.value = s.person.sub_type < kCostumes.size() ? s.person.sub_type : -1;
+            page.controls.push_back(std::move(c));
+        }
+
+        void passport(InfoPage& page, const StringTable& strings)
+        {
+            // The stamps are not read from the save.
+            page.note = text(strings, "Passport_StampsNeededLabelText") + u": " + std::u16string(kMissingValue);
         }
 
         void cash(InfoPage& page, const save::Guest& g, const StringTable& strings, const InfoUnits& units)
@@ -315,11 +455,20 @@ namespace rct3::ui
 
     } // namespace
 
-    std::vector<PersonTabInfo> person_tabs(bool staff)
+    std::vector<PersonTabInfo> person_tabs(const PersonFacts& facts)
     {
-        if (staff)
-            return { kStaffTabs.begin(), kStaffTabs.end() };
-        return { kGuestTabs.begin(), kGuestTabs.end() };
+        if (facts.staff == nullptr)
+            return { kGuestTabs.begin(), kGuestTabs.end() };
+        std::vector<PersonTabInfo> tabs { kStaffTabs.begin(), kStaffTabs.end() };
+        const save::StaffKind kind = facts.staff->kind;
+        int slot = 3;
+        if (!tasks(kind).empty())
+            tabs.push_back({ PersonTab::Tasks, slot++, "Staff_Tools", "Staff_Tasks" });
+        if (kind == save::StaffKind::Entertainer)
+            tabs.push_back({ PersonTab::Costume, slot++, "Staff_InfoIcon", "Entertainer_Costume_Menu" });
+        if (const std::size_t pots = uniform_pots(kind); pots > 0)
+            tabs.push_back({ PersonTab::Uniform, slot++, kPaintIcon, uniform_help(kind), pots });
+        return tabs;
     }
 
     std::u16string person_name(const PersonFacts& facts, const StringTable& strings)
@@ -364,9 +513,12 @@ namespace rct3::ui
             case PersonTab::General:
                 page.heading = person_doing(facts, strings);
                 if (facts.guest != nullptr)
+                {
                     guest_general(page, *facts.guest, strings);
+                    page.controls.push_back(name_control(facts, strings));
+                }
                 else if (facts.staff != nullptr)
-                    page.lines.push_back({ job(*facts.staff, strings), { } });
+                    staff_general(page, facts, strings);
                 break;
             case PersonTab::Thoughts:
                 thoughts(page, facts, strings);
@@ -388,6 +540,19 @@ namespace rct3::ui
             case PersonTab::Cash:
                 if (facts.guest != nullptr)
                     cash(page, *facts.guest, strings, units);
+                break;
+            case PersonTab::Passport:
+                passport(page, strings);
+                break;
+            case PersonTab::Tasks:
+                if (facts.staff != nullptr)
+                    staff_tasks(page, *facts.staff, strings);
+                break;
+            case PersonTab::Costume:
+                if (facts.staff != nullptr)
+                    costume(page, *facts.staff, strings);
+                break;
+            case PersonTab::Uniform:
                 break;
         }
         return page;

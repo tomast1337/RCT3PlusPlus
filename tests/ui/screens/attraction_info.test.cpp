@@ -95,9 +95,9 @@ TEST_CASE("pages are written from the attraction's state")
     CHECK(view.note == u"Open");
 
     const InfoPage money = attraction_page(AttractionTab::Finances, f, s, units);
-    REQUIRE_FALSE(money.lines.empty());
-    CHECK(money.lines[0].label == u"Profit");
-    CHECK(money.lines[0].value == money_text(units.currency, 1234));
+    const auto profit = std::ranges::find(money.lines, std::u16string(u"Profit"), &InfoLine::label);
+    REQUIRE(profit != money.lines.end());
+    CHECK(profit->value == money_text(units.currency, 1234));
 
     InfoPage tests = attraction_page(AttractionTab::Tests, f, s, units);
     CHECK(tests.lines.empty());
@@ -175,12 +175,21 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
 
     const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });
     CHECK(vehicles.heading == u"Spinner");
-    CHECK(vehicles.lines.at(0).label == u"Trains");
-    CHECK(vehicles.lines.at(0).value == u"3");
+    const auto trains = std::ranges::find(vehicles.lines, std::u16string(u"Trains"), &InfoLine::label);
+    REQUIRE(trains != vehicles.lines.end());
+    CHECK(trains->value == u"3");
 
     const InfoPage mode = attraction_page(AttractionTab::Mode, f, s, { });
     CHECK(mode.heading == u"Back and forth");
-    CHECK(std::ranges::find(mode.lines, std::u16string(u"Least wait"), &InfoLine::label)->value == u"12 s");
+    CHECK(mode.sections.size() == 2);
+    const InfoPage waits = attraction_page(AttractionTab::Mode, f, s, { }, 1);
+    REQUIRE(waits.controls.size() == 4);
+    CHECK(waits.controls[0].label == u"Least wait");
+    CHECK(waits.controls[0].value == 1);
+    CHECK(waits.controls[1].value == 12);
+    CHECK(waits.controls[1].enabled);
+    CHECK(waits.controls[2].value == 0); // No longest wait: unticked, its seconds greyed
+    CHECK_FALSE(waits.controls[3].enabled);
 
     CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
     ride.graphs.speed = { 1, 2, 3 };
@@ -204,4 +213,55 @@ TEST_CASE("the thoughts page shows the latest thoughts about the attraction firs
     CHECK(page.lines[0].label == u"Tired");
     CHECK(page.lines[1].label == u"Lost at Big One");
     CHECK(page.lines[0].value.empty());
+}
+
+TEST_CASE("values the save does not hold are shown as missing, and what it holds can be changed")
+{
+    StringTable s = table();
+    s.add("RideInspectionIntervalEvery30Mins", u"Half hourly");
+    s.add("AttractionCustomersDialogLabel_Sold", u"%NAME% sold");
+    s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
+    save::Ride ride;
+    ride.kind = save::RideKind::Flat;
+    ride.ticket_price = 150;
+    ride.breakdown.inspection_interval = 2;
+    const AttractionFacts f { &ride.base, &ride, nullptr, { 3, 4, 5 } };
+
+    const InfoPage money = attraction_page(AttractionTab::Finances, f, s, { });
+    REQUIRE(money.controls.size() == 1);
+    CHECK(money.controls[0].id == control_id(AttractionControl::Price));
+    CHECK(money.controls[0].value == 150);
+    CHECK(money.controls[0].decimals == 2);
+    CHECK(money.controls[0].maximum == kMostRidePrice);
+
+    const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
+    CHECK(std::ranges::find(people.lines, std::u16string(u"Per hour"), &InfoLine::label)->value == kMissingValue);
+
+    const InfoPage care = attraction_page(AttractionTab::Maintenance, f, s, { });
+    REQUIRE(care.controls.size() == 1);
+    CHECK(care.controls[0].items.size() == 7);
+    CHECK(care.controls[0].items[2] == u"Half hourly");
+    CHECK(care.controls[0].value == 2);
+
+    const InfoPage cars = attraction_page(AttractionTab::Vehicles, f, s, { });
+    REQUIRE(cars.controls.size() == 1);
+    CHECK(cars.controls[0].kind == InfoControlKind::Paint);
+    CHECK(cars.controls[0].paints == std::vector<std::size_t> { 3, 4, 5 });
+    CHECK(attraction_page(AttractionTab::View, f, s, { }).controls.empty());
+
+    save::Stall stall;
+    stall.base.symbol = "SweetShopStall:shs";
+    save::StallItem sweets;
+    sweets.price = 90;
+    sweets.total_sold = 41;
+    stall.items = { sweets, sweets };
+    const AttractionFacts shop { &stall.base, nullptr, &stall, { 1 } };
+    const InfoPage items = attraction_page(AttractionTab::Items, shop, s, { });
+    REQUIRE(items.controls.size() == 2);
+    CHECK(items.controls[1].id == control_id(AttractionControl::ItemPrice, 1));
+    CHECK(items.controls[1].label == u"Sweets");
+    CHECK(items.controls[1].value == 90);
+    const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
+    CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
+    CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 1);
 }

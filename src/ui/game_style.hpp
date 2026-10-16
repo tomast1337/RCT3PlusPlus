@@ -541,6 +541,11 @@ namespace rct3::ui::game_skins
         s.palette.swatch_prefix = "Flexicolour_";
         s.palette.ring = "FlexiColourHighlightBlue";
         s.palette.current_ring = "FlexiColourHighlightWhite";
+        s.spinner = spinner_style();
+        s.dropdown = dropdown_style();
+        s.tick_box = kTickbox;
+        s.tick = kTick;
+        s.button = kTextButton;
         return s;
     }
 

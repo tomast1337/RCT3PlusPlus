@@ -99,8 +99,9 @@ namespace
 
 TEST_CASE("guests and staff have their own tabs, in the order of their places on the ring")
 {
-    const auto guests = person_tabs(false);
-    const auto workers = person_tabs(true);
+    const Park p = park();
+    const auto guests = person_tabs(guest(p));
+    const auto workers = person_tabs(staff(p));
     CHECK(guests.size() > workers.size());
     CHECK(std::ranges::is_sorted(guests, { }, &PersonTabInfo::slot));
     CHECK(std::ranges::is_sorted(workers, { }, &PersonTabInfo::slot));
@@ -165,7 +166,60 @@ TEST_CASE("a guest without a favourite says so, and a member of staff shows thei
     p.people.guests[0].favourite_ride = { };
     CHECK(value(person_page(PersonTab::Rides, guest(p), s, units), u"Best:") == u"Nothing yet");
     CHECK(value(person_page(PersonTab::Stats, staff(p), s, units), u"Mended:") == u"5");
-    CHECK(person_page(PersonTab::General, staff(p), s, units).lines.at(0).label == u"Fixer");
+    CHECK(person_page(PersonTab::General, staff(p), s, units).controls.at(0).text == u"Fixer 2");
     // A person who is not there gets an empty page.
     CHECK(person_page(PersonTab::Stats, PersonFacts { }, s, units).title.empty());
+}
+
+TEST_CASE("each job has its own tabs, and its controls are written from the save")
+{
+    StringTable s = table();
+    s.add("StaffTasks_FixRides", u"Mend");
+    s.add("Entertainer_SubType_Alien", u"Martian");
+    const InfoUnits units { };
+    Park p = park();
+    save::Staff& mechanic = p.people.staff[0];
+    mechanic.task_flags = 2;
+    mechanic.wage_level = 2;
+    mechanic.warnings = 1;
+
+    const auto tabs = person_tabs(staff(p));
+    REQUIRE(tabs.size() == 5);
+    CHECK(tabs[3].tab == PersonTab::Tasks);
+    CHECK(tabs[4].tab == PersonTab::Uniform);
+    CHECK(tabs[4].pots == 1);
+    CHECK(std::ranges::is_sorted(tabs, { }, &PersonTabInfo::slot));
+
+    const InfoPage work = person_page(PersonTab::Tasks, staff(p), s, units);
+    REQUIRE(work.controls.size() == 2);
+    CHECK(work.controls[0].value == 0); // Inspecting is bit 0, not set
+    CHECK(work.controls[1].label == u"Mend");
+    CHECK(work.controls[1].id == person_control(PersonControl::Task, 1));
+    CHECK(work.controls[1].value == 1);
+
+    const InfoPage general = person_page(PersonTab::General, staff(p), s, units);
+    REQUIRE(general.controls.size() == 3);
+    CHECK(general.controls[0].kind == InfoControlKind::Text);
+    CHECK(general.controls[1].id == person_control(PersonControl::Sack));
+    CHECK(general.controls[2].id == person_control(PersonControl::Warn));
+    mechanic.warnings = kMostWarnings;
+    CHECK(person_page(PersonTab::General, staff(p), s, units).controls.size() == 2);
+
+    const InfoPage stats = person_page(PersonTab::Stats, staff(p), s, units);
+    REQUIRE(stats.controls.size() == 1);
+    CHECK(stats.controls[0].value == 2);
+
+    mechanic.kind = save::StaffKind::Entertainer;
+    mechanic.person.sub_type = 3;
+    const auto shows = person_tabs(staff(p));
+    CHECK(std::ranges::contains(shows, PersonTab::Costume, &PersonTabInfo::tab));
+    CHECK(shows.back().pots == 2);
+    const InfoPage costume = person_page(PersonTab::Costume, staff(p), s, units);
+    REQUIRE(costume.controls.size() == 1);
+    CHECK(costume.controls[0].items.size() == 7);
+    CHECK(costume.controls[0].items[3] == u"Martian");
+    CHECK(costume.controls[0].value == 3);
+
+    mechanic.kind = save::StaffKind::LifeGuard;
+    CHECK(person_tabs(staff(p)).size() == 3);
 }

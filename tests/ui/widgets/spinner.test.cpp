@@ -118,3 +118,29 @@ TEST_CASE("the wheel over the spinner steps it")
     f.desktop.update({ { 30, 10 }, false, true, { 0, 2 } });
     CHECK(f.spinner.value() == 4);
 }
+
+TEST_CASE("a spinner with decimals shows a point and reads one back")
+{
+    Fixture f;
+    f.spinner.maximum = 2000;
+    f.spinner.decimals = 2;
+    f.spinner.set_value(5);
+    CHECK(f.spinner.field().text == u"0.05");
+    f.spinner.set_value(150);
+    CHECK(f.spinner.field().text == u"1.50");
+    f.desktop.set_keyboard_focus(&f.spinner.field());
+    const auto type = [&](std::u32string_view text) {
+        std::vector<KeyPress> presses(4, { Key::Backspace });
+        for (const char32_t c : text)
+            presses.push_back({ Key::Character, false, false, c });
+        presses.push_back({ Key::Enter });
+        f.keys(std::move(presses));
+    };
+    type(U"2.5");
+    CHECK(f.spinner.value() == 250);
+    type(U"3");
+    CHECK(f.spinner.value() == 300);
+    type(U"1.234"); // More places than it has: the old value stays
+    CHECK(f.spinner.value() == 300);
+    CHECK(f.spinner.field().text == u"3.00");
+}

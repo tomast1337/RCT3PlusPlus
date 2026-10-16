@@ -13,10 +13,13 @@
 #include "ui/panel_look.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/colour_palette.hpp"
+#include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/line_plot.hpp"
 #include "ui/widgets/paint_button.hpp"
+#include "ui/widgets/spinner.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -58,6 +61,11 @@ namespace rct3::ui
         ColourPaletteStyle palette; ///< Of the colours a paint tab opens
         std::size_t palette_count = 32;
         std::size_t palette_columns = 8;
+        SpinnerStyle spinner;   ///< Of a page's number controls
+        DropdownStyle dropdown; ///< Of its lists
+        std::string tick_box;   ///< Of its ticks
+        std::string tick;
+        std::string button;                           ///< Behind its buttons' text
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
         Color picked_section_colour = hex("#ffffff"); ///< Of the shown section's
         float glass_alpha = 0.15f;
@@ -86,6 +94,7 @@ namespace rct3::ui
         /// A paint tab's pots, each with its colour; pressing a pot opens colours to pick for it. The tab's icon
         /// is the pots'.
         std::vector<std::size_t> paints;
+        std::size_t colours = 0; ///< To pick from for its pots; 0 for the panel's own count
     };
 
     /// A colour the player picked for a paint tab's pot.
@@ -123,16 +132,21 @@ namespace rct3::ui
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
         inline constexpr float kPlotHeight = 64;
-        inline constexpr float kPairValue = 50;  ///< Of the value of a line paired with another on its row
         inline constexpr float kPairGap = 6;     ///< Between the two half lines of a row
+        inline constexpr float kRingReach = 30;  ///< Of the page's right end, under the ring's tabs
         inline constexpr float kChoiceSize = 22; ///< A choice button
         inline constexpr float kChoiceIconScale = 0.684f;
         inline constexpr float kChoiceRadius = 25; ///< From the tab's middle to its choices'
         /// Radians either side of the line out from the disc through the tab, for two and for three choices.
         inline constexpr float kTwoChoiceSpread = 0.35f;
         inline constexpr float kThreeChoiceSpread = 0.7f;
-        inline constexpr float kPaletteGap = 4;   ///< Between a paint tab and the colours it opens
-        inline constexpr float kScreenMargin = 4; ///< Kept between the colours and the screen's edges
+        inline constexpr float kPaletteGap = 4;     ///< Between a paint tab and the colours it opens
+        inline constexpr float kScreenMargin = 4;   ///< Kept between the colours and the screen's edges
+        inline constexpr float kControlHeight = 15; ///< Of a row holding a control
+        inline constexpr float kTickSize = 13;
+        inline constexpr float kPaintSize = 26;    ///< Of a page's pots
+        inline constexpr float kNumberWidth = 70;  ///< Of a page's spinners
+        inline constexpr float kChoiceWidth = 140; ///< Of a page's lists
     } // namespace info_panel
 
     struct InfoLine
@@ -148,6 +162,45 @@ namespace rct3::ui
         std::vector<float> values;
     };
 
+    enum class InfoControlKind : std::uint8_t
+    {
+        Number, ///< A spinner
+        Choice, ///< A list to pick from
+        Tick,   ///< A tick box, ticked when the value is not 0
+        Button, ///< Pressed for its value, which is 0
+        Paint,  ///< Pots of colours, each opening the colours to pick from
+        Text,   ///< A line to type in, told when Enter is pressed
+    };
+
+    /// Something on a page the player can change, on a row of its own under the lines: its label on the left,
+    /// the control in the value column. The owner tells the controls apart by their ids.
+    struct InfoControl
+    {
+        int id = 0;
+        InfoControlKind kind = InfoControlKind::Number;
+        std::u16string label;
+        int value = 0; ///< The number, the item picked, or whether ticked
+        int minimum = 0;
+        int maximum = 0;
+        int step = 1;
+        int decimals = 0;                  ///< Of a number shown with a point, such as money in hundredths
+        std::vector<std::u16string> items; ///< Of a list
+        std::u16string text;               ///< On a button, or typed
+        std::string icon;                  ///< A button's picture, instead of text
+        std::vector<std::size_t> paints;   ///< The colour of each pot
+        bool enabled = true;
+    };
+
+    /// A change the player made to a page's control: the control's id and its new value. For pots, `pot` is the
+    /// one painted and `value` its colour.
+    struct InfoChange
+    {
+        int id = 0;
+        int value = 0;
+        std::size_t pot = 0;
+        std::u16string text; ///< Typed
+    };
+
     /// A tab's content: a title, a row of buttons for its sections when it has more than one, lines of a
     /// label and a value, a note under them and a graph.
     struct InfoPage
@@ -160,6 +213,7 @@ namespace rct3::ui
 
         std::u16string note;
         std::vector<InfoSeries> graph;
+        std::vector<InfoControl> controls; ///< Under the note
     };
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
@@ -200,6 +254,13 @@ namespace rct3::ui
         {
             return std::exchange(choice_now_, std::nullopt);
         }
+        /// A change the player made to a control on the page since the last call.
+        [[nodiscard]] std::optional<InfoChange> take_change()
+        {
+            return std::exchange(change_now_, std::nullopt);
+        }
+        /// The widget of the page's control `id`, if the page has it.
+        [[nodiscard]] Widget* control(int id) const;
         /// The colour the player picked for a paint tab since the last call.
         [[nodiscard]] std::optional<InfoPaint> take_paint()
         {
@@ -282,6 +343,8 @@ namespace rct3::ui
         void open_choices(std::size_t tab);
         void close_choices();
         void open_palette(std::size_t tab, std::size_t pot);
+        void open_page_palette(std::size_t control, std::size_t pot);
+        void read_controls();
 
         InfoPanelStyle style_;
         std::vector<Button*> tabs_;
@@ -289,11 +352,17 @@ namespace rct3::ui
         std::vector<std::vector<InfoChoice>> tab_choices_;
         std::vector<Button*> choices_;
         std::optional<std::size_t> choosing_;
-        std::vector<PaintButton*> paints_; ///< Of each tab, its pots when it is a paint tab
+        std::vector<PaintButton*> paints_;       ///< Of each tab, its pots when it is a paint tab
+        std::vector<std::size_t> paint_colours_; ///< Of each tab, InfoTab::colours
         ColourPalette* palette_ = nullptr;
         std::optional<std::size_t> painting_;
         std::size_t painting_pot_ = 0;
         std::optional<InfoPaint> paint_now_;
+        /// The page's controls, with their widgets; the colours are out for a page's pots when painting_page_ is
+        /// set (the control) instead of painting_.
+        std::vector<std::pair<InfoControl, Widget*>> controls_;
+        std::optional<std::size_t> painting_page_;
+        std::optional<InfoChange> change_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
         std::optional<std::size_t> section_now_;

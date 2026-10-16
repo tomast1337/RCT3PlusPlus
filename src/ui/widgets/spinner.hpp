@@ -37,6 +37,8 @@ namespace rct3::ui
         int minimum = 0;
         int maximum = 100;
         int step = 1;
+        /// Places after the point the value is shown with: 2 shows 150 as 1.50, and reads 1.5 back as 150.
+        int decimals = 0;
 
         [[nodiscard]] int value() const
         {

@@ -295,7 +295,7 @@ namespace rct3::scene
         glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
         {
             if (scene.simulate && shown.guest != entt::null)
-                return scene.sim.registry.get<simulation::Pose>(shown.guest).position;
+                return simulation::between_steps(scene.sim.registry.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds).position;
             return glm::vec3(shown.pose.world[3]);
         }
 
@@ -319,7 +319,7 @@ namespace rct3::scene
                 if (simulated)
                 {
                     const auto& r = scene.sim.registry;
-                    const auto& at = r.get<simulation::Pose>(shown.guest);
+                    const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
                     const auto& stride = r.get<simulation::Stride>(shown.guest);
                     const auto kind = r.get<simulation::Errand>(shown.guest).kind;
                     if (kind == simulation::ErrandKind::Riding)
@@ -338,10 +338,9 @@ namespace rct3::scene
         }
 
         /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
-        /// while it does not run, and builds their mesh again when any moved.
+        /// while it does not run.
         void place_cars(ParkScene& scene)
         {
-            bool moved = false;
             for (std::size_t i = 0; i < scene.cars.size(); ++i)
             {
                 const std::uint64_t id = scene.cars[i].id;
@@ -355,14 +354,9 @@ namespace rct3::scene
                     // shortcut: every train of the ride moves as the one the simulation runs, upgrade when each runs on its own.
                     place = park::moved_along(*scene.courses[spot.ride], place, spot.distance, spot.distance + at - train->start);
                 }
-                if (glm::mat4& now = scene.car_places[id]; now != place)
-                {
-                    now = place;
-                    moved = true;
-                }
+                scene.car_places[i] = place;
             }
-            if (moved)
-                scene.car_mesh = park::object_mesh(scene.cars, scene.models, scene.grid, { }, { }, { }, scene.car_places);
+            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_places); });
         }
 
         /// Whether `build` has finished, without waiting for it.
@@ -424,6 +418,7 @@ namespace rct3::scene
                 const profiling::Scope zone("Moving");
                 scene.since_people[level] = 0;
                 scene.moving_people[level] = pose_people(scene, scene.people_levels, scene.clock, level, view, scene.simulate);
+                break; // One level a frame, so their rebuilds do not pile into one slow frame
             }
         }
 
@@ -858,13 +853,15 @@ namespace rct3::scene
             load_models(install, built, false, scene.models, scene.pictures);
             park::RideCars cars = park::ride_cars(scene.rides.rides, largest_id());
             load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
-            log.info("{} ride cars", cars.pieces.size());
             scene.cars = std::move(cars.pieces);
             scene.car_spots = std::move(cars.spots);
             scene.saved_cars = std::move(cars.fitted);
-            scene.car_places = scene.saved_cars;
-            scene.car_mesh = park::object_mesh(scene.cars, scene.models, scene.grid, { }, { }, { }, scene.car_places);
-            add_textures(device, scene, scene.car_mesh.batches);
+            for (const save::PlacedObject& car : scene.cars)
+                scene.car_places.push_back(scene.saved_cars.at(car.id));
+            scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
+            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_places); });
+            add_textures(device, scene, scene.car_meshes.mesh.batches);
+            log.info("{} ride cars, {} vertices", scene.cars.size(), scene.car_meshes.own.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
         }
         if (options.flag(config::GameOption::OffMapTrees))
@@ -956,6 +953,7 @@ namespace rct3::scene
                 }
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters);
                 simulation::start_guests(scene.sim);
+                simulation::import_parties(scene.sim, scene.people, guests);
                 for (ShownPerson& p : scene.shown_people)
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
@@ -1408,13 +1406,21 @@ namespace rct3::scene
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
             // What is hidden cannot be clicked.
-            const auto object = park::pick_object(ray, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::PlacedObject& o) { return scene.show_scenery && (scene.attractions.contains(o.id) || clickable_prop(scene, o)); });
+            if (scene.pick_boxes_of != scene.objects.size())
+            {
+                scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
+                scene.pick_boxes_of = scene.objects.size();
+            }
+            const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
+                const save::PlacedObject& o = scene.objects[i];
+                return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || clickable_prop(scene, o));
+            });
             std::vector<glm::mat4> placements;
             if (scene.show_people)
             {
                 placements.reserve(scene.shown_people.size());
                 for (const ShownPerson& p : scene.shown_people)
-                    placements.push_back(p.pose.world);
+                    placements.push_back(scene.simulate && p.guest != entt::null ? glm::translate(glm::mat4(1.0f), standing_at(scene, p)) : p.pose.world);
             }
             const auto person = park::pick_person(ray, placements, scene.grid);
             if (person && (!object || person->distance < object->distance))
@@ -1812,7 +1818,7 @@ namespace rct3::scene
                         draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (scene.show_scenery && parts.scenery)
-                profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
             if (scene.object_indices && scene.show_scenery && parts.scenery && parts.see_through)

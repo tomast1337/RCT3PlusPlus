@@ -94,38 +94,66 @@ namespace rct3::park
         return enter;
     }
 
-    std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted)
+    std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
     {
-        std::optional<PickHit> best;
-        float nearest = ground_hit(ray, grid).value_or(kFar);
-        std::map<std::string, std::optional<std::pair<glm::vec3, glm::vec3>>, std::less<>> boxes;
+        std::vector<PickBox> out;
+        std::map<std::string, std::optional<std::pair<glm::vec3, glm::vec3>>, std::less<>> shapes;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
             const save::PlacedObject& o = objects[i];
-            if (o.hidden || !wanted(o))
-                continue;
             const std::string key = model_key(o);
             const auto model = models.find(key);
             if (model == models.end() || model->second.levels.empty())
                 continue;
-            auto box = boxes.find(key);
-            if (box == boxes.end())
-                box = boxes.emplace(key, shape_box(model->second)).first;
-            if (!box->second)
+            auto shape = shapes.find(key);
+            if (shape == shapes.end())
+                shape = shapes.emplace(key, shape_box(model->second)).first;
+            if (!shape->second)
                 continue;
             const auto own = fitted.find(o.id);
             const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(o, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
+            PickBox& box = out.emplace_back();
+            box.index = i;
+            box.back = glm::inverse(transform);
+            box.low = shape->second->first;
+            box.high = shape->second->second;
+            box.park_low = glm::vec3(std::numeric_limits<float>::max());
+            box.park_high = glm::vec3(std::numeric_limits<float>::lowest());
+            for (int c = 0; c < 8; ++c)
+            {
+                const glm::vec3 corner { (c & 1) != 0 ? box.high.x : box.low.x, (c & 2) != 0 ? box.high.y : box.low.y, (c & 4) != 0 ? box.high.z : box.low.z };
+                const glm::vec3 at = glm::vec3(transform * glm::vec4(corner, 1.0f));
+                box.park_low = glm::min(box.park_low, at);
+                box.park_high = glm::max(box.park_high, at);
+            }
+        }
+        return out;
+    }
+
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted)
+    {
+        std::optional<PickHit> best;
+        float nearest = ground_hit(ray, grid).value_or(kFar);
+        for (const PickBox& box : boxes)
+        {
+            // The park box holds the turned one, so missing it, or meeting it past the nearest hit, rules it out.
+            if (const auto near = box_hit(ray, box.park_low, box.park_high); !near || *near >= nearest || !wanted(box.index))
+                continue;
             // In the model's own space the box is square to the axes; the transform keeps distances along the
             // line in step, so the hit's distance holds in the park too.
-            const glm::mat4 back = glm::inverse(transform);
-            const Ray local { glm::vec3(back * glm::vec4(ray.origin, 1.0f)), glm::vec3(back * glm::vec4(ray.direction, 0.0f)) };
-            if (const auto t = box_hit(local, box->second->first, box->second->second); t && *t < nearest)
+            const Ray local { glm::vec3(box.back * glm::vec4(ray.origin, 1.0f)), glm::vec3(box.back * glm::vec4(ray.direction, 0.0f)) };
+            if (const auto t = box_hit(local, box.low, box.high); t && *t < nearest)
             {
                 nearest = *t;
-                best = PickHit { i, *t };
+                best = PickHit { box.index, *t };
             }
         }
         return best;
+    }
+
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted)
+    {
+        return pick_object(ray, pick_boxes(objects, models, grid, fitted), grid, [&](std::size_t i) { return !objects[i].hidden && wanted(objects[i]); });
     }
 
     std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
@@ -153,6 +181,11 @@ namespace rct3::park
         float nearest = ground_hit(ray, grid).value_or(kFar);
         for (std::size_t i = 0; i < placements.size(); ++i)
         {
+            // Far from the line, the box cannot be hit: no need to turn the line into the person's space.
+            const glm::vec3 to = glm::vec3(placements[i][3]) - ray.origin;
+            const glm::vec3 off = to - glm::dot(to, ray.direction) / glm::dot(ray.direction, ray.direction) * ray.direction;
+            if (glm::dot(off, off) > kPersonReach * kPersonReach)
+                continue;
             // Like objects, a person is moved and turned without being stretched, so distances hold.
             const glm::mat4 back = glm::inverse(placements[i]);
             const Ray local { glm::vec3(back * glm::vec4(ray.origin, 1.0f)), glm::vec3(back * glm::vec4(ray.direction, 0.0f)) };

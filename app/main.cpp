@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos, 60 fps
@@ -60,6 +60,7 @@
 #include <exception>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <optional>
 #include <random>
 #include <string>
@@ -74,7 +75,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -345,6 +346,8 @@ int main(int argc, char** argv)
     std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::uint64_t> seed;
+    bool simulate = false;                        ///< The park starts with the simulation running
+    std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -366,6 +369,14 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--park") == 0 && i + 1 < argc)
         {
             park_file = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--simulate") == 0)
+        {
+            simulate = true;
+        }
+        else if (std::strcmp(argv[i], "--profile") == 0 && i + 1 < argc)
+        {
+            profile = argv[++i];
         }
         else if (std::strcmp(argv[i], "--audio") == 0)
         {
@@ -695,6 +706,7 @@ int main(int argc, char** argv)
         if (loaded)
         {
             park = std::move(*loaded);
+            park->simulate = simulate;
             park->scale = scale;
         }
         else
@@ -906,6 +918,11 @@ int main(int argc, char** argv)
         }
         const double ran = window->time() - start_time;
         log.info("ran {} frames in {:.1f} s, {:.2f} ms a frame{}", frame, ran, frame > 0 ? 1000 * ran / frame : 0.0, g_stop_requested != 0 ? ", stopped by a signal" : "");
+        if (profile)
+        {
+            std::ofstream out(*profile);
+            out << prof::tsv_snapshot();
+        }
     }
     catch (const std::exception& e)
     {

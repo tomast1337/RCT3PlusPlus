@@ -29,6 +29,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "scene/build_menus.hpp"
+#include "scene/park_footpaths.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_water.hpp"
 #include "scene/save_browser.hpp"
@@ -217,6 +218,7 @@ namespace rct3::scene
         std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
         std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
         ParkMap map; ///< The map window's pictures and what they show
+        ParkFootpaths footpaths; ///< The path panel's styles and the paths laid with it
     };
 
     /// The stages of loading a park, in the order they run.

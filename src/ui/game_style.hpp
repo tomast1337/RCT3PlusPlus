@@ -12,6 +12,7 @@
 #include "ui/screens/build_picker.hpp"
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
+#include "ui/screens/construction_panel.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/footpath_panel.hpp"
 #include "ui/screens/front_screen.hpp"
@@ -121,6 +122,7 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kFoldIcon = "GUI2Dialog_MinimiseIcon";
     inline constexpr std::string_view kOpenHeading = "Box_Minus";
     inline constexpr std::string_view kClosedHeading = "Box_Plus";
+    inline constexpr std::string_view kCurvedStrip = "BackgroundCurvedMirrored";
 
     /// A skin that can be drawn in code (game_frames.hpp), the panel it belongs to and whether the game's look
     /// draws it so. Panels move to code one at a time: tools/panel-look scores each against the pictures, and
@@ -163,6 +165,7 @@ namespace rct3::ui::game_skins
             { kDrawerLipRight, "message-drawer", Coded, game_frames::drawer_lip_right() },
             { kMiniFrame, "mini-window", Coded, game_frames::mini_window() },
             { kMiniBackground, "mini-window", Coded, game_frames::mini_window_panel() },
+            { kCurvedStrip, "construction-strip", Coded, game_frames::curved_strip() },
             { kWindowFrame, "window", Coded, game_frames::window() },
             { kWindowFrameUnfocused, "window", Coded, game_frames::window() },
             { kWindowBackground, "window-background", Coded, game_frames::window_background() },
@@ -642,6 +645,29 @@ namespace rct3::ui::game_skins
         s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
         s.career_leave_icon = "File_CareerMap";
         s.item_face = kMenuButtonSmall;
+        return s;
+    }
+
+    /// The strip that builds track, its buttons in the game's pictures: each picture's base name, with "On",
+    /// "Off" or "Dis" after it for its state.
+    [[nodiscard]] inline ConstructionPanelStyle construction_panel_style()
+    {
+        ConstructionPanelStyle s;
+        s.strip = kCurvedStrip;
+        s.title_button = kTitleButton;
+        s.close_icon = kCloseIcon;
+        constexpr std::string_view kIcon = "AttractionEditor_Icon";
+        const auto named = [&](std::string_view what) { return std::string(kIcon) + std::string(what); };
+        s.curves = { named("CurveL3"), named("CurveL2"), named("CurveL1"), named("Curve0"), named("CurveR1"), named("CurveR2"), named("CurveR3") };
+        s.slopes = { named("SlopeD3"), named("SlopeD2"), named("SlopeD1"), named("Slope0"), named("SlopeU1"), named("SlopeU2"), named("SlopeU3") };
+        s.banks = { named("BankL3"), named("BankL2"), named("BankL1"), named("Bank0"), named("BankR1"), named("BankR2"), named("BankR3"), named("BankInv") };
+        s.dial = "AttractionEditor_BankBackground";
+        s.chain = named("Chain");
+        s.demolish = named("DeleteOn");
+        s.named_button = kTextButton;
+        s.named_inset = kLozengeInset;
+        s.page_up = "SquareArrowUp";
+        s.page_down = "SquareArrowDown";
         return s;
     }
 

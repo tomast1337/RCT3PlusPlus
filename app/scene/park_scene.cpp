@@ -1470,6 +1470,13 @@ namespace rct3::scene
                 scene.shown_prop.reset();
             }
         }
+        // The Construction tab has no page: it opens the panel that builds the ride's track.
+        if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
+        {
+            if (const auto overlay = ride_track_overlay(scene, asked->index))
+                (void)open_track_building(scene, asked->index, *overlay, assets);
+        }
+        profiling::section("TrackBuilding", [&] { update_track_building(device, scene, assets, options.choice(config::GameOption::Currency)); });
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
@@ -1723,7 +1730,10 @@ namespace rct3::scene
             const WorldParts mirrored { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false };
             prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform) { draw_world(device, scene, transform, scene.light, mirrored); });
         });
-        profiling::section("World", [&] { draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye }); });
+        profiling::section("World", [&] {
+            draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye });
+            draw_track_ghost(device, scene, view_projection, scene.light);
+        });
 
         const profiling::Scope zone("Interface");
         scene.list.clear();

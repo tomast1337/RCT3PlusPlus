@@ -449,4 +449,15 @@ namespace rct3::ui::game_frames
         return f;
     }
 
+    CodedFrame curved_strip()
+    {
+        constexpr float kRadius = 20;
+        constexpr float kShadow = 3;
+        const Corners right { 0, kRadius, kRadius, 0 };
+        CodedFrame f;
+        f.layers.push_back({ inset_box(kShadow, kShadow, 0, 0), solid(hex("#0000005d"), right), { } });
+        f.layers.push_back({ inset_box(0, 0, kShadow, kShadow), outlined(kPatchBlue, kDiscBorder, 1.5f, right), { } });
+        return f;
+    }
+
 } // namespace rct3::ui::game_frames

@@ -40,7 +40,12 @@ namespace rct3::render::vulkan
         {
             const SceneLight& l = command.light;
             if (shader != Shader::Water)
-                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, command.extra_textures[0] ? 1.0f : 0.0f), glm::vec4(l.ground, 0.0f) };
+            {
+                // The push block is full, so the haze colour goes as one number: its channels in 8 bits each.
+                const glm::uvec3 h { glm::round(glm::clamp(l.haze, 0.0f, 1.0f) * 255.0f) };
+                const auto haze = static_cast<float>((h.r << 16) | (h.g << 8) | h.b);
+                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, command.extra_textures[0] ? 1.0f : 0.0f), glm::vec4(l.ground, haze) };
+            }
             const WaterView& w = command.water;
             const bool shadow = l.shadow_map && l.shadow_view;
             const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0));

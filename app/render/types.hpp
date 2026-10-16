@@ -265,6 +265,10 @@ namespace rct3::render
         /// map depth. Without both, nothing is in shadow.
         TextureHandle shadow_map;
         TextureHandle shadow_view;
+        /// Haze: far surfaces fade towards this colour (each channel 0 to 1), more the further they are from the
+        /// eye. None when `haze_rate` is 0.
+        glm::vec3 haze { 0.0f };
+        float haze_rate = 0; ///< How quickly, per world unit beyond the haze's start
     };
 
     /// What the Water shader needs besides its light and pictures.

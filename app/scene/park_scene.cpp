@@ -598,6 +598,9 @@ namespace rct3::scene
                 const glm::vec4 c = glm::mix(park::band_colour(scene.horizon_band, column), park::band_colour(scene.horizon_band, faded), day.fade);
                 scene.horizon = { c.r, c.g, c.b, c.a };
             }
+            // Far land fades into the horizon's colour.
+            scene.light.haze = { scene.horizon.r, scene.horizon.g, scene.horizon.b };
+            scene.light.haze_rate = scene.haze_rate;
         }
 
     } // namespace

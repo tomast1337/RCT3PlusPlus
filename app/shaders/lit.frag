@@ -12,7 +12,8 @@ layout(set = 3, binding = 0) uniform texture2D u_sun_view;
 // Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1.
 layout(set = 4, binding = 0) uniform texture2D u_variation;
 
-// render::SceneLight, packed. sun_direction.w is 1 when the shadow is given, sky.w when the variation is.
+// render::SceneLight, packed. sun_direction.w is 1 when the shadow is given, sky.w when the variation is;
+// sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
 layout(push_constant) uniform Draw {
   mat4 transform;
   vec4 sun_direction;
@@ -97,5 +98,16 @@ void main() {
     direct *= lit;
     ambient *= mix(0.7, 1.0, lit);
   }
-  out_color = vec4(color.rgb * (ambient + direct), color.a);
+  vec3 shaded = color.rgb * (ambient + direct);
+  // Haze: beyond its start, far surfaces fade towards the haze colour. The distance is the depth from the eye,
+  // which the perspective divide leaves in gl_FragCoord.w.
+  if (u_draw.sun.w > 0.0) {
+    const float kHazeStart = 150.0;
+    float rate = u_draw.sun.w;
+    float packed = u_draw.ground.w;
+    vec3 haze = vec3(floor(packed / 65536.0), mod(floor(packed / 256.0), 256.0), mod(packed, 256.0)) / 255.0;
+    float far = 1.0 - exp(-rate * max(1.0 / gl_FragCoord.w - kHazeStart, 0.0));
+    shaded = mix(shaded, haze, far);
+  }
+  out_color = vec4(shaded, color.a);
 }

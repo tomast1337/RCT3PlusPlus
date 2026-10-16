@@ -87,6 +87,20 @@ namespace rct3::ui
         position = t * range();
     }
 
+    CursorKind ScrollBar::cursor(Point p) const
+    {
+        if (range() <= 0)
+            return CursorKind::Arrow;
+        return contains(parts().rider, p) ? CursorKind::Grab : CursorKind::Hand;
+    }
+
+    CursorKind ScrollBar::held_cursor(Point p) const
+    {
+        if (held_ == Part::Rider)
+            return CursorKind::Grabbing;
+        return held_ == Part::None ? cursor(p) : CursorKind::Hand;
+    }
+
     void ScrollBar::on_press(Point p)
     {
         if (range() <= 0)

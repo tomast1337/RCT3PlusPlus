@@ -61,6 +61,11 @@ namespace rct3::ui
         {
             return true;
         }
+        /// A hand over the arrows.
+        [[nodiscard]] CursorKind cursor(Point p) const override
+        {
+            return contains(up_arrow(), p) || contains(down_arrow(), p) ? CursorKind::Hand : CursorKind::Arrow;
+        }
         void on_press(Point p) override;
         void on_release(Point p, bool inside) override;
         bool on_wheel(Point notches) override;

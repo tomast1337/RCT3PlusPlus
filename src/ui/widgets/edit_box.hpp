@@ -81,6 +81,10 @@ namespace rct3::ui
         {
             return true;
         }
+        [[nodiscard]] CursorKind cursor(Point) const override
+        {
+            return CursorKind::Text;
+        }
         void on_press(Point p) override;
         void on_drag(Point p) override;
         bool on_key(const KeyPress& key) override;

@@ -59,6 +59,8 @@ namespace rct3::simulation
         entt::entity flat_ride(std::string name, glm::ivec2 entrance, std::int64_t price, const RideSetup& setup = { }, int level = 0);
         /// A guest standing on the path tile `at`, wandering.
         entt::entity guest(glm::ivec2 at, const GuestSetup& setup = { }, int level = 0);
+        /// Makes `members` a party led by the first; the others follow.
+        entt::entity party(const std::vector<entt::entity>& members);
 
         void run(std::uint32_t ticks);
         void run_seconds(float seconds);

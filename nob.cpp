@@ -99,7 +99,8 @@ namespace
         else
         {
             c.mode = "debug";
-            c.compile_flags.insert(c.compile_flags.end(), { "-O0", "-g" });
+            // -Og keeps it debuggable at a fraction of -O0's cost; the park was too slow to play at -O0.
+            c.compile_flags.insert(c.compile_flags.end(), { "-Og", "-g" });
         }
         return c;
     }

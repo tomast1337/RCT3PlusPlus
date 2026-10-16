@@ -19,7 +19,9 @@
 #include "config/game_options.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
+#include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
+#include "park/object_pick.hpp"
 #include "park/person_mesh.hpp"
 #include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
@@ -153,8 +155,11 @@ namespace rct3::scene
         park::Leans leans;            ///< Of the built pieces that follow a slope
         park::Fitted fitted;          ///< Of the built pieces placed off the tile grid
         std::vector<glm::vec3> anchors;
-        park::ObjectLevels levels; ///< Those the object buffers hold
-        float since_rebuild = 0;   ///< Seconds since the levels were last looked at
+        /// The boxes the objects are clicked in, worked out again when objects are added.
+        mutable std::vector<park::PickBox> pick_boxes;
+        mutable std::size_t pick_boxes_of = 0; ///< How many objects they were worked out for
+        park::ObjectLevels levels;             ///< Those the object buffers hold
+        float since_rebuild = 0;               ///< Seconds since the levels were last looked at
         /// Meshes for levels that differ from those shown, while being built. Building only reads what is
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
@@ -189,8 +194,8 @@ namespace rct3::scene
         std::vector<save::PlacedObject> cars;
         std::vector<park::CarSpot> car_spots;                  ///< By car, as the park kept them
         park::Fitted saved_cars;                               ///< Where the park kept each car, by id
-        park::Fitted car_places;                               ///< Where each car stands now, by id
-        park::ObjectMesh car_mesh;                             ///< At car_places
+        std::vector<glm::mat4> car_places;                     ///< Where each car stands now, by car
+        park::MovingMeshes car_meshes;                         ///< At car_places
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose trains go round
         std::vector<entt::entity> ride_entities;               ///< In the simulation, by ride; null when not there
         std::optional<park::PersonLibrary> person_models;      ///< Of the park's people

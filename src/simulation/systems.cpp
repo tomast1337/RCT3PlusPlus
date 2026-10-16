@@ -28,6 +28,7 @@ namespace rct3::simulation
         constexpr float kConsumeSeconds = 10;           ///< Spent with what was bought before moving on
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
         constexpr float kQueueSpacing = 0.25f;          ///< Tiles between guests standing in a queue
+        constexpr double kJoinChance = 0.6;             ///< Of a party member going on the ride their leader picked
 
         float clamp01(float v)
         {
@@ -123,13 +124,31 @@ namespace rct3::simulation
             return ways[random::below(dice.state, count)];
         }
 
+        glm::vec3 lane_point(const PathNetwork& paths, NodeId node, glm::vec2 lane)
+        {
+            return paths.centre(node) + glm::vec3(lane.x, 0.0f, lane.y);
+        }
+
+        glm::vec2 new_lane(Dice& dice)
+        {
+            return { static_cast<float>(random::between(dice.state, -kLaneReach, kLaneReach)), static_cast<float>(random::between(dice.state, -kLaneReach, kLaneReach)) };
+        }
+
         void place(const PathNetwork& paths, const Stride& s, Pose& pose)
         {
-            const glm::vec3 a = paths.centre(s.from);
-            const glm::vec3 b = paths.centre(s.to);
+            const glm::vec3 a = lane_point(paths, s.from, s.lane_from);
+            const glm::vec3 b = lane_point(paths, s.to, s.lane_to);
             pose.position = glm::mix(a, b, s.progress);
-            if (a != b)
+            if (glm::distance(a, b) > 0.01f)
                 pose.heading = std::atan2(b.x - a.x, b.z - a.z);
+        }
+
+        /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
+        Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride)
+        {
+            if (r.all_of<Member>(guest))
+                return { ErrandKind::Waiting, ride, 0 };
+            return { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
         }
 
         void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose)
@@ -142,6 +161,12 @@ namespace rct3::simulation
         }
     } // namespace
 
+    Pose between_steps(const Pose& pose, float along)
+    {
+        const float turn = std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>());
+        return { glm::mix(pose.was, pose.position, along), pose.was_heading + turn * along, pose.was, pose.was_heading };
+    }
+
     std::uint32_t ticks(float seconds)
     {
         return static_cast<std::uint32_t>(std::ceil(std::max(seconds, 0.0f) / kTickSeconds));
@@ -150,11 +175,21 @@ namespace rct3::simulation
     void start_walking(SimWorld& world, entt::entity guest, NodeId at)
     {
         auto& r = world.registry;
+        // A guest who already stands somewhere keeps to where they stand on the tile.
+        glm::vec2 lane { 0.0f };
+        if (const auto* pose = r.try_get<Pose>(guest))
+        {
+            const glm::vec3 off = pose->position - world.paths.centre(at);
+            lane = glm::clamp(glm::vec2(off.x, off.z), -kLaneReach, kLaneReach);
+        }
         r.emplace_or_replace<Errand>(guest);
-        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1 });
+        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .lane_from = lane, .lane_to = lane });
         std::uint64_t mix = world.seed ^ (std::uint64_t { entt::to_integral(guest) } << 32);
         r.emplace_or_replace<Dice>(guest, random::seeded(random::split_mix(mix)));
-        place(world.paths, r.get<Stride>(guest), r.get_or_emplace<Pose>(guest));
+        auto& pose = r.get_or_emplace<Pose>(guest);
+        place(world.paths, r.get<Stride>(guest), pose);
+        pose.was = pose.position;
+        pose.was_heading = pose.heading;
     }
 
     void step(SimWorld& world, Workers* workers)
@@ -181,6 +216,12 @@ namespace rct3::simulation
             });
         }
 
+        for (auto [e, pose] : r.view<Pose>().each())
+        {
+            pose.was = pose.position;
+            pose.was_heading = pose.heading;
+        }
+
         // 2. Walking and deciding. Arrivals are noted per guest and dealt with after.
         const std::vector<Offer> on_offer = offers(r);
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
@@ -192,7 +233,7 @@ namespace rct3::simulation
                 for (std::size_t i = begin; i < end; ++i)
                 {
                     auto [errand, stride, pose, dice, needs, mood, wallet] = movers_view.get(movers[i]);
-                    if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading)
+                    if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading && errand.kind != ErrandKind::Waiting)
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                         continue; // Off the paths; nothing to walk on
@@ -201,7 +242,7 @@ namespace rct3::simulation
 
                     if (stride.from != stride.to)
                     {
-                        const float length = glm::distance(paths.centre(stride.from), paths.centre(stride.to));
+                        const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
                         stride.progress += length > 0 ? stride.speed * dt / length : 1;
                     }
                     if (stride.progress < 1)
@@ -215,14 +256,16 @@ namespace rct3::simulation
                     const NodeId at = stride.to;
                     stride.from = at;
                     stride.progress = 0;
+                    stride.lane_from = stride.lane_to;
                     if (!stride.route.empty())
                     {
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
                     }
-                    else if (errand.kind == ErrandKind::Heading)
+                    else if (errand.kind != ErrandKind::Wandering)
                     {
-                        arrived[i] = errand.target;
+                        if (errand.kind == ErrandKind::Heading)
+                            arrived[i] = errand.target;
                         stride.to = at;
                         stride.progress = 1;
                     }
@@ -231,7 +274,19 @@ namespace rct3::simulation
                         if (errand.rest == 0)
                         {
                             errand.rest = ticks(kIdleSeconds);
-                            if (auto goal = choose(paths, at, on_offer, needs, mood, wallet, dice))
+                            // A party goes where its neediest member needs to; whoever is sickest decides on rides.
+                            Needs want = needs;
+                            Mood feel = mood;
+                            if (const auto* member = r.try_get<Member>(movers[i]))
+                            {
+                                for (const entt::entity m : r.get<Party>(member->party).members)
+                                {
+                                    const Needs& n = r.get<Needs>(m);
+                                    want = { std::max(want.hunger, n.hunger), std::max(want.thirst, n.thirst), std::max(want.bladder, n.bladder) };
+                                    feel.nausea = std::max(feel.nausea, r.get<Mood>(m).nausea);
+                                }
+                            }
+                            if (auto goal = choose(paths, at, on_offer, want, feel, wallet, dice))
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };
                                 stride.route = std::move(goal->second);
@@ -240,53 +295,98 @@ namespace rct3::simulation
                                     arrived[i] = errand.target;
                                     stride.to = at;
                                     stride.progress = 1;
-                                    place(paths, stride, pose);
-                                    continue;
                                 }
-                                stride.to = stride.route.front();
-                                stride.route.erase(stride.route.begin());
-                                place(paths, stride, pose);
-                                continue;
+                                else
+                                {
+                                    stride.to = stride.route.front();
+                                    stride.route.erase(stride.route.begin());
+                                }
                             }
                         }
-                        stride.to = wander(paths, at, came, dice);
+                        if (errand.kind == ErrandKind::Wandering)
+                            stride.to = wander(paths, at, came, dice);
                     }
+                    stride.lane_to = stride.to != at ? new_lane(dice) : stride.lane_from;
                     place(paths, stride, pose);
                 }
             });
         }
 
-        // 3. Arrivals, in entity order.
+        // Followers take their leader's step, each in a lane of their own.
+        {
+            const auto view = r.view<Errand, Stride, Pose, Dice, const Member>();
+            const auto followers = sorted(view);
+            share(workers, followers.size(), [&](std::size_t begin, std::size_t end) {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    auto [errand, stride, pose, dice, member] = view.get(followers[i]);
+                    if (errand.kind != ErrandKind::Following)
+                        continue;
+                    const Stride& lead = r.get<Stride>(r.get<Party>(member.party).leader);
+                    if (lead.from != stride.from)
+                        stride.lane_from = stride.lane_to;
+                    if (lead.from != stride.from || lead.to != stride.to)
+                        stride.lane_to = lead.to != lead.from ? new_lane(dice) : stride.lane_from;
+                    stride.from = lead.from;
+                    stride.to = lead.to;
+                    stride.progress = lead.progress;
+                    place(paths, stride, pose);
+                }
+            });
+        }
+
+        // 3. Arrivals, in entity order. A leader's followers arrive with them.
+        const auto buy = [&](entt::entity guest, entt::entity at, const Shop& shop, bool chose) {
+            auto& attraction = r.get<Attraction>(at);
+            auto& wallet = r.get<Wallet>(guest);
+            auto& mood = r.get<Mood>(guest);
+            auto& needs = r.get<Needs>(guest);
+            float& need = shop.product == Product::Drink ? needs.thirst : needs.hunger;
+            if (!chose && need < kWant)
+                return; // Came along without wanting anything
+            if (!attraction.open || wallet.cash < attraction.price)
+            {
+                mood.happiness = clamp01(mood.happiness - kTreat);
+                return;
+            }
+            wallet.cash -= attraction.price;
+            attraction.income += attraction.price;
+            ++attraction.customers;
+            need = 0;
+            mood.happiness = clamp01(mood.happiness + kTreat);
+        };
         for (std::size_t i = 0; i < movers.size(); ++i)
         {
             if (arrived[i] == entt::null || !r.valid(arrived[i]))
                 continue;
             const entt::entity guest = movers[i];
+            std::vector<entt::entity> followers;
+            if (const auto* member = r.try_get<Member>(guest))
+            {
+                for (const entt::entity m : r.get<Party>(member->party).members)
+                    if (m != guest && r.get<Errand>(m).kind == ErrandKind::Following)
+                        followers.push_back(m);
+            }
             auto& errand = r.get<Errand>(guest);
-            auto& attraction = r.get<Attraction>(arrived[i]);
-            auto& wallet = r.get<Wallet>(guest);
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
                 errand = { ErrandKind::Wandering, entt::null, ticks(kConsumeSeconds) };
-                auto& mood = r.get<Mood>(guest);
-                if (!attraction.open || wallet.cash < attraction.price)
-                {
-                    mood.happiness = clamp01(mood.happiness - kTreat);
-                    continue;
-                }
-                wallet.cash -= attraction.price;
-                attraction.income += attraction.price;
-                ++attraction.customers;
-                auto& needs = r.get<Needs>(guest);
-                (shop->product == Product::Drink ? needs.thirst : needs.hunger) = 0;
-                mood.happiness = clamp01(mood.happiness + kTreat);
+                buy(guest, arrived[i], *shop, !r.all_of<Member>(guest));
+                for (const entt::entity m : followers)
+                    buy(m, arrived[i], *shop, false);
             }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
-                // In at the far end of the line.
-                ride->queue.push_back(guest);
-                errand = { ErrandKind::Queueing, arrived[i], 0 };
-                r.get<Stride>(guest).along = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
+                // In at the far end of the line, with those of the party who want to come; the rest wait (phase 5).
+                const auto join = [&](entt::entity g) {
+                    ride->queue.push_back(g);
+                    r.get<Errand>(g) = { ErrandKind::Queueing, arrived[i], 0 };
+                    r.get<Stride>(g).along = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
+                };
+                join(guest);
+                for (const entt::entity m : followers)
+                    if (r.get<Mood>(m).nausea < kMaxNausea && random::chance(r.get<Dice>(m).state, kJoinChance))
+                        join(m);
             }
         }
 
@@ -334,7 +434,7 @@ namespace rct3::simulation
                     auto& mood = r.get<Mood>(guest);
                     mood.happiness = clamp01(mood.happiness + ride.excitement * 0.3f);
                     mood.nausea = clamp01(mood.nausea + ride.nausea * 0.2f);
-                    r.get<Errand>(guest) = { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
+                    r.get<Errand>(guest) = after_ride(r, guest, e);
                     stop_at(paths, ride.exit != kNoNode ? ride.exit : attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
                 }
                 ride.riders.clear();
@@ -353,7 +453,7 @@ namespace rct3::simulation
                     auto& wallet = r.get<Wallet>(guest);
                     if (!attraction.open || wallet.cash < attraction.price)
                     {
-                        r.get<Errand>(guest) = { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
+                        r.get<Errand>(guest) = after_ride(r, guest, e);
                         continue;
                     }
                     wallet.cash -= attraction.price;
@@ -367,6 +467,51 @@ namespace rct3::simulation
                     train->running = true;
                 else if (!ride.riders.empty())
                     ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
+            }
+        }
+
+        // 5. Parties: while some are in a ride's queue or on it, the others walk to its exit and wait; once all
+        // are off, they go on together behind the leader.
+        for (const entt::entity e : sorted(r.view<Party>()))
+        {
+            const Party& party = r.get<Party>(e);
+            entt::entity ride = entt::null;
+            bool waiting = false;
+            for (const entt::entity m : party.members)
+            {
+                const Errand& errand = r.get<Errand>(m);
+                if (errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding)
+                    ride = errand.target;
+                waiting = waiting || errand.kind == ErrandKind::Waiting;
+            }
+            if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
+            {
+                const NodeId exit = r.get<CycleRide>(ride).exit != kNoNode ? r.get<CycleRide>(ride).exit : r.get<Attraction>(ride).entrance;
+                for (const entt::entity m : party.members)
+                {
+                    auto& errand = r.get<Errand>(m);
+                    if (errand.kind != ErrandKind::Following && !(m == party.leader && errand.kind == ErrandKind::Wandering))
+                        continue;
+                    auto& stride = r.get<Stride>(m);
+                    const NodeId at = stride.progress < 0.5f ? stride.from : stride.to;
+                    stride.route = paths.route(at, exit).value_or(std::vector<NodeId> { });
+                    stride.from = at;
+                    stride.to = at;
+                    stride.progress = 1;
+                    stride.lane_to = stride.lane_from;
+                    errand = { ErrandKind::Waiting, ride, 0 };
+                }
+            }
+            else if (waiting)
+            {
+                for (const entt::entity m : party.members)
+                {
+                    auto& errand = r.get<Errand>(m);
+                    if (m == party.leader)
+                        errand = errand.kind == ErrandKind::Waiting ? Errand { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) } : errand;
+                    else
+                        errand = { ErrandKind::Following, entt::null, 0 };
+                }
             }
         }
         ++world.tick;

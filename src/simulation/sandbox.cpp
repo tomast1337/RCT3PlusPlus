@@ -82,6 +82,20 @@ namespace rct3::simulation
         return e;
     }
 
+    entt::entity Sandbox::party(const std::vector<entt::entity>& members)
+    {
+        auto& r = world_.registry;
+        const entt::entity e = r.create();
+        for (const entt::entity m : members)
+        {
+            r.emplace<Member>(m, e);
+            if (m != members.front())
+                r.get<Errand>(m) = { ErrandKind::Following, entt::null, 0 };
+        }
+        r.emplace<Party>(e, members.front(), members);
+        return e;
+    }
+
     void Sandbox::run(std::uint32_t count)
     {
         for (std::uint32_t i = 0; i < count; ++i)

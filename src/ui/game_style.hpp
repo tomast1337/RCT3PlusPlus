@@ -16,6 +16,7 @@
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/screens/loading_screen.hpp"
+#include "ui/screens/management_window.hpp"
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
@@ -403,6 +404,21 @@ namespace rct3::ui::game_skins
         s.window = window_style();
         s.icon = kAboutIcon;
         s.credits_icon = kCreditsIcon;
+        return s;
+    }
+
+    /// The park's management windows in the large frame, laid out as the options window: picture tabs in the
+    /// top-right corner, the open tab's name in blue on their left. Their lists sit in the edit box frame
+    /// under a band of headings in the frames' blue (ours).
+    [[nodiscard]] inline ManagementWindowStyle management_window_style()
+    {
+        ManagementWindowStyle s;
+        s.window = window_style();
+        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.table.background = kListBox;
+        s.table.selection_skin = kSelectedRow;
+        s.button = kTextButton;
+        s.button_inset = kLozengeInset;
         return s;
     }
 

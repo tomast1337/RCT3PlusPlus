@@ -5,8 +5,10 @@
 // view, finances, thoughts, open-or-close and customers tabs; rides add vehicles, test results, operating
 // mode and maintenance, tracked rides construction and graphs, and stalls their items and extras.
 //
-// The open-or-close tab has no page: it offers the states the attraction can be put in. A tab whose content
-// is not built yet shows only its title.
+// The open-or-close tab has no page: it offers the states the attraction can be put in, and the construction
+// tab acts at once instead, asking for the construction window. A page shows a value the save does not hold
+// as missing rather than make one up; what the player can change in the save (the price, waits, inspections
+// and colours) comes as the page's controls.
 #pragma once
 
 #include "save/model/rides.hpp"
@@ -53,6 +55,7 @@ namespace rct3::ui
         int slot = 0;          ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
+        bool action = false;   ///< Does something at once instead of opening a page
     };
 
     /// The tabs of an attraction of `kind` in the state `state`, in the order of their slots.
@@ -87,7 +90,39 @@ namespace rct3::ui
         const save::AttractionCommon* common = nullptr;
         const save::Ride* ride = nullptr;
         const save::Stall* stall = nullptr;
+        /// The colours it is painted in, one for each pot it offers; none when it cannot be painted.
+        std::vector<std::size_t> colours { };
     };
+
+    /// Ids of the controls on an attraction's pages (InfoControl::id).
+    enum class AttractionControl : std::uint8_t
+    {
+        Price,      ///< A ride's admission, in hundredths
+        Colours,    ///< Its pots
+        MinWaitOn,  ///< Whether the trains wait at least a while
+        MinWait,    ///< Seconds
+        MaxWaitOn,  ///< Whether they leave after a while at most
+        MaxWait,    ///< Seconds
+        Inspection, ///< The interval's place in the list
+        ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
+    };
+
+    /// The id of `control` on a page, and of item `item`'s price.
+    [[nodiscard]] constexpr int control_id(AttractionControl control, std::size_t item = 0)
+    {
+        return static_cast<int>(control) + static_cast<int>(item);
+    }
+
+    /// The text shown for a value the save does not hold.
+    inline constexpr std::u16string_view kMissingValue = u"?";
+
+    /// Most waiting time the operating mode page offers, and the step it goes in (seconds).
+    inline constexpr int kMostWait = 250;
+    inline constexpr int kWaitStep = 5;
+    /// Most admission price, for rides and for other attractions and items, and its step (hundredths).
+    inline constexpr int kMostRidePrice = 2000;
+    inline constexpr int kMostPrice = 1000;
+    inline constexpr int kPriceStep = 10;
 
     /// The page of `tab`, at `section` when the page has several.
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);

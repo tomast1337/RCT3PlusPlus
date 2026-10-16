@@ -22,23 +22,28 @@ namespace rct3::render::vulkan
     {
 
         // What every shader finds in its push constants (app/shaders): the draw's transform, then the light of
-        // the Lit shaders. 128 bytes is all a device must offer.
+        // the Lit shaders, or what the Water shader needs (app/shaders/water.frag). 128 bytes is all a device
+        // must offer.
         struct PushBlock
         {
             glm::mat4 transform;
-            glm::vec4 sun_direction;
-            glm::vec4 sun;
-            glm::vec4 sky;
-            glm::vec4 ground;
+            glm::vec4 a;
+            glm::vec4 b;
+            glm::vec4 c;
+            glm::vec4 d;
         };
         static_assert(sizeof(PushBlock) == 128);
 
         constexpr VkShaderStageFlags kPushStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        PushBlock push_block(const DrawCommand& command)
+        PushBlock push_block(const DrawCommand& command, Shader shader)
         {
             const SceneLight& l = command.light;
-            return { command.transform, glm::vec4(l.sun_direction, 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
+            if (shader != Shader::Water)
+                return { command.transform, glm::vec4(l.sun_direction, 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
+            const WaterView& w = command.water;
+            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0));
+            return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
         }
 
         void check_imgui(VkResult result)
@@ -66,35 +71,6 @@ namespace rct3::render::vulkan
             std::vector<VkLayerProperties> layers(count);
             vkEnumerateInstanceLayerProperties(&count, layers.data());
             return std::ranges::any_of(layers, [name](const VkLayerProperties& l) { return std::strcmp(l.layerName, name) == 0; });
-        }
-
-        struct Barrier
-        {
-            VkImageLayout from;
-            VkImageLayout to;
-            VkPipelineStageFlags2 src_stage;
-            VkAccessFlags2 src_access;
-            VkPipelineStageFlags2 dst_stage;
-            VkAccessFlags2 dst_access;
-        };
-
-        void image_barrier(VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, const Barrier& b)
-        {
-            VkImageMemoryBarrier2 barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            barrier.srcStageMask = b.src_stage;
-            barrier.srcAccessMask = b.src_access;
-            barrier.dstStageMask = b.dst_stage;
-            barrier.dstAccessMask = b.dst_access;
-            barrier.oldLayout = b.from;
-            barrier.newLayout = b.to;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = image;
-            barrier.subresourceRange = { aspect, 0, 1, 0, 1 };
-            VkDependencyInfo dependency { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dependency.imageMemoryBarrierCount = 1;
-            dependency.pImageMemoryBarriers = &barrier;
-            vkCmdPipelineBarrier2(cmd, &dependency);
         }
 
         // The flip makes clip space Y point up, as the shared conventions in render/types.hpp promise.
@@ -387,7 +363,7 @@ namespace rct3::render::vulkan
         info.imageColorSpace = chosen.colorSpace;
         info.imageExtent = extent_;
         info.imageArrayLayers = 1;
-        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         info.preTransform = caps.currentTransform;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -431,7 +407,7 @@ namespace rct3::render::vulkan
         image.arrayLayers = 1;
         image.samples = VK_SAMPLE_COUNT_1_BIT;
         image.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // For copy_screen
         image.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         check(vkCreateImage(device_, &image, nullptr, &depth_image_), "vkCreateImage");
 
@@ -553,10 +529,17 @@ namespace rct3::render::vulkan
         push.stageFlags = kPushStages;
         push.size = sizeof(PushBlock);
 
-        const VkDescriptorSetLayout sets[] = { texture_set_layout_, sampler_set_layout_ };
+        // The extra textures take a set each, which only devices that bind enough sets get; the least Vulkan
+        // promises is four. Without them the Water shader is not offered.
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(gpu_, &props);
+        set_count_ = props.limits.maxBoundDescriptorSets >= kSetCount ? kSetCount : 2;
+        std::array<VkDescriptorSetLayout, kSetCount> sets { };
+        sets.fill(texture_set_layout_);
+        sets[1] = sampler_set_layout_;
         VkPipelineLayoutCreateInfo layout { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-        layout.setLayoutCount = 2;
-        layout.pSetLayouts = sets;
+        layout.setLayoutCount = set_count_;
+        layout.pSetLayouts = sets.data();
         layout.pushConstantRangeCount = 1;
         layout.pPushConstantRanges = &push;
         check(vkCreatePipelineLayout(device_, &layout, nullptr, &pipeline_layout_), "vkCreatePipelineLayout");
@@ -641,8 +624,8 @@ namespace rct3::render::vulkan
         return frames_[(frame_index_ + kFramesInFlight - 1) % kFramesInFlight].garbage;
     }
 
-    // Copies staging into the whole image and leaves it ready for sampling. Waits for the GPU.
-    void VulkanDevice::upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height)
+    // Records commands with `record` and runs them at once, waiting for the GPU. For setting up resources.
+    void VulkanDevice::submit_once(const std::function<void(VkCommandBuffer)>& record)
     {
         VkCommandBufferAllocateInfo alloc { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         alloc.commandPool = upload_pool_;
@@ -655,12 +638,7 @@ namespace rct3::render::vulkan
             VkCommandBufferBeginInfo begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             check(vkBeginCommandBuffer(cmd, &begin), "vkBeginCommandBuffer");
-            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
-            VkBufferImageCopy region { };
-            region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-            region.imageExtent = { width, height, 1 };
-            vkCmdCopyBufferToImage(cmd, staging.buffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+            record(cmd);
             check(vkEndCommandBuffer(cmd), "vkEndCommandBuffer");
 
             VkSubmitInfo submit { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -675,6 +653,49 @@ namespace rct3::render::vulkan
             throw;
         }
         vkFreeCommandBuffers(device_, upload_pool_, 1, &cmd);
+    }
+
+    // Copies staging into the whole image and leaves it ready for sampling. Waits for the GPU.
+    void VulkanDevice::upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height)
+    {
+        submit_once([&](VkCommandBuffer cmd) {
+            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+            VkBufferImageCopy region { };
+            region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            region.imageExtent = { width, height, 1 };
+            vkCmdCopyBufferToImage(cmd, staging.buffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        });
+    }
+
+    // Clears a target's depth to the far plane, leaves it ready for sampling, and registers it as texture `id`.
+    void VulkanDevice::make_depth_readable(Texture& texture, std::uint32_t id)
+    {
+        submit_once([&](VkCommandBuffer cmd) {
+            image_barrier(cmd, texture.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_CLEAR_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+            const VkClearDepthStencilValue far { 1.0f, 0 };
+            const VkImageSubresourceRange range { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
+            vkCmdClearDepthStencilImage(cmd, texture.depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &far, 1, &range);
+            image_barrier(cmd, texture.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_CLEAR_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        });
+        Texture depth;
+        VkDescriptorSetAllocateInfo set { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+        set.descriptorPool = descriptor_pool_;
+        set.descriptorSetCount = 1;
+        set.pSetLayouts = &texture_set_layout_;
+        check(vkAllocateDescriptorSets(device_, &set, &depth.set), "vkAllocateDescriptorSets");
+        VkDescriptorImageInfo info { };
+        info.imageView = texture.depth_view; // Owned by the target
+        info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        VkWriteDescriptorSet write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        write.dstSet = depth.set;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        write.pImageInfo = &info;
+        vkUpdateDescriptorSets(device_, 1, &write, 0, nullptr);
+        depth.extent = texture.extent;
+        textures_.emplace(id, depth);
+        texture.depth_id = id;
     }
 
     void VulkanDevice::ui_new_frame()
@@ -779,7 +800,7 @@ namespace rct3::render::vulkan
 
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->second.pipeline);
-        const PushBlock block = push_block(command);
+        const PushBlock block = push_block(command, pipeline->second.shader);
         vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
         if (command.texture)
         {
@@ -788,8 +809,18 @@ namespace rct3::render::vulkan
             if (texture == textures_.end())
                 return;
             const std::size_t sampler = static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address);
-            const VkDescriptorSet sets[] = { texture->second.set, sampler_sets_[sampler] };
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 2, sets, 0, nullptr);
+            std::array<VkDescriptorSet, kSetCount> sets { };
+            sets.fill(texture->second.set);
+            sets[1] = sampler_sets_[sampler];
+            // Only the Water shader reads the extra textures; a missing one reads as the first.
+            const std::uint32_t count = pipeline->second.shader == Shader::Water ? set_count_ : 2;
+            for (std::uint32_t i = 2; i < count; ++i)
+            {
+                const TextureHandle extra = command.extra_textures[i - 2];
+                if (const auto found = textures_.find(extra.id); extra && found != textures_.end())
+                    sets[i] = found->second.set;
+            }
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, count, sets.data(), 0, nullptr);
         }
         const VkDeviceSize offset = command.vertices.offset;
         vkCmdBindVertexBuffers(cmd, 0, 1, &vertices->second.buffer, &offset);
@@ -829,8 +860,41 @@ namespace rct3::render::vulkan
         vkCmdEndRendering(cmd);
         if (pass_target_ != nullptr)
             image_barrier(cmd, pass_target_->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        if (pass_target_ != nullptr && pass_target_->depth_id != 0)
+            image_barrier(cmd, pass_target_->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         pass_target_ = nullptr;
         state_ = State::InFrame;
+    }
+
+    bool VulkanDevice::copy_screen(TextureHandle target)
+    {
+        assert(state_ == State::InFrame);
+        const auto found = textures_.find(target.id);
+        if (found == textures_.end() || found->second.depth_id == 0 || found->second.extent.width != extent_.width || found->second.extent.height != extent_.height)
+            return false;
+        const Texture& t = found->second;
+        const VkCommandBuffer cmd = frames_[frame_index_].commands;
+        const VkImage screen = images_[image_index_];
+        constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        constexpr VkAccessFlags2 kDepthAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        constexpr VkAccessFlags2 kColorAccess = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        // Earlier reads of the target finish before it is written; the screen goes back to drawing afterwards.
+        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+        image_barrier(cmd, t.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+        VkImageCopy region { };
+        region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+        region.dstSubresource = region.srcSubresource;
+        region.extent = { extent_.width, extent_.height, 1 };
+        vkCmdCopyImage(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        vkCmdCopyImage(cmd, depth_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, kColorAccess });
+        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, kDepthStages, kDepthAccess });
+        image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        image_barrier(cmd, t.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        return true;
     }
 
     void VulkanDevice::end_frame()

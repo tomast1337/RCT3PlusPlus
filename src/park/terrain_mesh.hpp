@@ -35,11 +35,12 @@ namespace rct3::park
         glm::vec3 normal { 0.0f };
     };
 
-    /// Position and colour, for an untextured draw.
+    /// Position and colour, for an untextured draw, and how deep the water stands over the ground there.
     struct WaterVertex
     {
         glm::vec3 position { 0.0f };
         glm::vec4 colour { 1.0f };
+        float depth = 0; ///< World units, 0 where the ground reaches the surface or rises above it
     };
 
     enum class GroundPaint : std::uint8_t

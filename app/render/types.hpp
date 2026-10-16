@@ -12,6 +12,7 @@
 #include "math/glm.hpp"
 #include "math/hex_colour.hpp"
 
+#include <array>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
@@ -97,7 +98,8 @@ namespace rct3::render
 
     enum class TextureFormat : std::uint8_t
     {
-        Rgba8, ///< 4 bytes per pixel, R first, unsigned normalised
+        Rgba8,       ///< 4 bytes per pixel, R first, unsigned normalised
+        Rgba32Float, ///< 16 bytes per pixel, R first, 32-bit floats; for data shaders read back exactly
     };
 
     /// Pixels are copied at creation, rows top to bottom, tightly packed.
@@ -111,11 +113,14 @@ namespace rct3::render
         /// A texture passes draw into (PassDesc::target), with its own depth buffer and the screen's colour
         /// format, so every pipeline can draw into it. It takes no pixels and starts transparent.
         bool target = false;
+        /// Targets only: their depth can be drawn with as well, through Device::depth_texture. It reads 0 at the
+        /// near plane and 1 at the far plane, and 1 until something is drawn or copied into it.
+        bool readable_depth = false;
     };
 
-    [[nodiscard]] constexpr std::size_t texture_bytes(std::uint32_t width, std::uint32_t height, TextureFormat)
+    [[nodiscard]] constexpr std::size_t texture_bytes(std::uint32_t width, std::uint32_t height, TextureFormat format)
     {
-        return std::size_t { width } * height * 4;
+        return std::size_t { width } * height * (format == TextureFormat::Rgba32Float ? 16 : 4);
     }
 
     enum class Filter : std::uint8_t
@@ -178,6 +183,14 @@ namespace rct3::render
         Lit,
         /// Lit, with TexturedCutout's holes.
         LitCutout,
+        /// A water surface. Inputs as Lit, with location 1's alpha how see-through the water is and location 2's
+        /// first value the depth of water under the point. `DrawCommand::texture` is a tiling picture of waves
+        /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
+        /// surface, the scene behind the surface, that scene's depth, and the ripples (Rgba32Float, a column per
+        /// ripple: its middle's x and z, ring radius and height, 0 for none, then its wave number and ring width;
+        /// see park/water_ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
+        /// pictures `water` says are missing.
+        Water,
         /// A shape of ui/shape.hpp, shaded by its distance from the edge. Inputs: location 0 position (Float2),
         /// location 1 the point from the shape's middle then the shape's half width and height (Float4), 2 the
         /// corner radii (Float4), 3 softness, outline width, light width and ring width (Float4), 4 to 7 the
@@ -241,6 +254,23 @@ namespace rct3::render
         glm::vec3 ground { 0.0f }; ///< From below, on a surface facing down
     };
 
+    /// What the Water shader needs besides its light and pictures.
+    struct WaterView
+    {
+        glm::vec3 eye { 0.0f }; ///< Where the surface is seen from, in world space
+        float time = 0;         ///< Seconds; moves the waves
+        float near = 1;         ///< Of the projection in `DrawCommand::transform`, to read depth back as distance
+        float far = 2;
+        bool reflection = false; ///< The mirrored scene is given
+        bool refraction = false; ///< The scene behind and its depth are given
+        bool waves = false;      ///< Ruffle the surface with the wave picture
+        bool foam = false;       ///< Faint foam in shallows and on ripple crests
+        bool ripples = false;    ///< The ripple picture is given
+    };
+
+    /// How many pictures a draw can take besides DrawCommand::texture.
+    inline constexpr std::size_t kExtraTextures = 4;
+
     /// One draw. With `indices` set, `count` and `first` count indices, otherwise vertices.
     struct DrawCommand
     {
@@ -256,6 +286,10 @@ namespace rct3::render
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
         SceneLight light; ///< For the Lit shaders
+        /// For shaders that read more than one picture, bound after `texture` with the same sampler. A missing one
+        /// reads as `texture`.
+        std::array<TextureHandle, kExtraTextures> extra_textures { };
+        WaterView water; ///< For the Water shader
     };
 
     /// Counters for one finished frame.

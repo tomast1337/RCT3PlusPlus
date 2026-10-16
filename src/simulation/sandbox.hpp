@@ -18,7 +18,9 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -38,6 +40,9 @@ namespace rct3::simulation
         float cycle_seconds = 30;
         float excitement = 0.5f;
         float intensity = 0.3f;
+        float nausea = 0.3f;
+        std::vector<glm::ivec2> line { };   ///< Queue tiles from the entrance back to the paths; none to walk straight in
+        std::optional<glm::ivec2> exit { }; ///< The path tile riders get off onto; the entrance when none
     };
 
     class Sandbox
@@ -47,6 +52,8 @@ namespace rct3::simulation
 
         /// A straight path of tiles from `from` to `to` (same column or same row), both ends included.
         Sandbox& path(glm::ivec2 from, glm::ivec2 to, int level = 0);
+        /// The same, as one queue line.
+        Sandbox& queue(glm::ivec2 from, glm::ivec2 to, int level = 0);
 
         entt::entity shop(std::string name, Product product, glm::ivec2 entrance, std::int64_t price, int level = 0);
         entt::entity flat_ride(std::string name, glm::ivec2 entrance, std::int64_t price, const RideSetup& setup = { }, int level = 0);
@@ -65,10 +72,12 @@ namespace rct3::simulation
 
     private:
         NodeId node(glm::ivec2 tile, int level) const;
+        Sandbox& lay(glm::ivec2 from, glm::ivec2 to, int level, std::uint64_t line);
 
         SimWorld world_;
         std::unique_ptr<Workers> workers_;
         std::uint32_t guests_ = 0;
+        std::uint64_t lines_ = 0;
     };
 
 } // namespace rct3::simulation

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "simulation/coaster.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
@@ -91,7 +92,7 @@ TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
         guests.push_back(g);
     }
     park.run(2);
-    const auto& f = r.get<FlatRide>(ride);
+    const auto& f = r.get<CycleRide>(ride);
     CHECK(f.riders.size() == 2);
     CHECK(f.queue.size() == 1);
     CHECK(r.get<Errand>(guests[0]).kind == ErrandKind::Riding);
@@ -103,6 +104,34 @@ TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
     CHECK(r.get<Errand>(guests[0]).kind == ErrandKind::Wandering);
     CHECK(r.get<Wallet>(guests[0]).cash == 800);
     CHECK(r.get<Attraction>(ride).income == 600);
+}
+
+TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for them to reach the front")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 }).path({ 2, 1 }, { 4, 1 }).queue({ 3, 0 }, { 6, 0 });
+    // The line runs from the entrance at (6, 0) back to (3, 0), where it meets the path.
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 1, .cycle_seconds = 10, .line = { { 6, 0 }, { 5, 0 }, { 4, 0 }, { 3, 0 } }, .exit = glm::ivec2 { 4, 1 } });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
+        r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+        guests.push_back(g);
+    }
+    REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 3; }, 30));
+    CHECK(r.get<CycleRide>(ride).riders.empty());  // Nobody at the front yet
+    CHECK(r.get<Pose>(guests[0]).position.x > 12); // In at the far end, (3, 0)
+
+    REQUIRE(park.run_until([&] { return !r.get<CycleRide>(ride).riders.empty(); }, 30));
+    CHECK(r.get<CycleRide>(ride).riders.front() == guests[0]);
+    // The rest stand behind in order, a quarter tile apart.
+    CHECK(r.get<Stride>(guests[1]).along < r.get<Stride>(guests[2]).along);
+
+    REQUIRE(park.run_until([&] { return r.get<Errand>(guests[0]).kind == ErrandKind::Wandering; }, 30));
+    CHECK(r.get<Stride>(guests[0]).from == *park.world().paths.find({ 4, 1, 0 }));
+    CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers == 3; }, 120));
 }
 
 TEST_CASE("bored guests find the flat ride by themselves")
@@ -159,4 +188,25 @@ TEST_CASE("a guest with no drink stand to go to still goes for food")
     park.guest({ 0, 0 }, { .thirst = 1.0f, .hunger = 0.8f });
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Attraction>(food).customers == 1; }, 60));
+}
+
+TEST_CASE("a coaster's riders get off when its train comes round, not after the ride's time")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Looper", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 1000 });
+    auto& r = park.world().registry;
+    Coaster train;
+    train.distance = { 0, 50 };
+    train.height = { 0, 0 };
+    train.kinds = { Stretch::Plain, Stretch::Plain };
+    train.fixed_speed = 5; // Round in 10 s
+    r.emplace<Coaster>(ride, train);
+    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
+    CHECK(r.get<Coaster>(ride).running);
+    CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 15));
+    CHECK_FALSE(r.get<Coaster>(ride).running);
 }

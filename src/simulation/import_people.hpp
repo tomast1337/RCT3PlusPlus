@@ -7,10 +7,13 @@
 #include "save/model/people.hpp"
 #include "simulation/sim_world.hpp"
 
+#include <vector>
+
 namespace rct3::simulation
 {
 
-    /// Adds an entity for each guest of `people` that is in the park.
-    void import_guests(SimWorld& world, const save::PeopleModel& people);
+    /// Adds an entity for each guest of `people` that is in the park; returns them by the guests' places in
+    /// `people.guests`, null for those left out.
+    std::vector<entt::entity> import_guests(SimWorld& world, const save::PeopleModel& people);
 
 } // namespace rct3::simulation

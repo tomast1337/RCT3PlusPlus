@@ -4,6 +4,7 @@
 #include "record_file.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
@@ -85,5 +86,52 @@ TEST_CASE("later tracked rides point to their attraction fields")
         CHECK(i.type_id == 3);
         CHECK(i.name_text == "CoasterName");
         CHECK(i.icon == "CoasterIcon");
+    }
+}
+
+TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in version 1 items")
+{
+    for (const std::uint32_t version : { 1u, 5u })
+    {
+        CAPTURE(version);
+        Pool pool;
+        pool.add("Ride:trr");
+        const std::size_t base = version == 1 ? 0x50 : 0;
+        std::vector<std::byte> bytes(base + 0x130, std::byte { 0 });
+        auto word = [&](std::size_t offset, std::uint32_t value) {
+            std::vector<std::byte> w;
+            put(w, { value });
+            std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(base + offset));
+        };
+        auto real = [&](std::size_t offset, float value) { word(offset, std::bit_cast<std::uint32_t>(value)); };
+        word(0x48, 2);
+        word(0x4C, 0b101);
+        real(0x5C, 12.5f);
+        real(0x64, 3.5f);
+        real(0x6C, 2.5f);
+        real(0x74, 1.5f);
+        real(0x7C, -1);
+        real(0xF0, 1);
+        real(0xF4, 6);
+        word(0xFC, 123400);
+        real(0x108, 5);
+        real(0x10C, 25);
+        const auto overlay = make_record_overlay(version, pool, "Ride:trr", bytes, { });
+        const auto items = read_tracked_rides(overlay, overlay.common());
+        REQUIRE(items[0].ride.has_value());
+        REQUIRE(items[0].ride->operating.has_value());
+        const auto& d = *items[0].ride->operating;
+        CHECK(d.mode == 2);
+        CHECK(d.allowed_modes == 0b101);
+        CHECK(d.launch_speed == 12.5f);
+        CHECK(d.lift_speed == 3.5f);
+        CHECK(d.brake_speed == 2.5f);
+        CHECK(d.block_brake_speed == 1.5f);
+        CHECK_FALSE(d.fixed_speed);
+        CHECK(d.lift_min == 1);
+        CHECK(d.lift_max == 6);
+        CHECK(d.cost == 123400);
+        CHECK(d.launch_min == 5);
+        CHECK(d.launch_max == 25);
     }
 }

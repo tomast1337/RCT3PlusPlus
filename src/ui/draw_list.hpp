@@ -150,6 +150,9 @@ namespace rct3::ui
         void disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint = kWhite);
         /// A shape drawn in code (shape.hpp), cut to the clip like a quad.
         void shape(const Shape& shape);
+        /// A convex polygon in one colour, its corners (x, y) in order either way round, cut to the clip. Its
+        /// edges are not smoothed; for outlines and markers over pictures, such as a view drawn on a map.
+        void polygon(std::span<const std::array<float, 2>> corners, Color color);
 
         /// Narrows drawing to `rect` within the current clip until the matching pop_clip. Returns false when
         /// nothing would be visible, so the caller may skip what it was about to draw (it still has to pop).

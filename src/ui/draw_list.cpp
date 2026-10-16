@@ -176,6 +176,51 @@ namespace rct3::ui
         add_indices(BatchKind::Shapes, 0, base, kQuadCorners);
     }
 
+    void DrawList::polygon(std::span<const std::array<float, 2>> corners, Color color)
+    {
+        using Corner = std::array<float, 2>;
+        std::vector<Corner> kept;
+        kept.reserve(corners.size());
+        for (const Corner& c : corners)
+            kept.push_back({ c[0] * scale_, c[1] * scale_ });
+        if (!clips_.empty())
+        {
+            // Cut by each side of the clip in turn, keeping the part inside it.
+            const Rect& clip = clips_.back();
+            const auto cut = [&](int axis, float edge, bool keep_below) {
+                std::vector<Corner> out;
+                const auto inside = [&](const Corner& c) { return keep_below ? c.at(axis) <= edge : c.at(axis) >= edge; };
+                for (std::size_t i = 0; i < kept.size(); ++i)
+                {
+                    const Corner& a = kept[i];
+                    const Corner& b = kept[(i + 1) % kept.size()];
+                    if (inside(a))
+                        out.push_back(a);
+                    if (inside(a) != inside(b))
+                    {
+                        const float t = (edge - a.at(axis)) / (b.at(axis) - a.at(axis));
+                        out.push_back({ lerp(a[0], b[0], t), lerp(a[1], b[1], t) });
+                    }
+                }
+                kept = std::move(out);
+            };
+            cut(0, clip.x0, false);
+            cut(0, clip.x1, true);
+            cut(1, clip.y0, false);
+            cut(1, clip.y1, true);
+        }
+        if (kept.size() < 3)
+            return;
+        const auto base = static_cast<std::uint32_t>(vertices_.size());
+        for (const Corner& c : kept)
+            vertices_.push_back({ c[0], c[1], packed(color), 0, 0 });
+        // A fan from the first corner covers a convex polygon.
+        std::vector<std::uint32_t> fan;
+        for (std::uint32_t i = 1; i + 1 < kept.size(); ++i)
+            fan.insert(fan.end(), { 0, i, i + 1 });
+        add_indices(BatchKind::Quads, 0, base, fan);
+    }
+
     void DrawList::add_indices(BatchKind kind, TextureId texture, std::uint32_t base, std::span<const std::uint32_t> corners)
     {
         if (batches_.empty() || batches_.back().texture != texture || batches_.back().kind != kind)

@@ -3,7 +3,6 @@
 
 #include "backends/imgui_impl_glfw.h"
 #include "imgui.h"
-#include "logging/log.hpp"
 #include "render/backend.hpp"
 #include "strings/unicode.hpp"
 
@@ -295,8 +294,7 @@ namespace rct3::platform
     {
         if (!cursors_)
             return;
-        if (const auto shown = cursor_.set(*cursors_, kind))
-            logging::logger("platform").debug("pointer: {} as {}", ui::cursor_name(kind), ui::standard_cursor_name(*shown));
+        cursor_.set(*cursors_, kind);
     }
 
     ui::CursorKind Window::developer_cursor()

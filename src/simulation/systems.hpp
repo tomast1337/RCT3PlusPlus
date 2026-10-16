@@ -7,10 +7,13 @@
 //     what they need most, now and then a flat ride, or else the next tile to wander to;
 //  3. guests who reached the attraction they were heading for buy there or join its queue;
 //  4. flat rides run their cycles: a stopped ride takes on the front of its queue and runs, and lets its
-//     riders off when the cycle ends.
+//     riders off when the cycle ends;
+//  5. parties whose riders are all off go on together again.
 //
-// Phases 1 and 2 only write each guest's own components and are shared out over the workers; phases 3 and 4
-// change attractions and run on one thread in ascending entity order. Every choice draws on the guest's own
+// Followers in a party do not choose anything: after phase 2 they take their leader's step, each in a lane
+// of their own. Phases 1 and 2 and the followers' step only write each guest's own components and are shared
+// out over the workers; phases 3 to 5 change attractions and parties and run on one thread in ascending
+// entity order. Every choice draws on the guest's own
 // Dice, so a world steps the same way however many workers it has.
 #pragma once
 
@@ -24,6 +27,14 @@ namespace rct3::simulation
     class Workers;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
+    /// Farthest a guest walks off a path tile's middle, along x and z.
+    /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
+    /// the middle; upgrade when paths of other widths are modelled.
+    inline constexpr float kLaneReach = 1.3f;
+
+    struct Pose;
+    /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.
+    [[nodiscard]] Pose between_steps(const Pose& pose, float along);
 
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);

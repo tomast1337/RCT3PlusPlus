@@ -13,10 +13,12 @@
 //     device->ui_new_frame();                  // then the platform's ImGui new frame, ImGui::NewFrame, UI code
 //     device->begin_frame();                   // waits for a free frame slot, acquires the target
 //     device->allocate_transient(bytes);       // per-frame vertex/index data, any time inside the frame
+//     device->update_texture(texture, pixels); // between passes
 //     device->begin_pass({ ... });             // one or more passes
 //       device->draw({ ... });
 //       device->draw_ui();                     // in the last pass, so the UI is on top
 //     device->end_pass();
+//     device->copy_screen(target);             // between passes
 //     device->end_frame();                     // submits and presents
 //   device->shutdown();                        // also done by the destructor
 //
@@ -87,6 +89,12 @@ namespace rct3::render
 
         [[nodiscard]] virtual std::expected<TextureHandle, std::string> create_texture(const TextureDesc& desc) = 0;
         virtual void destroy_texture(TextureHandle texture) = 0;
+        /// Replaces every pixel of `texture` (not a target) with `pixels`, laid out as for create_texture. Only
+        /// between passes of a frame; draws of the frame after the call see the new pixels.
+        virtual void update_texture(TextureHandle texture, std::span<const std::byte> pixels) = 0;
+        /// The depth of a target made with `readable_depth`, as a texture to draw with; none for other textures.
+        /// It goes with the target.
+        [[nodiscard]] virtual TextureHandle depth_texture(TextureHandle target) const = 0;
 
         [[nodiscard]] virtual std::expected<PipelineHandle, std::string> create_pipeline(const PipelineDesc& desc) = 0;
         virtual void destroy_pipeline(PipelineHandle pipeline) = 0;
@@ -102,6 +110,10 @@ namespace rct3::render
         virtual void begin_pass(const PassDesc& pass) = 0;
         virtual void draw(const DrawCommand& command) = 0;
         virtual void end_pass() = 0;
+        /// Copies what the screen holds so far, colour and depth, into `target`: a target of the screen's size made
+        /// with `readable_depth`. Only between passes of a frame. False when the device cannot, or `target` does
+        /// not fit; it is then left as it was.
+        virtual bool copy_screen(TextureHandle target) = 0;
         virtual void end_frame() = 0;
 
         /// Counters of the last finished frame.

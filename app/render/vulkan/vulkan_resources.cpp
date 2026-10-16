@@ -38,6 +38,12 @@ namespace
     const std::uint32_t kShapeFrag[] =
 #include "shape.frag.inc"
         ;
+    const std::uint32_t kWaterVert[] =
+#include "water.vert.inc"
+        ;
+    const std::uint32_t kWaterFrag[] =
+#include "water.frag.inc"
+        ;
 
 } // namespace
 
@@ -70,6 +76,8 @@ namespace rct3::render::vulkan
                     return { kLitVert, kLitFrag, true };
                 case Shader::Shape:
                     return { kShapeVert, kShapeFrag };
+                case Shader::Water:
+                    return { kWaterVert, kWaterFrag };
             }
             return { };
         }
@@ -212,6 +220,8 @@ namespace rct3::render::vulkan
             return std::unexpected("empty texture");
         if (desc.target ? !desc.pixels.empty() : desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
             return std::unexpected("pixel data does not match the texture size");
+        if (desc.target && desc.format != TextureFormat::Rgba8)
+            return std::unexpected("targets take the screen's format");
         // A target starts as transparent pixels, sent up as any other texture's are.
         const std::vector<std::byte> clear(desc.target ? texture_bytes(desc.width, desc.height, desc.format) : 0);
         const std::span<const std::byte> pixels = desc.target ? std::span<const std::byte>(clear) : desc.pixels;
@@ -222,7 +232,7 @@ namespace rct3::render::vulkan
         {
             VkImageCreateInfo image { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             image.imageType = VK_IMAGE_TYPE_2D;
-            image.format = desc.target ? color_format_ : VK_FORMAT_R8G8B8A8_UNORM;
+            image.format = desc.target ? color_format_ : desc.format == TextureFormat::Rgba32Float ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R8G8B8A8_UNORM;
             image.extent = { desc.width, desc.height, 1 };
             image.mipLevels = 1;
             image.arrayLayers = 1;
@@ -248,12 +258,14 @@ namespace rct3::render::vulkan
             view.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
             check(vkCreateImageView(device_, &view, nullptr, &t.view), "vkCreateImageView");
 
+            t.extent = { desc.width, desc.height };
+            t.format = desc.format;
+            t.target = desc.target;
             if (desc.target)
             {
-                t.extent = { desc.width, desc.height };
                 VkImageCreateInfo depth = image;
                 depth.format = kDepthFormat;
-                depth.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                depth.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | (desc.readable_depth ? VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0);
                 check(vkCreateImage(device_, &depth, nullptr, &t.depth_image), "vkCreateImage");
                 vkGetImageMemoryRequirements(device_, t.depth_image, &needs);
                 alloc.allocationSize = needs.size;
@@ -290,10 +302,17 @@ namespace rct3::render::vulkan
             write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             write.pImageInfo = &info;
             vkUpdateDescriptorSets(device_, 1, &write, 0, nullptr);
+            if (desc.target && desc.readable_depth)
+                make_depth_readable(t, next_id_++);
         }
         catch (const std::exception& e)
         {
             destroy(staging);
+            if (const auto depth = textures_.find(t.depth_id); t.depth_id != 0 && depth != textures_.end())
+            {
+                destroy(depth->second);
+                textures_.erase(depth);
+            }
             destroy(t);
             return std::unexpected(e.what());
         }
@@ -305,15 +324,51 @@ namespace rct3::render::vulkan
     void VulkanDevice::destroy_texture(TextureHandle texture)
     {
         const auto it = textures_.find(texture.id);
-        if (it == textures_.end())
+        if (it == textures_.end() || it->second.image == VK_NULL_HANDLE) // A readable depth goes with its target
             return;
+        if (const auto depth = textures_.find(it->second.depth_id); it->second.depth_id != 0 && depth != textures_.end())
+        {
+            garbage_slot().textures.push_back(depth->second);
+            textures_.erase(depth);
+        }
         garbage_slot().textures.push_back(it->second);
         textures_.erase(it);
     }
 
+    TextureHandle VulkanDevice::depth_texture(TextureHandle target) const
+    {
+        const auto it = textures_.find(target.id);
+        return it != textures_.end() ? TextureHandle { it->second.depth_id } : TextureHandle { };
+    }
+
+    // The pixels go through the frame's transient memory and are copied in by the frame's commands, so draws
+    // recorded before see the old pixels and those after the new ones.
+    void VulkanDevice::update_texture(TextureHandle texture, std::span<const std::byte> pixels)
+    {
+        assert(state_ == State::InFrame);
+        const auto it = textures_.find(texture.id);
+        assert(it != textures_.end() && "update of an unknown texture");
+        if (it == textures_.end() || it->second.target || it->second.image == VK_NULL_HANDLE)
+            return;
+        const Texture& t = it->second;
+        if (pixels.size() != texture_bytes(t.extent.width, t.extent.height, t.format))
+            return;
+        const auto staging = allocate_transient(pixels);
+        if (!staging)
+            return;
+        const VkCommandBuffer cmd = frames_[frame_index_].commands;
+        image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
+        VkBufferImageCopy region { };
+        region.bufferOffset = staging->offset;
+        region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+        region.imageExtent = { t.extent.width, t.extent.height, 1 };
+        vkCmdCopyBufferToImage(cmd, buffers_.at(staging->buffer.id).buffer, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+    }
+
     VulkanDevice::TransientBlock VulkanDevice::make_transient_block(VkDeviceSize size)
     {
-        Buffer b = make_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        Buffer b = make_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         void* mapped = nullptr;
         try
         {
@@ -382,6 +437,8 @@ namespace rct3::render::vulkan
         const ShaderCode code = shader_code(desc.shader);
         if (code.vertex.empty() || code.fragment.empty())
             return std::unexpected("unknown shader");
+        if (desc.shader == Shader::Water && set_count_ < kSetCount)
+            return std::unexpected("the device binds too few descriptor sets for the water shader");
 
         VkShaderModule vert = VK_NULL_HANDLE;
         VkShaderModule frag = VK_NULL_HANDLE;
@@ -490,7 +547,7 @@ namespace rct3::render::vulkan
         vkDestroyShaderModule(device_, frag, nullptr);
 
         const std::uint32_t id = next_id_++;
-        pipelines_.emplace(id, Pipeline { pipeline, desc.topology });
+        pipelines_.emplace(id, Pipeline { pipeline, desc.topology, desc.shader });
         return PipelineHandle { id };
     }
 

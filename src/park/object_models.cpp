@@ -286,6 +286,8 @@ namespace rct3::park
             model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
         model.supports = support_footprint(*item);
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
+        model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
+        model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0;
         if ((item->flags & ovl::kItemFenceOutline) != 0 && item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
         {
             // Inside are the solid squares that reach down to the ground.

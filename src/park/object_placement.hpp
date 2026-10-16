@@ -52,9 +52,13 @@ namespace rct3::park
     /// when both sides are odd, a tile's corner when both are even.
     [[nodiscard]] glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares);
 
+    /// Whether `object` stands on the ground rather than at a height of its own.
+    [[nodiscard]] bool on_ground(const save::PlacedObject& object);
+
     /// The model-to-park transform of `object`, whose item positions itself as `positioning` and covers
-    /// `squares` tiles along its own X and Z.
-    [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 });
+    /// `squares` tiles along its own X and Z. On the ground it stands at the ground's height under its
+    /// anchor when `ground_height`, otherwise at its stored height.
+    [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 }, bool ground_height = true);
 
     /// Whether the park owns every tile `object` covers, for an item covering `squares` tiles along its own X
     /// and Z. Land bought only to build over counts for things raised off the ground, not for those on it.

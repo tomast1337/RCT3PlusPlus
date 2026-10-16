@@ -147,3 +147,11 @@ TEST_CASE("an item is on the park's land when every tile it covers is owned")
     raised.height_offset = 4;
     CHECK(on_owned_land(raised, { 1, 1 }, g));
 }
+
+TEST_CASE("an item that does not stand at the ground's height keeps its stored height on the ground")
+{
+    const save::TerrainGrid g = slope();
+    const save::PlacedObject wall = at(1, 0, 0);
+    CHECK(on_ground(wall));
+    CHECK(place(object_transform(wall, Positioning::Tile, g, { 1, 1 }, false), { }).y == doctest::Approx(3));
+}

@@ -40,7 +40,7 @@ namespace rct3::render::vulkan
         {
             const SceneLight& l = command.light;
             if (shader != Shader::Water)
-                return { command.transform, glm::vec4(l.sun_direction, 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
+                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, 0.0f), glm::vec4(l.sky, 0.0f), glm::vec4(l.ground, 0.0f) };
             const WaterView& w = command.water;
             const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0));
             return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
@@ -530,10 +530,10 @@ namespace rct3::render::vulkan
         push.size = sizeof(PushBlock);
 
         // The extra textures take a set each, which only devices that bind enough sets get; the least Vulkan
-        // promises is four. Without them the Water shader is not offered.
+        // promises is four, enough for the Lit shaders' shadow. Without six the Water shader is not offered.
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(gpu_, &props);
-        set_count_ = props.limits.maxBoundDescriptorSets >= kSetCount ? kSetCount : 2;
+        set_count_ = props.limits.maxBoundDescriptorSets >= kSetCount ? kSetCount : 4;
         std::array<VkDescriptorSetLayout, kSetCount> sets { };
         sets.fill(texture_set_layout_);
         sets[1] = sampler_set_layout_;
@@ -812,11 +812,14 @@ namespace rct3::render::vulkan
             std::array<VkDescriptorSet, kSetCount> sets { };
             sets.fill(texture->second.set);
             sets[1] = sampler_sets_[sampler];
-            // Only the Water shader reads the extra textures; a missing one reads as the first.
-            const std::uint32_t count = pipeline->second.shader == Shader::Water ? set_count_ : 2;
+            // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
+            const Shader shader = pipeline->second.shader;
+            const bool lit = shader == Shader::Lit || shader == Shader::LitCutout;
+            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 4 : 2;
+            const std::array<TextureHandle, kExtraTextures> extras = lit ? std::array<TextureHandle, kExtraTextures> { command.light.shadow_map, command.light.shadow_view } : command.extra_textures;
             for (std::uint32_t i = 2; i < count; ++i)
             {
-                const TextureHandle extra = command.extra_textures[i - 2];
+                const TextureHandle extra = extras[i - 2];
                 if (const auto found = textures_.find(extra.id); extra && found != textures_.end())
                     sets[i] = found->second.set;
             }

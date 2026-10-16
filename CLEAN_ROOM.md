@@ -45,6 +45,19 @@ Original code, original prose and synthetic test data are in. Everything below i
 When unsure whether something is a description or a copy: if you would have to look at the game file to
 produce it character for character, it is a copy.
 
+## Other open-source projects
+
+OpenRCT2 (GPL-3.0, <https://github.com/OpenRCT2/OpenRCT2>) re-implements a game whose simulation is close to
+ours, and its licence is compatible with ours. We may take inspiration from how it models the park, and
+borrow simulation values (rates, thresholds, weights) where they fit. We do not copy its code or its
+structure. Anything borrowed, even one constant, carries a comment that names the source exactly:
+
+```cpp
+// Taken from OpenRCT2 (GPL-3.0), src/openrct2/<path>, <function or constant name>.
+```
+
+The same goes for any other project: credit at the place of use, and only under a compatible licence.
+
 ## Where game-derived material goes
 
 Long-term private notes live in a workspace outside this repository, not here. `local/` at the repository

@@ -1,0 +1,5 @@
+EnTT 4.0.0 (release tag v4.0.0, commit 85c6bba014049b5de8fad49d25424df2f1f6a8c1)
+https://github.com/skypjack/entt
+entt.hpp is the release's single header, vendored unmodified; it matches single_include/entt/entt.hpp at
+the commit above. It is large: include it only from the simulation's own files.
+Licensed under the MIT licence; see LICENSE.

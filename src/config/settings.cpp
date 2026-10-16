@@ -20,6 +20,7 @@ namespace rct3::config
             { Setting::SkipIntro, "skip_intro", SettingKind::Flag, "Start without the logos (true/false). --no-intro skips them too.", "no" },
             { Setting::InterfaceScale, "interface_scale", SettingKind::Scale, "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
             { Setting::Language, "language", SettingKind::Text, "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
+            { Setting::NoAudio, "no_audio", SettingKind::Flag, "Start without any sound (true/false). --no-audio sets it, --audio overrides it for one run.", "no" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.

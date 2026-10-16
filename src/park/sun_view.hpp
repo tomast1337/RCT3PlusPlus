@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The view from the sun that a shadow map is drawn with: a square looked straight down the sunlight, round a
-// point near the camera, deep enough to hold everything that could cast a shadow into it. The square moves in
-// whole texels of the map, so shadow edges hold still while the camera pans.
+// point near the camera, deep enough to hold everything that could cast a shadow into it. Shadow edges crawl
+// whenever the map is drawn from a slightly different place, so everything about the view moves in steps: the
+// square in whole texels, its size in a few fixed sizes, and the sun's direction only once it has moved enough.
 #pragma once
 
 #include "math/glm.hpp"
@@ -25,7 +26,12 @@ namespace rct3::park
     /// map `texels` wide.
     [[nodiscard]] SunView sun_view(glm::vec3 to_sun, glm::vec3 centre, float radius, std::uint32_t texels);
 
-    /// How far round the camera's target shadows reach, for a camera `distance` from it: more when further out.
+    /// How far round the camera's target shadows reach, for a camera `distance` from it: more when further out,
+    /// in steps of a quarter of an octave, so zooming changes the map only now and then.
     [[nodiscard]] float shadow_radius(float distance);
+
+    /// The sun direction to draw shadows with: `kept` until `now` (both unit length) is more than `step` radians
+    /// from it, then `now`.
+    [[nodiscard]] glm::vec3 steady_sun(glm::vec3 kept, glm::vec3 now, float step);
 
 } // namespace rct3::park

@@ -199,9 +199,12 @@ namespace rct3::scene
         std::uint32_t view_pixels = 0;                     ///< Across the view's target
         std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
         render::SceneLight light;                          ///< What the day clock shows, for this frame
-        bool shadows = false;                              ///< The options ask for the sun's shadows
+        int shadows = 0;                                   ///< The Shadows option: none, static (drawn now and then), dynamic
         render::TextureHandle shadow_target;               ///< The park drawn from the sun, for its depth
         render::TextureHandle shadow_view;                 ///< How it was drawn, for the Lit shaders
+        glm::vec3 shadow_sun { 0.0f, 1.0f, 0.0f };         ///< The sun direction the map was last drawn with
+        glm::mat4 shadow_drawn { 0.0f };                   ///< The view the map was last drawn from
+        float shadow_drawn_at = 0;                         ///< `clock` when it was
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

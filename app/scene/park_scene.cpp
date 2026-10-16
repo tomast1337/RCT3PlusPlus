@@ -1494,7 +1494,7 @@ namespace rct3::scene
         }
         scene.clock += elapsed;
         scene.water.look = water_look(options);
-        scene.shadows = options.choice(config::GameOption::Shadows) > 0;
+        scene.shadows = options.choice(config::GameOption::Shadows);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
@@ -1603,6 +1603,7 @@ namespace rct3::scene
             bool scenery = true;
             bool people = true;
             bool water = true;
+            bool see_through = true;   ///< Blended parts, such as glass
             bool shaded_water = false; ///< With the water shader, seen from `eye`
             glm::vec3 eye { 0.0f };
         };
@@ -1673,7 +1674,7 @@ namespace rct3::scene
                 });
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
-            if (scene.object_indices && scene.show_scenery && parts.scenery)
+            if (scene.object_indices && scene.show_scenery && parts.scenery && parts.see_through)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 
@@ -1701,28 +1702,36 @@ namespace rct3::scene
                 auto view = device.create_texture({ .width = 5, .height = 1, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow view" });
                 if (!made || !view)
                 {
-                    scene.shadows = false;
+                    scene.shadows = 0;
                     return;
                 }
                 scene.shadow_target = *made;
                 scene.shadow_view = *view;
             }
-            const park::SunView sun = park::sun_view(scene.light.sun_direction, scene.camera.target, park::shadow_radius(scene.camera.distance), kShadowTexels);
+            // Half a degree: the shadows step now and then rather than crawl every frame.
+            scene.shadow_sun = park::steady_sun(scene.shadow_sun, glm::normalize(scene.light.sun_direction), glm::radians(0.5f));
+            const park::SunView sun = park::sun_view(scene.shadow_sun, scene.camera.target, park::shadow_radius(scene.camera.distance), kShadowTexels);
             // The depth bias: about a tenth of a world unit, in the map's depth.
             const std::array<float, 20> values
                 = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
+            // Static shadows redraw only when the view moves, or every two seconds to catch what changed in the park.
+            const bool redraw = scene.shadows > 1 || sun.view_projection != scene.shadow_drawn || scene.clock - scene.shadow_drawn_at > 2;
+            scene.light.shadow_map = device.depth_texture(scene.shadow_target);
+            scene.light.shadow_view = scene.shadow_view;
+            if (!redraw)
+                return;
+            scene.shadow_drawn = sun.view_projection;
+            scene.shadow_drawn_at = scene.clock;
             device.end_pass();
             device.update_texture(scene.shadow_view, std::as_bytes(std::span(values)));
             render::PassDesc into;
             into.target = scene.shadow_target;
             device.begin_pass(into);
-            draw_world(device, scene, sun.view_projection, scene.light, { .background = false, .water = false });
+            draw_world(device, scene, sun.view_projection, scene.light, { .background = false, .water = false, .see_through = false });
             device.end_pass();
             render::PassDesc back;
             back.clear = false;
             device.begin_pass(back);
-            scene.light.shadow_map = device.depth_texture(scene.shadow_target);
-            scene.light.shadow_view = scene.shadow_view;
         }
 
         /// Draws the attraction the info panel shows into the panel's round view, from its own camera.

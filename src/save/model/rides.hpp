@@ -332,6 +332,26 @@ namespace rct3::save
     // ---------------------------------------------------------------------------------------------------------
     // Trains and cars
 
+    /// What a train is doing, as the number it is stored as. Only numbers whose meaning the saves show are
+    /// named: tallied over 75 saves with `save-dump --trains`, by the train's speed, the piece under its front
+    /// and how long it had been in the state. Other numbers are valid values of the type too.
+    enum class TrainState : std::int32_t
+    {
+        Waiting = 1,   ///< Standing still at its station, for minutes at a time (112 trains, 24 saves)
+        Running = 13,  ///< Moving round its track away from the stations (294 trains, 25 saves)
+        Arriving = 22, ///< Slowing to a stop on a station platform (140 trains, 18 saves)
+        Parked = 68,   ///< Held for hours at a track's end with its cars on no piece (69 trains, 5 saves)
+    };
+
+    /// What a car is doing, as the number it is stored as; named as TrainState is, from the trains they are in.
+    enum class CarState : std::int32_t
+    {
+        Running = 1,  ///< In a running train, out on the track (935 cars)
+        Arriving = 2, ///< In a train arriving at a station (104 cars)
+        Waiting = 13, ///< Still on a station platform, in a waiting train (459 cars)
+        Parked = 16,  ///< In a parked train, on no piece (69 cars)
+    };
+
     struct Car
     {
         ObjectId id = 0;
@@ -339,7 +359,7 @@ namespace rct3::save
         std::int32_t car_count = 0; ///< Cars in the train as stored on the car
         /// Which of the (up to six) car designs of the train asset this car uses. Link cars use a distinct slot.
         std::int32_t design_slot = 0;
-        std::int32_t state = 0; ///< Car state as stored; the numbers are not given meanings yet
+        CarState state = CarState { }; ///< As stored; most numbers are not named
         std::int32_t passengers = 0;
         float distance = 0; ///< Metres along the track
         float speed = 0;    ///< m/s
@@ -359,10 +379,10 @@ namespace rct3::save
     struct Train
     {
         ObjectId id = 0;
-        ObjectId ride = 0;      ///< Back reference as stored
-        std::int32_t index = 0; ///< Index as stored; equals the position in Ride::trains in sound files
-        std::int32_t state = 0; ///< Train state as stored; the numbers are not given meanings yet
-        float state_time = 0;   ///< Seconds in the current state
+        ObjectId ride = 0;                 ///< Back reference as stored
+        std::int32_t index = 0;            ///< Index as stored; equals the position in Ride::trains in sound files
+        TrainState state = TrainState { }; ///< As stored; most numbers are not named
+        float state_time = 0;              ///< Seconds in the current state
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;
         float distance = 0; ///< Metres along the track

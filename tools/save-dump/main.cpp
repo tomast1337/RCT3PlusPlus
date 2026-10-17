@@ -3,6 +3,7 @@
 // save-dump: print the container structure of a park or scenario save file.
 //
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
+//   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -19,6 +20,7 @@
 #include "simulation/park_rating.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -26,6 +28,7 @@
 #include <fstream>
 #include <iterator>
 #include <map>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -481,6 +484,105 @@ int main(int argc, char** argv)
         }
         if (compared > 0)
             std::printf("mean difference %.0f over %zu saves\n", error_sum / static_cast<double>(compared), compared);
+        return 0;
+    }
+    // `save-dump --trains FILE...`: every saved train and car, grouped by the state number it holds, with what
+    // the save shows about them in that state, to tell what each number means.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--trains") == 0; }))
+    {
+        using namespace rct3::save;
+        struct Seen
+        {
+            std::size_t count = 0, still = 0, platform = 0, riders = 0, files = 0;
+            double speed = 0, time = 0, accel = 0;
+            std::map<std::string, std::size_t> pieces;
+            std::map<int, std::size_t> others; ///< Car states for trains, train states for cars
+            std::string last_file;
+        };
+        std::map<int, Seen> trains, cars;
+        // The piece's shape without the ride's prefix, e.g. "Station" from "WoodenCoaster_Station".
+        const auto shape = [](const std::string& symbol) {
+            const auto at = symbol.find('_');
+            std::string s = at == std::string::npos ? symbol : symbol.substr(at + 1);
+            if (const auto colon = s.find(':'); colon != std::string::npos)
+                s.resize(colon);
+            return s;
+        };
+        const auto note = [](Seen& seen, const std::string& file, float speed, float time, float accel, bool platform, int riders, const std::string& piece, int other) {
+            ++seen.count;
+            seen.still += std::abs(speed) < 0.01f;
+            seen.platform += platform;
+            seen.riders += riders > 0;
+            seen.speed += std::abs(speed);
+            seen.time += time;
+            seen.accel += accel;
+            ++seen.pieces[piece];
+            ++seen.others[other];
+            if (seen.last_file != file)
+            {
+                ++seen.files;
+                seen.last_file = file;
+            }
+        };
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+                continue;
+            const ObjectIndex index(*file);
+            const auto model = load_rides(*file, index);
+            if (!model)
+                continue;
+            for (const Ride& ride : model->rides)
+            {
+                std::map<ObjectId, const TrackPiece*> pieces;
+                if (ride.track)
+                    for (const TrackPiece& p : ride.track->pieces)
+                        pieces[p.id] = &p;
+                const auto piece = [&](ObjectId id) -> const TrackPiece* {
+                    const auto it = pieces.find(id);
+                    return it == pieces.end() ? nullptr : it->second;
+                };
+                for (const Train& t : ride.trains)
+                {
+                    int riders = 0;
+                    for (const Car& c : t.cars)
+                        riders += c.passengers;
+                    const TrackPiece* front = piece(t.front_piece);
+                    note(trains[static_cast<int>(t.state)], argv[i], t.speed, t.state_time, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<int>(t.cars.front().state));
+                    for (const Car& c : t.cars)
+                    {
+                        const TrackPiece* at = piece(c.front_piece);
+                        note(cars[static_cast<int>(c.state)], argv[i], c.speed, t.state_time, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<int>(t.state));
+                    }
+                }
+            }
+        }
+        const auto print = [](const char* what, const char* other, const std::map<int, Seen>& seen) {
+            std::printf("%s states\n", what);
+            for (const auto& [state, s] : seen)
+            {
+                const auto n = static_cast<double>(s.count);
+                std::printf("  %3d  %5zu in %3zu files  still %3.0f%%  platform %3.0f%%  riders %3.0f%%  speed %5.1f  accel %6.2f  time %6.1f\n", state, s.count, s.files, 100 * static_cast<double>(s.still) / n, 100 * static_cast<double>(s.platform) / n, 100 * static_cast<double>(s.riders) / n, s.speed / n, s.accel / n, s.time / n);
+                std::vector<std::pair<std::size_t, std::string>> top;
+                for (const auto& [name, k] : s.pieces)
+                    top.emplace_back(k, name);
+                std::ranges::sort(top, std::greater { });
+                std::printf("       pieces");
+                for (std::size_t k = 0; k < top.size() && k < 4; ++k)
+                    std::printf(" %s %.0f%%", top[k].second.c_str(), 100 * static_cast<double>(top[k].first) / n);
+                std::printf("\n       %s", other);
+                for (const auto& [o, k] : s.others)
+                    std::printf(" %d:%zu", o, k);
+                std::printf("\n");
+            }
+        };
+        print("train", "front car states", trains);
+        print("car", "train states", cars);
         return 0;
     }
     // --- people sweep: save-dump --people PATH... (begin) ---

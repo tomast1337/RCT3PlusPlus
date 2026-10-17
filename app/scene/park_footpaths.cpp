@@ -144,7 +144,7 @@ namespace rct3::scene
             const park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
             park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
             park::add_ground(mesh, park::ground_queues(f.paths, scene.grid).mesh);
-            park::add_ground(mesh, park::surrounding_land(scene.grid));
+            park::add_ground(mesh, park::surrounding_land(scene.grid, f.water));
             picture_styles(device, scene, assets, paths.styles);
             auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
             auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });

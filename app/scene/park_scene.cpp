@@ -936,8 +936,9 @@ namespace rct3::scene
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
         park::add_ground(mesh, queues.mesh);
-        const park::TerrainMesh surroundings = park::surrounding_land(scene.grid);
+        const park::TerrainMesh surroundings = park::surrounding_land(scene.grid, world->water);
         park::add_ground(mesh, surroundings);
+        mesh.water.insert(mesh.water.end(), surroundings.water.begin(), surroundings.water.end());
         scene.batches = mesh.batches;
         scene.footpaths.paths = world->paths;
         scene.footpaths.water = world->water;
@@ -1103,7 +1104,7 @@ namespace rct3::scene
         if (options.flag(config::GameOption::OffMapTrees))
         {
             random::RandomState scenery = random::stream(seed, random::RandomStream::Scenery);
-            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid), scenery);
+            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), scenery);
             log.info("{} trees beyond the edge", trees.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }

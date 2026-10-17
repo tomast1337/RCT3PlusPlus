@@ -92,6 +92,7 @@ namespace rct3::ui
         constexpr float kMphPerMs = 2.2369363f;
         constexpr float kFeetPerMetre = 3.28084f;
         constexpr int kSecondsPerMinute = 60;
+        constexpr float kSecondsPerHour = 3600;
         constexpr float kPercent = 100;
 
         std::u16string ascii(std::string_view s)
@@ -263,8 +264,10 @@ namespace rct3::ui
         void customers(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
             const save::AttractionCommon& a = *f.common;
-            // Customers an hour and the age are reckoned by the game from its clock; neither is saved.
-            add_half(page, strings, "AttractionCustomersDialogLabel_Customers", missing());
+            // Customers an hour and the age are reckoned by the game from its clock; neither is saved. A running
+            // park measures the first.
+            const bool measured = f.flow && f.flow->per_hour > 0;
+            add_half(page, strings, "AttractionCustomersDialogLabel_Customers", measured ? count(std::lround(f.flow->per_hour)) : missing());
             add_half(page, strings, "AttractionCustomersDialogLabel_Popularity", percent(a.popularity * kPercent));
             add_half(page, strings, "AttractionCustomersDialogLabel_Satisfaction", percent(a.satisfaction * kPercent));
             add_half(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", count(a.total_guests));
@@ -274,7 +277,11 @@ namespace rct3::ui
                 float longest = 0;
                 for (const save::Station& s : f.ride->stations)
                     longest = std::max(longest, s.queue_time);
-                add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", duration(longest));
+                // Running, the wait the queue now has at the rate the ride takes riders; unknown until measured.
+                const bool unknown = f.flow && !measured && f.flow->queued > 0;
+                if (f.flow)
+                    longest = measured ? static_cast<float>(f.flow->queued) * kSecondsPerHour / f.flow->per_hour : 0;
+                add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", unknown ? missing() : duration(longest));
                 add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", missing());
             }
             if (f.stall == nullptr)
@@ -352,8 +359,8 @@ namespace rct3::ui
         {
             const save::Ride& ride = *f.ride;
             page.heading = kind_name(ride.base.symbol, strings);
-            // How many a car or the ride holds is in the ride's kind, not in the save.
-            add(page, strings, "AttractionVehicleDialogLabelCapacity", missing());
+            // How many a car or the ride holds is in the ride's kind, not in the save; a running park knows it.
+            add(page, strings, "AttractionVehicleDialogLabelCapacity", f.flow ? count(f.flow->seats) : missing());
             if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
             {
                 add(page, strings, "AttractionVehicleDialogLabelNumTrains", count(static_cast<std::int64_t>(ride.trains.size())));

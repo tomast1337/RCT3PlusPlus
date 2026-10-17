@@ -2,6 +2,7 @@
 #include "park/surrounding_land.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -155,4 +156,32 @@ TEST_CASE("the land's height is found between its points")
     // The mesh's points agree with the rings.
     const TerrainMesh m = surrounding_land(g);
     CHECK(m.vertices[rings.points + 3].position.y == doctest::Approx(rings.heights[rings.points + 3]));
+}
+
+TEST_CASE("water over the ground at the edge goes on out as a sea, with the land kept under it")
+{
+    // A 4 by 4 map at height 2 with a lake at 3 over its first row: the -z side.
+    const save::TerrainGrid g = flat(4, 4, 2);
+    save::WaterLayer water;
+    save::WaterBody& lake = water.bodies.emplace_back();
+    lake.level = 3;
+    for (std::uint8_t c = 0; c < 4; ++c)
+        for (std::uint8_t t = 0; t < 2; ++t)
+            lake.tris.push_back({ .col = c, .row = 0, .triangle = t });
+    const LandRings rings = land_rings(g, water);
+    // The first row's points, and the corner where the last column turns away, are at sea.
+    CHECK(rings.sea[1] == 3);
+    CHECK(std::isnan(rings.sea[9])); // On the +z side, dry
+    CHECK(rings.heights[rings.points * 2 + 1] <= 3 - kSeaDepth);
+    CHECK_FALSE(land_height(rings, g, 6, -50)); // Out at sea: no land for trees
+    CHECK(land_height(rings, g, 6, 66));
+
+    const TerrainMesh m = surrounding_land(g, water);
+    REQUIRE_FALSE(m.water.empty());
+    CHECK(m.water.size() % 3 == 0);
+    CHECK(std::ranges::all_of(m.water, [](const WaterVertex& v) { return v.position.y == 3 && v.position.z <= 0; }));
+    CHECK(std::ranges::min(m.water, { }, [](const WaterVertex& v) { return v.position.z; }).position.z == doctest::Approx(-kSeaReach));
+    CHECK(m.low.z == doctest::Approx(-kSeaReach));
+    // Dry edges make no sea.
+    CHECK(surrounding_land(g).water.empty());
 }

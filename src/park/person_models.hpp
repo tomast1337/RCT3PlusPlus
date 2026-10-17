@@ -8,6 +8,9 @@
 // only read whole for the sets the park uses. A name used in several files is taken from the one nearest
 // the file asking for it. Everything needed is copied out, so the files can be let go once the park's
 // people are loaded.
+//
+// Staff pieces name uniform pictures that are kept outside the characters' folder, with the staff uniforms,
+// so the library indexes every folder it is given.
 #pragma once
 
 #include "ovl/frame_mesh.hpp"
@@ -102,8 +105,8 @@ namespace rct3::park
     class PersonLibrary
     {
     public:
-        /// Indexes the character files in `folder` (as spelled on disk) of the install at `root`.
-        PersonLibrary(const std::filesystem::path& root, std::string_view folder);
+        /// Indexes the character files in `folders` (as spelled on disk) of the install at `root`.
+        PersonLibrary(const std::filesystem::path& root, std::span<const std::string_view> folders);
         ~PersonLibrary();
         PersonLibrary(PersonLibrary&&) noexcept;
         PersonLibrary& operator=(PersonLibrary&&) noexcept;

@@ -151,10 +151,9 @@ namespace rct3::park
         }
     };
 
-    PersonLibrary::PersonLibrary(const std::filesystem::path& root, std::string_view folder)
+    PersonLibrary::PersonLibrary(const std::filesystem::path& root, std::span<const std::string_view> folders)
         : files_(std::make_unique<Files>())
     {
-        const std::array folders { folder };
         files_->parts = AssetIndex::scan(root, folders);
     }
 

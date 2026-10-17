@@ -553,8 +553,8 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     const auto w = build(ride_schema(), objs);
     const auto& r = w->model.rides[0];
     REQUIRE(r.trains.size() == 2);
-    CHECK(r.trains[0].state == 69);
-    CHECK(r.trains[1].state == 22);
+    CHECK(static_cast<int>(r.trains[0].state) == 69); // An unnamed number survives
+    CHECK(r.trains[1].state == TrainState::Arriving);
     CHECK(r.trains[0].symbol == "Invented:rit");
     CHECK(r.trains[0].front_piece == kB);
     CHECK(r.trains[0].distance == 3.5f);

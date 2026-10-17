@@ -67,6 +67,14 @@ namespace rct3::simulation
         float wet = 0;          ///< From dry (0) to soaked (1)
     };
 
+    /// Parties at the rides so far, in the registry's context: those held back from a load to ride together
+    /// on the next, and those too many for one load, split over two.
+    struct PartyBoarding
+    {
+        std::uint32_t held = 0;
+        std::uint32_t split = 0;
+    };
+
     /// The time of day the guests feel, in the registry's context; midday when none is there.
     struct Daylight
     {
@@ -89,6 +97,13 @@ namespace rct3::simulation
     {
         std::array<std::uint32_t, 3> in { };
         std::array<std::uint32_t, 3> out { };
+    };
+
+    /// The intensity of rides a guest likes, 0..1 as rides are rated; any when they have none.
+    struct Taste
+    {
+        float least = 0;
+        float most = 1;
     };
 
     /// A guest carrying an umbrella, up while it rains.
@@ -139,6 +154,7 @@ namespace rct3::simulation
         Hungry = 4,
         Thirsty = 5,
         Toilet = 12,
+        TooTame = 33,
         RainKeepsMeOff = 32,
         Vandalism = 14,
         Vomit = 15,
@@ -355,6 +371,33 @@ namespace rct3::simulation
         std::int64_t wage = 0;          ///< Hundredths of the currency unit a game hour
     };
 
+    /// How a ride has broken down, numbered as saved parks number breakdowns.
+    enum class Breakdown : std::int32_t
+    {
+        None = 0,
+        EmergencyStop = 1,        ///< A coaster's trains halt where they are
+        RestraintsFailToOpen = 2, ///< Riders cannot get off
+        RestraintsFailToClose = 3,
+        DoorsFailToOpen = 4, ///< Riders cannot get off
+        DoorsFailToClose = 5,
+        TrainStuckLeavingStation = 6,
+        StationBrakesFail = 7,
+        ControlFailure = 8,
+    };
+
+    /// The tiles a staff member keeps to. They wander and work only on these, and walk back to them when
+    /// they find themselves outside, after a job elsewhere. Staff without one have the whole park.
+    struct Patrol
+    {
+        std::vector<glm::ivec2> tiles; ///< (col, row), any level
+        std::uint32_t zone = 0;        ///< A shared zone: painting one on it paints all on it; 0 none
+
+        [[nodiscard]] bool covers(const PathTileSpot& at) const
+        {
+            return std::ranges::contains(tiles, glm::ivec2(at.col, at.row));
+        }
+    };
+
     /// A ride's wear. Each run wears it a little, and the less reliable it is the likelier a run ends in a
     /// breakdown, which closes it until a mechanic repairs it. Inspections win some reliability back.
     struct Upkeep
@@ -365,6 +408,16 @@ namespace rct3::simulation
         float inspect_every = 600;          ///< Seconds; negative never
         entt::entity mechanic = entt::null; ///< Sent to it, or at work on it
         std::uint32_t breakdowns = 0;       ///< Since the run began
+        Breakdown kind = Breakdown::None;   ///< The breakdown going on
+        Breakdown last = Breakdown::None;   ///< The latest one, going on or fixed
+        /// Downtime: each window is sampled a set number of times, and counts the samples the ride was down
+        /// in. Newest first; the oldest drops off as a new window starts.
+        std::array<std::uint8_t, 8> downtime { };
+        std::uint8_t samples = 0; ///< Taken in the newest window
+        float sample_clock = 0;   ///< Seconds since the last sample
+
+        /// Share of the samples in all windows taken while down, 0..1.
+        [[nodiscard]] float downtime_share() const;
     };
 
     /// What the park has paid its staff, kept in the registry's context.

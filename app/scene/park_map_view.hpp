@@ -50,7 +50,7 @@ namespace rct3::scene
     /// Brings the open window up to date: its pictures, the people (`people` is asked only when they are
     /// drawn again) and the camera, seen in a view `aspect` times as wide as it is tall. Returns the park
     /// point (x, z) the player picked on the map since the last frame, if any.
-    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<std::vector<park::MapPerson>()>& people, float elapsed);
+    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed);
 
     void destroy_park_map(render::Device& device, ParkMap& map);
 

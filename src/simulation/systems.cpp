@@ -114,6 +114,9 @@ namespace rct3::simulation
         constexpr float kInspectSeconds = 10;
         constexpr float kRepairGain = 0.02f;  ///< Reliability a repair wins back
         constexpr float kInspectGain = 0.05f; ///< And an inspection
+        // Downtime windows: a game hour each, sampled 20 times, so each counts 0..20 as saved parks' do.
+        constexpr std::uint8_t kDowntimeSamples = 20;
+        constexpr float kDowntimeSampleSeconds = kSecondsPerHour / kDowntimeSamples;
 
         float clamp01(float v)
         {
@@ -164,14 +167,14 @@ namespace rct3::simulation
         }
 
         /// The nearest offer of `kind` (and `product`, for shops) the guest can pay for, with the walk there.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet, float wildest = 1, float least_cover = 0)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet, float wildest = 1, float least_cover = 0, float tamest = 0)
         {
             // shortcut: one search per offer, upgrade to a single search that stops at the first entrance reached
             // when parks with many shops show up in profiles.
             std::optional<std::pair<entt::entity, std::vector<NodeId>>> best;
             for (const Offer& o : offers)
             {
-                if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash || o.intensity > wildest || o.cover < least_cover)
+                if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash || o.intensity > wildest || o.intensity < tamest || o.cover < least_cover)
                     continue;
                 auto walk = paths.route(at, o.entrance);
                 if (walk && (!best || walk->size() < best->second.size()))
@@ -183,7 +186,7 @@ namespace rct3::simulation
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
         /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
         /// under cover.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste)
         {
             std::array<std::pair<float, Product>, 6> wants { {
                 { rained_on && mood.wet > 0 ? 1.0f : 0.0f, Product::Umbrella },
@@ -202,17 +205,17 @@ namespace rct3::simulation
                     return found;
             }
             if (mood.nausea < kMaxNausea && random::chance(dice.state, kRideChance))
-                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet, mood.tolerance + kWildest + daring, rained_on ? kCovered : 0);
+                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet, std::min(mood.tolerance + kWildest, taste.most) + daring, rained_on ? kCovered : 0, taste.least);
             return std::nullopt;
         }
 
         /// The next tile for a wandering guest at `at`, not back where they came from unless it is the only way.
-        NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice)
+        NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, const Patrol* patrol = nullptr)
         {
             std::array<NodeId, 4> ways { };
             std::size_t count = 0;
             for (const NodeId n : paths.nodes()[at].next)
-                if (n != kNoNode && n != came && !paths.nodes()[n].queue)
+                if (n != kNoNode && n != came && !paths.nodes()[n].queue && (patrol == nullptr || patrol->covers(paths.nodes()[n].tile)))
                     ways[count++] = n;
             if (count == 0)
                 return came != kNoNode ? came : at;
@@ -236,6 +239,33 @@ namespace rct3::simulation
             pose.position = glm::mix(a, b, s.progress);
             if (glm::distance(a, b) > 0.01f)
                 pose.heading = std::atan2(b.x - a.x, b.z - a.z);
+        }
+
+        /// Where a party waits for those on a ride: a footpath tile beside its exit, off the riders' way; the exit
+        /// itself when it has none.
+        NodeId waiting_spot(const PathNetwork& paths, NodeId exit)
+        {
+            for (const NodeId n : paths.nodes()[exit].next)
+                if (n != kNoNode && !paths.nodes()[n].queue)
+                    return n;
+            return exit;
+        }
+
+        /// The lane of the `place`th of `of` standing together in a ring on a tile.
+        glm::vec2 ring_lane(std::size_t place, std::size_t of)
+        {
+            const float angle = 2 * glm::pi<float>() * static_cast<float>(place) / static_cast<float>(std::max<std::size_t>(of, 1));
+            return kHuddleRadius * glm::vec2(std::sin(angle), std::cos(angle));
+        }
+
+        /// The guest's place among their party's members, and how many there are.
+        std::pair<std::size_t, std::size_t> place_in_party(const entt::registry& r, entt::entity guest)
+        {
+            const auto* member = r.try_get<Member>(guest);
+            if (member == nullptr)
+                return { 0, 1 };
+            const auto& members = r.get<Party>(member->party).members;
+            return { static_cast<std::size_t>(std::ranges::find(members, guest) - members.begin()), members.size() };
         }
 
         /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
@@ -267,6 +297,12 @@ namespace rct3::simulation
         {
             const auto* visitor = r.try_get<Visitor>(guest);
             return visitor != nullptr ? visitor->age : AgeGroup::Adult;
+        }
+
+        Taste taste_of(const entt::registry& r, entt::entity guest)
+        {
+            const auto* taste = r.try_get<Taste>(guest);
+            return taste != nullptr ? *taste : Taste { };
         }
 
         float time_of_day(const entt::registry& r)
@@ -605,10 +641,15 @@ namespace rct3::simulation
                     free.push_back(e);
             }
             const auto send = [&](entt::entity ride, Upkeep& upkeep) {
+                // Those whose patrol takes the ride in first, then the nearest.
+                const auto ours = [&](entt::entity m) {
+                    const auto* patrol = r.try_get<Patrol>(m);
+                    return patrol != nullptr && !patrol->tiles.empty() && spot(ride) != kNoNode && patrol->covers(paths.nodes()[spot(ride)].tile);
+                };
                 std::optional<std::vector<NodeId>> best;
                 auto who = free.end();
                 for (auto m = free.begin(); m != free.end(); ++m)
-                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride)); way && (!best || way->size() < best->size()))
+                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride)); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
                     {
                         best = std::move(way);
                         who = m;
@@ -648,6 +689,7 @@ namespace rct3::simulation
                             r.get<Attraction>(staff.ride).open = true;
                         upkeep.reliability = std::min(upkeep.reliability + (upkeep.broken ? kRepairGain : kInspectGain), 1.0f);
                         upkeep.broken = false;
+                        upkeep.kind = Breakdown::None;
                         upkeep.since_inspection = 0;
                         upkeep.mechanic = entt::null;
                         staff.ride = entt::null;
@@ -666,8 +708,30 @@ namespace rct3::simulation
                 }
                 const NodeId came = stride.from;
                 const NodeId at = stride.to;
-                const bool tidies = staff.role == StaffRole::Handyman;
-                const bool mends = tidies || staff.role == StaffRole::Mechanic;
+                const Patrol* patrol = r.try_get<Patrol>(e);
+                if (patrol != nullptr && patrol->tiles.empty())
+                    patrol = nullptr; // On a zone not painted yet: the whole park
+                // Outside their patrol, after a job elsewhere: a way back to its nearest tile, kept in the route.
+                // shortcut: nearest as the crow flies, not by the paths; fine while areas are compact.
+                const auto back_to = [&](const Patrol& area, NodeId from) {
+                    if (!stride.route.empty())
+                        return true;
+                    NodeId home = kNoNode;
+                    float best = std::numeric_limits<float>::infinity();
+                    for (NodeId n = 0; n < paths.nodes().size(); ++n)
+                        if (!paths.nodes()[n].queue && area.covers(paths.nodes()[n].tile))
+                            if (const float d = glm::distance(paths.centre(n), paths.centre(from)); d < best)
+                            {
+                                best = d;
+                                home = n;
+                            }
+                    if (auto way = home != kNoNode ? paths.route(from, home) : std::nullopt; way && !way->empty())
+                        stride.route = std::move(*way);
+                    return !stride.route.empty();
+                };
+                const bool inside = patrol == nullptr || patrol->covers(paths.nodes()[at].tile);
+                const bool tidies = staff.role == StaffRole::Handyman && inside;
+                const bool mends = tidies || (staff.role == StaffRole::Mechanic && inside);
                 const auto job = [&] {
                     if (tidies && litter_on(at) > 0)
                     {
@@ -717,13 +781,23 @@ namespace rct3::simulation
                     stride.to = at;
                     stride.progress = 1;
                 }
+                else if (!inside && back_to(*patrol, at))
+                {
+                    stride.to = stride.route.front();
+                    stride.route.erase(stride.route.begin());
+                    stride.progress = 0;
+                    stride.lane_to = new_lane(dice);
+                }
                 else
                 {
+                    stride.route.clear();
                     // A handyman makes for the dirtiest tile beside them; the rest of the time staff wander.
-                    NodeId next = wander(paths, at, came != at ? came : kNoNode, dice);
+                    // No way back to a patrol off the paths: wander the park as if they had none.
+                    const Patrol* keep_to = inside ? patrol : nullptr;
+                    NodeId next = wander(paths, at, came != at ? came : kNoNode, dice, keep_to);
                     if (tidies)
                         for (const NodeId n : paths.nodes()[at].next)
-                            if (n != kNoNode && !paths.nodes()[n].queue && litter_on(n) > litter_on(next))
+                            if (n != kNoNode && !paths.nodes()[n].queue && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && litter_on(n) > litter_on(next))
                                 next = n;
                     stride.to = next;
                     stride.progress = 0;
@@ -733,6 +807,122 @@ namespace rct3::simulation
             }
         }
     } // namespace
+
+    float Upkeep::downtime_share() const
+    {
+        int sum = 0;
+        for (const std::uint8_t w : downtime)
+            sum += w;
+        return static_cast<float>(sum) / static_cast<float>(downtime.size() * kDowntimeSamples);
+    }
+
+    namespace
+    {
+        /// `staff` and everyone sharing their zone.
+        std::vector<entt::entity> zone_of(const entt::registry& r, entt::entity staff)
+        {
+            const auto* patrol = r.try_get<Patrol>(staff);
+            if (patrol == nullptr || patrol->zone == 0)
+                return { staff };
+            std::vector<entt::entity> all;
+            for (const auto [e, p] : r.view<const Patrol>().each())
+                if (p.zone == patrol->zone)
+                    all.push_back(e);
+            return all;
+        }
+
+        /// Sets the tiles of `staff`'s zone; with none left, the zone keeps them only as members.
+        void set_tiles(entt::registry& r, entt::entity staff, const std::vector<glm::ivec2>& tiles)
+        {
+            for (const entt::entity e : zone_of(r, staff))
+            {
+                if (tiles.empty() && r.get_or_emplace<Patrol>(e).zone == 0)
+                    r.remove<Patrol>(e);
+                else
+                    r.get_or_emplace<Patrol>(e).tiles = tiles;
+            }
+        }
+    } // namespace
+
+    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, int across, bool add)
+    {
+        const auto* patrol = r.try_get<Patrol>(staff);
+        std::vector<glm::ivec2> tiles = patrol != nullptr ? patrol->tiles : std::vector<glm::ivec2> { };
+        for (int dc = -across / 2; dc <= across / 2; ++dc)
+            for (int dr = -across / 2; dr <= across / 2; ++dr)
+            {
+                const glm::ivec2 t = at + glm::ivec2(dc, dr);
+                const auto in = std::ranges::find(tiles, t);
+                if (add && in == tiles.end())
+                    tiles.push_back(t);
+                else if (!add && in != tiles.end())
+                    tiles.erase(in);
+            }
+        set_tiles(r, staff, tiles);
+    }
+
+    void clear_patrol(entt::registry& r, entt::entity staff)
+    {
+        set_tiles(r, staff, { });
+    }
+
+    void fill_patrol(entt::registry& r, entt::entity staff)
+    {
+        const auto* patrol = r.try_get<Patrol>(staff);
+        if (patrol == nullptr || patrol->tiles.empty())
+            return;
+        glm::ivec2 low = patrol->tiles.front();
+        glm::ivec2 high = low;
+        for (const glm::ivec2 t : patrol->tiles)
+        {
+            low = glm::min(low, t);
+            high = glm::max(high, t);
+        }
+        std::vector<glm::ivec2> tiles;
+        for (int col = low.x; col <= high.x; ++col)
+            for (int row = low.y; row <= high.y; ++row)
+                tiles.emplace_back(col, row);
+        set_tiles(r, staff, tiles);
+    }
+
+    void join_zone(entt::registry& r, entt::entity staff, std::uint32_t zone)
+    {
+        if (zone == 0)
+        {
+            if (auto* patrol = r.try_get<Patrol>(staff))
+            {
+                patrol->zone = 0;
+                if (patrol->tiles.empty())
+                    r.remove<Patrol>(staff);
+            }
+            return;
+        }
+        std::optional<std::vector<glm::ivec2>> tiles;
+        for (const auto [e, p] : r.view<const Patrol>().each())
+            if (e != staff && p.zone == zone)
+                tiles = p.tiles;
+        auto& patrol = r.get_or_emplace<Patrol>(staff);
+        patrol.zone = zone;
+        if (tiles)
+            patrol.tiles = std::move(*tiles);
+    }
+
+    std::size_t uncovered_paths(const SimWorld& world, StaffRole role)
+    {
+        std::vector<const Patrol*> areas;
+        for (const auto [e, staff] : world.registry.view<const Staff>().each())
+        {
+            if (staff.role != role)
+                continue;
+            const auto* patrol = world.registry.try_get<Patrol>(e);
+            if (patrol == nullptr || patrol->tiles.empty())
+                return 0;
+            areas.push_back(patrol);
+        }
+        if (areas.empty())
+            return 0;
+        return static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), [&](const PathNode& n) { return !n.queue && std::ranges::none_of(areas, [&](const Patrol* a) { return a->covers(n.tile); }); }));
+    }
 
     std::int32_t old_litter(const SimWorld& world)
     {
@@ -867,6 +1057,12 @@ namespace rct3::simulation
                     {
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
+                        // Waiting for the others: in a ring with them on the last tile.
+                        if (stride.route.empty() && errand.kind == ErrandKind::Waiting)
+                        {
+                            const auto [place, of] = place_in_party(r, movers[i]);
+                            stride.lane_to = ring_lane(place, of);
+                        }
                     }
                     else if (errand.kind != ErrandKind::Wandering)
                     {
@@ -896,7 +1092,7 @@ namespace rct3::simulation
                             }
                             auto goal = going_home(r, paths, movers[i], at, dice, night);
                             if (!goal)
-                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0);
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0, taste_of(r, movers[i]));
                             if (goal)
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };
@@ -1084,6 +1280,17 @@ namespace rct3::simulation
                 r.emplace<Dice>(e, dice_for(world, e));
             if (!upkeep.broken)
                 upkeep.since_inspection += dt;
+            if ((upkeep.sample_clock += dt) >= kDowntimeSampleSeconds)
+            {
+                upkeep.sample_clock -= kDowntimeSampleSeconds;
+                upkeep.downtime[0] += upkeep.broken && upkeep.downtime[0] < kDowntimeSamples;
+                if (++upkeep.samples >= kDowntimeSamples)
+                {
+                    std::shift_right(upkeep.downtime.begin(), upkeep.downtime.end(), 1);
+                    upkeep.downtime[0] = 0;
+                    upkeep.samples = 0;
+                }
+            }
             for (const entt::entity guest : ride.queue)
                 if (r.valid(guest) && (r.get<Errand>(guest).queued += dt) >= kLongQueue)
                     think(r, guest, ThoughtKind::QueueTooLong, e, now);
@@ -1126,8 +1333,11 @@ namespace rct3::simulation
                     r.get<Errand>(guest) = after_ride(r, guest, e);
                     if (felt >= kEnjoyed)
                         think(r, guest, ThoughtKind::Enjoyed, e, now);
-                    if (ride.intensity > mood.tolerance + kWildest)
+                    const Taste taste = taste_of(r, guest);
+                    if (ride.intensity > std::min(mood.tolerance + kWildest, taste.most))
                         think(r, guest, ThoughtKind::TooIntense, e, now);
+                    else if (ride.intensity < taste.least)
+                        think(r, guest, ThoughtKind::TooTame, e, now);
                     const NodeId out = ride.exit != kNoNode ? ride.exit : attraction.entrance;
                     stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
                     if (mood.nausea >= kSick && random::chance(r.get<Dice>(guest).state, kSickAfterRide))
@@ -1152,6 +1362,13 @@ namespace rct3::simulation
                 upkeep.reliability = std::max(upkeep.reliability - kWearPerRun, 0.0f);
                 if (random::chance(r.get<Dice>(e).state, kBreakdownPerRun * (1 - upkeep.reliability)))
                 {
+                    // Any of the kinds a ride of its sort can have, alike. Our own choice.
+                    using enum Breakdown;
+                    constexpr std::array kCoaster { EmergencyStop, RestraintsFailToOpen, RestraintsFailToClose, TrainStuckLeavingStation, StationBrakesFail, ControlFailure };
+                    constexpr std::array kFlat { RestraintsFailToOpen, RestraintsFailToClose, DoorsFailToOpen, DoorsFailToClose, ControlFailure };
+                    const bool coaster = r.all_of<Trains>(e);
+                    const std::size_t pick = random::below(r.get<Dice>(e).state, coaster ? kCoaster.size() : kFlat.size());
+                    upkeep.kind = upkeep.last = coaster ? kCoaster[pick] : kFlat[pick];
                     upkeep.broken = true;
                     ++upkeep.breakdowns;
                     attraction.open = false;
@@ -1165,14 +1382,21 @@ namespace rct3::simulation
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                 {
                     Coaster& train = fleet->trains[t];
+                    if (upkeep.broken && upkeep.kind == Breakdown::EmergencyStop)
+                        continue; // Halted on the track till fixed
                     if (drive(train, dt, room_ahead(fleet->trains, t)))
                         unload(fleet->riders[t]);
                     if (!train.running && train.travelled == 0 && !loading)
                         loading = t;
                 }
             }
-            else if (ride.timer > 0 && --ride.timer == 0)
-                unload(ride.riders);
+            else
+            {
+                // Done, but with its restraints or doors stuck shut, its riders cannot get off till it is fixed.
+                const bool held = upkeep.broken && (upkeep.kind == Breakdown::RestraintsFailToOpen || upkeep.kind == Breakdown::DoorsFailToOpen);
+                if (ride.timer > 0 && !(held && ride.timer == 1) && --ride.timer == 0)
+                    unload(ride.riders);
+            }
             // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
             // its departure settings say.
             // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
@@ -1181,7 +1405,33 @@ namespace rct3::simulation
             auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*loading] : &ride.riders;
             if (riders != nullptr && at_front && riders->size() < ride.capacity)
             {
-                const std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), ride.queue.size());
+                std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), ride.queue.size());
+                // A party in line rides on one load: cut through by the seats left, it waits for the next when it
+                // fits one.
+                if (boarding < ride.queue.size())
+                {
+                    const auto party_of = [&](entt::entity g) {
+                        const auto* m = r.valid(g) ? r.try_get<Member>(g) : nullptr;
+                        return m != nullptr ? m->party : entt::null;
+                    };
+                    if (const entt::entity cut = party_of(ride.queue[boarding]); cut != entt::null && boarding > 0 && party_of(ride.queue[boarding - 1]) == cut)
+                    {
+                        std::size_t first = boarding;
+                        while (first > 0 && party_of(ride.queue[first - 1]) == cut)
+                            --first;
+                        std::size_t last = boarding;
+                        while (last < ride.queue.size() && party_of(ride.queue[last]) == cut)
+                            ++last;
+                        auto& count = r.ctx().emplace<PartyBoarding>();
+                        if (last - first <= ride.capacity)
+                        {
+                            boarding = first;
+                            ++count.held;
+                        }
+                        else
+                            ++count.split;
+                    }
+                }
                 for (std::size_t i = 0; i < boarding; ++i)
                 {
                     const entt::entity guest = ride.queue[i];
@@ -1273,14 +1523,17 @@ namespace rct3::simulation
             if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
             {
                 const NodeId exit = r.get<CycleRide>(ride).exit != kNoNode ? r.get<CycleRide>(ride).exit : r.get<Attraction>(ride).entrance;
+                const NodeId spot = waiting_spot(paths, exit);
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
-                    if (errand.kind != ErrandKind::Following && !(m == party.leader && errand.kind == ErrandKind::Wandering))
-                        continue;
                     auto& stride = r.get<Stride>(m);
+                    // Those going to wait, and riders just off, who walk over to the others.
+                    const bool off = errand.kind == ErrandKind::Waiting && stride.route.empty() && stride.progress >= 1 && stride.to == exit && spot != exit;
+                    if (errand.kind != ErrandKind::Following && !(m == party.leader && errand.kind == ErrandKind::Wandering) && !off)
+                        continue;
                     const NodeId at = stride.progress < 0.5f ? stride.from : stride.to;
-                    stride.route = paths.route(at, exit).value_or(std::vector<NodeId> { });
+                    stride.route = paths.route(at, spot).value_or(std::vector<NodeId> { });
                     stride.from = at;
                     stride.to = at;
                     stride.progress = 1;

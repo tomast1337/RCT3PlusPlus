@@ -74,3 +74,22 @@ TEST_CASE("a guest who cannot pay thinks so, and keeps no more than six thoughts
     CHECK(times(park, g, ThoughtKind::CantAfford) == 1);
     CHECK(park.world().registry.get<Thoughts>(g).recent.size() == 6);
 }
+
+TEST_CASE("guests go on rides their taste takes in, and say so of one too tame")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto gentle = park.flat_ride("Carousel", { 3, 0 }, 0, { .capacity = 4, .cycle_seconds = 10, .intensity = 0.1f });
+    auto& r = park.world().registry;
+    const auto thrill_seeker = park.guest({ 0, 0 });
+    r.emplace<Taste>(thrill_seeker, 0.4f, 0.9f);
+    const auto anyone = park.guest({ 0, 0 });
+    park.run_seconds(600);
+    CHECK(r.get<Attraction>(gentle).customers > 0);
+    CHECK(times(park, thrill_seeker, ThoughtKind::TooTame) == 0); // Never chose it
+    CHECK(std::ranges::none_of(r.get<Thoughts>(anyone).recent, [&](const Thought& t) { return t.kind == ThoughtKind::TooTame; }));
+    // Brought along anyway, they find it too tame.
+    r.get<Errand>(thrill_seeker) = { ErrandKind::Heading, gentle, 0 };
+    r.get<Stride>(thrill_seeker).route = { };
+    CHECK(park.run_until([&] { return times(park, thrill_seeker, ThoughtKind::TooTame) == 1; }, 600));
+}

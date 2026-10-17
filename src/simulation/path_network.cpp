@@ -5,7 +5,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <deque>
+#include <functional>
 #include <limits>
+#include <numbers>
+#include <queue>
 
 namespace rct3::simulation
 {
@@ -52,7 +55,31 @@ namespace rct3::simulation
             nodes_[id].next[side] = best;
             nodes_[best].next[(side + 2) % 4] = id;
         }
+        // The squares the new tile closes, seen from each tile round it.
+        for (int dc = -1; dc <= 1; ++dc)
+            for (int dr = -1; dr <= 1; ++dr)
+            {
+                const auto [first, last] = by_tile_.equal_range(key(tile.col + dc, tile.row + dr));
+                for (auto it = first; it != last; ++it)
+                    join_corners(it->second);
+            }
         return id;
+    }
+
+    void PathNetwork::join_corners(NodeId id)
+    {
+        // Corner k lies between side k and the side after it.
+        PathNode& a = nodes_[id];
+        for (std::size_t k = 0; k < 4; ++k)
+        {
+            const std::size_t across = (k + 1) % 4;
+            const NodeId b = a.next[k];
+            const NodeId c = a.next[across];
+            const NodeId d = b != kNoNode ? nodes_[b].next[across] : kNoNode;
+            const bool square = !a.queue && c != kNoNode && d != kNoNode && nodes_[c].next[k] == d && std::ranges::all_of(std::array { b, c, d }, [&](NodeId n) { return !nodes_[n].queue && nodes_[n].tile.level == a.tile.level; });
+            a.corner[k] = square ? d : kNoNode;
+            corners_ = corners_ || square;
+        }
     }
 
     std::optional<NodeId> PathNetwork::nearest(glm::vec3 at) const
@@ -86,6 +113,46 @@ namespace rct3::simulation
             return std::nullopt;
         if (from == to)
             return std::vector<NodeId> { };
+        const auto walk_to = [&](const std::vector<NodeId>& came) {
+            std::vector<NodeId> walk;
+            for (NodeId s = to; s != from; s = came[s])
+                walk.push_back(s);
+            std::ranges::reverse(walk);
+            return walk;
+        };
+        if (corners_)
+        {
+            // Steps across squares are longer, so the shortest walk is found by length; ties go to the lower node,
+            // so the same network always gives the same walk.
+            constexpr float kAcross = std::numbers::sqrt2_v<float>;
+            std::vector<NodeId> came(nodes_.size(), kNoNode);
+            std::vector<float> length(nodes_.size(), std::numeric_limits<float>::max());
+            std::priority_queue<std::pair<float, NodeId>, std::vector<std::pair<float, NodeId>>, std::greater<>> open;
+            length[from] = 0;
+            came[from] = from;
+            open.emplace(0.0f, from);
+            while (!open.empty())
+            {
+                const auto [so_far, at] = open.top();
+                open.pop();
+                if (at == to)
+                    return walk_to(came);
+                if (so_far > length[at])
+                    continue;
+                const auto step = [&](NodeId n, float cost) {
+                    if (n == kNoNode || (nodes_[n].queue && n != to) || so_far + cost >= length[n])
+                        return;
+                    length[n] = so_far + cost;
+                    came[n] = at;
+                    open.emplace(length[n], n);
+                };
+                for (const NodeId n : nodes_[at].next)
+                    step(n, 1);
+                for (const NodeId n : nodes_[at].corner)
+                    step(n, kAcross);
+            }
+            return std::nullopt;
+        }
         // Every step costs the same, so a breadth-first search finds a shortest walk. Sides are tried in a fixed
         // order, so the same network always gives the same walk.
         std::vector<NodeId> came(nodes_.size(), kNoNode);
@@ -101,13 +168,7 @@ namespace rct3::simulation
                     continue;
                 came[n] = at;
                 if (n == to)
-                {
-                    std::vector<NodeId> walk;
-                    for (NodeId s = to; s != from; s = came[s])
-                        walk.push_back(s);
-                    std::ranges::reverse(walk);
-                    return walk;
-                }
+                    return walk_to(came);
                 open.push_back(n);
             }
         }

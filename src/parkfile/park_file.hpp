@@ -21,6 +21,12 @@
 //   "WALT" v1  Wallet:   count u32, then entity u32, cash i64
 //   "DPRT" v1  Departure: count u32, then entity u32, load waited for u8 (0 full, 1 three quarters, 2 half,
 //              3 quarter, 4 any), least and longest wait i32 seconds (-1 none)
+//   "UPKP" v1  Upkeep:   count u32, then entity u32, reliability f32, broken u8, breakdown going on and last
+//              i32 (as saved parks number them), seconds since inspection and between inspections f32 (negative
+//              never), breakdowns u32, 8 downtime windows u8 (newest first), samples in the newest u8, seconds
+//              since the last sample f32. Which mechanic is on the way is not kept; one is sent again.
+//   "PTRL" v1  Patrol:   count u32, then entity u32, shared zone u32 (0 none), tile count u32, then each
+//              tile's col and row i32
 //
 // Component records are in ascending entity order and name only entities listed in "ENTS". A reader skips
 // chunks whose tag it does not know, so newer files with extra chunks still load; it refuses a chunk whose

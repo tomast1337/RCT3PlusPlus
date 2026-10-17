@@ -420,6 +420,45 @@ namespace rct3::ui
             }
         }
 
+        void patrol(InfoPage& page, const PersonFacts& facts, const StringTable& strings)
+        {
+            const std::size_t tiles = facts.patrol_tiles.value_or(0);
+            add(page, strings, "Rct3pp_PatrolTiles", tiles > 0 ? ascii(std::to_string(tiles)) : text(strings, "Rct3pp_PatrolWholePark"));
+            if (facts.uncovered_paths > 0)
+                add(page, strings, "Rct3pp_PatrolUncovered", ascii(std::to_string(facts.uncovered_paths)));
+            InfoControl paint;
+            paint.id = person_control(PersonControl::PatrolPaint);
+            paint.kind = InfoControlKind::Tick;
+            paint.label = text(strings, "Rct3pp_PatrolPaint");
+            paint.value = facts.painting_patrol ? 1 : 0;
+            page.controls.push_back(std::move(paint));
+            InfoControl brush;
+            brush.id = person_control(PersonControl::PatrolBrush);
+            brush.kind = InfoControlKind::Choice;
+            brush.label = text(strings, "Rct3pp_PatrolBrush");
+            for (const int across : kPatrolBrushes)
+                brush.items.push_back(ascii(std::format("{0} x {0}", across)));
+            brush.value = facts.patrol_brush;
+            page.controls.push_back(std::move(brush));
+            InfoControl zone;
+            zone.id = person_control(PersonControl::PatrolZone);
+            zone.kind = InfoControlKind::Choice;
+            zone.label = text(strings, "Rct3pp_PatrolZone");
+            zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
+            for (std::uint32_t z = 1; z <= kPatrolZones; ++z)
+                zone.items.push_back(ascii(std::to_string(z)));
+            zone.value = static_cast<int>(facts.patrol_zone);
+            page.controls.push_back(std::move(zone));
+            for (const auto [id, key] : { std::pair { PersonControl::PatrolFill, "Rct3pp_PatrolFill" }, std::pair { PersonControl::PatrolClear, "Rct3pp_PatrolClear" }, std::pair { PersonControl::PatrolCopy, "Rct3pp_PatrolCopy" } })
+            {
+                InfoControl button;
+                button.id = person_control(id);
+                button.kind = InfoControlKind::Button;
+                button.label = text(strings, key);
+                page.controls.push_back(std::move(button));
+            }
+        }
+
         void costume(InfoPage& page, const save::Staff& s, const StringTable& strings)
         {
             InfoControl c;
@@ -547,6 +586,8 @@ namespace rct3::ui
             case PersonTab::Tasks:
                 if (facts.staff != nullptr)
                     staff_tasks(page, *facts.staff, strings);
+                if (facts.patrol_tiles)
+                    patrol(page, facts, strings);
                 break;
             case PersonTab::Costume:
                 if (facts.staff != nullptr)

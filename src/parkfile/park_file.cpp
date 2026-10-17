@@ -287,7 +287,81 @@ namespace rct3::parkfile
             }
         };
 
-        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet, simulation::Departure>;
+        template<> struct Stored<simulation::Upkeep>
+        {
+            static constexpr std::string_view kTag = "UPKP";
+            static constexpr std::uint32_t kVersion = 1;
+            static constexpr std::size_t kMinRecord = 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 1 + 4;
+            static void write(Writer& w, const simulation::Upkeep& u)
+            {
+                w.number(u.reliability);
+                w.number(std::uint8_t { u.broken });
+                w.number(std::to_underlying(u.kind));
+                w.number(std::to_underlying(u.last));
+                w.number(u.since_inspection);
+                w.number(u.inspect_every);
+                w.number(u.breakdowns);
+                for (const std::uint8_t d : u.downtime)
+                    w.number(d);
+                w.number(u.samples);
+                w.number(u.sample_clock);
+            }
+            static std::expected<simulation::Upkeep, std::string> read(Reader& r)
+            {
+                simulation::Upkeep u;
+                u.reliability = r.number<float>();
+                u.broken = r.number<std::uint8_t>() != 0;
+                const auto kind = r.number<std::int32_t>();
+                const auto last = r.number<std::int32_t>();
+                constexpr auto kLast = std::to_underlying(simulation::Breakdown::ControlFailure);
+                if (kind < 0 || kind > kLast || last < 0 || last > kLast)
+                    return std::unexpected(std::format("unknown breakdown {} or {}", kind, last));
+                u.kind = static_cast<simulation::Breakdown>(kind);
+                u.last = static_cast<simulation::Breakdown>(last);
+                u.since_inspection = r.number<float>();
+                u.inspect_every = r.number<float>();
+                u.breakdowns = r.number<std::uint32_t>();
+                for (std::uint8_t& d : u.downtime)
+                    d = r.number<std::uint8_t>();
+                u.samples = r.number<std::uint8_t>();
+                u.sample_clock = r.number<float>();
+                return u;
+            }
+        };
+
+        template<> struct Stored<simulation::Patrol>
+        {
+            static constexpr std::string_view kTag = "PTRL";
+            static constexpr std::uint32_t kVersion = 1;
+            static constexpr std::size_t kMinRecord = 4 + 4 + 4;
+            static void write(Writer& w, const simulation::Patrol& p)
+            {
+                w.number(p.zone);
+                w.number(static_cast<std::uint32_t>(p.tiles.size()));
+                for (const glm::ivec2 t : p.tiles)
+                {
+                    w.number(std::int32_t { t.x });
+                    w.number(std::int32_t { t.y });
+                }
+            }
+            static std::expected<simulation::Patrol, std::string> read(Reader& r)
+            {
+                simulation::Patrol p;
+                p.zone = r.number<std::uint32_t>();
+                const auto count = r.number<std::uint32_t>();
+                if (count > r.left() / 8)
+                    return std::unexpected(std::format("{} tiles cannot fit in {} bytes", count, r.left()));
+                p.tiles.reserve(count);
+                for (std::uint32_t i = 0; i < count; ++i)
+                {
+                    const auto col = r.number<std::int32_t>();
+                    p.tiles.emplace_back(col, r.number<std::int32_t>());
+                }
+                return p;
+            }
+        };
+
+        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet, simulation::Departure, simulation::Upkeep, simulation::Patrol>;
 
         std::uint32_t id(entt::entity e)
         {

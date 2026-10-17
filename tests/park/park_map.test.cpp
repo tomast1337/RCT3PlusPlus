@@ -225,3 +225,15 @@ TEST_CASE("people are dots on a clear picture, guests and staff by their layers"
     CHECK(guests.at(4, 4).a == 255);
     CHECK(guests.at(28, 28).a == 0);
 }
+
+TEST_CASE("the staff's patrol areas are tinted under the people, deeper where they overlap")
+{
+    const save::TerrainGrid g = flat(4, 4);
+    const std::vector<glm::ivec2> tiles { { 0, 0 }, { 0, 0 }, { 3, 3 } };
+    const MapPicture p = people_picture(g, 8, { }, all_map_layers(), tiles);
+    // Row 0 is at the bottom of the picture.
+    CHECK(p.at(4, 28).a > p.at(28, 4).a);
+    CHECK(p.at(28, 4).a > 0);
+    CHECK(p.at(12, 12).a == 0);
+    CHECK(people_picture(g, 8, { }, only({ MapLayer::Guests }), tiles).at(4, 28).a == 0);
+}

@@ -186,6 +186,14 @@ namespace rct3::render
         Lit,
         /// Lit, with TexturedCutout's holes.
         LitCutout,
+        /// Lit, for an object drawn at two levels of detail at once while the eye's distance from it runs through a
+        /// band. Inputs as Lit, then location 4 the object's anchor and the distance the band starts at (Float4),
+        /// and location 5 the distance it ends at and the side (Float2): 1 for the coarser level, which draws
+        /// more of the pixels the farther through the band the eye is, -1 for the finer, which draws the rest. A
+        /// transform without perspective draws both whole. Sides 2 and -2 do the same, tinted red and blue.
+        LitCrossing,
+        /// LitCrossing, with TexturedCutout's holes.
+        LitCrossingCutout,
         /// A water surface. Inputs as Lit, with location 1's alpha how see-through the water is and location 2's
         /// first value the depth of water under the point. `DrawCommand::texture` is a tiling picture of waves
         /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
@@ -204,6 +212,12 @@ namespace rct3::render
         /// green, times colour blue, opaque.
         Glow,
     };
+
+    /// Whether `shader` is one of the Lit family, which reads the light and the shadow.
+    [[nodiscard]] constexpr bool lit_shader(Shader shader)
+    {
+        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout;
+    }
 
     enum class Topology : std::uint8_t
     {

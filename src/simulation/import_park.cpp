@@ -10,11 +10,14 @@
 #include "simulation/systems.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 namespace rct3::simulation
 {
@@ -26,7 +29,7 @@ namespace rct3::simulation
             return std::ranges::search(text, word, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == b; }).begin() != text.end();
         }
 
-        /// Drink or food, guessed from a name.
+        /// Drink, food or umbrella, guessed from a name.
         // shortcut: matches against a few words, upgrade to the item's asset kind once that is decoded.
         std::optional<Product> product_named(std::string_view name)
         {
@@ -36,10 +39,12 @@ namespace rct3::simulation
             for (const std::string_view w : { "burger", "fries", "fry", "chips", "pizza", "hotdog", "hot dog", "popcorn", "candy", "cotton", "ice cream", "icecream", "donut", "chicken", "pretzel", "food", "noodle", "taco", "sandwich", "cookie", "nugget", "kebab", "substall" })
                 if (contains(name, w))
                     return Product::Food;
+            if (contains(name, "umbrella"))
+                return Product::Umbrella;
             return std::nullopt;
         }
 
-        /// The first item of a stall that is a drink or food, by its name; where no item's name tells (some saves
+        /// The first item of a stall that is a drink, food or umbrella, by its name; where no item's name tells (some saves
         /// keep only a placeholder), by the stall's own symbol, at its first item's price.
         std::optional<std::pair<Product, std::int64_t>> sale_of(const save::Stall& stall)
         {
@@ -50,6 +55,19 @@ namespace rct3::simulation
                 return std::pair { *product, stall.items.front().price };
             return std::nullopt;
         }
+        /// The footpath node on the tile `o` stands on, or on one beside it.
+        std::optional<NodeId> path_by(const PathNetwork& paths, const save::PlacedObject& o)
+        {
+            constexpr std::array<glm::vec2, 5> kAround { { { 0, 0 }, { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } } };
+            for (const glm::vec2 d : kAround)
+            {
+                const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f + d.x) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f + d.y) * paths.tile_size };
+                if (const auto at = paths.nearest(middle); at && !paths.nodes()[*at].queue)
+                    return at;
+            }
+            return std::nullopt;
+        }
+
         /// The path node beside `spot` nearest its height, trying the side `facing` first; queue tiles only with
         /// `queues`, otherwise footpaths only. kNoNode when none touches it.
         NodeId beside(const PathNetwork& paths, const save::PlacementSpot& spot, std::uint8_t facing, bool queues)
@@ -181,7 +199,7 @@ namespace rct3::simulation
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->second, .open = stall.base.state == save::AttractionState::Open });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->second, .open = stall.base.state == save::AttractionState::Open, .saved = stall.base.id });
             r.emplace<Shop>(e, sale->first);
             ++added;
         }
@@ -242,6 +260,92 @@ namespace rct3::simulation
         return out;
     }
 
+    std::optional<Product> facility_of(std::uint32_t kind)
+    {
+        // Checked against the game's special attractions: kind 11 is named ToiletName, 12 CashMachineName and 13
+        // MedicalCentreName in their items.
+        switch (kind)
+        {
+            case 11:
+                return Product::Toilet;
+            case 12:
+                return Product::CashMachine;
+            case 13:
+                return Product::FirstAid;
+            default:
+                return std::nullopt;
+        }
+    }
+
+    std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of)
+    {
+        std::size_t added = 0;
+        for (const save::Ride& ride : rides.rides)
+        {
+            if (ride.kind != save::RideKind::Special || !ride.base.spot)
+                continue;
+            const auto kind = kind_of(ride);
+            const auto product = kind ? facility_of(*kind) : std::nullopt;
+            const NodeId entrance = product ? beside(world.paths, *ride.base.spot, ride.base.facing, false) : kNoNode;
+            if (entrance == kNoNode)
+                continue;
+            auto& r = world.registry;
+            const entt::entity e = r.create();
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::AttractionState::Open, .saved = ride.base.id });
+            r.emplace<Shop>(e, *product);
+            ++added;
+        }
+        return added;
+    }
+
+    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_sight)
+    {
+        std::size_t added = 0;
+        for (const save::PlacedObject& o : objects)
+        {
+            if (o.hidden || !is_sight(o))
+                continue;
+            if (const auto at = path_by(world.paths, o))
+            {
+                world.registry.emplace<PathItem>(world.registry.create(), PathItem { *at, PathItemKind::Sight });
+                ++added;
+            }
+        }
+        return added;
+    }
+
+    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate)
+    {
+        for (const save::PlacedObject& o : objects)
+        {
+            if (o.hidden || !is_gate(o))
+                continue;
+            if (const auto at = path_by(world.paths, o))
+            {
+                const entt::entity e = world.registry.create();
+                world.registry.emplace<ParkGate>(e, *at);
+                return e;
+            }
+        }
+        return entt::null;
+    }
+
+    Upkeep upkeep_of(const save::Ride& ride)
+    {
+        // The intervals the maintenance page lists, in its order: every 10, 20, 30 and 45 minutes, every hour,
+        // every two hours, never.
+        constexpr std::array<float, 7> kIntervals { 600, 1200, 1800, 2700, 3600, 7200, -1 };
+        const std::int32_t interval = ride.breakdown.inspection_interval;
+        using enum save::RepairStatus;
+        const save::RepairStatus status = ride.base.repair_status;
+        return {
+            .reliability = std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f),
+            .broken = ride.breakdown.current != save::BreakdownKind::None || status == MechanicCalled || status == MechanicOnTheWay || status == BeingFixed,
+            .since_inspection = std::max(ride.base.time_since_inspection, 0.0f),
+            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? kIntervals[static_cast<std::size_t>(interval)] : Upkeep { }.inspect_every,
+        };
+    }
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters)
     {
         std::vector<entt::entity> added(rides.rides.size(), entt::null);
@@ -271,7 +375,7 @@ namespace rct3::simulation
                 exit = beside(world.paths, *station.exit_spot, station.exit_spot->direction, false);
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open, .saved = ride.base.id });
             // Rated as the park has it; else from its last test, or a test run of our own.
             std::optional<Ratings> rated;
             if (ride.assessment.valid)
@@ -287,9 +391,14 @@ namespace rct3::simulation
                 cycle.intensity = rating(rated->intensity);
                 cycle.nausea = rating(rated->nausea);
             }
+            if (ride.assessment.valid)
+                cycle.cover = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
             r.emplace<CycleRide>(e, std::move(cycle));
             if (coaster)
                 r.emplace<Trains>(e, trains_of(*coaster, ride));
+            r.emplace<Upkeep>(e, upkeep_of(ride));
+            if (r.get<Upkeep>(e).broken)
+                r.get<Attraction>(e).open = false;
             // The game offers the settings to tracked rides only; others hold leftovers.
             if (ride.kind == save::RideKind::Tracked)
                 r.emplace<Departure>(e, departure_of(ride.options));
@@ -363,7 +472,7 @@ namespace rct3::simulation
             const save::StaffKind kind = people.staff[i].kind;
             const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : StaffRole::Other;
             const entt::entity e = r.create();
-            r.emplace<Staff>(e, role);
+            r.emplace<Staff>(e, Staff { .role = role, .wage = kWagePerLevel * std::max(people.staff[i].wage_level, 1) });
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             start_walking(world, e, *at);
             out[i] = e;

@@ -69,6 +69,9 @@ namespace rct3::park
     [[nodiscard]] std::optional<BuildList> ride_list(std::uint32_t kind) noexcept;
     /// The list of a shop or facility by its attraction kind; nothing for kinds the shops menu leaves out.
     [[nodiscard]] std::optional<BuildList> shop_list(std::uint32_t kind) noexcept;
+    /// The attraction kind of the special attraction (a toilet, a cash machine and the like) named `name` in the
+    /// overlay `file`; nothing when the file has no such attraction.
+    [[nodiscard]] std::optional<std::uint32_t> special_attraction_kind(const std::filesystem::path& file, std::string_view name);
     /// The list of a piece of scenery by its item category; nothing for categories no list shows.
     [[nodiscard]] std::optional<BuildList> scenery_list(std::uint32_t category) noexcept;
 

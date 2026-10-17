@@ -27,7 +27,6 @@ namespace rct3::simulation
         std::optional<float> rating;             ///< 0 to 1; none before the park has one
         std::optional<RatingParts> rating_parts; ///< How the rating was made up; none until a week has been rated
         bool harder_rating = false;              ///< The scenario asks for a harder rating
-        RatingCarry rating_carry;                ///< Penalty and bonus still to apply
         float time = 0;                          ///< Calendar units since the park's calendar began, as the park file keeps them
         float zero_time = 0;                     ///< Where the calendar's weeks are counted from
         save::CalendarDate date;                 ///< The calendar's date at `time`
@@ -49,8 +48,8 @@ namespace rct3::simulation
     /// how many new calendar weeks were started.
     std::int32_t pass_time(ParkState& state, float seconds);
 
-    /// Works the rating out again for a new week, from the park's people and rides as they stand, and lets the
-    /// penalty and bonus fade.
+    /// Scores the park for a new week, from its people and rides as they stand, and moves the rating towards
+    /// the score.
     /// `old_litter`, when given, counts the litter lying long enough to count instead of the saved litter.
     void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
 

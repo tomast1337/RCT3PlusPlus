@@ -31,7 +31,6 @@ namespace rct3::simulation
                 if (const auto rating = park->park.rating())
                     s.rating = *rating / save::kMaxParkRating;
                 s.harder_rating = park->park.flags.has(save::ParkFlag::HarderRating);
-                s.rating_carry.penalty = park->park.rating_penalty;
             }
             s.messages = park_messages(park->messages);
         }
@@ -69,12 +68,9 @@ namespace rct3::simulation
             in.old_litter = *old_litter;
         in.harder = state.harder_rating;
         in.guests = state.guests;
-        in.penalty = state.rating_carry.penalty;
-        in.bonus = state.rating_carry.bonus;
         const RatingParts parts = rate_park(in);
         state.rating_parts = parts;
-        state.rating = static_cast<float>(parts.total) / static_cast<float>(kMaxRating);
-        state.rating_carry = fade(state.rating_carry, !state.cash.has_value());
+        state.rating = next_rating(state.rating, parts.total);
     }
 
 } // namespace rct3::simulation

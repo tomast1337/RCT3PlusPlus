@@ -1,5 +1,12 @@
 {
     "Rct3pp": {
+        "RatingHappiness": "Happy guests:",
+        "RatingRides": "Good rides:",
+        "RatingReliability": "Rides running:",
+        "RatingGuests": "Busy park:",
+        "RatingLitter": "Litter:",
+        "RatingHarder": "Harder rating:",
+        "RatingScore": "This week's score:",
         "InterfaceKeys": "Interface",
         "PressKeys": "Press keys...",
         "NoKeys": "None",

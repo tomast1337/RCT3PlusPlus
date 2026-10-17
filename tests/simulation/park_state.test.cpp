@@ -81,8 +81,6 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     park.clock.time = 50 + save::GameClock::kUnitsPerWeek - 10;
     park.has_park = true;
     park.park.park_rating.samples = { 900.0f };
-    park.park.rating_penalty = 60;
-    park.has_finance = true; // Money that can run out: the penalty fades slowly
     park.park.flags.raw = static_cast<std::uint32_t>(save::ParkFlag::HarderRating);
     simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
     CHECK(s.harder_rating);
@@ -92,11 +90,10 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     CHECK(simulation::pass_time(s, simulation::kSecondsPerHour / 4) == 0);
     CHECK(simulation::pass_time(s, simulation::kSecondsPerHour) == 1);
 
-    // An empty park, with the harder rating and the penalty taken off; the penalty then fades.
+    // An empty park scores half its happiness, less the harder rating's share; the rating moves half way there.
     simulation::rate_week(s, save::PeopleModel { }, save::RideModel { });
     REQUIRE(s.rating_parts);
-    CHECK(s.rating_parts->total == 250 - 100 - 60);
+    CHECK(s.rating_parts->total == 250 - 38);
     REQUIRE(s.rating);
-    CHECK(*s.rating == doctest::Approx(0.09f));
-    CHECK(s.rating_carry.penalty == 11);
+    CHECK(*s.rating == doctest::Approx((0.9f + 0.212f) / 2));
 }

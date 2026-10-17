@@ -22,15 +22,14 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 4> kSpeedHelp = { "Playing_PauseHelp", "Playing_PlayHelp", "Playing_FastForwardHelp", "Playing_SuperFastForwardHelp" };
         constexpr std::string_view kGuestsHelp = "Toolbar_TT_GuestsInPark";
         constexpr std::string_view kRatingHelp = "Toolbar_TT_ParkRating";
-        constexpr std::string_view kRatingBase = "ParkRatingBreakdown_Base";
-        constexpr std::string_view kRatingGuests = "ParkRatingBreakdown_NumGuests";
-        constexpr std::string_view kRatingHappy = "ParkRatingBreakdown_HappyGuests";
-        constexpr std::string_view kRatingUpTime = "ParkRatingBreakdown_RideUpTime";
-        constexpr std::string_view kRatingRides = "ParkRatingBreakdown_ExcitementIntensity";
-        constexpr std::string_view kRatingLitter = "ParkRatingBreakdown_LitterVomit";
-        constexpr std::string_view kRatingPenalty = "ParkRatingBreakdown_Penalty";
-        constexpr std::string_view kRatingBonus = "ParkRatingBreakdown_Bonus";
-        constexpr std::string_view kRatingTotal = "ParkRatingBreakdown_Total";
+        // Our own labels: the parts are those of our rating model.
+        constexpr std::string_view kRatingHappiness = "Rct3pp_RatingHappiness";
+        constexpr std::string_view kRatingRides = "Rct3pp_RatingRides";
+        constexpr std::string_view kRatingReliability = "Rct3pp_RatingReliability";
+        constexpr std::string_view kRatingGuests = "Rct3pp_RatingGuests";
+        constexpr std::string_view kRatingLitter = "Rct3pp_RatingLitter";
+        constexpr std::string_view kRatingHarder = "Rct3pp_RatingHarder";
+        constexpr std::string_view kRatingTotal = "Rct3pp_RatingScore";
         constexpr std::array<std::string_view, 7> kWeatherHelp = { "WeatherType_Sunny_TT", "WeatherType_SunnyCloudy_TT", "WeatherType_Cloudy_TT", "WeatherType_LightRain_TT", "WeatherType_HeavyRain_TT", "WeatherType_Thunderstorm_TT", "WeatherType_Snowstorm_TT" };
 
         // Where things sit in the bar, left to right: each item's size and the room before it.
@@ -109,14 +108,12 @@ namespace rct3::ui
             out += strings.get(label);
             out += ascii(std::format(" {:+}", value));
         };
-        line(kRatingBase, parts->base, false);
+        line(kRatingHappiness, parts->happiness, true);
+        line(kRatingRides, parts->rides, true);
+        line(kRatingReliability, parts->reliability, true);
         line(kRatingGuests, parts->guests, true);
-        line(kRatingHappy, parts->happy_guests, true);
-        line(kRatingUpTime, parts->ride_up_time, true);
-        line(kRatingRides, parts->ride_scores, true);
         line(kRatingLitter, parts->litter, false);
-        line(kRatingPenalty, parts->penalty, false);
-        line(kRatingBonus, parts->bonus, false);
+        line(kRatingHarder, parts->harder, false);
         out += u'\n';
         out += strings.get(kRatingTotal);
         out += ascii(std::format(" {}", parts->total));

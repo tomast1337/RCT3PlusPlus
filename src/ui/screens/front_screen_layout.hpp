@@ -108,14 +108,17 @@ namespace rct3::ui::front_screen
     [[nodiscard]] Rect button_rect(const Frame& frame, Point centre, float size);
 
     /// The box beside menu button `index` where its label shows, and its parts. The round patch is
-    /// centred on the button; the band (about as high as the pointed end's picture, 85) runs from the
+    /// centred on the button; the band, as high as the patch so the patch caps its end, runs from the
     /// patch's middle on to the right. The patch and the box's height scale by the round
     /// scale; the band's far end and the text's stretch across. Lengths are our own values.
     inline constexpr Point kLabelBoxOffset { -48, -48 };
     inline constexpr Point kLabelBoxSize { 400, 96 };
-    inline constexpr Rect kLabelPatch { 0, 0, 96, 96 };  ///< In the box: a white ring round the button
-    inline constexpr Rect kLabelBand { 48, 6, 270, 90 }; ///< A light band from the ring on to the right
-    inline constexpr Rect kLabelText { 104, 6, 245, 90 };
+    /// In the box: a white ring round the button. Its picture is 95 by 97 with the disc at the top, so the
+    /// box is as much taller to keep the disc as high as the band; the disc's flat side lies at 46.5.
+    inline constexpr Rect kLabelPatch { 0, 0, 96, 98 };
+    /// A light band from the ring on to the right, under the white arc even beside the top button.
+    inline constexpr Rect kLabelBand { 46, 0, 285, 96 };
+    inline constexpr Rect kLabelText { 104, 0, 245, 96 };
     /// The band's pointed end: the lower ones reach further, `kLabelEndStep` times the index squared.
     inline constexpr float kLabelEndStep = 12;
     struct LabelBox

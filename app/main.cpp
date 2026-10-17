@@ -223,6 +223,12 @@ namespace
         ImGui::Checkbox("Free camera", &park.free_camera);
         ImGui::SetItemTooltip("No tilt, zoom or map limits, and the camera leaves the ground");
         ImGui::SliderFloat("Haze", &park.haze_rate, 0.0f, 0.003f, "%.5f");
+        if (ImGui::Checkbox("Show level blending", &park.tint_crossing))
+        {
+            park.levels = { }; // The crossing objects are built again with or without the tint
+            park.since_rebuild = rct3::scene::kObjectRebuildInterval;
+        }
+        ImGui::SetItemTooltip("Objects blending between two levels of detail show the finer level blue, the coarser red");
         if (ImGui::Checkbox("Simulate guests", &park.simulate))
         {
             park.people_levels.clear(); // The still people are built again without or with the simulated ones

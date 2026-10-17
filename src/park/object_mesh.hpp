@@ -38,8 +38,9 @@ namespace rct3::park
         std::vector<GroundVertex> vertices;
         std::vector<std::uint32_t> indices;
         std::vector<ObjectBatch> batches;
-        std::size_t placed = 0;  ///< Objects drawn
-        std::size_t missing = 0; ///< Visible objects without a model
+        std::vector<std::uint32_t> owners; ///< By vertex, the index of the object it belongs to
+        std::size_t placed = 0;            ///< Objects drawn
+        std::size_t missing = 0;           ///< Visible objects without a model
     };
 
     using ObjectModels = std::map<std::string, ObjectModel, std::less<>>;
@@ -68,6 +69,27 @@ namespace rct3::park
 
     /// The level of each object seen from `eye`, with the models' distances times `scale`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
+
+    /// How far round a crossing objects are already drawn as crossing, as a share of its distance, so ones the
+    /// eye reaches between two looks at the levels are ready.
+    inline constexpr float kCrossMargin = 0.1f;
+
+    /// The levels objects are drawn at from some eye. Objects near the edge of a level are drawn at two levels
+    /// at once, and cross from the finer to the coarser as the eye's distance runs through their band.
+    struct LevelPlan
+    {
+        ObjectLevels steady;              ///< Drawn whole at one level; kNotDrawn for crossing objects
+        ObjectLevels finer;               ///< Crossing objects at their finer level, kNotDrawn for the others
+        ObjectLevels coarser;             ///< At their coarser level; kNotDrawn too past the last level
+        std::vector<glm::vec2> bands { }; ///< By object: the distances its crossing starts and ends at
+
+        bool operator==(const LevelPlan&) const = default;
+    };
+
+    /// The plan for `objects` seen from `eye`, with the models' distances times `scale`. An object starts crossing
+    /// into the next level `band` of a level's farthest distance before it, as the eye draws away, and is wholly
+    /// at the next level at the distance itself; with `band` 0, objects jump from level to level.
+    [[nodiscard]] LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale = 1);
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.

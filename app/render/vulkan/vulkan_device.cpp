@@ -869,7 +869,7 @@ namespace rct3::render::vulkan
             sets[1] = sampler_sets_[sampler];
             // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
             const Shader shader = pipeline->second.shader;
-            const bool lit = shader == Shader::Lit || shader == Shader::LitCutout;
+            const bool lit = lit_shader(shader);
             const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 5 : 2;
             std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
             if (lit)

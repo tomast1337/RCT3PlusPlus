@@ -16,6 +16,7 @@
 #include <format>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
 namespace rct3::render::vulkan
 {
@@ -156,6 +157,8 @@ namespace rct3::render::vulkan
             {
                 vkDestroyPipeline(device_, p.pipeline, nullptr);
                 vkDestroyPipeline(device_, p.wire, nullptr);
+                vkDestroyPipeline(device_, p.multi, nullptr);
+                vkDestroyPipeline(device_, p.multi_wire, nullptr);
             }
             for (VkSampler s : samplers_)
                 vkDestroySampler(device_, s, nullptr);
@@ -448,11 +451,104 @@ namespace rct3::render::vulkan
         view.format = kDepthFormat;
         view.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
         check(vkCreateImageView(device_, &view, nullptr, &depth_view_), "vkCreateImageView");
+        create_multisample();
+    }
+
+    // Like the depth buffer, the multisampled images serve both frames in flight.
+    void VulkanDevice::create_multisample()
+    {
+        if (samples_ <= 1)
+            return;
+        const auto make = [&](VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImage& image, VkDeviceMemory& memory, VkImageView& view) {
+            VkImageCreateInfo info { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+            info.imageType = VK_IMAGE_TYPE_2D;
+            info.format = format;
+            info.extent = { extent_.width, extent_.height, 1 };
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.samples = static_cast<VkSampleCountFlagBits>(samples_);
+            info.tiling = VK_IMAGE_TILING_OPTIMAL;
+            info.usage = usage;
+            info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            check(vkCreateImage(device_, &info, nullptr, &image), "vkCreateImage");
+            VkMemoryRequirements needs;
+            vkGetImageMemoryRequirements(device_, image, &needs);
+            VkMemoryAllocateInfo alloc { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+            alloc.allocationSize = needs.size;
+            alloc.memoryTypeIndex = find_memory_type(needs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            check(vkAllocateMemory(device_, &alloc, nullptr, &memory), "vkAllocateMemory");
+            check(vkBindImageMemory(device_, image, memory, 0), "vkBindImageMemory");
+            VkImageViewCreateInfo v { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            v.image = image;
+            v.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            v.format = format;
+            v.subresourceRange = { aspect, 0, 1, 0, 1 };
+            check(vkCreateImageView(device_, &v, nullptr, &view), "vkCreateImageView");
+        };
+        make(color_format_, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, multi_color_image_, multi_color_memory_, multi_color_view_);
+        make(kDepthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, multi_depth_image_, multi_depth_memory_, multi_depth_view_);
+    }
+
+    void VulkanDevice::destroy_multisample()
+    {
+        vkDestroyImageView(device_, multi_color_view_, nullptr);
+        vkDestroyImage(device_, multi_color_image_, nullptr);
+        vkFreeMemory(device_, multi_color_memory_, nullptr);
+        vkDestroyImageView(device_, multi_depth_view_, nullptr);
+        vkDestroyImage(device_, multi_depth_image_, nullptr);
+        vkFreeMemory(device_, multi_depth_memory_, nullptr);
+        multi_color_view_ = multi_depth_view_ = VK_NULL_HANDLE;
+        multi_color_image_ = multi_depth_image_ = VK_NULL_HANDLE;
+        multi_color_memory_ = multi_depth_memory_ = VK_NULL_HANDLE;
+    }
+
+    std::vector<std::uint32_t> VulkanDevice::sample_levels() const
+    {
+        if (gpu_ == VK_NULL_HANDLE)
+            return { };
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(gpu_, &props);
+        const VkSampleCountFlags counts = props.limits.framebufferColorSampleCounts & props.limits.framebufferDepthSampleCounts;
+        std::vector<std::uint32_t> levels;
+        for (const std::uint32_t n : { 2u, 4u, 8u })
+            if ((counts & n) != 0)
+                levels.push_back(n);
+        return levels;
+    }
+
+    void VulkanDevice::set_samples(std::uint32_t samples)
+    {
+        assert(state_ == State::Idle);
+        if (samples != 1 && !std::ranges::contains(sample_levels(), samples))
+            samples = 1;
+        if (samples == samples_)
+            return;
+        vkDeviceWaitIdle(device_);
+        destroy_multisample();
+        samples_ = samples;
+        create_multisample();
+        if (ui_ready_)
+        {
+            ImGui_ImplVulkan_PipelineInfo info = ui_pipeline_info();
+            ImGui_ImplVulkan_CreateMainPipeline(&info);
+        }
+    }
+
+    ImGui_ImplVulkan_PipelineInfo VulkanDevice::ui_pipeline_info() const
+    {
+        ImGui_ImplVulkan_PipelineInfo info { };
+        info.MSAASamples = static_cast<VkSampleCountFlagBits>(samples_);
+        info.PipelineRenderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+        info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+        info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &color_format_;
+        info.PipelineRenderingCreateInfo.depthAttachmentFormat = kDepthFormat;
+        return info;
     }
 
     // Destroys the swapchain and everything sized to it.
     void VulkanDevice::destroy_swapchain()
     {
+        destroy_multisample();
         vkDestroyImageView(device_, depth_view_, nullptr);
         vkDestroyImage(device_, depth_image_, nullptr);
         vkFreeMemory(device_, depth_memory_, nullptr);
@@ -635,10 +731,7 @@ namespace rct3::render::vulkan
         info.MinImageCount = 2;
         info.ImageCount = static_cast<std::uint32_t>(images_.size());
         info.UseDynamicRendering = true;
-        info.PipelineInfoMain.PipelineRenderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
-        info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-        info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &color_format_;
-        info.PipelineInfoMain.PipelineRenderingCreateInfo.depthAttachmentFormat = kDepthFormat;
+        info.PipelineInfoMain = ui_pipeline_info();
         info.CheckVkResultFn = check_imgui;
         if (!ImGui_ImplVulkan_Init(&info))
             throw std::runtime_error("ImGui Vulkan backend init failed");
@@ -790,7 +883,15 @@ namespace rct3::render::vulkan
 
         image_barrier(frame.commands, images_[image_index_], VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
         constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-        image_barrier(frame.commands, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT });
+        // The depth buffer is also written by the resolve of a multisampled depth, as colour output.
+        constexpr VkPipelineStageFlags2 kDepthWriters = kDepthStages | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        constexpr VkAccessFlags2 kDepthWrites = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        image_barrier(frame.commands, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthWriters, kDepthWrites, kDepthWriters, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | kDepthWrites });
+        if (samples_ > 1)
+        {
+            image_barrier(frame.commands, multi_color_image_, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+            image_barrier(frame.commands, multi_depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT });
+        }
 
         frame_stats_ = { };
         state_ = State::InFrame;
@@ -831,6 +932,21 @@ namespace rct3::render::vulkan
         depth.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depth.clearValue.depthStencil = { pass.clear_depth, 0 };
 
+        // The screen drawn with more samples: into the multisampled images, kept for later passes, and resolved
+        // into the screen's own as the pass ends. Depth takes its first sample; every device can do that.
+        pass_samples_ = pass_target_ == nullptr ? samples_ : 1;
+        if (pass_samples_ > 1)
+        {
+            color.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+            color.resolveImageView = color.imageView;
+            color.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            color.imageView = multi_color_view_;
+            depth.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+            depth.resolveImageView = depth.imageView;
+            depth.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            depth.imageView = multi_depth_view_;
+        }
+
         VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
         rendering.renderArea = { { 0, 0 }, area };
         rendering.layerCount = 1;
@@ -856,9 +972,33 @@ namespace rct3::render::vulkan
         if (pipeline == pipelines_.end() || vertices == buffers_.end())
             return;
 
+        Pipeline& p = pipeline->second;
+        if (pass_samples_ > 1 && p.multi_samples != pass_samples_)
+        {
+            // First drawn on a screen with this many samples: made for it, the old one let go.
+            for (const VkPipeline old : { p.multi, p.multi_wire })
+                if (old != VK_NULL_HANDLE)
+                    garbage_slot().pipelines.push_back(old);
+            p.multi = p.multi_wire = VK_NULL_HANDLE;
+            PipelineDesc desc = p.desc;
+            desc.layout.attributes = p.attributes;
+            try
+            {
+                std::tie(p.multi, p.multi_wire) = build_pipeline(desc, static_cast<VkSampleCountFlagBits>(pass_samples_));
+            }
+            catch (const std::exception& e)
+            {
+                static const auto log = logging::logger("vulkan");
+                log.error("pipeline with {} samples: {}", pass_samples_, e.what());
+                return;
+            }
+            p.multi_samples = pass_samples_;
+        }
+        const VkPipeline fill = pass_samples_ > 1 ? p.multi : p.pipeline;
+        const VkPipeline wire = pass_samples_ > 1 ? p.multi_wire : p.wire;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wireframe_ && pipeline->second.wire ? pipeline->second.wire : pipeline->second.pipeline);
-        const PushBlock block = push_block(command, pipeline->second.shader);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wireframe_ && wire ? wire : fill);
+        const PushBlock block = push_block(command, p.shader);
         vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
         if (command.texture)
         {
@@ -933,6 +1073,7 @@ namespace rct3::render::vulkan
         if (pass_target_ != nullptr && pass_target_->depth_id != 0)
             image_barrier(cmd, pass_target_->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         pass_target_ = nullptr;
+        pass_samples_ = 1;
         state_ = State::InFrame;
     }
 
@@ -950,7 +1091,8 @@ namespace rct3::render::vulkan
         constexpr VkAccessFlags2 kColorAccess = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
         // Earlier reads of the target finish before it is written; the screen goes back to drawing afterwards.
         image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
-        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        // Depth is written by drawing, or by the resolve of a multisampled depth as colour output.
+        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kDepthStages | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
         image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
         image_barrier(cmd, t.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
         VkImageCopy region { };

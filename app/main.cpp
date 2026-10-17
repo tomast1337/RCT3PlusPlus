@@ -521,6 +521,7 @@ int main(int argc, char** argv)
         return 1;
     }
     log.info("rendering with {} on {}", render::backend_name(backend), device->device_name());
+    const std::vector<std::uint32_t> sample_levels = device->sample_levels();
 
     auto ui_demo = rct3::scene::create_ui_demo(*device);
     if (!ui_demo)
@@ -632,6 +633,8 @@ int main(int argc, char** argv)
                 setup.screen_size = setup.screen_sizes.size();
             setup.screen_sizes.push_back({ s.width, s.height });
         }
+        for (const std::uint32_t n : sample_levels)
+            setup.anti_aliasing_levels.push_back(static_cast<int>(n));
         setup.keys = key_map;
         // The game's pictures, then the user's screenshots, shuffled together.
         if (const auto pictures = install->find("Slideshow/Default"))
@@ -876,6 +879,12 @@ int main(int argc, char** argv)
                     window->set_cursor(cursor);
                 });
                 prof::section("Draw", [&] {
+                    // The anti-aliasing option picks among the levels the device offers, after none.
+                    if (front)
+                    {
+                        const auto level = static_cast<std::size_t>(front->live->options.choice(config::GameOption::AntiAliasing));
+                        device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
+                    }
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
                     device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : kBackground });
                     if (phase == Phase::Intro)

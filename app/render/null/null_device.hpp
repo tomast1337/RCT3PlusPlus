@@ -47,6 +47,13 @@ namespace rct3::render::null
         void set_wireframe(bool /*on*/) override
         {
         }
+        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override
+        {
+            return { };
+        }
+        void set_samples(std::uint32_t /*samples*/) override
+        {
+        }
         void end_frame() override;
         [[nodiscard]] FrameStats stats() const override
         {

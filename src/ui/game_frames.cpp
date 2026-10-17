@@ -283,13 +283,14 @@ namespace rct3::ui::game_frames
     {
 
         // The front screen's backdrop, in design units. Everything is round one centre: the veil runs from
-        // a white band under the ring out to a circle that leaves the left edge blue, the ring lies over the
-        // band, and the strip along the bottom closes it all.
+        // a white band under the ring out to the screen's edges, but for a circle that leaves the left edge
+        // blue; the ring lies over the band, and the strip along the bottom closes it all.
         constexpr float kCentreX = 735.5f;
         constexpr float kCentreY = 241.5f;
         constexpr float kVeilOuter = 660;
         constexpr float kRingOuter = 441;
-        constexpr float kRingWidth = 22;
+        /// Approximation: matched by eye to the running game on a wide screen; the arc's pictures alone give 22.
+        constexpr float kRingWidth = 30;
         constexpr float kVeilInner = 442; ///< Inside it, a thinner white band under the ring
         constexpr float kUnderRingWidth = 19.5f;
         constexpr Color kUnderRing = hex("#ffffffee");
@@ -335,18 +336,21 @@ namespace rct3::ui::game_frames
         CodedFrame f;
         f.width = 1024;
         f.height = 768;
-        // Blue to the left of the centre, outside the veil.
+        // The veil, everywhere above the strip outside the white ring; the blue then covers it to the left.
+        const Rect above { screen.x0 - 1, screen.y0 - 1, screen.x1 + 1, kStripTop };
+        Shape veil = solid(kVeil);
+        veil.cut_x = kCentreX - above.x0;
+        veil.cut_y = kCentreY - above.y0;
+        veil.cut_radius = kVeilInner;
+        f.layers.push_back({ units(above), veil, { } });
+        // Blue to the left of the centre, outside the veil's circle.
         const Rect blue { screen.x0 - 1, screen.y0 - 1, kCentreX, kStripTop };
         Shape left = solid(kBackdropBlue);
         left.cut_x = kCentreX - blue.x0;
         left.cut_y = kCentreY - blue.y0;
         left.cut_radius = kVeilOuter;
         f.layers.push_back({ units(blue), left, { } });
-        // The veil, as a ring from its outer circle in to the white ring, stopped by the strip.
-        Shape veil = solid(kVeil, round_corners(kVeilOuter));
-        veil.ring = kVeilOuter - kVeilInner;
         const FrameBox above_strip = units({ screen.x0, screen.y0, screen.x1, kStripTop });
-        f.layers.push_back({ units({ kCentreX - kVeilOuter, kCentreY - kVeilOuter, kCentreX + kVeilOuter, kCentreY + kVeilOuter }), veil, above_strip });
         Shape under = solid(kUnderRing, round_corners(kVeilInner));
         under.ring = kUnderRingWidth;
         f.layers.push_back({ units({ kCentreX - kVeilInner, kCentreY - kVeilInner, kCentreX + kVeilInner, kCentreY + kVeilInner }), under, above_strip });

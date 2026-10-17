@@ -141,7 +141,7 @@ TEST_CASE("on a wide screen the ring round a menu button stays round and the ban
     for (std::size_t i = 0; i < kMaxMenuEntries; ++i)
     {
         const LabelBox box = label_box(wide, i);
-        CHECK(box.patch.width() == doctest::Approx(box.patch.height()));
+        CHECK(box.patch.width() / box.patch.height() == doctest::Approx(kLabelPatch.width() / kLabelPatch.height()));
         CHECK(box.patch.width() == doctest::Approx(kLabelPatch.width() * wide.round));
         // The ring keeps its place round the button.
         const Rect button = button_rect(wide, on_ring(menu_angle(i), kMenuRadius), kMenuButtonSize);

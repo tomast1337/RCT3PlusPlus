@@ -121,44 +121,6 @@ namespace rct3::save
         WatchingEntertainer = 20,
     };
 
-    /// Sub-states of PersonState::Queueing.
-    enum class QueueingPhase : std::int32_t
-    {
-        Start = 0,
-        PushingIn = 1,
-        Queueing = 2,
-        Waiting = 3,
-        Entering = 4,
-        WaitingToPay = 5,
-        Paying = 6,
-        Leaving = 7,
-    };
-
-    /// Sub-states of PersonState::Swimming.
-    enum class SwimmingPhase : std::int32_t
-    {
-        Start = 0,
-        Idle = 1,
-        Travel = 2,
-        Queue = 3,
-        Shower = 4,
-        Diving = 5,
-        SunLounger = 6,
-        Splashing = 7,
-    };
-
-    /// Sub-states of a guest in GuestState::FollowingGroup.
-    enum class FollowPhase : std::int32_t
-    {
-        Wait = 0,
-        FollowLeader = 1,
-        Flock = 2,
-        SetPieceStart = 3,
-        SetPieceTravel = 4,
-        SetPieceGather = 5,
-        SetPiecePlay = 6,
-    };
-
     enum class RideIntensity : std::uint8_t
     {
         Low = 0,

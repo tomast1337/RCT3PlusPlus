@@ -13,6 +13,7 @@
 
 #include "math/glm.hpp"
 #include "park/asset_index.hpp"
+#include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/support_footprint.hpp"
 
@@ -56,6 +57,8 @@ namespace rct3::park
         PartBlend blend = PartBlend::Opaque;
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
+        /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part.
+        std::int32_t bone = -1;
     };
 
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.
@@ -99,6 +102,13 @@ namespace rct3::park
         std::vector<float> animation_seconds;
         /// Places for riders: the most bones named "peep" and a number that any level has.
         std::uint32_t seats = 0;
+        /// Where each rider sits, model space, by seat number, from the first level with seats.
+        std::vector<glm::mat4> seat_places;
+        /// Of a model its bones move: the bones and their motions, from the first level listing motions,
+        /// whose parts each name the bone that carries them.
+        std::optional<BoneRig> rig;
+        std::size_t rig_level = 0;
+        std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).

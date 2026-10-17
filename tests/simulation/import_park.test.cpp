@@ -2,6 +2,7 @@
 #include "simulation/import_park.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/import_people.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
@@ -17,6 +18,32 @@ TEST_CASE("a flat ride's timing is its starting, running and stopping animations
     CHECK(timing->seconds == doctest::Approx(75));
     CHECK(simulation::flat_ride_timing(seconds, 0, 1) == std::nullopt);                      // Nowhere to sit
     CHECK(simulation::flat_ride_timing(std::span(seconds).first(3), 16, 1) == std::nullopt); // Not a ride's animations
+}
+
+TEST_CASE("a stall sells what its items are named, or what its own kind is named when the items are not")
+{
+    simulation::SimWorld world;
+    for (int c = 0; c <= 3; ++c)
+        world.paths.add({ c, 0, 0 });
+    save::RideModel rides;
+    const auto stall = [&](std::string symbol, std::string item, int col) {
+        save::Stall& s = rides.stalls.emplace_back();
+        s.base.symbol = std::move(symbol);
+        s.base.spot = save::PlacementSpot { .col = col, .row = 1 };
+        s.items.push_back({ .price = 120, .name = std::move(item) });
+    };
+    stall("GenericStall:sta", "Cola", 0);
+    stall("HotDogStall:sta", "%ME%", 1);
+    stall("SouvenirStall:sta", "%ME%", 2); // Neither: left out
+    CHECK(simulation::import_stalls(world, rides) == 2);
+    std::vector<simulation::Product> sold;
+    for (const auto [e, shop, attraction] : world.registry.view<const simulation::Shop, const simulation::Attraction>().each())
+    {
+        sold.push_back(shop.product);
+        CHECK(attraction.price == 120);
+    }
+    std::ranges::sort(sold);
+    CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Food });
 }
 
 TEST_CASE("a ride comes over with its queue line, from the entrance back to the paths, and its exit")
@@ -54,4 +81,43 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     CHECK(cycle.capacity == 12);
     CHECK(cycle.excitement == doctest::Approx(0.5f));
     CHECK(cycle.nausea == 1); // Ratings past 10 count as 10
+}
+
+TEST_CASE("guests the park had on a ride are put back on it, as many as it seats")
+{
+    simulation::SimWorld world;
+    for (int c = 0; c <= 3; ++c)
+        world.paths.add({ c, 0, 0 });
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back();
+    ride.kind = save::RideKind::Flat;
+    ride.base.id = 42;
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0 };
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 2, .seconds = 40 } };
+    const auto added = simulation::import_rides(world, rides, timings);
+    REQUIRE(world.registry.valid(added[0]));
+
+    // Three up in the air on the ride, far from any path, and one walking by on the path.
+    save::PeopleModel people;
+    for (int k = 0; k < 4; ++k)
+    {
+        save::Guest& g = people.guests.emplace_back();
+        g.in_park = true;
+        g.person.id = static_cast<save::PeopleObjectId>(k + 1);
+        g.person.state = k < 3 ? save::PersonState::OnRide : save::PersonState::Wandering;
+        g.person.state_target.id = 42;
+        g.person.position = k < 3 ? save::PeopleVec3 { 40, 12, 40 } : save::PeopleVec3 { 2, 0, 0 };
+    }
+    const auto guests = simulation::import_guests(world, people);
+    simulation::start_guests(world);
+    CHECK(simulation::board_saved_riders(world, people, guests, rides, added) == 2);
+    auto& r = world.registry;
+    const auto& cycle = r.get<simulation::CycleRide>(added[0]);
+    CHECK(cycle.riders == std::vector { guests[0], guests[1] });
+    CHECK(cycle.timer > 0);
+    CHECK(r.get<simulation::Errand>(guests[0]).kind == simulation::ErrandKind::Riding);
+    // No room for the third: they walk off from the ride; the one on the path walks on.
+    CHECK(r.all_of<simulation::Stride>(guests[2]));
+    CHECK(r.get<simulation::Errand>(guests[2]).kind != simulation::ErrandKind::Riding);
+    CHECK(r.get<simulation::Errand>(guests[3]).kind != simulation::ErrandKind::Riding);
 }

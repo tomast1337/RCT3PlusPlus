@@ -24,19 +24,28 @@ namespace rct3::simulation
             return std::ranges::search(text, word, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == b; }).begin() != text.end();
         }
 
-        /// The first item of a stall that is a drink or food, guessed from its name.
-        // shortcut: matches item names against a few words, upgrade to the item's asset kind once that is decoded.
+        /// Drink or food, guessed from a name.
+        // shortcut: matches against a few words, upgrade to the item's asset kind once that is decoded.
+        std::optional<Product> product_named(std::string_view name)
+        {
+            for (const std::string_view w : { "drink", "cola", "soda", "juice", "coffee", "lemonade", "milkshake", "smoothie", "moonshine" })
+                if (contains(name, w))
+                    return Product::Drink;
+            for (const std::string_view w : { "burger", "fries", "fry", "chips", "pizza", "hotdog", "hot dog", "popcorn", "candy", "cotton", "ice cream", "icecream", "donut", "chicken", "pretzel", "food", "noodle", "taco", "sandwich", "cookie", "nugget", "kebab", "substall" })
+                if (contains(name, w))
+                    return Product::Food;
+            return std::nullopt;
+        }
+
+        /// The first item of a stall that is a drink or food, by its name; where no item's name tells (some saves
+        /// keep only a placeholder), by the stall's own symbol, at its first item's price.
         std::optional<std::pair<Product, std::int64_t>> sale_of(const save::Stall& stall)
         {
             for (const save::StallItem& item : stall.items)
-            {
-                for (const std::string_view w : { "drink", "cola", "soda", "juice", "coffee", "lemonade", "milkshake" })
-                    if (contains(item.name, w))
-                        return std::pair { Product::Drink, item.price };
-                for (const std::string_view w : { "burger", "fries", "chips", "pizza", "hotdog", "hot dog", "popcorn", "candy", "cotton", "ice cream", "icecream", "donut", "chicken", "pretzel", "food", "noodle", "taco", "sandwich" })
-                    if (contains(item.name, w))
-                        return std::pair { Product::Food, item.price };
-            }
+                if (const auto product = product_named(item.name))
+                    return std::pair { *product, item.price };
+            if (const auto product = product_named(stall.base.symbol); product && !stall.items.empty())
+                return std::pair { *product, stall.items.front().price };
             return std::nullopt;
         }
         /// The path node beside `spot` nearest its height, trying the side `facing` first; queue tiles only with
@@ -205,6 +214,32 @@ namespace rct3::simulation
         return c;
     }
 
+    Trains trains_of(const Coaster& coaster, const save::Ride& ride)
+    {
+        Trains out;
+        for (const save::Train& saved : ride.trains)
+        {
+            // Where the park kept it; a train away from the start runs on round to it, empty.
+            Coaster train = coaster;
+            const float length = train.length();
+            train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
+            train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
+            constexpr float kAtStart = 0.5f; // Metres off the start that still count as standing at it
+            if (train.travelled < kAtStart || train.travelled > length - kAtStart)
+            {
+                train.at = train.start;
+                train.travelled = 0;
+            }
+            train.running = train.travelled > 0;
+            train.speed = train.running ? saved.speed : 0;
+            out.trains.push_back(train);
+        }
+        if (out.trains.empty())
+            out.trains.push_back(coaster);
+        out.riders.resize(out.trains.size());
+        return out;
+    }
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters)
     {
         std::vector<entt::entity> added(rides.rides.size(), entt::null);
@@ -216,8 +251,8 @@ namespace rct3::simulation
             if (ride.kind == save::RideKind::Flat && i < flat_timings.size())
                 timing = flat_timings[i];
             else if (ride.kind == save::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time > 0)))
-                // shortcut: one train carries all the ride's seats round, upgrade when each train runs on its own.
-                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size()), .seconds = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
+                // Each train carries its share of the ride's seats.
+                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .seconds = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
             if (!timing || ride.stations.empty() || !ride.stations.front().entrance_spot)
                 continue;
             const save::Station& station = ride.stations.front();
@@ -252,10 +287,56 @@ namespace rct3::simulation
             }
             r.emplace<CycleRide>(e, std::move(cycle));
             if (coaster)
-                r.emplace<Coaster>(e, *coaster);
+                r.emplace<Trains>(e, trains_of(*coaster, ride));
             added[i] = e;
         }
         return added;
+    }
+
+    std::size_t board_saved_riders(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests, const save::RideModel& saved, std::span<const entt::entity> rides)
+    {
+        auto& r = world.registry;
+        std::unordered_map<save::ObjectId, entt::entity> ride_of;
+        for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
+            if (rides[i] != entt::null)
+                ride_of.emplace(saved.rides[i].base.id, rides[i]);
+        std::size_t seated = 0;
+        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        {
+            const save::Person& p = people.guests[i].person;
+            const auto ride = ride_of.find(p.state_target.id);
+            const entt::entity e = guests[i];
+            if (e == entt::null || p.state != save::PersonState::OnRide || ride == ride_of.end())
+                continue;
+            auto& cycle = r.get<CycleRide>(ride->second);
+            // Off the ride they get off where its riders do.
+            if (!r.all_of<Stride>(e))
+                start_walking(world, e, cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance);
+            std::vector<entt::entity>* riders = nullptr;
+            if (auto* fleet = r.try_get<Trains>(ride->second))
+            {
+                // A running train with room first, as most riders the park kept are out on the track.
+                for (int pass = 0; pass < 2 && riders == nullptr; ++pass)
+                    for (std::size_t t = 0; t < fleet->trains.size() && riders == nullptr; ++t)
+                        if (fleet->riders[t].size() < cycle.capacity && (pass == 1 || fleet->trains[t].running))
+                        {
+                            riders = &fleet->riders[t];
+                            fleet->trains[t].running = true;
+                        }
+            }
+            else if (cycle.riders.size() < cycle.capacity)
+            {
+                riders = &cycle.riders;
+                if (cycle.timer == 0)
+                    cycle.timer = std::max<std::uint32_t>(cycle.cycle_ticks, 1);
+            }
+            if (riders == nullptr)
+                continue;
+            riders->push_back(e);
+            r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
+            ++seated;
+        }
+        return seated;
     }
 
     std::size_t start_guests(SimWorld& world)

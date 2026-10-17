@@ -44,8 +44,13 @@ namespace rct3::park
             const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
             const CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
             std::vector<glm::vec3> path = shape->line.path;
+            std::vector<glm::vec3> ups = shape->line.ups;
+            ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
             if (piece.reversed)
+            {
                 std::ranges::reverse(path);
+                std::ranges::reverse(ups); // Up stays up: the way and the rails both turn round
+            }
             // Each piece starts where the last one ended; that point is taken once, and runs into this piece.
             if (!course.kinds.empty())
                 course.kinds.back() = kind;
@@ -55,6 +60,7 @@ namespace rct3::park
                 const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
                 course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at));
                 course.points.push_back(at);
+                course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                 course.kinds.push_back(kind);
             }
         }
@@ -80,21 +86,52 @@ namespace rct3::park
         return l > 0 ? way / l : glm::vec3 { 1, 0, 0 };
     }
 
-    glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, float saved_distance, float distance)
+    glm::vec3 course_up(const TrackCourse& course, float distance)
     {
-        const glm::vec3 from = course_direction(course, saved_distance);
-        const glm::vec3 to = course_direction(course, distance);
-        const glm::vec3 axis = glm::cross(from, to);
-        const float angle = std::atan2(glm::length(axis), glm::dot(from, to));
-        glm::mat4 turn(1.0f);
-        if (glm::length(axis) > 1e-6f)
-            turn = glm::rotate(turn, angle, glm::normalize(axis));
-        else if (angle > 1.0f) // Turned right round: about any axis square to the way
-            turn = glm::rotate(turn, angle, glm::normalize(glm::abs(from.y) < 0.9f ? glm::cross(from, glm::vec3(0, 1, 0)) : glm::cross(from, glm::vec3(1, 0, 0))));
-        glm::mat4 moved = turn * saved;
-        const glm::vec3 off = glm::vec3(saved[3]) - course_point(course, saved_distance);
-        moved[3] = glm::vec4(course_point(course, distance) + glm::vec3(turn * glm::vec4(off, 0.0f)), 1.0f);
-        return moved;
+        if (course.ups.size() != course.points.size())
+            return { 0, 1, 0 };
+        const auto [i, d] = stretch_at(course, distance);
+        if (i + 1 >= course.points.size())
+            return course.ups[i];
+        const float span = course.distance[i + 1] - course.distance[i];
+        const glm::vec3 up = glm::mix(course.ups[i], course.ups[i + 1], span > 0 ? (d - course.distance[i]) / span : 0.0f);
+        const float l = glm::length(up);
+        return l > 1e-6f ? up / l : course.ups[i];
+    }
+
+    namespace
+    {
+        /// The track's own frame under a car with wheels `at`: x across, y up, z from the rear wheels to the
+        /// front ones, standing midway between them.
+        glm::mat4 frame_at(const TrackCourse& course, Axles at)
+        {
+            const glm::vec3 front = course_point(course, at.front);
+            const glm::vec3 rear = course_point(course, at.rear);
+            glm::vec3 way = front - rear;
+            constexpr float kOnePoint = 1e-3f;
+            way = glm::length(way) > kOnePoint ? glm::normalize(way) : course_direction(course, (at.front + at.rear) / 2);
+            glm::vec3 up = course_up(course, at.front) + course_up(course, at.rear);
+            up -= glm::dot(up, way) * way;
+            if (glm::length(up) < 1e-6f) // Up along the way: any square to it will do
+                up = std::abs(way.y) < 0.9f ? glm::vec3 { 0, 1, 0 } - way.y * way : glm::vec3 { 1, 0, 0 } - way.x * way;
+            up = glm::normalize(up);
+            glm::mat4 frame(1.0f);
+            frame[0] = glm::vec4(glm::cross(up, way), 0);
+            frame[1] = glm::vec4(up, 0);
+            frame[2] = glm::vec4(way, 0);
+            frame[3] = glm::vec4((front + rear) / 2.0f, 1);
+            return frame;
+        }
+    } // namespace
+
+    glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by)
+    {
+        const glm::mat4 from = frame_at(course, saved_at);
+        const glm::mat4 to = frame_at(course, { saved_at.front + by, saved_at.rear + by });
+        // The frame is a turn and a shift, so its inverse is the turn's transpose and the shift taken back.
+        glm::mat4 back = glm::transpose(glm::mat4(glm::mat3(from)));
+        back[3] = glm::vec4(-(glm::mat3(back) * glm::vec3(from[3])), 1);
+        return to * back * saved;
     }
 
 } // namespace rct3::park

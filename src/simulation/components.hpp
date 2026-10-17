@@ -15,6 +15,7 @@
 #include "entt/entt.hpp"
 #include "math/glm.hpp"
 #include "random/generator.hpp"
+#include "simulation/coaster.hpp"
 #include "simulation/path_network.hpp"
 
 #include <cstdint>
@@ -90,11 +91,12 @@ namespace rct3::simulation
 
     /// Guests going round the park together, such as a family. The leader chooses where to go for all of
     /// them, by the most pressing needs among them; the others walk beside. At a ride some may stay out and
-    /// wait by its exit for the rest.
+    /// wait by its exit for the rest. Now and then they stop and stand in a ring for a while.
     struct Party
     {
         entt::entity leader = entt::null;
         std::vector<entt::entity> members { }; ///< The leader among them
+        std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting
     };
 
     struct Member
@@ -166,6 +168,14 @@ namespace rct3::simulation
         std::vector<NodeId> line { };
         NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
         std::vector<entt::entity> riders { }; ///< Guests on the ride now
+    };
+
+    /// The trains of a ride whose trains go round a track, each a Coaster of its own on the same track.
+    /// The one standing at the start loads; the others run, or wait behind the train in front.
+    struct Trains
+    {
+        std::vector<Coaster> trains;
+        std::vector<std::vector<entt::entity>> riders; ///< By train
     };
 
 } // namespace rct3::simulation

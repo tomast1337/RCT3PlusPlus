@@ -28,9 +28,9 @@ TEST_CASE("each part of the score adds to the total with its sign")
     in.old_litter = 10;
     const RatingParts p = simulation::rate_park(in);
     CHECK(p.happiness == 375);
-    CHECK(p.rides == 146);       // A ride scoring in full, times the variety of two rides
-    CHECK(p.reliability == 75);  // Running three quarters of the time on average
-    CHECK(p.guests == 275);      // Most of the part at 750 guests
+    CHECK(p.rides == 146);      // A ride scoring in full, times the variety of two rides
+    CHECK(p.reliability == 75); // Running three quarters of the time on average
+    CHECK(p.guests == 275);     // Most of the part at 750 guests
     CHECK(p.litter == -30);
     CHECK(p.harder == 0);
     CHECK(p.total == 375 + 146 + 75 + 275 - 30);

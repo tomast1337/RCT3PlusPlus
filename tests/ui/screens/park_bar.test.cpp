@@ -146,21 +146,21 @@ TEST_CASE("the rating's help gives its number, then its parts once a week has be
 {
     StringTable strings;
     strings.add("Toolbar_TT_ParkRating", u"Rating:");
-    strings.add("ParkRatingBreakdown_Base", u"Base:");
-    strings.add("ParkRatingBreakdown_NumGuests", u"Guests:");
-    strings.add("ParkRatingBreakdown_HappyGuests", u"Happy:");
-    strings.add("ParkRatingBreakdown_RideUpTime", u"Up:");
-    strings.add("ParkRatingBreakdown_ExcitementIntensity", u"Rides:");
-    strings.add("ParkRatingBreakdown_LitterVomit", u"Litter:");
-    strings.add("ParkRatingBreakdown_Total", u"Total:");
+    strings.add("Rct3pp_RatingHappiness", u"Happy:");
+    strings.add("Rct3pp_RatingRides", u"Rides:");
+    strings.add("Rct3pp_RatingReliability", u"Up:");
+    strings.add("Rct3pp_RatingGuests", u"Guests:");
+    strings.add("Rct3pp_RatingLitter", u"Litter:");
+    strings.add("Rct3pp_RatingHarder", u"Harder:");
+    strings.add("Rct3pp_RatingScore", u"Score:");
     CHECK(park_rating_help(strings, 0.4f, std::nullopt) == u"Rating: 400");
 
     simulation::RatingParts parts;
+    parts.happiness = 300;
+    parts.rides = 50;
+    parts.reliability = 40;
     parts.guests = 30;
-    parts.happy_guests = 300;
-    parts.ride_up_time = 40;
-    parts.ride_scores = 50;
     parts.litter = -20;
     parts.total = 400;
-    CHECK(park_rating_help(strings, 0.4f, parts) == u"Rating: 400\nGuests: +30\nHappy: +300\nUp: +40\nRides: +50\nLitter: -20\nTotal: 400");
+    CHECK(park_rating_help(strings, 0.4f, parts) == u"Rating: 400\nHappy: +300\nRides: +50\nUp: +40\nGuests: +30\nLitter: -20\nScore: 400");
 }

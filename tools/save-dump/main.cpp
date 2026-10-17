@@ -16,6 +16,7 @@
 #include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "simulation/park_rating.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -448,6 +449,40 @@ int main(int argc, char** argv)
         return bad ? 1 : 0;
     }
     // END park
+    // `save-dump --rating FILE...`: our park rating model's score for each save, beside the rating it holds.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--rating") == 0; }))
+    {
+        using namespace rct3::save;
+        double error_sum = 0;
+        std::size_t compared = 0;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+                continue;
+            const ObjectIndex index(*file);
+            const auto park = load_park(*file, index);
+            const auto people = load_people(*file, index);
+            const auto ride_model = load_rides(*file, index);
+            if (!park || !people || !ride_model || !park->park.rating())
+                continue;
+            auto input = rct3::simulation::rating_input(*people, *ride_model, park->clock.time);
+            input.guests = static_cast<std::int32_t>(park->park.guests_in_park.latest().value_or(0.0f));
+            input.harder = park->park.flags.has(ParkFlag::HarderRating);
+            const auto p = rct3::simulation::rate_park(input);
+            const float saved = *park->park.rating();
+            error_sum += std::abs(static_cast<double>(p.total) - static_cast<double>(saved));
+            ++compared;
+            std::printf("%-44s saved %4.0f ours %4d  happy %3d rides %3d up %3d guests %3d litter %4d harder %4d  (%d guests, %zu rides)\n", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.harder, input.guests, input.rides.size());
+        }
+        if (compared > 0)
+            std::printf("mean difference %.0f over %zu saves\n", error_sum / static_cast<double>(compared), compared);
+        return 0;
+    }
     // --- people sweep: save-dump --people PATH... (begin) ---
     if (argc > 1 && std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--people") == 0; }))
     {

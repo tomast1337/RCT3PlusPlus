@@ -369,6 +369,14 @@ namespace
         return cfg;
     }
 
+    // The app's flags: ImGui and Vulkan headers, app/ and the shaders glslc writes to build/<mode>/gen.
+    Config app_config(const Config& cfg)
+    {
+        Config app = cfg;
+        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-Iapp", "-I" + (cfg.out_dir() / "gen").string() });
+        return app;
+    }
+
     // Library objects, tools (tools/<name>/main.cpp -> build/<mode>/<name>) and the single test binary.
     // Without `tools`, only the library and the tests are built (CI's sanitizer job runs nothing else).
     bool build_all(const Config& cfg, bool tools = true)
@@ -410,6 +418,10 @@ namespace
         if (!link(with_audio_link(cfg), cfg.test_binary(), test_objects))
             return false;
 
+        // The app's sources too, as build_app compiles them, so editors find their headers.
+        const Config app = app_config(cfg);
+        for (const auto& source : find_files("app", ".cpp"))
+            database.push_back({ source, compile_cmd(app, source, object_path(app, source)).args });
         write_compile_commands(database);
         return true;
     }
@@ -450,8 +462,7 @@ namespace
         if (!compile(third_party, imgui_sources, headers, objects, ignored))
             return false;
 
-        Config app = cfg;
-        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-Iapp", "-I" + gen_dir.string() });
+        const Config app = app_config(cfg);
         std::vector<fs::path> lib_sources = core_sources(cfg);
         std::vector<fs::path> app_headers = headers;
         for (const auto& h : find_files("app", ".hpp"))

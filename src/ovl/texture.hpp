@@ -34,7 +34,7 @@ namespace rct3::ovl
         std::array<std::uint32_t, 3> parameters { };
         std::string_view style;          ///< Texture style name without the tag. Empty when not referenced.
         std::uint16_t first = 0;         ///< 0, 1 or 2
-        std::uint16_t count = 0;         ///< 0, 1 or 2. The engine treats values above 1 specially.
+        std::uint16_t count = 0;         ///< 0, 1 or 2 in shipped files
         std::optional<TextureNode> node; ///< Absent in the few textures whose `parameters[1]` is 4
     };
 

@@ -39,7 +39,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    bool drive(Coaster& c, float seconds)
+    bool drive(Coaster& c, float seconds, float room)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
             return false;
@@ -72,8 +72,20 @@ namespace rct3::simulation
                         c.slow = 0;
                 }
             }
-            c.at = wrap(c, c.at + c.speed * dt);
-            c.travelled += c.speed * dt;
+            // shortcut: with other trains on the track a train never rolls back, as if held by anti-rollback
+            // dogs everywhere, so it cannot run into the one behind; upgrade when the train behind gives room too.
+            if (std::isfinite(room))
+                c.speed = std::max(c.speed, 0.0f);
+            float moved = c.speed * dt;
+            if (moved > room)
+            {
+                // Held up behind the train in front until it moves on.
+                moved = std::max(room, 0.0f);
+                c.speed = 0;
+            }
+            room -= moved;
+            c.at = wrap(c, c.at + moved);
+            c.travelled += moved;
             if (c.travelled >= c.length())
             {
                 c.at = c.start;

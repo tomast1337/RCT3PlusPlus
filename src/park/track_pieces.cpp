@@ -114,6 +114,7 @@ namespace rct3::park
                 return std::nullopt;
             line.start_side = vec(r.front().position) - vec(l.front().position);
             line.end_side = vec(r.back().position) - vec(l.back().position);
+            std::vector<glm::vec3> sides; // From the left rail to the right, at each point of the path
             if (l.size() == r.size())
             {
                 constexpr int kPerPart = 8;
@@ -122,13 +123,24 @@ namespace rct3::park
                     for (int k = 0; k < kPerPart; ++k)
                     {
                         const float t = static_cast<float>(k) / kPerPart;
-                        line.path.push_back((vec(ovl::spline_point(left, i, t)) + vec(ovl::spline_point(right, i, t))) / 2.0f);
+                        const glm::vec3 a = vec(ovl::spline_point(left, i, t));
+                        const glm::vec3 b = vec(ovl::spline_point(right, i, t));
+                        line.path.push_back((a + b) / 2.0f);
+                        sides.push_back(b - a);
                     }
                 }
                 line.path.push_back(line.end);
             }
             else
                 line.path = { line.start, line.end };
+            sides.resize(line.path.size() - 1, line.start_side);
+            sides.push_back(line.end_side);
+            // Up is square to the way the track runs and to the line across its rails.
+            for (std::size_t k = 0; k < line.path.size(); ++k)
+            {
+                const glm::vec3 way = k == 0 ? line.start_direction : k + 1 == line.path.size() ? line.end_direction : line.path[k + 1] - line.path[k - 1];
+                line.ups.push_back(glm::normalize(glm::cross(glm::normalize(way), glm::normalize(sides[k]))));
+            }
             return line;
         }
     } // namespace

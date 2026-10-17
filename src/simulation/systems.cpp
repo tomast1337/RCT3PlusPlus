@@ -44,6 +44,7 @@ namespace rct3::simulation
         constexpr float kLongestHuddle = 20;
         constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
         constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground
+        constexpr float kLaneDrift = 0.4f;    ///< Most a walker's lane moves across the path from one tile to the next
         // Facilities, benches and sights.
         constexpr std::int64_t kLowCash = 500;   ///< Hundredths; a guest with less goes to a cash machine
         constexpr std::int64_t kWithdraw = 5000; ///< Hundredths a guest draws from one
@@ -274,9 +275,26 @@ namespace rct3::simulation
             return paths.centre(node) + glm::vec3(lane.x, 0.0f, lane.y);
         }
 
-        glm::vec2 new_lane(Dice& dice)
+        /// A lane near `was`, so walkers drift across the path rather than zigzag from tile to tile.
+        glm::vec2 new_lane(Dice& dice, glm::vec2 was)
         {
-            return { static_cast<float>(random::between(dice.state, -kLaneReach, kLaneReach)), static_cast<float>(random::between(dice.state, -kLaneReach, kLaneReach)) };
+            const glm::vec2 drift { static_cast<float>(random::between(dice.state, -kLaneDrift, kLaneDrift)), static_cast<float>(random::between(dice.state, -kLaneDrift, kLaneDrift)) };
+            return glm::clamp(was + drift, -kLaneReach, kLaneReach);
+        }
+
+        float step_length(const PathNetwork& paths, const Stride& s)
+        {
+            return glm::distance(lane_point(paths, s.from, s.lane_from), lane_point(paths, s.to, s.lane_to));
+        }
+
+        /// Takes a step just begun `left` world units along, what the tick's walk had left past the tile, so
+        /// walkers keep their pace through tiles.
+        void walk_on(const PathNetwork& paths, Stride& s, float left)
+        {
+            if (s.from == s.to || s.progress != 0 || left <= 0)
+                return;
+            const float length = step_length(paths, s);
+            s.progress = length > 0 ? std::min(left / length, 1.0f) : 1;
         }
 
         void place(const PathNetwork& paths, const Stride& s, Pose& pose)
@@ -579,7 +597,7 @@ namespace rct3::simulation
                     continue;
                 }
                 // What a guest just come to a tile thinks of themselves and of the path.
-                if (stride.progress == 0)
+                if (stride.fresh)
                 {
                     const auto about = [&](ThoughtKind kind, bool when) {
                         if (when)
@@ -603,7 +621,7 @@ namespace rct3::simulation
                     about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));
                 }
                 // A wandering guest just come to a tile may sit on a bench there when tired, or stop at a sight.
-                if (errand.kind == ErrandKind::Wandering && stride.progress == 0)
+                if (errand.kind == ErrandKind::Wandering && stride.fresh)
                 {
                     const NodeId here = stride.from;
                     const auto benches = static_cast<std::size_t>(std::ranges::count_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Bench && !r.get<PathItem>(i).broken; }));
@@ -756,15 +774,17 @@ namespace rct3::simulation
                     }
                     continue;
                 }
+                float left = 0;
                 if (stride.from != stride.to)
                 {
-                    const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
+                    const float length = step_length(paths, stride);
                     stride.progress += length > 0 ? stride.speed * dt / length : 1;
                     if (stride.progress < 1)
                     {
                         place(paths, stride, pose);
                         continue;
                     }
+                    left = (stride.progress - 1) * length;
                 }
                 const NodeId came = stride.from;
                 const NodeId at = stride.to;
@@ -826,7 +846,7 @@ namespace rct3::simulation
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
                         stride.progress = 0;
-                        stride.lane_to = new_lane(dice);
+                        stride.lane_to = new_lane(dice, stride.lane_from);
                     }
                     else
                     {
@@ -846,7 +866,7 @@ namespace rct3::simulation
                     stride.to = stride.route.front();
                     stride.route.erase(stride.route.begin());
                     stride.progress = 0;
-                    stride.lane_to = new_lane(dice);
+                    stride.lane_to = new_lane(dice, stride.lane_from);
                 }
                 else
                 {
@@ -861,8 +881,9 @@ namespace rct3::simulation
                                 next = n;
                     stride.to = next;
                     stride.progress = 0;
-                    stride.lane_to = next != at ? new_lane(dice) : stride.lane_from;
+                    stride.lane_to = next != at ? new_lane(dice, stride.lane_from) : stride.lane_from;
                 }
+                walk_on(paths, stride, left);
                 place(paths, stride, pose);
             }
         }
@@ -1110,6 +1131,7 @@ namespace rct3::simulation
                 for (std::size_t i = begin; i < end; ++i)
                 {
                     auto [errand, stride, pose, dice, needs, mood, wallet] = movers_view.get(movers[i]);
+                    stride.fresh = false;
                     if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading && errand.kind != ErrandKind::Waiting)
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
@@ -1127,10 +1149,12 @@ namespace rct3::simulation
                         continue; // Standing with the others
                     }
 
+                    float left = 0;
                     if (stride.from != stride.to)
                     {
-                        const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
+                        const float length = step_length(paths, stride);
                         stride.progress += length > 0 ? stride.speed * dt / length : 1;
+                        left = (stride.progress - 1) * length;
                     }
                     if (stride.progress < 1)
                     {
@@ -1143,7 +1167,9 @@ namespace rct3::simulation
                     const NodeId at = stride.to;
                     stride.from = at;
                     stride.progress = 0;
+                    stride.fresh = true;
                     stride.lane_from = stride.lane_to;
+                    bool ringed = false;
                     if (!stride.route.empty())
                     {
                         stride.to = stride.route.front();
@@ -1153,6 +1179,7 @@ namespace rct3::simulation
                         {
                             const auto [place, of] = place_in_party(r, movers[i]);
                             stride.lane_to = ring_lane(place, of);
+                            ringed = true;
                         }
                     }
                     else if (errand.kind != ErrandKind::Wandering)
@@ -1230,7 +1257,11 @@ namespace rct3::simulation
                         else if (errand.kind == ErrandKind::Wandering)
                             stride.to = wander(paths, at, came, dice);
                     }
-                    stride.lane_to = stride.to != at ? new_lane(dice) : stride.lane_from;
+                    if (stride.to == at)
+                        stride.lane_to = stride.lane_from;
+                    else if (!ringed)
+                        stride.lane_to = new_lane(dice, stride.lane_from);
+                    walk_on(paths, stride, left);
                     place(paths, stride, pose);
                 }
             });
@@ -1247,13 +1278,9 @@ namespace rct3::simulation
                     auto [errand, stride, pose, dice, member] = view.get(followers[i]);
                     if (errand.kind != ErrandKind::Following)
                         continue;
+                    stride.fresh = false;
                     const Party& party = r.get<Party>(member.party);
                     const Stride& lead = r.get<Stride>(party.leader);
-                    // How far through a step the follower gets in a tick, hurrying to make up ground.
-                    const auto hurry = [&] {
-                        const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
-                        return length > 0 ? kCatchUp * stride.speed * dt / length : 1.0f;
-                    };
                     if (party.huddle > 0 && lead.from == lead.to && stride.to == lead.to && stride.progress >= 1)
                     {
                         // In a ring round a point just ahead of the leader, facing in, the leader standing on it.
@@ -1276,21 +1303,32 @@ namespace rct3::simulation
                         stride.lane_from = stride.lane_to = glm::vec2(pose.position.x - middle.x, pose.position.z - middle.z);
                         continue;
                     }
-                    if (stride.from == lead.from && stride.to == lead.to)
+                    // A tick's walk, hurrying to make up ground: on through tiles until it is spent or they are level
+                    // with the leader, never passing them.
+                    float left = kCatchUp * stride.speed * dt;
+                    for (int tiles = 0; tiles < 3 && left > 0; ++tiles)
                     {
-                        // In step: closing in on the leader, never passing them.
-                        if (stride.progress < lead.progress)
-                            stride.progress = std::min(stride.progress + hurry(), lead.progress);
-                    }
-                    else if (stride.from != stride.to && stride.progress < 1)
-                        stride.progress = std::min(stride.progress + hurry(), 1.0f); // Finishing their own step first
-                    else
-                    {
+                        const bool in_step = stride.from == lead.from && stride.to == lead.to;
+                        if (in_step || (stride.from != stride.to && stride.progress < 1))
+                        {
+                            // In step, closing in on the leader; else finishing their own step first.
+                            const float until = in_step ? lead.progress : 1.0f;
+                            if (stride.progress >= until)
+                                break;
+                            const float length = step_length(paths, stride);
+                            const float gain = length > 0 ? std::min(left / length, until - stride.progress) : until - stride.progress;
+                            stride.progress += gain;
+                            left -= gain * length;
+                            if (in_step)
+                                break;
+                            continue;
+                        }
                         // At a tile, behind: the leader's step when it starts here, else the next tile towards them.
                         const NodeId at = stride.to;
                         stride.lane_from = stride.lane_to;
                         stride.from = at;
                         stride.progress = 0;
+                        stride.fresh = true;
                         if (at == lead.from)
                             stride.to = lead.to;
                         else if (const auto way = paths.route(at, lead.from); way && !way->empty())
@@ -1302,7 +1340,9 @@ namespace rct3::simulation
                             stride.to = lead.to;
                             stride.progress = lead.progress;
                         }
-                        stride.lane_to = stride.to != stride.from ? new_lane(dice) : stride.lane_from;
+                        stride.lane_to = stride.to != stride.from ? new_lane(dice, stride.lane_from) : stride.lane_from;
+                        if (stride.from == stride.to)
+                            break;
                     }
                     place(paths, stride, pose);
                 }

@@ -211,6 +211,7 @@ namespace rct3::simulation
         NodeId from = kNoNode;
         NodeId to = kNoNode;
         float progress = 0;
+        bool fresh = false; ///< Came to `from` this tick
         float speed = 1.3f; ///< World units a second
         /// How far off the tiles' middles, along x and z, the guest walks at `from` and at `to`, so people
         /// spread over the path instead of keeping to one line.

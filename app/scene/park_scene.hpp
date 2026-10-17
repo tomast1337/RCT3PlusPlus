@@ -98,10 +98,8 @@ namespace rct3::scene
     /// How far the sky is drawn from the eye: inside the camera's far limit.
     inline constexpr float kSkyRadius = park::kFar * 0.9f;
 
-    /// The people in motion at each level of detail, finest first, are posed again this often, in seconds: far
-    /// people move too little on screen to need it as often. Only those in view are posed. Those standing
-    /// still are only built again when one's level of detail changes, checked as often as objects' levels.
-    inline constexpr std::array kPeopleRebuildIntervals { 1.0f / 30.0f, 1.0f / 15.0f, 1.0f / 6.0f };
+    /// Seconds between posing the riders again; their cars carry them every frame between.
+    inline constexpr float kRidersRebuildInterval = 1.0f / 15.0f;
 
     /// The park drawn from the sun into a shadow map.
     struct ShadowDrawing
@@ -155,6 +153,13 @@ namespace rct3::scene
         park::ObjectLevels levels;
         park::ObjectMesh mesh;
         bool simulate = false; ///< Whether it left out the simulated guests
+    };
+
+    /// The riders posed away from the frame: their mesh, and what carries each piece of it.
+    struct RidersBuild
+    {
+        park::MovingMeshes riders;
+        std::vector<std::size_t> cars;
     };
 
     /// A person as the park shows it.
@@ -269,10 +274,11 @@ namespace rct3::scene
         std::vector<ShownPerson> shown_people;
         park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;
-        std::array<park::ObjectMesh, park::kPersonLevels> moving_people; ///< By level of detail
-        std::array<float, park::kPersonLevels> since_people { kPeopleRebuildIntervals };
+        park::ObjectMesh moving_people; ///< The people in motion in view, as last posed
         float since_people_levels = kObjectRebuildInterval;
-        std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
+        std::future<PeopleBuild> people_build;      ///< Like object_build, for the still people
+        std::future<park::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
+        std::future<RidersBuild> riders_build;      ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
         park::MovingMeshes riders;
         /// By piece of `riders`: what carries them, a car in `cars` or past those a seat in `seat_carriers`, or kNoCar

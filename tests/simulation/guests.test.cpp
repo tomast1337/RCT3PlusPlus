@@ -492,3 +492,26 @@ TEST_CASE("a ride reckons its riders an hour from its departures")
     // Two riders every 10 s or so, a little over with the step it takes to load.
     CHECK(f.per_hour == doctest::Approx(720).epsilon(0.1));
 }
+
+TEST_CASE("walkers keep an even pace and a steady way through tiles, their party with them")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 40, 0 });
+    const auto lead = park.guest({ 0, 0 });
+    const auto follower = park.guest({ 0, 0 });
+    park.party({ lead, follower });
+    auto& r = park.world().registry;
+    park.run(4);
+    for (int t = 0; t < 300; ++t)
+    {
+        park.run(1);
+        for (const auto g : { lead, follower })
+        {
+            const auto& pose = r.get<Pose>(g);
+            const float step = glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
+            CHECK(step > 0.25f); // Never stopping at a tile, nor waiting on the leader
+            CHECK(step < 0.4f);
+            CHECK(std::abs(std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>())) < 0.3f);
+        }
+    }
+}

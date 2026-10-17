@@ -33,6 +33,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "scene/park_management.hpp"
+#include "scene/park_patrol.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -1292,7 +1293,7 @@ namespace rct3::scene
 
         ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
         {
-            ui::AttractionFacts f;
+            ui::AttractionFacts f { .guests = scene.people.guests };
             if (ref.kind == park::AttractionRef::Kind::Stall)
             {
                 if (ref.index < scene.rides.stalls.size())
@@ -1339,6 +1340,15 @@ namespace rct3::scene
                 f.staff = &scene.people.staff[p.saved];
             else if (!p.staff && p.saved < scene.people.guests.size())
                 f.guest = &scene.people.guests[p.saved];
+            if (const entt::entity e = shown_staff(scene); e != entt::null)
+            {
+                const auto* patrol = scene.sim.registry.try_get<simulation::Patrol>(e);
+                f.patrol_tiles = patrol != nullptr ? patrol->tiles.size() : 0;
+                f.painting_patrol = scene.painting_patrol;
+                f.patrol_brush = scene.patrol_brush;
+                f.patrol_zone = patrol != nullptr ? patrol->zone : 0;
+                f.uncovered_paths = simulation::uncovered_paths(scene.sim, scene.sim.registry.get<simulation::Staff>(e).role);
+            }
             return f;
         }
 
@@ -1417,7 +1427,10 @@ namespace rct3::scene
                 picked = 0;
             scene.person_tab = scene.person_tabs.at(picked);
             if (scene.shown_person != shown)
+            {
                 scene.view_camera = person_view(scene, shown, scene.camera.yaw);
+                scene.painting_patrol = false;
+            }
             scene.shown.reset();
             scene.shown_prop.reset();
             scene.shown_person = shown;
@@ -1568,7 +1581,12 @@ namespace rct3::scene
             else if (change.id == ui::control_id(Price))
                 ride->ticket_price = change.value;
             else if (change.id == ui::control_id(Inspection))
+            {
                 ride->breakdown.inspection_interval = change.value;
+                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                    if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
+                        upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
+            }
             else if (change.id == ui::control_id(MinWaitOn))
                 wait_on(ride->options.min_wait, MinWait);
             else if (change.id == ui::control_id(MaxWaitOn))
@@ -1635,6 +1653,36 @@ namespace rct3::scene
             }
             if (staff == nullptr)
                 return false;
+            if (change.id == ui::person_control(PatrolPaint))
+            {
+                scene.painting_patrol = change.value != 0;
+                return false;
+            }
+            if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::person_control(PatrolClear))
+            {
+                simulation::clear_patrol(scene.sim.registry, e);
+                return true;
+            }
+            else if (e != entt::null && change.id == ui::person_control(PatrolFill))
+            {
+                simulation::fill_patrol(scene.sim.registry, e);
+                return true;
+            }
+            else if (e != entt::null && change.id == ui::person_control(PatrolZone))
+            {
+                simulation::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
+                return true;
+            }
+            if (change.id == ui::person_control(PatrolBrush))
+            {
+                scene.patrol_brush = change.value;
+                return false;
+            }
+            if (change.id == ui::person_control(PatrolCopy))
+            {
+                copy_patrol(scene);
+                return true;
+            }
             if (change.id == ui::person_control(Warn))
             {
                 staff->warnings = std::min(staff->warnings + 1, ui::kMostWarnings);
@@ -1738,13 +1786,15 @@ namespace rct3::scene
         }
 
         /// The people as the map draws them.
-        std::vector<park::MapPerson> map_people(const ParkScene& scene)
+        park::MapPeople map_people(const ParkScene& scene)
         {
-            std::vector<park::MapPerson> people;
-            people.reserve(scene.shown_people.size());
+            park::MapPeople shown;
+            shown.people.reserve(scene.shown_people.size());
             for (const ShownPerson& p : scene.shown_people)
-                people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
-            return people;
+                shown.people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
+            for (const auto [e, patrol] : scene.sim.registry.view<const simulation::Patrol>().each())
+                shown.patrol_tiles.insert(shown.patrol_tiles.end(), patrol.tiles.begin(), patrol.tiles.end());
+            return shown;
         }
 
     } // namespace
@@ -1804,6 +1854,11 @@ namespace rct3::scene
             // Pressing the park puts open colours away without picking.
             if ((pointer.down || input.right) && !over && info->painting())
                 info->close_palette();
+            // A stroke paints the patrol area while the left button is held over the park; its page shows the area
+            // again when the stroke ends.
+            const ui::Rect view = desktop.root().rect();
+            if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
+                show_info_page(scene, *info, assets, options);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -1813,7 +1868,10 @@ namespace rct3::scene
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 const ui::Rect screen = desktop.root().rect();
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
-                if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }))
+                // While painting a patrol area, the left button paints and does not pick.
+                if (painting_patrol(scene))
+                    ;
+                else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }))
                 {
                     const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
                     if (picked.person)
@@ -2014,6 +2072,22 @@ namespace rct3::scene
                         *scene.park.cash -= payroll->paid - scene.wages_seen;
                     scene.wages_seen = payroll->paid;
                 }
+                // The rides' upkeep into the saved rides, for their windows to show.
+                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                {
+                    const auto* upkeep = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Upkeep>(scene.ride_entities[i]) : nullptr;
+                    if (upkeep == nullptr)
+                        continue;
+                    save::Ride& ride = scene.rides.rides[i];
+                    ride.breakdown.reliability = upkeep->reliability * 100;
+                    ride.breakdown.current = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->kind));
+                    ride.breakdown.last = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->last));
+                    ride.base.time_since_inspection = upkeep->since_inspection;
+                    ride.breakdown.downtime_windows = upkeep->downtime;
+                    ride.breakdown.saved_downtime_percent.reset();
+                    using enum save::RepairStatus;
+                    ride.base.repair_status = !upkeep->broken ? Fine : upkeep->mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
+                }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {
                     const auto told = std::ranges::find(scene.broken_rides, e);
@@ -2183,6 +2257,7 @@ namespace rct3::scene
                         device.draw(draw);
                     }
                     draw_footpath_ghost(device, scene, transform, light);
+                    draw_patrol(device, scene, transform, light);
                 });
             const auto draw_objects = [&](bool see_through) {
                 for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })

@@ -343,6 +343,9 @@ namespace rct3::simulation
             .broken = ride.breakdown.current != save::BreakdownKind::None || status == MechanicCalled || status == MechanicOnTheWay || status == BeingFixed,
             .since_inspection = std::max(ride.base.time_since_inspection, 0.0f),
             .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? kIntervals[static_cast<std::size_t>(interval)] : Upkeep { }.inspect_every,
+            .kind = static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)),
+            .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
+            .downtime = ride.breakdown.downtime_windows,
         };
     }
 

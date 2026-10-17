@@ -15,7 +15,9 @@
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
 
+#include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -54,6 +56,13 @@ namespace rct3::ui
         const save::Staff* staff = nullptr;
         const save::PeopleModel* people = nullptr;
         const save::RideModel* rides = nullptr;
+        /// Staff the simulation walks: the tiles of their patrol area (0 for none, the whole park), and whether
+        /// clicks on the ground paint it. Empty for others.
+        std::optional<std::size_t> patrol_tiles;
+        bool painting_patrol = false;
+        int patrol_brush = 0;            ///< Of kPatrolBrushes
+        std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none
+        std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
 
         [[nodiscard]] const save::Person* person() const
         {
@@ -70,15 +79,26 @@ namespace rct3::ui
         Name,
         Sack, ///< Fires them at once, as the game does
         Warn,
-        Wage,    ///< The wage level, 0 to 2
-        Costume, ///< An entertainer's, by its place in the list
-        Task,    ///< The first task's tick; the task of flag bit b is this plus b
+        Wage,        ///< The wage level, 0 to 2
+        Costume,     ///< An entertainer's, by its place in the list
+        PatrolPaint, ///< Ticked while strokes on the ground add or take away tiles of their patrol area
+        PatrolClear, ///< Empties it, and their zone's: the whole park again
+        PatrolBrush, ///< How many tiles across a stroke paints, by its place in kPatrolBrushes
+        PatrolCopy,  ///< Gives the area to everyone else in their job
+        PatrolFill,  ///< Fills the box round the area
+        PatrolZone,  ///< The shared zone they are on, by its number; 0 none
+        Task,        ///< The first task's tick; the task of flag bit b is this plus b
     };
 
     [[nodiscard]] constexpr int person_control(PersonControl control, int bit = 0)
     {
         return static_cast<int>(control) + bit;
     }
+
+    /// Tiles across the patrol brush paints, by its choice.
+    inline constexpr std::array<int, 3> kPatrolBrushes { 1, 3, 5 };
+    /// Shared patrol zones a member of staff can be put on, besides none.
+    inline constexpr std::uint32_t kPatrolZones = 8;
 
     /// Longest name the player may type, as in the game.
     inline constexpr int kLongestName = 34;

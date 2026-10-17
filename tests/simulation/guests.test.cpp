@@ -335,10 +335,71 @@ TEST_CASE("party members who stay off a ride wait by its exit, and all go on tog
     CHECK(r.get<Errand>(leader).kind == ErrandKind::Riding);
     CHECK(r.get<Errand>(queasy).kind == ErrandKind::Waiting);
     park.run_seconds(10);
-    CHECK(r.get<Stride>(queasy).to == park.world().paths.nearest({ 12, 0, 0 })); // Walked to the exit tile
+    // Walked to the tile beside the exit, off the riders' way.
+    const NodeId exit = *park.world().paths.nearest({ 12, 0, 0 });
+    CHECK(r.get<Stride>(queasy).to != exit);
+    CHECK(std::ranges::contains(park.world().paths.nodes()[exit].next, r.get<Stride>(queasy).to));
     CHECK(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Following; }, 30));
     CHECK(r.get<Errand>(leader).kind == ErrandKind::Wandering);
     CHECK(r.get<Attraction>(ride).customers == 1);
+}
+
+TEST_CASE("a party in line rides on one load, held back for the next rather than split")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 20, .exit = glm::ivec2 { 3, 0 } });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> strangers;
+    for (int i = 0; i < 3; ++i)
+        strangers.push_back(park.guest({ 6, 0 }));
+    const auto a = park.guest({ 6, 0 });
+    const auto b = park.guest({ 6, 0 });
+    park.party({ a, b });
+    for (const auto g : { strangers[0], strangers[1], strangers[2], a, b })
+    {
+        r.get<CycleRide>(ride).queue.push_back(g);
+        r.get<Errand>(g) = { ErrandKind::Queueing, ride, 0 };
+    }
+    // Three strangers and a seat left: the party waits, and rides the next load together.
+    CHECK(park.run_until([&] { return r.get<Errand>(strangers[0]).kind == ErrandKind::Riding; }, 10));
+    CHECK(r.get<Errand>(a).kind == ErrandKind::Queueing);
+    CHECK(r.get<Errand>(b).kind == ErrandKind::Queueing);
+    CHECK(r.ctx().get<PartyBoarding>().held >= 1);
+    CHECK(park.run_until([&] { return r.get<Errand>(a).kind == ErrandKind::Riding; }, 60));
+    CHECK(r.get<Errand>(b).kind == ErrandKind::Riding);
+}
+
+TEST_CASE("those waiting for a ride stand in a ring beside its exit, and go on together after")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 3, 0 } });
+    const auto leader = park.guest({ 6, 0 });
+    std::vector<entt::entity> waiting;
+    for (int i = 0; i < 3; ++i)
+        waiting.push_back(park.guest({ 6, 0 }, { .nausea = 0.9f }));
+    std::vector<entt::entity> all { leader };
+    all.insert(all.end(), waiting.begin(), waiting.end());
+    park.party(all);
+    auto& r = park.world().registry;
+    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    park.run_seconds(20);
+    const NodeId exit = *park.world().paths.nearest({ 12, 0, 0 });
+    std::vector<glm::vec3> at;
+    for (const auto g : waiting)
+    {
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Waiting);
+        CHECK(r.get<Stride>(g).to != exit);
+        at.push_back(r.get<Pose>(g).position);
+    }
+    for (std::size_t i = 0; i < at.size(); ++i)
+        for (std::size_t k = i + 1; k < at.size(); ++k)
+            CHECK(glm::distance(at[i], at[k]) > 0.5f); // Apart, not piled up
+    // The last one off, all go on together.
+    CHECK(park.run_until([&] { return r.get<Errand>(leader).kind == ErrandKind::Wandering; }, 30));
+    for (const auto g : waiting)
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Following);
 }
 
 TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")

@@ -1,6 +1,17 @@
 {
     "Rct3pp": {
         "RatingHappiness": "Happy guests:",
+        "GuestsSuited": "Guests it suits:",
+        "PatrolTiles": "Patrol area tiles:",
+        "PatrolWholePark": "The whole park",
+        "PatrolPaint": "Paint patrol area",
+        "PatrolClear": "Clear patrol area",
+        "PatrolBrush": "Brush:",
+        "PatrolZone": "Shared zone:",
+        "PatrolNoZone": "None",
+        "PatrolFill": "Fill patrol area",
+        "PatrolCopy": "Give area to all in this job",
+        "PatrolUncovered": "Paths no one in this job patrols:",
         "RatingRides": "Good rides:",
         "RatingReliability": "Rides running:",
         "RatingGuests": "Busy park:",

@@ -31,6 +31,7 @@ namespace rct3::park
             { 0x7d, 0x8d, 0xa8, 255 }, // Toilets
             { 0xff, 0xd6, 0x00, 255 }, // Guests
             { 0xff, 0xff, 0xff, 255 }, // Staff
+            { 0x3f, 0x9f, 0xff, 90 },  // Patrols
         } };
 
         // Heights from the lowest to the highest ground of the park, as tints.
@@ -659,9 +660,20 @@ namespace rct3::park
         return p;
     }
 
-    MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers)
+    MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles)
     {
         MapPicture p = blank(grid.width * scale, grid.height * scale);
+        if (shows(layers, MapLayer::Patrols))
+            for (const glm::ivec2 t : patrol_tiles)
+            {
+                if (!grid.contains(t.x, t.y))
+                    continue;
+                const std::int32_t x0 = t.x * scale;
+                const std::int32_t y0 = (grid.height - 1 - t.y) * scale;
+                for (std::int32_t y = y0; y < y0 + scale; ++y)
+                    for (std::int32_t x = x0; x < x0 + scale; ++x)
+                        blend(p, x, y, map_layer_colour(MapLayer::Patrols), 1);
+            }
         const float radius = std::max(kSmallestPerson, kPersonRadius * static_cast<float>(scale));
         // Guests first: staff are fewer and should stay visible in a crowd.
         for (const bool staff : { false, true })

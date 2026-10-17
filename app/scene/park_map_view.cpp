@@ -63,6 +63,7 @@ namespace rct3::scene
             LayerText { park::MapLayer::Toilets, "MapText_toilet", u"Toilets" },
             LayerText { park::MapLayer::Guests, "Graph_Guests", u"Guests", true },
             LayerText { park::MapLayer::Staff, "Staff_Title", u"Staff" },
+            LayerText { park::MapLayer::Patrols, { }, u"Patrol areas" },
         };
         static_assert(kLayerTexts.size() == park::kMapLayerCount);
 
@@ -279,7 +280,7 @@ namespace rct3::scene
         std::vector<ui::MapLegendEntry> entries;
         for (const LayerText& t : kLayerTexts)
         {
-            const bool dots = t.layer >= park::MapLayer::Food;
+            const bool dots = t.layer >= park::MapLayer::Food && t.layer != park::MapLayer::Patrols;
             entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots });
         }
         auto& panel = desktop.root().add<ui::MapPanel>(std::string(kMapName), panel_style(), text(strings, kTitleKey, u"Map"), std::move(entries));
@@ -288,7 +289,7 @@ namespace rct3::scene
         map.since_people = 1e9f;
     }
 
-    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<std::vector<park::MapPerson>()>& people, float elapsed)
+    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed)
     {
         auto* panel = static_cast<ui::MapPanel*>(desktop.root().find(kMapName));
         if (panel == nullptr || panel->closing() || grid.empty())
@@ -311,8 +312,8 @@ namespace rct3::scene
         map.since_people += elapsed;
         if (map.since_people >= kPeopleInterval)
         {
-            const std::vector<park::MapPerson> shown = people();
-            replace(device, map.people, park::people_picture(grid, map.ground->scale, shown, map.layers), "park map people");
+            const park::MapPeople shown = people();
+            replace(device, map.people, park::people_picture(grid, map.ground->scale, shown.people, map.layers, shown.patrol_tiles), "park map people");
             map.since_people = 0;
         }
 

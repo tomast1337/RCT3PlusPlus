@@ -294,6 +294,9 @@ namespace rct3::scene
         std::optional<std::size_t> shown_person;           ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;            ///< Their tabs in the panel's order
         ui::PersonTab person_tab = ui::PersonTab::General; ///< The tab last opened on a person
+        bool painting_patrol = false;                      ///< Strokes on the ground paint the shown staff member's patrol area
+        int patrol_brush = 0;                              ///< Of ui::kPatrolBrushes
+        std::optional<bool> patrol_stroke;                 ///< While a stroke goes on: whether it adds tiles, or takes them away
         std::vector<save::BinState> bins;                  ///< Of the litter bins among the objects
         std::vector<save::SignState> signs;                ///< Of the signs among the objects
         std::optional<std::size_t> shown_prop;             ///< Of objects, the prop the info panel tells about instead

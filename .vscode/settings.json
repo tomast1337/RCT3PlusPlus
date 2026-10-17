@@ -1,0 +1,9 @@
+{
+    // clangd reads build/compile_commands.json, which ./nob build writes (app/ included).
+    "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/build", "--header-insertion=never"],
+    // The Microsoft C/C++ extension does not read it and reports false "file not found" errors; clangd does
+    // its job.
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "editor.formatOnSave": true,
+    "[cpp]": { "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd" }
+}

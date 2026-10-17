@@ -2,6 +2,7 @@
 #include "simulation/path_network.hpp"
 
 #include <algorithm>
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -44,6 +45,25 @@ TEST_CASE("a route is a shortest walk, and enters a queue only at its end")
     const NodeId beyond = p.add({ 5, 0, 0 });
     CHECK(p.route(from, queue));
     CHECK_FALSE(p.route(from, beyond));
+}
+
+TEST_CASE("one search finds the nearest of several places, the first where several share a tile")
+{
+    PathNetwork p;
+    for (int c = 0; c <= 6; ++c)
+        p.add({ c, 0, 0 });
+    const NodeId queue = p.add({ 7, 0, 0 }, true);
+    const auto at = [&](int c) { return *p.find({ c, 0, 0 }); };
+    const std::array far_first { at(6), at(4), at(2), at(2) };
+    const auto found = p.route_nearest(at(0), far_first);
+    REQUIRE(found);
+    CHECK(found->first == 2);
+    CHECK(found->second.size() == 2);
+    const std::array none { NodeId { 99 } };
+    CHECK_FALSE(p.route_nearest(at(0), none));
+    const std::array in_queue { queue };
+    CHECK(p.route_nearest(at(0), in_queue)->second.back() == queue);
+    CHECK(p.route_nearest(at(4), far_first)->first == 1); // Standing on one
 }
 
 TEST_CASE("a point on a path tile finds it")

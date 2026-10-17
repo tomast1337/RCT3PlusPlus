@@ -261,6 +261,7 @@ namespace rct3::save
             constexpr std::string_view kShopItems = "ShopItems";
             constexpr std::string_view kShopExtras = "ShopExtras";
             constexpr std::string_view kItemAsset = "CIDEntry";
+            constexpr std::string_view kItemKindSymbol = "SymbolName"; // On the carried-item asset entry
             constexpr std::string_view kPrice = "Price";
             constexpr std::string_view kSold = "TotalSold";
             constexpr std::string_view kItemStall = "Stall";
@@ -1152,6 +1153,9 @@ namespace rct3::save
                     StallItem si;
                     si.id = it->id;
                     si.item_asset = live(v[id::kItemAsset]);
+                    if (const Object* kind = si.item_asset != 0 ? index_.find(si.item_asset) : nullptr)
+                        if (auto k = decode(*kind))
+                            si.kind_symbol = View(&k->fields)[id::kItemKindSymbol].text();
                     si.price = v[id::kPrice].integer();
                     si.total_sold = v[id::kSold].integer();
                     si.name = v[id::kName].text();

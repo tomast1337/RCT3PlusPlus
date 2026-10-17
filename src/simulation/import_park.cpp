@@ -30,13 +30,14 @@ namespace rct3::simulation
         }
 
         /// Drink, food or umbrella, guessed from a name.
-        // shortcut: matches against a few words, upgrade to the item's asset kind once that is decoded.
+        // shortcut: matches words in item names and kind symbols (Soda:cid), upgrade to the kinds' own food and
+        // drink values once those are read.
         std::optional<Product> product_named(std::string_view name)
         {
-            for (const std::string_view w : { "drink", "cola", "soda", "juice", "coffee", "lemonade", "milkshake", "smoothie", "moonshine" })
+            for (const std::string_view w : { "drink", "cola", "soda", "juice", "coffee", "lemonade", "shake", "smoothie", "moonshine", "water", "beer", "burdock", "hotchocolate", "hot chocolate" })
                 if (contains(name, w))
                     return Product::Drink;
-            for (const std::string_view w : { "burger", "fries", "fry", "chips", "pizza", "hotdog", "hot dog", "popcorn", "candy", "cotton", "ice cream", "icecream", "donut", "chicken", "pretzel", "food", "noodle", "taco", "sandwich", "cookie", "nugget", "kebab", "substall" })
+            for (const std::string_view w : { "burger", "fries", "fry", "chips", "pizza", "hotdog", "hot dog", "popcorn", "candy", "cotton", "ice cream", "icecream", "donut", "chicken", "pretzel", "food", "noodle", "taco", "sandwich", "cookie", "nugget", "kebab", "sub", "steak", "pie", "sweets", "floss", "toffee", "delight", "hershey" })
                 if (contains(name, w))
                     return Product::Food;
             if (contains(name, "umbrella"))
@@ -44,12 +45,12 @@ namespace rct3::simulation
             return std::nullopt;
         }
 
-        /// The first item of a stall that is a drink, food or umbrella, by its name; where no item's name tells (some saves
-        /// keep only a placeholder), by the stall's own symbol, at its first item's price.
+        /// The first item of a stall that is a drink, food or umbrella, by its name or else its kind's symbol (custom
+        /// stalls keep only a placeholder name); where neither tells, by the stall's own symbol, at its first item's price.
         std::optional<std::pair<Product, std::int64_t>> sale_of(const save::Stall& stall)
         {
             for (const save::StallItem& item : stall.items)
-                if (const auto product = product_named(item.name))
+                if (const auto product = product_named(item.name).or_else([&] { return product_named(item.kind_symbol); }))
                     return std::pair { *product, item.price };
             if (const auto product = product_named(stall.base.symbol); product && !stall.items.empty())
                 return std::pair { *product, stall.items.front().price };
@@ -338,12 +339,14 @@ namespace rct3::simulation
         const std::int32_t interval = ride.breakdown.inspection_interval;
         using enum save::RepairStatus;
         const save::RepairStatus status = ride.base.repair_status;
+        // Broken by the repair status alone: saves keep a breakdown kind on most open, running rides too.
+        const bool broken = status == MechanicCalled || status == MechanicOnTheWay || status == BeingFixed;
         return {
             .reliability = std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f),
-            .broken = ride.breakdown.current != save::BreakdownKind::None || status == MechanicCalled || status == MechanicOnTheWay || status == BeingFixed,
+            .broken = broken,
             .since_inspection = std::max(ride.base.time_since_inspection, 0.0f),
             .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? kIntervals[static_cast<std::size_t>(interval)] : Upkeep { }.inspect_every,
-            .kind = static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)),
+            .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
             .downtime = ride.breakdown.downtime_windows,
         };

@@ -440,6 +440,7 @@ namespace rct3::save
     {
         ObjectId id = 0;
         ObjectId item_asset = 0; ///< Carried-item asset entry
+        std::string kind_symbol; ///< That entry's symbol, as `Soda:cid`; empty when unresolved
         std::int64_t price = 0;  ///< Hundredths
         std::int64_t total_sold = 0;
         std::string name;

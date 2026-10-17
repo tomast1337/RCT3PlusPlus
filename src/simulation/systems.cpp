@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/systems.hpp"
 
+#include "profiling/profiler.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
@@ -171,18 +172,21 @@ namespace rct3::simulation
         /// The nearest offer of `kind` (and `product`, for shops) the guest can pay for, with the walk there.
         std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet, float wildest = 1, float least_cover = 0, float tamest = 0)
         {
-            // shortcut: one search per offer, upgrade to a single search that stops at the first entrance reached
-            // when parks with many shops show up in profiles.
-            std::optional<std::pair<entt::entity, std::vector<NodeId>>> best;
+            std::vector<entt::entity> wanted;
+            std::vector<NodeId> entrances;
             for (const Offer& o : offers)
             {
                 if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash || o.intensity > wildest || o.intensity < tamest || o.cover < least_cover)
                     continue;
-                auto walk = paths.route(at, o.entrance);
-                if (walk && (!best || walk->size() < best->second.size()))
-                    best.emplace(o.entity, std::move(*walk));
+                wanted.push_back(o.entity);
+                entrances.push_back(o.entrance);
             }
-            return best;
+            if (wanted.empty())
+                return std::nullopt;
+            auto found = paths.route_nearest(at, entrances);
+            if (!found)
+                return std::nullopt;
+            return std::pair { wanted[found->first], std::move(found->second) };
         }
 
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
@@ -966,6 +970,7 @@ namespace rct3::simulation
         constexpr float dt = kTickSeconds;
         const float now = static_cast<float>(world.tick) * kTickSeconds;
 
+        std::optional<profiling::Scope> phase; // Each phase timed in turn, for the profiler's table
         const Weather weather = weather_in(r);
         const bool night = is_night(time_of_day(r));
         // Out of the rain: under an umbrella, or on a ride under cover.
@@ -977,6 +982,7 @@ namespace rct3::simulation
             return ride != nullptr && ride->cover >= kCovered;
         };
 
+        phase.emplace("Needs");
         // 1. Needs and moods.
         {
             const float thirst = 1 + kHeatPerDegree * std::max(weather.temperature - kHot, 0.0f);
@@ -1010,6 +1016,7 @@ namespace rct3::simulation
             pose.was_heading = pose.heading;
         }
 
+        phase.emplace("Walking");
         // 2. Walking and deciding. Arrivals are noted per guest and dealt with after.
         const std::vector<Offer> on_offer = offers(r);
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
@@ -1127,6 +1134,7 @@ namespace rct3::simulation
             });
         }
 
+        phase.emplace("Followers");
         // Followers take their leader's step, each in a lane of their own.
         {
             const auto view = r.view<Errand, Stride, Pose, Dice, const Member>();
@@ -1199,6 +1207,7 @@ namespace rct3::simulation
             });
         }
 
+        phase.emplace("Arrivals");
         // 3. Arrivals, in entity order. A leader's followers arrive with them.
         const auto buy = [&](entt::entity guest, entt::entity at, const Shop& shop, bool chose) {
             auto& attraction = r.get<Attraction>(at);
@@ -1272,6 +1281,7 @@ namespace rct3::simulation
             }
         }
 
+        phase.emplace("Rides");
         // 4. Rides, in entity order: queues shuffle forward, riders get off, the next ones board.
         for (const entt::entity e : sorted(r.view<CycleRide>()))
         {
@@ -1508,6 +1518,7 @@ namespace rct3::simulation
             }
         }
 
+        phase.emplace("Parties");
         // 5. Parties: while some are in a ride's queue or on it, the others walk to its exit and wait; once all
         // are off, they go on together behind the leader.
         for (const entt::entity e : sorted(r.view<Party>()))
@@ -1555,7 +1566,9 @@ namespace rct3::simulation
                 }
             }
         }
+        phase.emplace("Tidy");
         tidy(world);
+        phase.reset();
         ++world.tick;
     }
 

@@ -15,7 +15,9 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace rct3::simulation
@@ -70,6 +72,9 @@ namespace rct3::simulation
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
         /// when no walk reaches it. Queues are only entered at `to`, never walked through.
         [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to) const;
+        /// Like route, to whichever of `targets` is nearest: its place in `targets` (the first, where several
+        /// share a node) and the walk there. One search, however many targets.
+        [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets) const;
 
     private:
         static std::uint64_t key(int col, int row);

@@ -2,10 +2,11 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
-// what each shop and ride took and how the guests are doing, with how long the run took. Flat rides take
+// what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
+// time each phase of a step took, as the profiler's table. Flat rides take
 // their timing from their models, so they come over only with --game, the game's folder.
 #include "config/game_install.hpp"
 #include "park/asset_index.hpp"
@@ -15,6 +16,7 @@
 #include "park/object_models.hpp"
 #include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
+#include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -78,6 +80,7 @@ int main(int argc, char** argv)
     std::string_view weather;
     bool whole_day = false; // Run the clock through the night, whatever the park's day mode
     bool patrol = false;    // Give each handyman and mechanic a patrol: the tiles round where they start
+    bool profile = false;   // Print the time each phase of a step took
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -92,6 +95,8 @@ int main(int argc, char** argv)
             whole_day = true;
         else if (std::strcmp(argv[i], "--patrol") == 0)
             patrol = true;
+        else if (std::strcmp(argv[i], "--profile") == 0)
+            profile = true;
         else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
             weather = argv[++i];
         else
@@ -99,7 +104,7 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol]\n");
+        std::fprintf(stderr, "usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]\n");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -308,7 +313,7 @@ int main(int argc, char** argv)
     std::printf("litter %zu  path items %zu  rides broken down %td  staff on the paths %zu of %zu\n", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
-            std::printf("stall %s [%s] sells %s\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str());
+            std::printf("stall %s [%s] sells %s (%s)\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
     std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu  seated %zu  parties %zu\n", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
@@ -344,6 +349,8 @@ int main(int argc, char** argv)
 
     const auto workers = threads > 0 ? std::make_unique<simulation::Workers>(threads) : nullptr;
     const std::uint32_t steps = simulation::ticks(seconds);
+    if (profile)
+        profiling::register_thread("Main");
     const auto start = std::chrono::steady_clock::now();
     // Rides with more than one train: the closest any train came to the back of the one ahead, and how many
     // laps each train finished.
@@ -414,7 +421,8 @@ int main(int argc, char** argv)
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
             std::printf("%02d:00%s in the park: %zu children, %zu teens, %zu adults; came %u/%u/%u, went %u/%u/%u\n", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
         }
-        simulation::step(world, workers.get());
+        profiling::section("Step", [&] { simulation::step(world, workers.get()); });
+        profiling::capture_frame();
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {
             const auto* bin = world.registry.try_get<simulation::Bin>(e);
@@ -443,6 +451,8 @@ int main(int argc, char** argv)
     }
     const double took = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     std::printf("ran %u ticks (%.0f s of park time) in %.3f s, %.1f us a tick\n", steps, seconds, took, took * 1e6 / std::max(steps, 1u));
+    if (profile)
+        std::printf("%s", profiling::tsv_snapshot().c_str());
 
     auto& r = world.registry;
     for (const auto& [e, fleet] : fleets)
@@ -458,10 +468,14 @@ int main(int argc, char** argv)
         constexpr std::array<const char*, 6> kProducts { "drink", "food", "toilet", "cash", "aid", "brolly" };
         const char* sells = !shop ? "ride" : kProducts[static_cast<std::size_t>(shop->product)];
         std::size_t suits = 0; // Guests whose taste takes in a ride's intensity
-        if (const auto* ride = r.try_get<simulation::CycleRide>(e))
+        const auto* ride = r.try_get<simulation::CycleRide>(e);
+        if (ride)
             for (const auto [g, taste] : r.view<const simulation::Taste>(entt::exclude<simulation::Left>).each())
                 suits += taste.least <= ride->intensity && ride->intensity <= taste.most;
-        std::printf("  %-28s %-6s customers %5u  income %8.2f  suits %zu\n", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100, suits);
+        std::printf("  %-28s %-6s customers %5u  income %8.2f  suits %zu", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100, suits);
+        if (ride)
+            std::printf("  queue %zu on %zu tiles%s", ride->queue.size(), ride->line.size(), a.open ? "" : "  closed");
+        std::printf("\n");
     }
     {
         std::map<simulation::NodeId, std::size_t> lying;

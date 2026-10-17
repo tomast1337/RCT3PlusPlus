@@ -4,6 +4,7 @@
 #include "park/object_placement.hpp"
 
 #include <cmath>
+#include <tuple>
 #include <utility>
 
 namespace rct3::park
@@ -22,7 +23,7 @@ namespace rct3::park
             std::vector<std::uint32_t> owners;  ///< By vertex
         };
 
-        using Key = std::pair<PartBlend, std::string>;
+        using Key = std::tuple<PartBlend, std::string, bool>; // Blend, painted picture, one-sided
 
         FlexiColours colours_of(const save::PlacedObject& object, const ColourOverrides& overrides)
         {
@@ -34,8 +35,9 @@ namespace rct3::park
         {
             for (auto& [key, run] : runs)
             {
+                const auto& [blend, texture, one_sided] = key;
                 const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                mesh.batches.push_back({ key.second, run.picture, run.colours, key.first, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
+                mesh.batches.push_back({ texture, run.picture, run.colours, blend, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()), one_sided });
                 mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
                 mesh.owners.insert(mesh.owners.end(), run.owners.begin(), run.owners.end());
                 for (const std::uint32_t i : run.indices)
@@ -160,7 +162,7 @@ namespace rct3::park
             const bool fit = model->second.fits_ground && !stretched && on_ground(object);
             for (const ModelPart& part : shown.parts)
             {
-                Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours) }];
+                Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours), part.one_sided }];
                 run.picture = part.texture;
                 run.colours = used_colours(part.slots, colours);
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
@@ -201,7 +203,7 @@ namespace rct3::park
                 continue;
             ++boards.mesh.placed;
             const FlexiColours colours = colours_of(objects[index], overrides);
-            Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours) }];
+            Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours), false }];
             run.picture = board->texture;
             run.colours = used_colours(board->slots, colours);
             const auto first = static_cast<std::uint32_t>(run.vertices.size());

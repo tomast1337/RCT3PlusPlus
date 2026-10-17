@@ -119,12 +119,9 @@ void main() {
   // In shadow the sky still lights a surface, but less of it: part of the sky is behind what casts the shadow.
   if (u_draw.sun_direction.w > 0.5 && dot(direct, direct) > 0.0) {
     float before = u_draw.sun_direction.w - 1.0;
-    // Looked up off the side that is seen: a shell drawn from both sides, such as a slide's open trough, is
-    // seen from behind inside, and pushed the normal's way it would shadow itself in stripes.
-    vec3 seen = gl_FrontFacing ? n : -n;
-    float lit = sunlit(u_shadow, u_sun_view, seen);
+    float lit = sunlit(u_shadow, u_sun_view, n);
     if (before > 0.002)
-      lit = mix(lit, sunlit(u_shadow_before, u_sun_view_before, seen), before);
+      lit = mix(lit, sunlit(u_shadow_before, u_sun_view_before, n), before);
     direct *= lit;
     ambient *= mix(0.7, 1.0, lit);
   }

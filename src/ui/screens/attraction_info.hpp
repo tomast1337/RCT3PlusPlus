@@ -17,6 +17,7 @@
 #include "ui/string_table.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -88,6 +89,15 @@ namespace rct3::ui
     };
 
     /// The attraction a page is written about: its common part, and the ride or the stall it is.
+    /// What the running park knows of a ride now: seats a train (or a go) has, guests in its queue, riders an
+    /// hour (0 before it has measured).
+    struct RideFlow
+    {
+        std::uint32_t seats = 0;
+        std::size_t queued = 0;
+        float per_hour = 0;
+    };
+
     struct AttractionFacts
     {
         const save::AttractionCommon* common = nullptr;
@@ -95,6 +105,8 @@ namespace rct3::ui
         const save::Stall* stall = nullptr;
         /// The colours it is painted in, one for each pot it offers; none when it cannot be painted.
         std::vector<std::size_t> colours { };
+        /// While the park runs; the pages show these over what the save kept.
+        std::optional<RideFlow> flow { };
     };
 
     /// Ids of the controls on an attraction's pages (InfoControl::id).

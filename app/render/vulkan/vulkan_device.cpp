@@ -46,7 +46,10 @@ namespace rct3::render::vulkan
                 // The push block is full, so the haze colour goes as one number: its channels in 8 bits each.
                 const glm::uvec3 h { glm::round(glm::clamp(l.haze, 0.0f, 1.0f) * 255.0f) };
                 const auto haze = static_cast<float>((h.r << 16) | (h.g << 8) | h.b);
-                return { command.transform, glm::vec4(l.sun_direction, l.shadow_map && l.shadow_view ? 1.0f : 0.0f), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, command.extra_textures[0] ? 1.0f : 0.0f), glm::vec4(l.ground, haze) };
+                // sun_direction.w: 0 without a shadow, else 1 plus the older shadow's weight (lit.frag).
+                const bool before = l.shadow_map_before && l.shadow_view_before;
+                const float shadow = l.shadow_map && l.shadow_view ? 1 + (before ? std::clamp(l.shadow_before, 0.0f, 1.0f) : 0.0f) : 0.0f;
+                return { command.transform, glm::vec4(l.sun_direction, shadow), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, command.extra_textures[0] ? 1.0f : 0.0f), glm::vec4(l.ground, haze) };
             }
             const WaterView& w = command.water;
             const bool shadow = l.shadow_map && l.shadow_view;
@@ -870,10 +873,10 @@ namespace rct3::render::vulkan
             // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
             const Shader shader = pipeline->second.shader;
             const bool lit = lit_shader(shader);
-            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 5 : 2;
+            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 7 : 2;
             std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
             if (lit)
-                extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0] };
+                extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0], command.light.shadow_map_before, command.light.shadow_view_before };
             else if (shader == Shader::Water)
             {
                 extras[4] = command.light.shadow_map;

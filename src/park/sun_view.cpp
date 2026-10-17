@@ -36,4 +36,12 @@ namespace rct3::park
         return glm::dot(kept, now) >= std::cos(step) ? kept : now;
     }
 
+    float sun_step_share(glm::vec3 kept, glm::vec3 now, float step)
+    {
+        if (step <= 0)
+            return 1;
+        // Through the cross product: accurate at the half degree steps, where an arc cosine of nearly 1 is not.
+        return std::clamp(std::atan2(glm::length(glm::cross(kept, now)), glm::dot(kept, now)) / step, 0.0f, 1.0f);
+    }
+
 } // namespace rct3::park

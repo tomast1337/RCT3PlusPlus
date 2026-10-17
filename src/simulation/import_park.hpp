@@ -5,6 +5,7 @@
 #pragma once
 
 #include "park/object_models.hpp"
+#include "park/overhead.hpp"
 #include "park/track_course.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -78,6 +79,10 @@ namespace rct3::simulation
     /// The first park entrance `is_gate` picks out, as the gate guests come in and leave by, at the path tile it
     /// stands on or one beside it. entt::null when there is none on the paths. Call after import_paths.
     entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate);
+
+    /// Marks the path tiles with a roof or shade over them, as `overhead` finds over the middle of each (see
+    /// park/overhead.hpp). Returns how many are under a roof. Call after import_paths.
+    std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead);
 
     /// A saved ride's reliability, whether it stands broken down, and its inspections.
     [[nodiscard]] Upkeep upkeep_of(const save::Ride& ride);

@@ -40,6 +40,8 @@ namespace rct3::simulation
         bool queue = false;
         float height = 0;       ///< World height of the middle of the tile
         std::uint64_t line = 0; ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
+        bool covered = false;   ///< Under a roof that keeps the rain off
+        bool shaded = false;    ///< Out of the sun: under a roof or trees
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -64,6 +66,12 @@ namespace rct3::simulation
             return nodes_;
         }
         [[nodiscard]] std::optional<NodeId> find(PathTileSpot tile) const;
+        /// Marks what is over a node's tile.
+        void cover(NodeId node, bool covered, bool shaded)
+        {
+            nodes_[node].covered = covered;
+            nodes_[node].shaded = shaded || covered;
+        }
         /// The path tile whose column and row hold world point `at`, at the level nearest its height.
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;
         /// The middle of a node's tile in world space.

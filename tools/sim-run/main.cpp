@@ -14,6 +14,7 @@
 #include "park/item_category.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
+#include "park/overhead.hpp"
 #include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
 #include "profiling/profiler.hpp"
@@ -195,6 +196,8 @@ int main(int argc, char** argv)
             if (!piece_models.contains(park::model_key(o)))
                 if (auto model = loader.load(o.symbol, o.overlay))
                     piece_models.emplace(park::model_key(o), std::move(*model));
+        const std::size_t roofed = simulation::import_cover(world, [&](std::span<const glm::vec3> points) { return park::overheads(points, world_model->objects, piece_models, world_model->terrain, { }); });
+        std::printf("paths under a roof %zu, in the shade %zu of %zu\n", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
         std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
@@ -306,8 +309,8 @@ int main(int argc, char** argv)
     if (weather == "rain" || weather == "storm")
         sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")
-        sky = { .temperature = weather == "hot" ? 35.0f : 2.0f };
-    std::printf("weather: %s%s, %.0f degrees\n", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", static_cast<double>(sky.temperature));
+        sky = { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
+    std::printf("weather: %s%s%s, %.0f degrees; %.1f guests an hour come in\n", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature), simulation::arrivals_per_second(sky) * 3600);
     const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
     std::printf("breakdowns going on, by kind:%s\n", breakdown_kinds(world.registry).c_str());
     std::printf("litter %zu  path items %zu  rides broken down %td  staff on the paths %zu of %zu\n", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
@@ -512,8 +515,21 @@ int main(int argc, char** argv)
                 ++thought[t.kind];
         }
         std::size_t wet = 0;
+        std::size_t hot = 0;
         for (const auto [e, mood] : r.view<const simulation::Mood>().each())
+        {
             wet += mood.wet >= 0.5f;
+            hot += mood.heat >= 0.5f;
+        }
+        // Walking guests by what is over the tile they are on.
+        std::size_t roofed = 0;
+        std::size_t shaded = 0;
+        for (const auto [e, errand, stride] : r.view<const simulation::Errand, const simulation::Stride>().each())
+            if (errand.kind != simulation::ErrandKind::Riding && errand.kind != simulation::ErrandKind::Queueing && stride.from < world.paths.nodes().size())
+            {
+                roofed += world.paths.nodes()[stride.from].covered;
+                shaded += world.paths.nodes()[stride.from].shaded;
+            }
         std::size_t queued[2] { };
         std::size_t rides[2] { };
         for (const auto [e, ride] : r.view<const simulation::CycleRide>().each())
@@ -522,9 +538,16 @@ int main(int argc, char** argv)
             ++rides[ride.cover >= 0.5f];
         }
         std::uint32_t drinks = 0;
+        std::uint32_t umbrellas = 0;
+        std::array<std::uint32_t, 3> served { }; // Food and drink sold, by Serve
         for (const auto [e, shop, a] : r.view<const simulation::Shop, const simulation::Attraction>().each())
+        {
             drinks += shop.product == simulation::Product::Drink ? a.customers : 0;
-        std::printf("weather: %zu wet, %zu with umbrellas; queueing for %zu open-air rides %zu, for %zu covered %zu; drinks sold %u\n", wet, r.view<const simulation::Umbrella>().size(), rides[0], queued[0], rides[1], queued[1], drinks);
+            umbrellas += shop.product == simulation::Product::Umbrella ? a.customers : 0;
+            if (shop.product == simulation::Product::Drink || shop.product == simulation::Product::Food)
+                served[std::to_underlying(shop.serve)] += a.customers;
+        }
+        std::printf("weather: %zu wet, %zu too hot, %zu with umbrellas (%u sold); walking under a roof %zu, in the shade %zu; queueing for %zu open-air rides %zu, for %zu covered %zu; drinks sold %u; food and drink sold plain %u, cold %u, hot %u\n", wet, hot, r.view<const simulation::Umbrella>().size(), umbrellas, roofed, shaded, rides[0], queued[0], rides[1], queued[1], drinks, served[0], served[1], served[2]);
         {
             // Parties waiting by rides: how many stand on an exit tile, and how many share a spot.
             std::size_t waiting = 0;

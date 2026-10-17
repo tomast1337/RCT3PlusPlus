@@ -47,6 +47,26 @@ TEST_CASE("a stall sells what its items are named, or their kinds are, or its ow
     CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Drink, simulation::Product::Food });
 }
 
+TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherwise")
+{
+    simulation::SimWorld world;
+    for (int c = 0; c <= 3; ++c)
+        world.paths.add({ c, 0, 0 });
+    save::RideModel rides;
+    for (const auto& [item, col] : { std::pair { "Ice Cream", 0 }, std::pair { "Hot Chocolate", 1 }, std::pair { "Steak", 2 }, std::pair { "Milk Shake", 3 } })
+    {
+        save::Stall& s = rides.stalls.emplace_back();
+        s.base.spot = save::PlacementSpot { .col = col, .row = 1 };
+        s.items.push_back({ .price = 100, .name = item });
+    }
+    REQUIRE(simulation::import_stalls(world, rides) == 4);
+    std::vector<simulation::Serve> served;
+    for (const auto [e, shop] : world.registry.view<const simulation::Shop>().each())
+        served.push_back(shop.serve);
+    std::ranges::sort(served);
+    CHECK(served == std::vector { simulation::Serve::Any, simulation::Serve::Cold, simulation::Serve::Cold, simulation::Serve::Hot });
+}
+
 TEST_CASE("a ride comes over with its queue line, from the entrance back to the paths, and its exit")
 {
     simulation::SimWorld world;
@@ -62,6 +82,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     save::Ride& ride = rides.rides.emplace_back();
     ride.kind = save::RideKind::Flat;
     ride.base.name = "Spinner";
+    ride.base.symbol = "BumperBoats:ffr"; // Boats, which splash their riders
     ride.ticket_price = 150;
     ride.assessment = { .valid = true, .excitement = 5, .intensity = 2, .nausea = 12 };
     save::Station& station = ride.stations.emplace_back();
@@ -75,6 +96,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     const auto e = added[0];
     REQUIRE(world.registry.valid(e));
     const auto& cycle = world.registry.get<simulation::CycleRide>(e);
+    CHECK(cycle.splash);
     const auto at = [&](int c, int r) { return *world.paths.find({ c, r, 0 }); };
     CHECK(cycle.line == std::vector { at(5, 0), at(4, 0), at(3, 0) });
     CHECK(world.registry.get<simulation::Attraction>(e).entrance == at(3, 0));

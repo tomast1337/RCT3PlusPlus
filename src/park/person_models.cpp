@@ -19,6 +19,8 @@ namespace rct3::park
     namespace
     {
 
+        constexpr std::string_view kLeftHand = "attachmentl"; ///< How the left hand's socket pieces are named, lower case
+
         std::string lower(std::string_view s)
         {
             std::string out(s);
@@ -239,10 +241,12 @@ namespace rct3::park
         if (piece)
         {
             const auto* mesh = f.find_item<ovl::FrameMesh>(piece->mesh, "mms", *piece_file, [&](Files::Open& o) -> const auto& { return f.items(o, o.meshes, &ovl::read_frame_meshes, &ovl::FrameMeshItem::mesh); });
-            // Sockets for held things carry no shape of their own.
-            if (mesh && mesh->tracks == 0)
+            // Sockets for held things carry no shape of their own; only the left hand's is kept, to hold things in.
+            const bool left_hand = lower(name).starts_with(kLeftHand);
+            if (mesh && (mesh->tracks == 0 || left_hand))
             {
                 PieceModel model;
+                model.left_hand = mesh->tracks != 0;
                 model.channel = piece->channel;
                 model.mesh = *mesh;
                 std::vector<std::string_view> names;

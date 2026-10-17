@@ -78,7 +78,9 @@ namespace rct3::simulation
     Weather guest_weather(const ParkState& state)
     {
         using enum save::WeatherType;
-        return { .rain = state.weather == LightRain || state.weather == HeavyRain || state.weather == Thunderstorm, .storm = state.weather == Thunderstorm, .temperature = state.temperature.value_or(Weather { }.temperature) };
+        // A snowstorm keeps guests in as a thunderstorm does.
+        const bool storm = state.weather == Thunderstorm || state.weather == Snowstorm;
+        return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = state.temperature.value_or(Weather { }.temperature) };
     }
 
 } // namespace rct3::simulation

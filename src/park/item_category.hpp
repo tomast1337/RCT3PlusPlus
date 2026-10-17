@@ -14,6 +14,7 @@ namespace rct3::park
         Tree = 0,
         Shrub = 2,
         Flowers = 3,
+        Wall = 5, ///< Building walls, arches and drapes
         SmallScenery = 7,
         MediumScenery = 8,
         Animatronic = 10,
@@ -35,7 +36,10 @@ namespace rct3::park
         Bench = 31,
         Sign = 32,
         PathFeature = 33, ///< Information points, speakers, fountains and the like
-        Effect = 44,      ///< Fire, mist and smoke
+        Floor = 34,       ///< Building floors, which roof what is under them
+        Roof = 35,
+        WallCorner = 36,
+        Effect = 44, ///< Fire, mist and smoke
     };
 
     /// Whether guests stop to watch an item of `category`: animatronics, effects and path features.

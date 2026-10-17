@@ -139,6 +139,10 @@ namespace rct3::park
         /// `overlay` first. Nothing when the train, the car or every level of its visual is missing.
         [[nodiscard]] std::optional<ObjectModel> load_car(std::string_view train, std::string_view overlay, std::size_t slot);
 
+        /// A model of the one static shape `shape` (its name without the tag), as carried items are drawn,
+        /// looked for in `overlay` first. Nothing when it is missing.
+        [[nodiscard]] std::optional<ObjectModel> load_shape(std::string_view shape, std::string_view overlay);
+
         /// The pictures the loaded models' parts name, by key.
         [[nodiscard]] const ModelPictures& pictures() const
         {
@@ -156,6 +160,8 @@ namespace rct3::park
         std::string texture_key(std::string_view name, std::string_view near);
         /// Adds the levels of `visual`, held in the file at `visual_path`, to `model`.
         void add_levels(ObjectModel& model, const ovl::SceneryVisual& visual, std::string_view visual_path);
+        /// Adds the meshes of static shape `name`, looked for near `near`, to `level`; false when it is missing.
+        bool add_static(ModelLevel& level, std::string_view name, std::string_view near);
         void set_texture(ModelPart& part, std::string_view name, std::string_view near);
     };
 

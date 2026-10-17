@@ -65,6 +65,7 @@ namespace rct3::simulation
         float nausea = 0;
         float tolerance = 0.5f; ///< How well the guest's stomach takes rides, 0..1: the higher, the wilder the rides they go on and the slower they sicken
         float wet = 0;          ///< From dry (0) to soaked (1)
+        float heat = 0;         ///< From cool (0) to sweltering (1), out in the hot sun
     };
 
     /// Parties at the rides so far, in the registry's context: those held back from a load to ride together
@@ -116,6 +117,7 @@ namespace rct3::simulation
     {
         bool rain = false;
         bool storm = false;
+        bool sunny = false;     ///< Sun out, beating down on those not in the shade
         float temperature = 20; ///< Degrees Celsius
     };
 
@@ -165,7 +167,9 @@ namespace rct3::simulation
         QueueTooLong = 31,
         TooIntense = 34,
         Enjoyed = 42,
+        GoHome = 19,
         Raining = 93,
+        Thunder = 94,
         Cold = 95,
         Hot = 96,
         Soaked = 191,
@@ -252,9 +256,18 @@ namespace rct3::simulation
         Umbrella,    ///< Keeps the rain off
     };
 
+    /// Whether a shop's food or drink is cold (ice cream, a slush), hot (coffee, soup) or neither.
+    enum class Serve : std::uint8_t
+    {
+        Any,
+        Cold, ///< Cools a guest down; wanted most on hot days
+        Hot,  ///< Wanted most on cold days
+    };
+
     struct Shop
     {
         Product product = Product::Drink;
+        Serve serve = Serve::Any;
     };
 
     struct CycleRide
@@ -266,6 +279,7 @@ namespace rct3::simulation
         float intensity = 0.3f;              ///< How much it shakes them, 0..1
         float nausea = 0.3f;                 ///< How sick it makes them, 0..1
         float cover = 0;                     ///< How much of it is under cover, 0..1
+        bool splash = false;                 ///< Rides through water, splashing its riders
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.

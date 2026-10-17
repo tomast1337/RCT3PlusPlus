@@ -14,6 +14,7 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/off_map_trees.hpp"
+#include "park/overhead.hpp"
 #include "park/path_supports.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
@@ -227,6 +228,31 @@ namespace rct3::scene
         /// names another.
         constexpr std::string_view kUniformFolder = "StaffUniforms";
         constexpr std::uint8_t kColourCells = 16;
+        constexpr std::string_view kCarriedFolder = "CarriedItems";
+        constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
+        /// The umbrella shapes, in the order of ParkScene::umbrellas.
+        constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
+
+        /// Reads the umbrellas guests carry and uploads their pictures with the people's.
+        void load_umbrellas(render::Device& device, ParkScene& scene, const config::GameInstall& install)
+        {
+            const std::string folder = install.find(kCarriedFolder).value_or(std::filesystem::path(kCarriedFolder)).filename().string();
+            const std::array<std::string_view, 1> folders { folder };
+            const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
+            park::ModelLoader loader(index);
+            std::vector<park::ObjectBatch> batches;
+            for (std::size_t i = 0; i < kUmbrellaShapes.size(); ++i)
+            {
+                scene.umbrellas[i] = loader.load_shape(kUmbrellaShapes[i], kCarriedOverlay);
+                if (scene.umbrellas[i])
+                    for (const park::ModelPart& part : scene.umbrellas[i]->levels.front().parts)
+                        batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, { }, part.blend, 0, 0 });
+            }
+            if (auto uploaded = ui::upload_textures(device, park::paint_batches(batches, loader.pictures())))
+                scene.people_textures.merge(*uploaded);
+            else
+                logging::logger("park").warning("umbrella pictures: {}", uploaded.error());
+        }
 
         /// Reads the models of the park's guests and staff and uploads their pictures.
         void load_people_models(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::uint64_t seed)
@@ -296,6 +322,7 @@ namespace rct3::scene
                 logging::logger("park").warning("people pictures: {}", uploaded.error());
             logging::logger("park").info("{} people shown, {} pictures", scene.shown_people.size(), library.pictures().size());
             scene.person_models.emplace(std::move(library));
+            load_umbrellas(device, scene, install);
         }
 
         /// Whether a person standing at `at` may be in the view `transform` gives, with room to spare so people
@@ -394,6 +421,8 @@ namespace rct3::scene
             return glm::vec3(shown.pose.world[3]);
         }
 
+        /// How guests walk holding an umbrella up, as the game's motions name it.
+        const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
         /// How riders sit in a car, as the game's motions name it.
         const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
@@ -443,6 +472,21 @@ namespace rct3::scene
                     // People are modelled facing +z, which the heading turns towards the way they go.
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+                    // An umbrella held up in the rain.
+                    // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
+                    // with one then.
+                    const auto* weather = r.ctx().find<simulation::Weather>();
+                    if (weather != nullptr && weather->rain && r.all_of<simulation::Umbrella>(shown.guest))
+                    {
+                        const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
+                        const auto& umbrella = scene.umbrellas[visitor != nullptr && visitor->age == simulation::AgeGroup::Child ? 1 : 0];
+                        pose.held = umbrella ? &*umbrella : nullptr;
+                        // shortcut: standing guests hold it up in the walk's first pose, legs mid-step; upgrade if a
+                        // standing motion with an umbrella turns up.
+                        pose.motion = kUmbrellaMotion;
+                        if (!walking)
+                            pose.time = 0;
+                    }
                 }
                 if (moving && (static_cast<std::size_t>(levels[i]) != *level || !maybe_in_view(view, glm::vec3(pose.world[3]))))
                     continue;
@@ -1241,6 +1285,7 @@ namespace rct3::scene
                 simulation::import_parties(scene.sim, scene.people, guests);
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
+                simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
                 simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
                     const auto file = install.find(ride.base.overlay_path + ".common.ovl");
                     return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;

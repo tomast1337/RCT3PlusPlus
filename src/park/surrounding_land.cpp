@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <limits>
 #include <map>
 
 namespace rct3::park
@@ -93,6 +95,28 @@ namespace rct3::park
             return !g.empty() && g.cells.size() == static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height);
         }
 
+        /// For each point of `edge`, the level of the water on its tile when that stands over the point's ground;
+        /// NaN elsewhere.
+        std::vector<float> sea_levels(const save::TerrainGrid& g, const std::vector<EdgePoint>& edge, const save::WaterLayer& water)
+        {
+            std::map<std::pair<int, int>, float> on_edge; // Highest water on each edge tile
+            for (const save::WaterBody& body : water.bodies)
+                for (const save::WaterTri& t : body.tris)
+                    if (g.contains(t.col, t.row) && (t.col == 0 || t.row == 0 || t.col == g.width - 1 || t.row == g.height - 1))
+                    {
+                        auto [it, added] = on_edge.try_emplace({ t.col, t.row }, body.level);
+                        it->second = std::max(it->second, body.level);
+                    }
+            std::vector<float> out(edge.size(), std::numeric_limits<float>::quiet_NaN());
+            for (std::size_t i = 0; i < edge.size(); ++i)
+            {
+                const EdgeCorner c = edge_corner(g, edge[i]);
+                if (const auto it = on_edge.find({ c.col, c.row }); it != on_edge.end() && it->second > edge_height(g, edge[i]))
+                    out[i] = it->second;
+            }
+            return out;
+        }
+
     } // namespace
 
     float edge_level(const save::TerrainGrid& grid)
@@ -106,13 +130,14 @@ namespace rct3::park
         return sum / static_cast<float>(edge.size());
     }
 
-    LandRings land_rings(const save::TerrainGrid& grid)
+    LandRings land_rings(const save::TerrainGrid& grid, const save::WaterLayer& water)
     {
         LandRings out;
         if (!whole(grid))
             return out;
         const std::vector<EdgePoint> edge = edge_points(grid);
         out.points = edge.size();
+        out.sea = sea_levels(grid, edge, water);
         out.distances = ring_distances();
         const float level = edge_level(grid);
         std::vector<float> heights(out.points);
@@ -125,6 +150,9 @@ namespace rct3::park
                 heights = smoothed(std::move(heights), kSurroundSmoothing);
                 for (float& h : heights)
                     h = level + (h - level) * kSurroundKeep;
+                for (std::size_t i = 0; i < out.points; ++i)
+                    if (!std::isnan(out.sea[i]))
+                        heights[i] = std::min(heights[i], out.sea[i] - kSeaDepth);
             }
             out.heights.insert(out.heights.end(), heights.begin(), heights.end());
         }
@@ -166,13 +194,15 @@ namespace rct3::park
         const auto n = rings.points;
         const auto i = static_cast<std::size_t>(std::floor(along)) % n;
         const float s = along - std::floor(along);
+        if (!rings.sea.empty() && !std::isnan(rings.sea[s < 0.5f ? i : (i + 1) % n]))
+            return std::nullopt; // Under the sea
         const auto height = [&](std::size_t k, std::size_t p) { return rings.heights[k * n + p % n]; };
         const float inner = height(ring, i) + (height(ring, i + 1) - height(ring, i)) * s;
         const float outer = height(ring + 1, i) + (height(ring + 1, i + 1) - height(ring + 1, i)) * s;
         return inner + (outer - inner) * t;
     }
 
-    TerrainMesh surrounding_land(const save::TerrainGrid& grid)
+    TerrainMesh surrounding_land(const save::TerrainGrid& grid, const save::WaterLayer& water)
     {
         TerrainMesh mesh;
         if (!whole(grid))
@@ -203,7 +233,7 @@ namespace rct3::park
         }
 
         // Heights from the shape; surfaces ring by ring from the ring inside.
-        const LandRings shape = land_rings(grid);
+        const LandRings shape = land_rings(grid, water);
         for (std::size_t k = 1; k < rings; ++k)
         {
             for (auto& [surface, share] : shares)
@@ -218,16 +248,34 @@ namespace rct3::park
         const float z0 = grid.world_z(0);
         const float width = grid.world_x(grid.width) - x0;
         const float depth = grid.world_z(grid.height) - z0;
+        // Point `i` of the ring `d` out, at height `y`.
+        const auto ring_point = [&](float d, std::size_t i, float y) {
+            const float u = static_cast<float>(edge[i % n].x) / static_cast<float>(grid.width);
+            const float v = static_cast<float>(edge[i % n].z) / static_cast<float>(grid.height);
+            return glm::vec3(x0 - d + u * (width + 2 * d), y, z0 - d + v * (depth + 2 * d));
+        };
         std::vector<glm::vec3> points;
         points.reserve(n * rings);
         for (std::size_t k = 0; k < rings; ++k)
-        {
-            const float d = distances[k];
             for (std::size_t i = 0; i < n; ++i)
+                points.push_back(ring_point(distances[k], i, shape.heights[at(k, i)]));
+
+        // The sea: between each two points it goes out from, over every ring and on to kSeaReach.
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            const float a = shape.sea[i];
+            const float b = shape.sea[(i + 1) % n];
+            if (std::isnan(a) || std::isnan(b))
+                continue;
+            const auto water_at = [&](std::size_t k, std::size_t p, float level) -> WaterVertex {
+                const float d = k < rings ? distances[k] : kSeaReach;
+                const float ground = k < rings ? shape.heights[at(k, p)] : level - kSeaDepth;
+                return { ring_point(d, p, level), kWaterColour, std::max(level - ground, 0.0f) };
+            };
+            for (std::size_t k = 0; k < rings; ++k)
             {
-                const float u = static_cast<float>(edge[i].x) / static_cast<float>(grid.width);
-                const float v = static_cast<float>(edge[i].z) / static_cast<float>(grid.height);
-                points.emplace_back(x0 - d + u * (width + 2 * d), shape.heights[at(k, i)], z0 - d + v * (depth + 2 * d));
+                const std::array q { water_at(k, i, a), water_at(k, i + 1, b), water_at(k + 1, i, a), water_at(k + 1, i + 1, b) };
+                mesh.water.insert(mesh.water.end(), { q[0], q[2], q[1], q[1], q[2], q[3] });
             }
         }
 
@@ -287,9 +335,12 @@ namespace rct3::park
             mesh.batches.push_back(batch);
         }
 
-        const float far = distances.back();
+        const float far = mesh.water.empty() ? distances.back() : kSeaReach;
+        float top = std::ranges::max(points, { }, &glm::vec3::y).y;
+        for (const WaterVertex& w : mesh.water)
+            top = std::max(top, w.position.y);
         mesh.low = { x0 - far, std::ranges::min(points, { }, &glm::vec3::y).y, z0 - far };
-        mesh.high = { x0 + width + far, std::ranges::max(points, { }, &glm::vec3::y).y, z0 + depth + far };
+        mesh.high = { x0 + width + far, top, z0 + depth + far };
         return mesh;
     }
 

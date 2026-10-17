@@ -29,7 +29,9 @@ namespace rct3::simulation
     {
         float thirst = 0;
         float hunger = 0;
+        float bladder = 0;
         float happiness = 0.5f;
+        float energy = 1;
         float nausea = 0;
         std::int64_t cash = 5000; ///< Hundredths
     };
@@ -41,6 +43,7 @@ namespace rct3::simulation
         float excitement = 0.5f;
         float intensity = 0.3f;
         float nausea = 0.3f;
+        float cover = 0;
         std::vector<glm::ivec2> line { };   ///< Queue tiles from the entrance back to the paths; none to walk straight in
         std::optional<glm::ivec2> exit { }; ///< The path tile riders get off onto; the entrance when none
     };

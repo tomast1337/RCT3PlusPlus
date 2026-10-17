@@ -332,6 +332,19 @@ namespace rct3::park
         }
     }
 
+    std::optional<std::uint32_t> special_attraction_kind(const std::filesystem::path& file, std::string_view name)
+    {
+        const auto overlay = ovl::Overlay::load(file);
+        if (!overlay)
+            return std::nullopt;
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+            if (part != nullptr)
+                for (const auto& e : ovl::read_special_attractions(*overlay, *part))
+                    if (e.attraction && strings::equals_ignoring_case(e.name, name))
+                        return e.attraction->info.type_id;
+        return std::nullopt;
+    }
+
     void add_build_items(const ovl::Overlay& overlay, std::string_view path, std::vector<BuildItem>& items)
     {
         std::vector<const ovl::Part*> parts { &overlay.common() };

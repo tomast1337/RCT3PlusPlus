@@ -442,13 +442,12 @@ namespace rct3::scene
             return kChatMotions[turn % kChatMotions.size()];
         }
 
-        /// Poses the people near enough to see that stand still, or those at `level` that move and may be
-        /// in `view`, as they are at `clock`, at `levels`. With `simulate`, the simulated guests count as
-        /// moving and stand where the simulation has them. The still ones read only what is set when the park
-        /// loads besides the arguments, so they may be posed beside the frame; the moving ones only on it.
-        park::ObjectMesh pose_people(const ParkScene& scene, const park::ObjectLevels& levels, float clock, std::optional<std::size_t> level, const glm::mat4& view, bool simulate)
+        /// Places the people near enough to see that stand still, or those that move and may be in `view`, as
+        /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
+        /// where the simulation has them. The still ones read only what is set when the park loads besides the
+        /// arguments, so they may be placed beside the frame; the moving ones only on it.
+        std::vector<park::PlacedPerson> place_people(const ParkScene& scene, const park::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
         {
-            const bool moving = level.has_value();
             std::vector<park::PlacedPerson> placed;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
             {
@@ -488,16 +487,16 @@ namespace rct3::scene
                             pose.time = 0;
                     }
                 }
-                if (moving && (static_cast<std::size_t>(levels[i]) != *level || !maybe_in_view(view, glm::vec3(pose.world[3]))))
+                if (moving && !maybe_in_view(view, glm::vec3(pose.world[3])))
                     continue;
                 placed.push_back(pose);
             }
-            return park::person_mesh(*scene.person_models, placed);
+            return placed;
         }
 
-        /// Poses the riders seated in the ride cars into `scene.riders`, each car's in the car's own space;
-        /// place_cars moves them with their cars. Riders drawn at no level of detail are left out.
-        void pose_riders(ParkScene& scene)
+        /// Starts posing the riders seated in the ride cars away from the frame, each car's in the car's own
+        /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
+        std::future<RidersBuild> pose_riders(const ParkScene& scene)
         {
             std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
@@ -515,14 +514,17 @@ namespace rct3::scene
                 pose.motion = kRideMotion;
                 by_car[seat->first].push_back(pose);
             }
-            std::vector<park::ObjectMesh> alone;
-            scene.rider_cars.clear();
-            for (const auto& [car, riders] : by_car)
-            {
-                alone.push_back(park::person_mesh(*scene.person_models, riders));
-                scene.rider_cars.push_back(car);
-            }
-            scene.riders = park::gathered_meshes(alone);
+            return std::async(std::launch::async, [&library = *scene.person_models, by_car = std::move(by_car)] {
+                std::vector<park::ObjectMesh> alone;
+                RidersBuild built;
+                for (const auto& [car, riders] : by_car)
+                {
+                    alone.push_back(park::person_mesh(library, riders));
+                    built.cars.push_back(car);
+                }
+                built.riders = park::gathered_meshes(alone);
+                return built;
+            });
         }
 
         /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
@@ -587,17 +589,14 @@ namespace rct3::scene
             return build.valid() && build.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
         }
 
-        /// Builds the people meshes again as often as they need: the moving ones often, the nearer the more
-        /// often, the still ones when a person's level of detail changes. The still ones are built beside
-        /// the frame, and their levels only taken on with them, so the moving ones keep to the same levels.
+        /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
+        /// the last are done, the riders a few times a second, the still ones when a person's level of detail
+        /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
         void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
         {
             if (!scene.person_models)
                 return;
-            for (float& since : scene.since_people)
-                since += elapsed;
             scene.since_people_levels += elapsed;
-            bool new_levels = false;
             if (ready(scene.people_build))
             {
                 PeopleBuild built = scene.people_build.get();
@@ -605,7 +604,6 @@ namespace rct3::scene
                 {
                     scene.people_levels = std::move(built.levels);
                     scene.still_people = std::move(built.mesh);
-                    new_levels = true;
                 }
                 else
                     scene.people_levels.clear(); // Built before the switch changed; build again
@@ -630,7 +628,7 @@ namespace rct3::scene
                     scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {
                         profiling::register_thread("PeopleWorker");
                         PeopleBuild built;
-                        built.mesh = profiling::section("Still", [&] { return pose_people(scene, levels, 0, std::nullopt, view, simulate); });
+                        built.mesh = profiling::section("Still", [&] { return park::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate)); });
                         built.levels = levels;
                         built.simulate = simulate;
                         profiling::unregister_thread();
@@ -638,25 +636,25 @@ namespace rct3::scene
                     });
                 }
             }
-            // Every level at once when people change level, or someone is drawn at both; else the most overdue
-            // one a frame, so their rebuilds do not pile into one slow frame nor starve the coarser levels.
-            std::size_t due = 0;
-            for (std::size_t level = 1; level < park::kPersonLevels; ++level)
-                if (scene.since_people[level] / kPeopleRebuildIntervals[level] > scene.since_people[due] / kPeopleRebuildIntervals[due])
-                    due = level;
-            for (std::size_t level = 0; level < park::kPersonLevels; ++level)
+            // The people in motion are posed away from the frame, again as soon as the last posing is done.
+            if (ready(scene.moving_build))
+                scene.moving_people = scene.moving_build.get();
+            if (!scene.moving_build.valid())
             {
-                if (!new_levels && (level != due || scene.since_people[level] < kPeopleRebuildIntervals[level]))
-                    continue;
                 const profiling::Scope zone("Moving");
-                scene.since_people[level] = 0;
-                scene.moving_people[level] = pose_people(scene, scene.people_levels, scene.clock, level, view, scene.simulate);
+                scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, placed = place_people(scene, scene.people_levels, scene.clock, true, view, scene.simulate)] { return park::person_mesh(library, placed); });
+            }
+            if (ready(scene.riders_build))
+            {
+                RidersBuild built = scene.riders_build.get();
+                scene.riders = std::move(built.riders);
+                scene.rider_cars = std::move(built.cars);
             }
             scene.since_riders += elapsed;
-            if (scene.simulate && scene.since_riders >= kPeopleRebuildIntervals[1])
+            if (scene.simulate && scene.since_riders >= kRidersRebuildInterval && !scene.riders_build.valid())
             {
                 scene.since_riders = 0;
-                profiling::section("Riders", [&] { pose_riders(scene); });
+                scene.riders_build = profiling::section("Riders", [&] { return pose_riders(scene); });
             }
         }
 
@@ -776,6 +774,10 @@ namespace rct3::scene
                 scene.object_build.wait();
             if (scene.people_build.valid())
                 scene.people_build.wait();
+            if (scene.moving_build.valid())
+                scene.moving_build.wait();
+            if (scene.riders_build.valid())
+                scene.riders_build.wait();
         }
 
         float scale_for(const render::Device& device, const ParkScene& scene)
@@ -1668,9 +1670,12 @@ namespace rct3::scene
         {
             if (scene.people_build.valid())
                 (void)scene.people_build.get();
+            if (scene.moving_build.valid())
+                (void)scene.moving_build.get();
+            if (scene.riders_build.valid())
+                (void)scene.riders_build.get();
             scene.people_levels.clear();
             scene.since_people_levels = kObjectRebuildInterval;
-            scene.since_people = kPeopleRebuildIntervals;
         }
 
         /// Fires the member of staff shown as `shown`: they leave the park at once, as in the game.
@@ -2337,8 +2342,7 @@ namespace rct3::scene
             if (scene.show_people && parts.people)
                 profiling::section("People", [&] {
                     draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
-                    for (const park::ObjectMesh& people : scene.moving_people)
-                        draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    draw_transient(device, scene, scene.moving_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                     if (scene.simulate)
                         draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });

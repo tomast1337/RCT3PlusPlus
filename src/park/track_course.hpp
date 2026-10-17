@@ -30,6 +30,7 @@ namespace rct3::park
     struct TrackCourse
     {
         std::vector<glm::vec3> points;
+        std::vector<glm::vec3> ups;      ///< Up for the track at each point, leaning with its bank; none is straight up
         std::vector<float> distance;     ///< From the start to each point
         std::vector<CourseKind> kinds;   ///< Of the stretch from each point to the next; the last is unused
         std::vector<float> piece_starts; ///< Distance at the start of each of the track's pieces
@@ -54,10 +55,20 @@ namespace rct3::park
     /// Which way the track runs at `distance`, as course_point finds it; a unit vector.
     [[nodiscard]] glm::vec3 course_direction(const TrackCourse& course, float distance);
 
-    /// Where a car the park kept at `saved`, `saved_distance` along `course`, stands once moved to `distance`:
-    /// as far off the course there, and turned as much as the track turns between the two.
-    /// shortcut: the turn is the least that takes one direction to the other, so a car keeps its saved roll,
-    /// upgrade when the course knows the track's bank.
-    [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, float saved_distance, float distance);
+    /// Which way is up for the track at `distance`, as course_point finds it; a unit vector.
+    [[nodiscard]] glm::vec3 course_up(const TrackCourse& course, float distance);
+
+    /// Where a car's front and rear wheels stand on a course, as distances along it. A car without wheels of
+    /// its own has both at one point.
+    struct Axles
+    {
+        float front = 0;
+        float rear = 0;
+    };
+
+    /// Where a car the park kept at `saved`, its wheels at `saved_at` along `course`, stands once both are
+    /// moved on by `by`: it points from its rear wheels to its front ones, leans with the track's bank
+    /// between them, and keeps the place and turn it had against the track.
+    [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
 
 } // namespace rct3::park

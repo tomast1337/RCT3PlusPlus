@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace rct3::park
@@ -24,6 +25,13 @@ namespace rct3::park
 
     /// The objects' shapes, each standing at the origin until moved.
     [[nodiscard]] MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+
+    /// Shapes already built, each in its own space, as one mesh: batches drawn alike are gathered.
+    [[nodiscard]] MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone);
+
+    /// The parts of `object` (whose model `model` has a rig) at its rig's level, one piece per bone in the
+    /// model's own space, each to be put where its bone is; with the bone of each piece.
+    [[nodiscard]] std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid);
 
     /// Puts each object where `places` (model to world, by object) has it, leaving those already there.
     /// Moves and turns only: a stretched place leaves the normals off.

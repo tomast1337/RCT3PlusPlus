@@ -14,6 +14,9 @@
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <cstdint>
+#include <map>
+#include <span>
 #include <utility>
 
 namespace rct3::park
@@ -183,11 +186,131 @@ namespace rct3::park
             return lookup(entries(f.anims, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::BoneAnim>(ovl::read_bone_anims(o, p), &ovl::BoneAnimItem::anim); }), name);
         }
 
-        /// Bones named "peep" and a number: where riders sit.
-        std::uint32_t seats_of(const ovl::BoneShape& shape)
+        /// Whether `bone` is named "peep" and a number: where a rider sits.
+        bool is_seat(const ovl::Bone& b)
         {
             constexpr std::string_view kSeat = "peep";
-            return static_cast<std::uint32_t>(std::ranges::count_if(shape.bones, [&](const ovl::Bone& b) { return b.name.size() > kSeat.size() && strings::equals_ignoring_case(b.name.substr(0, kSeat.size()), kSeat) && std::ranges::all_of(b.name.substr(kSeat.size()), [](char c) { return c >= '0' && c <= '9'; }); }));
+            return b.name.size() > kSeat.size() && strings::equals_ignoring_case(b.name.substr(0, kSeat.size()), kSeat) && std::ranges::all_of(b.name.substr(kSeat.size()), [](char c) { return c >= '0' && c <= '9'; });
+        }
+
+        std::uint32_t seats_of(const ovl::BoneShape& shape)
+        {
+            return static_cast<std::uint32_t>(std::ranges::count_if(shape.bones, is_seat));
+        }
+
+        /// The seats' places, model space, in seat-number order.
+        std::vector<glm::mat4> seat_places(const ovl::BoneShape& shape)
+        {
+            std::vector<std::pair<int, glm::mat4>> seats;
+            for (const ovl::Bone& b : shape.bones)
+            {
+                if (!is_seat(b))
+                    continue;
+                // Row vectors in rows read as glm's columns: the same transform, for column vectors.
+                glm::mat4 place { 1.0f };
+                for (glm::length_t c = 0; c < 4; ++c)
+                    for (glm::length_t r = 0; r < 4; ++r)
+                        place[c][r] = b.world[static_cast<std::size_t>(c * 4 + r)];
+                seats.emplace_back(std::stoi(std::string(b.name.substr(4))), place);
+            }
+            std::ranges::sort(seats, { }, &std::pair<int, glm::mat4>::first);
+            std::vector<glm::mat4> out;
+            for (const auto& s : seats)
+                out.push_back(s.second);
+            return out;
+        }
+
+        glm::mat4 column_matrix(const std::array<float, 16>& rows)
+        {
+            // Row vectors in rows read as glm's columns: the same transform, for column vectors.
+            glm::mat4 m { 1.0f };
+            for (glm::length_t c = 0; c < 4; ++c)
+                for (glm::length_t r = 0; r < 4; ++r)
+                    m[c][r] = rows[static_cast<std::size_t>(c * 4 + r)];
+            return m;
+        }
+
+        /// The rig of `shape`, without motions.
+        BoneRig rig_of(const ovl::BoneShape& shape)
+        {
+            BoneRig rig;
+            for (const ovl::Bone& b : shape.bones)
+            {
+                rig.parents.push_back(b.parent);
+                rig.rest_local.push_back(column_matrix(b.local));
+                rig.rest_world.push_back(column_matrix(b.world));
+            }
+            return rig;
+        }
+
+        /// How `anim` moves the bones of `shape`, matched by name.
+        BoneMotion motion_of(const ovl::BoneShape& shape, const ovl::BoneAnim& anim)
+        {
+            BoneMotion m;
+            m.seconds = anim.duration;
+            m.positions.resize(shape.bones.size());
+            m.rotations.resize(shape.bones.size());
+            const auto keys = [](std::span<const ovl::BoneKeyframe> frames) {
+                BoneKeys k;
+                for (const ovl::BoneKeyframe& f : frames)
+                {
+                    k.times.push_back(f.time);
+                    k.values.emplace_back(f.value[0], f.value[1], f.value[2]);
+                }
+                return k;
+            };
+            for (const ovl::BoneTrack& track : anim.bones)
+            {
+                const auto bone = std::ranges::find(shape.bones, track.name, &ovl::Bone::name);
+                if (bone == shape.bones.end())
+                    continue;
+                const auto b = static_cast<std::size_t>(bone - shape.bones.begin());
+                m.positions[b] = keys(track.positions);
+                m.rotations[b] = keys(track.rotations);
+            }
+            return m;
+        }
+
+        /// `mesh` as one part per bone, each part taking the triangles whose first corner that bone carries most.
+        /// shortcut: a corner shared by bones follows the one with most weight, upgrade if seams show where parts
+        /// bend.
+        std::vector<ModelPart> parts_by_bone(const ovl::BoneMesh& mesh, ModelPart whole)
+        {
+            std::vector<std::int32_t> carrier(whole.vertices.size(), 0);
+            for (std::size_t i = 0; i < carrier.size(); ++i)
+            {
+                const ovl::BoneVertex v = mesh.vertex(i);
+                carrier[i] = v.bones[static_cast<std::size_t>(std::ranges::max_element(v.weights) - v.weights.begin())];
+            }
+            std::map<std::int32_t, std::pair<ModelPart, std::vector<std::uint32_t>>> by_bone;
+            for (std::size_t t = 0; t + 2 < whole.indices.size(); t += 3)
+            {
+                const std::int32_t bone = carrier[whole.indices[t]];
+                auto [at, added] = by_bone.try_emplace(bone);
+                auto& [part, remap] = at->second;
+                if (added)
+                {
+                    part.texture = whole.texture;
+                    part.slots = whole.slots;
+                    part.blend = whole.blend;
+                    part.bone = bone;
+                    remap.assign(whole.vertices.size(), UINT32_MAX);
+                }
+                for (std::size_t k = t; k < t + 3; ++k)
+                {
+                    std::uint32_t& to = remap[whole.indices[k]];
+                    if (to == UINT32_MAX)
+                    {
+                        to = static_cast<std::uint32_t>(part.vertices.size());
+                        part.vertices.push_back(whole.vertices[whole.indices[k]]);
+                    }
+                    part.indices.push_back(to);
+                }
+            }
+            std::vector<ModelPart> out;
+            for (auto& [bone, entry] : by_bone)
+                out.push_back(std::move(entry.first));
+            return out;
         }
 
         const ovl::FlexiTexture* texture_in(OpenFile& f, std::string_view name)
@@ -342,19 +465,40 @@ namespace rct3::park
                 if (shape == nullptr)
                     continue;
                 model.seats = std::max(model.seats, seats_of(*shape));
-                if (model.animation_seconds.empty())
+                if (model.seat_places.empty())
+                    model.seat_places = seat_places(*shape);
+                const bool rigged = !model.rig && !lod.animations.empty();
+                if (rigged)
                 {
-                    for (const std::string_view name : lod.animations)
-                    {
-                        const auto anim_file = files_->holding(tagged(name, kAnimTag), visual_path);
-                        const ovl::BoneAnim* anim = anim_file ? anim_in(*anim_file->second, name) : nullptr;
+                    model.rig = rig_of(*shape);
+                    model.rig_level = model.levels.size();
+                    // In seat-number order, as the seats' places are.
+                    std::vector<std::pair<int, std::int32_t>> seats;
+                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                        if (is_seat(shape->bones[b]))
+                            seats.emplace_back(std::stoi(std::string(shape->bones[b].name.substr(4))), static_cast<std::int32_t>(b));
+                    std::ranges::sort(seats);
+                    for (const auto& seat : seats)
+                        model.seat_bones.push_back(seat.second);
+                }
+                for (const std::string_view name : lod.animations)
+                {
+                    const auto anim_file = files_->holding(tagged(name, kAnimTag), visual_path);
+                    const ovl::BoneAnim* anim = anim_file ? anim_in(*anim_file->second, name) : nullptr;
+                    if (rigged)
+                        model.rig->motions.push_back(anim != nullptr ? motion_of(*shape, *anim) : BoneMotion { });
+                    if (model.animation_seconds.size() < lod.animations.size())
                         model.animation_seconds.push_back(anim != nullptr ? anim->duration : 0.0f);
-                    }
                 }
                 for (const ovl::BoneMesh& mesh : shape->meshes)
                 {
-                    level.parts.push_back(part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); }));
-                    set_texture(level.parts.back(), mesh.texture, file->first);
+                    ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
+                    set_texture(part, mesh.texture, file->first);
+                    if (rigged)
+                        for (ModelPart& one : parts_by_bone(mesh, std::move(part)))
+                            level.parts.push_back(std::move(one));
+                    else
+                        level.parts.push_back(std::move(part));
                 }
             }
             else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::Billboard))

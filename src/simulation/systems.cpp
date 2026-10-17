@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <optional>
 
 namespace rct3::simulation
@@ -29,6 +30,11 @@ namespace rct3::simulation
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
         constexpr float kQueueSpacing = 0.25f;          ///< Tiles between guests standing in a queue
         constexpr double kJoinChance = 0.6;             ///< Of a party member going on the ride their leader picked
+        constexpr double kHuddleChance = 0.08;          ///< Of a wandering party stopping to stand together, each thought
+        constexpr float kShortestHuddle = 8;            ///< Seconds
+        constexpr float kLongestHuddle = 20;
+        constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
+        constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground
 
         float clamp01(float v)
         {
@@ -192,6 +198,22 @@ namespace rct3::simulation
         pose.was_heading = pose.heading;
     }
 
+    float room_ahead(std::span<const Coaster> trains, std::size_t t)
+    {
+        const Coaster& train = trains[t];
+        const float length = train.length();
+        float room = std::numeric_limits<float>::infinity();
+        for (std::size_t k = 0; k < trains.size(); ++k)
+        {
+            if (k == t || length <= 0)
+                continue;
+            // How far ahead the back of train k is, round the track.
+            const float ahead = std::fmod(std::fmod(trains[k].at - train.at, length) + length, length);
+            room = std::min(room, std::max(ahead - trains[k].train_length - kBlockGap, 0.0f));
+        }
+        return room;
+    }
+
     void step(SimWorld& world, Workers* workers)
     {
         entt::registry& r = world.registry;
@@ -239,6 +261,14 @@ namespace rct3::simulation
                         continue; // Off the paths; nothing to walk on
                     if (errand.rest > 0)
                         --errand.rest;
+                    // A leader is the only one to write their party, so this is safe beside the other guests.
+                    const auto* member = r.try_get<Member>(movers[i]);
+                    Party* party = member != nullptr && r.get<Party>(member->party).leader == movers[i] ? &r.get<Party>(member->party) : nullptr;
+                    if (party != nullptr && party->huddle > 0)
+                    {
+                        --party->huddle;
+                        continue; // Standing with the others
+                    }
 
                     if (stride.from != stride.to)
                     {
@@ -303,7 +333,13 @@ namespace rct3::simulation
                                 }
                             }
                         }
-                        if (errand.kind == ErrandKind::Wandering)
+                        if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kIdleSeconds) && random::chance(dice.state, kHuddleChance))
+                        {
+                            party->huddle = ticks(static_cast<float>(random::between(dice.state, double { kShortestHuddle }, double { kLongestHuddle })));
+                            stride.to = at;
+                            stride.progress = 1;
+                        }
+                        else if (errand.kind == ErrandKind::Wandering)
                             stride.to = wander(paths, at, came, dice);
                     }
                     stride.lane_to = stride.to != at ? new_lane(dice) : stride.lane_from;
@@ -322,14 +358,63 @@ namespace rct3::simulation
                     auto [errand, stride, pose, dice, member] = view.get(followers[i]);
                     if (errand.kind != ErrandKind::Following)
                         continue;
-                    const Stride& lead = r.get<Stride>(r.get<Party>(member.party).leader);
-                    if (lead.from != stride.from)
+                    const Party& party = r.get<Party>(member.party);
+                    const Stride& lead = r.get<Stride>(party.leader);
+                    // How far through a step the follower gets in a tick, hurrying to make up ground.
+                    const auto hurry = [&] {
+                        const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
+                        return length > 0 ? kCatchUp * stride.speed * dt / length : 1.0f;
+                    };
+                    if (party.huddle > 0 && lead.from == lead.to && stride.to == lead.to && stride.progress >= 1)
+                    {
+                        // In a ring round a point just ahead of the leader, facing in, the leader standing on it.
+                        const Pose& leader = r.get<Pose>(party.leader);
+                        const glm::vec3 middle = paths.centre(lead.to);
+                        glm::vec3 centre = leader.position + kHuddleRadius * glm::vec3(std::sin(leader.heading), 0.0f, std::cos(leader.heading));
+                        centre.x = std::clamp(centre.x, middle.x - kLaneReach, middle.x + kLaneReach);
+                        centre.z = std::clamp(centre.z, middle.z - kLaneReach, middle.z + kLaneReach);
+                        const auto place_in_ring = static_cast<float>(std::ranges::find(party.members, followers[i]) - party.members.begin());
+                        const auto leader_place = static_cast<float>(std::ranges::find(party.members, party.leader) - party.members.begin());
+                        const float angle = std::atan2(leader.position.x - centre.x, leader.position.z - centre.z) + 2 * glm::pi<float>() * (place_in_ring - leader_place) / static_cast<float>(party.members.size());
+                        // Stepping across to their place in the ring rather than jumping there.
+                        const glm::vec3 spot = centre + kHuddleRadius * glm::vec3(std::sin(angle), 0.0f, std::cos(angle));
+                        const glm::vec3 off = spot - pose.position;
+                        const float reach = kCatchUp * stride.speed * dt;
+                        pose.position = glm::length(off) <= reach ? spot : pose.position + off * (reach / glm::length(off));
+                        pose.heading = angle + glm::pi<float>();
+                        stride.from = lead.to;
+                        stride.to = lead.to;
+                        stride.lane_from = stride.lane_to = glm::vec2(pose.position.x - middle.x, pose.position.z - middle.z);
+                        continue;
+                    }
+                    if (stride.from == lead.from && stride.to == lead.to)
+                    {
+                        // In step: closing in on the leader, never passing them.
+                        if (stride.progress < lead.progress)
+                            stride.progress = std::min(stride.progress + hurry(), lead.progress);
+                    }
+                    else if (stride.from != stride.to && stride.progress < 1)
+                        stride.progress = std::min(stride.progress + hurry(), 1.0f); // Finishing their own step first
+                    else
+                    {
+                        // At a tile, behind: the leader's step when it starts here, else the next tile towards them.
+                        const NodeId at = stride.to;
                         stride.lane_from = stride.lane_to;
-                    if (lead.from != stride.from || lead.to != stride.to)
-                        stride.lane_to = lead.to != lead.from ? new_lane(dice) : stride.lane_from;
-                    stride.from = lead.from;
-                    stride.to = lead.to;
-                    stride.progress = lead.progress;
+                        stride.from = at;
+                        stride.progress = 0;
+                        if (at == lead.from)
+                            stride.to = lead.to;
+                        else if (const auto way = paths.route(at, lead.from); way && !way->empty())
+                            stride.to = way->front();
+                        else
+                        {
+                            // No walk to them: put beside the leader, as before.
+                            stride.from = lead.from;
+                            stride.to = lead.to;
+                            stride.progress = lead.progress;
+                        }
+                        stride.lane_to = stride.to != stride.from ? new_lane(dice) : stride.lane_from;
+                    }
                     place(paths, stride, pose);
                 }
             });
@@ -422,12 +507,8 @@ namespace rct3::simulation
                     }
                 }
             }
-            // A cycle ends when the ride's time is up, or its train has come round.
-            auto* train = r.try_get<Coaster>(e);
-            const bool finished = train ? drive(*train, dt) : ride.timer > 0 && --ride.timer == 0;
-            if (finished)
-            {
-                for (const entt::entity guest : ride.riders)
+            const auto unload = [&](std::vector<entt::entity>& riders) {
+                for (const entt::entity guest : riders)
                 {
                     if (!r.valid(guest))
                         continue;
@@ -437,13 +518,30 @@ namespace rct3::simulation
                     r.get<Errand>(guest) = after_ride(r, guest, e);
                     stop_at(paths, ride.exit != kNoNode ? ride.exit : attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
                 }
-                ride.riders.clear();
+                riders.clear();
+            };
+            // A cycle ends when the ride's time is up, or a train has come round.
+            auto* fleet = r.try_get<Trains>(e);
+            std::optional<std::size_t> loading; // The train standing at the start, ready to load
+            if (fleet != nullptr)
+            {
+                for (std::size_t t = 0; t < fleet->trains.size(); ++t)
+                {
+                    Coaster& train = fleet->trains[t];
+                    if (drive(train, dt, room_ahead(fleet->trains, t)))
+                        unload(fleet->riders[t]);
+                    if (!train.running && train.travelled == 0 && !loading)
+                        loading = t;
+                }
             }
+            else if (ride.timer > 0 && --ride.timer == 0)
+                unload(ride.riders);
             // Loads once the first in line has reached the front.
             // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
             const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along < 0.5f);
-            if (ride.timer == 0 && !(train && train->running) && at_front)
+            if ((fleet != nullptr ? loading.has_value() : ride.timer == 0) && at_front)
             {
+                auto& riders = fleet != nullptr ? fleet->riders[*loading] : ride.riders;
                 const std::size_t boarding = std::min<std::size_t>(ride.capacity, ride.queue.size());
                 for (std::size_t i = 0; i < boarding; ++i)
                 {
@@ -460,13 +558,21 @@ namespace rct3::simulation
                     attraction.income += attraction.price;
                     ++attraction.customers;
                     r.get<Errand>(guest).kind = ErrandKind::Riding;
-                    ride.riders.push_back(guest);
+                    riders.push_back(guest);
                 }
                 ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
-                if (!ride.riders.empty() && train)
-                    train->running = true;
-                else if (!ride.riders.empty())
+                if (!riders.empty() && fleet != nullptr)
+                    fleet->trains[*loading].running = true;
+                else if (!riders.empty())
                     ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
+            }
+            // A train left standing at the start goes, empty if need be, once another is held up behind it (within
+            // a centimetre: positions far round a long track lose that much to rounding).
+            if (fleet != nullptr && loading && !fleet->trains[*loading].running)
+            {
+                for (std::size_t t = 0; t < fleet->trains.size(); ++t)
+                    if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
+                        fleet->trains[*loading].running = true;
             }
         }
 

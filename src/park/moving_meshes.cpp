@@ -10,17 +10,45 @@ namespace rct3::park
 
     MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
-        MovingMeshes out;
-        // Each object alone at the origin, then its batches gathered with those of the others drawn alike.
+        // Each object alone at the origin.
         std::vector<ObjectMesh> alone;
         alone.reserve(objects.size());
         for (const save::PlacedObject& o : objects)
-        {
             alone.push_back(object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
-            out.own.insert(out.own.end(), alone.back().vertices.begin(), alone.back().vertices.end());
+        return gathered_meshes(alone);
+    }
+
+    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid)
+    {
+        std::map<std::int32_t, ModelLevel> by_bone;
+        if (model.rig_level < model.levels.size())
+            for (const ModelPart& part : model.levels[model.rig_level].parts)
+                if (part.bone >= 0)
+                    by_bone[part.bone].parts.push_back(part);
+        std::vector<ObjectMesh> alone;
+        std::vector<std::int32_t> bones;
+        ObjectModels one;
+        for (auto& [bone, level] : by_bone)
+        {
+            ObjectModel piece;
+            piece.positioning = model.positioning;
+            piece.levels = { std::move(level) };
+            one[model_key(object)] = std::move(piece);
+            alone.push_back(object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
+            bones.push_back(bone);
+        }
+        return { gathered_meshes(alone), std::move(bones) };
+    }
+
+    MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone)
+    {
+        MovingMeshes out;
+        for (const ObjectMesh& one : alone)
+        {
+            out.own.insert(out.own.end(), one.vertices.begin(), one.vertices.end());
             out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
-            out.mesh.placed += alone.back().placed;
-            out.mesh.missing += alone.back().missing;
+            out.mesh.placed += one.placed;
+            out.mesh.missing += one.missing;
         }
         std::map<std::pair<std::string, PartBlend>, std::size_t> batch_of;
         std::vector<std::vector<std::uint32_t>> indices;
@@ -46,7 +74,7 @@ namespace rct3::park
             out.mesh.indices.insert(out.mesh.indices.end(), indices[b].begin(), indices[b].end());
         }
         out.mesh.vertices = out.own;
-        out.places.assign(objects.size(), glm::mat4(1.0f));
+        out.places.assign(alone.size(), glm::mat4(1.0f));
         return out;
     }
 

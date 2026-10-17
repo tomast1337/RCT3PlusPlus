@@ -17,9 +17,11 @@
 // Dice, so a world steps the same way however many workers it has.
 #pragma once
 
+#include "simulation/coaster.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstdint>
+#include <span>
 
 namespace rct3::simulation
 {
@@ -35,6 +37,13 @@ namespace rct3::simulation
     struct Pose;
     /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.
     [[nodiscard]] Pose between_steps(const Pose& pose, float along);
+
+    /// Keeps a train this far behind the back of the one in front, metres; our own figure.
+    inline constexpr float kBlockGap = 4.0f;
+
+    /// The clear track ahead of train `t` of `trains`, up to kBlockGap short of the back of the nearest
+    /// train in front; endless for a lone train.
+    [[nodiscard]] float room_ahead(std::span<const Coaster> trains, std::size_t t);
 
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);

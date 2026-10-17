@@ -6,9 +6,11 @@
 
 #include "park/object_models.hpp"
 #include "park/track_course.hpp"
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstddef>
@@ -48,6 +50,9 @@ namespace rct3::simulation
     /// has a station; shuttles, slides and open water are left to their timing.
     [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
 
+    /// `ride`'s trains on `coaster`'s track, each where the park kept it.
+    [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::Ride& ride);
+
     /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
     /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in
     /// `rides.rides`. A coaster with its track in `coasters` at its place runs its train round it; one without
@@ -58,5 +63,10 @@ namespace rct3::simulation
 
     /// Sets every guest standing on a path walking; returns how many. Call after import_paths.
     std::size_t start_guests(SimWorld& world);
+
+    /// Puts the guests the park had on a ride (`guests` by place in `people`, `rides` as import_rides made
+    /// them) back on it: on a flat ride's turn, or on a train, sending off one that stands at the start. Those
+    /// the ride has no room for walk off from its exit. Returns how many it seated. Call after start_guests.
+    std::size_t board_saved_riders(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests, const save::RideModel& saved, std::span<const entt::entity> rides);
 
 } // namespace rct3::simulation

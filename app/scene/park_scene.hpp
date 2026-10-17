@@ -197,8 +197,25 @@ namespace rct3::scene
         std::vector<glm::mat4> car_places;                     ///< Where each car stands now, by car
         park::MovingMeshes car_meshes;                         ///< At car_places
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose trains go round
-        std::vector<entt::entity> ride_entities;               ///< In the simulation, by ride; null when not there
-        std::optional<park::PersonLibrary> person_models;      ///< Of the park's people
+        std::vector<entt::entity> ride_entities;
+        /// The cars of each simulated ride, by their places in `cars`, front to back.
+        std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
+        /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
+        std::map<entt::entity, std::size_t> ride_seats;
+        /// A flat ride its bones move: drawn apart from the other objects, a piece per bone.
+        struct BonedRide
+        {
+            entt::entity ride = entt::null;
+            std::size_t object = 0; ///< Its place in `objects`
+            glm::mat4 placed { 1.0f };
+            park::MovingMeshes mesh;
+            std::vector<std::int32_t> bones; ///< By piece of `mesh`
+            std::size_t first_seat = 0;      ///< Its first seat's place in seat_carriers
+        };
+        std::vector<BonedRide> boned_rides;
+        /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.
+        std::vector<glm::mat4> seat_carriers;
+        std::optional<park::PersonLibrary> person_models; ///< Of the park's people
         std::vector<ShownPerson> shown_people;
         park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;
@@ -206,6 +223,13 @@ namespace rct3::scene
         std::array<float, park::kPersonLevels> since_people { kPeopleRebuildIntervals };
         float since_people_levels = kObjectRebuildInterval;
         std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
+        /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
+        park::MovingMeshes riders;
+        /// By piece of `riders`: what carries them, a car in `cars` or past those a seat in `seat_carriers`, or kNoCar
+        /// where they sit still.
+        std::vector<std::size_t> rider_cars;
+        std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
+        float since_riders = 0;
         ui::UiTextures people_textures;
         park::AttractionObjects attractions;                  ///< Which attraction each object belongs to, for clicks
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about

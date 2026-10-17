@@ -36,6 +36,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -184,7 +185,8 @@ int main(int argc, char** argv)
             if (timings[i])
                 std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->seconds));
     }
-    const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(simulation::import_rides(world, *rides, timings, coasters), [](entt::entity e) { return e != entt::null; }));
+    const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters);
+    const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));
     {
         // How far the paths' heights are from where the save stands its guests, as a check on both.
         std::vector<float> gaps;
@@ -196,11 +198,12 @@ int main(int argc, char** argv)
             std::printf("height gap to saved guests: median %.3f, 90%% %.3f, max %.3f\n", gaps[gaps.size() / 2], gaps[gaps.size() * 9 / 10], gaps.back());
     }
     const std::size_t walking = simulation::start_guests(world);
+    const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
-            std::printf("stall %s sells %s\n", stall.base.name.c_str(), item.name.c_str());
-    std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu  parties %zu\n", world.paths.nodes().size(), shops, ride_count, walking, parties);
+            std::printf("stall %s [%s] sells %s\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str());
+    std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu  seated %zu  parties %zu\n", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();
@@ -236,12 +239,43 @@ int main(int argc, char** argv)
     const auto workers = threads > 0 ? std::make_unique<simulation::Workers>(threads) : nullptr;
     const std::uint32_t steps = simulation::ticks(seconds);
     const auto start = std::chrono::steady_clock::now();
+    // Rides with more than one train: the closest any train came to the back of the one ahead, and how many
+    // laps each train finished.
+    struct Fleet
+    {
+        float closest = std::numeric_limits<float>::infinity();
+        std::vector<std::uint32_t> laps;
+        std::vector<float> travelled;
+    };
+    std::map<entt::entity, Fleet> fleets;
+    for (const auto [e, trains] : world.registry.view<const simulation::Trains>().each())
+        if (trains.trains.size() > 1)
+            fleets[e] = { .laps = std::vector<std::uint32_t>(trains.trains.size()), .travelled = std::vector<float>(trains.trains.size()) };
     for (std::uint32_t i = 0; i < steps; ++i)
+    {
         simulation::step(world, workers.get());
+        for (auto& [e, fleet] : fleets)
+        {
+            const auto& trains = world.registry.get<simulation::Trains>(e).trains;
+            for (std::size_t t = 0; t < trains.size(); ++t)
+            {
+                fleet.closest = std::min(fleet.closest, simulation::room_ahead(trains, t) + simulation::kBlockGap);
+                fleet.laps[t] += trains[t].travelled < fleet.travelled[t];
+                fleet.travelled[t] = trains[t].travelled;
+            }
+        }
+    }
     const double took = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     std::printf("ran %u ticks (%.0f s of park time) in %.3f s, %.1f us a tick\n", steps, seconds, took, took * 1e6 / std::max(steps, 1u));
 
     auto& r = world.registry;
+    for (const auto& [e, fleet] : fleets)
+    {
+        std::printf("  %-28s %zu trains, closest %.2f m, laps", r.get<simulation::Attraction>(e).name.c_str(), fleet.laps.size(), static_cast<double>(fleet.closest));
+        for (const std::uint32_t d : fleet.laps)
+            std::printf(" %u", d);
+        std::printf("\n");
+    }
     for (const auto [e, a] : r.view<const simulation::Attraction>().each())
     {
         const auto* shop = r.try_get<simulation::Shop>(e);
@@ -263,5 +297,28 @@ int main(int argc, char** argv)
     }
     if (count > 0)
         std::printf("guests: wandering %zu heading %zu queueing %zu riding %zu following %zu waiting %zu  happiness %.2f thirst %.2f hunger %.2f\n", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
+    // How well parties keep together: followers' distance from their leader, and how far waiting members stand
+    // from the exit of the ride their party is on.
+    std::vector<float> apart;
+    std::vector<float> from_exit;
+    for (const auto [e, errand, member, pose] : r.view<const simulation::Errand, const simulation::Member, const simulation::Pose>().each())
+    {
+        const auto& party = r.get<simulation::Party>(member.party);
+        if (errand.kind == simulation::ErrandKind::Following)
+            apart.push_back(glm::distance(pose.position, r.get<simulation::Pose>(party.leader).position));
+        else if (errand.kind == simulation::ErrandKind::Waiting && r.valid(errand.target) && r.all_of<simulation::CycleRide>(errand.target) && r.get<simulation::Stride>(e).route.empty())
+        {
+            const simulation::NodeId exit = r.get<simulation::CycleRide>(errand.target).exit;
+            if (exit != simulation::kNoNode)
+                from_exit.push_back(glm::distance(pose.position, world.paths.centre(exit)));
+        }
+    }
+    for (auto [name, v] : { std::pair { "followers from leader", &apart }, std::pair { "waiters from exit", &from_exit } })
+    {
+        if (v->empty())
+            continue;
+        std::ranges::sort(*v);
+        std::printf("%s: %zu, median %.2f, 90%% %.2f, max %.2f\n", name, v->size(), static_cast<double>((*v)[v->size() / 2]), static_cast<double>((*v)[v->size() * 9 / 10]), static_cast<double>(v->back()));
+    }
     return 0;
 }

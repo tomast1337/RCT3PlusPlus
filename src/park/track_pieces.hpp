@@ -79,6 +79,9 @@ namespace rct3::park
         /// Points along the middle line from start to end, a few to each part of the rails' splines; just the
         /// two ends when the rails are split differently.
         std::vector<glm::vec3> path { };
+        /// Which way is up for the track at each point of `path`: square to the rails, so it leans with
+        /// the bank. A unit vector.
+        std::vector<glm::vec3> ups { };
     };
 
     /// What a section stores about a piece besides its splines.

@@ -1960,7 +1960,9 @@ namespace rct3::scene
                 // Each thing broken costs the park some rating, and bad runs of it are told to the player.
                 if (const auto* vandalism = scene.sim.registry.ctx().find<simulation::Vandalism>())
                 {
-                    scene.park.rating_carry.penalty += kVandalismPenalty * static_cast<std::int32_t>(vandalism->broken - scene.vandalism_seen);
+                    const auto broken = static_cast<float>(vandalism->broken - scene.vandalism_seen);
+                    if (scene.park.rating)
+                        *scene.park.rating = std::max(0.0f, *scene.park.rating - kVandalismPenalty * broken / static_cast<float>(simulation::kMaxRating));
                     scene.vandalism_seen = vandalism->broken;
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });

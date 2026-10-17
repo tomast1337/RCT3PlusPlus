@@ -8,64 +8,65 @@ using simulation::RatingInput;
 using simulation::RatingParts;
 using simulation::RideRatingInput;
 
-TEST_CASE("an empty park is rated on the middling happiness score alone")
+TEST_CASE("an empty park scores half its happiness and nothing else")
 {
     const RatingParts p = simulation::rate_park({ });
+    CHECK(p.happiness == 250);
+    CHECK(p.rides == 0);
+    CHECK(p.reliability == 0);
     CHECK(p.guests == 0);
-    CHECK(p.happy_guests == 250);
-    CHECK(p.ride_up_time == 0);
-    CHECK(p.ride_scores == 0);
     CHECK(p.total == 250);
 }
 
-TEST_CASE("each part of the rating adds to the total with its sign")
+TEST_CASE("each part of the score adds to the total with its sign")
+{
+    RatingInput in;
+    in.guests = 750;
+    in.guests_inside = 4;
+    in.happiness = 3; // Three quarters happy on average
+    in.rides = { { .downtime_percent = 0, .excitement = 7.0f, .intensity = 5.0f }, { .downtime_percent = 50, .excitement = { }, .intensity = { } } };
+    in.old_litter = 10;
+    const RatingParts p = simulation::rate_park(in);
+    CHECK(p.happiness == 375);
+    CHECK(p.rides == 146);       // A ride scoring in full, times the variety of two rides
+    CHECK(p.reliability == 75);  // Running three quarters of the time on average
+    CHECK(p.guests == 275);      // Most of the part at 750 guests
+    CHECK(p.litter == -30);
+    CHECK(p.harder == 0);
+    CHECK(p.total == 375 + 146 + 75 + 275 - 30);
+}
+
+TEST_CASE("a ride too intense for comfort scores less, and nothing past the range")
+{
+    RatingInput mild;
+    mild.rides = { { .downtime_percent = 0, .excitement = 7.0f, .intensity = 7.0f } };
+    RatingInput harsh = mild;
+    harsh.rides[0].intensity = 9.0f;
+    RatingInput brutal = mild;
+    brutal.rides[0].intensity = 11.0f;
+    CHECK(simulation::rate_park(harsh).rides * 2 == doctest::Approx(simulation::rate_park(mild).rides).epsilon(0.05));
+    CHECK(simulation::rate_park(brutal).rides == 0);
+}
+
+TEST_CASE("the harder rating takes a share off, and the total stays in range")
 {
     RatingInput in;
     in.harder = true;
-    in.guests = 1000;
-    in.guests_inside = 10;
-    in.happy_guests = 7;
-    in.rides = { { .downtime_percent = 0, .excitement = 4.0f, .intensity = 6.0f }, { .downtime_percent = 25, .excitement = { }, .intensity = { } } };
-    in.old_litter = 3;
-    in.penalty = 10;
-    in.bonus = 20;
     const RatingParts p = simulation::rate_park(in);
-    CHECK(p.base == -100);
-    CHECK(p.guests == 75);        // Half way to the guest count that scores the most
-    CHECK(p.happy_guests == 420); // Seven in ten happy
-    CHECK(p.ride_up_time == 35);  // Three quarters up on average, scaled down for only two rides
-    // Only the tested ride counts: its scores, and how near its averages are to the pleasant levels.
-    CHECK(p.ride_scores == 5 + 48 + 8 + 45);
-    CHECK(p.litter == -12);
-    CHECK(p.penalty == -10);
-    CHECK(p.bonus == 20);
-    CHECK(p.total == -100 + 75 + 420 + 35 + 106 - 12 - 10 + 20);
-}
+    CHECK(p.harder == -38);
+    CHECK(p.total == 212);
 
-TEST_CASE("every part stops at its cap")
-{
-    RatingInput in;
-    in.guests = 5000;
-    in.guests_inside = 10;
-    in.happy_guests = 10;
-    in.rides.assign(12, { .downtime_percent = 0, .excitement = 10.0f, .intensity = 10.0f });
-    in.old_litter = 500;
-    const RatingParts p = simulation::rate_park(in);
-    CHECK(p.guests == 150);
-    CHECK(p.happy_guests == 500);
-    CHECK(p.ride_up_time == 200);
-    CHECK(p.ride_scores == 100 + 11 + 100 + 20);
-    CHECK(p.litter == -600);
-}
-
-TEST_CASE("the total is kept between nothing and the most there is")
-{
     RatingInput high;
-    high.bonus = 2000;
-    CHECK(simulation::rate_park(high).total == simulation::kMaxRating);
+    high.guests = 100000;
+    high.guests_inside = 1;
+    high.happiness = 1;
+    high.rides.assign(100, { .downtime_percent = 0, .excitement = 9.0f, .intensity = 6.0f });
+    CHECK(simulation::rate_park(high).total == 1000);
 
     RatingInput low;
-    low.old_litter = 200;
+    low.old_litter = 1000;
+    low.guests_inside = 1;
+    CHECK(simulation::rate_park(low).litter == -500);
     CHECK(simulation::rate_park(low).total == 0);
 }
 
@@ -76,12 +77,10 @@ TEST_CASE("the inputs are gathered from the park's guests, rides and litter")
     people.guests[0].in_park = false;
     people.guests[0].mood_now.happiness = 0.9f;
     people.guests[1].mood_now.happiness = 0.6f;
-    people.guests[2].mood_now.happiness = 0.5f; // Not more happy than not
-    people.litter.resize(3);
+    people.guests[2].mood_now.happiness = 0.5f;
+    people.litter.resize(2);
     people.litter[0].create_time = 10;
-    people.litter[1].create_time = 10;
-    people.litter[1].flags = 1u << 5; // Kept out of the rating
-    people.litter[2].create_time = 100;
+    people.litter[1].create_time = 300; // Too new to count
 
     save::RideModel rides;
     rides.rides.resize(3);
@@ -95,8 +94,8 @@ TEST_CASE("the inputs are gathered from the park's guests, rides and litter")
 
     const RatingInput in = simulation::rating_input(people, rides, 300);
     CHECK(in.guests_inside == 2);
-    CHECK(in.happy_guests == 1);
-    CHECK(in.old_litter == 1); // Only the old, counted piece
+    CHECK(in.happiness == doctest::Approx(1.1f));
+    CHECK(in.old_litter == 1);
     REQUIRE(in.rides.size() == 2);
     CHECK(in.rides[0].downtime_percent == doctest::Approx(10.0f));
     CHECK(in.rides[0].excitement == 3.5f);
@@ -105,10 +104,9 @@ TEST_CASE("the inputs are gathered from the park's guests, rides and litter")
     CHECK_FALSE(in.rides[1].excitement);
 }
 
-TEST_CASE("the penalty and bonus fade each week, never below nothing")
+TEST_CASE("the rating moves half way towards each week's score")
 {
-    CHECK(simulation::fade({ .penalty = 100, .bonus = 10 }, false).penalty == 51);
-    CHECK(simulation::fade({ .penalty = 100, .bonus = 10 }, false).bonus == 7);
-    CHECK(simulation::fade({ .penalty = 100, .bonus = 2 }, true).penalty == 0);
-    CHECK(simulation::fade({ .penalty = 100, .bonus = 2 }, true).bonus == 0);
+    CHECK(simulation::next_rating(std::nullopt, 600) == doctest::Approx(0.6f));
+    CHECK(simulation::next_rating(0.2f, 600) == doctest::Approx(0.4f));
+    CHECK(simulation::next_rating(0.8f, 2000) == doctest::Approx(0.9f));
 }

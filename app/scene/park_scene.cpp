@@ -222,6 +222,10 @@ namespace rct3::scene
         constexpr std::array kPersonDistances { 75.0f, 200.0f, 600.0f };
         constexpr std::uint8_t kPickColour = 255;
         constexpr std::string_view kCharacterFolder = "Characters";
+        /// Where the staff's uniform pictures are.
+        /// shortcut: always the one set the game ships, though a save names its set; upgrade when a save
+        /// names another.
+        constexpr std::string_view kUniformFolder = "StaffUniforms";
         constexpr std::uint8_t kColourCells = 16;
 
         /// Reads the models of the park's guests and staff and uploads their pictures.
@@ -231,7 +235,10 @@ namespace rct3::scene
             const auto folder = install.find(kCharacterFolder);
             if (!folder)
                 return;
-            park::PersonLibrary library(install.root(), folder->filename().string());
+            const std::string characters = folder->filename().string();
+            const std::string uniforms = install.find(kUniformFolder).value_or(std::filesystem::path(kUniformFolder)).filename().string();
+            const std::array<std::string_view, 2> folders { characters, uniforms };
+            park::PersonLibrary library(install.root(), folders);
             std::map<save::PeopleObjectId, std::string_view> groups;
             for (const save::PartGroup& g : scene.people.part_groups)
                 groups.emplace(g.id, g.symbol);

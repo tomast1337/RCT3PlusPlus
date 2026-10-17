@@ -13,6 +13,7 @@
 #include "ovl/static_shape.hpp"
 #include "ovl/track_section.hpp"
 #include "park/item_category.hpp"
+#include "park/terrain_mesh.hpp"
 #include "park/water_flow.hpp"
 #include "strings/ascii.hpp"
 
@@ -382,15 +383,20 @@ namespace rct3::park
 
     PaletteImage water_picture()
     {
-        // Our own look, matched by eye to nothing: pale blue shades in a soft criss-cross of ripples.
+        // The lakes' colour, its ripple crests a little lighter, in a soft criss-cross.
         // shortcut: a still picture, moving water would need its own shader; upgrade when fountains get one.
         constexpr std::uint32_t kSize = 64;
         constexpr int kShades = 16;
         PaletteImage picture;
         picture.width = kSize;
         picture.height = kSize;
+        constexpr float kCrest = 0.25f; ///< How much lighter the crests are
         for (int i = 0; i < kShades; ++i)
-            picture.palette[i] = { static_cast<std::uint8_t>(120 + i * 6), static_cast<std::uint8_t>(170 + i * 5), static_cast<std::uint8_t>(205 + i * 3) };
+        {
+            const glm::vec3 shade = glm::mix(glm::vec3(kWaterColour), glm::vec3(1.0f), kCrest * static_cast<float>(i) / (kShades - 1));
+            picture.palette[i] = { static_cast<std::uint8_t>(shade.r * 255), static_cast<std::uint8_t>(shade.g * 255), static_cast<std::uint8_t>(shade.b * 255) };
+        }
+        const float alpha = kWaterColour.a * 255;
         picture.indices.resize(kSize * kSize);
         picture.alpha.resize(kSize * kSize);
         constexpr float kTurn = 6.2831853f / kSize;
@@ -402,7 +408,7 @@ namespace rct3::park
                 const float wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y)) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x))) * 0.25f + 0.5f;
                 const std::size_t at = y * kSize + x;
                 picture.indices[at] = static_cast<std::uint8_t>(std::clamp(wave * kShades, 0.0f, kShades - 1.0f));
-                picture.alpha[at] = static_cast<std::uint8_t>(130 + wave * 70);
+                picture.alpha[at] = static_cast<std::uint8_t>(std::clamp(alpha - 20 + wave * 40, 1.0f, 254.0f));
             }
         }
         return picture;
@@ -416,6 +422,8 @@ namespace rct3::park
                 pictures_.emplace(std::string(kWaterPicture), water_picture());
             part.texture = std::string(kWaterPicture);
             part.slots = 0;
+            for (ModelVertex& v : part.vertices)
+                v.position.y += kWaterLift;
             return;
         }
         part.texture = texture_key(name, near);

@@ -125,7 +125,11 @@ namespace rct3::park
     /// name is in no file, so the look is ours.
     inline constexpr std::string_view kWaterPicture = "rct3pp:water";
 
-    /// A see-through, light blue, faintly rippled picture for those parts.
+    /// How far those parts are lifted: they lie on the basin they fill, and would fight it for depth. Our own
+    /// value, small enough not to show.
+    inline constexpr float kWaterLift = 0.03f;
+
+    /// A see-through, faintly rippled picture for those parts, in the colour of the park's lakes.
     [[nodiscard]] PaletteImage water_picture();
 
     /// Loads models through an asset index, reading each overlay once. Keep it while loading a park's models,

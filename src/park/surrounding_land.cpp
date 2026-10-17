@@ -138,6 +138,22 @@ namespace rct3::park
         const std::vector<EdgePoint> edge = edge_points(grid);
         out.points = edge.size();
         out.sea = sea_levels(grid, edge, water);
+        // Each point's way along the edge to the nearest sea, and how far down the land there comes: all the way
+        // at sea, less the farther off.
+        out.shore.assign(out.points, std::numeric_limits<float>::quiet_NaN());
+        std::vector<float> dip(out.points, 0.0f);
+        for (std::size_t i = 0; i < out.points; ++i)
+        {
+            for (std::size_t d = 0; d < kShorePoints && std::isnan(out.shore[i]); ++d)
+            {
+                for (const std::size_t j : { (i + d) % out.points, (i + out.points - d % out.points) % out.points })
+                    if (!std::isnan(out.sea[j]) && std::isnan(out.shore[i]))
+                    {
+                        out.shore[i] = out.sea[j];
+                        dip[i] = 1 - static_cast<float>(d) / static_cast<float>(kShorePoints);
+                    }
+            }
+        }
         out.distances = ring_distances();
         const float level = edge_level(grid);
         std::vector<float> heights(out.points);
@@ -151,8 +167,8 @@ namespace rct3::park
                 for (float& h : heights)
                     h = level + (h - level) * kSurroundKeep;
                 for (std::size_t i = 0; i < out.points; ++i)
-                    if (!std::isnan(out.sea[i]))
-                        heights[i] = std::min(heights[i], out.sea[i] - kSeaDepth);
+                    if (!std::isnan(out.shore[i]))
+                        heights[i] = std::min(heights[i], out.shore[i] - kSeaDepth * dip[i]);
             }
             out.heights.insert(out.heights.end(), heights.begin(), heights.end());
         }
@@ -194,12 +210,14 @@ namespace rct3::park
         const auto n = rings.points;
         const auto i = static_cast<std::size_t>(std::floor(along)) % n;
         const float s = along - std::floor(along);
-        if (!rings.sea.empty() && !std::isnan(rings.sea[s < 0.5f ? i : (i + 1) % n]))
-            return std::nullopt; // Under the sea
         const auto height = [&](std::size_t k, std::size_t p) { return rings.heights[k * n + p % n]; };
         const float inner = height(ring, i) + (height(ring, i + 1) - height(ring, i)) * s;
         const float outer = height(ring + 1, i) + (height(ring + 1, i + 1) - height(ring + 1, i)) * s;
-        return inner + (outer - inner) * t;
+        const float ground = inner + (outer - inner) * t;
+        const auto nearer = s < 0.5f ? i : (i + 1) % n;
+        if (!rings.shore.empty() && !std::isnan(rings.shore[nearer]) && (!std::isnan(rings.sea[nearer]) || ground < rings.shore[nearer]))
+            return std::nullopt; // Under water
+        return ground;
     }
 
     TerrainMesh surrounding_land(const save::TerrainGrid& grid, const save::WaterLayer& water)
@@ -260,13 +278,16 @@ namespace rct3::park
             for (std::size_t i = 0; i < n; ++i)
                 points.push_back(ring_point(distances[k], i, shape.heights[at(k, i)]));
 
-        // The sea: between each two points it goes out from, over every ring and on to kSeaReach.
+        // The sea and the water by its shore: between each two points either is off, over every ring and on to
+        // kSeaReach. Where the land rises out of it, it is under the land.
         for (std::size_t i = 0; i < n; ++i)
         {
-            const float a = shape.sea[i];
-            const float b = shape.sea[(i + 1) % n];
-            if (std::isnan(a) || std::isnan(b))
+            float a = shape.shore[i];
+            float b = shape.shore[(i + 1) % n];
+            if (std::isnan(a) && std::isnan(b))
                 continue;
+            a = std::isnan(a) ? b : a;
+            b = std::isnan(b) ? a : b;
             const auto water_at = [&](std::size_t k, std::size_t p, float level) -> WaterVertex {
                 const float d = k < rings ? distances[k] : kSeaReach;
                 const float ground = k < rings ? shape.heights[at(k, p)] : level - kSeaDepth;

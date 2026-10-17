@@ -71,6 +71,7 @@ namespace rct3::config
             { O::RideDistance, "ride_distance", 0, 3, kAny, 2 },
             { O::ImposterDistance, "imposter_distance", 0, 1500, 5, 500 },
             { O::BlendDetailLevels, "blend_detail_levels", 0, 1, 1, 1 },
+            { O::DetailBlendBand, "detail_blend_band", 0.05f, 0.5f, 0.05f, 0.2f },
             { O::CompressTextures, "compress_textures", 0, 1, 1, 0 },
             { O::AggressiveDepthBias, "aggressive_depth_bias", 0, 1, 1, 0 },
             { O::TextureDetail, "texture_detail", 0, 1, kAny, 1 },

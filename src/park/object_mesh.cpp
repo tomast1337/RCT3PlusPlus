@@ -3,6 +3,7 @@
 
 #include "park/object_placement.hpp"
 
+#include <cmath>
 #include <utility>
 
 namespace rct3::park
@@ -18,6 +19,7 @@ namespace rct3::park
             std::vector<GroundVertex> vertices;
             std::vector<std::uint32_t> indices;
             std::vector<BillboardStand> stands; ///< Billboard runs only
+            std::vector<std::uint32_t> owners;  ///< By vertex
         };
 
         using Key = std::pair<PartBlend, std::string>;
@@ -35,6 +37,7 @@ namespace rct3::park
                 const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
                 mesh.batches.push_back({ key.second, run.picture, run.colours, key.first, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
                 mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
+                mesh.owners.insert(mesh.owners.end(), run.owners.begin(), run.owners.end());
                 for (const std::uint32_t i : run.indices)
                     mesh.indices.push_back(base + i);
             }
@@ -67,6 +70,43 @@ namespace rct3::park
             anchors.emplace_back(placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted)[3]);
         }
         return anchors;
+    }
+
+    LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale)
+    {
+        LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };
+        for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
+        {
+            if (objects[i].hidden)
+                continue;
+            const auto model = models.find(model_key(objects[i]));
+            if (model == models.end() || model->second.levels.empty())
+                continue;
+            const auto& levels = model->second.levels;
+            const float distance = glm::distance(eye, anchors[i]);
+            const auto level = level_at(model->second, distance, scale);
+            // The edges the object may be crossing: past the end of its own level, or just past the one before.
+            const std::size_t last = levels.size() - 1;
+            const std::size_t at = level.value_or(last + 1);
+            for (const std::size_t edge : { at, at - 1 })
+            {
+                if (band <= 0)
+                    break;
+                if (edge > last)
+                    continue;
+                const float far = levels[edge].distance * scale;
+                const float near = far * (1 - band);
+                if (!std::isfinite(far) || far <= 0 || distance < near - far * kCrossMargin || distance > far + far * kCrossMargin)
+                    continue;
+                plan.finer[i] = static_cast<std::int8_t>(edge);
+                plan.coarser[i] = edge < last ? static_cast<std::int8_t>(edge + 1) : kNotDrawn;
+                plan.bands[i] = { near, far };
+                break;
+            }
+            if (plan.finer[i] == kNotDrawn && level)
+                plan.steady[i] = static_cast<std::int8_t>(*level);
+        }
+        return plan;
     }
 
     ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale)
@@ -135,6 +175,7 @@ namespace rct3::park
                     }
                     run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, stretched ? glm::normalize(turn * v.normal) : turn * v.normal });
                 }
+                run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
                 for (const std::uint32_t i : part.indices)
                     run.indices.push_back(base + i);
             }
@@ -173,6 +214,7 @@ namespace rct3::park
             run.vertices.push_back({ glm::vec3(0.0f), shade, { board->uv_min.x, board->uv_max.y } });
             for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u })
                 run.indices.push_back(first + i);
+            run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
             run.stands.push_back({ anchors[index], board->width / 2, board->height });
         }
         for (const auto& [key, run] : runs)

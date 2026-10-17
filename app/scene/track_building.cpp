@@ -215,7 +215,7 @@ namespace rct3::scene
         void objects_changed(ParkScene& scene)
         {
             scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
-            scene.levels.clear();
+            scene.levels = { };
             scene.since_rebuild = kObjectRebuildInterval;
         }
 

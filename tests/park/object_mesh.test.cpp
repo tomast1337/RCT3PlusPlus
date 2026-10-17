@@ -254,3 +254,43 @@ TEST_CASE("a leaning object's points rise with their distance from its anchor")
     CHECK(m.vertices[2].position.y != doctest::Approx(0.0f));
     CHECK(m.vertices[1].position.y == doctest::Approx(1.0f)); // Straight above the anchor: not moved
 }
+
+TEST_CASE("objects near the edge of a level are drawn at both levels, crossing over through a band")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Tree", three_levels()); // Levels reach 10, 50 and 200
+    const std::vector<save::PlacedObject> objects { object("Tree", 0) };
+    const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
+    const auto plan = [&](float distance) { return plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, distance), 0.2f); };
+
+    CHECK(plan(5).steady == ObjectLevels { 0 });
+    CHECK(plan(5).finer == ObjectLevels { kNotDrawn });
+    // In the band before the first level's edge, and just past it: both levels, crossing from 8 to 10.
+    for (const float d : { 9.0f, 10.5f })
+    {
+        const LevelPlan p = plan(d);
+        CHECK(p.steady == ObjectLevels { kNotDrawn });
+        CHECK(p.finer == ObjectLevels { 0 });
+        CHECK(p.coarser == ObjectLevels { 1 });
+        CHECK(p.bands[0] == glm::vec2(8, 10));
+    }
+    CHECK(plan(20).steady == ObjectLevels { 1 });
+    // Past the last level it crosses into nothing, then is not drawn at all.
+    CHECK(plan(210).finer == ObjectLevels { 2 });
+    CHECK(plan(210).coarser == ObjectLevels { kNotDrawn });
+    CHECK(plan(300).steady == ObjectLevels { kNotDrawn });
+    CHECK(plan(300).finer == ObjectLevels { kNotDrawn });
+    // Without a band, objects jump.
+    CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 9), 0).steady == ObjectLevels { 0 });
+}
+
+TEST_CASE("each vertex of a mesh knows the object it belongs to")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Tree", three_levels());
+    const std::vector<save::PlacedObject> objects { object("Rock", 0), object("Tree", 0), object("Tree", 1) };
+    const ObjectMesh mesh = object_mesh(objects, models, flat());
+    CHECK(mesh.owners == std::vector<std::uint32_t> { 1, 1, 1, 2, 2, 2 });
+    const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
+    CHECK(gather_billboards(objects, models, anchors, ObjectLevels { kNotDrawn, kNotDrawn, 2 }).mesh.owners == std::vector<std::uint32_t> { 2, 2, 2, 2 });
+}

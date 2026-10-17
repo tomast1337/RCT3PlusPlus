@@ -15,6 +15,7 @@ layout(location = 0) out vec4 v_color;
 layout(location = 1) out vec2 v_uv;
 layout(location = 2) out vec3 v_normal;
 layout(location = 3) out vec3 v_world;
+layout(location = 4) flat out vec2 v_cross; // Not crossing levels (lit_crossing.vert)
 
 void main() {
   gl_Position = u_draw.transform * vec4(a_position, 1.0);
@@ -22,4 +23,5 @@ void main() {
   v_uv = a_uv;
   v_normal = a_normal;
   v_world = a_position;
+  v_cross = vec2(0.0);
 }

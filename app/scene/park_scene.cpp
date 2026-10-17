@@ -112,6 +112,15 @@ namespace rct3::scene
             { 3, render::VertexFormat::Float3, offsetof(park::GroundVertex, normal) },
         } };
 
+        constexpr std::array<render::VertexAttribute, 6> kCrossingAttributes = { {
+            { 0, render::VertexFormat::Float3, offsetof(CrossingVertex, ground) + offsetof(park::GroundVertex, position) },
+            { 1, render::VertexFormat::Float4, offsetof(CrossingVertex, ground) + offsetof(park::GroundVertex, colour) },
+            { 2, render::VertexFormat::Float2, offsetof(CrossingVertex, ground) + offsetof(park::GroundVertex, uv) },
+            { 3, render::VertexFormat::Float3, offsetof(CrossingVertex, ground) + offsetof(park::GroundVertex, normal) },
+            { 4, render::VertexFormat::Float4, offsetof(CrossingVertex, band) },
+            { 5, render::VertexFormat::Float2, offsetof(CrossingVertex, side) },
+        } };
+
         /// The top folders of the install that the park's objects come from, as they are spelled on disk.
         std::vector<std::string> object_folders(const config::GameInstall& install, std::span<const save::PlacedObject> objects)
         {
@@ -588,41 +597,67 @@ namespace rct3::scene
 
         /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`. Reads only
         /// what is set when the park loads besides its arguments, so it may run beside the frame.
-        std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::ObjectLevels& shown)
+        std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band)
         {
             ObjectBuild built;
-            built.levels = profiling::section("Levels", [&] { return park::object_levels(scene.objects, scene.models, scene.anchors, eye); });
+            built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band); });
             for (const ParkScene::BonedRide& boned : scene.boned_rides)
-                built.levels[boned.object] = -1; // Drawn apart, moving
-            if (built.levels == shown)
+            {
+                // Drawn apart, moving
+                built.plan.steady[boned.object] = park::kNotDrawn;
+                built.plan.finer[boned.object] = park::kNotDrawn;
+                built.plan.coarser[boned.object] = park::kNotDrawn;
+            }
+            if (built.plan == shown)
                 return std::nullopt;
-            built.mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, built.levels, { }, scene.leans, scene.fitted); });
-            built.billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, built.levels); });
+            for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
+            {
+                shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted); });
+                shapes->billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
+            }
             return built;
         }
 
-        /// Puts `built` in the object buffers.
-        void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+        /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.
+        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const park::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
         {
-            for (render::BufferHandle& b : { std::ref(scene.object_vertices), std::ref(scene.object_indices) })
+            std::vector<std::pair<glm::vec4, glm::vec2>> out;
+            out.reserve(owners.size());
+            for (const std::uint32_t o : owners)
+                out.push_back({ glm::vec4(scene.anchors[o], plan.bands[o].x), glm::vec2(plan.bands[o].y, side) });
+            return out;
+        }
+
+        /// `vertices` with the bands of `bands`, for the crossing shaders.
+        std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
+        {
+            std::vector<CrossingVertex> out;
+            out.reserve(vertices.size());
+            for (std::size_t i = 0; i < vertices.size() && i < bands.size(); ++i)
+                out.push_back({ vertices[i], bands[i].first, bands[i].second });
+            return out;
+        }
+
+        /// Puts `shapes` in `shown`'s buffers, dropping what they held.
+        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const park::LevelPlan& plan, float side = 0)
+        {
+            for (const render::BufferHandle b : { shown.vertices, shown.indices })
             {
                 if (b)
                     device.destroy_buffer(b);
-                b = { };
             }
-            scene.levels = std::move(built.levels);
-            scene.object_batches = built.mesh.batches;
+            shown = { .batches = shapes.mesh.batches, .billboards = std::move(shapes.billboards) };
+            if (side != 0)
+                shown.bands = crossing_bands(scene, plan, shown.billboards.mesh.owners, side);
             profiling::section("Textures", [&] {
-                add_textures(device, scene, built.mesh.batches);
-                add_textures(device, scene, built.billboards.mesh.batches);
+                add_textures(device, scene, shapes.mesh.batches);
+                add_textures(device, scene, shown.billboards.mesh.batches);
             });
-            scene.billboards = std::move(built.billboards);
-            scene.billboards_eye.reset();
-            if (built.mesh.indices.empty())
+            if (shapes.mesh.indices.empty())
                 return;
             const profiling::Scope zone("Upload");
-            auto vertices = upload(device, render::BufferUsage::Vertex, built.mesh.vertices, "object vertices");
-            auto indices = upload(device, render::BufferUsage::Index, built.mesh.indices, "object indices");
+            auto vertices = side != 0 ? upload(device, render::BufferUsage::Vertex, crossing_vertices(shapes.mesh.vertices, crossing_bands(scene, plan, shapes.mesh.owners, side)), "crossing object vertices") : upload(device, render::BufferUsage::Vertex, shapes.mesh.vertices, "object vertices");
+            auto indices = upload(device, render::BufferUsage::Index, shapes.mesh.indices, "object indices");
             if (!vertices || !indices)
             {
                 logging::logger("park").warning("object buffers: {}", !vertices ? vertices.error() : indices.error());
@@ -630,11 +665,22 @@ namespace rct3::scene
                     device.destroy_buffer(*vertices);
                 if (indices)
                     device.destroy_buffer(*indices);
-                scene.object_batches.clear();
+                shown.batches.clear();
                 return;
             }
-            scene.object_vertices = *vertices;
-            scene.object_indices = *indices;
+            shown.vertices = *vertices;
+            shown.indices = *indices;
+        }
+
+        /// Puts `built` in the object buffers.
+        void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+        {
+            scene.levels = std::move(built.plan);
+            show_shapes(device, scene, scene.steady_objects, std::move(built.steady), scene.levels);
+            const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.frag)
+            show_shapes(device, scene, scene.finer_objects, std::move(built.finer), scene.levels, -side);
+            show_shapes(device, scene, scene.coarser_objects, std::move(built.coarser), scene.levels, side);
+            scene.billboards_eye.reset();
         }
 
         /// Takes on the objects' meshes once built, and looks at their levels again every
@@ -650,9 +696,9 @@ namespace rct3::scene
             if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
                 return;
             scene.since_rebuild = 0;
-            scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels] {
+            scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band] {
                 profiling::register_thread("ObjectWorker");
-                auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown); });
+                auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band); });
                 profiling::unregister_thread();
                 return built;
             });
@@ -678,12 +724,13 @@ namespace rct3::scene
             return e.height > 0 ? static_cast<float>(e.width) / static_cast<float>(e.height) : 1.0f;
         }
 
-        /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`.
-        void draw_transient(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of)
+        /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`; with its vertices
+        /// as `vertex_bytes` when given, for pipelines of another layout.
+        void draw_transient(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of, std::span<const std::byte> vertex_bytes = { })
         {
             if (mesh.indices.empty())
                 return;
-            const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
+            const auto vertices = device.allocate_transient(vertex_bytes.empty() ? std::as_bytes(std::span(mesh.vertices)) : vertex_bytes);
             const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
             if (!vertices || !indices)
                 return;
@@ -1038,6 +1085,7 @@ namespace rct3::scene
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
         begin(ParkLoadStage::Scene);
+        scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         auto solid = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" });
         if (!solid)
@@ -1051,8 +1099,17 @@ namespace rct3::scene
         if (!see_through)
             return fail(see_through.error());
         scene.see_through_pipeline = *see_through;
+        const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
+        for (auto [pipeline, desc] : { std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } }, std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } },
+                                       std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } } })
+        {
+            auto made = device.create_pipeline(desc);
+            if (!made)
+                return fail(made.error());
+            *pipeline = *made;
+        }
         profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }))
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band))
                 show_objects(device, scene, std::move(*built));
         });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)
@@ -1169,7 +1226,7 @@ namespace rct3::scene
         scene.desktop->tooltip_style = skins::tooltip_style();
         scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
-        const auto drawn = std::ranges::count_if(scene.levels, [](std::int8_t l) { return l != park::kNotDrawn; });
+        const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != park::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != park::kNotDrawn; });
         const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
         const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
         log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
@@ -1415,7 +1472,7 @@ namespace rct3::scene
             if (scene.object_build.valid())
                 (void)scene.object_build.get();
             change(scene.objects[index]);
-            scene.levels.clear();
+            scene.levels = { };
             scene.since_rebuild = kObjectRebuildInterval;
         }
 
@@ -1818,12 +1875,14 @@ namespace rct3::scene
         if (scene.billboards_eye != viewer)
         {
             const profiling::Scope zone("Billboards");
-            park::face_billboards(scene.billboards, viewer);
+            for (ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
+                park::face_billboards(shown->billboards, viewer);
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
+        scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.bloom = options.flag(config::GameOption::Bloom);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
@@ -1961,16 +2020,26 @@ namespace rct3::scene
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
             if (parts.background)
                 profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            const auto draw_objects = [&](bool see_through) {
-                for (const park::ObjectBatch& batch : scene.object_batches)
+            const auto pipeline_for = [&](const ShownObjects& shown, park::PartBlend blend) {
+                const bool crossing = &shown != &scene.steady_objects;
+                if (blend == park::PartBlend::Opaque)
+                    return crossing ? scene.crossing_pipeline : scene.object_pipeline;
+                if (blend == park::PartBlend::Cutout)
+                    return crossing ? scene.crossing_cutout_pipeline : scene.cutout_pipeline;
+                return crossing ? scene.crossing_see_through_pipeline : scene.see_through_pipeline;
+            };
+            const auto draw_shown = [&](const ShownObjects& shown, bool see_through) {
+                if (!shown.indices)
+                    return;
+                for (const park::ObjectBatch& batch : shown.batches)
                 {
                     if ((batch.blend == park::PartBlend::Blended) != see_through)
                         continue;
                     const auto texture = scene.object_textures.find(batch.texture);
                     render::DrawCommand draw;
-                    draw.pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
-                    draw.vertices = { scene.object_vertices };
-                    draw.indices = { scene.object_indices };
+                    draw.pipeline = pipeline_for(shown, batch.blend);
+                    draw.vertices = { shown.vertices };
+                    draw.indices = { shown.indices };
                     draw.index_type = render::IndexType::U32;
                     draw.first = batch.first;
                     draw.count = batch.count;
@@ -2004,10 +2073,22 @@ namespace rct3::scene
                     }
                     draw_footpath_ghost(device, scene, transform, light);
                 });
-            if (scene.object_indices && scene.show_scenery && parts.scenery)
+            const auto draw_objects = [&](bool see_through) {
+                for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
+                    draw_shown(*shown, see_through);
+            };
+            if (scene.show_scenery && parts.scenery)
                 profiling::section("Objects", [&] { draw_objects(false); });
             if (scene.show_scenery && parts.scenery)
-                profiling::section("Billboards", [&] { draw_transient(device, scene, scene.billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+                profiling::section("Billboards", [&] {
+                    for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
+                    {
+                        // shortcut: crossing billboards are copied with their bands each frame; fine for the
+                        // few in bands, upgrade to a second vertex stream if many trees cross at once.
+                        const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
+                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return pipeline_for(*shown, b.blend); }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
+                    }
+                });
             if (scene.show_people && parts.people)
                 profiling::section("People", [&] {
                     draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
@@ -2024,7 +2105,7 @@ namespace rct3::scene
             });
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
-            if (scene.object_indices && scene.show_scenery && parts.scenery && parts.see_through)
+            if (scene.show_scenery && parts.scenery && parts.see_through)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
         }
 
@@ -2173,12 +2254,12 @@ namespace rct3::scene
         destroy_park_water(device, scene.water);
         destroy_park_glow(device, scene.glow);
         destroy_save_browser(device, scene.saves);
-        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.object_vertices, scene.object_indices })
+        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
         {
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

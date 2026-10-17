@@ -87,6 +87,7 @@ namespace rct3::config
         RideDistance,
         ImposterDistance, ///< Beyond it, scenery is drawn as flat pictures
         BlendDetailLevels,
+        DetailBlendBand, ///< Ours: how far before a level's edge objects start blending into the next, as a share of its distance
         CompressTextures,
         AggressiveDepthBias,
         TextureDetail,

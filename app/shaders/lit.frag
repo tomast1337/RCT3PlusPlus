@@ -26,6 +26,9 @@ layout(location = 0) in vec4 v_color;
 layout(location = 1) in vec2 v_uv;
 layout(location = 2) in vec3 v_normal;
 layout(location = 3) in vec3 v_world;
+// How far an object crossing between two levels of detail is through its band, and its side: 1 the coarser
+// level, -1 the finer, 0 not crossing; 2 and -2 tint the coarser red and the finer blue (lit_crossing.vert).
+layout(location = 4) flat in vec2 v_cross;
 layout(location = 0) out vec4 out_color;
 
 // How much of the 2 by 2 texels round `at` (in texels, from the map's corner) lies nearer the sun than `depth`,
@@ -74,8 +77,25 @@ float variation() {
   return 1.0 + kVariation * (2.0 * n - 1.0);
 }
 
+// A 4 by 4 Bayer pattern: each pixel's place, in sixteenths, in the order a square's pixels fill as a fade grows.
+const float kDither[16] = float[16](1.0, 9.0, 3.0, 11.0, 13.0, 5.0, 15.0, 7.0, 4.0, 12.0, 2.0, 10.0, 16.0, 8.0, 14.0, 6.0);
+
+// Whether a crossing object leaves this pixel to its other level: the coarser level draws the pixels whose place
+// is within how far through the band it is, the finer the rest, so between them each pixel is drawn once.
+bool crossed_out() {
+  if (v_cross.y == 0.0)
+    return false;
+  ivec2 p = ivec2(gl_FragCoord.xy) & 3;
+  bool coarser = kDither[p.y * 4 + p.x] / 16.0 <= v_cross.x;
+  return coarser != (v_cross.y > 0.0);
+}
+
 void main() {
+  if (crossed_out())
+    discard;
   vec4 color = texture(sampler2D(u_texture, u_sampler), v_uv) * v_color;
+  if (abs(v_cross.y) > 1.5)
+    color.rgb = mix(color.rgb, v_cross.y > 0.0 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 0.0, 1.0), 0.6);
   if (u_draw.sky.w > 0.5)
     color.rgb *= variation();
   if (kCutout) {

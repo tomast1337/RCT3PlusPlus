@@ -236,7 +236,7 @@ namespace rct3::scene
         save::RideModel rides;
         save::PeopleModel people; ///< Guests, staff and litter as saved; read for the weekly rating
         simulation::SimWorld sim; ///< The paths, shops and guests the simulation runs
-        bool simulate = false;    ///< Developer switch: run the simulation and show its guests
+        bool simulate = true;     ///< Run the simulation and show its guests; off only to see the park as saved
         float sim_time = 0;       ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;

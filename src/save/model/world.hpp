@@ -416,6 +416,7 @@ namespace rct3::save
         std::vector<PlacedObject> objects;
         std::vector<BinState> bins;
         std::vector<SignState> signs;
+        std::vector<std::uint64_t> benches; ///< The placed objects that are benches guests can sit on
         std::optional<Weather> weather;
         std::optional<std::int32_t> sky_background; ///< Background (sky box) index
         std::optional<WorldTime> time;

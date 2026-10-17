@@ -51,6 +51,7 @@ namespace rct3::simulation
 
     /// Works the rating out again for a new week, from the park's people and rides as they stand, and lets the
     /// penalty and bonus fade.
-    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides);
+    /// `old_litter`, when given, counts the litter lying long enough to count instead of the saved litter.
+    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
 
 } // namespace rct3::simulation

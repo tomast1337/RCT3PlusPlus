@@ -136,3 +136,49 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
     CHECK(r.get<simulation::Errand>(guests[2]).kind != simulation::ErrandKind::Riding);
     CHECK(r.get<simulation::Errand>(guests[3]).kind != simulation::ErrandKind::Riding);
 }
+
+TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path tiles they stand on")
+{
+    simulation::SimWorld world;
+    const auto tile = world.paths.add({ 2, 1, 0 }); // Middle at x 10, z 6
+    const glm::vec3 middle = world.paths.centre(tile);
+
+    save::PeopleModel people;
+    people.litter.push_back({ .position = { middle.x + 1, 0, middle.z }, .type = 3, .create_time = 100 });
+    people.litter.push_back({ .position = { middle.x, 0, middle.z }, .state = save::LitterState::Carried });
+    people.litter.push_back({ .position = { 50, 0, 50 } }); // Off the paths
+    CHECK(simulation::import_litter(world, people, 124) == 1);
+    const auto pieces = world.registry.view<simulation::Litter>();
+    REQUIRE(pieces.size() == 1);
+    const auto& piece = world.registry.get<simulation::Litter>(pieces.front());
+    CHECK(piece.node == tile);
+    CHECK(piece.kind == 3);
+    CHECK(piece.age == doctest::Approx(40)); // A game hour of the calendar
+
+    save::WorldModel w;
+    for (std::uint64_t id = 1; id <= 4; ++id)
+        w.objects.push_back({ .id = id, .col = id == 4 ? 9 : 2, .row = 1 });
+    w.bins.push_back({ .object_ref = 1, .capacity = 0.4f, .contents = 0.03f });
+    w.benches = { 2, 4 }; // The second stands off the paths
+    w.signs.push_back({ .object_ref = 3 });
+    CHECK(simulation::import_path_items(world, w.objects, w.bins, w.benches, w.signs) == 3);
+    const auto bins = world.registry.view<simulation::Bin>();
+    REQUIRE(bins.size() == 1);
+    CHECK(world.registry.get<simulation::Bin>(bins.front()).capacity == doctest::Approx(40));
+    CHECK(world.registry.get<simulation::Bin>(bins.front()).contents == 3);
+    for (const auto [e, item] : world.registry.view<simulation::PathItem>().each())
+        CHECK(item.node == tile);
+
+    people.staff.resize(3);
+    people.staff[0].kind = save::StaffKind::Handyman;
+    people.staff[0].person.position = { middle.x, 0, middle.z };
+    people.staff[1].kind = save::StaffKind::SecurityGuard;
+    people.staff[1].person.position = { middle.x, 0, middle.z };
+    people.staff[2].person.position = { 50, 0, 50 };
+    const auto staff = simulation::import_staff(world, people);
+    REQUIRE(staff.size() == 3);
+    CHECK(world.registry.get<simulation::Staff>(staff[0]).role == simulation::StaffRole::Handyman);
+    CHECK(world.registry.get<simulation::Staff>(staff[1]).role == simulation::StaffRole::Guard);
+    CHECK(world.registry.get<simulation::Stride>(staff[0]).to == tile);
+    CHECK(staff[2] == entt::null);
+}

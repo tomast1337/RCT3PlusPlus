@@ -13,6 +13,7 @@
 #include "park/object_models.hpp"
 #include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
+#include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -21,6 +22,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/park_state.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/workers.hpp"
@@ -39,6 +41,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <string>
 #include <vector>
@@ -200,6 +203,11 @@ int main(int argc, char** argv)
     const std::size_t walking = simulation::start_guests(world);
     const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
+    const auto park_model = save::load_park(*file, index);
+    const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
+    const std::size_t items = simulation::import_path_items(world, world_model->objects, world_model->bins, world_model->benches, world_model->signs);
+    const auto staff = simulation::import_staff(world, *people);
+    std::printf("litter %zu  path items %zu  staff on the paths %zu of %zu\n", litter, items, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             std::printf("stall %s [%s] sells %s\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str());
@@ -251,9 +259,33 @@ int main(int argc, char** argv)
     for (const auto [e, trains] : world.registry.view<const simulation::Trains>().each())
         if (trains.trains.size() > 1)
             fleets[e] = { .laps = std::vector<std::uint32_t>(trains.trains.size()), .travelled = std::vector<float>(trains.trains.size()) };
+    // Litter dropped and swept, bins emptied and things mended over the run.
+    struct Tally
+    {
+        std::size_t dropped = 0, swept = 0, emptied = 0, mended = 0;
+        void drop(entt::registry&, entt::entity)
+        {
+            ++dropped;
+        }
+        void sweep(entt::registry&, entt::entity)
+        {
+            ++swept;
+        }
+    } tally;
+    world.registry.on_construct<simulation::Litter>().connect<&Tally::drop>(tally);
+    world.registry.on_destroy<simulation::Litter>().connect<&Tally::sweep>(tally);
+    std::map<entt::entity, std::pair<float, bool>> was; // Each path item's bin contents and whether broken
     for (std::uint32_t i = 0; i < steps; ++i)
     {
         simulation::step(world, workers.get());
+        for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
+        {
+            const auto* bin = world.registry.try_get<simulation::Bin>(e);
+            const auto [contents, broken] = was[e];
+            tally.emptied += bin != nullptr && bin->contents < contents;
+            tally.mended += broken && !item.broken;
+            was[e] = { bin != nullptr ? bin->contents : 0.0f, item.broken };
+        }
         for (auto& [e, fleet] : fleets)
         {
             const auto& trains = world.registry.get<simulation::Trains>(e).trains;
@@ -281,6 +313,21 @@ int main(int argc, char** argv)
         const auto* shop = r.try_get<simulation::Shop>(e);
         const char* sells = !shop ? "ride" : shop->product == simulation::Product::Drink ? "drink" : "food";
         std::printf("  %-28s %-5s customers %5u  income %8.2f\n", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100);
+    }
+    {
+        std::map<simulation::NodeId, std::size_t> lying;
+        for (const auto [e, piece] : r.view<const simulation::Litter>().each())
+            ++lying[piece.node];
+        float held = 0;
+        float room = 0;
+        for (const auto [e, bin] : r.view<const simulation::Bin>().each())
+        {
+            held += bin.contents;
+            room += bin.capacity;
+        }
+        const auto* vandalism = r.ctx().find<simulation::Vandalism>();
+        std::printf("litter: %zu lying on %zu tiles (most %zu), %zu dropped, %zu swept; bins %.0f of %.0f full, emptied %zu times\n", r.view<const simulation::Litter>().size(), lying.size(), lying.empty() ? 0 : std::ranges::max(lying | std::views::values), tally.dropped, tally.swept, static_cast<double>(held), static_cast<double>(room), tally.emptied);
+        std::printf("vandalism: %u broken, %zu mended, %u warnings; old litter for the rating %d\n", vandalism ? vandalism->broken : 0, tally.mended, vandalism ? vandalism->warnings : 0, simulation::old_litter(world));
     }
     std::array<std::size_t, 6> doing { };
     double happiness = 0;

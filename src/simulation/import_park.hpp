@@ -50,6 +50,21 @@ namespace rct3::simulation
     /// has a station; shuttles, slides and open water are left to their timing.
     [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
 
+    /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped
+    /// to `now` (calendar units, as the park keeps them). Returns how many pieces came over. Call after
+    /// import_paths.
+    std::size_t import_litter(SimWorld& world, const save::PeopleModel& people, float now);
+
+    /// The bins, benches and signs, each standing on the placed object of `objects` it names, that stand on a path tile, with what each bin holds.
+    /// Returns how many came over. Call after import_paths.
+    /// shortcut: lamps carry nothing in saves that marks them out, so vandals leave them be; upgrade when path
+    /// items are told apart by their models.
+    std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
+
+    /// The park's staff, walking the paths at their work from where they stand; each one's entity by their
+    /// place in `people.staff`, null for those off the paths. Call after import_paths.
+    std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people);
+
     /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
     [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
 

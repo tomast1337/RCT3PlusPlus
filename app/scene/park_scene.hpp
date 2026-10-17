@@ -89,7 +89,9 @@ namespace rct3::scene
 
     /// The object buffers are built again at most this often, in seconds, while the view moves.
     inline constexpr float kObjectRebuildInterval = 0.25f;
-    inline constexpr float kLivePageInterval = 1.0f; ///< Seconds between showings of a page that follows the running park
+    inline constexpr std::int32_t kVandalismPenalty = 10; ///< Of the rating for each thing broken.
+    inline constexpr std::int32_t kLitterWarning = 20;    ///< Old pieces of litter that make the player be told.
+    inline constexpr float kLivePageInterval = 1.0f;      ///< Seconds between showings of a page that follows the running park
 
     /// Behind the ground when the sky cannot be read.
     inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
@@ -282,6 +284,8 @@ namespace rct3::scene
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
         std::size_t info_section = 0;                         ///< Of the open tab's page
         float since_info_page = 0;                            ///< Seconds since a live page was shown again
+        std::uint32_t vandalism_seen = 0;                     ///< Breaks the park has been charged for
+        std::uint32_t vandalism_warnings_seen = 0;            ///< Warnings already posted as messages
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         std::optional<std::size_t> shown_person;           ///< Of shown_people, the one the info panel tells about instead

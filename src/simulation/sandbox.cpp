@@ -68,6 +68,31 @@ namespace rct3::simulation
         return e;
     }
 
+    entt::entity Sandbox::item(PathItemKind kind, glm::ivec2 at, float capacity, int level)
+    {
+        auto& r = world_.registry;
+        const entt::entity e = r.create();
+        r.emplace<PathItem>(e, PathItem { node(at, level), kind });
+        if (kind == PathItemKind::Bin)
+            r.emplace<Bin>(e, Bin { capacity, 0 });
+        return e;
+    }
+
+    entt::entity Sandbox::staff(StaffRole role, glm::ivec2 at, int level)
+    {
+        const entt::entity e = world_.registry.create();
+        world_.registry.emplace<Staff>(e, role);
+        start_walking(world_, e, node(at, level));
+        return e;
+    }
+
+    Sandbox& Sandbox::litter(glm::ivec2 at, int count, int level)
+    {
+        for (int i = 0; i < count; ++i)
+            world_.registry.emplace<Litter>(world_.registry.create(), Litter { node(at, level) });
+        return *this;
+    }
+
     entt::entity Sandbox::guest(glm::ivec2 at, const GuestSetup& setup, int level)
     {
         auto& r = world_.registry;

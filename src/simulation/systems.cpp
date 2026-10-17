@@ -9,6 +9,10 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <span>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -26,7 +30,6 @@ namespace rct3::simulation
         constexpr double kRideChance = 0.25;            ///< Of a guest with no pressing need going for a ride
         constexpr float kMaxNausea = 0.6f;              ///< Guests feeling sicker skip rides
         constexpr float kIdleSeconds = 5;               ///< Between thoughts while wandering
-        constexpr float kConsumeSeconds = 10;           ///< Spent with what was bought before moving on
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
         constexpr float kQueueSpacing = 0.25f;          ///< Tiles between guests standing in a queue
         constexpr double kJoinChance = 0.6;             ///< Of a party member going on the ride their leader picked
@@ -35,6 +38,23 @@ namespace rct3::simulation
         constexpr float kLongestHuddle = 20;
         constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
         constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground
+        // Litter, vandals and staff. First guesses to tune against how saved parks look.
+        constexpr std::size_t kDirtyPath = 3; ///< Pieces of litter on a tile that make guests on it glum
+        constexpr float kDirtGloomPerSecond = 1.0f / 900;
+        constexpr float kVandalGloomPerSecond = 1.0f / 1200; ///< While standing by something broken
+        constexpr float kCarrySeconds = 60;                  ///< A guest looks for a bin this long before dropping their rubbish
+        constexpr double kLitterbugChance = 0.03;            ///< Of dropping it at once, for a happy guest
+        constexpr double kGrumpyLitterChance = 0.3;          ///< Added as happiness falls to nothing
+        constexpr float kVandalMood = 0.15f;                 ///< Guests less happy than this may break things
+        constexpr double kVandalPerSecond = 1.0 / 120;       ///< Chance a second of such a guest breaking what is by them
+        constexpr int kGuardReach = 3;                       ///< Path tiles a guard keeps vandals off, walking out from theirs
+        constexpr float kSweepSeconds = 2;                   ///< A piece of litter
+        constexpr float kEmptySeconds = 4;                   ///< A bin
+        constexpr float kMendSeconds = 8;
+        constexpr float kEmptyAt = 0.5f;       ///< Share of a bin's room filled before a handyman empties it
+        constexpr float kVandalismFade = 3600; ///< Seconds over which a break stops counting as recent
+        constexpr float kBadVandalism = 2.5f;  ///< Recent breaks that make the player be told: about three within the hour
+        constexpr float kWarningEvery = 1200;  ///< Seconds at least between telling them
 
         float clamp01(float v)
         {
@@ -196,6 +216,206 @@ namespace rct3::simulation
         place(world.paths, r.get<Stride>(guest), pose);
         pose.was = pose.position;
         pose.was_heading = pose.heading;
+    }
+
+    namespace
+    {
+        bool walking(ErrandKind kind)
+        {
+            return kind == ErrandKind::Wandering || kind == ErrandKind::Heading || kind == ErrandKind::Following || kind == ErrandKind::Waiting;
+        }
+
+        /// Litter, path items and staff, for one tick: after the guests have walked and bought.
+        void tidy(SimWorld& world)
+        {
+            entt::registry& r = world.registry;
+            const PathNetwork& paths = world.paths;
+            constexpr float dt = kTickSeconds;
+            auto& vandalism = r.ctx().emplace<Vandalism>();
+            vandalism.recent *= std::exp(-dt / kVandalismFade);
+            if (vandalism.since_warning >= 0)
+                vandalism.since_warning += dt;
+
+            // What lies and stands on each tile, in entity order.
+            std::unordered_map<NodeId, std::vector<entt::entity>> litter_at;
+            for (const entt::entity e : sorted(r.view<Litter>()))
+            {
+                auto& piece = r.get<Litter>(e);
+                piece.age += dt;
+                litter_at[piece.node].push_back(e);
+            }
+            std::unordered_map<NodeId, std::vector<entt::entity>> items_at;
+            for (const entt::entity e : sorted(r.view<const PathItem>()))
+                items_at[r.get<PathItem>(e).node].push_back(e);
+            const auto items = [&](NodeId node) -> std::span<const entt::entity> {
+                const auto found = items_at.find(node);
+                return found != items_at.end() ? std::span<const entt::entity>(found->second) : std::span<const entt::entity> { };
+            };
+            const auto litter_on = [&](NodeId node) {
+                const auto found = litter_at.find(node);
+                return found != litter_at.end() ? found->second.size() : 0;
+            };
+            const auto drop = [&](NodeId node, std::uint8_t kind) {
+                const entt::entity e = r.create();
+                r.emplace<Litter>(e, Litter { node, kind, 0 });
+                litter_at[node].push_back(e);
+            };
+            // The tiles guards keep vandals off: theirs and those a few steps along the paths from it.
+            std::unordered_set<NodeId> guarded;
+            for (const auto [e, staff, stride] : r.view<const Staff, const Stride>().each())
+            {
+                if (staff.role != StaffRole::Guard || stride.to >= paths.nodes().size())
+                    continue;
+                std::vector<NodeId> ring { stride.to };
+                guarded.insert(stride.to);
+                for (int step = 0; step < kGuardReach; ++step)
+                {
+                    std::vector<NodeId> next;
+                    for (const NodeId n : ring)
+                        for (const NodeId m : paths.nodes()[n].next)
+                            if (m != kNoNode && guarded.insert(m).second)
+                                next.push_back(m);
+                    ring = std::move(next);
+                }
+            }
+
+            // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
+            const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>();
+            for (const entt::entity g : sorted(guests_view))
+            {
+                auto [errand, stride, mood, dice, needs] = guests_view.get(g);
+                if (!walking(errand.kind) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                    continue;
+                const NodeId at = stride.progress < 0.5f ? stride.from : stride.to;
+                if (litter_on(at) >= kDirtyPath)
+                    mood.happiness = clamp01(mood.happiness - kDirtGloomPerSecond * dt);
+                if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
+                    mood.happiness = clamp01(mood.happiness - kVandalGloomPerSecond * dt);
+                if (auto* rubbish = r.try_get<Rubbish>(g))
+                {
+                    const bool finished = rubbish->held < kConsumeSeconds && rubbish->held + dt >= kConsumeSeconds;
+                    rubbish->held += dt;
+                    if (rubbish->held >= kConsumeSeconds)
+                    {
+                        const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken; });
+                        bool gone = true;
+                        if (finished && random::chance(dice.state, kLitterbugChance + kGrumpyLitterChance * (1 - mood.happiness)))
+                            drop(at, rubbish->kind);
+                        else if (bin != items(at).end())
+                        {
+                            // A full bin overflows onto the path.
+                            auto& b = r.get<Bin>(*bin);
+                            if (b.contents + 1 <= b.capacity)
+                                b.contents += 1;
+                            else
+                                drop(at, rubbish->kind);
+                        }
+                        else if (rubbish->held >= kConsumeSeconds + kCarrySeconds)
+                            drop(at, rubbish->kind);
+                        else
+                            gone = false;
+                        if (gone)
+                            r.remove<Rubbish>(g);
+                    }
+                }
+                if (mood.happiness < kVandalMood && !guarded.contains(at) && random::chance(dice.state, kVandalPerSecond * dt))
+                {
+                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken; });
+                    if (whole != items(at).end())
+                    {
+                        r.get<PathItem>(*whole).broken = true;
+                        ++vandalism.broken;
+                        vandalism.recent += 1;
+                        if (vandalism.recent >= kBadVandalism && (vandalism.since_warning < 0 || vandalism.since_warning >= kWarningEvery))
+                        {
+                            ++vandalism.warnings;
+                            vandalism.since_warning = 0;
+                        }
+                    }
+                }
+            }
+
+            // Staff walk the paths. Handymen sweep, empty bins and mend; mechanics mend; each job keeps them a while.
+            if (paths.nodes().empty())
+                return;
+            const auto staff_view = r.view<Staff, Stride, Pose, Dice>();
+            for (const entt::entity e : sorted(staff_view))
+            {
+                auto [staff, stride, pose, dice] = staff_view.get(e);
+                if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                    continue;
+                if (staff.busy > 0)
+                {
+                    staff.busy = std::max(staff.busy - dt, 0.0f);
+                    continue;
+                }
+                if (stride.from != stride.to)
+                {
+                    const float length = glm::distance(lane_point(paths, stride.from, stride.lane_from), lane_point(paths, stride.to, stride.lane_to));
+                    stride.progress += length > 0 ? stride.speed * dt / length : 1;
+                    if (stride.progress < 1)
+                    {
+                        place(paths, stride, pose);
+                        continue;
+                    }
+                }
+                const NodeId came = stride.from;
+                const NodeId at = stride.to;
+                const bool tidies = staff.role == StaffRole::Handyman;
+                const bool mends = tidies || staff.role == StaffRole::Mechanic;
+                const auto job = [&] {
+                    if (tidies && litter_on(at) > 0)
+                    {
+                        auto& here = litter_at[at];
+                        r.destroy(here.back());
+                        here.pop_back();
+                        return kSweepSeconds;
+                    }
+                    for (const entt::entity i : items(at))
+                    {
+                        auto& item = r.get<PathItem>(i);
+                        if (mends && item.broken)
+                        {
+                            item.broken = false;
+                            return kMendSeconds;
+                        }
+                        if (auto* bin = r.try_get<Bin>(i); tidies && bin != nullptr && bin->contents > 0 && bin->contents >= kEmptyAt * bin->capacity)
+                        {
+                            bin->contents = 0;
+                            return kEmptySeconds;
+                        }
+                    }
+                    return 0.0f;
+                };
+                stride.from = at;
+                stride.lane_from = stride.lane_to;
+                if (const float busy = job(); busy > 0)
+                {
+                    staff.busy = busy;
+                    stride.to = at;
+                    stride.progress = 1;
+                }
+                else
+                {
+                    // A handyman makes for the dirtiest tile beside them; the rest of the time staff wander.
+                    NodeId next = wander(paths, at, came != at ? came : kNoNode, dice);
+                    if (tidies)
+                        for (const NodeId n : paths.nodes()[at].next)
+                            if (n != kNoNode && !paths.nodes()[n].queue && litter_on(n) > litter_on(next))
+                                next = n;
+                    stride.to = next;
+                    stride.progress = 0;
+                    stride.lane_to = next != at ? new_lane(dice) : stride.lane_from;
+                }
+                place(paths, stride, pose);
+            }
+        }
+    } // namespace
+
+    std::int32_t old_litter(const SimWorld& world)
+    {
+        const auto view = world.registry.view<const Litter>();
+        return static_cast<std::int32_t>(std::ranges::count_if(view, [&](entt::entity e) { return view.get<const Litter>(e).age >= kOldLitterSeconds; }));
     }
 
     bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
@@ -450,6 +670,7 @@ namespace rct3::simulation
             ++attraction.customers;
             need = 0;
             mood.happiness = clamp01(mood.happiness + kTreat);
+            r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
         };
         for (std::size_t i = 0; i < movers.size(); ++i)
         {
@@ -658,6 +879,7 @@ namespace rct3::simulation
                 }
             }
         }
+        tidy(world);
         ++world.tick;
     }
 

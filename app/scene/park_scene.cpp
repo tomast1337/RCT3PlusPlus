@@ -1218,10 +1218,15 @@ namespace rct3::scene
                 simulation::start_guests(scene.sim);
                 simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
                 simulation::import_parties(scene.sim, scene.people, guests);
+                simulation::import_litter(scene.sim, scene.people, scene.park.time);
+                simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
+                const auto staff = simulation::import_staff(scene.sim, scene.people);
                 for (ShownPerson& p : scene.shown_people)
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
                         p.guest = guests[p.saved];
+                    else if (p.staff && p.saved < staff.size())
+                        p.guest = staff[p.saved];
                 }
             });
         }
@@ -1575,6 +1580,8 @@ namespace rct3::scene
         {
             change_people(scene);
             const std::size_t saved = scene.shown_people.at(shown).saved;
+            if (const entt::entity walker = scene.shown_people[shown].guest; walker != entt::null)
+                scene.sim.registry.destroy(walker);
             scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
             scene.people.staff.erase(scene.people.staff.begin() + static_cast<std::ptrdiff_t>(saved));
             for (ShownPerson& p : scene.shown_people)
@@ -1933,7 +1940,13 @@ namespace rct3::scene
             simulation::advance(scene.day, game_seconds);
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (simulation::pass_time(scene.park, game_seconds) > 0)
-                profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides); });
+            {
+                // While the park runs, its own litter counts, and much of it is told to the player.
+                const std::optional<std::int32_t> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
+                profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides, old); });
+                if (old >= kLitterWarning)
+                    simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
+            }
             simulation::age(scene.park.messages, game_seconds);
             if (scene.simulate)
             {
@@ -1944,6 +1957,14 @@ namespace rct3::scene
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
                 });
+                // Each thing broken costs the park some rating, and bad runs of it are told to the player.
+                if (const auto* vandalism = scene.sim.registry.ctx().find<simulation::Vandalism>())
+                {
+                    scene.park.rating_carry.penalty += kVandalismPenalty * static_cast<std::int32_t>(vandalism->broken - scene.vandalism_seen);
+                    scene.vandalism_seen = vandalism->broken;
+                    for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
+                        simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
+                }
             }
             profiling::section("Cars", [&] { place_cars(scene); });
         });

@@ -90,6 +90,16 @@ namespace rct3::save
             constexpr std::string_view kSkyIndex = "BackgroundSave";
             constexpr std::string_view kTimeClass = "GameTime";
             constexpr std::string_view kCameraClass = "MainCamera";
+
+            // Pool squares. Type 0 holds water; the others are decks and steps round it. Prototypes are not in
+            // the park.
+            constexpr std::string_view kPoolClass = "PoolSegment";
+            constexpr std::string_view kPoolCol = "Col";
+            constexpr std::string_view kPoolRow = "Row";
+            constexpr std::string_view kPoolType = "SegmentType";
+            constexpr std::string_view kPoolSurface = "SurfaceHeight";
+            constexpr std::string_view kPoolDepth = "Depth";
+            constexpr std::string_view kPoolPrototype = "Prototype";
             constexpr std::string_view kCameraPos = "Pos";
             constexpr std::string_view kCameraOr = "Or";
         } // namespace names
@@ -468,6 +478,7 @@ namespace rct3::save
             Sky,
             Time,
             Camera,
+            Pool,
         };
 
         // Typed reads over a decoded value. Missing attributes and attributes kept raw give empty results.
@@ -856,6 +867,8 @@ namespace rct3::save
                 kinds[i] = Kind::Time;
             else if (name == names::kCameraClass)
                 kinds[i] = Kind::Camera;
+            else if (name == names::kPoolClass)
+                kinds[i] = Kind::Pool;
             else if (std::ranges::find(names::kPathClasses, name) != std::end(names::kPathClasses))
             {
                 kinds[i] = Kind::Path;
@@ -1012,6 +1025,10 @@ namespace rct3::save
                     {
                         m.camera = Camera { point_of(o.find(names::kCameraPos)), point_of(o.find(names::kCameraOr)) };
                     }
+                    break;
+                case Kind::Pool:
+                    if (int_or(o.find(names::kPoolType), -1) == 0 && !get_bool(o.find(names::kPoolPrototype)).value_or(false))
+                        m.pool_water.push_back({ int_or(o.find(names::kPoolCol)), int_or(o.find(names::kPoolRow)), int_or(o.find(names::kPoolSurface)), int_or(o.find(names::kPoolDepth)) });
                     break;
             }
         }

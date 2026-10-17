@@ -19,6 +19,7 @@
 #include "save/model/world.hpp"
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace rct3::park
@@ -78,6 +79,18 @@ namespace rct3::park
     inline constexpr glm::vec4 kWaterColour = unit(hex("#2c64a0a6"));
 
     [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water);
+
+    /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
+    /// which rises a fifth of a unit.
+    inline constexpr float kPoolBrim = 0.1f;
+    /// Pool water is clearer and lighter than the lakes'.
+    inline constexpr glm::vec4 kPoolColour = unit(hex("#3c9ccc90"));
+
+    /// The water of pools: a level square on each pool square that holds water, as two triangles like the
+    /// lakes', deep down to the pool's floor. Squares off the grid are left out.
+    /// shortcut: every square is whole, so water shows past the rim of rounded corner pieces; upgrade by
+    /// cutting it to the piece's shape when that shows.
+    [[nodiscard]] std::vector<WaterVertex> pool_water(const save::TerrainGrid& grid, std::span<const save::PoolWater> pools);
 
     /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
     /// which is how much of that surface shows there.

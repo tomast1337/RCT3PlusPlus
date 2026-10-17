@@ -470,7 +470,9 @@ namespace
                     continue;
                 }
                 const auto& s = *item.section;
-                std::printf("  %-32s sid %-24s splines %s %s %s %s refs %zu\n", name.c_str(), std::string(s.scenery_item).c_str(), std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.references.size());
+                std::printf("  %-32s sid %-24s splines %s %s %s %s extra %s %s refs %zu\n", name.c_str(), std::string(s.scenery_item).c_str(), std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.extra_splines[0].empty() ? "-" : std::string(s.extra_splines[0]).c_str(), s.extra_splines[1].empty() ? "-" : std::string(s.extra_splines[1]).c_str(), s.references.size());
+                for (const auto& r : s.references)
+                    std::printf("    +0x%02x %s:%s\n", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
             }
         }
         if (opt.ric)

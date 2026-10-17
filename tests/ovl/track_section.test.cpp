@@ -46,8 +46,10 @@ TEST_CASE("track sections are read in every file version")
         pool.add("CurveL:spl");
         pool.add("CurveR:spl");
         pool.add("Extra:spl");
+        pool.add("CurveL_WaterSpline:spl");
+        pool.add("CurveR_WaterSpline:spl");
         const auto bytes = record(version, pool);
-        const auto overlay = make_record_overlay(version, pool, "Curve:tks", bytes, { { 4, "Curve:sid" }, { 0x20, "CurveL:spl" }, { 0x24, "CurveR:spl" }, { 0x28, "CurveL:spl" }, { 0x2C, "CurveR:spl" }, { 0x30, "Extra:spl" } });
+        const auto overlay = make_record_overlay(version, pool, "Curve:tks", bytes, { { 4, "Curve:sid" }, { 0x20, "CurveL:spl" }, { 0x24, "CurveR:spl" }, { 0x28, "CurveL:spl" }, { 0x2C, "CurveR:spl" }, { 0x30, "Extra:spl" }, { 0xD8, "CurveL_WaterSpline:spl" }, { 0xDC, "CurveR_WaterSpline:spl" } });
         const auto items = read_track_sections(overlay, overlay.common());
         REQUIRE(items.size() == 1);
         CHECK(items[0].name == "Curve");
@@ -64,8 +66,10 @@ TEST_CASE("track sections are read in every file version")
         CHECK(s.splines[3] == "CurveR");
         CHECK(s.extra_splines[0] == "Extra");
         CHECK(s.extra_splines[1].empty());
+        CHECK(s.water_splines[0] == "CurveL_WaterSpline");
+        CHECK(s.water_splines[1] == "CurveR_WaterSpline");
         CHECK(s.scale[1] == 2.0f);
-        CHECK(s.references.size() == 6);
+        CHECK(s.references.size() == 8);
         CHECK(s.references[0].offset == 4);
         CHECK(s.references[0].tag == "sid");
         CHECK(s.record.size() == kSize[version]);

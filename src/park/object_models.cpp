@@ -9,11 +9,15 @@
 #include "ovl/ride_train.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/scenery_visual.hpp"
+#include "ovl/spline.hpp"
 #include "ovl/static_shape.hpp"
+#include "ovl/track_section.hpp"
 #include "park/item_category.hpp"
+#include "park/water_flow.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <span>
@@ -50,6 +54,8 @@ namespace rct3::park
             std::optional<ByName<ovl::FlexiTexture>> textures;
             std::optional<ByName<ovl::RideTrain>> trains;
             std::optional<ByName<ovl::RideCar>> cars;
+            std::optional<ByName<ovl::TrackSection>> sections;
+            std::optional<ByName<ovl::Spline>> splines;
         };
 
         /// Every readable entry of both parts, read the first time it is asked for.
@@ -139,7 +145,7 @@ namespace rct3::park
                 auto overlay = ovl::Overlay::load(index.file(path));
                 std::unique_ptr<OpenFile> file;
                 if (overlay)
-                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { }, { }, { }, { } });
+                    file = std::make_unique<OpenFile>(OpenFile { std::move(*overlay), { }, { }, { }, { }, { }, { }, { }, { }, { }, { } });
                 it = open.emplace(std::string(path), std::move(file)).first;
             }
             return it->second.get();
@@ -331,6 +337,15 @@ namespace rct3::park
             return lookup(entries(f.cars, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::RideCar>(ovl::read_ride_cars(o, p), &ovl::RideCarItem::car); }), name);
         }
 
+        const ovl::TrackSection* section_in(OpenFile& f, std::string_view name)
+        {
+            return lookup(entries(f.sections, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::TrackSection>(ovl::read_track_sections(o, p), &ovl::TrackSectionItem::section); }), name);
+        }
+        const ovl::Spline* spline_in(OpenFile& f, std::string_view name)
+        {
+            return lookup(entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }), name);
+        }
+
     } // namespace
 
     ModelLoader::ModelLoader(const AssetIndex& index)
@@ -365,8 +380,44 @@ namespace rct3::park
         return key;
     }
 
-    void ModelLoader::set_texture(ModelPart& part, std::string_view name, std::string_view near)
+    PaletteImage water_picture()
     {
+        // Our own look, matched by eye to nothing: pale blue shades in a soft criss-cross of ripples.
+        // shortcut: a still picture, moving water would need its own shader; upgrade when fountains get one.
+        constexpr std::uint32_t kSize = 64;
+        constexpr int kShades = 16;
+        PaletteImage picture;
+        picture.width = kSize;
+        picture.height = kSize;
+        for (int i = 0; i < kShades; ++i)
+            picture.palette[i] = { static_cast<std::uint8_t>(120 + i * 6), static_cast<std::uint8_t>(170 + i * 5), static_cast<std::uint8_t>(205 + i * 3) };
+        picture.indices.resize(kSize * kSize);
+        picture.alpha.resize(kSize * kSize);
+        constexpr float kTurn = 6.2831853f / kSize;
+        for (std::uint32_t y = 0; y < kSize; ++y)
+        {
+            for (std::uint32_t x = 0; x < kSize; ++x)
+            {
+                // Whole periods across the picture, so it tiles.
+                const float wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y)) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x))) * 0.25f + 0.5f;
+                const std::size_t at = y * kSize + x;
+                picture.indices[at] = static_cast<std::uint8_t>(std::clamp(wave * kShades, 0.0f, kShades - 1.0f));
+                picture.alpha[at] = static_cast<std::uint8_t>(130 + wave * 70);
+            }
+        }
+        return picture;
+    }
+
+    void ModelLoader::set_texture(ModelPart& part, std::string_view name, std::string_view style, std::string_view near)
+    {
+        if (strings::equals_ignoring_case(style, "SIWater"))
+        {
+            if (!pictures_.contains(kWaterPicture))
+                pictures_.emplace(std::string(kWaterPicture), water_picture());
+            part.texture = std::string(kWaterPicture);
+            part.slots = 0;
+            return;
+        }
         part.texture = texture_key(name, near);
         const auto picture = pictures_.find(part.texture);
         part.slots = picture != pictures_.end() ? picture->second.slots : 0;
@@ -442,6 +493,7 @@ namespace rct3::park
         add_levels(model, *visual, visual_path);
         if (model.levels.empty())
             return std::nullopt;
+        add_flow(model, symbol, near);
         return model;
     }
 
@@ -491,7 +543,7 @@ namespace rct3::park
                 for (const ovl::BoneMesh& mesh : shape->meshes)
                 {
                     ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
-                    set_texture(part, mesh.texture, file->first);
+                    set_texture(part, mesh.texture, mesh.style, file->first);
                     if (rigged)
                         for (ModelPart& one : parts_by_bone(mesh, std::move(part)))
                             level.parts.push_back(std::move(one));
@@ -522,6 +574,27 @@ namespace rct3::park
         }
     }
 
+    void ModelLoader::add_flow(ObjectModel& model, std::string_view symbol, std::string_view path)
+    {
+        OpenFile* file = files_->get(path);
+        if (file == nullptr)
+            return;
+        // shortcut: finds the piece's track section by the item's name, which nearly all sections share; upgrade
+        // if a slide shows pieces left dry.
+        const ovl::TrackSection* section = section_in(*file, symbol);
+        if (section == nullptr || section->water_splines[0].empty() || section->water_splines[1].empty())
+            return;
+        const ovl::Spline* left = spline_in(*file, section->water_splines[0]);
+        const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
+        if (left == nullptr || right == nullptr)
+            return;
+        const auto strip = flow_strip(*left, *right, std::string(kFlowPicture));
+        if (!strip)
+            return;
+        for (ModelLevel& level : model.levels)
+            level.parts.push_back(*strip);
+    }
+
     bool ModelLoader::add_static(ModelLevel& level, std::string_view name, std::string_view near)
     {
         const auto file = files_->holding(tagged(name, kStaticTag), near);
@@ -531,7 +604,7 @@ namespace rct3::park
         for (const ovl::ShapeMesh& mesh : shape->meshes)
         {
             level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
-            set_texture(level.parts.back(), mesh.texture, file->first);
+            set_texture(level.parts.back(), mesh.texture, mesh.style, file->first);
         }
         return true;
     }

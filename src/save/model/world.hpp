@@ -300,6 +300,16 @@ namespace rct3::save
         std::optional<float> last_emptied; ///< Park time, as the clock counts it; empty when never emptied
     };
 
+    /// A square of a pool that holds water. Its pieces stand in a stack from the floor up to the rim: the rim
+    /// piece at the surface height, the floor `depth` below it.
+    struct PoolWater
+    {
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t surface = 0; ///< Whole units, as placed objects' heights
+        std::int32_t depth = 0;   ///< Whole units
+    };
+
     /// What a sign placed in the park says.
     struct SignState
     {
@@ -417,6 +427,7 @@ namespace rct3::save
         std::vector<BinState> bins;
         std::vector<SignState> signs;
         std::vector<std::uint64_t> benches; ///< The placed objects that are benches guests can sit on
+        std::vector<PoolWater> pool_water;
         std::optional<Weather> weather;
         std::optional<std::int32_t> sky_background; ///< Background (sky box) index
         std::optional<WorldTime> time;

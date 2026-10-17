@@ -25,6 +25,7 @@
 #include "park/sun_view.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
+#include "park/water_flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -985,6 +986,7 @@ namespace rct3::scene
         scene.day = park_day(*file, index, *world, options);
         begin(ParkLoadStage::Ground);
         park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water); });
+        std::ranges::copy(park::pool_water(scene.grid, world->pool_water), std::back_inserter(mesh.water));
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
@@ -1062,6 +1064,20 @@ namespace rct3::scene
         scene.blank = *blank;
 
         begin(ParkLoadStage::Objects);
+        if (const auto flow_file = install.find(park::kFlowFile))
+        {
+            // The water running down slides; without it they are drawn dry.
+            if (auto flow = park::load_flow_picture(*flow_file))
+            {
+                if (auto uploaded = ui::upload_textures(device, { { std::string(park::kFlowPicture), *flow } }))
+                {
+                    scene.object_textures.merge(*uploaded);
+                    scene.flow_picture = std::move(*flow);
+                }
+            }
+            else
+                logging::logger("park").warning("flowing water: {}", flow.error());
+        }
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
         scene.bins = std::move(world->bins);
@@ -2383,6 +2399,25 @@ namespace rct3::scene
             return true;
         }
 
+        /// Rolls the flowing water's picture on as the water flows (park/water_flow.hpp). Call inside the screen
+        /// pass; it ends the pass and begins it again keeping what was drawn when the picture moves.
+        void roll_flow(render::Device& device, ParkScene& scene)
+        {
+            const auto texture = scene.object_textures.find(park::kFlowPicture);
+            if (texture == scene.object_textures.end())
+                return;
+            const std::uint32_t shift = park::flow_shift(scene.flow_picture.height, scene.clock);
+            if (shift == scene.flow_shift)
+                return;
+            scene.flow_shift = shift;
+            const ovl::RgbaImage rolled = park::flow_rows(scene.flow_picture, shift);
+            device.end_pass();
+            device.update_texture(texture->second.handle, std::as_bytes(std::span(rolled.pixels)));
+            render::PassDesc back;
+            back.clear = false;
+            device.begin_pass(back);
+        }
+
         /// Draws the park round the camera from `drawing.sun` into its map, outside any pass.
         void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const park::SunView& sun)
         {
@@ -2529,6 +2564,7 @@ namespace rct3::scene
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
+        profiling::section("Flow", [&] { roll_flow(device, scene); });
         if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));

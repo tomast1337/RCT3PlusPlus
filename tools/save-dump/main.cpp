@@ -279,6 +279,18 @@ namespace
         for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
             std::printf(" [level %g, %zu tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
         std::printf("\n");
+        if (!w.pool_water.empty())
+        {
+            // How the pools' surfaces stand against the ground under them, highest corner.
+            std::map<int, std::size_t> above;
+            for (const PoolWater& p : w.pool_water)
+                if (w.terrain.contains(p.col, p.row))
+                    ++above[p.surface - static_cast<int>(std::ceil(w.terrain.at(p.col, p.row).max_height()))];
+            std::printf("  pools        %zu squares of water; surface minus ground:", w.pool_water.size());
+            for (const auto& [d, n] : above)
+                std::printf(" %d x%zu", d, n);
+            std::printf("\n");
+        }
 
         std::array<std::size_t, 4> kinds { };
         std::size_t with_underground = 0;

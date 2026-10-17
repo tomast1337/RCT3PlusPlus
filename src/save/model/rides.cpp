@@ -1034,7 +1034,7 @@ namespace rct3::save
                     t.id = d->id;
                     t.ride = tf[id::kTrainRide].ref();
                     t.index = tf[id::kWhichTrain].i32();
-                    t.state = static_cast<TrainState>(tf[id::kState].i32());
+                    t.state = tf[id::kState].i32();
                     t.state_time = tf[id::kStateTime].number();
                     t.front_piece = live(tf[id::kFrontPiece]);
                     t.rear_piece = live(tf[id::kRearPiece]);
@@ -1082,7 +1082,7 @@ namespace rct3::save
                         car.index = cf[id::kWhichCar].i32();
                         car.car_count = cf[id::kCarCount].i32();
                         car.design_slot = cf[id::kCarSlot].i32();
-                        car.state = static_cast<CarState>(cf[id::kState].i32());
+                        car.state = cf[id::kState].i32();
                         car.passengers = cf[id::kPeeps].i32();
                         const View st = cf[id::kCarStats];
                         car.distance = st[id::kDistance].number();

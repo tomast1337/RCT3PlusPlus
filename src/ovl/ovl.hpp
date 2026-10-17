@@ -21,7 +21,7 @@ namespace rct3::ovl
     {
         std::string loader;             ///< SDK namespace, e.g. "FGDK", "RCT3"
         std::string name;               ///< Type name, e.g. "FlexiTexture"
-        std::uint32_t loader_type;      ///< Numeric type id passed to the engine's handler lookup
+        std::uint32_t loader_type;      ///< Numeric type id of the item's loader
         std::string tag;                ///< File extension, e.g. "ftx"
         std::uint32_t symbol_count = 0; ///< v5 only; 0 otherwise
     };

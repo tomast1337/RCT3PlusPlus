@@ -52,8 +52,7 @@ namespace rct3::ovl
         /// the `kMeshFlag*` constants. The low bits are not fully understood: 0x4 is present in every nonzero
         /// value below 0x1000. With 0x8 it marks sign and entrance boards, which are drawn with the texture
         /// style alone. With 0x10 it marks chain lifts and flowing water, with 0x20 or 0x40 wheels, whose
-        /// texture is likely animated at run time. Bit 0x1 is never stored, the engine sets it after loading
-        /// for parts that need the blended pass.
+        /// texture is likely animated at run time. Bit 0x1 is never stored.
         std::uint32_t texture_flags = 0;
         /// Face culling, a Direct3D cull mode: 1 draws both sides of every triangle, 3 draws only the front
         /// (triangles wound clockwise as seen from outside in the game's left-handed space).

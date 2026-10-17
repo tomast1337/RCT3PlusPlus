@@ -35,47 +35,47 @@ namespace rct3::ui
         // In the front screen's 1024 by 768 design frame, y down (front_screen_layout.hpp).
 
         /// The scenarios on a circle round the buttons' centre, the first at the top left.
-        inline constexpr float kScenarioRadius = 435;
-        inline constexpr float kScenarioFirstAngle = 2.7f;
-        inline constexpr float kScenarioAngleStep = 0.15f;
+        inline constexpr float kScenarioRadius = 430; ///< The middle of the white ring, measured on its pictures
+        inline constexpr float kScenarioFirstAngle = 2.75f;
+        inline constexpr float kScenarioAngleStep = 0.16f;
         inline constexpr float kScenarioSize = 64;
-        inline constexpr float kPickedFactor = 1.388f; ///< The picked scenario's size, times kScenarioSize
+        inline constexpr float kPickedFactor = 1.4f; ///< The picked scenario's size, times kScenarioSize
         /// The round pictures' size, times their own: the others', the picked one's.
         inline constexpr float kIconScale = 0.5f;
-        inline constexpr float kPickedIconScale = 0.752f;
+        inline constexpr float kPickedIconScale = 0.75f;
         /// Where a scenario's mark goes, in fractions of its button: from the left, from the top, and its size.
-        inline constexpr Point kMarkAt { 0.341f, 0.441f };
+        inline constexpr Point kMarkAt { 0.35f, 0.45f };
         inline constexpr float kMarkSize = 0.5f;
         /// How much the picked scenario grows under the pointer, times its size; the rest grow as the front
         /// screen's buttons do.
-        inline constexpr float kPickedSwell = 1.05f;
+        inline constexpr float kPickedSwell = 1.06f;
 
         /// The panel: its sides, its top, and the least it reaches down; a long description takes it lower.
-        inline constexpr float kPanelLeft = 15;
-        inline constexpr float kPanelRight = 260;
+        inline constexpr float kPanelLeft = 16;
+        inline constexpr float kPanelRight = 264;
         inline constexpr float kPanelTop = 40;
-        inline constexpr float kPanelBottom = 300;
-        inline constexpr float kTextLeft = 25; ///< The name and description, inside the panel
-        inline constexpr float kTextRight = 250;
+        inline constexpr float kPanelBottom = 304;
+        inline constexpr float kTextLeft = 26; ///< The name and description, inside the panel
+        inline constexpr float kTextRight = 254;
         inline constexpr float kTitleGap = 10; ///< Under the name
 
         /// The buttons under the description: squares of kButtonSize, kButtonUp of a button above the
         /// panel's bottom, counted back from its right edge in steps of kButtonStep buttons.
         inline constexpr float kButtonSize = 32;
         inline constexpr float kButtonUp = 0.4f;
-        inline constexpr float kButtonStep = 1.2f;
-        inline constexpr std::array<float, 3> kButtonSteps = { 4.1f, 3.1f, 2.1f }; ///< New, resume, load
+        inline constexpr float kButtonStep = 1.25f;
+        inline constexpr std::array<float, 3> kButtonSteps = { 4.0f, 3.0f, 2.0f }; ///< New, resume, load
 
         /// Main menu and quit, on the front screen's small circle.
-        inline constexpr std::array<float, 2> kSmallAngles = { 4.02f, 4.1f };
+        inline constexpr std::array<float, 2> kSmallAngles = front_screen::kSmallAngles;
 
         /// The large picture: its bottom-left corner kPictureBottom above the screen's bottom, at
         /// kPictureScale of its own size when a front piece goes over it. The front piece settles from
         /// kPopFactor bigger over kPopTime seconds.
-        inline constexpr float kPictureBottom = 74;
-        inline constexpr float kPictureScale = 0.75f;
-        inline constexpr float kPopFactor = 1.1f;
-        inline constexpr float kPopTime = 0.3f;
+        inline constexpr float kPictureBottom = 76;
+        inline constexpr float kPictureScale = 0.8f;
+        inline constexpr float kPopFactor = 1.12f;
+        inline constexpr float kPopTime = 0.25f;
 
         [[nodiscard]] float scenario_angle(std::size_t index);
         /// How big the front piece is, times its settled size, `time` seconds after the pick.

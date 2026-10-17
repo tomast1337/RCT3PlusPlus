@@ -168,18 +168,6 @@ namespace
         draw_skin_at(context, fs::kStripRightSkin, { fs::kStripRight });
     }
 
-    // The white ring's five pieces at their own size, where the front screen puts them.
-    void draw_front_arc(ui::DrawContext& context, PanelLook, ui::Rect)
-    {
-        namespace fs = ui::front_screen;
-        for (std::size_t i = 0; i < fs::kArcSkins.size(); ++i)
-        {
-            const ui::Point at = fs::kArcPieces.at(i);
-            const ui::Point size = fs::kArcPieceSizes.at(i);
-            draw_skin_at(context, fs::kArcSkins[i], { { at.x, at.y, at.x + size.x, at.y + size.y } });
-        }
-    }
-
     // A label's band as the menu draws it: the half disc behind the button, then the pointed end stretched to
     // a few shapes, and at its own size.
     void draw_label_band(ui::DrawContext& context, PanelLook, ui::Rect)
@@ -201,7 +189,7 @@ namespace
     {
         return {
             { "info-panel", 520, 175, draw_info_panel },         { "lozenge", 256, 104, draw_lozenges },        { "menu", 298, 146, draw_menus },         { "selected-row", 198, 66, draw_selected_rows },           { "button-face", 170, 52, draw_button_faces },        { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc },
-            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "front-arc", 1024, 768, draw_front_arc },    { "label-band", 324, 138, draw_label_band },
+            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop },    { "label-band", 324, 138, draw_label_band },
             { "loading-bar", 92, 48, draw_loading_bar },
         };
     }

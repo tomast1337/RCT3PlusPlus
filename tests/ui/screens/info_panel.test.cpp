@@ -5,6 +5,7 @@
 #include "ui/game_style.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -46,12 +47,11 @@ namespace
     }
 } // namespace
 
-TEST_CASE("tabs go round the ring from up and to the right, a quarter turn every three places")
+TEST_CASE("tabs go round the ring from up and to the right, the fourth mirroring the first")
 {
     const Point first = info_tab_offset(0);
     CHECK(first.x > 0);
     CHECK(first.y < 0);
-    CHECK(first.x == -first.y);
     const Point up = info_tab_offset(1);
     CHECK(up.y < first.y);
     const Point left = info_tab_offset(3);
@@ -163,14 +163,14 @@ TEST_CASE("a tab with choices fans them out round itself and tells the one picke
 TEST_CASE("choices spread evenly either side of the line out through their tab")
 {
     const Point one = info_choice_offset(0, 0, 1);
-    CHECK(one.x == -one.y);
+    CHECK(one.x > 0);
+    CHECK(one.y < 0);
     const Point left = info_choice_offset(0, 0, 3);
     const Point middle = info_choice_offset(0, 1, 3);
     const Point right = info_choice_offset(0, 2, 3);
     CHECK(middle.x == one.x);
     CHECK(middle.y == one.y);
-    CHECK(left.x == -right.y);
-    CHECK(left.y == -right.x);
+    CHECK(std::hypot(left.x - one.x, left.y - one.y) == doctest::Approx(std::hypot(right.x - one.x, right.y - one.y)).epsilon(0.02)); // Whole units
 }
 
 TEST_CASE("a page's sections are buttons that ask for another section")

@@ -64,7 +64,7 @@ namespace rct3::ui
         inline constexpr float kItemHeight = 33;
         inline constexpr float kItemStep = 40; ///< From one menu item to the next
         inline constexpr float kItemGap = 7;   ///< Between the tool button and its menu's nearest item
-        inline constexpr float kItemIconScale = 0.684f;
+        inline constexpr float kItemIconScale = 0.7f;
     } // namespace tool_row
 
     /// The step between buttons on a screen `width` units wide.

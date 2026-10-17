@@ -72,7 +72,7 @@ TEST_CASE("the scenarios sit on an arc, the picked one larger, locked ones disab
     CHECK(f.map->title() == u"Title B");
     const Rect picked = f.map->scenario_button(1).rect();
     const Rect other = f.map->scenario_button(0).rect();
-    CHECK(picked.width() == doctest::Approx(other.width() * 1.388f));
+    CHECK(picked.width() == doctest::Approx(other.width() * career_board::kPickedFactor));
     CHECK(other.y0 < picked.y0); // Further down the arc
     CHECK(f.map->scenario_button(3).enabled);
     CHECK_FALSE(f.map->scenario_button(4).enabled);
@@ -149,7 +149,7 @@ TEST_CASE("the bottom strip names the picked scenario, the one under the pointer
 
 TEST_CASE("the front piece of the large picture settles in a third of a second")
 {
-    CHECK(career_board::pop(0) == doctest::Approx(1.1f));
+    CHECK(career_board::pop(0) == doctest::Approx(career_board::kPopFactor));
     CHECK(career_board::pop(0.3f) == doctest::Approx(1.0f));
     CHECK(career_board::pop(1) == doctest::Approx(1.0f));
     CHECK(career_board::pop(0.15f) < 1.05f);

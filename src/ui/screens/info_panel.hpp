@@ -112,18 +112,18 @@ namespace rct3::ui
         inline constexpr float kShadowOffset = 3; ///< Of the shadows, right and down
         /// Across the round view of the thing, centred on the disc, within the disc's plain middle.
         inline constexpr float kView = 106;
-        inline constexpr float kRingRadius = 70; ///< From the disc's middle to the tabs' middles
-        inline constexpr float kFirstAngle = 45; ///< Degrees up from the right, of slot 0
-        inline constexpr float kSlotAngle = 30;  ///< Between neighbouring slots, going round to the left
-        inline constexpr float kTabSize = 27;    ///< A tab's face at rest
+        inline constexpr float kRingRadius = 72; ///< From the disc's middle to the tabs' middles
+        inline constexpr float kFirstAngle = 42; ///< Degrees up from the right, of slot 0
+        inline constexpr float kSlotAngle = 32;  ///< Between neighbouring slots, going round to the left
+        inline constexpr float kTabSize = 28;    ///< A tab's face at rest
         inline constexpr float kTabGrown = 40;   ///< Under the pointer
         inline constexpr float kIconSize = 40;   ///< Of the tab icons' own pictures
         inline constexpr float kCloseSize = 14;
         inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
         inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
         inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
-        inline constexpr float kStripExtra = 31;   ///< Of the strip's width beyond its content's
-        inline constexpr float kStripNarrowest = 131;
+        inline constexpr float kStripExtra = 32;   ///< Of the strip's width beyond its content's
+        inline constexpr float kStripNarrowest = 136;
         inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content
         inline constexpr float kBodyLeft = 16;     ///< Of the content, from the strip's left edge
         inline constexpr float kBodyTop = 12;      ///< From the strip's top edge
@@ -135,11 +135,11 @@ namespace rct3::ui
         inline constexpr float kPairGap = 6;     ///< Between the two half lines of a row
         inline constexpr float kRingReach = 30;  ///< Of the page's right end, under the ring's tabs
         inline constexpr float kChoiceSize = 22; ///< A choice button
-        inline constexpr float kChoiceIconScale = 0.684f;
-        inline constexpr float kChoiceRadius = 25; ///< From the tab's middle to its choices'
+        inline constexpr float kChoiceIconScale = 0.7f;
+        inline constexpr float kChoiceRadius = 26; ///< From the tab's middle to its choices'
         /// Radians either side of the line out from the disc through the tab, for two and for three choices.
-        inline constexpr float kTwoChoiceSpread = 0.35f;
-        inline constexpr float kThreeChoiceSpread = 0.7f;
+        inline constexpr float kTwoChoiceSpread = 0.38f;
+        inline constexpr float kThreeChoiceSpread = 0.76f;
         inline constexpr float kPaletteGap = 4;     ///< Between a paint tab and the colours it opens
         inline constexpr float kScreenMargin = 4;   ///< Kept between the colours and the screen's edges
         inline constexpr float kControlHeight = 15; ///< Of a row holding a control

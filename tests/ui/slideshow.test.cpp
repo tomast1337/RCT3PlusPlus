@@ -72,13 +72,13 @@ TEST_CASE("a new list starts at its beginning")
 TEST_CASE("the pictures fill the top right beyond the artwork")
 {
     const Rect r = slideshow_rect(1024, 768);
-    CHECK(r.x0 == doctest::Approx(74));
+    CHECK(r.x0 == doctest::Approx(80));
     CHECK(r.y0 == 0);
     CHECK(r.x1 == 1024);
-    CHECK(r.y1 == doctest::Approx(768 - 55.5f));
+    CHECK(r.y1 == doctest::Approx(768 - 60));
     const Rect wide = slideshow_rect(1920, 1080);
-    CHECK(wide.x0 == doctest::Approx(138.75f));
-    CHECK(wide.y1 == doctest::Approx(1080 - 74 * 1080 / 768.0 * 1080 / 1920));
+    CHECK(wide.x0 == doctest::Approx(150));
+    CHECK(wide.y1 == doctest::Approx(1080 - 80 * 1080 / 768.0 * 1080 / 1920));
     const Rect empty = slideshow_rect(0, 0);
     CHECK(empty.width() == 0);
 }

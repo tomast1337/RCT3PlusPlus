@@ -84,7 +84,8 @@ namespace rct3::save
     };
 
     /// States shared by all persons. Guests and staff reuse numbers from 12 upward for role-specific states
-    /// (see GuestState); the number alone is not enough to name those.
+    /// (see GuestState); the number alone is not enough to name those. Names are the game's own text keys.
+    /// Numbers are matched to states by what the person is doing in game and what their state target is.
     enum class PersonState : std::int32_t
     {
         Decision = 0,

@@ -66,7 +66,6 @@ namespace rct3::ui
         } };
 
         // The artwork's skins.
-        using fs::kArcSkins;
         using fs::kBandBottomSkin;
         using fs::kBandEndSkin;
         using fs::kBandTopSkin;
@@ -200,13 +199,8 @@ namespace rct3::ui
 
     void draw_front_arc(DrawContext& context, const fs::Frame& frame, std::string_view logo)
     {
-        if (const SkinRef* first = context.skins.find(kArcSkins[0]); first != nullptr && first->coded != nullptr)
-            draw_frame(context.list, game_frames::front_arc(), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
-        else
-        {
-            for (std::size_t i = 0; i < kArcSkins.size(); ++i)
-                draw_at_size(context, frame, kArcSkins[i], fs::kArcPieces.at(i));
-        }
+        // Always drawn in code: our layout does not place the game's arc pictures.
+        draw_frame(context.list, game_frames::front_arc(), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
         draw_at_size(context, frame, context.skins.find(logo) != nullptr ? logo : kLogoSkin, fs::kLogo);
     }
 

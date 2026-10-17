@@ -39,8 +39,8 @@ namespace rct3::ui
         constexpr float kSmallIcon = 16;
         constexpr std::array<float, 4> kSpeedWidths = { 8, 8, 13, 17 };
         constexpr float kSpeedHeight = 13;
-        constexpr float kMoneyWidth = 97;
-        constexpr float kGuestsWidth = 38;
+        constexpr float kMoneyWidth = 100;
+        constexpr float kGuestsWidth = 40;
         constexpr float kThumbWidth = 12;
         constexpr float kThumbHeight = 15;
         constexpr float kRatingWidth = 25;

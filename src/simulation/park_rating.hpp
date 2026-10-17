@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The park's rating, worked out again each game week from how the park stands at that moment. It is not
-// carried over from the week before: it adds up a handful of parts, each scored on its own, and keeps the sum
-// between 0 and 1000.
+// The park's rating, our own model. Once a game week the park is scored from how it stands, and the rating
+// moves part of the way towards that score, so one bad week dents it and a run of them sinks it.
 //
-//  - Guests: more guests in the park score more, up to a cap reached at a couple of thousand.
-//  - Happy guests: the share of the guests inside who are more happy than not. An empty park gets a middling
-//    score for this part rather than none.
-//  - Ride up-time: how much of the time the rides are running, scaled down while the park has only a few.
-//  - Excitement and intensity: the rated rides' scores added up, up to a cap, plus a little more when the
-//    average ride sits near a pleasant level of each.
-//  - Litter: every piece left lying for more than a few weeks takes some off, up to a cap.
-//  - A harder rating, set by the scenario, starts the sum lower.
-//  - A penalty and a bonus, which fade a little each week.
+// The score is out of 1000 and adds up five parts, each worth up to its own share:
+//
+//  - Happiness: how happy the guests in the park are, on average. An empty park scores half of this part.
+//  - Rides: how good the tested rides are, on average, times how many rides there are to choose from. A
+//    ride is good when it is exciting without being too intense.
+//  - Reliability: how much of the time the rides are running.
+//  - Guests: a busy park scores more, with less to gain from each guest as the park fills.
+//  - Litter: litter left lying takes some off, up to a cap.
+//
+// A scenario that asks for a harder rating scales the score down.
+//
+// Every number here is our own, tuned so that the scores of the game's parks land near the ratings their
+// saves hold.
 #pragma once
 
+#include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 
@@ -35,51 +39,42 @@ namespace rct3::simulation
         std::optional<float> intensity;
     };
 
-    /// Everything the weekly rating is worked out from.
+    /// Everything the weekly score is worked out from.
     struct RatingInput
     {
         bool harder = false;            ///< The scenario asks for a harder rating
         std::int32_t guests = 0;        ///< The park's guest count
         std::int32_t guests_inside = 0; ///< Guests walked through, counted one by one
-        std::int32_t happy_guests = 0;  ///< Of those, the ones happier than half way
+        float happiness = 0;            ///< Their happiness, each 0..1, added up
         std::vector<RideRatingInput> rides;
         std::int32_t old_litter = 0; ///< Pieces lying long enough to count
-        std::int32_t penalty = 0;
-        std::int32_t bonus = 0;
     };
 
-    /// The parts of a rating, each already signed as it adds to the total.
+    /// The parts of a score, each already signed as it adds to the total.
     struct RatingParts
     {
-        std::int32_t base = 0; ///< Negative for a harder rating, otherwise zero
+        std::int32_t happiness = 0;
+        std::int32_t rides = 0;
+        std::int32_t reliability = 0;
         std::int32_t guests = 0;
-        std::int32_t happy_guests = 0;
-        std::int32_t ride_up_time = 0;
-        std::int32_t ride_scores = 0;
-        std::int32_t litter = 0;  ///< Zero or negative
-        std::int32_t penalty = 0; ///< Zero or negative
-        std::int32_t bonus = 0;
-        std::int32_t total = 0; ///< The parts added up, kept to 0..kMaxRating
+        std::int32_t litter = 0; ///< Zero or negative
+        std::int32_t harder = 0; ///< Zero or negative: what the harder rating took off
+        std::int32_t total = 0;  ///< The parts added up, kept to 0..kMaxRating
 
         bool operator==(const RatingParts&) const = default;
     };
 
-    /// How long a piece of litter must lie, in calendar units, before it counts against the rating.
-    inline constexpr float kLitterCountsAfter = 240.0f;
+    /// How long a piece of litter must lie, in calendar units, before it counts against the rating: a day.
+    inline constexpr float kLitterCountsAfter = save::GameClock::kUnitsPerWeek / 7;
 
     [[nodiscard]] RatingParts rate_park(const RatingInput& input);
 
-    /// The rating's inputs gathered from the park's people and rides at calendar time `now`. The guest
-    /// count, flag, penalty and bonus are left for the caller.
+    /// The score's inputs gathered from the park's people and rides at calendar time `now`. The guest count
+    /// and the harder flag are left for the caller.
     [[nodiscard]] RatingInput rating_input(const save::PeopleModel& people, const save::RideModel& rides, float now);
 
-    /// The penalty and bonus after a week has been rated: each fades by a fixed step, never below zero. The
-    /// penalty fades faster in a park whose money never runs out.
-    struct RatingCarry
-    {
-        std::int32_t penalty = 0;
-        std::int32_t bonus = 0;
-    };
-    [[nodiscard]] RatingCarry fade(RatingCarry carry, bool unlimited_money) noexcept;
+    /// The rating after a week: `before` (0..1, none for a park not rated yet) moved part of the way towards
+    /// `score` (0..kMaxRating).
+    [[nodiscard]] float next_rating(std::optional<float> before, std::int32_t score) noexcept;
 
 } // namespace rct3::simulation

@@ -121,6 +121,13 @@ namespace rct3::park
 
     using ModelPictures = std::map<std::string, PaletteImage, std::less<>>;
 
+    /// Key of the picture given to parts drawn as water: their texture style is SIWater and the texture they
+    /// name is in no file, so the look is ours.
+    inline constexpr std::string_view kWaterPicture = "rct3pp:water";
+
+    /// A see-through, light blue, faintly rippled picture for those parts.
+    [[nodiscard]] PaletteImage water_picture();
+
     /// Loads models through an asset index, reading each overlay once. Keep it while loading a park's models,
     /// then drop it to free the files.
     class ModelLoader
@@ -159,11 +166,15 @@ namespace rct3::park
         std::map<std::string, bool, std::less<>> tried_pictures_;
 
         std::string texture_key(std::string_view name, std::string_view near);
+        /// Gives `part` the picture of texture `name` near `near`, or the water picture when `style` asks for it.
+        void set_texture(ModelPart& part, std::string_view name, std::string_view style, std::string_view near);
         /// Adds the levels of `visual`, held in the file at `visual_path`, to `model`.
         void add_levels(ObjectModel& model, const ovl::SceneryVisual& visual, std::string_view visual_path);
         /// Adds the meshes of static shape `name`, looked for near `near`, to `level`; false when it is missing.
         bool add_static(ModelLevel& level, std::string_view name, std::string_view near);
-        void set_texture(ModelPart& part, std::string_view name, std::string_view near);
+        /// Adds to every level of `model` the water running down it, when it is a track piece of the file at
+        /// `path` that carries water (see water_flow.hpp).
+        void add_flow(ObjectModel& model, std::string_view symbol, std::string_view path);
     };
 
 } // namespace rct3::park

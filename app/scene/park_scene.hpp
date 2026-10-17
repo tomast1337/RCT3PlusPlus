@@ -17,6 +17,7 @@
 #pragma once
 
 #include "config/game_options.hpp"
+#include "ovl/texture_image.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/moving_meshes.hpp"
@@ -229,6 +230,8 @@ namespace rct3::scene
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
+        ovl::RgbaImage flow_picture;  ///< The flowing water's, still; empty without one (park/water_flow.hpp)
+        std::uint32_t flow_shift = 0; ///< Rows it is rolled by on the GPU
         park::SkyModels sky;
         park::ObjectMesh sky_mesh; ///< Built again each frame round the eye
         ui::UiTextures sky_textures;

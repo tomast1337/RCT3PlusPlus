@@ -201,6 +201,7 @@ namespace
         kBin,
         kSign,
         kBench,
+        kPool,
     };
 
     Attr u8a(const char* n)
@@ -262,6 +263,7 @@ namespace
             { "LitterBinBehaviour", { refa("\"SceneryItem\""), f32a("Capacity"), f32a("Contents"), f32a("LastEmptied") } },
             { "SignBehaviour", { refa("\"SceneryItem\""), i32a("SignType"), { "UserText", "string", 0, { } } } },
             { "ParkBenchBehaviour", { refa("\"SceneryItem\"") } },
+            { "PoolSegment", { i32a("Col"), i32a("Depth"), { "Prototype", "bool", 1, { } }, i32a("Row"), i32a("SegmentType"), i32a("SurfaceHeight") } },
         };
     }
 
@@ -913,4 +915,17 @@ TEST_CASE("enum names")
     CHECK(weather_type_from(6) == WeatherType::Snowstorm);
     CHECK(std::string(to_string(PathKind::Queue)) == "queue");
     CHECK(std::string(to_string(Ownership::Locked)) == "locked");
+}
+
+TEST_CASE("load_world: the pool squares that hold water, at their surface and depth")
+{
+    const auto pool = [](std::uint64_t id, std::int32_t col, std::int32_t row, std::int32_t type, bool prototype) { return Obj { kPool, id, Bytes().i32(col).i32(2).u8(prototype ? 1 : 0).i32(row).i32(type).i32(-5) }; };
+    const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), pool(500, 1, 0, 0, false), pool(501, 2, 1, 0, false), pool(502, 0, 0, 1, false), pool(503, 0, 1, 0, true) });
+    REQUIRE(l->world);
+    REQUIRE(l->world->pool_water.size() == 2);
+    CHECK(l->world->pool_water[0].col == 1);
+    CHECK(l->world->pool_water[0].row == 0);
+    CHECK(l->world->pool_water[0].surface == -5);
+    CHECK(l->world->pool_water[0].depth == 2);
+    CHECK(l->world->pool_water[1].col == 2);
 }

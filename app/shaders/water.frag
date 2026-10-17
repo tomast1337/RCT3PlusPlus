@@ -363,7 +363,8 @@ void main() {
     alpha = mix(alpha, 1.0, foam);
   }
 
-  // The edge fades in over the first bit of depth, so the shore has no hard line.
-  alpha *= smoothstep(0.0, kShoreSoftness, depth);
+  // The edge fades in over the first bit of depth, so the shore has no hard line; far off, water fades into
+  // the horizon drawn behind it before the far plane cuts it, as the land beyond the park does.
+  alpha *= smoothstep(0.0, kShoreSoftness, depth) * (1.0 - smoothstep(0.6, 0.95, dist / u_draw.sun_far.w));
   out_color = vec4(colour, alpha);
 }

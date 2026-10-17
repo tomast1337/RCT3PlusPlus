@@ -232,4 +232,22 @@ namespace rct3::park
         mesh.high = had ? glm::max(mesh.high, more.high) : more.high;
     }
 
+    std::vector<WaterVertex> pool_water(const save::TerrainGrid& grid, std::span<const save::PoolWater> pools)
+    {
+        std::vector<WaterVertex> out;
+        for (const save::PoolWater& pool : pools)
+        {
+            if (!grid.contains(pool.col, pool.row))
+                continue;
+            const float level = static_cast<float>(pool.surface) + kPoolBrim;
+            for (const int c : { 0, 1, 2, 3, 2, 1 })
+            {
+                glm::vec3 p = corner(grid, pool.col, pool.row, c);
+                p.y = level;
+                out.push_back({ p, kPoolColour, static_cast<float>(pool.depth) + kPoolBrim });
+            }
+        }
+        return out;
+    }
+
 } // namespace rct3::park

@@ -35,6 +35,9 @@ namespace rct3::ovl
         std::array<std::string_view, 4> splines;
         /// Further "spl" items, empty in most pieces.
         std::array<std::string_view, 2> extra_splines;
+        /// "spl" items, left then right, named `<Piece>L_WaterSpline` and `<Piece>R_WaterSpline`: the edges of
+        /// the water running down the piece, on slides and water rides. Empty on dry pieces.
+        std::array<std::string_view, 2> water_splines;
         std::array<float, 3> scale { }; ///< 1, 1, 1 in nearly all items
         /// Every reference in the record, in file order, including those above.
         std::vector<ItemReference> references;

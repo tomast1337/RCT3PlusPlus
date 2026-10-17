@@ -55,6 +55,8 @@ namespace rct3::ovl
                 {
                     s.extra_splines[i] = record->ref(0x30 + i * 4, "spl");
                 }
+                for (std::size_t i = 0; i < s.water_splines.size(); ++i)
+                    s.water_splines[i] = record->ref(0xD8 + i * 4, "spl");
                 for (std::size_t i = 0; i < s.scale.size(); ++i)
                     s.scale[i] = record->real(0xBC + i * 4);
                 s.references = record->references(static_cast<std::uint32_t>(size));

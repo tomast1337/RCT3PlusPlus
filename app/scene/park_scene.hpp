@@ -100,6 +100,15 @@ namespace rct3::scene
     /// still are only built again when one's level of detail changes, checked as often as objects' levels.
     inline constexpr std::array kPeopleRebuildIntervals { 1.0f / 30.0f, 1.0f / 15.0f, 1.0f / 6.0f };
 
+    /// The park drawn from the sun into a shadow map.
+    struct ShadowDrawing
+    {
+        render::TextureHandle target; ///< For its depth
+        render::TextureHandle view;   ///< How it was drawn, for the Lit shaders
+        glm::vec3 sun { 0.0f, 1.0f, 0.0f };
+        glm::mat4 drawn { 0.0f }; ///< The view it was last drawn from; 0 when not drawn yet
+    };
+
     /// Objects' shapes and billboards at some levels.
     struct ObjectShapes
     {
@@ -289,11 +298,13 @@ namespace rct3::scene
         std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
         render::SceneLight light;                          ///< What the day clock shows, for this frame
         int shadows = 0;                                   ///< The Shadows option: none, static (drawn now and then), dynamic
-        render::TextureHandle shadow_target;               ///< The park drawn from the sun, for its depth
-        render::TextureHandle shadow_view;                 ///< How it was drawn, for the Lit shaders
-        glm::vec3 shadow_sun { 0.0f, 1.0f, 0.0f };         ///< The sun direction the map was last drawn with
-        glm::mat4 shadow_drawn { 0.0f };                   ///< The view the map was last drawn from
-        float shadow_drawn_at = 0;                         ///< `clock` when it was
+        /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
+        /// goes on towards its next step (park::sun_step_share).
+        std::array<ShadowDrawing, 2> shadow_drawings;
+        std::size_t shadow_now = 0;     ///< Which of them is the latest
+        bool shadow_before_due = false; ///< Dynamic shadows draw the older drawing every other frame
+        float shadow_drawn_at = 0;      ///< `clock` when they were last drawn
+        bool blend_shadows = true;      ///< Developer switch: without it, shadows step from one drawing to the next
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

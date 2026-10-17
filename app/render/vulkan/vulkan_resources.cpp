@@ -462,7 +462,7 @@ namespace rct3::render::vulkan
             return std::unexpected("unknown shader");
         if (desc.shader == Shader::Water && set_count_ < kSetCount)
             return std::unexpected("the device binds too few descriptor sets for the water shader");
-        if (lit_shader(desc.shader) && set_count_ < 5)
+        if (lit_shader(desc.shader) && set_count_ < 7)
             return std::unexpected("the device binds too few descriptor sets for the lit shaders");
 
         VkShaderModule vert = VK_NULL_HANDLE;

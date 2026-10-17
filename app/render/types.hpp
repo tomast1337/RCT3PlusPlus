@@ -279,6 +279,11 @@ namespace rct3::render
         /// map depth. Without both, nothing is in shadow.
         TextureHandle shadow_map;
         TextureHandle shadow_view;
+        /// The Lit shaders only: an older shadow drawn as `shadow_map` and `shadow_view` are, mixed in with
+        /// `shadow_before` (0 to 1) of the weight, so the shadow moves smoothly between two drawings of it.
+        TextureHandle shadow_map_before;
+        TextureHandle shadow_view_before;
+        float shadow_before = 0;
         /// Haze: far surfaces fade towards this colour (each channel 0 to 1), more the further they are from the
         /// eye. None when `haze_rate` is 0.
         glm::vec3 haze { 0.0f };

@@ -70,3 +70,14 @@ TEST_CASE("the shadows' sun moves only once it has moved enough")
     CHECK(steady_sun(kept, near, 0.01f) == kept);
     CHECK(steady_sun(kept, far, 0.01f) == far);
 }
+
+TEST_CASE("the sun's share of its next shadow step grows with its angle from where shadows were drawn")
+{
+    const float step = glm::radians(0.5f);
+    const glm::vec3 kept = glm::normalize(glm::vec3(0.3f, 0.8f, 0.1f));
+    const auto turned = [&](float angle) { return glm::vec3(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1)) * glm::vec4(kept, 0)); };
+    CHECK(sun_step_share(kept, kept, step) == 0);
+    CHECK(sun_step_share(kept, turned(step * 0.25f), step) == doctest::Approx(0.25f).epsilon(0.01));
+    CHECK(sun_step_share(kept, turned(step * 0.75f), step) == doctest::Approx(0.75f).epsilon(0.01));
+    CHECK(sun_step_share(kept, turned(step * 3), step) == 1);
+}

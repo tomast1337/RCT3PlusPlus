@@ -2121,55 +2121,117 @@ namespace rct3::scene
 
         constexpr std::uint32_t kShadowTexels = 2048;
 
-        /// Draws the park round the camera from the sun into the shadow map, and gives `scene.light` the map;
-        /// without shadows, or with the sun down, takes it away. Cut-out pictures leave their clear pixels out of
-        /// the map, so leaves and bushes cast their own shapes.
+        /// Makes the textures of `drawing`; false when the device cannot.
+        bool make_shadow_drawing(render::Device& device, ShadowDrawing& drawing)
+        {
+            render::TextureDesc desc;
+            desc.width = kShadowTexels;
+            desc.height = kShadowTexels;
+            desc.target = true;
+            desc.readable_depth = true;
+            desc.label = "shadow map";
+            auto made = device.create_texture(desc);
+            std::vector<std::byte> blank(5 * 16);
+            auto view = device.create_texture({ .width = 5, .height = 1, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow view" });
+            if (!made || !view)
+            {
+                if (made)
+                    device.destroy_texture(*made);
+                if (view)
+                    device.destroy_texture(*view);
+                return false;
+            }
+            drawing.target = *made;
+            drawing.view = *view;
+            return true;
+        }
+
+        /// Draws the park round the camera from `drawing.sun` into its map, outside any pass.
+        void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const park::SunView& sun)
+        {
+            // The depth bias: about a tenth of a world unit, in the map's depth.
+            const std::array<float, 20> values
+                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
+            drawing.drawn = sun.view_projection;
+            device.update_texture(drawing.view, std::as_bytes(std::span(values)));
+            render::PassDesc into;
+            into.target = drawing.target;
+            device.begin_pass(into);
+            // Without shadows: the map would be read while drawn into.
+            render::SceneLight light = scene.light;
+            light.shadow_map = light.shadow_map_before = { };
+            light.shadow_view = light.shadow_view_before = { };
+            draw_world(device, scene, sun.view_projection, light, { .background = false, .water = false, .see_through = false });
+            device.end_pass();
+        }
+
+        /// Draws the park round the camera from the sun into the shadow maps, and gives `scene.light` them;
+        /// without shadows, or with the sun down, takes them away. Cut-out pictures leave their clear pixels out
+        /// of the maps, so leaves and bushes cast their own shapes.
+        ///
+        /// The sun is drawn from only now and then, when it has gone half a degree, and the drawing before is
+        /// kept: the shader mixes the two by how far the sun is on its way to the next step, so the shadow
+        /// moves smoothly yet each map is drawn from a steady direction, without the crawl of one drawn anew
+        /// each frame. It lags the sun by a step.
         void draw_shadow_map(render::Device& device, ParkScene& scene)
         {
             scene.light.shadow_map = { };
             scene.light.shadow_view = { };
+            scene.light.shadow_map_before = { };
+            scene.light.shadow_view_before = { };
+            scene.light.shadow_before = 0;
             if (!scene.shadows || scene.light.sun_direction.y <= 0.02f)
                 return;
-            if (!scene.shadow_target)
+            for (ShadowDrawing& drawing : scene.shadow_drawings)
             {
-                render::TextureDesc desc;
-                desc.width = kShadowTexels;
-                desc.height = kShadowTexels;
-                desc.target = true;
-                desc.readable_depth = true;
-                desc.label = "shadow map";
-                auto made = device.create_texture(desc);
-                std::vector<std::byte> blank(5 * 16);
-                auto view = device.create_texture({ .width = 5, .height = 1, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow view" });
-                if (!made || !view)
+                if (!drawing.target && !make_shadow_drawing(device, drawing))
                 {
                     scene.shadows = 0;
                     return;
                 }
-                scene.shadow_target = *made;
-                scene.shadow_view = *view;
             }
-            // Half a degree: the shadows step now and then rather than crawl every frame.
-            scene.shadow_sun = park::steady_sun(scene.shadow_sun, glm::normalize(scene.light.sun_direction), glm::radians(0.5f));
-            const park::SunView sun = park::sun_view(scene.shadow_sun, scene.camera.target, park::shadow_radius(scene.camera.distance), kShadowTexels);
-            // The depth bias: about a tenth of a world unit, in the map's depth.
-            const std::array<float, 20> values
-                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
-            // Static shadows redraw only when the view moves, or every two seconds to catch what changed in the park.
-            const bool redraw = scene.shadows > 1 || sun.view_projection != scene.shadow_drawn || scene.clock - scene.shadow_drawn_at > 2;
-            scene.light.shadow_map = device.depth_texture(scene.shadow_target);
-            scene.light.shadow_view = scene.shadow_view;
-            if (!redraw)
+            const float step = glm::radians(0.5f);
+            const glm::vec3 to_sun = glm::normalize(scene.light.sun_direction);
+            ShadowDrawing* now = &scene.shadow_drawings[scene.shadow_now];
+            const bool stepped = park::steady_sun(now->sun, to_sun, step) != now->sun;
+            if (stepped)
+            {
+                scene.shadow_now = 1 - scene.shadow_now;
+                now = &scene.shadow_drawings[scene.shadow_now];
+                now->sun = to_sun;
+            }
+            ShadowDrawing& before = scene.shadow_drawings[1 - scene.shadow_now];
+            const bool blend = scene.blend_shadows && before.drawn != glm::mat4(0.0f);
+            const float centre_radius = park::shadow_radius(scene.camera.distance);
+            const park::SunView sun = park::sun_view(now->sun, scene.camera.target, centre_radius, kShadowTexels);
+            const park::SunView sun_before = park::sun_view(before.sun, scene.camera.target, centre_radius, kShadowTexels);
+            // Static shadows redraw when the view moves, or every two seconds to catch what changed in the park;
+            // the older drawing then too, so both cover the same ground and show the same park. A step alone
+            // draws only the new one: the older is the one drawn before it.
+            // Dynamic shadows draw the newer every frame and the older, fading out, every other frame: a frame
+            // behind is not seen, and it saves half the cost of the second drawing.
+            const bool timed = scene.clock - scene.shadow_drawn_at > 2;
+            const bool dynamic = scene.shadows > 1;
+            scene.shadow_before_due = dynamic && !scene.shadow_before_due;
+            const bool draw_now = dynamic || timed || stepped || sun.view_projection != now->drawn;
+            const bool draw_before = blend && (timed || scene.shadow_before_due || sun_before.view_projection != before.drawn);
+            scene.light.shadow_map = device.depth_texture(now->target);
+            scene.light.shadow_view = now->view;
+            if (blend)
+            {
+                scene.light.shadow_map_before = device.depth_texture(before.target);
+                scene.light.shadow_view_before = before.view;
+                scene.light.shadow_before = 1 - park::sun_step_share(now->sun, to_sun, step);
+            }
+            if (!draw_now && !draw_before)
                 return;
-            scene.shadow_drawn = sun.view_projection;
-            scene.shadow_drawn_at = scene.clock;
+            if (timed)
+                scene.shadow_drawn_at = scene.clock;
             device.end_pass();
-            device.update_texture(scene.shadow_view, std::as_bytes(std::span(values)));
-            render::PassDesc into;
-            into.target = scene.shadow_target;
-            device.begin_pass(into);
-            draw_world(device, scene, sun.view_projection, scene.light, { .background = false, .water = false, .see_through = false });
-            device.end_pass();
+            if (draw_now)
+                profiling::section("Now", [&] { draw_shadow(device, scene, *now, sun); });
+            if (draw_before)
+                profiling::section("Before", [&] { draw_shadow(device, scene, before, sun_before); });
             render::PassDesc back;
             back.clear = false;
             device.begin_pass(back);
@@ -2286,7 +2348,7 @@ namespace rct3::scene
         }
         if (scene.view_target)
             device.destroy_texture(scene.view_target);
-        for (const render::TextureHandle t : { scene.shadow_target, scene.shadow_view })
+        for (const render::TextureHandle t : { scene.shadow_drawings[0].target, scene.shadow_drawings[0].view, scene.shadow_drawings[1].target, scene.shadow_drawings[1].view })
         {
             if (t)
                 device.destroy_texture(t);

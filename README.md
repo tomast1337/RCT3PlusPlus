@@ -102,9 +102,30 @@ File names inside the install are matched without regard to case, as on Windows.
 
 ## Clean-room policy
 
-This repository contains original code and format specifications only. It must not contain
-decompiled source, game assets, or other copyrighted material from RollerCoaster Tycoon 3. You need a
-legitimate copy of the game to use it.
+rct3++ is a clean-room reimplementation. This repository contains original code and format descriptions
+written in our own words, and nothing else: no game files or assets, no text or data copied from them, and
+no decompiled or disassembled code. rct3++ ships no game content; you need your own legitimate copy of
+RollerCoaster Tycoon 3 to play.
+
+Where our knowledge comes from:
+
+- **Data files, read as data.** rct3++ reads the game's data, save and scenario files so that you can use
+  the files you own, as modding tools have long done. We describe their layout ourselves.
+- **Watching the game play.** A value that exists only inside the game's program (a speed, a rate, a
+  threshold) is treated as unknown. We measure the behaviour in the running game and approximate it, and
+  the code says so.
+- **Our own model**, where measuring is not practical. rct3++ does not aim to match the original number
+  for number.
+- **Open-source work** under a compatible licence, such as OpenRCT2, credited where it is used.
+
+We do not accept contributions based on decompiling, disassembling or debugging the game's executables, or
+on leaked source or documents. See the clean-room standards in the [Code of Conduct](CODE_OF_CONDUCT.md)
+and the detailed rules in [CLEAN_ROOM.md](CLEAN_ROOM.md).
+
+## Contributing
+
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Read it, and
+[CLEAN_ROOM.md](CLEAN_ROOM.md), before opening a pull request.
 
 ## License
 

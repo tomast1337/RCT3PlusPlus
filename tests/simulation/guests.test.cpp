@@ -416,3 +416,18 @@ TEST_CASE("a ride waiting for a full load sends a full train when the queue is l
         CHECK(fleet.riders[0].size() == 2);
     }
 }
+
+TEST_CASE("a ride reckons its riders an hour from its departures")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Spinner", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    for (int i = 0; i < 12; ++i)
+        r.get<Errand>(park.guest({ 4, 0 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+    const auto& f = r.get<CycleRide>(ride);
+    CHECK(f.per_hour == 0);
+    park.run_seconds(45);
+    // Two riders every 10 s or so, a little over with the step it takes to load.
+    CHECK(f.per_hour == doctest::Approx(720).epsilon(0.1));
+}

@@ -169,6 +169,8 @@ namespace rct3::simulation
         NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
         std::vector<entt::entity> riders { }; ///< Guests on the ride now
         float loading = 0;                    ///< Seconds the train at the start, or the stopped ride, has been loading
+        float since_departure = -1;           ///< Seconds since a train or go last left; -1 before the first
+        float per_hour = 0;                   ///< Riders an hour, smoothed over the last departures; 0 before two
     };
 
     /// How full a train must be to leave: Departure::wait_for, in the order the operating panel lists them.

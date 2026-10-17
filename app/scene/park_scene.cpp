@@ -1280,6 +1280,12 @@ namespace rct3::scene
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
             }
+            // A running ride's seats, queue and riders an hour.
+            if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
+            {
+                if (const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[ref.index]))
+                    f.flow = ui::RideFlow { cycle->capacity, cycle->queue.size(), cycle->per_hour };
+            }
             if (const auto painted = painted_object(scene, ref))
             {
                 for (const std::size_t slot : painted->second)
@@ -1794,6 +1800,13 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
+            // The customers page follows the running park; it has no controls to lose a half-made change in.
+            scene.since_info_page += elapsed;
+            if (scene.shown && scene.simulate && scene.info_tab == ui::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)
+            {
+                scene.since_info_page = 0;
+                show_info_page(scene, *info, assets, options);
+            }
             const auto action = info->take_action();
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {

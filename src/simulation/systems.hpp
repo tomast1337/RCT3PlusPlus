@@ -50,6 +50,9 @@ namespace rct3::simulation
     /// seconds of loading, as `departure` says.
     [[nodiscard]] bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited);
 
+    /// Weight of the newest departure in a ride's riders an hour (CycleRide::per_hour); our own figure.
+    inline constexpr float kFlowSmoothing = 0.25f;
+
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);
 

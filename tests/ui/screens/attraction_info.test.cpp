@@ -268,3 +268,27 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
     CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 1);
 }
+
+TEST_CASE("a running ride shows its riders an hour, the wait its queue now has and its seats")
+{
+    StringTable s = table();
+    s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
+    s.add("AttractionCustomersDialogLabel_QueueTime", u"Queue");
+    s.add("AttractionVehicleDialogLabelCapacity", u"Seats");
+    save::Ride ride;
+    ride.kind = save::RideKind::Tracked;
+    ride.stations.emplace_back().queue_time = 600; // What the save kept, no longer shown
+    AttractionFacts f { &ride.base, &ride, nullptr };
+    f.flow = RideFlow { .seats = 24, .queued = 60, .per_hour = 720 };
+    const auto value = [](const InfoPage& page, std::u16string_view label) { return std::ranges::find(page.lines, std::u16string(label), &InfoLine::label)->value; };
+
+    const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
+    CHECK(value(people, u"Per hour") == u"720");
+    CHECK(value(people, u"Queue") == u"5:00"); // 60 in line at 12 a minute
+    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"24");
+
+    f.flow->per_hour = 0; // Not yet measured
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == kMissingValue);
+    f.flow->queued = 0;
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == u"0:00");
+}

@@ -112,7 +112,7 @@ namespace rct3::ui::front_screen
     /// scale; the band's far end and the text's stretch across.
     inline constexpr Point kLabelBoxOffset { -48, -48 };
     inline constexpr Point kLabelBoxSize { 400, 96 };
-    inline constexpr Rect kLabelPatch { 0, 0, 96, 96 }; ///< In the box: a white ring round the button
+    inline constexpr Rect kLabelPatch { 0, 0, 96, 96 };  ///< In the box: a white ring round the button
     inline constexpr Rect kLabelBand { 48, 6, 270, 90 }; ///< A light band from the ring on to the right
     inline constexpr Rect kLabelText { 104, 6, 245, 90 };
     /// The band's pointed end: the lower ones reach further, `kLabelEndStep` times the index squared.
@@ -145,8 +145,8 @@ namespace rct3::ui::front_screen
         float angle = 0;
         float radius = 0;
     };
-    inline constexpr Polar kStart { 0, 500 };      ///< Off the right of the screen, where every button begins
-    inline constexpr Polar kParked { 1.9f, 500 };  ///< Off the top
+    inline constexpr Polar kStart { 0, 500 };     ///< Off the right of the screen, where every button begins
+    inline constexpr Polar kParked { 1.9f, 500 }; ///< Off the top
     inline constexpr float kParentRadiusFactor = 2;
     inline constexpr float kEaseRate = 8; ///< Per second
     inline constexpr float kAngleClose = 0.04f;

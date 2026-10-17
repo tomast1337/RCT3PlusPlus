@@ -189,8 +189,7 @@ namespace
     {
         return {
             { "info-panel", 520, 175, draw_info_panel },         { "lozenge", 256, 104, draw_lozenges },        { "menu", 298, 146, draw_menus },         { "selected-row", 198, 66, draw_selected_rows },           { "button-face", 170, 52, draw_button_faces },        { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc },
-            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop },    { "label-band", 324, 138, draw_label_band },
-            { "loading-bar", 92, 48, draw_loading_bar },
+            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "label-band", 324, 138, draw_label_band },   { "loading-bar", 92, 48, draw_loading_bar },
         };
     }
 

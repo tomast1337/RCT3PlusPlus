@@ -15,15 +15,15 @@ namespace rct3::simulation
         constexpr float kReliabilityShare = 100;
         constexpr float kGuestsShare = 300;
         constexpr float kEmptyParkHappiness = 0.5f;
-        constexpr float kGoodExcitement = 7;   ///< A ride this exciting scores in full
-        constexpr float kHarshIntensity = 7;   ///< Above this, a ride starts to put guests off
-        constexpr float kIntensityRange = 4;   ///< How far above harsh a ride stops scoring at all
-        constexpr float kRidesForVariety = 3;  ///< About two thirds of the variety at this many rides
-        constexpr float kGuestsForBusy = 300;  ///< About two thirds of the guests part at this many guests
+        constexpr float kGoodExcitement = 7;  ///< A ride this exciting scores in full
+        constexpr float kHarshIntensity = 7;  ///< Above this, a ride starts to put guests off
+        constexpr float kIntensityRange = 4;  ///< How far above harsh a ride stops scoring at all
+        constexpr float kRidesForVariety = 3; ///< About two thirds of the variety at this many rides
+        constexpr float kGuestsForBusy = 300; ///< About two thirds of the guests part at this many guests
         constexpr std::int32_t kPerLitter = 3;
         constexpr std::int32_t kMostLitter = 500;
         constexpr float kHarderShare = 0.15f; ///< Taken off the score by the harder rating
-        constexpr float kWeeklyMove = 0.5f; ///< Share of the way the rating moves towards the week's score
+        constexpr float kWeeklyMove = 0.5f;   ///< Share of the way the rating moves towards the week's score
 
         std::int32_t whole(float v) noexcept
         {

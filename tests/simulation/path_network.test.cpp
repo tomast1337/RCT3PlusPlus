@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/path_network.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -53,4 +54,69 @@ TEST_CASE("a point on a path tile finds it")
     CHECK(p.centre(n) == glm::vec3 { 7, 2, 9 });
     CHECK(p.nearest({ 6.5f, 2.2f, 8.1f }) == n);
     CHECK_FALSE(p.nearest({ 0, 0, 0 }));
+}
+
+namespace
+{
+    std::size_t corners(const PathNetwork& p)
+    {
+        std::size_t n = 0;
+        for (const PathNode& node : p.nodes())
+            n += static_cast<std::size_t>(std::ranges::count_if(node.corner, [](NodeId c) { return c != kNoNode; }));
+        return n;
+    }
+} // namespace
+
+TEST_CASE("a walk cuts across a plaza on the diagonal")
+{
+    PathNetwork p;
+    for (int col = 0; col < 4; ++col)
+        for (int row = 0; row < 4; ++row)
+            p.add({ col, row, 0 });
+    const NodeId from = *p.find({ 0, 0, 0 });
+    const NodeId to = *p.find({ 3, 3, 0 });
+    const auto walk = p.route(from, to);
+    REQUIRE(walk);
+    CHECK(walk->size() == 3); // Three steps across, not six round
+    CHECK(walk->front() == *p.find({ 1, 1, 0 }));
+    CHECK(p.nodes()[from].corner[0] == *p.find({ 1, 1, 0 }));
+    // Straight along an edge stays straight: no zigzag of diagonals.
+    const auto edge = p.route(from, *p.find({ 3, 0, 0 }));
+    REQUIRE(edge);
+    CHECK(edge->size() == 3);
+}
+
+TEST_CASE("no diagonal round a corner, over a gap, across a step in height or through a queue")
+{
+    {
+        PathNetwork corner; // An L: the inside tile is grass
+        corner.add({ 0, 0, 0 });
+        corner.add({ 1, 0, 0 });
+        corner.add({ 1, 1, 0 });
+        CHECK(corners(corner) == 0);
+        CHECK(corner.route(0, 2)->size() == 2);
+    }
+    {
+        PathNetwork slope;
+        slope.add({ 0, 0, 0 });
+        slope.add({ 1, 0, 0 });
+        slope.add({ 0, 1, 0 });
+        slope.add({ 1, 1, 1 }); // A step up
+        CHECK(corners(slope) == 0);
+    }
+    {
+        PathNetwork queue;
+        queue.add({ 0, 0, 0 });
+        queue.add({ 1, 0, 0 });
+        queue.add({ 0, 1, 0 });
+        queue.add({ 1, 1, 0 }, true);
+        CHECK(corners(queue) == 0);
+    }
+    PathNetwork square; // The fourth tile added last closes it, both ways across
+    square.add({ 0, 0, 0 });
+    square.add({ 1, 0, 0 });
+    square.add({ 0, 1, 0 });
+    CHECK(corners(square) == 0);
+    square.add({ 1, 1, 0 });
+    CHECK(corners(square) == 4);
 }

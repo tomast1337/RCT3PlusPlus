@@ -46,8 +46,9 @@ namespace rct3::park
         Toilets,
         Guests,
         Staff,
+        Patrols, ///< The tiles of the staff's patrol areas
     };
-    inline constexpr std::size_t kMapLayerCount = 16;
+    inline constexpr std::size_t kMapLayerCount = 17;
 
     /// The layers shown, by MapLayer.
     using MapLayers = std::bitset<kMapLayerCount>;
@@ -162,7 +163,15 @@ namespace rct3::park
         glm::vec2 at { 0.0f }; ///< In the park (x, z)
         bool staff = false;
     };
-    /// A clear picture the size of the map's with a dot for each person whose layer `layers` shows.
-    [[nodiscard]] MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers);
+    /// The people the map shows, and the tiles (col, row) of the staff's patrol areas, once for each area.
+    struct MapPeople
+    {
+        std::vector<MapPerson> people;
+        std::vector<glm::ivec2> patrol_tiles;
+    };
+
+    /// A clear picture the size of the map's with a dot for each person whose layer `layers` shows, over the
+    /// patrol tiles tinted, deeper where areas overlap.
+    [[nodiscard]] MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles = { });
 
 } // namespace rct3::park

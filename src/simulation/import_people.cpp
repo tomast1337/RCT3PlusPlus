@@ -50,6 +50,9 @@ namespace rct3::simulation
             // Values for the four tolerances saves keep.
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, 0.25f + 0.25f * static_cast<float>(std::to_underlying(g.nausea_tolerance)));
             r.emplace<Wallet>(e, std::int64_t { g.cash.current });
+            // Saved on the rides' rating scale, about 0 to 10.
+            if (g.ride_preference.max > g.ride_preference.min)
+                r.emplace<Taste>(e, g.ride_preference.min / 10, g.ride_preference.max / 10);
         }
         return out;
     }

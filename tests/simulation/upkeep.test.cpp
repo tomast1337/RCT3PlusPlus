@@ -24,10 +24,11 @@ TEST_CASE("a ride worn right down breaks now and then, and its queue gives up")
     CHECK_FALSE(r.get<Attraction>(ride).open);
     park.run(1);
     CHECK(r.get<CycleRide>(ride).queue.empty());
-    // Closed, it gets no riders and wears no further while it waits for a mechanic.
+    // Closed, it takes no one on and wears no further while it waits for a mechanic.
+    const std::uint32_t customers = r.get<Attraction>(ride).customers;
     park.run_seconds(300);
     CHECK(r.get<Upkeep>(ride).breakdowns == 1);
-    CHECK(r.get<CycleRide>(ride).riders.empty());
+    CHECK(r.get<Attraction>(ride).customers == customers);
 }
 
 TEST_CASE("the nearest free mechanic walks to a broken ride, repairs it and it opens again")
@@ -89,4 +90,121 @@ TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
     upkeep = upkeep_of(ride);
     CHECK(upkeep.broken);
     CHECK(upkeep.inspect_every < 0);
+}
+
+TEST_CASE("an emergency stop halts a coaster's train on the track till a mechanic fixes it")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Looper", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 1000 });
+    auto& r = park.world().registry;
+    Coaster train;
+    train.distance = { 0, 50 };
+    train.height = { 0, 0 };
+    train.kinds = { Stretch::Plain, Stretch::Plain };
+    train.fixed_speed = 5; // Round in 10 s
+    r.emplace<Trains>(ride, Trains { { train }, { { } } });
+    r.emplace<Upkeep>(ride, Upkeep { .inspect_every = -1 });
+    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    REQUIRE(r.get<Trains>(ride).trains[0].running);
+    auto& upkeep = r.get<Upkeep>(ride);
+    upkeep.broken = true;
+    upkeep.kind = upkeep.last = Breakdown::EmergencyStop;
+    const float at = r.get<Trains>(ride).trains[0].travelled;
+    park.run_seconds(30);
+    CHECK(r.get<Trains>(ride).trains[0].travelled == at);
+    CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
+    park.staff(StaffRole::Mechanic, { 0, 0 });
+    CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 60));
+    CHECK(upkeep.kind == Breakdown::None);
+    CHECK(upkeep.last == Breakdown::EmergencyStop);
+}
+
+TEST_CASE("with its restraints stuck shut a ride keeps its riders on till fixed")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    r.emplace<Upkeep>(ride, Upkeep { .inspect_every = -1 });
+    const auto g = park.guest({ 4, 0 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    REQUIRE(r.get<Errand>(g).kind == ErrandKind::Riding);
+    r.get<Upkeep>(ride).broken = true;
+    r.get<Upkeep>(ride).kind = Breakdown::RestraintsFailToOpen;
+    park.run_seconds(60);
+    CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
+    park.staff(StaffRole::Mechanic, { 0, 0 });
+    CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 60));
+}
+
+TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a save keeps which")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
+    for (int i = 0; i < 8; ++i)
+        park.guest({ i % 4, 0 });
+    auto& r = park.world().registry;
+    r.emplace<Upkeep>(ride, Upkeep { .reliability = 0, .inspect_every = -1 });
+    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).broken; }, 3000));
+    CHECK(r.get<Upkeep>(ride).kind != Breakdown::None);
+    CHECK(r.get<Upkeep>(ride).kind != Breakdown::EmergencyStop); // A coaster's, not a flat ride's
+    rct3::save::Ride saved;
+    saved.breakdown.current = rct3::save::BreakdownKind::DoorsFailToOpen;
+    saved.base.repair_status = rct3::save::RepairStatus::BeingFixed;
+    CHECK(upkeep_of(saved).kind == Breakdown::DoorsFailToOpen);
+}
+
+TEST_CASE("a mechanic leaves their patrol for a breakdown, and goes back to it after")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto ride = park.flat_ride("Twister", { 8, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+    const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
+    r.emplace<Patrol>(mechanic, Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
+    CHECK(park.run_until([&] { return !r.get<Upkeep>(ride).broken; }, 120));
+    const auto& nodes = park.world().paths.nodes();
+    CHECK(park.run_until([&] { return nodes[r.get<Stride>(mechanic).from].tile.col <= 2; }, 120));
+    park.run_seconds(300);
+    CHECK(nodes[r.get<Stride>(mechanic).to].tile.col <= 2);
+}
+
+TEST_CASE("a ride's downtime counts the samples it was down in, window by window")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+    park.run_seconds(kSecondsPerHour + 1); // A whole window down, with no mechanic to fix it
+    auto& upkeep = r.get<Upkeep>(ride);
+    CHECK(upkeep.downtime[1] == 20);
+    CHECK(upkeep.downtime_share() == doctest::Approx(20.0 / 160).epsilon(0.05));
+    upkeep.broken = false;
+    park.run_seconds(8 * kSecondsPerHour);
+    CHECK(upkeep.downtime_share() == 0);
+    rct3::save::Ride saved;
+    saved.breakdown.downtime_windows = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    CHECK(upkeep_of(saved).downtime_share() == doctest::Approx(36.0 / 160));
+}
+
+TEST_CASE("a breakdown goes to the mechanic whose patrol takes the ride in, before a nearer one")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto ride = park.flat_ride("Twister", { 8, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    const auto near = park.staff(StaffRole::Mechanic, { 6, 0 });
+    const auto far = park.staff(StaffRole::Mechanic, { 0, 0 });
+    r.emplace<Patrol>(near, Patrol { { { 5, 0 }, { 6, 0 } } });
+    r.emplace<Patrol>(far, Patrol { { { 0, 0 }, { 8, 0 } } });
+    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+    park.run(1);
+    CHECK(r.get<Upkeep>(ride).mechanic == far);
 }

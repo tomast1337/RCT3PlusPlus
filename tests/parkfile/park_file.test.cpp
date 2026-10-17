@@ -175,3 +175,30 @@ TEST_CASE("broken files are refused, not trusted")
         CHECK_FALSE(parkfile::read_park_file(std::vector<std::byte>(32, std::byte { 'x' })));
     }
 }
+
+TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as written")
+{
+    SimWorld world;
+    auto& r = world.registry;
+    const auto ride = r.create();
+    simulation::Upkeep upkeep { .reliability = 0.4f, .broken = true, .since_inspection = 90, .inspect_every = -1, .breakdowns = 3, .kind = simulation::Breakdown::DoorsFailToOpen, .last = simulation::Breakdown::DoorsFailToOpen };
+    upkeep.downtime = { 20, 4, 0, 0, 0, 0, 0, 7 };
+    upkeep.samples = 11;
+    upkeep.sample_clock = 0.75f;
+    r.emplace<simulation::Upkeep>(ride, upkeep);
+    const auto handyman = r.create();
+    r.emplace<simulation::Patrol>(handyman, simulation::Patrol { { { 3, 4 }, { -1, 200 } }, 2 });
+    const auto bytes = parkfile::write_park_file(world);
+    const auto read = parkfile::read_park_file(bytes);
+    REQUIRE_MESSAGE(read, read.error());
+    const auto& back = read->registry.get<simulation::Upkeep>(ride);
+    CHECK(back.broken);
+    CHECK(back.kind == simulation::Breakdown::DoorsFailToOpen);
+    CHECK(back.reliability == 0.4f);
+    CHECK(back.downtime == upkeep.downtime);
+    CHECK(back.downtime_share() == doctest::Approx(31.0 / 160));
+    CHECK(back.samples == 11);
+    CHECK(read->registry.get<simulation::Patrol>(handyman).tiles == std::vector<glm::ivec2> { { 3, 4 }, { -1, 200 } });
+    CHECK(read->registry.get<simulation::Patrol>(handyman).zone == 2);
+    CHECK(parkfile::write_park_file(*read) == bytes);
+}

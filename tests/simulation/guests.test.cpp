@@ -128,8 +128,8 @@ TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for th
 
     REQUIRE(park.run_until([&] { return !r.get<CycleRide>(ride).riders.empty(); }, 30));
     CHECK(r.get<CycleRide>(ride).riders.front() == guests[0]);
-    // The rest stand behind in order, a quarter tile apart.
-    CHECK(r.get<Stride>(guests[1]).along < r.get<Stride>(guests[2]).along);
+    // The rest, who walked in side by side, end up standing behind in order.
+    CHECK(park.run_until([&] { return r.get<Stride>(guests[1]).along < r.get<Stride>(guests[2]).along; }, 5));
 
     REQUIRE(park.run_until([&] { return r.get<Errand>(guests[0]).kind == ErrandKind::Wandering; }, 30));
     CHECK(r.get<Stride>(guests[0]).from == *park.world().paths.find({ 4, 1, 0 }));

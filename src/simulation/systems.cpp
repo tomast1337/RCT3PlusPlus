@@ -34,10 +34,12 @@ namespace rct3::simulation
         constexpr float kMaxNausea = 0.6f;              ///< Guests feeling sicker skip rides
         constexpr float kIdleSeconds = 5;               ///< Between thoughts while wandering
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
-        constexpr float kQueueSpacing = 0.25f;          ///< Tiles between guests standing in a queue
-        constexpr double kJoinChance = 0.6;             ///< Of a party member going on the ride their leader picked
-        constexpr double kHuddleChance = 0.08;          ///< Of a wandering party stopping to stand together, each thought
-        constexpr float kShortestHuddle = 8;            ///< Seconds
+        /// Tiles between guests standing in a queue: queueing guests in saved parks stand a median 0.62 units
+        /// (0.15 tiles) from the nearest other.
+        constexpr float kQueueSpacing = 0.15f;
+        constexpr double kJoinChance = 0.6;    ///< Of a party member going on the ride their leader picked
+        constexpr double kHuddleChance = 0.08; ///< Of a wandering party stopping to stand together, each thought
+        constexpr float kShortestHuddle = 8;   ///< Seconds
         constexpr float kLongestHuddle = 20;
         constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
         constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground

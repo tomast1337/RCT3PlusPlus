@@ -219,7 +219,7 @@ namespace rct3::scene
         }
 
         /// How far away people are drawn at each level of detail, finest first; beyond the last they are not.
-        constexpr std::array kPersonDistances { 15.0f, 40.0f, 120.0f };
+        constexpr std::array kPersonDistances { 75.0f, 200.0f, 600.0f };
         constexpr std::uint8_t kPickColour = 255;
         constexpr std::string_view kCharacterFolder = "Characters";
         constexpr std::uint8_t kColourCells = 16;
@@ -546,6 +546,7 @@ namespace rct3::scene
             for (float& since : scene.since_people)
                 since += elapsed;
             scene.since_people_levels += elapsed;
+            bool new_levels = false;
             if (ready(scene.people_build))
             {
                 PeopleBuild built = scene.people_build.get();
@@ -553,7 +554,7 @@ namespace rct3::scene
                 {
                     scene.people_levels = std::move(built.levels);
                     scene.still_people = std::move(built.mesh);
-                    scene.since_people = kPeopleRebuildIntervals;
+                    new_levels = true;
                 }
                 else
                     scene.people_levels.clear(); // Built before the switch changed; build again
@@ -586,14 +587,19 @@ namespace rct3::scene
                     });
                 }
             }
+            // Every level at once when people change level, or someone is drawn at both; else the most overdue
+            // one a frame, so their rebuilds do not pile into one slow frame nor starve the coarser levels.
+            std::size_t due = 0;
+            for (std::size_t level = 1; level < park::kPersonLevels; ++level)
+                if (scene.since_people[level] / kPeopleRebuildIntervals[level] > scene.since_people[due] / kPeopleRebuildIntervals[due])
+                    due = level;
             for (std::size_t level = 0; level < park::kPersonLevels; ++level)
             {
-                if (scene.since_people[level] < kPeopleRebuildIntervals[level])
+                if (!new_levels && (level != due || scene.since_people[level] < kPeopleRebuildIntervals[level]))
                     continue;
                 const profiling::Scope zone("Moving");
                 scene.since_people[level] = 0;
                 scene.moving_people[level] = pose_people(scene, scene.people_levels, scene.clock, level, view, scene.simulate);
-                break; // One level a frame, so their rebuilds do not pile into one slow frame
             }
             scene.since_riders += elapsed;
             if (scene.simulate && scene.since_riders >= kPeopleRebuildIntervals[1])

@@ -80,7 +80,22 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     CHECK(cycle.exit == at(4, 2));
     CHECK(cycle.capacity == 12);
     CHECK(cycle.excitement == doctest::Approx(0.5f));
-    CHECK(cycle.nausea == 1); // Ratings past 10 count as 10
+    CHECK(cycle.nausea == 1);                                     // Ratings past 10 count as 10
+    CHECK_FALSE(world.registry.all_of<simulation::Departure>(e)); // A flat ride's saved settings are not its own
+}
+
+TEST_CASE("a tracked ride leaves the station as its saved operating settings say")
+{
+    save::OperatingOptions o;
+    o.wait_for_load = 1;
+    o.min_wait = 10;
+    o.max_wait = -1;
+    const simulation::Departure d = simulation::departure_of(o);
+    CHECK(d.wait_for == simulation::LoadWait::ThreeQuarters);
+    CHECK(d.min_wait == 10);
+    CHECK(d.max_wait == -1);
+    o.wait_for_load = 9;
+    CHECK(simulation::departure_of(o).wait_for == simulation::LoadWait::Any);
 }
 
 TEST_CASE("guests the park had on a ride are put back on it, as many as it seats")

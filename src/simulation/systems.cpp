@@ -67,14 +67,24 @@ namespace rct3::simulation
         constexpr float kVomitGloomPerSecond = 1.0f / 300; ///< Happiness lost beside vomit
         constexpr float kQueasyPerSecond = 1.0f / 600;     ///< Nausea gained beside it
         // Weather.
-        constexpr float kWetPerSecond = 1.0f / 120;      ///< Out in the rain with nothing over them; twice that in a storm
-        constexpr float kDryPerSecond = 1.0f / 300;      ///< Out of it
-        constexpr float kWetGloomPerSecond = 1.0f / 400; ///< Happiness lost while wet; twice that in the cold
-        constexpr float kCovered = 0.5f;                 ///< Share of a ride under cover that keeps its riders dry
-        constexpr double kRainLeavePerSecond = 1.0 / 90; ///< Chance a second of leaving an open-air ride's queue; three times that in a storm
-        constexpr float kHot = 25;                       ///< Degrees from which guests get thirsty faster
-        constexpr float kCold = 10;                      ///< Degrees under which guests get hungry faster
-        constexpr float kHeatPerDegree = 0.1f;           ///< Extra thirst, or hunger in the cold, per degree past those
+        constexpr float kWetPerSecond = 1.0f / 120;        ///< Out in the rain with nothing over them; twice that in a storm
+        constexpr float kDryPerSecond = 1.0f / 300;        ///< Out of it
+        constexpr float kWetGloomPerSecond = 1.0f / 400;   ///< Happiness lost while wet; twice that in the cold
+        constexpr float kCovered = 0.5f;                   ///< Share of a ride under cover that keeps its riders dry
+        constexpr double kRainLeavePerSecond = 1.0 / 90;   ///< Chance a second of leaving an open-air ride's queue; three times that in a storm
+        constexpr float kHot = 25;                         ///< Degrees from which guests get thirsty faster
+        constexpr float kCold = 10;                        ///< Degrees under which guests get hungry faster
+        constexpr float kHeatPerDegree = 0.1f;             ///< Extra thirst, or hunger in the cold, per degree past those
+        constexpr double kStormHomePerSecond = 1.0 / 120;  ///< Chance a second of any guest heading home in a storm
+        constexpr float kSweatPerSecond = 1.0f / 900;      ///< Heat gained out in the sun on a hot day, more for each degree past kHot
+        constexpr float kCoolPerSecond = 1.0f / 90;        ///< Heat lost in the shade, on a cooler day, or while wet
+        constexpr float kHeatGloomPerSecond = 1.0f / 1200; ///< Happiness lost while too hot
+        constexpr float kSplash = 0.3f;                    ///< Wetness a splashing ride leaves its riders with: damp, not soaked
+        // How many come in at the gate in the weather, against a mild dry day.
+        constexpr double kRainArrivals = 0.5;
+        constexpr double kStormArrivals = 0.25;
+        constexpr double kColdArrivals = 0.6;
+        constexpr double kSunnyArrivals = 1.3; ///< On a sunny day that is not too cold
         // Day and night.
         constexpr float kDusk = 20.0f / 24;
         constexpr float kDawn = 6.0f / 24;
@@ -151,6 +161,8 @@ namespace rct3::simulation
             std::int64_t price;
             float intensity;
             float cover;
+            Serve serve;
+            bool splash;
         };
 
         std::vector<Offer> offers(const entt::registry& r)
@@ -162,21 +174,21 @@ namespace rct3::simulation
                 if (!a.open || a.entrance == kNoNode)
                     continue;
                 if (const auto* shop = r.try_get<Shop>(e))
-                    out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price, 0, 1 });
+                    out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price, 0, 1, shop->serve, false });
                 else if (const auto* ride = r.try_get<CycleRide>(e))
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price, ride->intensity, ride->cover });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price, ride->intensity, ride->cover, Serve::Any, ride->splash });
             }
             return out;
         }
 
-        /// The nearest offer of `kind` (and `product`, for shops) the guest can pay for, with the walk there.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet, float wildest = 1, float least_cover = 0, float tamest = 0)
+        /// The nearest offer the guest can pay for that `wanted` picks, with the walk there.
+        template<typename Pick> std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Wallet& wallet, const Pick& pick)
         {
             std::vector<entt::entity> wanted;
             std::vector<NodeId> entrances;
             for (const Offer& o : offers)
             {
-                if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash || o.intensity > wildest || o.intensity < tamest || o.cover < least_cover)
+                if (o.price > wallet.cash || !pick(o))
                     continue;
                 wanted.push_back(o.entity);
                 entrances.push_back(o.entrance);
@@ -191,28 +203,57 @@ namespace rct3::simulation
 
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
         /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
-        /// under cover.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste)
+        /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
+        /// something cold to eat or drink, or a ride that splashes them.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature)
         {
-            std::array<std::pair<float, Product>, 6> wants { {
+            struct Want
+            {
+                float need;
+                Product product;
+                bool cold = false; ///< Only something cold will do
+            };
+            const float hot = mood.heat;
+            std::array<Want, 8> wants { {
                 { rained_on && mood.wet > 0 ? 1.0f : 0.0f, Product::Umbrella },
                 { needs.thirst, Product::Drink },
                 { needs.hunger, Product::Food },
+                { hot, Product::Drink, true },
+                { hot, Product::Food, true },
                 { needs.bladder, Product::Toilet },
                 { mood.nausea, Product::FirstAid },
                 { wallet.cash < kLowCash ? 1.0f : 0.0f, Product::CashMachine },
             } };
-            std::ranges::stable_sort(wants, std::greater { }, &std::pair<float, Product>::first);
-            for (const auto& [need, product] : wants)
+            std::ranges::stable_sort(wants, std::greater { }, &Want::need);
+            const Serve suits = hot >= kWant || temperature >= kHot ? Serve::Cold : temperature < kCold ? Serve::Hot : Serve::Any;
+            const Serve wrong = suits == Serve::Cold ? Serve::Hot : suits == Serve::Hot ? Serve::Cold : Serve::Any;
+            // What suits the weather, else anything but what does not.
+            const auto shop = [&](Product product, bool only_suits) { return nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return o.kind == AttractionKind::Shop && o.product == product && (only_suits ? o.serve == suits : o.serve != wrong || wrong == Serve::Any); }); };
+            for (const Want& want : wants)
             {
-                if (need < kWant)
+                if (want.need < kWant)
                     break;
-                if (auto found = nearest_offer(paths, at, offers, AttractionKind::Shop, product, wallet))
+                if (want.cold)
+                {
+                    if (auto found = nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return o.kind == AttractionKind::Shop && o.product == want.product && o.serve == Serve::Cold; }))
+                        return found;
+                    continue;
+                }
+                if (suits != Serve::Any)
+                    if (auto found = shop(want.product, true))
+                        return found;
+                if (auto found = shop(want.product, false))
                     return found;
             }
-            if (mood.nausea < kMaxNausea && random::chance(dice.state, kRideChance))
-                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet, std::min(mood.tolerance + kWildest, taste.most) + daring, rained_on ? kCovered : 0, taste.least);
-            return std::nullopt;
+            if (mood.nausea >= kMaxNausea || !random::chance(dice.state, kRideChance))
+                return std::nullopt;
+            const float wildest = std::min(mood.tolerance + kWildest, taste.most) + daring;
+            const float least_cover = rained_on ? kCovered : 0;
+            const auto ride = [&](bool splash) { return nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least && o.cover >= least_cover && (!splash || o.splash); }); };
+            if (hot >= kWant)
+                if (auto found = ride(true))
+                    return found;
+            return ride(false);
         }
 
         /// The next tile for a wandering guest at `at`, not back where they came from unless it is the only way.
@@ -318,10 +359,11 @@ namespace rct3::simulation
         }
 
         /// A wandering guest (with their party, all walking with them) that may go home now, by night for
-        /// families: the gate and the way there.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night)
+        /// families, in a storm for anyone: the gate and the way there.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm)
         {
-            if (!night || age_of(r, guest) == AgeGroup::Teen || !random::chance(dice.state, kGoHomePerSecond * kIdleSeconds))
+            const double chance = (night && age_of(r, guest) != AgeGroup::Teen ? kGoHomePerSecond : 0) + (storm ? kStormHomePerSecond : 0);
+            if (chance == 0 || !random::chance(dice.state, chance * kIdleSeconds))
                 return std::nullopt;
             if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
                 return std::nullopt;
@@ -379,6 +421,16 @@ namespace rct3::simulation
     {
         const float turn = std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>());
         return { glm::mix(pose.was, pose.position, along), pose.was_heading + turn * along, pose.was, pose.was_heading };
+    }
+
+    double arrivals_per_second(const Weather& weather)
+    {
+        double rate = kArrivalsPerSecond * (weather.storm ? kStormArrivals : weather.rain ? kRainArrivals : 1);
+        if (weather.temperature < kCold)
+            rate *= kColdArrivals;
+        else if (weather.sunny && !weather.rain)
+            rate *= kSunnyArrivals;
+        return rate;
     }
 
     bool is_night(float time)
@@ -440,7 +492,7 @@ namespace rct3::simulation
                 if (!r.all_of<Dice>(gate))
                     r.emplace<Dice>(gate, dice_for(world, gate));
                 auto& dice = r.get<Dice>(gate).state;
-                if (!random::chance(dice, kArrivalsPerSecond * dt))
+                if (!random::chance(dice, arrivals_per_second(weather) * dt))
                     continue;
                 const bool family = random::chance(dice, night ? kFamilyArrivals : 1 - kFamilyArrivals);
                 const AgeGroup age = !family ? AgeGroup::Teen : random::chance(dice, 0.5) ? AgeGroup::Adult : AgeGroup::Child;
@@ -542,7 +594,9 @@ namespace rct3::simulation
                     about(ThoughtKind::Litter, litter_on(stride.from) >= kDirtyPath);
                     about(ThoughtKind::Raining, weather.rain && !r.all_of<Umbrella>(g));
                     about(ThoughtKind::Soaked, mood.wet >= kWant);
-                    about(ThoughtKind::Hot, weather.temperature >= kHot);
+                    about(ThoughtKind::Hot, weather.temperature >= kHot || mood.heat >= kWant);
+                    about(ThoughtKind::Thunder, weather.storm);
+                    about(ThoughtKind::GoHome, errand.kind == ErrandKind::Heading && r.valid(errand.target) && r.all_of<ParkGate>(errand.target));
                     about(ThoughtKind::Cold, weather.temperature < kCold);
                     about(ThoughtKind::Vandalism, std::ranges::any_of(items(stride.from), [&](entt::entity i) { return r.get<PathItem>(i).broken; }));
                     const auto here = litter_at.find(stride.from);
@@ -973,14 +1027,23 @@ namespace rct3::simulation
         std::optional<profiling::Scope> phase; // Each phase timed in turn, for the profiler's table
         const Weather weather = weather_in(r);
         const bool night = is_night(time_of_day(r));
-        // Out of the rain: under an umbrella, or on a ride under cover.
-        const auto sheltered = [&](entt::entity guest) {
-            if (r.all_of<Umbrella>(guest))
-                return true;
+        // Under cover (roof), or in the shade (roof or trees): on a ride under cover, or on a path tile.
+        const auto under = [&](entt::entity guest, bool shade) {
             const auto* errand = r.try_get<Errand>(guest);
-            const auto* ride = errand != nullptr && errand->kind == ErrandKind::Riding && r.valid(errand->target) ? r.try_get<CycleRide>(errand->target) : nullptr;
-            return ride != nullptr && ride->cover >= kCovered;
+            if (errand != nullptr && errand->kind == ErrandKind::Riding)
+            {
+                const auto* ride = r.valid(errand->target) ? r.try_get<CycleRide>(errand->target) : nullptr;
+                return ride != nullptr && ride->cover >= kCovered;
+            }
+            const auto* stride = r.try_get<Stride>(guest);
+            if (stride == nullptr || stride->from >= paths.nodes().size())
+                return false;
+            const PathNode& node = paths.nodes()[stride->from];
+            return shade ? node.shaded : node.covered;
         };
+        // Out of the rain: under an umbrella, or under cover.
+        const auto sheltered = [&](entt::entity guest) { return r.all_of<Umbrella>(guest) || under(guest, false); };
+        const bool sun = weather.sunny && weather.temperature >= kHot;
 
         phase.emplace("Needs");
         // 1. Needs and moods.
@@ -1000,8 +1063,14 @@ namespace rct3::simulation
                         mood.wet = clamp01(mood.wet + kWetPerSecond * (weather.storm ? 2 : 1) * dt);
                     else
                         mood.wet = clamp01(mood.wet - kDryPerSecond * dt);
-                    if (mood.wet >= kWant)
+                    // Wet is only a misery when it is not hot.
+                    if (mood.wet >= kWant && weather.temperature < kHot)
                         mood.happiness = clamp01(mood.happiness - kWetGloomPerSecond * (weather.temperature < kCold ? 2 : 1) * dt);
+                    // The sun heats those out in it; shade, a cooler day and getting wet cool them.
+                    const float sweat = sun && !under(guests[i], true) ? kSweatPerSecond * (1 + kHeatPerDegree * (weather.temperature - kHot)) : -kCoolPerSecond;
+                    mood.heat = clamp01(mood.heat + (sweat - (mood.wet > 0 ? kCoolPerSecond : 0)) * dt);
+                    if (mood.heat >= kWant)
+                        mood.happiness = clamp01(mood.happiness - kHeatGloomPerSecond * dt);
                     needs.bladder = clamp01(needs.bladder + kBladderPerSecond * dt);
                     mood.energy = clamp01(mood.energy - kEnergyPerSecond * dt);
                     if (std::max({ needs.thirst, needs.hunger, needs.bladder }) >= kPressing)
@@ -1019,6 +1088,19 @@ namespace rct3::simulation
         phase.emplace("Walking");
         // 2. Walking and deciding. Arrivals are noted per guest and dealt with after.
         const std::vector<Offer> on_offer = offers(r);
+        // Footpath tiles under cover and in the shade, where guests go out of the rain or the sun.
+        std::vector<NodeId> covers;
+        std::vector<NodeId> shades;
+        for (NodeId n = 0; n < paths.nodes().size(); ++n)
+        {
+            const PathNode& node = paths.nodes()[n];
+            if (node.queue)
+                continue;
+            if (node.covered)
+                covers.push_back(n);
+            if (node.shaded)
+                shades.push_back(n);
+        }
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
         std::vector<entt::entity> arrived(movers.size(), entt::null);
@@ -1097,11 +1179,19 @@ namespace rct3::simulation
                                     feel.nausea = std::max(feel.nausea, r.get<Mood>(m).nausea);
                                     feel.tolerance = std::min(feel.tolerance, r.get<Mood>(m).tolerance);
                                     feel.wet = std::max(feel.wet, r.get<Mood>(m).wet);
+                                    feel.heat = std::max(feel.heat, r.get<Mood>(m).heat);
                                 }
                             }
-                            auto goal = going_home(r, paths, movers[i], at, dice, night);
+                            auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm);
                             if (!goal)
-                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0, taste_of(r, movers[i]));
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0, taste_of(r, movers[i]), weather.temperature);
+                            // Nowhere to go: out of the rain under the nearest roof (in a storm even with an
+                            // umbrella), or out of the sun into the nearest shade.
+                            const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
+                            const bool sweltering = sun && feel.heat >= kWant;
+                            if (!goal && (rained_on ? !paths.nodes()[at].covered : sweltering && !paths.nodes()[at].shaded))
+                                if (const auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->second.empty())
+                                    stride.route = std::move(refuge->second);
                             if (goal)
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };
@@ -1119,7 +1209,19 @@ namespace rct3::simulation
                                 }
                             }
                         }
-                        if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kIdleSeconds) && random::chance(dice.state, kHuddleChance))
+                        // Staying under cover while it rains, or in the shade until cooled.
+                        const bool refuge = (weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm) && paths.nodes()[at].covered) || (sun && mood.heat >= kWant / 2 && paths.nodes()[at].shaded);
+                        if (errand.kind == ErrandKind::Wandering && !stride.route.empty())
+                        {
+                            stride.to = stride.route.front();
+                            stride.route.erase(stride.route.begin());
+                        }
+                        else if (errand.kind == ErrandKind::Wandering && refuge)
+                        {
+                            stride.to = at;
+                            stride.progress = 1;
+                        }
+                        else if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kIdleSeconds) && random::chance(dice.state, kHuddleChance))
                         {
                             party->huddle = ticks(static_cast<float>(random::between(dice.state, double { kShortestHuddle }, double { kLongestHuddle })));
                             stride.to = at;
@@ -1216,7 +1318,8 @@ namespace rct3::simulation
             auto& needs = r.get<Needs>(guest);
             float* need = shop.product == Product::Drink ? &needs.thirst : shop.product == Product::Food ? &needs.hunger : shop.product == Product::Toilet ? &needs.bladder : shop.product == Product::FirstAid ? &mood.nausea : nullptr;
             const bool umbrella = shop.product == Product::Umbrella;
-            if (!chose && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kWant : wallet.cash >= kLowCash))
+            const bool cools = shop.serve == Serve::Cold && mood.heat >= kWant;
+            if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kWant : wallet.cash >= kLowCash))
                 return; // Came along without wanting anything
             if (!attraction.open || wallet.cash < attraction.price)
             {
@@ -1235,6 +1338,11 @@ namespace rct3::simulation
             else
                 wallet.cash += kWithdraw;
             mood.happiness = clamp01(mood.happiness + kTreat);
+            // Something cold on a hot day or hot on a cold one pleases the more, and something cold cools.
+            if ((shop.serve == Serve::Cold && (weather.temperature >= kHot || mood.heat >= kWant)) || (shop.serve == Serve::Hot && weather.temperature < kCold))
+                mood.happiness = clamp01(mood.happiness + kTreat);
+            if (shop.serve == Serve::Cold)
+                mood.heat = 0;
             if (shop.product == Product::Drink || shop.product == Product::Food)
                 r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
         };
@@ -1342,6 +1450,11 @@ namespace rct3::simulation
                     const float felt = felt_excitement(ride.excitement, r.all_of<Trains>(e), age_of(r, guest), night);
                     mood.happiness = clamp01(mood.happiness + felt * 0.3f);
                     mood.nausea = clamp01(mood.nausea + ride.nausea * 0.2f * (1.5f - mood.tolerance) * (eating(r, guest) ? kFullStomach : 1));
+                    if (ride.splash)
+                    {
+                        mood.wet = std::max(mood.wet, kSplash);
+                        mood.heat = 0;
+                    }
                     r.get<Errand>(guest) = after_ride(r, guest, e);
                     if (felt >= kEnjoyed)
                         think(r, guest, ThoughtKind::Enjoyed, e, now);
@@ -1483,7 +1596,7 @@ namespace rct3::simulation
             if (weather.rain && ride.cover < kCovered)
             {
                 std::erase_if(ride.queue, [&](entt::entity guest) {
-                    if (!r.valid(guest) || r.all_of<Umbrella>(guest) || !random::chance(r.get<Dice>(guest).state, kRainLeavePerSecond * (weather.storm ? 3 : 1) * dt))
+                    if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from].covered || !random::chance(r.get<Dice>(guest).state, kRainLeavePerSecond * (weather.storm ? 3 : 1) * dt))
                         return false;
                     think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
                     r.get<Errand>(guest) = after_ride(r, guest, e);

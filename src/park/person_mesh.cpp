@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person_mesh.hpp"
 
+#include "park/flexi_colours.hpp"
 #include "park/person_motions.hpp"
 
 #include <cstring>
@@ -155,6 +156,8 @@ namespace rct3::park
             for (const std::size_t piece : pieces.fixed)
             {
                 const PieceModel& model = library.piece(piece);
+                if (model.left_hand)
+                    continue;
                 add_piece(runs, model, person, person.look.colours[model.channel < 3 ? model.channel : 0]);
             }
             for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
@@ -169,7 +172,53 @@ namespace rct3::park
                 add_head(runs, library.head(*head), person, level);
         }
 
+        void add_held(Runs& runs, const ObjectModel& held, const glm::mat4& place)
+        {
+            if (held.levels.empty())
+                return;
+            const glm::mat3 turn { place };
+            for (const ModelPart& part : held.levels.front().parts)
+            {
+                Run& run = runs[painted_name(part.texture, part.slots, { })];
+                const auto base = static_cast<std::uint32_t>(run.vertices.size());
+                for (const ModelVertex& v : part.vertices)
+                    run.vertices.push_back({ glm::vec3(place * glm::vec4(v.position, 1.0f)), glm::vec4(1.0f), v.uv, glm::normalize(turn * v.normal) });
+                for (const std::uint32_t i : part.indices)
+                    run.indices.push_back(base + (i < part.vertices.size() ? i : 0));
+            }
+        }
+
     } // namespace
+
+    std::optional<glm::vec3> left_hand(const PersonLibrary& library, const PlacedPerson& person)
+    {
+        const PartSet* body = person.look.body;
+        if (body == nullptr)
+            return std::nullopt;
+        const std::size_t level = std::min(person.level, kPersonLevels - 1);
+        for (const std::size_t piece : (person.look.swimwear ? body->swim_levels : body->levels)[level].fixed)
+        {
+            if (const PieceModel& model = library.piece(piece); model.left_hand)
+                return socket_point(model, person);
+        }
+        return std::nullopt;
+    }
+
+    std::optional<glm::vec3> socket_point(const PieceModel& socket, const PlacedPerson& person)
+    {
+        // The socket's triangle, posed as a piece would be, at the person's own place.
+        PlacedPerson own = person;
+        own.world = glm::mat4(1.0f);
+        Runs runs;
+        add_piece(runs, socket, own, 0);
+        const auto& posed = runs[socket.texture].vertices;
+        if (posed.empty())
+            return std::nullopt;
+        glm::vec3 sum { 0.0f };
+        for (const GroundVertex& v : posed)
+            sum += v.position;
+        return sum / static_cast<float>(posed.size());
+    }
 
     glm::vec2 colour_cell(std::uint8_t colour)
     {
@@ -185,6 +234,9 @@ namespace rct3::park
             add_set(runs, library, person.look.head, person, 0);
             add_set(runs, library, person.look.body, person, 1);
             add_set(runs, library, person.look.legs, person, 2);
+            if (person.held != nullptr)
+                if (const auto hand = left_hand(library, person))
+                    add_held(runs, *person.held, glm::translate(person.world, *hand));
             ++mesh.placed;
         }
         for (auto& [texture, run] : runs)

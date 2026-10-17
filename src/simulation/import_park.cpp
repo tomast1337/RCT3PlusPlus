@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -45,15 +46,43 @@ namespace rct3::simulation
             return std::nullopt;
         }
 
+        /// Whether food or drink by that name is served cold or hot, guessed from the name as product_named does.
+        Serve serve_named(std::string_view name)
+        {
+            for (const std::string_view w : { "ice cream", "icecream", "shake", "slush", "frozen", "smoothie", "lolly", "sundae", "sorbet" })
+                if (contains(name, w))
+                    return Serve::Cold;
+            for (const std::string_view w : { "coffee", "hotchocolate", "hot chocolate", "cocoa", "soup" })
+                if (contains(name, w))
+                    return Serve::Hot;
+            return Serve::Any;
+        }
+
+        /// Whether a ride by that kind's symbol splashes its riders: boats, flumes, rapids and water slides.
+        // shortcut: matches words in the ride kinds' symbols, upgrade when rides' own water flags are read.
+        bool splashes(std::string_view symbol)
+        {
+            return std::ranges::any_of(std::initializer_list<std::string_view> { "flume", "rapids", "splash", "dingy", "dinghy", "raft", "bumperboat", "jetski", "watercoaster", "supersoaker", "seaserpent", "bodyslide", "ringslide", "proslide", "sinkingship", "airboat" }, [&](std::string_view w) { return contains(symbol, w); });
+        }
+
         /// The first item of a stall that is a drink, food or umbrella, by its name or else its kind's symbol (custom
         /// stalls keep only a placeholder name); where neither tells, by the stall's own symbol, at its first item's price.
-        std::optional<std::pair<Product, std::int64_t>> sale_of(const save::Stall& stall)
+        struct Sale
+        {
+            Shop shop;
+            std::int64_t price = 0;
+        };
+        std::optional<Sale> sale_of(const save::Stall& stall)
         {
             for (const save::StallItem& item : stall.items)
-                if (const auto product = product_named(item.name).or_else([&] { return product_named(item.kind_symbol); }))
-                    return std::pair { *product, item.price };
+            {
+                if (const auto product = product_named(item.name))
+                    return Sale { { *product, serve_named(item.name) }, item.price };
+                if (const auto product = product_named(item.kind_symbol))
+                    return Sale { { *product, serve_named(item.kind_symbol) }, item.price };
+            }
             if (const auto product = product_named(stall.base.symbol); product && !stall.items.empty())
-                return std::pair { *product, stall.items.front().price };
+                return Sale { { *product, serve_named(stall.base.symbol) }, stall.items.front().price };
             return std::nullopt;
         }
         /// The footpath node on the tile `o` stands on, or on one beside it.
@@ -155,6 +184,22 @@ namespace rct3::simulation
         return out;
     }
 
+    std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead)
+    {
+        PathNetwork& paths = world.paths;
+        std::vector<glm::vec3> middles;
+        for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            middles.push_back(paths.centre(n));
+        const std::vector<park::Overhead> over = overhead(middles);
+        std::size_t roofed = 0;
+        for (NodeId n = 0; n < paths.nodes().size() && n < over.size(); ++n)
+        {
+            paths.cover(n, over[n].roof, over[n].shade);
+            roofed += over[n].roof ? 1 : 0;
+        }
+        return roofed;
+    }
+
     void import_paths(SimWorld& world, const save::WorldModel& world_model)
     {
         const save::TerrainGrid& grid = world_model.terrain;
@@ -200,8 +245,8 @@ namespace rct3::simulation
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->second, .open = stall.base.state == save::AttractionState::Open, .saved = stall.base.id });
-            r.emplace<Shop>(e, sale->first);
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::AttractionState::Open, .saved = stall.base.id });
+            r.emplace<Shop>(e, sale->shop);
             ++added;
         }
         return added;
@@ -399,6 +444,7 @@ namespace rct3::simulation
             }
             if (ride.assessment.valid)
                 cycle.cover = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
+            cycle.splash = splashes(ride.base.symbol);
             r.emplace<CycleRide>(e, std::move(cycle));
             if (coaster)
                 r.emplace<Trains>(e, trains_of(*coaster, ride));

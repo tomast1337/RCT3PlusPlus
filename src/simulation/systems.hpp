@@ -77,6 +77,9 @@ namespace rct3::simulation
     /// Puts `staff` on shared zone `zone` (0 none). Joining a zone others are on takes its tiles.
     void join_zone(entt::registry& r, entt::entity staff, std::uint32_t zone);
 
+    /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
+    [[nodiscard]] double arrivals_per_second(const Weather& weather);
+
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
     [[nodiscard]] bool is_night(float time);
 

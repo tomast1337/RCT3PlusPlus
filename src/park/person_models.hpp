@@ -70,6 +70,7 @@ namespace rct3::park
         std::uint32_t channel = 0; ///< Which of the person's colours picks the picture's cell
         ovl::FrameMesh mesh;       ///< Its motions' names are not kept
         MotionIndex motions;
+        bool left_hand = false; ///< A socket for what the left hand holds, its one triangle at the hand; not drawn
     };
 
     /// A head carried by bones, at its two finer levels.

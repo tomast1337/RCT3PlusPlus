@@ -264,6 +264,8 @@ namespace rct3::scene
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.
         std::vector<glm::mat4> seat_carriers;
         std::optional<park::PersonLibrary> person_models; ///< Of the park's people
+        /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
+        std::array<std::optional<park::ObjectModel>, 2> umbrellas;
         std::vector<ShownPerson> shown_people;
         park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;

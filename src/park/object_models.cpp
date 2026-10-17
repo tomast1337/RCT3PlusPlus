@@ -448,15 +448,8 @@ namespace rct3::park
             level.distance = lod.distance;
             if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
             {
-                const auto file = files_->holding(tagged(lod.static_shape, kStaticTag), visual_path);
-                const ovl::StaticShape* shape = file ? static_in(*file->second, lod.static_shape) : nullptr;
-                if (shape == nullptr)
+                if (!add_static(level, lod.static_shape, visual_path))
                     continue;
-                for (const ovl::ShapeMesh& mesh : shape->meshes)
-                {
-                    level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
-                    set_texture(level.parts.back(), mesh.texture, file->first);
-                }
             }
             else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
             {
@@ -522,6 +515,30 @@ namespace rct3::park
             }
             model.levels.push_back(std::move(level));
         }
+    }
+
+    bool ModelLoader::add_static(ModelLevel& level, std::string_view name, std::string_view near)
+    {
+        const auto file = files_->holding(tagged(name, kStaticTag), near);
+        const ovl::StaticShape* shape = file ? static_in(*file->second, name) : nullptr;
+        if (shape == nullptr)
+            return false;
+        for (const ovl::ShapeMesh& mesh : shape->meshes)
+        {
+            level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
+            set_texture(level.parts.back(), mesh.texture, file->first);
+        }
+        return true;
+    }
+
+    std::optional<ObjectModel> ModelLoader::load_shape(std::string_view shape, std::string_view overlay)
+    {
+        ModelLevel level;
+        if (!add_static(level, shape, index_.overlay(overlay).value_or(std::string(overlay))))
+            return std::nullopt;
+        ObjectModel model;
+        model.levels.push_back(std::move(level));
+        return model;
     }
 
     std::optional<ObjectModel> ModelLoader::load_car(std::string_view train, std::string_view overlay, std::size_t slot)

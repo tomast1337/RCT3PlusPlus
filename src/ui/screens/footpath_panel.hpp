@@ -61,9 +61,9 @@ namespace rct3::ui
     namespace footpath_panel
     {
         /// Of the ring's slots, how far round each tab sits: the first is up and to the left of the disc's
-        /// middle, the others follow clockwise a twelfth of a turn apart.
-        inline constexpr float kFirstAngle = 120;
-        inline constexpr float kSlotAngle = -30;
+        /// middle, the others follow clockwise. Our own values.
+        inline constexpr float kFirstAngle = 128;
+        inline constexpr float kSlotAngle = -32;
         inline constexpr int kControlsSlot = 0;
         inline constexpr int kFollowSlot = 1;
         inline constexpr int kPathsSlot = 4;
@@ -78,20 +78,20 @@ namespace rct3::ui
         inline constexpr float kStatusGap = 8;  ///< Between the disc and the band's text
         /// The controls page and the rectangle of each control on it, in the order of the controls.
         inline constexpr float kControlsWidth = 160;
-        inline constexpr float kControlsHeight = 101;
+        inline constexpr float kControlsHeight = 100;
         inline constexpr std::array<Rect, kFootpathControls> kControlRects { {
-            { 30, 7, 58, 32 },
-            { 60, 7, 88, 32 },
-            { 90, 7, 118, 32 },
-            { 0, 33, 29, 63 },
-            { 30, 33, 59, 63 },
-            { 60, 33, 89, 63 },
-            { 90, 33, 119, 63 },
-            { 120, 33, 149, 63 },
-            { 119, 69, 159, 99 },
-            { 78, 71, 118, 101 },
+            { 32, 4, 60, 30 },
+            { 62, 4, 90, 30 },
+            { 92, 4, 120, 30 },
+            { 2, 34, 30, 62 },
+            { 32, 34, 60, 62 },
+            { 62, 34, 90, 62 },
+            { 92, 34, 120, 62 },
+            { 122, 34, 150, 62 },
+            { 122, 68, 158, 98 },
+            { 82, 68, 118, 98 },
         } };
-        inline constexpr Rect kTextRect { 0, 70, 80, 96 };
+        inline constexpr Rect kTextRect { 0, 68, 80, 98 };
         inline constexpr float kLargeIcon = 40; ///< Of the remove and cut pictures, drawn smaller to fit
         inline constexpr std::size_t kStyleColumns = 5;
         inline constexpr float kStyleCell = 36; ///< A style's picture and the room round it

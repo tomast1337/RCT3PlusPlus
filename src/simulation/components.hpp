@@ -18,6 +18,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/path_network.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -62,6 +63,45 @@ namespace rct3::simulation
         float happiness = 0.5f;
         float energy = 0.5f;
         float nausea = 0;
+        float tolerance = 0.5f; ///< How well the guest's stomach takes rides, 0..1: the higher, the wilder the rides they go on and the slower they sicken
+        float wet = 0;          ///< From dry (0) to soaked (1)
+    };
+
+    /// The time of day the guests feel, in the registry's context; midday when none is there.
+    struct Daylight
+    {
+        float time = 0.5f; ///< Fraction of a day from midnight
+    };
+
+    /// Where guests come into the park and leave it.
+    struct ParkGate
+    {
+        NodeId node = kNoNode;
+    };
+
+    /// A guest who has gone home. Kept, without what made them move, for whoever still shows them.
+    struct Left
+    {
+    };
+
+    /// Guests in and out of the gate so far, in the registry's context, by AgeGroup.
+    struct Turnstile
+    {
+        std::array<std::uint32_t, 3> in { };
+        std::array<std::uint32_t, 3> out { };
+    };
+
+    /// A guest carrying an umbrella, up while it rains.
+    struct Umbrella
+    {
+    };
+
+    /// The weather the guests feel, in the registry's context; fair and mild when none is there.
+    struct Weather
+    {
+        bool rain = false;
+        bool storm = false;
+        float temperature = 20; ///< Degrees Celsius
     };
 
     struct Wallet
@@ -87,6 +127,47 @@ namespace rct3::simulation
         ErrandKind kind = ErrandKind::Wandering;
         entt::entity target = entt::null; ///< The attraction, when heading for one, queueing or riding
         std::uint32_t rest = 0;           ///< Ticks until the guest next considers what to do
+        float queued = 0;                 ///< Seconds in the queue so far, while queueing
+    };
+
+    /// What a guest thinks, numbered as saved parks number their guests' thoughts, so the game's language
+    /// files hold the words for each.
+    enum class ThoughtKind : std::int32_t
+    {
+        Tired = 2,
+        Litter = 3,
+        Hungry = 4,
+        Thirsty = 5,
+        Toilet = 12,
+        RainKeepsMeOff = 32,
+        Vandalism = 14,
+        Vomit = 15,
+        Sick = 20,
+        VerySick = 21,
+        Broke = 24,
+        CantAfford = 25,
+        QueueTooLong = 31,
+        TooIntense = 34,
+        Enjoyed = 42,
+        Raining = 93,
+        Cold = 95,
+        Hot = 96,
+        Soaked = 191,
+    };
+
+    struct Thought
+    {
+        ThoughtKind kind = ThoughtKind::Tired;
+        entt::entity about = entt::null; ///< The attraction thought about, if any
+        float time = 0;                  ///< Seconds into the run
+        std::uint32_t variant = 0;       ///< Picks which of the ways to say it
+    };
+
+    /// A guest's recent thoughts, newest first.
+    struct Thoughts
+    {
+        std::vector<Thought> recent;
+        std::uint32_t had = 0; ///< Thoughts had so far, for the park to tell new ones apart
     };
 
     /// Guests going round the park together, such as a family. The leader chooses where to go for all of
@@ -141,12 +222,18 @@ namespace rct3::simulation
         bool open = true;
         std::int64_t income = 0; ///< Hundredths, taken so far
         std::uint32_t customers = 0;
+        std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
     };
 
+    /// What a shop sells, or what a facility does for its guests.
     enum class Product : std::uint8_t
     {
         Drink,
         Food,
+        Toilet,      ///< Relieves the bladder
+        CashMachine, ///< Gives the guest more cash
+        FirstAid,    ///< Settles a sick guest's stomach
+        Umbrella,    ///< Keeps the rain off
     };
 
     struct Shop
@@ -162,6 +249,7 @@ namespace rct3::simulation
         float excitement = 0.5f;             ///< How much a ride cheers its riders, 0..1
         float intensity = 0.3f;              ///< How much it shakes them, 0..1
         float nausea = 0.3f;                 ///< How sick it makes them, 0..1
+        float cover = 0;                     ///< How much of it is under cover, 0..1
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.
@@ -210,7 +298,8 @@ namespace rct3::simulation
         /// shortcut: which saved number is a cup or a wrapper is not known, so ours are 0 for food and 1 for
         /// drink; upgrade when litter is drawn.
         std::uint8_t kind = 0;
-        float age = 0; ///< Seconds it has lain
+        float age = 0;      ///< Seconds it has lain
+        bool vomit = false; ///< Left by a sick guest
     };
 
     /// What a guest is left holding once they have eaten or drunk what they bought.
@@ -225,6 +314,7 @@ namespace rct3::simulation
         Bin,
         Bench,
         Sign,
+        Sight, ///< Something to stop and watch: a fountain, an effect, an animatronic
     };
 
     /// Something standing on a path tile that guests use and vandals break.
@@ -233,6 +323,13 @@ namespace rct3::simulation
         NodeId node = kNoNode;
         PathItemKind kind = PathItemKind::Bin;
         bool broken = false; ///< Of no use until a handyman or mechanic mends it
+    };
+
+    /// A guest stopped on the path a while: sitting on a bench, or watching a sight.
+    struct Linger
+    {
+        PathItemKind at = PathItemKind::Bench;
+        float left = 0; ///< Seconds
     };
 
     /// What a bin holds, in pieces of rubbish.
@@ -253,7 +350,28 @@ namespace rct3::simulation
     struct Staff
     {
         StaffRole role = StaffRole::Other;
-        float busy = 0; ///< Seconds left at the job in hand
+        float busy = 0;                 ///< Seconds left at the job in hand
+        entt::entity ride = entt::null; ///< The ride a mechanic is going to, or working on, to repair or inspect
+        std::int64_t wage = 0;          ///< Hundredths of the currency unit a game hour
+    };
+
+    /// A ride's wear. Each run wears it a little, and the less reliable it is the likelier a run ends in a
+    /// breakdown, which closes it until a mechanic repairs it. Inspections win some reliability back.
+    struct Upkeep
+    {
+        float reliability = 1; ///< 0..1
+        bool broken = false;
+        float since_inspection = 0;         ///< Seconds
+        float inspect_every = 600;          ///< Seconds; negative never
+        entt::entity mechanic = entt::null; ///< Sent to it, or at work on it
+        std::uint32_t breakdowns = 0;       ///< Since the run began
+    };
+
+    /// What the park has paid its staff, kept in the registry's context.
+    struct Payroll
+    {
+        std::int64_t paid = 0; ///< Hundredths
+        double owed = 0;       ///< Hundredths earned and not yet paid, under one
     };
 
     /// The park's run of vandalism, kept in the registry's context.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park_state.hpp"
 
+#include "simulation/components.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -71,6 +73,12 @@ namespace rct3::simulation
         const RatingParts parts = rate_park(in);
         state.rating_parts = parts;
         state.rating = next_rating(state.rating, parts.total);
+    }
+
+    Weather guest_weather(const ParkState& state)
+    {
+        using enum save::WeatherType;
+        return { .rain = state.weather == LightRain || state.weather == HeavyRain || state.weather == Thunderstorm, .storm = state.weather == Thunderstorm, .temperature = state.temperature.value_or(Weather { }.temperature) };
     }
 
 } // namespace rct3::simulation

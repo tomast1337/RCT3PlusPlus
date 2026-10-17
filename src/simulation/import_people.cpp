@@ -47,7 +47,8 @@ namespace rct3::simulation
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
             r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
-            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea);
+            // Values for the four tolerances saves keep.
+            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, 0.25f + 0.25f * static_cast<float>(std::to_underlying(g.nausea_tolerance)));
             r.emplace<Wallet>(e, std::int64_t { g.cash.current });
         }
         return out;

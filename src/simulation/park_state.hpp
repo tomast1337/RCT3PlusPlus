@@ -18,6 +18,7 @@
 
 namespace rct3::simulation
 {
+    struct Weather;
 
     struct ParkState
     {
@@ -43,6 +44,9 @@ namespace rct3::simulation
 
     /// The state a saved park starts in. `park` is null when the park's model could not be read.
     [[nodiscard]] ParkState park_state(const save::ParkModel* park, const save::WorldModel& world);
+
+    /// The weather the simulated guests feel, from the park's.
+    [[nodiscard]] Weather guest_weather(const ParkState& state);
 
     /// Moves the calendar on by `seconds` of game time, at the clock's rate of real seconds per hour. Returns
     /// how many new calendar weeks were started.

@@ -3,10 +3,13 @@
 
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/workers.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <span>
@@ -38,6 +41,54 @@ namespace rct3::simulation
         constexpr float kLongestHuddle = 20;
         constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
         constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground
+        // Facilities, benches and sights.
+        constexpr std::int64_t kLowCash = 500;   ///< Hundredths; a guest with less goes to a cash machine
+        constexpr std::int64_t kWithdraw = 5000; ///< Hundredths a guest draws from one
+        constexpr float kTired = 0.45f;          ///< Energy below which a guest sits down on a bench they pass
+        constexpr double kSitChance = 0.5;
+        constexpr float kSitSeconds = 30;
+        constexpr float kRestPerSecond = 1.0f / 60; ///< Energy back while sitting
+        constexpr std::size_t kBenchSeats = 3;
+        constexpr double kWatchChance = 0.3; ///< Of stopping at a sight passed
+        constexpr float kWatchSeconds = 15;
+        constexpr float kSightCheerPerSecond = 1.0f / 300; ///< Happiness while watching
+        // Sickness.
+        constexpr float kSettlePerSecond = 1.0f / 900;     ///< Nausea fading away
+        constexpr float kRestSettlePerSecond = 1.0f / 120; ///< And while sitting on a bench
+        constexpr float kWildest = 0.3f;                   ///< Intensity past a guest's tolerance they still go on
+        constexpr float kFullStomach = 1.5f;               ///< Nausea a ride gives a guest still eating, times as much; settling as much slower
+        constexpr float kSick = 0.8f;                      ///< Nausea past which a guest may be sick
+        constexpr double kSickAfterRide = 0.3;             ///< Chance of it, getting off a ride
+        constexpr double kSickPerSecond = 1.0 / 120;       ///< Chance a second, walking
+        constexpr float kRelief = 0.25f;                   ///< Nausea gone with it
+        constexpr float kVomitGloomPerSecond = 1.0f / 300; ///< Happiness lost beside vomit
+        constexpr float kQueasyPerSecond = 1.0f / 600;     ///< Nausea gained beside it
+        // Weather.
+        constexpr float kWetPerSecond = 1.0f / 120;      ///< Out in the rain with nothing over them; twice that in a storm
+        constexpr float kDryPerSecond = 1.0f / 300;      ///< Out of it
+        constexpr float kWetGloomPerSecond = 1.0f / 400; ///< Happiness lost while wet; twice that in the cold
+        constexpr float kCovered = 0.5f;                 ///< Share of a ride under cover that keeps its riders dry
+        constexpr double kRainLeavePerSecond = 1.0 / 90; ///< Chance a second of leaving an open-air ride's queue; three times that in a storm
+        constexpr float kHot = 25;                       ///< Degrees from which guests get thirsty faster
+        constexpr float kCold = 10;                      ///< Degrees under which guests get hungry faster
+        constexpr float kHeatPerDegree = 0.1f;           ///< Extra thirst, or hunger in the cold, per degree past those
+        // Day and night.
+        constexpr float kDusk = 20.0f / 24;
+        constexpr float kDawn = 6.0f / 24;
+        constexpr float kNightThrill = 0.3f;            ///< Extra excitement teens find in a coaster in the dark
+        constexpr float kNightDread = 0.2f;             ///< Excitement families lose in one
+        constexpr float kNightDaring = 0.2f;            ///< Intensity past their tolerance teens take on at night
+        constexpr double kArrivalsPerSecond = 1.0 / 30; ///< Guests coming in at the gate
+        constexpr double kFamilyArrivals = 0.15;        ///< Of those at night that are not teens; teens the same by day
+        constexpr double kGoHomePerSecond = 1.0 / 60;   ///< Chance a second of a family heading home in the dark
+        constexpr float kArrivingMood = 0.7f;
+        constexpr float kTeenTolerance = 0.75f;
+        constexpr std::int64_t kArrivingCash = 5000; ///< Hundredths
+        // Thoughts.
+        constexpr std::size_t kThoughtsKept = 6; ///< As many as saved parks keep
+        constexpr float kRethinkSeconds = 300;   ///< Before the same thought about the same thing comes back
+        constexpr float kLongQueue = 240;        ///< Seconds of queueing that feel like ages
+        constexpr float kEnjoyed = 0.5f;         ///< Excitement of a ride its riders enjoy
         // Litter, vandals and staff. First guesses to tune against how saved parks look.
         constexpr std::size_t kDirtyPath = 3; ///< Pieces of litter on a tile that make guests on it glum
         constexpr float kDirtGloomPerSecond = 1.0f / 900;
@@ -55,6 +106,14 @@ namespace rct3::simulation
         constexpr float kVandalismFade = 3600; ///< Seconds over which a break stops counting as recent
         constexpr float kBadVandalism = 2.5f;  ///< Recent breaks that make the player be told: about three within the hour
         constexpr float kWarningEvery = 1200;  ///< Seconds at least between telling them
+        // Ride wear and mechanics. To tune against saved rides' reliability and downtime.
+        constexpr float kWearPerRun = 0.004f;     ///< Reliability a run costs
+        constexpr double kBreakdownPerRun = 0.05; ///< Chance a run ends in a breakdown, times the reliability lost
+        constexpr float kBreakdownGloom = 0.1f;   ///< Happiness lost by those queueing when their ride breaks down
+        constexpr float kRepairSeconds = 20;
+        constexpr float kInspectSeconds = 10;
+        constexpr float kRepairGain = 0.02f;  ///< Reliability a repair wins back
+        constexpr float kInspectGain = 0.05f; ///< And an inspection
 
         float clamp01(float v)
         {
@@ -85,6 +144,7 @@ namespace rct3::simulation
             NodeId entrance;
             std::int64_t price;
             float intensity;
+            float cover;
         };
 
         std::vector<Offer> offers(const entt::registry& r)
@@ -96,22 +156,22 @@ namespace rct3::simulation
                 if (!a.open || a.entrance == kNoNode)
                     continue;
                 if (const auto* shop = r.try_get<Shop>(e))
-                    out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price, 0 });
+                    out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price, 0, 1 });
                 else if (const auto* ride = r.try_get<CycleRide>(e))
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price, ride->intensity });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price, ride->intensity, ride->cover });
             }
             return out;
         }
 
         /// The nearest offer of `kind` (and `product`, for shops) the guest can pay for, with the walk there.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> nearest_offer(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, AttractionKind kind, Product product, const Wallet& wallet, float wildest = 1, float least_cover = 0)
         {
             // shortcut: one search per offer, upgrade to a single search that stops at the first entrance reached
             // when parks with many shops show up in profiles.
             std::optional<std::pair<entt::entity, std::vector<NodeId>>> best;
             for (const Offer& o : offers)
             {
-                if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash)
+                if (o.kind != kind || (kind == AttractionKind::Shop && o.product != product) || o.price > wallet.cash || o.intensity > wildest || o.cover < least_cover)
                     continue;
                 auto walk = paths.route(at, o.entrance);
                 if (walk && (!best || walk->size() < best->second.size()))
@@ -120,12 +180,21 @@ namespace rct3::simulation
             return best;
         }
 
-        /// Where the guest goes next: a shop for the most pressing need there is one for, else now and then a
-        /// flat ride.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice)
+        /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
+        /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
+        /// under cover.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring)
         {
-            const bool thirst_first = needs.thirst >= needs.hunger;
-            for (const auto& [need, product] : { std::pair { thirst_first ? needs.thirst : needs.hunger, thirst_first ? Product::Drink : Product::Food }, std::pair { thirst_first ? needs.hunger : needs.thirst, thirst_first ? Product::Food : Product::Drink } })
+            std::array<std::pair<float, Product>, 6> wants { {
+                { rained_on && mood.wet > 0 ? 1.0f : 0.0f, Product::Umbrella },
+                { needs.thirst, Product::Drink },
+                { needs.hunger, Product::Food },
+                { needs.bladder, Product::Toilet },
+                { mood.nausea, Product::FirstAid },
+                { wallet.cash < kLowCash ? 1.0f : 0.0f, Product::CashMachine },
+            } };
+            std::ranges::stable_sort(wants, std::greater { }, &std::pair<float, Product>::first);
+            for (const auto& [need, product] : wants)
             {
                 if (need < kWant)
                     break;
@@ -133,7 +202,7 @@ namespace rct3::simulation
                     return found;
             }
             if (mood.nausea < kMaxNausea && random::chance(dice.state, kRideChance))
-                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet);
+                return nearest_offer(paths, at, offers, AttractionKind::Ride, Product::Drink, wallet, mood.tolerance + kWildest + daring, rained_on ? kCovered : 0);
             return std::nullopt;
         }
 
@@ -177,6 +246,83 @@ namespace rct3::simulation
             return { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
         }
 
+        /// Whether a guest is still eating what they bought.
+        bool eating(const entt::registry& r, entt::entity guest)
+        {
+            const auto* rubbish = r.try_get<Rubbish>(guest);
+            return rubbish != nullptr && rubbish->kind == 0 && rubbish->held < kConsumeSeconds;
+        }
+
+        /// A guest is sick on the path tile `at`, and feels better for it. Returns the mess.
+        entt::entity be_sick(entt::registry& r, entt::entity guest, NodeId at)
+        {
+            const entt::entity mess = r.create();
+            r.emplace<Litter>(mess, Litter { .node = at, .vomit = true });
+            auto& mood = r.get<Mood>(guest);
+            mood.nausea = clamp01(mood.nausea - kRelief);
+            return mess;
+        }
+
+        AgeGroup age_of(const entt::registry& r, entt::entity guest)
+        {
+            const auto* visitor = r.try_get<Visitor>(guest);
+            return visitor != nullptr ? visitor->age : AgeGroup::Adult;
+        }
+
+        float time_of_day(const entt::registry& r)
+        {
+            const auto* found = r.ctx().find<Daylight>();
+            return found != nullptr ? found->time : Daylight { }.time;
+        }
+
+        /// A wandering guest (with their party, all walking with them) that may go home now, by night for
+        /// families: the gate and the way there.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night)
+        {
+            if (!night || age_of(r, guest) == AgeGroup::Teen || !random::chance(dice.state, kGoHomePerSecond * kIdleSeconds))
+                return std::nullopt;
+            if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
+                return std::nullopt;
+            for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
+                if (auto walk = paths.route(at, at_gate.node))
+                    return std::pair { gate, std::move(*walk) };
+            return std::nullopt;
+        }
+
+        /// The guest goes home: they stop needing, feeling and walking, and leave their party.
+        void leave(entt::registry& r, entt::entity guest)
+        {
+            ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Rubbish>(guest);
+            r.emplace<Left>(guest);
+        }
+
+        Weather weather_in(const entt::registry& r)
+        {
+            const auto* found = r.ctx().find<Weather>();
+            return found != nullptr ? *found : Weather { };
+        }
+
+        /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
+        void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now)
+        {
+            auto& thoughts = r.get_or_emplace<Thoughts>(guest);
+            if (std::ranges::any_of(thoughts.recent, [&](const Thought& t) { return t.kind == kind && t.about == about && now - t.time < kRethinkSeconds; }))
+                return;
+            const auto variant = static_cast<std::uint32_t>(random::next(r.get<Dice>(guest).state));
+            thoughts.recent.insert(thoughts.recent.begin(), Thought { kind, about, now, variant });
+            if (thoughts.recent.size() > kThoughtsKept)
+                thoughts.recent.pop_back();
+            ++thoughts.had;
+        }
+
+        /// An entity's own random numbers, from the run's seed.
+        Dice dice_for(const SimWorld& world, entt::entity e)
+        {
+            std::uint64_t mix = world.seed ^ (std::uint64_t { entt::to_integral(e) } << 32);
+            return { random::seeded(random::split_mix(mix)) };
+        }
+
         void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose)
         {
             stride.from = node;
@@ -191,6 +337,18 @@ namespace rct3::simulation
     {
         const float turn = std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>());
         return { glm::mix(pose.was, pose.position, along), pose.was_heading + turn * along, pose.was, pose.was_heading };
+    }
+
+    bool is_night(float time)
+    {
+        return time >= kDusk || time < kDawn;
+    }
+
+    float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night)
+    {
+        if (!coaster || !night)
+            return excitement;
+        return excitement * (age == AgeGroup::Teen ? 1 + kNightThrill : 1 - kNightDread);
     }
 
     std::uint32_t ticks(float seconds)
@@ -210,8 +368,7 @@ namespace rct3::simulation
         }
         r.emplace_or_replace<Errand>(guest);
         r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .lane_from = lane, .lane_to = lane });
-        std::uint64_t mix = world.seed ^ (std::uint64_t { entt::to_integral(guest) } << 32);
-        r.emplace_or_replace<Dice>(guest, random::seeded(random::split_mix(mix)));
+        r.emplace_or_replace<Dice>(guest, dice_for(world, guest));
         auto& pose = r.get_or_emplace<Pose>(guest);
         place(world.paths, r.get<Stride>(guest), pose);
         pose.was = pose.position;
@@ -231,7 +388,30 @@ namespace rct3::simulation
             entt::registry& r = world.registry;
             const PathNetwork& paths = world.paths;
             constexpr float dt = kTickSeconds;
+            const float now = static_cast<float>(world.tick) * kTickSeconds;
+            const Weather weather = weather_in(r);
             auto& vandalism = r.ctx().emplace<Vandalism>();
+            // Guests come in at the gate: families by day, mostly teens after dark.
+            const bool night = is_night(time_of_day(r));
+            for (const entt::entity gate : sorted(r.view<const ParkGate>()))
+            {
+                if (!r.all_of<Dice>(gate))
+                    r.emplace<Dice>(gate, dice_for(world, gate));
+                auto& dice = r.get<Dice>(gate).state;
+                if (!random::chance(dice, kArrivalsPerSecond * dt))
+                    continue;
+                const bool family = random::chance(dice, night ? kFamilyArrivals : 1 - kFamilyArrivals);
+                const AgeGroup age = !family ? AgeGroup::Teen : random::chance(dice, 0.5) ? AgeGroup::Adult : AgeGroup::Child;
+                const NodeId at = r.get<ParkGate>(gate).node;
+                const entt::entity guest = r.create();
+                r.emplace<Visitor>(guest, age, random::chance(dice, 0.5), std::string { }, world.tick);
+                r.emplace<Pose>(guest, paths.centre(at), 0.0f);
+                r.emplace<Needs>(guest);
+                r.emplace<Mood>(guest, Mood { .happiness = kArrivingMood, .energy = 1, .tolerance = age == AgeGroup::Teen ? kTeenTolerance : Mood { }.tolerance });
+                r.emplace<Wallet>(guest, kArrivingCash);
+                start_walking(world, guest, at);
+                ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
+            }
             vandalism.recent *= std::exp(-dt / kVandalismFade);
             if (vandalism.since_warning >= 0)
                 vandalism.since_warning += dt;
@@ -281,14 +461,81 @@ namespace rct3::simulation
 
             // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>();
+            std::unordered_map<NodeId, std::size_t> seated;
+            for (const auto [g, linger, stride] : r.view<const Linger, const Stride>().each())
+                seated[stride.from] += linger.at == PathItemKind::Bench;
             for (const entt::entity g : sorted(guests_view))
             {
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
                 if (!walking(errand.kind) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                     continue;
+                // Sitting rests a guest, watching cheers them; then they walk on.
+                if (auto* linger = r.try_get<Linger>(g))
+                {
+                    if (linger->at == PathItemKind::Bench)
+                    {
+                        mood.energy = clamp01(mood.energy + kRestPerSecond * dt);
+                        mood.nausea = clamp01(mood.nausea - kRestSettlePerSecond * dt);
+                    }
+                    else
+                        mood.happiness = clamp01(mood.happiness + kSightCheerPerSecond * dt);
+                    linger->left -= dt;
+                    if (linger->left <= 0)
+                        r.remove<Linger>(g);
+                    continue;
+                }
+                // What a guest just come to a tile thinks of themselves and of the path.
+                if (stride.progress == 0)
+                {
+                    const auto about = [&](ThoughtKind kind, bool when) {
+                        if (when)
+                            think(r, g, kind, entt::null, now);
+                    };
+                    about(ThoughtKind::Hungry, needs.hunger >= kWant);
+                    about(ThoughtKind::Thirsty, needs.thirst >= kWant);
+                    about(ThoughtKind::Toilet, needs.bladder >= kWant);
+                    about(ThoughtKind::Tired, mood.energy < kTired);
+                    about(mood.nausea >= kSick ? ThoughtKind::VerySick : ThoughtKind::Sick, mood.nausea >= kWant);
+                    about(ThoughtKind::Broke, r.get<Wallet>(g).cash < kLowCash);
+                    about(ThoughtKind::Litter, litter_on(stride.from) >= kDirtyPath);
+                    about(ThoughtKind::Raining, weather.rain && !r.all_of<Umbrella>(g));
+                    about(ThoughtKind::Soaked, mood.wet >= kWant);
+                    about(ThoughtKind::Hot, weather.temperature >= kHot);
+                    about(ThoughtKind::Cold, weather.temperature < kCold);
+                    about(ThoughtKind::Vandalism, std::ranges::any_of(items(stride.from), [&](entt::entity i) { return r.get<PathItem>(i).broken; }));
+                    const auto here = litter_at.find(stride.from);
+                    about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));
+                }
+                // A wandering guest just come to a tile may sit on a bench there when tired, or stop at a sight.
+                if (errand.kind == ErrandKind::Wandering && stride.progress == 0)
+                {
+                    const NodeId here = stride.from;
+                    const auto benches = static_cast<std::size_t>(std::ranges::count_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Bench && !r.get<PathItem>(i).broken; }));
+                    const bool sight = std::ranges::any_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight; });
+                    if ((mood.energy < kTired || mood.nausea >= kWant) && seated[here] < benches * kBenchSeats && random::chance(dice.state, kSitChance))
+                    {
+                        r.emplace<Linger>(g, PathItemKind::Bench, kSitSeconds);
+                        ++seated[here];
+                        continue;
+                    }
+                    if (sight && random::chance(dice.state, kWatchChance))
+                    {
+                        r.emplace<Linger>(g, PathItemKind::Sight, kWatchSeconds);
+                        continue;
+                    }
+                }
                 const NodeId at = stride.progress < 0.5f ? stride.from : stride.to;
                 if (litter_on(at) >= kDirtyPath)
                     mood.happiness = clamp01(mood.happiness - kDirtGloomPerSecond * dt);
+                if (const auto here = litter_at.find(at); here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }))
+                {
+                    mood.happiness = clamp01(mood.happiness - kVomitGloomPerSecond * dt);
+                    mood.nausea = clamp01(mood.nausea + kQueasyPerSecond * dt);
+                }
+                if (mood.nausea >= kSick && random::chance(dice.state, kSickPerSecond * dt))
+                {
+                    litter_at[at].push_back(be_sick(r, g, at));
+                }
                 if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
                     mood.happiness = clamp01(mood.happiness - kVandalGloomPerSecond * dt);
                 if (auto* rubbish = r.try_get<Rubbish>(g))
@@ -320,7 +567,7 @@ namespace rct3::simulation
                 }
                 if (mood.happiness < kVandalMood && !guarded.contains(at) && random::chance(dice.state, kVandalPerSecond * dt))
                 {
-                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken; });
+                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && r.get<PathItem>(i).kind != PathItemKind::Sight; });
                     if (whole != items(at).end())
                     {
                         r.get<PathItem>(*whole).broken = true;
@@ -339,14 +586,72 @@ namespace rct3::simulation
             if (paths.nodes().empty())
                 return;
             const auto staff_view = r.view<Staff, Stride, Pose, Dice>();
+            auto& payroll = r.ctx().emplace<Payroll>();
+            for (const entt::entity e : sorted(staff_view))
+                payroll.owed += static_cast<double>(staff_view.get<Staff>(e).wage) * dt / kSecondsPerHour;
+            payroll.paid += static_cast<std::int64_t>(payroll.owed);
+            payroll.owed -= std::floor(payroll.owed);
+
+            // Free mechanics: the nearest by the paths goes to a broken ride, else to one due an inspection.
+            const auto spot = [&](entt::entity ride) {
+                const NodeId exit = r.get<CycleRide>(ride).exit;
+                return exit != kNoNode ? exit : r.get<Attraction>(ride).entrance;
+            };
+            std::vector<entt::entity> free;
+            for (const entt::entity e : sorted(staff_view))
+            {
+                const auto [staff, stride] = staff_view.get<Staff, Stride>(e);
+                if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to < paths.nodes().size())
+                    free.push_back(e);
+            }
+            const auto send = [&](entt::entity ride, Upkeep& upkeep) {
+                std::optional<std::vector<NodeId>> best;
+                auto who = free.end();
+                for (auto m = free.begin(); m != free.end(); ++m)
+                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride)); way && (!best || way->size() < best->size()))
+                    {
+                        best = std::move(way);
+                        who = m;
+                    }
+                if (who == free.end())
+                    return;
+                r.get<Staff>(*who).ride = ride;
+                r.get<Stride>(*who).route = std::move(*best);
+                upkeep.mechanic = *who;
+                free.erase(who);
+            };
+            const auto rides = sorted(r.view<const Upkeep, const CycleRide>());
+            for (const bool broken : { true, false })
+                for (const entt::entity ride : rides)
+                {
+                    auto& upkeep = r.get<Upkeep>(ride);
+                    const bool due = broken ? upkeep.broken : upkeep.inspect_every >= 0 && upkeep.since_inspection >= upkeep.inspect_every;
+                    if (!free.empty() && due && upkeep.mechanic == entt::null)
+                        send(ride, upkeep);
+                }
+
             for (const entt::entity e : sorted(staff_view))
             {
                 auto [staff, stride, pose, dice] = staff_view.get(e);
                 if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                     continue;
+                if (staff.ride != entt::null && !r.valid(staff.ride))
+                    staff.ride = entt::null;
                 if (staff.busy > 0)
                 {
                     staff.busy = std::max(staff.busy - dt, 0.0f);
+                    if (staff.busy == 0 && staff.ride != entt::null)
+                    {
+                        // Done at the ride: repaired and open again, or inspected.
+                        auto& upkeep = r.get<Upkeep>(staff.ride);
+                        if (upkeep.broken)
+                            r.get<Attraction>(staff.ride).open = true;
+                        upkeep.reliability = std::min(upkeep.reliability + (upkeep.broken ? kRepairGain : kInspectGain), 1.0f);
+                        upkeep.broken = false;
+                        upkeep.since_inspection = 0;
+                        upkeep.mechanic = entt::null;
+                        staff.ride = entt::null;
+                    }
                     continue;
                 }
                 if (stride.from != stride.to)
@@ -389,7 +694,24 @@ namespace rct3::simulation
                 };
                 stride.from = at;
                 stride.lane_from = stride.lane_to;
-                if (const float busy = job(); busy > 0)
+                if (staff.ride != entt::null)
+                {
+                    // On the way to a ride, or there and setting to work.
+                    if (!stride.route.empty())
+                    {
+                        stride.to = stride.route.front();
+                        stride.route.erase(stride.route.begin());
+                        stride.progress = 0;
+                        stride.lane_to = new_lane(dice);
+                    }
+                    else
+                    {
+                        staff.busy = r.get<Upkeep>(staff.ride).broken ? kRepairSeconds : kInspectSeconds;
+                        stride.to = at;
+                        stride.progress = 1;
+                    }
+                }
+                else if (const float busy = job(); busy > 0)
                 {
                     staff.busy = busy;
                     stride.to = at;
@@ -450,17 +772,38 @@ namespace rct3::simulation
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
         constexpr float dt = kTickSeconds;
+        const float now = static_cast<float>(world.tick) * kTickSeconds;
+
+        const Weather weather = weather_in(r);
+        const bool night = is_night(time_of_day(r));
+        // Out of the rain: under an umbrella, or on a ride under cover.
+        const auto sheltered = [&](entt::entity guest) {
+            if (r.all_of<Umbrella>(guest))
+                return true;
+            const auto* errand = r.try_get<Errand>(guest);
+            const auto* ride = errand != nullptr && errand->kind == ErrandKind::Riding && r.valid(errand->target) ? r.try_get<CycleRide>(errand->target) : nullptr;
+            return ride != nullptr && ride->cover >= kCovered;
+        };
 
         // 1. Needs and moods.
         {
+            const float thirst = 1 + kHeatPerDegree * std::max(weather.temperature - kHot, 0.0f);
+            const float hunger = 1 + kHeatPerDegree * std::max(kCold - weather.temperature, 0.0f);
             const auto view = r.view<Needs, Mood>();
             const auto guests = sorted(view);
             share(workers, guests.size(), [&](std::size_t begin, std::size_t end) {
                 for (std::size_t i = begin; i < end; ++i)
                 {
                     auto [needs, mood] = view.get<Needs, Mood>(guests[i]);
-                    needs.thirst = clamp01(needs.thirst + kThirstPerSecond * dt);
-                    needs.hunger = clamp01(needs.hunger + kHungerPerSecond * dt);
+                    mood.nausea = clamp01(mood.nausea - kSettlePerSecond * dt / (eating(r, guests[i]) ? kFullStomach : 1));
+                    needs.thirst = clamp01(needs.thirst + kThirstPerSecond * thirst * dt);
+                    needs.hunger = clamp01(needs.hunger + kHungerPerSecond * hunger * dt);
+                    if (weather.rain && !sheltered(guests[i]))
+                        mood.wet = clamp01(mood.wet + kWetPerSecond * (weather.storm ? 2 : 1) * dt);
+                    else
+                        mood.wet = clamp01(mood.wet - kDryPerSecond * dt);
+                    if (mood.wet >= kWant)
+                        mood.happiness = clamp01(mood.happiness - kWetGloomPerSecond * (weather.temperature < kCold ? 2 : 1) * dt);
                     needs.bladder = clamp01(needs.bladder + kBladderPerSecond * dt);
                     mood.energy = clamp01(mood.energy - kEnergyPerSecond * dt);
                     if (std::max({ needs.thirst, needs.hunger, needs.bladder }) >= kPressing)
@@ -490,6 +833,8 @@ namespace rct3::simulation
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                         continue; // Off the paths; nothing to walk on
+                    if (r.all_of<Linger>(movers[i]))
+                        continue; // Sitting or watching
                     if (errand.rest > 0)
                         --errand.rest;
                     // A leader is the only one to write their party, so this is safe beside the other guests.
@@ -545,9 +890,14 @@ namespace rct3::simulation
                                     const Needs& n = r.get<Needs>(m);
                                     want = { std::max(want.hunger, n.hunger), std::max(want.thirst, n.thirst), std::max(want.bladder, n.bladder) };
                                     feel.nausea = std::max(feel.nausea, r.get<Mood>(m).nausea);
+                                    feel.tolerance = std::min(feel.tolerance, r.get<Mood>(m).tolerance);
+                                    feel.wet = std::max(feel.wet, r.get<Mood>(m).wet);
                                 }
                             }
-                            if (auto goal = choose(paths, at, on_offer, want, feel, wallet, dice))
+                            auto goal = going_home(r, paths, movers[i], at, dice, night);
+                            if (!goal)
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0);
+                            if (goal)
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };
                                 stride.route = std::move(goal->second);
@@ -657,20 +1007,29 @@ namespace rct3::simulation
             auto& wallet = r.get<Wallet>(guest);
             auto& mood = r.get<Mood>(guest);
             auto& needs = r.get<Needs>(guest);
-            float& need = shop.product == Product::Drink ? needs.thirst : needs.hunger;
-            if (!chose && need < kWant)
+            float* need = shop.product == Product::Drink ? &needs.thirst : shop.product == Product::Food ? &needs.hunger : shop.product == Product::Toilet ? &needs.bladder : shop.product == Product::FirstAid ? &mood.nausea : nullptr;
+            const bool umbrella = shop.product == Product::Umbrella;
+            if (!chose && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kWant : wallet.cash >= kLowCash))
                 return; // Came along without wanting anything
             if (!attraction.open || wallet.cash < attraction.price)
             {
                 mood.happiness = clamp01(mood.happiness - kTreat);
+                if (wallet.cash < attraction.price)
+                    think(r, guest, ThoughtKind::CantAfford, at, now);
                 return;
             }
             wallet.cash -= attraction.price;
             attraction.income += attraction.price;
             ++attraction.customers;
-            need = 0;
+            if (need != nullptr)
+                *need = 0;
+            else if (umbrella)
+                r.emplace_or_replace<Umbrella>(guest);
+            else
+                wallet.cash += kWithdraw;
             mood.happiness = clamp01(mood.happiness + kTreat);
-            r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
+            if (shop.product == Product::Drink || shop.product == Product::Food)
+                r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
         };
         for (std::size_t i = 0; i < movers.size(); ++i)
         {
@@ -692,6 +1051,14 @@ namespace rct3::simulation
                 for (const entt::entity m : followers)
                     buy(m, arrived[i], *shop, false);
             }
+            else if (r.all_of<ParkGate>(arrived[i]))
+            {
+                if (const auto* member = r.try_get<Member>(guest))
+                    r.destroy(member->party);
+                for (const entt::entity m : followers)
+                    leave(r, m);
+                leave(r, guest);
+            }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
                 // In at the far end of the line, with those of the party who want to come; the rest wait (phase 5).
@@ -712,6 +1079,14 @@ namespace rct3::simulation
         {
             auto& ride = r.get<CycleRide>(e);
             auto& attraction = r.get<Attraction>(e);
+            auto& upkeep = r.get_or_emplace<Upkeep>(e);
+            if (!r.all_of<Dice>(e))
+                r.emplace<Dice>(e, dice_for(world, e));
+            if (!upkeep.broken)
+                upkeep.since_inspection += dt;
+            for (const entt::entity guest : ride.queue)
+                if (r.valid(guest) && (r.get<Errand>(guest).queued += dt) >= kLongQueue)
+                    think(r, guest, ThoughtKind::QueueTooLong, e, now);
             if (!ride.line.empty())
             {
                 const float last = static_cast<float>(ride.line.size() - 1);
@@ -745,10 +1120,18 @@ namespace rct3::simulation
                     if (!r.valid(guest))
                         continue;
                     auto& mood = r.get<Mood>(guest);
-                    mood.happiness = clamp01(mood.happiness + ride.excitement * 0.3f);
-                    mood.nausea = clamp01(mood.nausea + ride.nausea * 0.2f);
+                    const float felt = felt_excitement(ride.excitement, r.all_of<Trains>(e), age_of(r, guest), night);
+                    mood.happiness = clamp01(mood.happiness + felt * 0.3f);
+                    mood.nausea = clamp01(mood.nausea + ride.nausea * 0.2f * (1.5f - mood.tolerance) * (eating(r, guest) ? kFullStomach : 1));
                     r.get<Errand>(guest) = after_ride(r, guest, e);
-                    stop_at(paths, ride.exit != kNoNode ? ride.exit : attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    if (felt >= kEnjoyed)
+                        think(r, guest, ThoughtKind::Enjoyed, e, now);
+                    if (ride.intensity > mood.tolerance + kWildest)
+                        think(r, guest, ThoughtKind::TooIntense, e, now);
+                    const NodeId out = ride.exit != kNoNode ? ride.exit : attraction.entrance;
+                    stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
+                    if (mood.nausea >= kSick && random::chance(r.get<Dice>(guest).state, kSickAfterRide))
+                        be_sick(r, guest, out);
                 }
                 riders.clear();
             };
@@ -763,6 +1146,16 @@ namespace rct3::simulation
                 }
                 ride.since_departure = 0;
                 ride.loading = 0;
+                // Each run with riders wears the ride, and may end in a breakdown that closes it.
+                if (riding == 0)
+                    return;
+                upkeep.reliability = std::max(upkeep.reliability - kWearPerRun, 0.0f);
+                if (random::chance(r.get<Dice>(e).state, kBreakdownPerRun * (1 - upkeep.reliability)))
+                {
+                    upkeep.broken = true;
+                    ++upkeep.breakdowns;
+                    attraction.open = false;
+                }
             };
             // A cycle ends when the ride's time is up, or a train has come round.
             auto* fleet = r.try_get<Trains>(e);
@@ -797,6 +1190,8 @@ namespace rct3::simulation
                     auto& wallet = r.get<Wallet>(guest);
                     if (!attraction.open || wallet.cash < attraction.price)
                     {
+                        if (wallet.cash < attraction.price)
+                            think(r, guest, ThoughtKind::CantAfford, e, now);
                         r.get<Errand>(guest) = after_ride(r, guest, e);
                         continue;
                     }
@@ -808,7 +1203,7 @@ namespace rct3::simulation
                 }
                 ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
             }
-            if (riders != nullptr)
+            if (riders != nullptr && !upkeep.broken)
             {
                 const auto* departure = r.try_get<Departure>(e);
                 if (departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
@@ -822,9 +1217,35 @@ namespace rct3::simulation
                 else
                     ride.loading += dt;
             }
+            // In the rain, guests with nothing over them leave an open-air ride's queue.
+            if (weather.rain && ride.cover < kCovered)
+            {
+                std::erase_if(ride.queue, [&](entt::entity guest) {
+                    if (!r.valid(guest) || r.all_of<Umbrella>(guest) || !random::chance(r.get<Dice>(guest).state, kRainLeavePerSecond * (weather.storm ? 3 : 1) * dt))
+                        return false;
+                    think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
+                    r.get<Errand>(guest) = after_ride(r, guest, e);
+                    stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    return true;
+                });
+            }
+            // A broken ride's queue gives up, put out at the far end of the line.
+            if (upkeep.broken)
+            {
+                for (const entt::entity guest : ride.queue)
+                {
+                    if (!r.valid(guest))
+                        continue;
+                    auto& mood = r.get<Mood>(guest);
+                    mood.happiness = clamp01(mood.happiness - kBreakdownGloom);
+                    r.get<Errand>(guest) = after_ride(r, guest, e);
+                    stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                }
+                ride.queue.clear();
+            }
             // A train left standing at the start goes, empty if need be, once another is held up behind it (within
             // a centimetre: positions far round a long track lose that much to rounding).
-            if (fleet != nullptr && loading && !fleet->trains[*loading].running)
+            if (fleet != nullptr && loading && !fleet->trains[*loading].running && !upkeep.broken)
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                     if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)

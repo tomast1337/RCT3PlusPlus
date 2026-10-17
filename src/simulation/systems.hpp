@@ -18,6 +18,7 @@
 #pragma once
 
 #include "simulation/coaster.hpp"
+#include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstdint>
@@ -58,6 +59,13 @@ namespace rct3::simulation
     inline constexpr float kOldLitterSeconds = 400;
     /// Pieces of litter lying long enough to count against the park's rating (kOldLitterSeconds).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
+
+    /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
+    [[nodiscard]] bool is_night(float time);
+
+    /// How exciting a guest of `age` finds a ride rated `excitement`: in the dark a coaster thrills teens more
+    /// and families less.
+    [[nodiscard]] float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night);
 
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);

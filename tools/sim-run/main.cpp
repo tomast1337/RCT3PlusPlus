@@ -2,13 +2,15 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. Flat rides take
 // their timing from their models, so they come over only with --game, the game's folder.
 #include "config/game_install.hpp"
 #include "park/asset_index.hpp"
+#include "park/build_catalogue.hpp"
+#include "park/item_category.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/track_course.hpp"
@@ -44,6 +46,8 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 int main(int argc, char** argv)
@@ -54,6 +58,8 @@ int main(int argc, char** argv)
     unsigned threads = 0;
     std::uint64_t seed = 1;
     const char* game = nullptr;
+    std::string_view weather;
+    bool whole_day = false; // Run the clock through the night, whatever the park's day mode
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -64,12 +70,16 @@ int main(int argc, char** argv)
             seed = std::strtoull(argv[++i], nullptr, 10);
         else if (std::strcmp(argv[i], "--game") == 0 && i + 1 < argc)
             game = argv[++i];
+        else if (std::strcmp(argv[i], "--whole-day") == 0)
+            whole_day = true;
+        else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
+            weather = argv[++i];
         else
             path = argv[i];
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR]\n");
+        std::fprintf(stderr, "usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day]\n");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -102,6 +112,9 @@ int main(int argc, char** argv)
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
+    std::set<std::uint64_t> sights;                        // Placed objects guests stop to watch
+    std::set<std::uint64_t> gates;                         // Park entrances
+    std::map<std::uint64_t, std::uint32_t> facility_kinds; // Special attractions' kinds, by attraction
     if (game)
     {
         const auto install = config::open_game_install(game);
@@ -134,6 +147,16 @@ int main(int argc, char** argv)
                 break;
         }
         park::ModelLoader loader(assets);
+        for (const save::PlacedObject& o : world_model->objects)
+            if (const auto model = loader.load(o.symbol, o.overlay); model && park::is_sight(model->category))
+                sights.insert(o.id);
+            else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
+                gates.insert(o.id);
+        for (const save::Ride& ride : rides->rides)
+            if (ride.kind == save::RideKind::Special)
+                if (const auto file = install->find(ride.base.overlay_path + ".common.ovl"))
+                    if (const auto kind = park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))))
+                        facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::ObjectModel>, std::less<>> models;
         timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
             auto [at, added] = models.try_emplace(o.symbol);
@@ -207,7 +230,46 @@ int main(int argc, char** argv)
     const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
     const std::size_t items = simulation::import_path_items(world, world_model->objects, world_model->bins, world_model->benches, world_model->signs);
     const auto staff = simulation::import_staff(world, *people);
-    std::printf("litter %zu  path items %zu  staff on the paths %zu of %zu\n", litter, items, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
+    const std::size_t facilities = simulation::import_facilities(world, *rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
+        const auto found = facility_kinds.find(ride.base.id);
+        return found != facility_kinds.end() ? std::optional(found->second) : std::nullopt;
+    });
+    const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::PlacedObject& o) { return sights.contains(o.id); });
+    const bool gate = simulation::import_gate(world, world_model->objects, [&](const save::PlacedObject& o) { return gates.contains(o.id); }) != entt::null;
+    std::printf("facilities %zu  sights %zu  gate %s\n", facilities, sight_count, gate ? "yes" : "none");
+    // The park's time of day, as its file left it, run through every hour.
+    simulation::DayWindow hours;
+    if (park_model && park_model->has_park)
+        hours = simulation::opening_hours(park_model->park.opening_minutes, park_model->park.closing_minutes);
+    simulation::DayClock day = simulation::start_day(world_model->time ? std::optional(world_model->time->day_fraction) : std::nullopt, simulation::day_window(simulation::day_mode(world_model->time ? world_model->time->day_night_mode : std::nullopt), hours), simulation::DayTransition::Instant);
+    if (whole_day)
+        day.window = { };
+    {
+        // How the coasters feel by day and in the dark, to teens and to families.
+        float rated = 0;
+        std::size_t coasters = 0;
+        for (const auto [e, ride, trains] : world.registry.view<const simulation::CycleRide, const simulation::Trains>().each())
+        {
+            rated += ride.excitement;
+            ++coasters;
+        }
+        if (coasters > 0)
+        {
+            using enum simulation::AgeGroup;
+            rated /= static_cast<float>(coasters);
+            std::printf("coasters' excitement: by day %.2f; at night %.2f to teens, %.2f to families\n", static_cast<double>(rated), static_cast<double>(simulation::felt_excitement(rated, true, Teen, true)), static_cast<double>(simulation::felt_excitement(rated, true, Adult, true)));
+        }
+    }
+    world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
+    // The park's own weather, unless another is asked for.
+    auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(simulation::park_state(park_model ? &*park_model : nullptr, *world_model)));
+    if (weather == "rain" || weather == "storm")
+        sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
+    else if (weather == "hot" || weather == "cold")
+        sky = { .temperature = weather == "hot" ? 35.0f : 2.0f };
+    std::printf("weather: %s%s, %.0f degrees\n", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", static_cast<double>(sky.temperature));
+    const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
+    std::printf("litter %zu  path items %zu  rides broken down %td  staff on the paths %zu of %zu\n", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             std::printf("stall %s [%s] sells %s\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str());
@@ -262,21 +324,46 @@ int main(int argc, char** argv)
     // Litter dropped and swept, bins emptied and things mended over the run.
     struct Tally
     {
-        std::size_t dropped = 0, swept = 0, emptied = 0, mended = 0;
-        void drop(entt::registry&, entt::entity)
+        std::size_t dropped = 0, swept = 0, emptied = 0, mended = 0, repaired = 0, inspected = 0, sat = 0, watched = 0, sick = 0, sick_by_exit = 0;
+        std::set<simulation::NodeId> exits;
+        void linger(entt::registry& r, entt::entity e)
+        {
+            ++(r.get<simulation::Linger>(e).at == simulation::PathItemKind::Bench ? sat : watched);
+        }
+        void drop(entt::registry& r, entt::entity e)
         {
             ++dropped;
+            if (const auto& piece = r.get<simulation::Litter>(e); piece.vomit)
+            {
+                ++sick;
+                sick_by_exit += exits.contains(piece.node);
+            }
         }
         void sweep(entt::registry&, entt::entity)
         {
             ++swept;
         }
     } tally;
+    for (const auto [e, ride, attraction] : world.registry.view<const simulation::CycleRide, const simulation::Attraction>().each())
+        tally.exits.insert(ride.exit != simulation::kNoNode ? ride.exit : attraction.entrance);
     world.registry.on_construct<simulation::Litter>().connect<&Tally::drop>(tally);
     world.registry.on_destroy<simulation::Litter>().connect<&Tally::sweep>(tally);
-    std::map<entt::entity, std::pair<float, bool>> was; // Each path item's bin contents and whether broken
+    world.registry.on_construct<simulation::Linger>().connect<&Tally::linger>(tally);
+    std::map<entt::entity, std::pair<float, bool>> was;      // Each path item's bin contents and whether broken
+    std::map<entt::entity, std::pair<float, bool>> ride_was; // Each ride's time since inspection and whether broken
     for (std::uint32_t i = 0; i < steps; ++i)
     {
+        const auto hour = static_cast<int>(day.time * simulation::kHoursPerDay);
+        simulation::advance(day, simulation::kTickSeconds);
+        world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
+        if (const auto now = static_cast<int>(day.time * simulation::kHoursPerDay); now != hour)
+        {
+            std::array<std::size_t, 3> in { };
+            for (const auto [e, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
+                ++in[static_cast<std::size_t>(visitor.age)];
+            const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
+            std::printf("%02d:00%s in the park: %zu children, %zu teens, %zu adults; came %u/%u/%u, went %u/%u/%u\n", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
+        }
         simulation::step(world, workers.get());
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {
@@ -285,6 +372,13 @@ int main(int argc, char** argv)
             tally.emptied += bin != nullptr && bin->contents < contents;
             tally.mended += broken && !item.broken;
             was[e] = { bin != nullptr ? bin->contents : 0.0f, item.broken };
+        }
+        for (const auto [e, upkeep] : world.registry.view<const simulation::Upkeep>().each())
+        {
+            const auto [since, broken] = ride_was.try_emplace(e, upkeep.since_inspection, upkeep.broken).first->second;
+            tally.repaired += broken && !upkeep.broken;
+            tally.inspected += !broken && upkeep.since_inspection < since;
+            ride_was[e] = { upkeep.since_inspection, upkeep.broken };
         }
         for (auto& [e, fleet] : fleets)
         {
@@ -311,7 +405,8 @@ int main(int argc, char** argv)
     for (const auto [e, a] : r.view<const simulation::Attraction>().each())
     {
         const auto* shop = r.try_get<simulation::Shop>(e);
-        const char* sells = !shop ? "ride" : shop->product == simulation::Product::Drink ? "drink" : "food";
+        constexpr std::array<const char*, 6> kProducts { "drink", "food", "toilet", "cash", "aid", "brolly" };
+        const char* sells = !shop ? "ride" : kProducts[static_cast<std::size_t>(shop->product)];
         std::printf("  %-28s %-5s customers %5u  income %8.2f\n", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100);
     }
     {
@@ -328,6 +423,49 @@ int main(int argc, char** argv)
         const auto* vandalism = r.ctx().find<simulation::Vandalism>();
         std::printf("litter: %zu lying on %zu tiles (most %zu), %zu dropped, %zu swept; bins %.0f of %.0f full, emptied %zu times\n", r.view<const simulation::Litter>().size(), lying.size(), lying.empty() ? 0 : std::ranges::max(lying | std::views::values), tally.dropped, tally.swept, static_cast<double>(held), static_cast<double>(room), tally.emptied);
         std::printf("vandalism: %u broken, %zu mended, %u warnings; old litter for the rating %d\n", vandalism ? vandalism->broken : 0, tally.mended, vandalism ? vandalism->warnings : 0, simulation::old_litter(world));
+        std::uint32_t breakdowns = 0;
+        std::size_t down = 0;
+        float reliability = 0;
+        for (const auto [e, upkeep] : r.view<const simulation::Upkeep>().each())
+        {
+            breakdowns += upkeep.breakdowns;
+            down += upkeep.broken;
+            reliability += upkeep.reliability;
+        }
+        const auto ride_count = r.view<const simulation::Upkeep>().size();
+        const std::size_t mechanics = static_cast<std::size_t>(std::ranges::count_if(r.view<const simulation::Staff>(), [&](entt::entity e) { return r.get<simulation::Staff>(e).role == simulation::StaffRole::Mechanic; }));
+        const auto* payroll = r.ctx().find<simulation::Payroll>();
+        std::map<simulation::ThoughtKind, std::size_t> thought;
+        std::size_t thinkers = 0;
+        for (const auto [e, thoughts] : r.view<const simulation::Thoughts>().each())
+        {
+            thinkers += !thoughts.recent.empty();
+            for (const simulation::Thought& t : thoughts.recent)
+                ++thought[t.kind];
+        }
+        std::size_t wet = 0;
+        for (const auto [e, mood] : r.view<const simulation::Mood>().each())
+            wet += mood.wet >= 0.5f;
+        std::size_t queued[2] { };
+        std::size_t rides[2] { };
+        for (const auto [e, ride] : r.view<const simulation::CycleRide>().each())
+        {
+            queued[ride.cover >= 0.5f] += ride.queue.size();
+            ++rides[ride.cover >= 0.5f];
+        }
+        std::uint32_t drinks = 0;
+        for (const auto [e, shop, a] : r.view<const simulation::Shop, const simulation::Attraction>().each())
+            drinks += shop.product == simulation::Product::Drink ? a.customers : 0;
+        std::printf("weather: %zu wet, %zu with umbrellas; queueing for %zu open-air rides %zu, for %zu covered %zu; drinks sold %u\n", wet, r.view<const simulation::Umbrella>().size(), rides[0], queued[0], rides[1], queued[1], drinks);
+        std::printf("thoughts held by %zu guests:", thinkers);
+        for (const auto [kind, n] : thought)
+            std::printf(" %d:%zu", std::to_underlying(kind), n);
+        std::printf("\n");
+        std::printf("guests sat on benches %zu times and stopped at sights %zu times\n", tally.sat, tally.watched);
+        const auto vomit_lying = std::ranges::count_if(r.view<const simulation::Litter>(), [&](entt::entity e) { return r.get<simulation::Litter>(e).vomit; });
+        const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea >= 0.6f; });
+        std::printf("sickness: guests sick %zu times, %zu by a ride's exit; %td lying now; %td guests too sick to ride\n", tally.sick, tally.sick_by_exit, vomit_lying, queasy);
+        std::printf("rides: %u breakdowns, %zu repaired, %zu inspections, %zu down now, reliability %.2f on average; %zu mechanics; wages paid %.2f\n", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid : 0) / 100);
     }
     std::array<std::size_t, 6> doing { };
     double happiness = 0;

@@ -290,13 +290,107 @@ namespace rct3::scene
             return clip.w > -kReach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
         }
 
+        constexpr std::size_t kNoCar = static_cast<std::size_t>(-1);
+
+        /// Where rider carrier `k` (see ParkScene::rider_cars) stands now.
+        glm::mat4 carrier_place(const ParkScene& scene, std::size_t k)
+        {
+            if (k == kNoCar)
+                return glm::mat4(1.0f);
+            if (k < scene.car_places.size())
+                return scene.car_places[k];
+            k -= scene.cars.size();
+            return k < scene.seat_carriers.size() ? scene.seat_carriers[k] : glm::mat4(1.0f);
+        }
+
+        /// Where simulated guest `guest` sits while riding: the car, by its place in `cars`, and the seat in
+        /// the car's own space that their place among the riders comes to, counting the train's seats front
+        /// to back. On a ride without cars the car is kNoCar and the seat is in the park, on the ride as it is
+        /// drawn. Nothing when not riding, or when the ride has no seat for them.
+        /// shortcut: flat rides are drawn standing still, so their riders sit still too, upgrade when the
+        /// rides' motions are played.
+        std::optional<std::pair<std::size_t, glm::mat4>> seat_of(const ParkScene& scene, entt::entity guest)
+        {
+            const auto& r = scene.sim.registry;
+            const auto& errand = r.get<simulation::Errand>(guest);
+            if (errand.kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(errand.target))
+                return std::nullopt;
+            // On a ride with trains, the train the guest boarded and their place among its riders.
+            const auto* fleet = r.try_get<simulation::Trains>(errand.target);
+            std::size_t train = 0;
+            const std::vector<entt::entity>* riders = &r.get<simulation::CycleRide>(errand.target).riders;
+            if (fleet != nullptr)
+                for (std::size_t t = 0; t < fleet->riders.size(); ++t)
+                    if (std::ranges::contains(fleet->riders[t], guest))
+                    {
+                        train = t;
+                        riders = &fleet->riders[t];
+                    }
+            auto seat = static_cast<std::size_t>(std::ranges::find(*riders, guest) - riders->begin());
+            if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
+            {
+                const save::PlacedObject& o = scene.objects[object->second];
+                const auto model = scene.models.find(park::model_key(o));
+                if (model == scene.models.end() || seat >= model->second.seat_places.size())
+                    return std::nullopt;
+                // On a ride its bones move, the seat's bone carries the seat.
+                if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end())
+                    return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
+                return std::pair { kNoCar, park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
+            }
+            const auto cars = scene.ride_cars.find(errand.target);
+            if (cars == scene.ride_cars.end())
+                return std::nullopt;
+            for (const std::size_t car : cars->second)
+            {
+                if (fleet != nullptr && scene.car_spots[car].train != train)
+                    continue;
+                const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
+                if (seat < seats)
+                    return std::pair { car, model->second.seat_places[seat] };
+                seat -= seats;
+            }
+            return std::nullopt;
+        }
+
+        /// Where simulated guest `guest` sits in the park while riding, as seat_of finds it.
+        std::optional<glm::mat4> seat_place(const ParkScene& scene, entt::entity guest)
+        {
+            if (const auto seat = seat_of(scene, guest))
+                return seat->first == kNoCar ? seat->second : carrier_place(scene, seat->first) * seat->second;
+            return std::nullopt;
+        }
+
         /// Where `shown` stands now: where the simulation has walked it while that runs, else where it was saved.
         /// Reads the simulation, so only on the frame's thread.
         glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
         {
             if (scene.simulate && shown.guest != entt::null)
+                if (const auto seat = seat_place(scene, shown.guest))
+                    return glm::vec3((*seat)[3]);
+            if (scene.simulate && shown.guest != entt::null)
                 return simulation::between_steps(scene.sim.registry.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds).position;
             return glm::vec3(shown.pose.world[3]);
+        }
+
+        /// How riders sit in a car, as the game's motions name it.
+        const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
+        /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
+        const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
+        constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
+
+        /// The motion of a simulated guest standing still: something from kChatMotions while their party
+        /// stands together, else idling.
+        std::int32_t chat_motion(const ParkScene& scene, const ShownPerson& shown)
+        {
+            const auto& r = scene.sim.registry;
+            const auto* member = r.try_get<simulation::Member>(shown.guest);
+            if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
+                return park::motion::kIdle;
+            // Each by turns, offset by who they are so they do not all laugh at once.
+            const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
+            return kChatMotions[turn % kChatMotions.size()];
         }
 
         /// Poses the people near enough to see that stand still, or those at `level` that move and may be
@@ -322,19 +416,75 @@ namespace rct3::scene
                     const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
                     const auto& stride = r.get<simulation::Stride>(shown.guest);
                     const auto kind = r.get<simulation::Errand>(shown.guest).kind;
+                    pose.time = shown.saved_time + clock * shown.speed;
                     if (kind == simulation::ErrandKind::Riding)
-                        continue; // Riders are not shown on the ride yet
+                        continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
                     const bool walking = stride.from != stride.to;
                     // People are modelled facing +z, which the heading turns towards the way they go.
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = walking ? park::motion::kWalk : park::motion::kIdle;
-                    pose.time = shown.saved_time + clock * shown.speed;
+                    pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
                 }
                 if (moving && (static_cast<std::size_t>(levels[i]) != *level || !maybe_in_view(view, glm::vec3(pose.world[3]))))
                     continue;
                 placed.push_back(pose);
             }
             return park::person_mesh(*scene.person_models, placed);
+        }
+
+        /// Poses the riders seated in the ride cars into `scene.riders`, each car's in the car's own space;
+        /// place_cars moves them with their cars. Riders drawn at no level of detail are left out.
+        void pose_riders(ParkScene& scene)
+        {
+            std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
+            for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
+            {
+                const ShownPerson& shown = scene.shown_people[i];
+                if (shown.guest == entt::null || scene.people_levels[i] == park::kNotDrawn)
+                    continue;
+                const auto seat = seat_of(scene, shown.guest);
+                if (!seat)
+                    continue;
+                park::PlacedPerson pose = shown.pose;
+                pose.level = static_cast<std::size_t>(scene.people_levels[i]);
+                pose.time = shown.saved_time + scene.clock * shown.speed;
+                pose.world = seat->second;
+                pose.motion = kRideMotion;
+                by_car[seat->first].push_back(pose);
+            }
+            std::vector<park::ObjectMesh> alone;
+            scene.rider_cars.clear();
+            for (const auto& [car, riders] : by_car)
+            {
+                alone.push_back(park::person_mesh(*scene.person_models, riders));
+                scene.rider_cars.push_back(car);
+            }
+            scene.riders = park::gathered_meshes(alone);
+        }
+
+        /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
+        /// the seats they carry.
+        void swing_rides(ParkScene& scene)
+        {
+            for (ParkScene::BonedRide& boned : scene.boned_rides)
+            {
+                const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
+                if (model == scene.models.end() || !model->second.rig)
+                    continue;
+                const auto* cycle = scene.simulate ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
+                const bool riding = cycle != nullptr && cycle->timer > 0;
+                const float into = riding ? static_cast<float>(cycle->cycle_ticks - cycle->timer) * simulation::kTickSeconds + scene.sim_time : 0.0f;
+                const float length = cycle != nullptr ? static_cast<float>(cycle->cycle_ticks) * simulation::kTickSeconds : 0.0f;
+                const auto [motion, time] = park::flat_ride_motion(model->second.animation_seconds, length, into, riding, scene.clock);
+                const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
+                std::vector<glm::mat4> places(boned.bones.size());
+                for (std::size_t p = 0; p < places.size(); ++p)
+                    places[p] = boned.placed * moves[static_cast<std::size_t>(boned.bones[p])];
+                park::move_meshes(boned.mesh, places);
+                const auto& seat_bones = model->second.seat_bones;
+                for (std::size_t seat = 0; seat < seat_bones.size(); ++seat)
+                    if (seat_bones[seat] >= 0 && static_cast<std::size_t>(seat_bones[seat]) < moves.size())
+                        scene.seat_carriers[boned.first_seat + seat] = boned.placed * moves[static_cast<std::size_t>(seat_bones[seat])];
+            }
         }
 
         /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
@@ -347,16 +497,24 @@ namespace rct3::scene
                 const park::CarSpot spot = scene.car_spots[i];
                 glm::mat4 place = scene.saved_cars.at(id);
                 const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
-                if (const auto* train = ride != entt::null ? scene.sim.registry.try_get<simulation::Coaster>(ride) : nullptr; train && scene.courses[spot.ride])
+                const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
+                if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
                 {
-                    // Between ticks, on as far as the train's speed takes it.
-                    const float at = train->at + (train->running ? train->speed * scene.sim_time : 0.0f);
-                    // shortcut: every train of the ride moves as the one the simulation runs, upgrade when each runs on its own.
-                    place = park::moved_along(*scene.courses[spot.ride], place, spot.distance, spot.distance + at - train->start);
+                    const simulation::Coaster& train = fleet->trains[spot.train];
+                    // Between ticks, on as far as the train's speed takes it, from where the park kept it.
+                    const float at = train.at + (train.running ? train.speed * scene.sim_time : 0.0f);
+                    place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, at - scene.rides.rides[spot.ride].trains[spot.train].distance);
                 }
                 scene.car_places[i] = place;
             }
-            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_places); });
+            profiling::section("Rides", [&] { swing_rides(scene); });
+            profiling::section("Mesh", [&] {
+                park::move_meshes(scene.car_meshes, scene.car_places);
+                scene.rider_places.resize(scene.rider_cars.size());
+                for (std::size_t k = 0; k < scene.rider_cars.size(); ++k)
+                    scene.rider_places[k] = carrier_place(scene, scene.rider_cars[k]);
+                park::move_meshes(scene.riders, scene.rider_places);
+            });
         }
 
         /// Whether `build` has finished, without waiting for it.
@@ -420,6 +578,12 @@ namespace rct3::scene
                 scene.moving_people[level] = pose_people(scene, scene.people_levels, scene.clock, level, view, scene.simulate);
                 break; // One level a frame, so their rebuilds do not pile into one slow frame
             }
+            scene.since_riders += elapsed;
+            if (scene.simulate && scene.since_riders >= kPeopleRebuildIntervals[1])
+            {
+                scene.since_riders = 0;
+                profiling::section("Riders", [&] { pose_riders(scene); });
+            }
         }
 
         /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`. Reads only
@@ -428,6 +592,8 @@ namespace rct3::scene
         {
             ObjectBuild built;
             built.levels = profiling::section("Levels", [&] { return park::object_levels(scene.objects, scene.models, scene.anchors, eye); });
+            for (const ParkScene::BonedRide& boned : scene.boned_rides)
+                built.levels[boned.object] = -1; // Drawn apart, moving
             if (built.levels == shown)
                 return std::nullopt;
             built.mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, built.levels, { }, scene.leans, scene.fitted); });
@@ -952,7 +1118,38 @@ namespace rct3::scene
                     }
                 }
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters);
+                for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
+                    if (const std::size_t ride = scene.car_spots[i].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
+                        scene.ride_cars[scene.ride_entities[ride]].push_back(i);
+                // Flat rides seat their riders on the object that has the seats, as flat_ride_timings finds it.
+                for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.ride_entities.size(); ++i)
+                {
+                    const save::Ride& ride = scene.rides.rides[i];
+                    if (ride.kind != save::RideKind::Flat || ride.base.placement == 0 || scene.ride_entities[i] == entt::null)
+                        continue;
+                    for (std::size_t k = 0; k < scene.objects.size(); ++k)
+                    {
+                        const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
+                        if (model != scene.models.end() && !model->second.seat_places.empty())
+                        {
+                            scene.ride_seats[scene.ride_entities[i]] = k;
+                            if (model->second.rig)
+                            {
+                                ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
+                                boned.ride = scene.ride_entities[i];
+                                boned.object = k;
+                                boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
+                                std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
+                                boned.first_seat = scene.seat_carriers.size();
+                                scene.seat_carriers.resize(scene.seat_carriers.size() + model->second.seat_bones.size(), boned.placed);
+                                add_textures(device, scene, boned.mesh.mesh.batches);
+                            }
+                            break;
+                        }
+                    }
+                }
                 simulation::start_guests(scene.sim);
+                simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
                 simulation::import_parties(scene.sim, scene.people, guests);
                 for (ShownPerson& p : scene.shown_people)
                 {
@@ -1816,9 +2013,15 @@ namespace rct3::scene
                     draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                     for (const park::ObjectMesh& people : scene.moving_people)
                         draw_transient(device, scene, people, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    if (scene.simulate)
+                        draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+            profiling::section("Rides", [&] {
+                for (const ParkScene::BonedRide& boned : scene.boned_rides)
+                    draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+            });
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
             if (scene.object_indices && scene.show_scenery && parts.scenery && parts.see_through)

@@ -203,14 +203,54 @@ TEST_CASE("a coaster's riders get off when its train comes round, not after the 
     train.height = { 0, 0 };
     train.kinds = { Stretch::Plain, Stretch::Plain };
     train.fixed_speed = 5; // Round in 10 s
-    r.emplace<Coaster>(ride, train);
+    r.emplace<Trains>(ride, Trains { { train }, { { } } });
     const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     park.run(2);
     CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
-    CHECK(r.get<Coaster>(ride).running);
+    CHECK(r.get<Trains>(ride).trains[0].running);
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 15));
-    CHECK_FALSE(r.get<Coaster>(ride).running);
+    CHECK_FALSE(r.get<Trains>(ride).trains[0].running);
+}
+
+TEST_CASE("a coaster's trains run on their own, each waiting behind the one in front")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Looper", { 4, 0 }, 100, { .capacity = 1, .cycle_seconds = 1000 });
+    auto& r = park.world().registry;
+    Coaster track;
+    track.distance = { 0, 100 };
+    track.height = { 0, 0 };
+    track.kinds = { Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.train_length = 10;
+    // One standing at the start, one coming round 30 m behind it.
+    Coaster waiting = track;
+    Coaster coming = track;
+    coming.at = 70;
+    coming.travelled = 70;
+    coming.running = true;
+    r.emplace<Trains>(ride, Trains { { waiting, coming }, { { }, { } } });
+    const auto& fleet = r.get<Trains>(ride);
+    const auto gap = [&] { return std::fmod(fleet.trains[0].at - fleet.trains[1].at + 100.0f, 100.0f) - track.train_length; };
+    // Held back behind the standing train, which then goes round empty to make way.
+    CHECK(park.run_until(
+        [&] {
+            CHECK(gap() >= kBlockGap - 1e-3f);
+            return fleet.trains[0].running;
+        },
+        5));
+    for (int i = 0; i < 80; ++i)
+    {
+        park.run(1);
+        CHECK(gap() >= kBlockGap - 1e-3f); // Never closer than the gap, round and round
+    }
+    // A rider boards whichever train stands at the start, and gets off when it comes round.
+    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    CHECK(park.run_until([&] { return r.get<Errand>(g).kind == ErrandKind::Riding; }, 30));
+    CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 30));
 }
 
 TEST_CASE("guests spread over the path but keep on it")
@@ -250,12 +290,35 @@ TEST_CASE("a party walks together, goes where its neediest wants, and each buys 
     for (int i = 0; i < 20; ++i)
     {
         park.run(1);
-        CHECK(r.get<Stride>(child).to == r.get<Stride>(parent).to);
+        // Beside the parent, or a step behind and catching up.
+        CHECK((r.get<Stride>(child).to == r.get<Stride>(parent).to || r.get<Stride>(child).to == r.get<Stride>(parent).from));
     }
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
     CHECK(r.get<Needs>(child).thirst < 0.05f);
     CHECK(r.get<Wallet>(child).cash == 900);
     CHECK(r.get<Wallet>(parent).cash == 1000); // Not thirsty, so bought nothing
+}
+
+TEST_CASE("a follower far from their leader walks back to them rather than jumping")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto leader = park.guest({ 0, 0 });
+    const auto straggler = park.guest({ 8, 0 });
+    park.party({ leader, straggler });
+    auto& r = park.world().registry;
+    const auto in_step = [&] { return r.get<Stride>(straggler).from == r.get<Stride>(leader).from && r.get<Stride>(straggler).to == r.get<Stride>(leader).to; };
+    CHECK_FALSE(in_step());
+    bool caught = false;
+    for (int i = 0; i < 400 && !caught; ++i)
+    {
+        const glm::vec3 was = r.get<Pose>(straggler).position;
+        park.run(1);
+        // A hurried walk a tick at most, and a little for the lane changing.
+        CHECK(glm::distance(was, r.get<Pose>(straggler).position) < 1.5f);
+        caught = in_step();
+    }
+    CHECK(caught);
 }
 
 TEST_CASE("party members who stay off a ride wait by its exit, and all go on together after")
@@ -276,4 +339,32 @@ TEST_CASE("party members who stay off a ride wait by its exit, and all go on tog
     CHECK(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Following; }, 30));
     CHECK(r.get<Errand>(leader).kind == ErrandKind::Wandering);
     CHECK(r.get<Attraction>(ride).customers == 1);
+}
+
+TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto a = park.guest({ 4, 0 });
+    const auto b = park.guest({ 4, 0 });
+    const auto c = park.guest({ 4, 0 });
+    const auto party = park.party({ a, b, c });
+    auto& r = park.world().registry;
+    r.get<Party>(party).huddle = ticks(5);
+    park.run(6); // Time to step across to their places
+    std::vector<glm::vec3> at;
+    for (const auto g : { a, b, c })
+    {
+        CHECK(r.get<Stride>(g).from == r.get<Stride>(g).to); // Standing
+        at.push_back(r.get<Pose>(g).position);
+    }
+    const glm::vec3 centre = (at[0] + at[1] + at[2]) / 3.0f;
+    for (std::size_t k = 0; k < 3; ++k)
+    {
+        CHECK(glm::distance(at[k], centre) == doctest::Approx(0.7f).epsilon(0.05));
+        const glm::vec3 in = centre - at[k];
+        const float facing = std::atan2(in.x, in.z) - r.get<Pose>(std::array { a, b, c }[k]).heading;
+        CHECK(std::cos(facing) > 0.99f); // Facing the middle
+    }
+    CHECK(park.run_until([&] { return r.get<Stride>(a).from != r.get<Stride>(a).to; }, 15)); // On their way again
 }

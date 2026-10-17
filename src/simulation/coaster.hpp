@@ -12,6 +12,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -48,8 +49,10 @@ namespace rct3::simulation
         }
     };
 
-    /// Moves `coaster`'s running train on by `seconds`; whether it has come round to its start, where it stops.
-    bool drive(Coaster& coaster, float seconds);
+    /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
+    /// up to the train in front), where it stops and waits; whether it has come round to its start, where it
+    /// stops.
+    bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// How long a lap of `coaster` takes from a standing start, by driving a copy of it; nothing if the train
     /// does not come round within `most` seconds.

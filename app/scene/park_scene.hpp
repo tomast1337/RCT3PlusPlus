@@ -167,6 +167,7 @@ namespace rct3::scene
         bool staff = false;              ///< A member of staff rather than a guest
         std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
         entt::entity guest = entt::null; ///< The simulated guest it shows, for guests the simulation walks
+        std::uint32_t thoughts_seen = 0; ///< Of the simulated guest's thoughts, those already in the saved person
     };
 
     struct ParkScene
@@ -286,6 +287,8 @@ namespace rct3::scene
         float since_info_page = 0;                            ///< Seconds since a live page was shown again
         std::uint32_t vandalism_seen = 0;                     ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;            ///< Warnings already posted as messages
+        std::int64_t wages_seen = 0;                          ///< Of the staff's pay, what has come out of the park's cash
+        std::vector<entt::entity> broken_rides;               ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         std::optional<std::size_t> shown_person;           ///< Of shown_people, the one the info panel tells about instead

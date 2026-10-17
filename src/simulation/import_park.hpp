@@ -65,6 +65,26 @@ namespace rct3::simulation
     /// place in `people.staff`, null for those off the paths. Call after import_paths.
     std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people);
 
+    /// The facility of a special attraction's kind, as its item in the game's files stores it; nothing for
+    /// kinds guests do not use yet.
+    [[nodiscard]] std::optional<Product> facility_of(std::uint32_t kind);
+    /// The park's toilets, cash machines and first aid rooms, as shops guests go to by their needs; `kind_of`
+    /// gives a special attraction's kind from the game's files. Returns how many came over. Call after
+    /// import_paths.
+    std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of);
+    /// The objects `is_sight` picks out (fountains, effects, animatronics), each on the path tile it stands on
+    /// or one beside it, for guests to stop and watch. Returns how many came over. Call after import_paths.
+    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_sight);
+    /// The first park entrance `is_gate` picks out, as the gate guests come in and leave by, at the path tile it
+    /// stands on or one beside it. entt::null when there is none on the paths. Call after import_paths.
+    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate);
+
+    /// A saved ride's reliability, whether it stands broken down, and its inspections.
+    [[nodiscard]] Upkeep upkeep_of(const save::Ride& ride);
+
+    /// Hundredths of the currency unit a game hour a member of staff earns for each wage level.
+    inline constexpr std::int64_t kWagePerLevel = 50;
+
     /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
     [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
 

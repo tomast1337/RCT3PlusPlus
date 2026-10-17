@@ -64,7 +64,7 @@ namespace rct3::simulation
         for (const glm::ivec2 tile : setup.line)
             line.push_back(node(tile, level));
         r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = std::move(name), .entrance = line.empty() ? node(entrance, level) : line.back(), .price = price });
-        r.emplace<CycleRide>(e, CycleRide { .capacity = setup.capacity, .cycle_ticks = ticks(setup.cycle_seconds), .excitement = setup.excitement, .intensity = setup.intensity, .nausea = setup.nausea, .line = std::move(line), .exit = setup.exit ? node(*setup.exit, level) : kNoNode });
+        r.emplace<CycleRide>(e, CycleRide { .capacity = setup.capacity, .cycle_ticks = ticks(setup.cycle_seconds), .excitement = setup.excitement, .intensity = setup.intensity, .nausea = setup.nausea, .cover = setup.cover, .line = std::move(line), .exit = setup.exit ? node(*setup.exit, level) : kNoNode });
         return e;
     }
 
@@ -100,8 +100,8 @@ namespace rct3::simulation
         const entt::entity e = r.create();
         r.emplace<Visitor>(e, AgeGroup::Adult, false, std::format("Guest {}", ++guests_), world_.tick);
         r.emplace<Pose>(e, world_.paths.centre(n), 0.0f);
-        r.emplace<Needs>(e, setup.hunger, setup.thirst, 0.0f);
-        r.emplace<Mood>(e, setup.happiness, 1.0f, setup.nausea);
+        r.emplace<Needs>(e, setup.hunger, setup.thirst, setup.bladder);
+        r.emplace<Mood>(e, setup.happiness, setup.energy, setup.nausea);
         r.emplace<Wallet>(e, setup.cash);
         start_walking(world_, e, n);
         return e;

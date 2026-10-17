@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
+#include "park/build_catalogue.hpp"
 #include "park/daylight.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
@@ -322,9 +323,10 @@ namespace rct3::scene
         std::optional<std::pair<std::size_t, glm::mat4>> seat_of(const ParkScene& scene, entt::entity guest)
         {
             const auto& r = scene.sim.registry;
-            const auto& errand = r.get<simulation::Errand>(guest);
-            if (errand.kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(errand.target))
+            const auto* walking = r.try_get<simulation::Errand>(guest); // None once gone home
+            if (walking == nullptr || walking->kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(walking->target))
                 return std::nullopt;
+            const simulation::Errand& errand = *walking;
             // On a ride with trains, the train the guest boarded and their place among its riders.
             const auto* fleet = r.try_get<simulation::Trains>(errand.target);
             std::size_t train = 0;
@@ -561,6 +563,10 @@ namespace rct3::scene
                 park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
                 for (std::size_t i = 0; i < levels.size(); ++i)
                 {
+                    // shortcut: guests who come in at the gate are simulated but not shown; add them to the shown
+                    // people once new guests can be dressed and posed.
+                    if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
+                        continue; // Gone home
                     const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
                     const auto level = std::ranges::find_if(kPersonDistances, [&](float d) { return distance <= d; });
                     if (level != kPersonDistances.end())
@@ -1220,7 +1226,22 @@ namespace rct3::scene
                 simulation::import_parties(scene.sim, scene.people, guests);
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
+                simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
+                    const auto file = install.find(ride.base.overlay_path + ".common.ovl");
+                    return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
+                });
+                simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                    const auto model = scene.models.find(park::model_key(o));
+                    return model != scene.models.end() && park::is_sight(model->second.category);
+                });
+                simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                    const auto model = scene.models.find(park::model_key(o));
+                    return model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
+                });
                 const auto staff = simulation::import_staff(scene.sim, scene.people);
+                for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
+                    if (upkeep.broken)
+                        scene.broken_rides.push_back(e);
                 for (ShownPerson& p : scene.shown_people)
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
@@ -1953,6 +1974,8 @@ namespace rct3::scene
                 // A long frame steps at most a few seconds, so the park catches up rather than stalls.
                 constexpr float kMostSeconds = 2;
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
+                scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
+                scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
@@ -1966,6 +1989,41 @@ namespace rct3::scene
                     scene.vandalism_seen = vandalism->broken;
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
+                }
+                // New thoughts go into the guests' saved thoughts, newest first, for their windows to show.
+                for (ShownPerson& p : scene.shown_people)
+                {
+                    const auto* thoughts = p.staff || p.guest == entt::null || p.saved >= scene.people.guests.size() ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
+                    if (thoughts == nullptr || thoughts->had == p.thoughts_seen)
+                        continue;
+                    auto& slots = scene.people.guests[p.saved].person.thoughts;
+                    for (std::size_t k = std::min<std::size_t>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
+                    {
+                        const simulation::Thought& t = thoughts->recent[k];
+                        const float newest = std::ranges::max(slots, { }, &save::Thought::time).time;
+                        const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
+                        std::shift_right(slots.begin(), slots.end(), 1);
+                        slots[0] = { .about = { about != nullptr ? about->saved : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
+                    }
+                    p.thoughts_seen = thoughts->had;
+                }
+                // Staff are paid from the park's cash, and the player hears of rides breaking down and being fixed.
+                if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
+                {
+                    if (scene.park.cash)
+                        *scene.park.cash -= payroll->paid - scene.wages_seen;
+                    scene.wages_seen = payroll->paid;
+                }
+                for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
+                {
+                    const auto told = std::ranges::find(scene.broken_rides, e);
+                    if (upkeep.broken == (told != scene.broken_rides.end()))
+                        continue;
+                    if (upkeep.broken)
+                        scene.broken_rides.push_back(e);
+                    else
+                        scene.broken_rides.erase(told);
+                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject_name = attraction.name });
                 }
             }
             profiling::section("Cars", [&] { place_cars(scene); });

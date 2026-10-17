@@ -38,6 +38,14 @@ namespace rct3::park
         Effect = 44,      ///< Fire, mist and smoke
     };
 
+    /// Whether guests stop to watch an item of `category`: animatronics, effects and path features.
+    /// shortcut: path features take in information points and speakers too, which nothing tells apart yet;
+    /// upgrade when the item's own data does.
+    [[nodiscard]] constexpr bool is_sight(std::uint32_t category) noexcept
+    {
+        return category == static_cast<std::uint32_t>(ItemCategory::Animatronic) || category == static_cast<std::uint32_t>(ItemCategory::PathFeature) || category == static_cast<std::uint32_t>(ItemCategory::Effect);
+    }
+
     /// Whether an item of `category` is a prop the player clicks on to look at by itself, rather than part of
     /// a path, a ride, the supports under them, or something lying about.
     [[nodiscard]] constexpr bool is_prop(std::uint32_t category) noexcept

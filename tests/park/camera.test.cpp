@@ -126,3 +126,22 @@ TEST_CASE("the pointer pushes the view only near the screen's edges, hardest at 
     CHECK(edge_push({ 0, 0 }, size, 10) == glm::vec2(-1, 1));
     CHECK(edge_push({ 0, 0 }, size, 0) == glm::vec2(0, 0));
 }
+
+TEST_CASE("a wheel zoom rolls in over its time, most of it early, all of it in the end")
+{
+    float pending = 1;
+    float taken = 0;
+    for (int frame = 0; frame < 15; ++frame) // A quarter second at 60 frames a second
+    {
+        const float step = zoom_step(pending, 1.0f / 60, 0.25f);
+        if (frame == 0)
+            CHECK(step == doctest::Approx(0.18f).epsilon(0.05));
+        pending -= step;
+        taken += step;
+    }
+    CHECK(taken == doctest::Approx(0.95f).epsilon(0.01));
+    for (int frame = 0; frame < 120 && pending != 0; ++frame)
+        pending -= zoom_step(pending, 1.0f / 60, 0.25f);
+    CHECK(pending == 0);
+    CHECK(zoom_step(-2, 1, 0) == -2);
+}

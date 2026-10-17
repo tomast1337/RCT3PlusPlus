@@ -141,8 +141,8 @@ namespace rct3::render::vulkan
         throw std::runtime_error("no suitable Vulkan memory type");
     }
 
-    // A buffer in host-visible, coherent memory. Throws; destroys what it made first.
-    VulkanDevice::Buffer VulkanDevice::make_buffer(VkDeviceSize size, VkBufferUsageFlags usage)
+    // A buffer in `memory`, host-visible and coherent unless asked otherwise. Throws; destroys what it made first.
+    VulkanDevice::Buffer VulkanDevice::make_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory)
     {
         Buffer b;
         try
@@ -157,7 +157,7 @@ namespace rct3::render::vulkan
             vkGetBufferMemoryRequirements(device_, b.buffer, &needs);
             VkMemoryAllocateInfo alloc { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
             alloc.allocationSize = needs.size;
-            alloc.memoryTypeIndex = find_memory_type(needs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            alloc.memoryTypeIndex = find_memory_type(needs.memoryTypeBits, memory);
             check(vkAllocateMemory(device_, &alloc, nullptr, &b.memory), "vkAllocateMemory");
             check(vkBindBufferMemory(device_, b.buffer, b.memory, 0), "vkBindBufferMemory");
         }
@@ -191,17 +191,28 @@ namespace rct3::render::vulkan
     {
         if (desc.data.empty())
             return std::unexpected("empty buffer");
+        // Kept in the GPU's own memory: every pass reads the park's meshes, and reading them across the bus
+        // each time held the frame up.
         Buffer b;
+        Buffer staging;
         try
         {
-            b = make_buffer(desc.data.size(), desc.usage == BufferUsage::Index ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+            staging = make_buffer(desc.data.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
             void* mapped = nullptr;
-            check(vkMapMemory(device_, b.memory, 0, desc.data.size(), 0, &mapped), "vkMapMemory");
+            check(vkMapMemory(device_, staging.memory, 0, desc.data.size(), 0, &mapped), "vkMapMemory");
             std::memcpy(mapped, desc.data.data(), desc.data.size());
-            vkUnmapMemory(device_, b.memory);
+            vkUnmapMemory(device_, staging.memory);
+            b = make_buffer(desc.data.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | (desc.usage == BufferUsage::Index ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            submit_once([&](VkCommandBuffer cmd) {
+                const VkBufferCopy region { 0, 0, desc.data.size() };
+                vkCmdCopyBuffer(cmd, staging.buffer, b.buffer, 1, &region);
+            });
+            destroy(staging);
+            staging = { };
         }
         catch (const std::exception& e)
         {
+            destroy(staging);
             destroy(b);
             return std::unexpected(e.what());
         }

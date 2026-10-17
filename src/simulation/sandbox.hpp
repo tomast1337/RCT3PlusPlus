@@ -59,6 +59,12 @@ namespace rct3::simulation
         entt::entity flat_ride(std::string name, glm::ivec2 entrance, std::int64_t price, const RideSetup& setup = { }, int level = 0);
         /// A guest standing on the path tile `at`, wandering.
         entt::entity guest(glm::ivec2 at, const GuestSetup& setup = { }, int level = 0);
+        /// A bench, sign or bin standing on the path tile `at`; a bin holds `capacity` pieces of rubbish.
+        entt::entity item(PathItemKind kind, glm::ivec2 at, float capacity = 40, int level = 0);
+        /// A member of staff on the path tile `at`, walking the paths at their work.
+        entt::entity staff(StaffRole role, glm::ivec2 at, int level = 0);
+        /// `count` pieces of litter lying on the path tile `at`.
+        Sandbox& litter(glm::ivec2 at, int count = 1, int level = 0);
         /// Makes `members` a party led by the first; the others follow.
         entt::entity party(const std::vector<entt::entity>& members);
 

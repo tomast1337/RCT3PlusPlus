@@ -200,6 +200,7 @@ namespace
         kGroundSurface,
         kBin,
         kSign,
+        kBench,
     };
 
     Attr u8a(const char* n)
@@ -260,6 +261,7 @@ namespace
             { "QueueTypeGroundSurface", { colours("Colours"), refa("QueueType") } },
             { "LitterBinBehaviour", { refa("\"SceneryItem\""), f32a("Capacity"), f32a("Contents"), f32a("LastEmptied") } },
             { "SignBehaviour", { refa("\"SceneryItem\""), i32a("SignType"), { "UserText", "string", 0, { } } } },
+            { "ParkBenchBehaviour", { refa("\"SceneryItem\"") } },
         };
     }
 
@@ -797,6 +799,7 @@ TEST_CASE("load_world: litter bins and signs keep the object they belong to")
             { kBin, 400, Bytes().u64(300).f32(2.0f).f32(0.5f).f32(-1.0f) },
             { kBin, 401, Bytes().u64(301).f32(2.0f).f32(0.0f).f32(1234.5f) },
             { kSign, 402, Bytes().u64(301).i32(0).text(u"Welcome") },
+            { kBench, 403, Bytes().u64(300) },
         });
     REQUIRE(l->world);
     REQUIRE(l->world->bins.size() == 2);
@@ -808,6 +811,7 @@ TEST_CASE("load_world: litter bins and signs keep the object they belong to")
     REQUIRE(l->world->signs.size() == 1);
     CHECK(l->world->signs[0].object_ref == 301);
     CHECK(l->world->signs[0].text == "Welcome");
+    CHECK(l->world->benches == std::vector<std::uint64_t> { 300 });
 }
 
 TEST_CASE("load_world: dangling references resolve to nothing, not errors")

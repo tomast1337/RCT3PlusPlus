@@ -11,6 +11,7 @@
 // and colours) comes as the page's controls.
 #pragma once
 
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "ui/money_text.hpp"
 #include "ui/screens/info_panel.hpp"
@@ -18,6 +19,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -107,7 +109,18 @@ namespace rct3::ui
         std::vector<std::size_t> colours { };
         /// While the park runs; the pages show these over what the save kept.
         std::optional<RideFlow> flow { };
+        /// The park's guests, to tell how many the ride suits.
+        std::span<const save::Guest> guests { };
     };
+
+    struct GuestsSuited
+    {
+        std::size_t suited = 0; ///< Whose preferred intensity takes in the ride's
+        std::size_t in_park = 0;
+    };
+
+    /// How many of the guests in the park like rides of `intensity` (as saved, about 0 to 10).
+    [[nodiscard]] GuestsSuited guests_suited(float intensity, std::span<const save::Guest> guests);
 
     /// Ids of the controls on an attraction's pages (InfoControl::id).
     enum class AttractionControl : std::uint8_t

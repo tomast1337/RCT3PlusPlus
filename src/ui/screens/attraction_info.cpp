@@ -304,7 +304,7 @@ namespace rct3::ui
             return ride.kind == save::RideKind::Tracked && ride.mode != Boat && ride.mode != Race && ride.mode != MiniGolf && ride.mode != Aquarium;
         }
 
-        void tests(InfoPage& page, const save::Ride& ride, std::size_t section, const StringTable& strings, const InfoUnits& units)
+        void tests(InfoPage& page, const save::Ride& ride, std::span<const save::Guest> guests, std::size_t section, const StringTable& strings, const InfoUnits& units)
         {
             if (measured(ride))
             {
@@ -351,6 +351,8 @@ namespace rct3::ui
             {
                 add(page, strings, "AttractionResultsDialogLabel_Excitement", rating(ride.assessment.excitement, strings));
                 add(page, strings, "AttractionResultsDialogLabel_Intensity", rating(ride.assessment.intensity, strings));
+                if (const GuestsSuited s = guests_suited(ride.assessment.intensity, guests); s.in_park > 0)
+                    add(page, strings, "Rct3pp_GuestsSuited", ascii(std::format("{} / {}", s.suited, s.in_park)));
                 add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(ride.assessment.nausea, strings));
             }
         }
@@ -570,6 +572,19 @@ namespace rct3::ui
         return text(strings, std::format("{}{}", kRatingWord, step - kRatingSteps.begin()));
     }
 
+    GuestsSuited guests_suited(float intensity, std::span<const save::Guest> guests)
+    {
+        GuestsSuited s;
+        for (const save::Guest& g : guests)
+        {
+            if (!g.in_park)
+                continue;
+            ++s.in_park;
+            s.suited += g.ride_preference.min <= intensity && intensity <= g.ride_preference.max;
+        }
+        return s;
+    }
+
     InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, std::size_t section)
     {
         InfoPage page;
@@ -595,7 +610,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Tests:
                 if (f.ride)
-                    tests(page, *f.ride, section, strings, units);
+                    tests(page, *f.ride, f.guests, section, strings, units);
                 break;
             case AttractionTab::Vehicles:
                 if (f.ride)

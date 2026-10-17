@@ -34,4 +34,9 @@ namespace rct3::park
     /// from it, then `now`.
     [[nodiscard]] glm::vec3 steady_sun(glm::vec3 kept, glm::vec3 now, float step);
 
+    /// How far the sun has gone from `kept` (as steady_sun keeps it) towards its next step: 0 at `kept`, 1 a
+    /// whole `step` radians on. Shadows drawn at the last two kept directions mix by it, the older weighing one
+    /// less this, so they move smoothly and arrive at each drawing just as the next is made.
+    [[nodiscard]] float sun_step_share(glm::vec3 kept, glm::vec3 now, float step);
+
 } // namespace rct3::park

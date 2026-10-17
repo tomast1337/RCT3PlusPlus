@@ -58,6 +58,23 @@ structure. Anything borrowed, even one constant, carries a comment that names th
 
 The same goes for any other project: credit at the place of use, and only under a compatible licence.
 
+## Values only the program knows
+
+Some numbers are not in any data or save file, only inside the game's program: speeds, rates, thresholds,
+timings. Treat them as unknown. Do not take them from the executable, even as a check.
+
+- Measure the behaviour in the running game instead: an experiment anyone can repeat (build this, time
+  that, count those), and approximate the value from the result.
+- Or design our own value, when measuring is not practical. Matching the original exactly is not a goal.
+- Mark it in the code, saying where it came from:
+
+```cpp
+constexpr float kQueueStep = 0.8f; ///< Approximation: timed guests shuffling along a 20-tile queue in-game
+constexpr float kHuddleRadius = 0.7f; ///< Our own value
+```
+
+Values read from data or save files are fine to use; say which file they come from.
+
 ## Where game-derived material goes
 
 Long-term private notes live in a workspace outside this repository, not here. `local/` at the repository

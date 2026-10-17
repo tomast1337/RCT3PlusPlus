@@ -32,8 +32,8 @@
 namespace rct3::park
 {
 
-    /// The tallest column built, in levels.
-    inline constexpr std::int32_t kTallestColumn = 228;
+    /// The tallest column built, in levels. Our own limit.
+    inline constexpr std::int32_t kTallestColumn = 240;
 
     /// The tile under each square of `object`'s footprint, row by row like the footprint's squares.
     [[nodiscard]] std::vector<std::pair<int, int>> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint);

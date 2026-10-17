@@ -37,7 +37,7 @@ namespace rct3::ui
     {
         inline constexpr float kWidth = 652;
         inline constexpr float kHeight = 100;
-        inline constexpr float kStripLeft = 30; ///< Where the strip starts; the ring panel covers the rest
+        inline constexpr float kStripLeft = 32; ///< Where the strip starts; the ring panel covers the rest
         inline constexpr float kStripRight = 648;
         inline constexpr float kRowLeft = 40; ///< Of the first curve and slope button
         inline constexpr float kStep = 30;    ///< Between buttons of a row
@@ -55,9 +55,9 @@ namespace rct3::ui
         inline constexpr float kCostTop = 81;
         inline constexpr float kLabelWidth = 220;
         inline constexpr float kLabelHeight = 15;
-        inline constexpr Point kDemolishAt { 325, 73 };
-        inline constexpr Point kDemolishSize { 38, 26 };
-        inline constexpr float kNamedLeft = 413;
+        inline constexpr Point kDemolishAt { 322, 72 };
+        inline constexpr Point kDemolishSize { 40, 26 };
+        inline constexpr float kNamedLeft = 410;
         inline constexpr float kNamedWidth = 205;
         inline constexpr std::size_t kNamedRows = 4;
         inline constexpr std::size_t kNamedColumns = 1; ///< One a row: two would cut the longer names

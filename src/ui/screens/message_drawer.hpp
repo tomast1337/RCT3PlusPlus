@@ -47,11 +47,11 @@ namespace rct3::ui
 
     namespace message_drawer
     {
-        inline constexpr float kWidth = 474;
-        inline constexpr float kLeft = -255;      ///< From the middle of the screen to the drawer's left edge
+        inline constexpr float kWidth = 480;
+        inline constexpr float kLeft = -258;      ///< From the middle of the screen to the drawer's left edge
         inline constexpr float kTop = 4;          ///< From the top of the screen; the top never moves
-        inline constexpr float kClosed = 20;      ///< Height when closed, all of it behind the bar
-        inline constexpr float kOpen = 354;       ///< Height when fully open
+        inline constexpr float kClosed = 22;      ///< Height when closed, all of it behind the bar
+        inline constexpr float kOpen = 360;       ///< Height when fully open
         inline constexpr float kSlideSpeed = 200; ///< Units a second it slides by itself
         inline constexpr float kHoldSeconds = 8;  ///< It stays down this long to show new messages
     } // namespace message_drawer

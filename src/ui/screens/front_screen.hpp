@@ -35,7 +35,6 @@ namespace rct3::ui
         inline constexpr std::string_view kBandTopSkin = "FrontScreen_TopLeft";
         inline constexpr std::string_view kBandBottomSkin = "FrontScreen_BottomLeft";
         inline constexpr std::string_view kStripRightSkin = "FrontScreen_BottomRight";
-        inline constexpr std::array<std::string_view, 5> kArcSkins = { "FrontScreen_OverCircle_P1", "FrontScreen_OverCircle_P2", "FrontScreen_OverCircle_P3", "FrontScreen_OverCircle_P4", "FrontScreen_OverCircle_P5" };
         inline constexpr std::string_view kPatchSkin = "FrontScreen_IconCircle_Back";
         inline constexpr std::string_view kBandEndSkin = "FrontScreen_Triangle";
     } // namespace front_screen

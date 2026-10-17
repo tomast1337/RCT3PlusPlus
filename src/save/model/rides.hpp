@@ -85,76 +85,6 @@ namespace rct3::save
         BeingFixed = 4,
     };
 
-    /// Train state machine, 0..70 in known files. Values that are not named here (for example the lift helper
-    /// states, which are numbered but not individually named) are still valid values of the type.
-    enum class TrainState : std::int32_t
-    {
-        WaitingToLoad = 0,
-        Loading = 1,
-        ReadyToDepart = 2,
-        RestraintsClosing = 3,
-        DoorsClosing = 4,
-        WaitingToDepart = 5,
-        WaitingToDepartSyncTrains = 6,
-        WaitingToDepartSyncStations = 7,
-        WaitingForCableLiftAtStation = 8,
-        EngagingCableLift = 9,
-        AscendingCableLift = 10,
-        DisengagingCableLift = 11,
-        WaitingToGoAtCableLift = 12,
-        TravellingToNextStation = 13,
-        WaitingAtLiftHill = 14,
-        StoppingAtBlockBrake = 15,
-        WaitingAtBlockBrake = 16,
-        WaitingForCableLiftAtBlockBrake = 17,
-        WaitingAtTop = 18,
-        StoppingOnHoldingPiece = 19,
-        StoppedOnHoldingPiece = 20,
-        WaitingOnHoldingPiece = 21,
-        StoppingAtStation = 22,
-        StoppedAtStation = 23,
-        AligningAtStation = 24,
-        WaitingToUnload = 25,
-        WaitingToUnloadSyncTrains = 26,
-        DoorsOpening = 27,
-        RestraintsOpening = 28,
-        Unloading = 29,
-        // 30..44: helper-train states of the thrill lift and cable lift mechanisms
-        Crashing = 45,
-        OffTrack = 46,
-        OffTrackReturning = 47,
-        OffTrackAligning = 48,
-        OffTrackEntering = 49,
-        ThrillLiftEntering = 50,
-        Crashed = 51,
-        SlowingAtBlockBrake = 52,
-        // 53..66: reverse cable lift counterparts and sync/waiting variants
-        FillingWithWater = 67,
-        HeldInvisibleOffTrack = 68,
-        SlowingForObstruction = 70,
-    };
-
-    enum class CarState : std::int32_t
-    {
-        StartingTravel = 0,
-        Travelling = 1,
-        Slowing = 2,
-        Aligning = 3,
-        AligningSpinSwing = 4,
-        Aligned = 5,
-        Crashing = 6,
-        OffTrack = 7,
-        RestraintsClosing = 8,
-        RestraintsClosed = 9,
-        DoorsClosing = 10,
-        DoorsClosed = 11,
-        RestraintsOpening = 12,
-        RestraintsOpen = 13,
-        DoorsOpening = 14,
-        DoorsOpen = 15,
-        HeldInvisibleOffTrack = 16,
-    };
-
     /// What kind of attraction object a Ride was loaded from.
     enum class RideKind : std::uint8_t
     {
@@ -409,7 +339,7 @@ namespace rct3::save
         std::int32_t car_count = 0; ///< Cars in the train as stored on the car
         /// Which of the (up to six) car designs of the train asset this car uses. Link cars use a distinct slot.
         std::int32_t design_slot = 0;
-        CarState state = CarState::StartingTravel;
+        std::int32_t state = 0; ///< Car state as stored; the numbers are not given meanings yet
         std::int32_t passengers = 0;
         float distance = 0; ///< Metres along the track
         float speed = 0;    ///< m/s
@@ -431,7 +361,7 @@ namespace rct3::save
         ObjectId id = 0;
         ObjectId ride = 0;      ///< Back reference as stored
         std::int32_t index = 0; ///< Index as stored; equals the position in Ride::trains in sound files
-        TrainState state = TrainState::WaitingToLoad;
+        std::int32_t state = 0; ///< Train state as stored; the numbers are not given meanings yet
         float state_time = 0; ///< Seconds in the current state
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;

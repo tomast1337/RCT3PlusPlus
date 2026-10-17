@@ -49,6 +49,8 @@ namespace rct3::ui
         constexpr std::string_view kMountainsHelp = "Rct3pp_MountainsHelp";
         constexpr std::string_view kBlendBand = "Rct3pp_DetailBlendBand";
         constexpr std::string_view kBlendBandHelp = "Rct3pp_DetailBlendBandHelp";
+        constexpr std::string_view kBlendShadows = "Rct3pp_BlendShadows";
+        constexpr std::string_view kBlendShadowsHelp = "Rct3pp_BlendShadowsHelp";
 
         constexpr std::string_view kAutoDetect = "AutoDetectLabel";
         constexpr std::string_view kAutoDetectTip = "GameOptionsDialog_GraphicsDetailLevel";
@@ -392,6 +394,8 @@ namespace rct3::ui
             samples.push_back(str(strings, "GameOptionsDialog_AntiAliasLevel") + u" " + ascii(std::to_string(level)));
         rows.choice(O::AntiAliasing, str(strings, "GameOptionsDialog_AntiAlias"), std::move(samples));
         rows.choice(O::Shadows, str(strings, "GameOptionsDialog_Shadows"), items(strings, { "GameOptionsDialog_ShadowsTypeNone", "GameOptionsDialog_ShadowsTypeStatic", "GameOptionsDialog_ShadowsTypeDynamic" }));
+        rows.tick(O::BlendShadows, str(strings, kBlendShadows), str(strings, kBlendShadowsHelp));
+        rows.indent();
         rows.section();
         rows.tick(O::ShowDetailLevels, str(strings, "GameOptionsDialog_LodOptions"), str(strings, "GameOptionsDialog_LodOptionsHelp"));
         const OptionIs details { O::ShowDetailLevels, 1 };

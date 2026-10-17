@@ -12,8 +12,11 @@
 #include <cstdint>
 #include <functional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+struct ImGui_ImplVulkan_PipelineInfo;
 
 namespace rct3::render::vulkan
 {
@@ -58,6 +61,8 @@ namespace rct3::render::vulkan
             wireframe_ = on;
         }
         void end_frame() override;
+        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override;
+        void set_samples(std::uint32_t samples) override;
         [[nodiscard]] FrameStats stats() const override
         {
             return last_stats_;
@@ -107,6 +112,13 @@ namespace rct3::render::vulkan
             VkPipeline wire = VK_NULL_HANDLE; ///< The same, outlining triangles; none without line fill
             Topology topology = Topology::Triangles;
             Shader shader = Shader::VertexColor;
+            /// How it was asked for, its label dropped and its attributes kept in `attributes`, to make it again
+            /// for the screen drawn with more samples.
+            PipelineDesc desc;
+            std::vector<VertexAttribute> attributes;
+            VkPipeline multi = VK_NULL_HANDLE; ///< For the screen drawn with `multi_samples`; made when first drawn
+            VkPipeline multi_wire = VK_NULL_HANDLE;
+            std::uint32_t multi_samples = 0;
         };
 
         // Objects released once the frame slot that last used them has finished on the GPU.
@@ -170,6 +182,11 @@ namespace rct3::render::vulkan
         void submit_once(const std::function<void(VkCommandBuffer)>& record);
         void upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height);
         void make_depth_readable(Texture& texture, std::uint32_t id);
+        /// `desc` as a pipeline drawing with `samples` per pixel, and the same outlining triangles where it can.
+        [[nodiscard]] std::pair<VkPipeline, VkPipeline> build_pipeline(const PipelineDesc& desc, VkSampleCountFlagBits samples);
+        void create_multisample();
+        [[nodiscard]] ImGui_ImplVulkan_PipelineInfo ui_pipeline_info() const;
+        void destroy_multisample();
 
         DeviceConfig config_;
         State state_ = State::Off;
@@ -195,6 +212,17 @@ namespace rct3::render::vulkan
         VkImage depth_image_ = VK_NULL_HANDLE;
         VkDeviceMemory depth_memory_ = VK_NULL_HANDLE;
         VkImageView depth_view_ = VK_NULL_HANDLE;
+
+        // With more than one sample, the screen's passes draw into these and resolve into the swapchain image and
+        // depth_view_ as each ends, so later passes and copy_screen find the screen as without.
+        std::uint32_t samples_ = 1;
+        std::uint32_t pass_samples_ = 1; ///< Of the open pass
+        VkImage multi_color_image_ = VK_NULL_HANDLE;
+        VkDeviceMemory multi_color_memory_ = VK_NULL_HANDLE;
+        VkImageView multi_color_view_ = VK_NULL_HANDLE;
+        VkImage multi_depth_image_ = VK_NULL_HANDLE;
+        VkDeviceMemory multi_depth_memory_ = VK_NULL_HANDLE;
+        VkImageView multi_depth_view_ = VK_NULL_HANDLE;
 
         // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag), sets 2 on the extra textures
         // when the device can bind that many sets.

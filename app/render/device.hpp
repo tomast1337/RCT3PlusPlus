@@ -31,6 +31,7 @@
 #include <expected>
 #include <string>
 #include <string_view>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -117,6 +118,13 @@ namespace rct3::render
         virtual void end_frame() = 0;
         /// For debugging: while on, draws of triangles outline them instead of filling them, where the device can.
         virtual void set_wireframe(bool on) = 0;
+
+        /// The samples per pixel above 1 the screen can be drawn with to smooth edges, fewest first; none when
+        /// the device cannot.
+        [[nodiscard]] virtual std::vector<std::uint32_t> sample_levels() const = 0;
+        /// Draws the screen's passes with `samples` per pixel from the next frame: 1 for none, else one of
+        /// sample_levels. Passes into targets keep one. Only between frames.
+        virtual void set_samples(std::uint32_t samples) = 0;
 
         /// Counters of the last finished frame.
         [[nodiscard]] virtual FrameStats stats() const = 0;

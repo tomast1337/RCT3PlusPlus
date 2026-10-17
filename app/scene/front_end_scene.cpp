@@ -74,6 +74,7 @@ namespace rct3::scene
         front.choices.language = std::move(setup.language);
         front.choices.screen_sizes = std::move(setup.screen_sizes);
         front.choices.screen_size = setup.screen_size;
+        front.choices.anti_aliasing_levels = std::move(setup.anti_aliasing_levels);
         front.choices.keys = std::move(setup.keys);
         front.choices.inert = config::inert_options();
         front.choices.background_music = music_files(install);

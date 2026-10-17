@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_models.hpp"
 
+#include "park/terrain_mesh.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <doctest/doctest.h>
@@ -39,4 +41,6 @@ TEST_CASE("the water picture is see-through, tiles and is never recoloured")
         seam = std::max(seam, std::abs(at(0, y) - at(water.width - 1, y)));
     }
     CHECK(seam <= inside);
+    // In the lakes' colour at its darkest.
+    CHECK(water.palette[0].b == static_cast<std::uint8_t>(kWaterColour.b * 255));
 }

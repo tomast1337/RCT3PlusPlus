@@ -264,7 +264,30 @@ namespace rct3::parkfile
             }
         };
 
-        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet>;
+        template<> struct Stored<simulation::Departure>
+        {
+            static constexpr std::string_view kTag = "DPRT";
+            static constexpr std::uint32_t kVersion = 1;
+            static constexpr std::size_t kMinRecord = 4 + 1 + 8;
+            static void write(Writer& w, const simulation::Departure& d)
+            {
+                w.number(std::to_underlying(d.wait_for));
+                w.number(d.min_wait);
+                w.number(d.max_wait);
+            }
+            static std::expected<simulation::Departure, std::string> read(Reader& r)
+            {
+                const auto wait_for = r.number<std::uint8_t>();
+                if (wait_for > std::to_underlying(simulation::LoadWait::Any))
+                    return std::unexpected(std::format("unknown load to wait for {}", wait_for));
+                simulation::Departure d { .wait_for = static_cast<simulation::LoadWait>(wait_for) };
+                d.min_wait = r.number<std::int32_t>();
+                d.max_wait = r.number<std::int32_t>();
+                return d;
+            }
+        };
+
+        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet, simulation::Departure>;
 
         std::uint32_t id(entt::entity e)
         {

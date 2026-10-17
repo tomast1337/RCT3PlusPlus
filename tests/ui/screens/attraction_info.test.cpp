@@ -183,13 +183,16 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     CHECK(mode.heading == u"Back and forth");
     CHECK(mode.sections.size() == 2);
     const InfoPage waits = attraction_page(AttractionTab::Mode, f, s, { }, 1);
-    REQUIRE(waits.controls.size() == 4);
-    CHECK(waits.controls[0].label == u"Least wait");
-    CHECK(waits.controls[0].value == 1);
-    CHECK(waits.controls[1].value == 12);
-    CHECK(waits.controls[1].enabled);
-    CHECK(waits.controls[2].value == 0); // No longest wait: unticked, its seconds greyed
-    CHECK_FALSE(waits.controls[3].enabled);
+    REQUIRE(waits.controls.size() == 5);
+    CHECK(waits.controls[0].id == control_id(AttractionControl::WaitFor));
+    CHECK(waits.controls[0].items.size() == 5);
+    CHECK(waits.controls[0].value == 4); // Any load, the list's last
+    CHECK(waits.controls[1].label == u"Least wait");
+    CHECK(waits.controls[1].value == 1);
+    CHECK(waits.controls[2].value == 12);
+    CHECK(waits.controls[2].enabled);
+    CHECK(waits.controls[3].value == 0); // No longest wait: unticked, its seconds greyed
+    CHECK_FALSE(waits.controls[4].enabled);
 
     CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
     ride.graphs.speed = { 1, 2, 3 };

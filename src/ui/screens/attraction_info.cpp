@@ -81,6 +81,9 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 7> kInspectionIntervals = {
             "RideInspectionIntervalEvery10Mins", "RideInspectionIntervalEvery20Mins", "RideInspectionIntervalEvery30Mins", "RideInspectionIntervalEvery45Mins", "RideInspectionIntervalEveryHour", "RideInspectionIntervalEvery2Hours", "RideInspectionIntervalNever",
         };
+        /// The loads a train can wait for, in the order of the operating page's list, which is the order the
+        /// save numbers them in.
+        constexpr std::array<std::string_view, 5> kLoads = { "RideOpModeDialog_FullLoad", "RideOpModeDialog_3_4Load", "RideOpModeDialog_1_2Load", "RideOpModeDialog_1_4Load", "RideOpModeDialog_AnyLoad" };
         constexpr std::array<std::string_view, 2> kModeSections = { "AttractionDetails_RideOpModeHelp", "RideOpModeDialog_WaitFor" };
         constexpr std::string_view kSoldName = "%NAME%";
 
@@ -398,7 +401,15 @@ namespace rct3::ui
             page.section = std::min(section, kModeSections.size() - 1);
             if (page.section == 1)
             {
-                // The page has room for the four rows only under the sections.
+                // The page has room for these five rows only under the sections.
+                InfoControl c;
+                c.id = control_id(AttractionControl::WaitFor);
+                c.kind = InfoControlKind::Choice;
+                c.label = text(strings, "RideOpModeDialog_WaitFor");
+                for (const std::string_view key : kLoads)
+                    c.items.push_back(text(strings, key));
+                c.value = o.wait_for_load >= 0 && std::cmp_less(o.wait_for_load, kLoads.size()) ? o.wait_for_load : -1;
+                page.controls.push_back(std::move(c));
                 wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, text(strings, "RideOpModeDialog_MinWaitTime"), o.min_wait);
                 wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, text(strings, "RideOpModeDialog_MaxWaitTime"), o.max_wait);
                 return;

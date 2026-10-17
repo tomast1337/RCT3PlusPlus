@@ -1545,6 +1545,12 @@ namespace rct3::scene
                 ride->options.min_wait = change.value;
             else if (change.id == ui::control_id(MaxWait))
                 ride->options.max_wait = change.value;
+            else if (change.id == ui::control_id(WaitFor))
+                ride->options.wait_for_load = change.value;
+            // The running ride leaves as its settings now say.
+            if (ride != nullptr && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
+                if (auto* departure = scene.sim.registry.try_get<simulation::Departure>(scene.ride_entities[ref.index]))
+                    *departure = simulation::departure_of(ride->options);
         }
 
         /// Lets the people's meshes be changed: the build beside the frame reads them, so it is dropped first,

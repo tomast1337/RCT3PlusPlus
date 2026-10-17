@@ -531,6 +531,18 @@ namespace rct3::simulation
                 }
                 riders.clear();
             };
+            // Riders an hour over the time since the last departure, smoothed over the last few.
+            if (ride.since_departure >= 0)
+                ride.since_departure += dt;
+            const auto depart = [&](std::size_t riding) {
+                if (ride.since_departure > 0)
+                {
+                    const float rate = static_cast<float>(riding) * 3600 / ride.since_departure;
+                    ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kFlowSmoothing) : rate;
+                }
+                ride.since_departure = 0;
+                ride.loading = 0;
+            };
             // A cycle ends when the ride's time is up, or a train has come round.
             auto* fleet = r.try_get<Trains>(e);
             std::optional<std::size_t> loading; // The train standing at the start, ready to load
@@ -580,7 +592,7 @@ namespace rct3::simulation
                 const auto* departure = r.try_get<Departure>(e);
                 if (departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
                 {
-                    ride.loading = 0;
+                    depart(riders->size());
                     if (fleet != nullptr)
                         fleet->trains[*loading].running = true;
                     else
@@ -597,7 +609,7 @@ namespace rct3::simulation
                     if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
                     {
                         fleet->trains[*loading].running = true;
-                        ride.loading = 0;
+                        depart(fleet->riders[*loading].size());
                     }
             }
         }

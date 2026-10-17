@@ -45,6 +45,11 @@ namespace rct3::simulation
     /// train in front; endless for a lone train.
     [[nodiscard]] float room_ahead(std::span<const Coaster> trains, std::size_t t);
 
+    struct Departure;
+    /// Whether a train (or a ride's next go) with `riders` of `capacity` seats aboard leaves after `waited`
+    /// seconds of loading, as `departure` says.
+    [[nodiscard]] bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited);
+
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);
 

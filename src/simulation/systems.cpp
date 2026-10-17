@@ -198,6 +198,17 @@ namespace rct3::simulation
         pose.was_heading = pose.heading;
     }
 
+    bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
+    {
+        if (departure.max_wait >= 0 && waited >= static_cast<float>(departure.max_wait))
+            return true;
+        if (departure.min_wait >= 0 && waited < static_cast<float>(departure.min_wait))
+            return false;
+        // Quarters of the seats it waits for; any load is one rider.
+        const auto quarters = 4 - static_cast<std::size_t>(departure.wait_for);
+        return riders >= std::max<std::size_t>((capacity * quarters + 3) / 4, 1);
+    }
+
     float room_ahead(std::span<const Coaster> trains, std::size_t t)
     {
         const Coaster& train = trains[t];
@@ -536,13 +547,15 @@ namespace rct3::simulation
             }
             else if (ride.timer > 0 && --ride.timer == 0)
                 unload(ride.riders);
-            // Loads once the first in line has reached the front.
+            // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
+            // its departure settings say.
             // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
             const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along < 0.5f);
-            if ((fleet != nullptr ? loading.has_value() : ride.timer == 0) && at_front)
+            const bool ready = fleet != nullptr ? loading.has_value() : ride.timer == 0;
+            auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*loading] : &ride.riders;
+            if (riders != nullptr && at_front && riders->size() < ride.capacity)
             {
-                auto& riders = fleet != nullptr ? fleet->riders[*loading] : ride.riders;
-                const std::size_t boarding = std::min<std::size_t>(ride.capacity, ride.queue.size());
+                const std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), ride.queue.size());
                 for (std::size_t i = 0; i < boarding; ++i)
                 {
                     const entt::entity guest = ride.queue[i];
@@ -558,13 +571,23 @@ namespace rct3::simulation
                     attraction.income += attraction.price;
                     ++attraction.customers;
                     r.get<Errand>(guest).kind = ErrandKind::Riding;
-                    riders.push_back(guest);
+                    riders->push_back(guest);
                 }
                 ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
-                if (!riders.empty() && fleet != nullptr)
-                    fleet->trains[*loading].running = true;
-                else if (!riders.empty())
-                    ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
+            }
+            if (riders != nullptr)
+            {
+                const auto* departure = r.try_get<Departure>(e);
+                if (departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
+                {
+                    ride.loading = 0;
+                    if (fleet != nullptr)
+                        fleet->trains[*loading].running = true;
+                    else
+                        ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
+                }
+                else
+                    ride.loading += dt;
             }
             // A train left standing at the start goes, empty if need be, once another is held up behind it (within
             // a centimetre: positions far round a long track lose that much to rounding).
@@ -572,7 +595,10 @@ namespace rct3::simulation
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                     if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
+                    {
                         fleet->trains[*loading].running = true;
+                        ride.loading = 0;
+                    }
             }
         }
 

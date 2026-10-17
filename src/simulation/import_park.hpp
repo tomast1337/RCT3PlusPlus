@@ -50,6 +50,9 @@ namespace rct3::simulation
     /// has a station; shuttles, slides and open water are left to their timing.
     [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
 
+    /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
+    [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
+
     /// `ride`'s trains on `coaster`'s track, each where the park kept it.
     [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::Ride& ride);
 
@@ -58,7 +61,8 @@ namespace rct3::simulation
     /// `rides.rides`. A coaster with its track in `coasters` at its place runs its train round it; one without
     /// is timed by its last test lap. Either carries all its seats. Excitement, intensity and nausea are the
     /// saved ratings; for a ride the park has not rated, those of its last test or of a test run on its track
-    /// (simulation/ratings.hpp). Call after import_paths.
+    /// (simulation/ratings.hpp). Tracked rides leave the station as their operating settings say. Call after
+    /// import_paths.
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { });
 
     /// Sets every guest standing on a path walking; returns how many. Call after import_paths.

@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos, 60 fps
@@ -16,6 +16,7 @@
 //   --no-audio        no sound at all; kept by --write-settings
 //   --audio           sound for this run, even when the settings turn it off
 //   --park FILE       load this park save straight away
+//   --no-simulate     show parks as saved, standing still, without running the simulation
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
@@ -75,7 +76,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -352,7 +353,7 @@ int main(int argc, char** argv)
     std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::uint64_t> seed;
-    bool simulate = false;                        ///< The park starts with the simulation running
+    bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
     for (int i = 1; i < argc; ++i)
     {
@@ -376,9 +377,9 @@ int main(int argc, char** argv)
         {
             park_file = argv[++i];
         }
-        else if (std::strcmp(argv[i], "--simulate") == 0)
+        else if (std::strcmp(argv[i], "--no-simulate") == 0)
         {
-            simulate = true;
+            simulate = false;
         }
         else if (std::strcmp(argv[i], "--profile") == 0 && i + 1 < argc)
         {

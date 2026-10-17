@@ -59,6 +59,9 @@ namespace rct3::park
     /// Brought `factor` times as far, within the limits; unless `free`, which allows from the near plane to the
     /// far one.
     [[nodiscard]] ParkCamera zoomed(ParkCamera camera, float factor, bool free = false);
+    /// How much of a zoom still to come to take this frame, `elapsed` seconds long, so it eases out: each
+    /// `seconds` takes all but a twentieth of what is left.
+    [[nodiscard]] float zoom_step(float pending, float elapsed, float seconds);
     /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
     /// box fills a square view without leaving it.
     [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);

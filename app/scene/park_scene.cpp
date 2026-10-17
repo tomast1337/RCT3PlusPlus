@@ -95,13 +95,14 @@ namespace rct3::scene
         constexpr std::string_view kNo = "SMB_Label_No";
 
         // How far the controls move the camera.
-        constexpr float kDragPan = 0.0025f; ///< Per pixel, times the distance
-        constexpr float kDragTurn = 0.006f; ///< Radians per pixel
-        constexpr float kKeyPan = 0.8f;     ///< Per second, times the distance
-        constexpr float kEdgeBand = 12;     ///< Interface units in from a screen edge where the pointer pushes
-        constexpr float kWheelZoom = 0.85f; ///< Distance times this per notch towards the screen
-        constexpr float kKeyZoom = 2.5f;    ///< Times per second
-        constexpr float kKeyTurn = 1.5f;    ///< Radians per second
+        constexpr float kDragPan = 0.0025f;    ///< Per pixel, times the distance
+        constexpr float kDragTurn = 0.006f;    ///< Radians per pixel
+        constexpr float kKeyPan = 0.8f;        ///< Per second, times the distance
+        constexpr float kEdgeBand = 12;        ///< Interface units in from a screen edge where the pointer pushes
+        constexpr float kWheelZoom = 0.85f;    ///< Distance times this per notch towards the screen
+        constexpr float kWheelSeconds = 0.25f; ///< How long a notch takes to roll in, nearly all of it
+        constexpr float kKeyZoom = 2.5f;       ///< Times per second
+        constexpr float kKeyTurn = 1.5f;       ///< Radians per second
 
         constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
 
@@ -818,8 +819,17 @@ namespace rct3::scene
                 c = park::turned(c, dx * kDragTurn, dy * kDragTurn, free);
             else if (scene.dragging)
                 c = park::panned(c, -dx * kDragPan * c.distance, dy * kDragPan * c.distance);
-            if (!over_interface && input.pointer.wheel.y != 0)
-                c = park::zoomed(c, std::pow(kWheelZoom, input.pointer.wheel.y), free);
+            if (!over_interface)
+                scene.zoom_pending += input.pointer.wheel.y;
+            if (scene.zoom_pending != 0)
+            {
+                const float notches = park::zoom_step(scene.zoom_pending, elapsed, kWheelSeconds);
+                scene.zoom_pending -= notches;
+                const park::ParkCamera before = c;
+                c = park::zoomed(c, std::pow(kWheelZoom, notches), free);
+                if (c.distance == before.distance)
+                    scene.zoom_pending = 0; // At a limit: what is left would roll in late once turned back
+            }
 
             const float step = kKeyPan * c.distance * elapsed;
             float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);

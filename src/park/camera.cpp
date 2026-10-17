@@ -103,6 +103,13 @@ namespace rct3::park
         return camera;
     }
 
+    float zoom_step(float pending, float elapsed, float seconds)
+    {
+        if (seconds <= 0 || std::abs(pending) < 1e-4f)
+            return pending; // The tail, taken at once so it does not linger
+        return pending * (1 - std::exp(std::log(0.05f) * elapsed / seconds));
+    }
+
     ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid)
     {
         if (grid.empty())

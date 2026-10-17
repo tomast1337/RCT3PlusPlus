@@ -200,4 +200,69 @@ namespace rct3::simulation
         std::vector<std::vector<entt::entity>> riders; ///< By train
     };
 
+    // ----- litter, path items and staff -----
+
+    /// A piece of litter lying on a path tile until a handyman sweeps it up.
+    struct Litter
+    {
+        NodeId node = kNoNode;
+        /// What it looks like, numbered as saved parks number it (0..5).
+        /// shortcut: which saved number is a cup or a wrapper is not known, so ours are 0 for food and 1 for
+        /// drink; upgrade when litter is drawn.
+        std::uint8_t kind = 0;
+        float age = 0; ///< Seconds it has lain
+    };
+
+    /// What a guest is left holding once they have eaten or drunk what they bought.
+    struct Rubbish
+    {
+        std::uint8_t kind = 0; ///< As Litter::kind, once dropped
+        float held = 0;        ///< Seconds since they bought it, eating or drinking first
+    };
+
+    enum class PathItemKind : std::uint8_t
+    {
+        Bin,
+        Bench,
+        Sign,
+    };
+
+    /// Something standing on a path tile that guests use and vandals break.
+    struct PathItem
+    {
+        NodeId node = kNoNode;
+        PathItemKind kind = PathItemKind::Bin;
+        bool broken = false; ///< Of no use until a handyman or mechanic mends it
+    };
+
+    /// What a bin holds, in pieces of rubbish.
+    struct Bin
+    {
+        float capacity = 0;
+        float contents = 0;
+    };
+
+    enum class StaffRole : std::uint8_t
+    {
+        Handyman, ///< Sweeps, empties bins and mends what is broken
+        Mechanic, ///< Mends what is broken
+        Guard,    ///< Keeps vandals off the paths near them
+        Other,    ///< Walks the paths, nothing more yet
+    };
+
+    struct Staff
+    {
+        StaffRole role = StaffRole::Other;
+        float busy = 0; ///< Seconds left at the job in hand
+    };
+
+    /// The park's run of vandalism, kept in the registry's context.
+    struct Vandalism
+    {
+        std::uint32_t broken = 0;   ///< Things broken since the run began
+        float recent = 0;           ///< Things broken lately, each fading away over a game hour or so
+        float since_warning = -1;   ///< Seconds since the player was last told; -1 never
+        std::uint32_t warnings = 0; ///< Times the player has been told, for the park to post as messages
+    };
+
 } // namespace rct3::simulation

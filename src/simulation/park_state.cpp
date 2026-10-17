@@ -62,9 +62,11 @@ namespace rct3::simulation
         return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
     }
 
-    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides)
+    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides, std::optional<std::int32_t> old_litter)
     {
         RatingInput in = rating_input(people, rides, state.time);
+        if (old_litter)
+            in.old_litter = *old_litter;
         in.harder = state.harder_rating;
         in.guests = state.guests;
         in.penalty = state.rating_carry.penalty;

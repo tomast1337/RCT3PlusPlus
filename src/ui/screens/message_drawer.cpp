@@ -22,14 +22,14 @@ namespace rct3::ui
 
         // Where things sit, in units from the drawer's left and bottom edges.
         constexpr float kLipHeight = 39;
-        constexpr float kLipSplit = 236; ///< Where the lip's left half ends and its right half starts
+        constexpr float kLipSplit = kWidth / 2; ///< Where the lip's left half ends and its right half starts
         constexpr float kBackHeight = 36;
         constexpr float kBackReach = kOpen - kLipHeight; ///< How far up the back is repeated
         constexpr float kFirstRow = 26;                  ///< Bottom of the newest row
         constexpr float kStripeLeft = 10;
-        constexpr float kStripeRight = 462;
+        constexpr float kStripeRight = 470;
         constexpr float kTextLeft = 42;
-        constexpr float kTextRight = 460;
+        constexpr float kTextRight = 468;
         constexpr float kRowPadding = 4; ///< Added to the text's height; the text starts half of it down
         constexpr float kEmptyRow = 18;
         constexpr float kArrowSize = 17;
@@ -37,7 +37,7 @@ namespace rct3::ui
         constexpr float kNewerLeft = 330;
         constexpr float kOlderLeft = 350;
         /// Rows filling more than this from the first skipped one leave room to step to older messages.
-        constexpr float kPage = 283;
+        constexpr float kPage = 290;
         /// Above the newest rows when sliding down for them, for the part of the drawer behind the bar.
         constexpr float kUnderBar = 20;
 

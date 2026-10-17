@@ -138,14 +138,6 @@ namespace rct3::ui::game_skins
     /// The front screen's design, the rectangle its backdrop's pieces are cut from.
     inline constexpr Rect kFrontDesign { 0, 0, front_screen::kDesignWidth, front_screen::kDesignHeight };
 
-    /// The piece of the front screen's white ring under arc skin `index`, measured on that skin's own size.
-    [[nodiscard]] inline CodedFrame arc_piece(std::size_t index)
-    {
-        const Point at = front_screen::kArcPieces.at(index);
-        const Point size = front_screen::kArcPieceSizes.at(index);
-        return game_frames::front_piece(game_frames::front_arc(), { at.x, at.y, at.x + size.x, at.y + size.y });
-    }
-
     [[nodiscard]] inline std::vector<CodedSkin> coded_skins()
     {
         using enum PanelLook;
@@ -172,11 +164,6 @@ namespace rct3::ui::game_skins
             { front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandTop) },
             { front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandBottom) },
             { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kStripRight) },
-            { front_screen::kArcSkins[0], "front-arc", Coded, arc_piece(0) },
-            { front_screen::kArcSkins[1], "front-arc", Coded, arc_piece(1) },
-            { front_screen::kArcSkins[2], "front-arc", Coded, arc_piece(2) },
-            { front_screen::kArcSkins[3], "front-arc", Coded, arc_piece(3) },
-            { front_screen::kArcSkins[4], "front-arc", Coded, arc_piece(4) },
             { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch() },
             { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end() },
             { loading_screen::kBarLeft, "loading-bar", Coded, game_frames::bar_end_left() },

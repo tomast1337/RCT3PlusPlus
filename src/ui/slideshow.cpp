@@ -13,7 +13,7 @@ namespace rct3::ui
     namespace
     {
 
-        constexpr float kEdge = 74; ///< Of the front screen's artwork, at the reference size
+        constexpr float kEdge = 80; ///< Of the front screen's artwork, at the reference size
         constexpr float kReferenceWidth = 1024;
         constexpr float kReferenceHeight = 768;
 

@@ -918,6 +918,11 @@ int main(int argc, char** argv)
         }
         const double ran = window->time() - start_time;
         log.info("ran {} frames in {:.1f} s, {:.2f} ms a frame{}", frame, ran, frame > 0 ? 1000 * ran / frame : 0.0, g_stop_requested != 0 ? ", stopped by a signal" : "");
+        if (device)
+        {
+            const rct3::render::FrameStats stats = device->stats();
+            log.info("last frame: {} passes, {} draws, {} primitives", stats.passes, stats.draws, stats.primitives);
+        }
         if (profile)
         {
             std::ofstream out(*profile);

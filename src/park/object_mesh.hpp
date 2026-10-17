@@ -31,6 +31,7 @@ namespace rct3::park
         PartBlend blend = PartBlend::Opaque;
         std::uint32_t first = 0;
         std::uint32_t count = 0;
+        bool one_sided = false; ///< Drawn only from the side its triangles face (see ModelPart)
     };
 
     struct ObjectMesh

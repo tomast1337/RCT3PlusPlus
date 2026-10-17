@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <tuple>
 #include <utility>
 
 namespace rct3::park
@@ -50,14 +51,14 @@ namespace rct3::park
             out.mesh.placed += one.placed;
             out.mesh.missing += one.missing;
         }
-        std::map<std::pair<std::string, PartBlend>, std::size_t> batch_of;
+        std::map<std::tuple<std::string, PartBlend, bool>, std::size_t> batch_of;
         std::vector<std::vector<std::uint32_t>> indices;
         for (std::size_t i = 0; i < alone.size(); ++i)
         {
             const std::uint32_t base = i == 0 ? 0 : out.ends[i - 1];
             for (const ObjectBatch& batch : alone[i].batches)
             {
-                const auto [at, added] = batch_of.try_emplace({ batch.texture, batch.blend }, out.mesh.batches.size());
+                const auto [at, added] = batch_of.try_emplace({ batch.texture, batch.blend, batch.one_sided }, out.mesh.batches.size());
                 if (added)
                 {
                     out.mesh.batches.push_back(batch);

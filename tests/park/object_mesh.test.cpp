@@ -294,3 +294,19 @@ TEST_CASE("each vertex of a mesh knows the object it belongs to")
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
     CHECK(gather_billboards(objects, models, anchors, ObjectLevels { kNotDrawn, kNotDrawn, 2 }).mesh.owners == std::vector<std::uint32_t> { 2, 2, 2, 2 });
 }
+
+TEST_CASE("one-sided parts get batches of their own, apart from two-sided ones in the same picture")
+{
+    ObjectModels models;
+    ObjectModel slide;
+    ModelPart shell = triangle("slide", PartBlend::Opaque);
+    shell.one_sided = true;
+    slide.levels = { { 100, { shell, triangle("slide", PartBlend::Opaque) }, { } } };
+    models.emplace("Things/Things|Slide", slide);
+    const std::vector<save::PlacedObject> objects { object("Slide", 0) };
+    const ObjectMesh m = object_mesh(objects, models, flat());
+    REQUIRE(m.batches.size() == 2);
+    CHECK(m.batches[0].texture == m.batches[1].texture);
+    CHECK(m.batches[0].one_sided != m.batches[1].one_sided);
+    CHECK(m.batches[0].count == 3);
+}

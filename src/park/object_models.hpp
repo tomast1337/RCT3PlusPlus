@@ -55,6 +55,7 @@ namespace rct3::park
         std::string texture;     ///< Key of the part's picture, empty for none
         std::uint32_t slots = 0; ///< Colour slots the picture recolours (bit k: slot k)
         PartBlend blend = PartBlend::Opaque;
+        bool one_sided = false; ///< Only the side its triangles face is drawn; the file marks the rest as both
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
         /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part.

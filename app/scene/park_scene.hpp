@@ -300,6 +300,7 @@ namespace rct3::scene
         ui::DrawList list;
         std::optional<float> scale;
         ui::Point last_pointer;
+        float zoom_pending = 0; ///< Wheel zoom still to roll in, as notches towards the screen (negative away)
         bool turning = false;
         bool dragging = false;
         int zooming = 0;             ///< From the keys: 1 in, -1 out

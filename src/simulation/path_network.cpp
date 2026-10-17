@@ -109,38 +109,49 @@ namespace rct3::simulation
 
     std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to) const
     {
-        if (from >= nodes_.size() || to >= nodes_.size())
+        auto found = route_nearest(from, std::span(&to, 1));
+        return found ? std::optional(std::move(found->second)) : std::nullopt;
+    }
+
+    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets) const
+    {
+        if (from >= nodes_.size())
             return std::nullopt;
-        if (from == to)
-            return std::vector<NodeId> { };
-        const auto walk_to = [&](const std::vector<NodeId>& came) {
+        constexpr std::size_t kNotTarget = std::numeric_limits<std::size_t>::max();
+        std::vector<std::size_t> target(nodes_.size(), kNotTarget); // The first of `targets` at each node
+        for (std::size_t i = targets.size(); i-- > 0;)
+            if (targets[i] < nodes_.size())
+                target[targets[i]] = i;
+        if (target[from] != kNotTarget)
+            return std::pair { target[from], std::vector<NodeId> { } };
+        std::vector<NodeId> came(nodes_.size(), kNoNode);
+        const auto walk_to = [&](NodeId to) {
             std::vector<NodeId> walk;
             for (NodeId s = to; s != from; s = came[s])
                 walk.push_back(s);
             std::ranges::reverse(walk);
-            return walk;
+            return std::pair { target[to], std::move(walk) };
         };
+        came[from] = from;
         if (corners_)
         {
             // Steps across squares are longer, so the shortest walk is found by length; ties go to the lower node,
             // so the same network always gives the same walk.
             constexpr float kAcross = std::numbers::sqrt2_v<float>;
-            std::vector<NodeId> came(nodes_.size(), kNoNode);
             std::vector<float> length(nodes_.size(), std::numeric_limits<float>::max());
             std::priority_queue<std::pair<float, NodeId>, std::vector<std::pair<float, NodeId>>, std::greater<>> open;
             length[from] = 0;
-            came[from] = from;
             open.emplace(0.0f, from);
             while (!open.empty())
             {
                 const auto [so_far, at] = open.top();
                 open.pop();
-                if (at == to)
-                    return walk_to(came);
+                if (target[at] != kNotTarget)
+                    return walk_to(at);
                 if (so_far > length[at])
                     continue;
                 const auto step = [&](NodeId n, float cost) {
-                    if (n == kNoNode || (nodes_[n].queue && n != to) || so_far + cost >= length[n])
+                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || so_far + cost >= length[n])
                         return;
                     length[n] = so_far + cost;
                     came[n] = at;
@@ -155,20 +166,18 @@ namespace rct3::simulation
         }
         // Every step costs the same, so a breadth-first search finds a shortest walk. Sides are tried in a fixed
         // order, so the same network always gives the same walk.
-        std::vector<NodeId> came(nodes_.size(), kNoNode);
         std::deque<NodeId> open { from };
-        came[from] = from;
         while (!open.empty())
         {
             const NodeId at = open.front();
             open.pop_front();
             for (const NodeId n : nodes_[at].next)
             {
-                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && n != to))
+                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget))
                     continue;
                 came[n] = at;
-                if (n == to)
-                    return walk_to(came);
+                if (target[n] != kNotTarget)
+                    return walk_to(n);
                 open.push_back(n);
             }
         }

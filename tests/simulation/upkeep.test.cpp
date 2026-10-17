@@ -157,6 +157,9 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     saved.breakdown.current = rct3::save::BreakdownKind::DoorsFailToOpen;
     saved.base.repair_status = rct3::save::RepairStatus::BeingFixed;
     CHECK(upkeep_of(saved).kind == Breakdown::DoorsFailToOpen);
+    saved.base.repair_status = rct3::save::RepairStatus::Fine; // A kind kept on a ride running fine
+    CHECK_FALSE(upkeep_of(saved).broken);
+    CHECK(upkeep_of(saved).kind == Breakdown::None);
 }
 
 TEST_CASE("a mechanic leaves their patrol for a breakdown, and goes back to it after")

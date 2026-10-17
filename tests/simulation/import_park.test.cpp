@@ -20,22 +20,23 @@ TEST_CASE("a flat ride's timing is its starting, running and stopping animations
     CHECK(simulation::flat_ride_timing(std::span(seconds).first(3), 16, 1) == std::nullopt); // Not a ride's animations
 }
 
-TEST_CASE("a stall sells what its items are named, or what its own kind is named when the items are not")
+TEST_CASE("a stall sells what its items are named, or their kinds are, or its own kind is when neither tells")
 {
     simulation::SimWorld world;
-    for (int c = 0; c <= 3; ++c)
+    for (int c = 0; c <= 4; ++c)
         world.paths.add({ c, 0, 0 });
     save::RideModel rides;
-    const auto stall = [&](std::string symbol, std::string item, int col) {
+    const auto stall = [&](std::string symbol, std::string item, int col, std::string kind = { }) {
         save::Stall& s = rides.stalls.emplace_back();
         s.base.symbol = std::move(symbol);
         s.base.spot = save::PlacementSpot { .col = col, .row = 1 };
-        s.items.push_back({ .price = 120, .name = std::move(item) });
+        s.items.push_back({ .kind_symbol = std::move(kind), .price = 120, .name = std::move(item) });
     };
     stall("GenericStall:sta", "Cola", 0);
     stall("HotDogStall:sta", "%ME%", 1);
-    stall("SouvenirStall:sta", "%ME%", 2); // Neither: left out
-    CHECK(simulation::import_stalls(world, rides) == 2);
+    stall("SouvenirStall:sta", "%ME%", 2);                // Neither: left out
+    stall("GenericStall:sta", "%ME%", 3, "RootBeer:cid"); // A custom stall, told by its item's kind
+    CHECK(simulation::import_stalls(world, rides) == 3);
     std::vector<simulation::Product> sold;
     for (const auto [e, shop, attraction] : world.registry.view<const simulation::Shop, const simulation::Attraction>().each())
     {
@@ -43,7 +44,7 @@ TEST_CASE("a stall sells what its items are named, or what its own kind is named
         CHECK(attraction.price == 120);
     }
     std::ranges::sort(sold);
-    CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Food });
+    CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Drink, simulation::Product::Food });
 }
 
 TEST_CASE("a ride comes over with its queue line, from the entrance back to the paths, and its exit")

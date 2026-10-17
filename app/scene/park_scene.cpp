@@ -1892,6 +1892,7 @@ namespace rct3::scene
         scene.clock += elapsed;
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
+        scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.bloom = options.flag(config::GameOption::Bloom);
         advance_park_water(scene.water, elapsed);

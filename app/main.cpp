@@ -229,8 +229,6 @@ namespace
             park.since_rebuild = rct3::scene::kObjectRebuildInterval;
         }
         ImGui::SetItemTooltip("Objects blending between two levels of detail show the finer level blue, the coarser red");
-        ImGui::Checkbox("Blend shadow steps", &park.blend_shadows);
-        ImGui::SetItemTooltip("Shadows move smoothly between two drawings from the sun; off, they step every half degree");
         if (ImGui::Checkbox("Simulate guests", &park.simulate))
         {
             park.people_levels.clear(); // The still people are built again without or with the simulated ones

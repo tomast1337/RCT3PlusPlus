@@ -16,7 +16,8 @@
 //
 // Where the park's water reaches the edge and stands over the ground there, it goes on out as a sea: the
 // land under it is kept kSeaDepth below its surface, and the water carries on to kSeaReach, past where the
-// eye can see, the water's shader fading it into the horizon near the far plane.
+// eye can see, the water's shader fading it into the horizon near the far plane. Beside the sea, the land comes
+// down to it over kShorePoints edge points, under the same water, so the shore is a slope and not a wall.
 #pragma once
 
 #include "park/terrain_mesh.hpp"
@@ -45,6 +46,8 @@ namespace rct3::park
     inline constexpr float kSeaDepth = 3;
     /// How far from the edge the sea goes: past the far plane wherever the eye is over the map.
     inline constexpr float kSeaReach = 6000;
+    /// Over how many edge points beside the sea the land comes down to it.
+    inline constexpr std::size_t kShorePoints = 6;
 
     /// The land's shape without its paint: how far out each ring is, and the height of each of its points.
     /// Every ring has `points` points, walking round the map as its edge does.
@@ -55,12 +58,15 @@ namespace rct3::park
         std::vector<float> heights;   ///< Ring after ring, `points` each
         /// Round the edge, the level of the sea going out from each point; NaN where there is none.
         std::vector<float> sea;
+        /// Round the edge, the level of the water lying off each point: the sea's, or the nearest sea's within
+        /// kShorePoints; NaN beyond.
+        std::vector<float> shore;
     };
 
     [[nodiscard]] LandRings land_rings(const save::TerrainGrid& grid, const save::WaterLayer& water = { });
 
     /// The land's height at world (x, z) beyond the map's edge, between its points. Nothing on the map, past
-    /// the land's reach, or under the sea.
+    /// the land's reach, or under the sea or the water by its shore.
     [[nodiscard]] std::optional<float> land_height(const LandRings& rings, const save::TerrainGrid& grid, float x, float z);
 
     /// The height the land settles at far out: the mean height round the map's edge.

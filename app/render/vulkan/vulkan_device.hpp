@@ -128,7 +128,13 @@ namespace rct3::render::vulkan
             // merges them into one block big enough for the whole frame.
             std::vector<TransientBlock> transient;
             VkDeviceSize transient_used = 0; ///< In the last block
+            /// When each pass began and ended on the GPU, read once the frame is done; none where the queue
+            /// keeps no time.
+            VkQueryPool timings = VK_NULL_HANDLE;
+            std::uint32_t stamps = 0; ///< Written this frame, two a pass
         };
+        static constexpr std::uint32_t kMostStamps = 64;
+        float stamp_ms_ = 0; ///< Milliseconds a timestamp tick lasts
 
         enum class State : std::uint8_t
         {
@@ -157,7 +163,7 @@ namespace rct3::render::vulkan
 
         // Resources (vulkan_resources.cpp)
         [[nodiscard]] std::uint32_t find_memory_type(std::uint32_t type_bits, VkMemoryPropertyFlags properties) const;
-        [[nodiscard]] Buffer make_buffer(VkDeviceSize size, VkBufferUsageFlags usage);
+        [[nodiscard]] Buffer make_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         void destroy(const Buffer& buffer);
         void destroy(const Texture& texture);
         [[nodiscard]] TransientBlock make_transient_block(VkDeviceSize size);

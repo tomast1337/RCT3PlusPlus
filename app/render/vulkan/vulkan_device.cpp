@@ -6,12 +6,14 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui.h"
 #include "logging/log.hpp"
+#include "profiling/profiler.hpp"
 #include "render/vulkan/vulkan_check.hpp"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <format>
 #include <stdexcept>
 #include <string>
 
@@ -162,6 +164,8 @@ namespace rct3::render::vulkan
             for (Frame& f : frames_)
             {
                 vkDestroyFence(device_, f.in_flight, nullptr);
+                if (f.timings != VK_NULL_HANDLE)
+                    vkDestroyQueryPool(device_, f.timings, nullptr);
                 vkDestroySemaphore(device_, f.image_available, nullptr);
                 vkDestroyCommandPool(device_, f.pool, nullptr);
             }
@@ -502,6 +506,26 @@ namespace rct3::render::vulkan
             fence.flags = VK_FENCE_CREATE_SIGNALED_BIT;
             check(vkCreateFence(device_, &fence, nullptr, &f.in_flight), "vkCreateFence");
         }
+        // The passes' GPU times for the profiler, where the queue keeps time.
+        {
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(gpu_, &props);
+            std::uint32_t family_count = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(gpu_, &family_count, nullptr);
+            std::vector<VkQueueFamilyProperties> families(family_count);
+            vkGetPhysicalDeviceQueueFamilyProperties(gpu_, &family_count, families.data());
+            if (props.limits.timestampPeriod > 0 && queue_family_ < family_count && families[queue_family_].timestampValidBits > 0)
+            {
+                stamp_ms_ = props.limits.timestampPeriod * 1e-6f;
+                for (Frame& f : frames_)
+                {
+                    VkQueryPoolCreateInfo query { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+                    query.queryType = VK_QUERY_TYPE_TIMESTAMP;
+                    query.queryCount = kMostStamps;
+                    check(vkCreateQueryPool(device_, &query, nullptr, &f.timings), "vkCreateQueryPool");
+                }
+            }
+        }
 
         VkCommandPoolCreateInfo pool { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
         pool.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
@@ -725,6 +749,16 @@ namespace rct3::render::vulkan
         assert(state_ == State::Idle);
         Frame& frame = frames_[frame_index_];
         check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
+        if (frame.timings != VK_NULL_HANDLE && frame.stamps > 0 && profiling::enabled())
+        {
+            std::array<std::uint64_t, kMostStamps> stamps { };
+            if (vkGetQueryPoolResults(device_, frame.timings, 0, frame.stamps, sizeof stamps, stamps.data(), sizeof(std::uint64_t), VK_QUERY_RESULT_64_BIT) == VK_SUCCESS)
+            {
+                for (std::uint32_t k = 0; k + 1 < frame.stamps; k += 2)
+                    profiling::record(std::format("GPU/Pass {}", k / 2), static_cast<double>(stamps[k + 1] - stamps[k]) * stamp_ms_);
+                profiling::record("GPU", static_cast<double>(stamps[frame.stamps - 1] - stamps[0]) * stamp_ms_);
+            }
+        }
         release(frame.garbage);
         reset_transient(frame);
 
@@ -747,6 +781,9 @@ namespace rct3::render::vulkan
         VkCommandBufferBeginInfo begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         check(vkBeginCommandBuffer(frame.commands, &begin), "vkBeginCommandBuffer");
+        frame.stamps = 0;
+        if (frame.timings != VK_NULL_HANDLE)
+            vkCmdResetQueryPool(frame.commands, frame.timings, 0, kMostStamps);
 
         image_barrier(frame.commands, images_[image_index_], VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
         constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
@@ -797,6 +834,8 @@ namespace rct3::render::vulkan
         rendering.colorAttachmentCount = 1;
         rendering.pColorAttachments = &color;
         rendering.pDepthAttachment = &depth;
+        if (Frame& frame = frames_[frame_index_]; frame.timings != VK_NULL_HANDLE && frame.stamps + 2 <= kMostStamps)
+            vkCmdWriteTimestamp2(cmd, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, frame.timings, frame.stamps++);
         vkCmdBeginRendering(cmd, &rendering);
         set_viewport(cmd, area);
 
@@ -884,6 +923,8 @@ namespace rct3::render::vulkan
         assert(state_ == State::InPass);
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         vkCmdEndRendering(cmd);
+        if (Frame& frame = frames_[frame_index_]; frame.timings != VK_NULL_HANDLE && frame.stamps % 2 == 1)
+            vkCmdWriteTimestamp2(cmd, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, frame.timings, frame.stamps++);
         if (pass_target_ != nullptr)
             image_barrier(cmd, pass_target_->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         if (pass_target_ != nullptr && pass_target_->depth_id != 0)

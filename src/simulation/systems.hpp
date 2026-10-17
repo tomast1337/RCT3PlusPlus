@@ -29,6 +29,7 @@ namespace rct3::simulation
     class Workers;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
+    inline constexpr float kConsumeSeconds = 10; ///< A guest spends with what they bought before moving on; our own figure
     /// Farthest a guest walks off a path tile's middle, along x and z.
     /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
     /// the middle; upgrade when paths of other widths are modelled.
@@ -52,6 +53,11 @@ namespace rct3::simulation
 
     /// Weight of the newest departure in a ride's riders an hour (CycleRide::per_hour); our own figure.
     inline constexpr float kFlowSmoothing = 0.25f;
+
+    /// Seconds litter lies before it counts against the park's rating. Our own value.
+    inline constexpr float kOldLitterSeconds = 400;
+    /// Pieces of litter lying long enough to count against the park's rating (kOldLitterSeconds).
+    [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
 
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);

@@ -77,6 +77,7 @@ namespace rct3::save
 
             constexpr std::string_view kBinClass = "LitterBinBehaviour";
             constexpr std::string_view kSignClass = "SignBehaviour";
+            constexpr std::string_view kBenchClass = "ParkBenchBehaviour";
             constexpr std::string_view kBehaviourOwner = "\"SceneryItem\""; ///< The quotes are part of the stored name
             constexpr std::string_view kBinCapacity = "Capacity";
             constexpr std::string_view kBinContents = "Contents";
@@ -462,6 +463,7 @@ namespace rct3::save
             Scenery,
             Bin,
             Sign,
+            Bench,
             Weather,
             Sky,
             Time,
@@ -844,6 +846,8 @@ namespace rct3::save
                 kinds[i] = Kind::Bin;
             else if (name == names::kSignClass)
                 kinds[i] = Kind::Sign;
+            else if (name == names::kBenchClass)
+                kinds[i] = Kind::Bench;
             else if (name == names::kWeatherClass)
                 kinds[i] = Kind::Weather;
             else if (name == names::kSkyClass)
@@ -984,6 +988,10 @@ namespace rct3::save
                     m.signs.push_back(std::move(s));
                     break;
                 }
+                case Kind::Bench:
+                    if (const auto owner = get_ref(o.find(names::kBehaviourOwner)))
+                        m.benches.push_back(*owner);
+                    break;
                 case Kind::Weather:
                     if (singleton(have_weather, o))
                         m.weather = read_weather(o);

@@ -362,7 +362,7 @@ namespace rct3::save
         ObjectId ride = 0;      ///< Back reference as stored
         std::int32_t index = 0; ///< Index as stored; equals the position in Ride::trains in sound files
         std::int32_t state = 0; ///< Train state as stored; the numbers are not given meanings yet
-        float state_time = 0; ///< Seconds in the current state
+        float state_time = 0;   ///< Seconds in the current state
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;
         float distance = 0; ///< Metres along the track

@@ -91,10 +91,15 @@ namespace rct3::park
             }
         }
 
+        /// A mesh's sides value for drawing only the front of its triangles; 1 draws both. Of the shapes in the
+        /// install, those marked so face the way their normals point all but 0.2% of the time, the rest 0.4.
+        constexpr std::uint32_t kFrontOnly = 3;
+
         template<typename Mesh, typename Index> ModelPart part_of(const Mesh& mesh, Index&& index)
         {
             ModelPart part;
             part.blend = blend_of(mesh.transparency);
+            part.one_sided = mesh.sides == kFrontOnly;
             part.vertices.reserve(mesh.vertex_count);
             for (std::size_t i = 0; i < mesh.vertex_count; ++i)
             {

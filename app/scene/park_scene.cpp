@@ -1164,26 +1164,22 @@ namespace rct3::scene
         begin(ParkLoadStage::Scene);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
-        auto solid = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" });
-        if (!solid)
-            return fail(solid.error());
-        scene.object_pipeline = *solid;
-        auto cutout = device.create_pipeline({ .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" });
-        if (!cutout)
-            return fail(cutout.error());
-        scene.cutout_pipeline = *cutout;
-        auto see_through = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" });
-        if (!see_through)
-            return fail(see_through.error());
-        scene.see_through_pipeline = *see_through;
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
-        for (auto [pipeline, desc] : { std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } }, std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } },
-                                       std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } } })
+        for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
+                                       std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
+                                       std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } } })
         {
             auto made = device.create_pipeline(desc);
             if (!made)
                 return fail(made.error());
             *pipeline = *made;
+            // The models' front faces wind as the device's do (seen in the park: culling the other way turned
+            // slides inside out).
+            desc.cull = render::CullMode::Back;
+            auto front = device.create_pipeline(desc);
+            if (!front)
+                return fail(front.error());
+            scene.front_only[made->id] = *front;
         }
         profiling::section("ObjectBuffers", [&] {
             if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band))
@@ -2277,6 +2273,8 @@ namespace rct3::scene
                     return crossing ? scene.crossing_cutout_pipeline : scene.cutout_pipeline;
                 return crossing ? scene.crossing_see_through_pipeline : scene.see_through_pipeline;
             };
+            const auto sided = [&](render::PipelineHandle pipeline, const park::ObjectBatch& batch) { return batch.one_sided ? scene.front_only.at(pipeline.id) : pipeline; };
+            const auto object_pipeline = [&](const park::ObjectBatch& b) { return sided(pipeline_for(scene.steady_objects, b.blend), b); };
             const auto draw_shown = [&](const ShownObjects& shown, bool see_through) {
                 if (!shown.indices)
                     return;
@@ -2286,7 +2284,7 @@ namespace rct3::scene
                         continue;
                     const auto texture = scene.object_textures.find(batch.texture);
                     render::DrawCommand draw;
-                    draw.pipeline = pipeline_for(shown, batch.blend);
+                    draw.pipeline = sided(pipeline_for(shown, batch.blend), batch);
                     draw.vertices = { shown.vertices };
                     draw.indices = { shown.indices };
                     draw.index_type = render::IndexType::U32;
@@ -2336,7 +2334,7 @@ namespace rct3::scene
                         // shortcut: crossing billboards are copied with their bands each frame; fine for the
                         // few in bands, upgrade to a second vertex stream if many trees cross at once.
                         const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
-                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return pipeline_for(*shown, b.blend); }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
+                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
                     }
                 });
             if (scene.show_people && parts.people)
@@ -2347,10 +2345,10 @@ namespace rct3::scene
                         draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (scene.show_scenery && parts.scenery)
-                profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             profiling::section("Rides", [&] {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
-                    draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::Opaque ? scene.object_pipeline : b.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
             });
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
@@ -2575,6 +2573,9 @@ namespace rct3::scene
             if (p)
                 device.destroy_pipeline(p);
         }
+        for (const auto& [id, p] : scene.front_only)
+            device.destroy_pipeline(p);
+        scene.front_only.clear();
         destroy_park_map(device, scene.map);
         ui::destroy_textures(device, scene.ground_textures);
         ui::destroy_textures(device, scene.object_textures);

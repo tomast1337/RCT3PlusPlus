@@ -31,18 +31,18 @@ namespace rct3::ui
     namespace build_picker
     {
         /// The panel's size and the parts round the list.
-        inline constexpr float kWidth = 290;
-        inline constexpr float kHeight = 320;
+        inline constexpr float kWidth = 300; ///< Our own values
+        inline constexpr float kHeight = 340;
         inline constexpr float kTitleHeight = 22; ///< The band that drags the panel, with its buttons
-        inline constexpr float kSide = 5;
-        inline constexpr float kBottomBar = 36;
+        inline constexpr float kSide = 6;
+        inline constexpr float kBottomBar = 34;
         inline constexpr float kTitleButton = 16;
         inline constexpr Point kCloseAt { 3, 3 };
         inline constexpr Point kFoldAt { 19, 3 };
 
         /// Rows, large and small.
-        inline constexpr float kLargeRow = 68;
-        inline constexpr float kSmallRow = 16;
+        inline constexpr float kLargeRow = 70;
+        inline constexpr float kSmallRow = 18;
         inline constexpr float kLargeIcon = 64;
         inline constexpr float kSmallIcon = 14;
         inline constexpr float kLargeBadge = 26;

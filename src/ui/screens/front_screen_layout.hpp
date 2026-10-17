@@ -67,54 +67,57 @@ namespace rct3::ui::front_screen
     /// The design on `screen`: stretched to it, or `uniform`ly at the smaller scale from its bottom-left corner.
     [[nodiscard]] Frame frame_for(const Rect& screen, bool uniform = false);
 
-    // The artwork, as design rectangles. Pictures not given a size here are drawn at their own size in
-    // design units from the top-left corner given.
+    // Our own layout, built round the artwork as measured on its pictures (game_frames.cpp): the circles'
+    // centre, the veil's rim and the strip's top. Everything else here is our own value.
+
+    // The artwork, as design rectangles: each picture at its own size. Pictures not given a size here are
+    // drawn at their own size in design units from the top-left corner given.
     inline constexpr Rect kBandTop { 0, 0, 512, 512 };         ///< The left band above the bottom strip
     inline constexpr Rect kBandBottom { 0, 512, 512, 768 };    ///< The left part of the bottom strip
-    inline constexpr Rect kStripRight { 512, 513, 1024, 768 }; ///< The rest of the bottom strip
-    inline constexpr Point kLogo { 0, 18 };
-    inline constexpr Rect kChildren { 0, 310, 384, 694 };
-    /// The arc, in five pieces from the top edge down and round to the right edge.
-    inline constexpr std::array<Point, 5> kArcPieces = { { { 295, 0 }, { 327, 413 }, { 385, 510 }, { 430, 564 }, { 609, 546 } } };
-    /// Their sizes, as the pictures are drawn.
-    inline constexpr std::array<Point, 5> kArcPieceSizes = { { { 97, 413 }, { 96, 99 }, { 88, 56 }, { 181, 100 }, { 415, 138 } } };
-    inline constexpr Rect kHelpTitle { 256, 712, 768, 736 }; ///< The larger line of help, on the bottom strip
-    inline constexpr Rect kHelpText { 256, 740, 768, 756 };  ///< The smaller line under it
+    inline constexpr Rect kStripRight { 512, 512, 1024, 768 }; ///< The rest of the bottom strip
+    inline constexpr Point kLogo { 0, 16 };                    ///< Our own value
+    inline constexpr Rect kChildren { 0, 310, 384, 694 };      ///< The picture's own size, standing on the strip
+    inline constexpr Rect kHelpTitle { 262, 709, 788, 735 };   ///< The lozenge's upper half, above its rule
+    inline constexpr Rect kHelpText { 262, 739, 788, 757 };    ///< Its lower half
 
     /// A point on a circle round the buttons' centre: `angle` in radians, anticlockwise from the right.
-    inline constexpr Point kRingCentre { 734, 241 };
+    inline constexpr Point kRingCentre { 735.5f, 241.5f }; ///< The artwork's circles' centre, measured on its pictures
     [[nodiscard]] Point on_ring(float angle, float radius);
 
-    /// The circle the menu buttons sit on, the first at the top-left and the next ones further down.
-    inline constexpr float kMenuRadius = 650;
-    inline constexpr float kMenuFirstAngle = 3.06f;
-    inline constexpr float kMenuAngleStep = 0.165f;
-    inline constexpr float kMenuButtonSize = 83;
+    /// The circle the menu buttons sit on, the first at the top-left and the next ones further down. The
+    /// buttons ride the veil's rim; the spacing is our own.
+    inline constexpr float kMenuRadius = 660;
+    inline constexpr float kMenuFirstAngle = 3.05f;
+    inline constexpr float kMenuAngleStep = 0.17f;
+    inline constexpr float kMenuButtonSize = 84;
     inline constexpr std::size_t kMaxMenuEntries = 5;
     [[nodiscard]] float menu_angle(std::size_t index);
 
     /// How much a round button grows under the pointer, times its size, and how fast, in sizes a second.
-    inline constexpr float kSwellFactor = 1.46f;
-    inline constexpr float kSwellRate = 5;
+    /// Our own values.
+    inline constexpr float kSwellFactor = 1.4f;
+    inline constexpr float kSwellRate = 6;
 
-    /// Back and Quit, side by side on a smaller circle.
-    inline constexpr float kSmallRadius = 520;
-    inline constexpr std::array<float, 2> kSmallAngles = { 4.02f, 4.1f };
+    /// Back and Quit, side by side on a smaller circle outside the white ring. Our own values; the size is
+    /// the small button picture's.
+    inline constexpr float kSmallRadius = 530;
+    inline constexpr std::array<float, 2> kSmallAngles = { 4.0f, 4.09f };
     inline constexpr float kSmallButtonSize = 32;
 
     /// A square button of `size` design units centred on a design point.
     [[nodiscard]] Rect button_rect(const Frame& frame, Point centre, float size);
 
-    /// The box beside menu button `index` where its label shows, and its parts. The box starts a little up
-    /// and left of the button's centre, so the round patch in it sits behind the button. The patch and the
-    /// box's height scale by the round scale; the band's far end and the text's stretch across.
-    inline constexpr Point kLabelBoxOffset { -47.7f, -52.3f };
-    inline constexpr Point kLabelBoxSize { 400, 100 };
-    inline constexpr Rect kLabelPatch { 0, 3, 97, 100 }; ///< In the box: a white ring round the button
-    inline constexpr Rect kLabelBand { 46, 3, 268, 97 }; ///< A light band from the ring on to the right
-    inline constexpr Rect kLabelText { 105, 3, 240, 97 };
+    /// The box beside menu button `index` where its label shows, and its parts. The round patch is
+    /// centred on the button; the band (about as high as the pointed end's picture, 85) runs from the
+    /// patch's middle on to the right. The patch and the box's height scale by the round
+    /// scale; the band's far end and the text's stretch across. Lengths are our own values.
+    inline constexpr Point kLabelBoxOffset { -48, -48 };
+    inline constexpr Point kLabelBoxSize { 400, 96 };
+    inline constexpr Rect kLabelPatch { 0, 0, 96, 96 }; ///< In the box: a white ring round the button
+    inline constexpr Rect kLabelBand { 48, 6, 270, 90 }; ///< A light band from the ring on to the right
+    inline constexpr Rect kLabelText { 104, 6, 245, 90 };
     /// The band's pointed end: the lower ones reach further, `kLabelEndStep` times the index squared.
-    inline constexpr float kLabelEndStep = 10;
+    inline constexpr float kLabelEndStep = 12;
     struct LabelBox
     {
         Rect patch;
@@ -127,27 +130,27 @@ namespace rct3::ui::front_screen
     /// The badges of installed expansion packs, in slots: their lower-left corners on a circle below and
     /// right of the buttons' centre, each slot turned a little further clockwise than the last. The corner
     /// moves with the screen, snapped to whole units, but the badge keeps its size; the last pack
-    /// installed takes the first slot.
+    /// installed takes the first slot. Our own values.
     inline constexpr float kBadgeSize = 100;
-    inline constexpr float kBadgeRadius = 475;
-    inline constexpr Point kBadgeFirstDirection { 0.7f, 1 }; ///< Turned by one step for the first badge
-    inline constexpr float kBadgeStep = 0.28f;
+    inline constexpr float kBadgeRadius = 480;
+    inline constexpr Point kBadgeFirstDirection { 0.6f, 1 }; ///< Turned by one step for the first badge
+    inline constexpr float kBadgeStep = 0.3f;
     [[nodiscard]] Rect badge_rect(const Frame& frame, std::size_t slot);
 
     // How the menu buttons fly in. Each button moves on the circle by angle and radius, easing towards
     // where its menu wants it: on its place on the ring when its menu is open, twice as far out when its
     // menu is the one the open menu came from, else parked above the top of the screen. The angle eases
-    // first and the radius only once the angle is close.
+    // first and the radius only once the angle is close. Our own values.
     struct Polar
     {
         float angle = 0;
         float radius = 0;
     };
-    inline constexpr Polar kStart { 0, 480 };       ///< Off the right of the screen, where every button begins
-    inline constexpr Polar kParked { 1.885f, 480 }; ///< Off the top
+    inline constexpr Polar kStart { 0, 500 };      ///< Off the right of the screen, where every button begins
+    inline constexpr Polar kParked { 1.9f, 500 };  ///< Off the top
     inline constexpr float kParentRadiusFactor = 2;
-    inline constexpr float kEaseRate = 10; ///< Per second
-    inline constexpr float kAngleClose = 0.05f;
+    inline constexpr float kEaseRate = 8; ///< Per second
+    inline constexpr float kAngleClose = 0.04f;
     inline constexpr float kRadiusClose = 0.5f;
     inline constexpr float kLabelFadeRate = 4; ///< Labels fade in over a quarter second once their button arrives
 

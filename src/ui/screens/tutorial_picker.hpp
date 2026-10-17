@@ -29,7 +29,7 @@ namespace rct3::ui
         /// The disc's radius, and the box it must fit in: right of the arc, clear of the top edge and above
         /// the badges and the bottom strip. The box stretches with the screen; the disc is as large as fits
         /// in it, as near the buttons' centre as it can be while staying inside.
-        inline constexpr float kDiscRadius = 324;
+        inline constexpr float kDiscRadius = 320; ///< Our own values from here on
         inline constexpr Rect kDiscArea { 380, 8, 1016, 590 };
 
         /// Where the disc lands on a screen: its middle, and screen units per design unit.
@@ -54,17 +54,17 @@ namespace rct3::ui
         [[nodiscard]] DiscPlace disc_place(const front_screen::Frame& frame);
 
         /// The tutorials on a circle round the buttons' centre, the first at the top.
-        inline constexpr float kRadius = 275;
-        inline constexpr float kFirstAngle = 2.4f;
-        inline constexpr float kAngleStep = 0.25f;
+        inline constexpr float kRadius = 270;
+        inline constexpr float kFirstAngle = 2.35f;
+        inline constexpr float kAngleStep = 0.26f;
         inline constexpr float kButtonSize = 64;
-        inline constexpr float kStartAngle = 5.65f; ///< The start button, on the same circle
+        inline constexpr float kStartAngle = 5.6f; ///< The start button, on the same circle
 
         /// A name runs from kLabelStart buttons right of its button's left edge to kLabelReach right of
         /// its right edge, as tall as the button.
-        inline constexpr float kLabelStart = 1.5f;
-        inline constexpr float kLabelReach = 270;
-        inline constexpr Rect kDescription { 784, 91, 984, 391 };
+        inline constexpr float kLabelStart = 1.45f;
+        inline constexpr float kLabelReach = 280;
+        inline constexpr Rect kDescription { 780, 96, 980, 396 };
 
         [[nodiscard]] float angle(std::size_t index);
     } // namespace tutorial_picker

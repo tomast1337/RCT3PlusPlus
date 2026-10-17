@@ -19,6 +19,8 @@
 //   "NEED" v1  Needs:    count u32, then entity u32, hunger, thirst, bladder f32
 //   "MOOD" v1  Mood:     count u32, then entity u32, happiness, energy, nausea f32
 //   "WALT" v1  Wallet:   count u32, then entity u32, cash i64
+//   "DPRT" v1  Departure: count u32, then entity u32, load waited for u8 (0 full, 1 three quarters, 2 half,
+//              3 quarter, 4 any), least and longest wait i32 seconds (-1 none)
 //
 // Component records are in ascending entity order and name only entities listed in "ENTS". A reader skips
 // chunks whose tag it does not know, so newer files with extra chunks still load; it refuses a chunk whose

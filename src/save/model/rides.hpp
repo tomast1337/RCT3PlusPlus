@@ -287,12 +287,12 @@ namespace rct3::save
         bool block_sectioned = false;
         bool sync_trains = false;
         bool leave_if_other_train_enters_station = false;
-        std::int32_t min_wait = -1; ///< Seconds; -1 none
-        std::int32_t max_wait = -1; ///< Seconds; -1 none
-        std::int32_t wait_for_load = 0;
-        float launch_speed = 0; ///< m/s
-        float lift_speed = 0;   ///< m/s
-        float brake_speed = 0;  ///< m/s
+        std::int32_t min_wait = -1;     ///< Seconds; -1 none
+        std::int32_t max_wait = -1;     ///< Seconds; -1 none
+        std::int32_t wait_for_load = 4; ///< Load a train waits for: 0 full, 1 three quarters, 2 half, 3 quarter, 4 any
+        float launch_speed = 0;         ///< m/s
+        float lift_speed = 0;           ///< m/s
+        float brake_speed = 0;          ///< m/s
         float block_brake_off_speed = 0;
         float fixed_speed = -1; ///< m/s; -1 none
     };

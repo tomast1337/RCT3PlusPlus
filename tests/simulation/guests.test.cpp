@@ -368,3 +368,51 @@ TEST_CASE("a party stops now and then to stand in a ring facing in, then walks o
     }
     CHECK(park.run_until([&] { return r.get<Stride>(a).from != r.get<Stride>(a).to; }, 15)); // On their way again
 }
+
+TEST_CASE("a train leaves when its wait is over and its load is in, or after its longest wait whatever its load")
+{
+    const Departure half { .wait_for = LoadWait::Half, .min_wait = 10, .max_wait = 60 };
+    CHECK_FALSE(departs(half, 8, 8, 5));                        // Full, but not yet waited its least
+    CHECK(departs(half, 4, 8, 10));                             // Half full, waited enough
+    CHECK_FALSE(departs(half, 3, 8, 30));                       // Not half full
+    CHECK(departs(half, 0, 8, 60));                             // Its longest wait: leaves empty
+    CHECK(departs({ .wait_for = LoadWait::Quarter }, 1, 3, 0)); // A quarter of 3 seats rounds up to 1
+    CHECK_FALSE(departs({ }, 0, 8, 1000));                      // Any load waits for someone, with no longest wait
+    CHECK(departs({ }, 1, 8, 0));
+}
+
+TEST_CASE("a ride waiting for a full load sends a full train when the queue is long, a part-full one after its longest wait when short")
+{
+    const auto train_ride = [](Sandbox& park, int guests) {
+        park.path({ 0, 0 }, { 4, 0 });
+        const auto ride = park.flat_ride("Looper", { 4, 0 }, 100, { .capacity = 4, .cycle_seconds = 1000 });
+        auto& r = park.world().registry;
+        Coaster train;
+        train.distance = { 0, 500 };
+        train.height = { 0, 0 };
+        train.kinds = { Stretch::Plain, Stretch::Plain };
+        train.fixed_speed = 5;
+        r.emplace<Trains>(ride, Trains { { train }, { { } } });
+        r.emplace<Departure>(ride, Departure { .wait_for = LoadWait::Full, .max_wait = 30 });
+        for (int i = 0; i < guests; ++i)
+            r.get<Errand>(park.guest({ 4, 0 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+        return ride;
+    };
+    {
+        Sandbox park;
+        const auto ride = train_ride(park, 6);
+        const auto& fleet = park.world().registry.get<Trains>(ride);
+        CHECK(park.run_until([&] { return fleet.trains[0].running; }, 5));
+        CHECK(fleet.riders[0].size() == 4);
+    }
+    {
+        Sandbox park;
+        const auto ride = train_ride(park, 2);
+        const auto& fleet = park.world().registry.get<Trains>(ride);
+        park.run_seconds(25);
+        CHECK_FALSE(fleet.trains[0].running);
+        CHECK(fleet.riders[0].size() == 2);
+        CHECK(park.run_until([&] { return fleet.trains[0].running; }, 10));
+        CHECK(fleet.riders[0].size() == 2);
+    }
+}

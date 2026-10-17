@@ -809,7 +809,7 @@ namespace rct3::save
                 o.leave_if_other_train_enters_station = f[id::kLeaveIfEnters].boolean();
                 o.min_wait = f[id::kMinWait].i32(-1);
                 o.max_wait = f[id::kMaxWait].i32(-1);
-                o.wait_for_load = f[id::kWaitForLoad].i32();
+                o.wait_for_load = f[id::kWaitForLoad].i32(4);
                 o.launch_speed = f[id::kLaunchSpeed].number();
                 o.lift_speed = f[id::kLiftSpeed].number();
                 o.brake_speed = f[id::kBrakeSpeed].number();

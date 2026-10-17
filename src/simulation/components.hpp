@@ -168,6 +168,26 @@ namespace rct3::simulation
         std::vector<NodeId> line { };
         NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
         std::vector<entt::entity> riders { }; ///< Guests on the ride now
+        float loading = 0;                    ///< Seconds the train at the start, or the stopped ride, has been loading
+    };
+
+    /// How full a train must be to leave: Departure::wait_for, in the order the operating panel lists them.
+    enum class LoadWait : std::uint8_t
+    {
+        Full,
+        ThreeQuarters,
+        Half,
+        Quarter,
+        Any, ///< At least one rider
+    };
+
+    /// When a ride's train, or its next ride, leaves the station: the operating panel's settings. A ride
+    /// without one leaves as soon as anyone has boarded.
+    struct Departure
+    {
+        LoadWait wait_for = LoadWait::Any;
+        std::int32_t min_wait = -1; ///< Seconds it waits before it looks at its load; -1 none
+        std::int32_t max_wait = -1; ///< Seconds after which it leaves whatever its load, even empty; -1 none
     };
 
     /// The trains of a ride whose trains go round a track, each a Coaster of its own on the same track.

@@ -107,6 +107,7 @@ namespace rct3::ui
         MaxWaitOn,  ///< Whether they leave after a while at most
         MaxWait,    ///< Seconds
         Inspection, ///< The interval's place in the list
+        WaitFor,    ///< The load the trains wait for, its place in the list
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

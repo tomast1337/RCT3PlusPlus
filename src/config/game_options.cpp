@@ -48,6 +48,7 @@ namespace rct3::config
             { O::GraphicsQuality, "graphics_quality", 0, 5, 1, 2 },
             { O::AntiAliasing, "anti_aliasing", 0, 8, 1, 0 },
             { O::Shadows, "shadows", 0, 2, 1, 2 },
+            { O::BlendShadows, "blend_shadows", 0, 1, 1, 1 },
             { O::ShowDetailLevels, "show_detail_levels", 0, 1, 1, 0 },
             { O::PeopleDetail, "people_detail", 0, 3, kAny, 2 },
             { O::PeopleDistance, "people_distance", 0, 3, kAny, 2 },

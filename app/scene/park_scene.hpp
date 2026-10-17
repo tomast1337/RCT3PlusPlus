@@ -304,7 +304,7 @@ namespace rct3::scene
         std::size_t shadow_now = 0;     ///< Which of them is the latest
         bool shadow_before_due = false; ///< Dynamic shadows draw the older drawing every other frame
         float shadow_drawn_at = 0;      ///< `clock` when they were last drawn
-        bool blend_shadows = true;      ///< Developer switch: without it, shadows step from one drawing to the next
+        bool blend_shadows = true;      ///< The BlendShadows option: without it, shadows step from one drawing to the next
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::FontSet* current_fonts = nullptr;

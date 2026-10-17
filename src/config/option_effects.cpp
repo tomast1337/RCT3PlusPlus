@@ -38,6 +38,9 @@ namespace rct3::config
             O::WaterBumps,
             O::Refraction,
             O::Shadows,
+            O::BlendShadows,
+            O::BlendDetailLevels, // Scenery between levels of detail
+            O::DetailBlendBand,
             O::Bloom,
         };
 

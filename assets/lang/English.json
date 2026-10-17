@@ -12,6 +12,8 @@
         "SkyHelp": "The sky shows the colours of the time of day, with the sun, the moon and the stars.",
         "MountainsHelp": "Hills and mountains stand far beyond the edges of the park.",
         "DetailBlendBand": "Blend distance",
+        "BlendShadows": "Smooth shadows",
+        "BlendShadowsHelp": "Shadows move smoothly as the sun crosses the sky, rather than in small steps. Costs a little more to draw.",
         "DetailBlendBandHelp": "How long the stretch is over which scenery blends from one level of detail to the next as the camera moves.",
         "AllItemsShown": "All shown: the park does not say which are available",
         "Paths": {

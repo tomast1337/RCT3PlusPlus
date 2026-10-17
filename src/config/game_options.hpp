@@ -64,6 +64,7 @@ namespace rct3::config
         GraphicsQuality, ///< 0 to 4 from fastest to finest, 5 custom
         AntiAliasing,    ///< 0 none, then each level the device offers
         Shadows,         ///< 0 none, 1 static, 2 dynamic
+        BlendShadows,    ///< Ours: shadows move smoothly between drawings from the sun, rather than step
         ShowDetailLevels,
         PeopleDetail,
         PeopleDistance,

@@ -29,6 +29,9 @@ namespace
     const std::uint32_t kLitVert[] =
 #include "lit.vert.inc"
         ;
+    const std::uint32_t kLitCrossingVert[] =
+#include "lit_crossing.vert.inc"
+        ;
     const std::uint32_t kLitFrag[] =
 #include "lit.frag.inc"
         ;
@@ -77,6 +80,10 @@ namespace rct3::render::vulkan
                     return { kLitVert, kLitFrag };
                 case Shader::LitCutout:
                     return { kLitVert, kLitFrag, true };
+                case Shader::LitCrossing:
+                    return { kLitCrossingVert, kLitFrag };
+                case Shader::LitCrossingCutout:
+                    return { kLitCrossingVert, kLitFrag, true };
                 case Shader::Shape:
                     return { kShapeVert, kShapeFrag };
                 case Shader::Water:
@@ -455,7 +462,7 @@ namespace rct3::render::vulkan
             return std::unexpected("unknown shader");
         if (desc.shader == Shader::Water && set_count_ < kSetCount)
             return std::unexpected("the device binds too few descriptor sets for the water shader");
-        if ((desc.shader == Shader::Lit || desc.shader == Shader::LitCutout) && set_count_ < 5)
+        if (lit_shader(desc.shader) && set_count_ < 5)
             return std::unexpected("the device binds too few descriptor sets for the lit shaders");
 
         VkShaderModule vert = VK_NULL_HANDLE;

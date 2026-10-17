@@ -100,12 +100,41 @@ namespace rct3::scene
     /// still are only built again when one's level of detail changes, checked as often as objects' levels.
     inline constexpr std::array kPeopleRebuildIntervals { 1.0f / 30.0f, 1.0f / 15.0f, 1.0f / 6.0f };
 
-    /// The objects' meshes for new levels, built away from the frame.
-    struct ObjectBuild
+    /// Objects' shapes and billboards at some levels.
+    struct ObjectShapes
     {
-        park::ObjectLevels levels;
         park::ObjectMesh mesh;
         park::Billboards billboards;
+    };
+
+    /// The objects' meshes for new levels, built away from the frame: those drawn at one level apart from those
+    /// crossing between two, at each.
+    struct ObjectBuild
+    {
+        park::LevelPlan plan;
+        ObjectShapes steady;
+        ObjectShapes finer;
+        ObjectShapes coarser;
+    };
+
+    /// A vertex of an object crossing between two levels: as GroundVertex, then its object's anchor and the
+    /// distances its band starts and ends at, and its side (render::Shader::LitCrossing).
+    struct CrossingVertex
+    {
+        park::GroundVertex ground;
+        glm::vec4 band { 0.0f };
+        glm::vec2 side { 0.0f };
+    };
+
+    /// Objects' shapes in buffers for drawing, and their billboards, turned whenever the eye moves. For crossing
+    /// objects, the buffers hold CrossingVertex, and `bands` each billboard corner's band and side.
+    struct ShownObjects
+    {
+        std::vector<park::ObjectBatch> batches;
+        render::BufferHandle vertices;
+        render::BufferHandle indices;
+        park::Billboards billboards;
+        std::vector<std::pair<glm::vec4, glm::vec2>> bands;
     };
 
     /// The still people's mesh for new levels, built away from the frame.
@@ -144,8 +173,9 @@ namespace rct3::scene
         /// How quickly far land fades into haze, per world unit beyond its start. The default leaves the hills
         /// round the park about half hidden; weather can raise it for misty or rainy days, or set 0 for none.
         float haze_rate = 0.0004f;
-        bool wireframe = false;   ///< Developer switch: outline the world's triangles
-        bool free_camera = false; ///< Developer switch: no camera limits, and the camera leaves the ground
+        bool wireframe = false;     ///< Developer switch: outline the world's triangles
+        bool tint_crossing = false; ///< Developer switch: objects crossing levels show the finer blue, the coarser red
+        bool free_camera = false;   ///< Developer switch: no camera limits, and the camera leaves the ground
         ui::UiTextures ground_textures;
         render::TextureHandle blank;     ///< For ground without a picture
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
@@ -158,20 +188,25 @@ namespace rct3::scene
         /// The boxes the objects are clicked in, worked out again when objects are added.
         mutable std::vector<park::PickBox> pick_boxes;
         mutable std::size_t pick_boxes_of = 0; ///< How many objects they were worked out for
-        park::ObjectLevels levels;             ///< Those the object buffers hold
-        float since_rebuild = 0;               ///< Seconds since the levels were last looked at
+        park::LevelPlan levels;                ///< Those the object buffers hold
+        /// Of a level's distance, how far before its edge objects start blending into the next; 0 jumps. Set
+        /// from the options each frame, and handed to each build.
+        float blend_band = 0;
+        float since_rebuild = 0; ///< Seconds since the levels were last looked at
         /// Meshes for levels that differ from those shown, while being built. Building only reads what is
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
         std::future<std::optional<ObjectBuild>> object_build;
-        std::vector<park::ObjectBatch> object_batches;
-        render::BufferHandle object_vertices;
-        render::BufferHandle object_indices;
-        park::Billboards billboards;                 ///< Gathered with the levels, turned whenever the eye moves
-        std::optional<glm::vec3> billboards_eye;     ///< The eye they face, none when not turned yet
-        render::PipelineHandle object_pipeline;      ///< Opaque parts
-        render::PipelineHandle cutout_pipeline;      ///< Parts with holes
-        render::PipelineHandle see_through_pipeline; ///< Blended parts, drawn last without writing depth
+        ShownObjects steady_objects;                          ///< Objects drawn at one level
+        ShownObjects finer_objects;                           ///< Those crossing between two, at the finer
+        ShownObjects coarser_objects;                         ///< The same at the coarser
+        std::optional<glm::vec3> billboards_eye;              ///< The eye they face, none when not turned yet
+        render::PipelineHandle object_pipeline;               ///< Opaque parts
+        render::PipelineHandle cutout_pipeline;               ///< Parts with holes
+        render::PipelineHandle crossing_pipeline;             ///< Opaque parts of crossing objects
+        render::PipelineHandle crossing_cutout_pipeline;      ///< Their parts with holes
+        render::PipelineHandle crossing_see_through_pipeline; ///< Their blended parts
+        render::PipelineHandle see_through_pipeline;          ///< Blended parts, drawn last without writing depth
         ui::UiTextures object_textures;
         park::SkyModels sky;
         park::ObjectMesh sky_mesh; ///< Built again each frame round the eye

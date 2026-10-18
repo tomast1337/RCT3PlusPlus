@@ -26,6 +26,10 @@ namespace rct3::strings
     /// Appends `c` as one code unit, or two for characters past U+FFFF.
     void append_utf16(std::u16string& out, char32_t c);
 
+    /// `text` for searching: lower case, and the accented Latin letters (U+00C0 to U+00FF) as their plain
+    /// ones, so "Cafe" finds "Café".
+    [[nodiscard]] std::u16string search_folded(std::u16string_view text);
+
     [[nodiscard]] std::string to_utf8(std::u16string_view text);
     [[nodiscard]] std::u16string to_utf16(std::string_view utf8);
 

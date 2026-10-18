@@ -160,3 +160,28 @@ TEST_CASE("items dearer than the cash are marked; none when money never runs out
     CHECK_FALSE(f.picker->rows()[0]->dear);
     CHECK(f.picker->rows()[1]->dear);
 }
+
+TEST_CASE("the search box keeps the items whose names hold it, and their headings open")
+{
+    Fixture f({ row(u"Carousel", 1), row(u"Café set", 2, { row(u"Café sign", 3), row(u"Bench", 4) }), row(u"Ferris wheel", 5) });
+    const auto& rows = f.picker->rows();
+    f.picker->search_box().text = u"CAFE";
+    f.step();
+    CHECK_FALSE(rows[0]->visible);
+    CHECK(rows[1]->visible);
+    CHECK(rows[2]->visible);
+    CHECK_FALSE(rows[3]->visible);
+    CHECK_FALSE(rows[4]->visible);
+    f.picker->search_box().text = u"wheel";
+    f.step();
+    CHECK_FALSE(rows[1]->visible);
+    CHECK(rows[4]->visible);
+    CHECK(rows[4]->rect().y0 == f.picker->rows()[4]->parent()->rect().y0);
+    f.desktop.update({ }, KeyboardState { .presses = { KeyPress { .key = Key::Escape } } });
+    f.step();
+    CHECK(f.picker->search_box().text.empty());
+    CHECK(rows[0]->visible);
+    f.desktop.update({ }, KeyboardState { .presses = { KeyPress { .key = Key::Escape } } });
+    f.step();
+    CHECK(f.desktop.root().find("list") == nullptr);
+}

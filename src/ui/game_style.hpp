@@ -589,6 +589,8 @@ namespace rct3::ui::game_skins
         s.text_button = kTextButton;
         s.open_heading = kOpenHeading;
         s.closed_heading = kClosedHeading;
+        s.search_box = kListBox;
+        s.search_box_focused = kListBoxFocused;
         s.scroll_bar = scroll_bar_style(Orientation::Vertical);
         return s;
     }

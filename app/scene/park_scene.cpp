@@ -53,6 +53,7 @@
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
+#include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
@@ -987,6 +988,11 @@ namespace rct3::scene
         }
 
     } // namespace
+
+    bool typing(const ParkScene& scene)
+    {
+        return scene.desktop && dynamic_cast<const ui::EditBox*>(scene.desktop->keyboard_focus()) != nullptr;
+    }
 
     void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index)
     {
@@ -2041,10 +2047,10 @@ namespace rct3::scene
         desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
         // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
-        // answers it.
+        // answers it. An open build list takes it first, to empty its search and then to close.
         const bool asking = desktop.root().find(kQuestionName) != nullptr;
         ui::KeyboardState keys = keyboard;
-        if (!asking)
+        if (!asking && !build_list_open(desktop.root()))
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
             auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName));

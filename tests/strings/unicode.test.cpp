@@ -64,3 +64,9 @@ TEST_CASE("characters past U+FFFF take two units")
     CHECK(is_high_surrogate(out[1]));
     CHECK(is_low_surrogate(out[2]));
 }
+
+TEST_CASE("search folding drops case and the accents of Latin letters")
+{
+    CHECK(rct3::strings::search_folded(u"Café CRÈME Ñoño") == u"cafe creme nono");
+    CHECK(rct3::strings::search_folded(u"Straße ×2") == u"straße ×2");
+}

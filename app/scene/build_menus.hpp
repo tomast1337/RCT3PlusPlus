@@ -40,6 +40,9 @@ namespace rct3::scene
     /// open before, titled with the button's help. False for an item that has no list.
     bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::StringTable& strings, const ui::Currency& currency);
 
+    /// Whether a list is open.
+    [[nodiscard]] bool build_list_open(const ui::Widget& root);
+
     /// Each frame: keeps what the open list changed and shades its items dearer than `cash`; returns the item
     /// picked in it, if one was.
     [[nodiscard]] std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash);

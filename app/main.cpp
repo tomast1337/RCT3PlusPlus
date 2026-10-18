@@ -339,7 +339,7 @@ namespace
         const float y = p.y - static_cast<float>(view.y);
         const rct3::ui::Widget* before = in.picked;
         if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<float>(view.size.width) && y < static_cast<float>(view.size.height))
-            in.picked = &rct3::ui::widget_at(desktop.root(), { x / in.scale, y / in.scale });
+            in.picked = rct3::ui::widget_at(desktop.root(), { x / in.scale, y / in.scale });
         if (!rct3::ui::in_tree(desktop.root(), in.picked)) // Gone since: a window closed, or another screen
             in.picked = nullptr;
         in.newly_picked = in.picked != before;
@@ -419,7 +419,11 @@ namespace
         const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
         const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * in.scale) / to_ui.x, (static_cast<float>(view.y) + cy * in.scale) / to_ui.y }; };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
-        if (const rct3::ui::Widget* holder = in.outlined->parent())
+        // The nearest holder smaller than the screen; full-screen frames and the desktop would only outline the game.
+        const rct3::ui::Widget* holder = in.outlined->parent();
+        while (holder != nullptr && holder->parent() != nullptr && holder->rect().width() >= holder->parent()->rect().width() && holder->rect().height() >= holder->parent()->rect().height())
+            holder = holder->parent();
+        if (holder != nullptr && holder->parent() != nullptr)
             draw.AddRect(corner(holder->rect().x0, holder->rect().y0), corner(holder->rect().x1, holder->rect().y1), IM_COL32(255, 200, 60, 160));
         const rct3::ui::Rect& r = in.outlined->rect();
         draw.AddRectFilled(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 40));

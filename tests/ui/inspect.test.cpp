@@ -19,14 +19,14 @@ TEST_CASE("a widget is named by its class and found again by its path")
     CHECK(desktop.root().find(widget_path(ok)) == &ok);
     CHECK(widget_path(desktop.root()).empty());
 
-    // The window lets the pointer through where it has nothing: there the desktop is under it.
+    // The window lets the pointer through where it has nothing, and the desktop is never picked.
     window.placement = fill();
     ok.placement = top_left(10, 10, 20, 20);
     desktop.layout({ 0, 0, 100, 100 });
-    CHECK(&widget_at(desktop.root(), { 15, 15 }) == &ok);
-    CHECK(&widget_at(desktop.root(), { 60, 60 }) == &desktop.root());
+    CHECK(widget_at(desktop.root(), { 15, 15 }) == &ok);
+    CHECK(widget_at(desktop.root(), { 60, 60 }) == nullptr);
     ok.visible = false;
-    CHECK(&widget_at(desktop.root(), { 15, 15 }) == &desktop.root());
+    CHECK(widget_at(desktop.root(), { 15, 15 }) == nullptr);
     ok.visible = true;
 
     CHECK(in_tree(desktop.root(), &ok));

@@ -51,8 +51,10 @@ namespace rct3::park
         std::optional<std::uint8_t> side; ///< None when the path does not reach that edge
     };
 
-    /// The path `ray` meets first, if it meets one before the ground; a path is met at its middle height.
-    [[nodiscard]] std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    /// The path `ray` meets first, if it meets one before the ground; a path is met at its middle height. With
+    /// `through_ground`, as when the ground is drawn see-through, the ground hides no path off it, so paths in
+    /// tunnels can be picked.
+    [[nodiscard]] std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, bool through_ground = false);
 
     /// Has `builder` go on from `path`'s edge on `side`: the next piece on the tile beyond, heading away, at
     /// the height the path meets the edge. False, leaving the builder as it was, when the path does not reach

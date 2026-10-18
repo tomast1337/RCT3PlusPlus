@@ -74,6 +74,8 @@ TEST_CASE("our folders of games match the game's")
     CHECK(game_saves_folder(UserFolder::Parks) == "Parks");
     CHECK(game_saves_folder(UserFolder::Scenarios) == "Scenarios");
     CHECK(game_saves_folder(UserFolder::NewScenarios) == "Start New Scenarios");
+    CHECK(game_saves_folder(UserFolder::Guests) == "Peeps");
+    CHECK_FALSE(game_saves_folder(UserFolder::Photos).has_value());
     CHECK_FALSE(game_saves_folder(UserFolder::Config).has_value());
     CHECK_FALSE(game_saves_folder(UserFolder::Careers).has_value());
 }

@@ -205,3 +205,73 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Stride>(staff[0]).to == tile);
     CHECK(staff[2] == entt::null);
 }
+
+TEST_CASE("paths laid and taken away come and go from the network; walkers and rides catch up")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 4;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(32);
+    save::WorldModel model;
+    model.terrain = grid;
+    simulation::import_paths(world, model);
+    // A row of paths along row 0, and a ride whose entrance at (5, 1) has no path beside it yet.
+    std::vector<save::PathTile> laid;
+    for (int c = 0; c <= 3; ++c)
+    {
+        save::PathTile& p = laid.emplace_back();
+        p.kind = save::PathKind::Ground;
+        p.col = static_cast<std::uint8_t>(c);
+        p.id = static_cast<std::uint64_t>(c + 1);
+        CHECK(simulation::add_path(world, p, grid) != simulation::kNoNode);
+    }
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back();
+    ride.kind = save::RideKind::Flat;
+    ride.base.id = 42;
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 5, .row = 1 };
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .seconds = 30 } };
+    const auto at = [&](int c) { return *world.paths.find({ c, 0, 0 }); };
+    // Imported while a stub path reaches the entrance, then the stub goes and a path is laid to it later.
+    save::PathTile stub;
+    stub.kind = save::PathKind::Ground;
+    stub.col = 5;
+    stub.row = 2;
+    (void)simulation::add_path(world, stub, grid);
+    const auto e = simulation::import_rides(world, rides, timings).front();
+    REQUIRE(world.registry.valid(e));
+    simulation::remove_path(world, stub, grid);
+    save::PathTile& joining = laid.emplace_back();
+    joining.kind = save::PathKind::Ground;
+    joining.col = 4;
+    (void)simulation::add_path(world, joining, grid);
+    save::PathTile& front = laid.emplace_back();
+    front.kind = save::PathKind::Ground;
+    front.col = 5;
+    (void)simulation::add_path(world, front, grid);
+    CHECK(simulation::relink_attractions(world, rides) == 1);
+    CHECK(world.registry.get<simulation::Attraction>(e).entrance == at(5));
+    CHECK(simulation::relink_attractions(world, rides) == 0);
+
+    // A guest walking from (1, 0) to (2, 0) on the way to (3, 0); then (2, 0) is taken away.
+    auto& r = world.registry;
+    const entt::entity walker = r.create();
+    r.emplace<simulation::Pose>(walker, simulation::Pose { .position = world.paths.centre(at(1)) });
+    r.emplace<simulation::Stride>(walker, simulation::Stride { .from = at(1), .to = at(2), .progress = 0.5f, .route = { at(3) } });
+    r.emplace<simulation::Errand>(walker, simulation::Errand { .kind = simulation::ErrandKind::Heading, .target = e });
+    const simulation::NodeId middle = at(2);
+    const entt::entity litter = r.create();
+    r.emplace<simulation::Litter>(litter, simulation::Litter { .node = middle });
+    simulation::remove_path(world, laid[2], grid);
+    CHECK_FALSE(world.paths.find({ 2, 0, 0 }));
+    const auto& stride = r.get<simulation::Stride>(walker);
+    CHECK(stride.from == at(1));
+    CHECK(stride.to == at(1));
+    CHECK(stride.route.empty());
+    CHECK(r.get<simulation::Errand>(walker).kind == simulation::ErrandKind::Wandering);
+    CHECK_FALSE(r.valid(litter));
+    CHECK_FALSE(world.paths.route(at(1), at(3)));
+}

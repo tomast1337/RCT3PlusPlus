@@ -11,6 +11,9 @@
 // and the vertex alpha says how much of what is below each layer covers. The batches come lowest surface
 // first and must be drawn in order, with alpha blending and depth tests that pass on equal depth.
 //
+// A wall can have openings: a band of height on a tile where the ground is hollowed out, as round a tunnel,
+// leaves that band out of every wall along the tile's edges.
+//
 // World units throughout: X along the columns, Z along the rows, Y up.
 #pragma once
 
@@ -78,7 +81,16 @@ namespace rct3::park
     inline constexpr float kFlat = 0.001f;
     inline constexpr glm::vec4 kWaterColour = unit(hex("#2c64a0a6"));
 
-    [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water);
+    /// A band of height on a tile that the walls along its edges leave open.
+    struct GroundOpening
+    {
+        int col = 0;
+        int row = 0;
+        float low = 0;
+        float high = 0;
+    };
+
+    [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings = { });
 
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit. Our own value.

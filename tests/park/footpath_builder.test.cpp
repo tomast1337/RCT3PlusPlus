@@ -174,7 +174,7 @@ TEST_CASE("a hill stops a piece, or is cut down to it")
 {
     save::TerrainGrid g = owned_grid(4, 4);
     for (float& c : g.cells[1 * 4 + 2].corners)
-        c = 3;
+        c = 2; // Too low over the piece for a tunnel
     FootpathBuilder b;
     start_at(b, { 1, 1 });
     b.heading = 1;
@@ -196,6 +196,35 @@ TEST_CASE("a hill stops a piece, or is cut down to it")
     start_at(c, { 0, 0 });
     CHECK(next_piece(c, rough)->start == 2);
     CHECK_FALSE(next_piece(c, rough)->ground);
+}
+
+TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
+{
+    save::TerrainGrid g = owned_grid(4, 4);
+    for (float& c : g.cells[1 * 4 + 2].corners)
+        c = 3;
+    FootpathBuilder b;
+    start_at(b, { 1, 1 });
+    b.heading = 1;
+    std::vector<save::PathTile> paths;
+    CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 10, 0));
+    const NextPiece under = *next_piece(b, g);
+    CHECK(under.tunnel);
+    CHECK_FALSE(under.cut);
+    CHECK_FALSE(under.ground);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
+    CHECK(piece_price(under, g, 1200) == 1200 + kTunnelPieceCost);
+    CHECK(lay_path(b, paths, under, "Gravel", 11, 12));
+    REQUIRE(paths.back().elevation);
+    CHECK(paths.back().elevation->underground);
+    CHECK(paths.back().kind == save::PathKind::Flying);
+    CHECK(g.at(2, 1).max_height() == 3); // Not cut
+
+    // Rising inside the hill needs room over the piece's high end.
+    b.slope = PathSlope::Up;
+    for (float& c : g.cells[1 * 4 + 3].corners)
+        c = 3.5f;
+    CHECK_FALSE(next_piece(b, g)->tunnel);
 }
 
 TEST_CASE("a raised piece costs more for each started unit of height")

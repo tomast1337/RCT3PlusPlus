@@ -12,8 +12,10 @@
 // The cheapest route wins: each piece costs its price, as laying it would (raised pieces more the higher they
 // stand), plus kRouteStepCost so shorter routes win among equally priced ones, kRouteTurnCost for each turn so
 // routes run straight, kRouteSlopeCost for each sloping piece so routes keep level where they can, and
-// kRouteCutCost for each piece cut into the ground. With cutting off, a route goes
-// over or round a hill; with it on, it may cut through.
+// kRouteCutCost for each unit of ground cut away under each piece. Tunnel pieces cut nothing, so where the
+// ground stands high a route goes under it rather than cut a deep trench. With cutting off, a route goes over
+// or round a hill, or through it where it can reach a tunnel without cutting; with it on, it may cut its way
+// down to a tunnel or through.
 #pragma once
 
 #include "park/footpath_builder.hpp"
@@ -32,7 +34,7 @@ namespace rct3::park
     inline constexpr std::int64_t kRouteStepCost = 100;
     inline constexpr std::int64_t kRouteTurnCost = 50;
     inline constexpr std::int64_t kRouteSlopeCost = 100;
-    inline constexpr std::int64_t kRouteCutCost = 400;
+    inline constexpr std::int64_t kRouteCutCost = 200;
     /// Pieces looked at before a search gives up. Our own value.
     inline constexpr std::size_t kRouteSearchLimit = 60000;
 

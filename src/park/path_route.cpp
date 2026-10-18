@@ -2,6 +2,7 @@
 #include "park/path_route.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <queue>
 #include <unordered_map>
@@ -49,7 +50,16 @@ namespace rct3::park
         {
             if (same_piece_at(paths, piece, b))
                 return 0;
-            return piece_cost(ground_cost, !piece.ground, height_above_ground(piece, grid));
+            return piece_price(piece, grid, ground_cost);
+        }
+
+        /// kRouteCutCost for each started unit the ground of `piece`'s tile is cut down by.
+        std::int64_t cut_cost(const NextPiece& piece, const save::TerrainGrid& grid)
+        {
+            if (!piece.cut)
+                return 0;
+            const float depth = grid.at(piece.spot.col, piece.spot.row).max_height() - static_cast<float>(std::min(piece.start, piece.end));
+            return kRouteCutCost * std::max<std::int64_t>(1, static_cast<std::int64_t>(std::ceil(depth)));
         }
     } // namespace
 
@@ -134,7 +144,7 @@ namespace rct3::park
                     next.on_slope = b.slope != PathSlope::Flat;
                     next.parent = at;
                     next.step = { heading, b.slope, *piece };
-                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn ? kRouteTurnCost : 0) + (piece->cut ? kRouteCutCost : 0) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
+                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn ? kRouteTurnCost : 0) + cut_cost(*piece, grid) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
                     const std::uint64_t key = key_of(next);
                     if (const auto known = best.find(key); known != best.end() && known->second <= next.cost)
                         continue;

@@ -49,11 +49,13 @@ namespace rct3::park
 
     enum class GroundPaint : std::uint8_t
     {
-        Surface, ///< A land surface, by its index in the terrain types
-        Cliff,   ///< A cliff face, likewise
-        PathA,   ///< A ground path's first picture, by its style's index in the park
-        PathB,   ///< Its second picture
-        Queue,   ///< A ground queue's picture, by its painting's index in the park
+        Surface,       ///< A land surface, by its index in the terrain types
+        Cliff,         ///< A cliff face, likewise
+        PathA,         ///< A ground path's first picture, by its style's index in the park
+        PathB,         ///< Its second picture
+        Queue,         ///< A ground queue's picture, by its painting's index in the park
+        TunnelWall,    ///< A tunnel's side wall, by the cliff face of the ground it goes through
+        TunnelCeiling, ///< Its ceiling, likewise
     };
 
     /// A run of `count` indices from `first` painted with one surface or cliff face.

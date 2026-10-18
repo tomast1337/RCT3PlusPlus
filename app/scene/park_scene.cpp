@@ -2431,7 +2431,7 @@ namespace rct3::scene
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
-            if (const auto picked = update_build_menus(scene.build, desktop.root()); picked && start_ride_placing(scene, *picked))
+            if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash); picked && start_ride_placing(scene, *picked))
             {
                 close_track_building(scene);
                 close_footpath_panel(scene);

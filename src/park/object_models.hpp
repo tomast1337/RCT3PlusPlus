@@ -83,16 +83,17 @@ namespace rct3::park
 
     struct ObjectModel
     {
-        std::uint16_t positioning = 0;                ///< How the item sits on its tile (see object_placement.hpp)
-        std::uint32_t category = 0;                   ///< What kind of item it is (see item_category.hpp)
-        std::array<std::int32_t, 2> squares { 1, 1 }; ///< Tiles it covers along its own X and Z
-        float sway = 0;                               ///< How much it sways in the wind; above 0 for trees and plants only
-        std::string support_group;                    ///< The set of supports it stands on, or the set a support belongs to
-        std::int32_t lowest_level = 0;                ///< Lowest level its footprint takes, from its base height
-        bool water_only = false;                      ///< A ride that stands only on water
-        bool photo_spot = false;                      ///< A path item guests stop at to have their photo taken
-        bool ground_height = true;                    ///< On the ground, it stands at the ground's height there
-        bool fits_ground = false;                     ///< A plant on the ground, its shape bends to follow it
+        std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
+        std::uint32_t category = 0;                      ///< What kind of item it is (see item_category.hpp)
+        std::array<std::int32_t, 2> squares { 1, 1 };    ///< Tiles it covers along its own X and Z
+        float sway = 0;                                  ///< How much it sways in the wind; above 0 for trees and plants only
+        std::string support_group;                       ///< The set of supports it stands on, or the set a support belongs to
+        std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
+        bool water_only = false;                         ///< A ride that stands only on water
+        bool photo_spot = false;                         ///< A path item guests stop at to have their photo taken
+        bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
+        bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
+        std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
         /// whether it is inside the outline. Empty for every other item.
         std::vector<bool> fence_outline;

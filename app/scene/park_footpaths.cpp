@@ -8,6 +8,7 @@
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_pick.hpp"
+#include "park/relief_maps.hpp"
 #include "park/surrounding_land.hpp"
 #include "scene/park_scene.hpp"
 #include "ui/extra_skins.hpp"
@@ -119,6 +120,8 @@ namespace rct3::scene
             f.pictured = styles;
             if (images.empty())
                 return;
+            if (scene.relief_maps)
+                park::add_relief_maps(images);
             auto uploaded = ui::upload_textures(device, images);
             if (!uploaded)
             {

@@ -92,6 +92,7 @@ namespace rct3::config
         CompressTextures,
         AggressiveDepthBias,
         TextureDetail,
+        SurfaceDetail, ///< Ours: 0 off, 1 fine grain up close, 2 also relief from maps made of the textures
         Trees3D,
         OffMapTrees,
         SimpleTerrain,

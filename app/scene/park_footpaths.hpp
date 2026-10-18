@@ -8,7 +8,7 @@
 // Queue tiles get railings on their closed sides, and a queue tile laid beside a ride's entrance joins the
 // station's line (park/queue_lines.hpp).
 //
-// With a path style chosen, dragging over bare ground paints paths on the tiles the pointer passes over, and a
+// With a path style chosen, the path a click would lay shows under the pointer; dragging over bare ground paints paths on the tiles the pointer passes over, and a
 // click lays one (park/path_drag.hpp); they show faintly while the button is held, are laid when it is let go,
 // and the right button calls the stroke off. Taking a piece away right after a stroke takes the whole stroke
 // away. Pointing at a path shows an arrow on its edge nearest the pointer and the piece that would go on from
@@ -80,11 +80,12 @@ namespace rct3::scene
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, std::uint8_t>> hover_edge;
-        bool drop = false;                  ///< The stroke ended, so its paths are laid
-        std::optional<park::DragPlan> plan; ///< What the stroke would lay, worked out when it changes
-        std::vector<std::uint64_t> stroke;  ///< The paths the last stroke laid, until another piece is laid
-        bool dirty = false;                 ///< The next piece changed, so the ghost is built again
-        std::u16string notice;              ///< Why the last piece was not laid, until the next control
+        std::optional<park::PathSpot> hover_tile; ///< Bare ground pointed at, shown as the path a click would lay
+        bool drop = false;                        ///< The stroke ended, so its paths are laid
+        std::optional<park::DragPlan> plan;       ///< What the stroke would lay, worked out when it changes
+        std::vector<std::uint64_t> stroke;        ///< The paths the last stroke laid, until another piece is laid
+        bool dirty = false;                       ///< The next piece changed, so the ghost is built again
+        std::u16string notice;                    ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.

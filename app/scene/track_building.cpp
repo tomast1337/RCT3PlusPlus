@@ -325,19 +325,41 @@ namespace rct3::scene
             (void)scene.object_build.get();
     }
 
+    namespace
+    {
+        /// The texture a ghost draws `batch` with. Ghosts are drawn see-through, which takes a picture's alpha
+        /// as coverage; opaque parts may keep other things in their alpha (a path's surface does), so they get
+        /// a copy of their own with it filled.
+        std::string ghost_texture(const park::ObjectBatch& batch)
+        {
+            return batch.blend == park::PartBlend::Opaque ? "ghost:" + batch.texture : batch.texture;
+        }
+    } // namespace
+
     void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost)
     {
         std::vector<park::ObjectBatch> missing;
         for (const park::ObjectBatch& batch : ghost.batches)
         {
-            if (!scene.object_textures.contains(batch.texture))
+            if (!scene.object_textures.contains(ghost_texture(batch)))
                 missing.push_back(batch);
         }
         if (missing.empty())
             return;
         auto pictures = park::paint_batches(missing, scene.pictures);
+        for (const park::ObjectBatch& batch : missing)
+        {
+            const auto painted = pictures.find(batch.texture);
+            if (batch.blend != park::PartBlend::Opaque || painted == pictures.end())
+                continue;
+            ovl::RgbaImage filled = painted->second;
+            for (std::size_t i = 3; i < filled.pixels.size(); i += 4)
+                filled.pixels[i] = 255;
+            pictures.insert_or_assign(ghost_texture(batch), std::move(filled));
+        }
         if (scene.relief_maps)
             park::add_relief_maps(pictures); // The pictures stay for the object once it is built
+        std::erase_if(pictures, [&](const auto& entry) { return scene.object_textures.contains(entry.first); });
         auto uploaded = ui::upload_textures(device, pictures);
         if (uploaded)
             scene.object_textures.merge(*uploaded);
@@ -456,6 +478,19 @@ namespace rct3::scene
             draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
     }
 
+    render::SceneLight ghost_light(render::SceneLight light)
+    {
+        constexpr float kGhostGlow = 1.6f; // Our own value: bright enough to pass the glow's threshold through the ghost's see-through tint
+        light.sun = glm::vec3(0.0f);
+        light.sky = glm::vec3(kGhostGlow);
+        light.ground = glm::vec3(kGhostGlow);
+        light.shadow_map = { };
+        light.shadow_view = { };
+        light.shadow_map_before = { };
+        light.shadow_view_before = { };
+        return light;
+    }
+
     void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light)
     {
         if (mesh.indices.empty() || !scene.see_through_pipeline)
@@ -466,7 +501,7 @@ namespace rct3::scene
             return;
         for (const park::ObjectBatch& batch : mesh.batches)
         {
-            const auto texture = scene.object_textures.find(batch.texture);
+            const auto texture = scene.object_textures.find(ghost_texture(batch));
             render::DrawCommand draw;
             draw.pipeline = scene.see_through_pipeline;
             draw.vertices = *vertices;
@@ -478,7 +513,7 @@ namespace rct3::scene
             draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
             draw.filter = render::Filter::Linear;
             draw.address = render::AddressMode::Repeat;
-            draw.light = light;
+            draw.light = ghost_light(light);
             device.draw(draw);
         }
     }

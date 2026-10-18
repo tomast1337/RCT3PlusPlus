@@ -331,6 +331,7 @@ namespace rct3::scene
         render::TextureHandle view_target;                 ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                     ///< Across the view's target
         std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
+        std::optional<ui::Point> right_press;              ///< Likewise the right button
         render::SceneLight light;                          ///< What the day clock shows, for this frame
         int shadows = 0;                                   ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun

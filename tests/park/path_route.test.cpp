@@ -104,6 +104,21 @@ TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting i
     CHECK(sloping(*through) < sloping(*over));
 }
 
+TEST_CASE("under a mountain a route tunnels rather than climb over or cut a trench")
+{
+    save::TerrainGrid g = owned_grid(14, 3);
+    for (int col = 4; col <= 9; ++col)
+        ridge(g, col, 12);
+    for (const bool cut : { false, true })
+    {
+        const auto route = find_route(started_at({ 1, 1 }, cut), { 12, 1 }, g, { }, 1000);
+        REQUIRE(route);
+        CHECK(joined(*route));
+        CHECK(std::ranges::count_if(*route, [](const RouteStep& s) { return s.piece.tunnel; }) == 6);
+        CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.cut; }));
+    }
+}
+
 TEST_CASE("a route goes on from the trail's end and walks over paths already there")
 {
     const save::TerrainGrid g = owned_grid(8, 3);

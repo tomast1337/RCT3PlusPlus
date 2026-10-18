@@ -31,8 +31,14 @@
 // and moving the pointer up or down before letting go steps the slope: each kSlopeDragStep up is one step
 // steeper upwards (flat, ramp up, stairs up), each down one step downwards; letting go lays the piece.
 //
+// A piece with the ground of its whole tile at least kTunnelCover above its top is a tunnel piece: it goes
+// under the ground without cutting it, so it is never refused for going into the ground, and it is kept
+// whether cutting is on or off. Where a tunnel meets a slope or a cliff the ground opens round it. A tunnel is
+// reached from a piece cut into the slope in front of it, or from below a cliff.
+//
 // A piece on the ground costs its style's price. A raised piece costs more the higher its middle is above the
-// ground under it: kRaisedPieceCost more for each started unit of height.
+// ground under it: kRaisedPieceCost more for each started unit of height. A tunnel piece costs
+// kTunnelPieceCost more.
 #pragma once
 
 #include "park/terrain_mesh.hpp"
@@ -128,6 +134,10 @@ namespace rct3::park
     /// under a raised path. Our own value.
     inline constexpr std::int32_t kPathHeadroom = 2;
 
+    /// Ground over a piece's top, in world units, that makes it a tunnel piece. Our own value, fitted to the
+    /// parks' underground paths, all of which have about this much or more over them.
+    inline constexpr float kTunnelCover = 3;
+
     /// The next piece as it would be laid.
     struct NextPiece
     {
@@ -136,6 +146,7 @@ namespace rct3::park
         std::int32_t end = 0;   ///< Height it is left at
         bool ground = false;    ///< Lies on the ground; otherwise raised
         bool cut = false;       ///< Goes into the ground, so the ground has to be cut down first
+        bool tunnel = false;    ///< Goes under the ground with room to walk: a tunnel piece
         friend bool operator==(const NextPiece&, const NextPiece&) = default;
     };
 
@@ -213,5 +224,11 @@ namespace rct3::park
     /// The price of a piece whose style costs `ground_cost` on the ground. `raised` false for a piece laid on
     /// the ground; otherwise `height` is how far its middle is above the ground under it, in world units.
     [[nodiscard]] std::int64_t piece_cost(std::int32_t ground_cost, bool raised, float height) noexcept;
+
+    /// Added to a tunnel piece's price, in hundredths of the currency unit. Our own value.
+    inline constexpr std::int64_t kTunnelPieceCost = 1000;
+
+    /// The price of `piece` on `grid` of a style that costs `ground_cost` on the ground.
+    [[nodiscard]] std::int64_t piece_price(const NextPiece& piece, const save::TerrainGrid& grid, std::int32_t ground_cost);
 
 } // namespace rct3::park

@@ -9,6 +9,7 @@
 //   std::vector                      u32 count, then each element
 //   std::array and glm vectors       each element
 //   std::optional                    u8 1 then the value, or u8 0
+//   std::variant                     u8 index of the alternative held, then its value (std::monostate: none)
 //   a struct                         each member in the order declared
 //
 // A chunk written this way starts with a u64 hash of its type's layout (the kinds above, nested), so a reader
@@ -33,6 +34,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace rct3::parkfile::detail
@@ -232,6 +234,13 @@ namespace rct3::parkfile::detail
     {
     };
 
+    template<typename T> struct IsVariant : std::false_type
+    {
+    };
+    template<typename... T> struct IsVariant<std::variant<T...>> : std::true_type
+    {
+    };
+
     template<typename T>
     concept Scalar = std::is_arithmetic_v<T> || std::is_enum_v<T>;
 
@@ -270,6 +279,14 @@ namespace rct3::parkfile::detail
         {
             out += std::format("a{}(", T::length());
             layout<typename T::value_type>(out);
+            out += ')';
+        }
+        else if constexpr (std::same_as<T, std::monostate>)
+            out += 'n';
+        else if constexpr (IsVariant<T>::value)
+        {
+            out += "x(";
+            [&]<std::size_t... I>(std::index_sequence<I...>) { ((out += I > 0 ? "|" : "", layout<std::variant_alternative_t<I, T>>(out)), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
             out += ')';
         }
         else
@@ -329,6 +346,14 @@ namespace rct3::parkfile::detail
             for (glm::length_t i = 0; i < T::length(); ++i)
                 put(w, value[i]);
         }
+        else if constexpr (std::same_as<T, std::monostate>)
+            return;
+        else if constexpr (IsVariant<T>::value)
+        {
+            static_assert(std::variant_size_v<T> <= 255);
+            w.number(static_cast<std::uint8_t>(value.index()));
+            std::visit([&](const auto& held) { put(w, held); }, value);
+        }
         else
         {
             const auto& [... members] = value;
@@ -379,6 +404,18 @@ namespace rct3::parkfile::detail
         {
             for (glm::length_t i = 0; i < T::length(); ++i)
                 get(r, value[i]);
+        }
+        else if constexpr (std::same_as<T, std::monostate>)
+            return;
+        else if constexpr (IsVariant<T>::value)
+        {
+            const auto index = r.number<std::uint8_t>();
+            if (index >= std::variant_size_v<T>)
+            {
+                r.fail();
+                return;
+            }
+            [&]<std::size_t... I>(std::index_sequence<I...>) { ((I == index ? get(r, value.template emplace<I>()) : void()), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
         }
         else
         {

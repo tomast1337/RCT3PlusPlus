@@ -17,16 +17,21 @@
 //   "RIDE" v1  save::RideModel
 //   "PARK" v1  SavedProgress
 //   "VIEW" v1  park::ParkCamera
+//   "PEOP" v1  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
+//              they are. Saves made before it lack it; their people start again from the original park.
 //
-// The guests, staff and the simulation start again from the original park.
+// The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
 
 #include "park/camera.hpp"
 #include "save/model/park.hpp"
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/summary.hpp"
+#include "simulation/components.hpp"
 #include "simulation/park_rating.hpp"
+#include "simulation/sim_world.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,6 +39,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace rct3::parkfile
@@ -55,6 +61,39 @@ namespace rct3::parkfile
         float day_time = 0; ///< The day clock's time
     };
 
+    /// A guest in the park.
+    struct SavedGuest
+    {
+        std::int32_t look = -1; ///< Place in SavedPeople::model.guests of the guest drawn for them; -1 none
+        simulation::Visitor visitor;
+        glm::vec3 position { 0.0f };
+        float heading = 0;
+        simulation::Needs needs;
+        simulation::Mood mood;
+        std::int64_t cash = 0;
+        std::optional<simulation::Taste> taste;
+        std::int32_t party = -1; ///< Guests with the same number go round together; -1 alone
+        bool leader = false;
+    };
+
+    /// A member of staff at work.
+    struct SavedWorker
+    {
+        std::int32_t look = -1; ///< Place in SavedPeople::model.staff; -1 none
+        simulation::StaffRole role = simulation::StaffRole::Other;
+        std::int64_t wage = 0;
+        glm::vec3 position { 0.0f };
+        float heading = 0;
+        std::optional<simulation::Patrol> patrol;
+    };
+
+    struct SavedPeople
+    {
+        save::PeopleModel model; ///< Looks, names and pages; the guests no longer in the park marked out
+        std::vector<SavedGuest> guests;
+        std::vector<SavedWorker> staff;
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -67,7 +106,24 @@ namespace rct3::parkfile
         save::RideModel rides;
         SavedProgress progress;
         park::ParkCamera camera;
+        std::optional<SavedPeople> people; ///< None in saves made before people were kept
     };
+
+    /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one
+    /// drawn (guests in model.guests, staff in model.staff).
+    [[nodiscard]] SavedPeople keep_people(const simulation::SimWorld& world, save::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks);
+
+    /// Adds the saved guests to `world`, standing where they stood; returns them in the order of people.guests.
+    /// Call after import_paths in place of import_guests, then start_guests, then place_parties.
+    std::vector<entt::entity> place_guests(simulation::SimWorld& world, const SavedPeople& people);
+
+    /// Makes the saved parties again of the guests start_guests set walking, `guests` being place_guests's
+    /// answer; in place of import_parties.
+    void place_parties(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
+
+    /// Adds the saved staff to `world`, walking; returns them in the order of people.staff, null for those not
+    /// on a path. In place of import_staff.
+    std::vector<entt::entity> place_staff(simulation::SimWorld& world, const SavedPeople& people);
 
     /// The objects a save keeps: the first `own` (the park's own) and those a path or a track piece stands on
     /// (the player's); not those loading makes again (supports, railings, cars, trees).

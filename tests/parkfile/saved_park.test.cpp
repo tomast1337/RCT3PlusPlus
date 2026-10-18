@@ -55,6 +55,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->progress.date.year == 2);
     CHECK(read->progress.day_time == 0.25f);
     CHECK(read->camera.target == glm::vec3 { 1, 2, 3 });
+    CHECK_FALSE(read->people); // As in saves made before people were kept
     CHECK(parkfile::write_saved_park(*read) == bytes);
 }
 
@@ -84,4 +85,87 @@ TEST_CASE("a save keeps the park's objects and those the player built, not those
     CHECK(kept[1].id == 11);
     CHECK(kept[2].id == 13);
     CHECK(kept[3].id == 14);
+}
+
+TEST_CASE("a save keeps the guests and staff, and loading puts them back")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    save::PeopleModel model;
+    model.guests.resize(2);
+    model.guests[0].in_park = true;
+    model.staff.resize(1);
+    // Ann is drawn as the second saved guest; Bob came in at the gate since; Cy has left.
+    const entt::entity ann = r.create();
+    r.emplace<Visitor>(ann, Visitor { .name = "Ann" });
+    r.emplace<Pose>(ann, Pose { .position = { 1, 0, 2 }, .heading = 0.5f });
+    r.emplace<Needs>(ann, Needs { .hunger = 0.25f });
+    r.emplace<Mood>(ann);
+    r.emplace<Wallet>(ann, 500);
+    r.emplace<Taste>(ann, 0.1f, 0.7f);
+    const entt::entity bob = r.create();
+    r.emplace<Visitor>(bob, Visitor { .name = "Bob" });
+    r.emplace<Pose>(bob);
+    r.emplace<Needs>(bob);
+    r.emplace<Mood>(bob);
+    r.emplace<Wallet>(bob);
+    const entt::entity cy = r.create();
+    r.emplace<Visitor>(cy);
+    r.emplace<Pose>(cy);
+    r.emplace<Needs>(cy);
+    r.emplace<Mood>(cy);
+    r.emplace<Wallet>(cy);
+    r.emplace<Left>(cy);
+    const entt::entity party = r.create();
+    r.emplace<Party>(party, Party { .leader = bob, .members = { ann, bob } });
+    r.emplace<Member>(ann, party);
+    r.emplace<Member>(bob, party);
+    const entt::entity sweeper = r.create();
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900 });
+    r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
+    r.emplace<Patrol>(sweeper, Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, model, { { ann, 1 }, { sweeper, 0 } });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->people);
+    const parkfile::SavedPeople& people = *read->people;
+    CHECK_FALSE(people.model.guests[0].in_park);
+    CHECK(people.model.guests[1].in_park);
+    REQUIRE(people.guests.size() == 2);
+    REQUIRE(people.staff.size() == 1);
+    CHECK(people.staff[0].look == 0);
+    CHECK(people.staff[0].role == StaffRole::Handyman);
+    CHECK(people.staff[0].wage == 900);
+    REQUIRE(people.staff[0].patrol);
+    CHECK(people.staff[0].patrol->tiles == std::vector<glm::ivec2> { { 1, 2 }, { 3, 4 } });
+    CHECK(people.staff[0].patrol->zone == 7);
+
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    const auto guests = parkfile::place_guests(loaded, people);
+    REQUIRE(guests.size() == 2);
+    const std::size_t first = people.guests[0].look == 1 ? 0 : 1; // Ann's place
+    const entt::entity ann2 = guests[first];
+    const entt::entity bob2 = guests[1 - first];
+    CHECK(l.get<Visitor>(ann2).name == "Ann");
+    CHECK(l.get<Pose>(ann2).position == glm::vec3 { 1, 0, 2 });
+    CHECK(l.get<Pose>(ann2).heading == 0.5f);
+    CHECK(l.get<Needs>(ann2).hunger == 0.25f);
+    CHECK(l.get<Wallet>(ann2).cash == 500);
+    CHECK(l.get<Taste>(ann2).most == 0.7f);
+    CHECK(l.get<Visitor>(bob2).name == "Bob");
+    CHECK(people.guests[1 - first].look == -1);
+    // As start_guests leaves them, walking.
+    for (const entt::entity e : guests)
+        l.emplace<Errand>(e);
+    parkfile::place_parties(loaded, people, guests);
+    REQUIRE(l.all_of<Member>(ann2));
+    const auto& together = l.get<Party>(l.get<Member>(ann2).party);
+    CHECK(together.leader == bob2);
+    CHECK(l.get<Errand>(ann2).kind == ErrandKind::Following);
+    // No paths to walk on here, so the sweeper is not placed.
+    CHECK(parkfile::place_staff(loaded, people) == std::vector<entt::entity> { entt::null });
 }

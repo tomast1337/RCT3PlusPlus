@@ -39,7 +39,8 @@ namespace rct3::ui
         constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kOk = "SMB_Label_OK";
         constexpr std::u16string_view kUnread = u"<Scanning...>"; ///< A row's first line until its file is read
-        constexpr std::u16string_view kExtension = u".dat";
+        constexpr std::u16string_view kExtension = u".park";      ///< Ours, which saving writes
+        constexpr std::u16string_view kOriginal = u".dat";        ///< The original game's, only ever read
         /// What file names may hold besides letters and digits, as in the game.
         constexpr std::u16string_view kNameCharacters = u" _.,'!()[]-+=#;";
         constexpr std::string_view kQuestionName = "file_question";
@@ -66,9 +67,15 @@ namespace rct3::ui
             return std::ranges::equal(a, b, [](char16_t x, char16_t y) { return lower(x) == lower(y); });
         }
 
-        bool has_extension(std::u16string_view name)
+        /// How long the save extension `name` ends with is, ours or the game's; 0 for none.
+        std::size_t extension_size(std::u16string_view name)
         {
-            return name.size() >= kExtension.size() && same_name(name.substr(name.size() - kExtension.size()), kExtension);
+            for (const std::u16string_view e : { kExtension, kOriginal })
+            {
+                if (name.size() >= e.size() && same_name(name.substr(name.size() - e.size()), e))
+                    return e.size();
+            }
+            return 0;
         }
 
         std::u16string replaced(std::u16string text, std::u16string_view key, std::u16string_view value)
@@ -95,12 +102,12 @@ namespace rct3::ui
 
     std::u16string shown_file_name(std::u16string_view file)
     {
-        return std::u16string(has_extension(file) ? file.substr(0, file.size() - kExtension.size()) : file);
+        return std::u16string(file.substr(0, file.size() - extension_size(file)));
     }
 
     std::u16string with_save_extension(std::u16string_view name)
     {
-        return has_extension(name) ? std::u16string(name) : std::u16string(name) + std::u16string(kExtension);
+        return shown_file_name(name) + std::u16string(kExtension);
     }
 
     /// One file: its picture, its name to rename it by, and three lines about it.
@@ -495,7 +502,8 @@ namespace rct3::ui
                 continue;
             }
             pending_ = files_[i];
-            pending_new_ = with_save_extension(box.text);
+            // The file keeps its kind: renaming never makes a game's park look like one of ours.
+            pending_new_ = box.text + files_[i].substr(files_[i].size() - extension_size(files_[i]));
             ask(Asking::Rename, replaced(replaced(text(kRenameFile), u"%OLDNAME%", old_name), u"%NEWNAME%", box.text), false);
         }
 

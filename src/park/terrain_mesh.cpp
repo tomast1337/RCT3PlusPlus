@@ -4,8 +4,10 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <utility>
+#include <vector>
 
 namespace rct3::park
 {
@@ -125,6 +127,30 @@ namespace rct3::park
             b.wall({ GroundPaint::Cliff, cliff }, { a0, a1, b1, b0 }, along_x);
         }
 
+        /// The same wall without the bands in `open`: each part between them, its ends' heights held to it.
+        /// shortcut: a sloping wall's part is cut straight at its ends, not where its slope crosses a band's
+        /// edge; fine for openings on level walls, cut exactly if sloping ones show gaps.
+        void open_wall(Builder& b, glm::vec3 a0, glm::vec3 a1, glm::vec3 b0, glm::vec3 b1, std::uint8_t cliff_a, std::uint8_t cliff_b, bool along_x, std::vector<std::pair<float, float>> open)
+        {
+            if (open.empty())
+                return edge_wall(b, a0, a1, b0, b1, cliff_a, cliff_b, along_x);
+            std::ranges::sort(open);
+            const std::uint8_t cliff = a0.y + a1.y >= b0.y + b1.y ? cliff_a : cliff_b;
+            float from = -std::numeric_limits<float>::infinity();
+            const auto part = [&](float low, float high) {
+                if (high - low < kFlat)
+                    return;
+                const auto held = [&](glm::vec3 p) { return glm::vec3 { p.x, std::clamp(p.y, low, high), p.z }; };
+                edge_wall(b, held(a0), held(a1), held(b0), held(b1), cliff, cliff, along_x);
+            };
+            for (const auto& [low, high] : open)
+            {
+                part(from, low);
+                from = std::max(from, high);
+            }
+            part(from, std::numeric_limits<float>::infinity());
+        }
+
     } // namespace
 
     glm::vec3 ground_normal(const save::TerrainGrid& g, int col, int row, int c)
@@ -153,11 +179,22 @@ namespace rct3::park
         return sum;
     }
 
-    TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water)
+    TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings)
     {
         TerrainMesh mesh;
         if (grid.empty() || grid.cells.size() != static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height))
             return mesh;
+        std::map<std::pair<int, int>, std::vector<std::pair<float, float>>> open_at;
+        for (const GroundOpening& o : openings)
+            open_at[{ o.col, o.row }].emplace_back(o.low, o.high);
+        // The bands open on the edge between two tiles: either tile's.
+        const auto open_between = [&](int col, int row, int other_col, int other_row) {
+            std::vector<std::pair<float, float>> open;
+            for (const auto& at : { std::pair { col, row }, std::pair { other_col, other_row } })
+                if (const auto found = open_at.find(at); found != open_at.end())
+                    open.insert(open.end(), found->second.begin(), found->second.end());
+            return open;
+        };
 
         Builder b;
         float low = grid.cells.front().corners[0];
@@ -173,9 +210,9 @@ namespace rct3::park
                 const std::array<glm::vec3, 4> n { ground_normal(grid, col, row, 0), ground_normal(grid, col, row, 1), ground_normal(grid, col, row, 2), ground_normal(grid, col, row, 3) };
                 ground_layers(b, grid, col, row, c, n);
                 if (grid.contains(col + 1, row))
-                    edge_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false);
+                    open_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false, open_between(col, row, col + 1, row));
                 if (grid.contains(col, row + 1))
-                    edge_wall(b, c[2], c[3], corner(grid, col, row + 1, 0), corner(grid, col, row + 1, 1), cell.cliff, grid.at(col, row + 1).cliff, true);
+                    open_wall(b, c[2], c[3], corner(grid, col, row + 1, 0), corner(grid, col, row + 1, 1), cell.cliff, grid.at(col, row + 1).cliff, true, open_between(col, row, col, row + 1));
             }
         }
 

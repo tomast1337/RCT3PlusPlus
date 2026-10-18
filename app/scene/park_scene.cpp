@@ -16,6 +16,7 @@
 #include "park/off_map_trees.hpp"
 #include "park/overhead.hpp"
 #include "park/path_supports.hpp"
+#include "park/path_tunnels.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
 #include "park/relief_maps.hpp"
@@ -1002,7 +1003,9 @@ namespace rct3::scene
         scene.camera = park::overview(scene.grid);
         scene.day = park_day(*file, index, *world, options);
         begin(ParkLoadStage::Ground);
-        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water); });
+        const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(world->paths, scene.grid);
+        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water, hollows); });
+        park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
         std::ranges::copy(park::pool_water(scene.grid, world->pool_water), std::back_inserter(mesh.water));
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));

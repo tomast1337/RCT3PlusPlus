@@ -650,7 +650,7 @@ int main(int argc, char** argv)
                 {
                     const auto& c = world->terrain.at(p.col, p.row).corners;
                     const auto o = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
-                    std::printf("tile %s %s %d %d %d %d %d %.2f %.2f %.2f %.2f %s %d\n", argv[i], to_string(p.kind), p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
+                    std::printf("tile %s %s%s %d %d %d %d %d %.2f %.2f %.2f %.2f %s %d\n", argv[i], to_string(p.kind), p.elevation && p.elevation->underground ? "-under" : "", p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
                 }
                 if (std::getenv("PATHS_ALL") != nullptr && p.queue)
                 {

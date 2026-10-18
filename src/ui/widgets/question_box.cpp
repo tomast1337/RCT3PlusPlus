@@ -26,7 +26,7 @@ namespace rct3::ui
         for (std::size_t i = 0; i < answers.size(); ++i)
         {
             const QuestionAnswer& a = answers[i];
-            Button& b = content().add<Button>("answer" + std::to_string(i), style.button, a.icon);
+            Button& b = content().add<Button>(a.icon.empty() ? "answer" + std::to_string(i) : a.icon, style.button, a.icon);
             b.font = style.font;
             if (a.icon.empty())
             {

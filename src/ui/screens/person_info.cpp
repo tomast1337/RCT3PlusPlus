@@ -127,13 +127,13 @@ namespace rct3::ui
 
         void add(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
         {
-            page.lines.push_back({ text(strings, label), std::move(value) });
+            page.lines.push_back({ text(strings, label), std::move(value), false, std::string(label) });
         }
 
         /// A line that shares its row with the one beside it.
         void add_half(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
         {
-            page.lines.push_back({ text(strings, label), std::move(value), true });
+            page.lines.push_back({ text(strings, label), std::move(value), true, std::string(label) });
         }
 
         std::u16string percent(float fraction)
@@ -371,6 +371,7 @@ namespace rct3::ui
             // The money of each level is the job's own, which the save does not hold: the level is shown.
             InfoControl wage;
             wage.id = person_control(PersonControl::Wage);
+            wage.name = "Employee_Wage";
             wage.kind = InfoControlKind::Number;
             wage.label = text(strings, "Employee_Wage");
             wage.value = std::clamp(s.wage_level, 0, 2);
@@ -382,6 +383,7 @@ namespace rct3::ui
         {
             InfoControl name;
             name.id = person_control(PersonControl::Name);
+            name.name = "PersonName";
             name.kind = InfoControlKind::Text;
             name.text = person_name(f, strings);
             name.maximum = kLongestName;
@@ -395,6 +397,7 @@ namespace rct3::ui
             const auto button = [&](PersonControl id, std::string_view icon, std::string_view help) {
                 InfoControl b;
                 b.id = person_control(id);
+                b.name = icon;
                 b.kind = InfoControlKind::Button;
                 b.icon = icon;
                 b.label = text(strings, help);
@@ -413,6 +416,7 @@ namespace rct3::ui
             {
                 InfoControl tick;
                 tick.id = person_control(PersonControl::Task, t.bit);
+                tick.name = t.label;
                 tick.kind = InfoControlKind::Tick;
                 tick.label = text(strings, t.label);
                 tick.value = (s.task_flags >> t.bit) & 1;
@@ -428,12 +432,14 @@ namespace rct3::ui
                 add(page, strings, "Rct3pp_PatrolUncovered", ascii(std::to_string(facts.uncovered_paths)));
             InfoControl paint;
             paint.id = person_control(PersonControl::PatrolPaint);
+            paint.name = "Rct3pp_PatrolPaint";
             paint.kind = InfoControlKind::Tick;
             paint.label = text(strings, "Rct3pp_PatrolPaint");
             paint.value = facts.painting_patrol ? 1 : 0;
             page.controls.push_back(std::move(paint));
             InfoControl brush;
             brush.id = person_control(PersonControl::PatrolBrush);
+            brush.name = "Rct3pp_PatrolBrush";
             brush.kind = InfoControlKind::Choice;
             brush.label = text(strings, "Rct3pp_PatrolBrush");
             for (const int across : kPatrolBrushes)
@@ -442,6 +448,7 @@ namespace rct3::ui
             page.controls.push_back(std::move(brush));
             InfoControl zone;
             zone.id = person_control(PersonControl::PatrolZone);
+            zone.name = "Rct3pp_PatrolZone";
             zone.kind = InfoControlKind::Choice;
             zone.label = text(strings, "Rct3pp_PatrolZone");
             zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
@@ -453,6 +460,7 @@ namespace rct3::ui
             {
                 InfoControl button;
                 button.id = person_control(id);
+                button.name = key;
                 button.kind = InfoControlKind::Button;
                 button.label = text(strings, key);
                 page.controls.push_back(std::move(button));
@@ -463,6 +471,7 @@ namespace rct3::ui
         {
             InfoControl c;
             c.id = person_control(PersonControl::Costume);
+            c.name = "Entertainer_Costume_Text";
             c.kind = InfoControlKind::Choice;
             c.label = text(strings, "Entertainer_Costume_Text");
             for (const std::string_view key : kCostumes)

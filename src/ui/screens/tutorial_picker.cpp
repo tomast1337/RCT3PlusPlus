@@ -50,7 +50,7 @@ namespace rct3::ui
     {
         for (std::size_t i = 0; i < tutorials_.size(); ++i)
         {
-            auto& b = add<FrontButton>("tutorial" + std::to_string(i), style_.button, tutorials_[i].icon);
+            auto& b = add<FrontButton>(tutorials_[i].icon, style_.button, tutorials_[i].icon);
             b.icon_own_size = true;
             b.placement = top_left(0, 0, 0, 0); // Nowhere until the first layout
             buttons_.push_back(&b);

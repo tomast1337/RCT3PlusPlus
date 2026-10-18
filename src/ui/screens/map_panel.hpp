@@ -44,7 +44,8 @@ namespace rct3::ui
         Color colour;
         bool shown = true;
         bool starts_group = false;
-        bool round = false; ///< A round swatch, for things the map shows as dots
+        bool round = false;     ///< A round swatch, for things the map shows as dots
+        std::string name = { }; ///< Its row's name: the text's string key, to find where it is made by
     };
 
     /// Where the legend's rows go, from the top of the legend: each row's top.

@@ -18,7 +18,7 @@ namespace rct3::scene
 
         std::string window_name(ui::ManagementTopic topic)
         {
-            return std::format("management{}", static_cast<int>(topic));
+            return std::string(ui::management_layout(topic).title);
         }
 
         ui::ManagementWindow* find_window(const ui::Desktop& desktop, ui::ManagementTopic topic)

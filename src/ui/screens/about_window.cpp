@@ -163,7 +163,7 @@ namespace rct3::ui
         for (std::size_t i = 0; i < kAboutPageCount; ++i)
         {
             // The picture is the button, drawn at the tab's size.
-            auto& tab = body.add<Button>("tab" + std::to_string(i), tabs.at(i).first);
+            auto& tab = body.add<Button>(tabs.at(i).first, tabs.at(i).first);
             tab.toggle = true;
             tab.tooltip = strings.get(tabs.at(i).second);
             const float right = style.tab_size * static_cast<float>(kAboutPageCount - i);
@@ -171,7 +171,7 @@ namespace rct3::ui
             tabs_.at(i) = &tab;
             captions_.at(i) = tab.tooltip;
 
-            auto& page = body.add<Widget>("page" + std::to_string(i));
+            auto& page = body.add<Widget>(std::string(tabs.at(i).second));
             page.placement = top_left(0, style.tab_bar_height, style.page_width, style.page_height);
             pages_.at(i) = &page;
         }

@@ -67,7 +67,7 @@ TEST_CASE("the scenic page sets the surroundings whatever the quality level")
     f.dialog->tab(OptionsPage::Scenic).click();
     f.desktop.update({ });
     CHECK(f.dialog->page() == OptionsPage::Scenic);
-    Widget* page = f.dialog->find("content/page3");
+    Widget* page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
     REQUIRE(page != nullptr);
     const bool sky = f.options.flag(O::Sky);
     const bool clouds = f.options.flag(O::Clouds);
@@ -131,7 +131,7 @@ TEST_CASE("controls change the options at once")
 {
     Fixture f;
     // The first tick box on the graphics page is full screen.
-    Widget* page = f.dialog->find("content/page2");
+    Widget* page = f.dialog->find("content/GameOptionsDialog_GraphicSettingsTabHelp");
     REQUIRE(page != nullptr);
     Tickbox* fullscreen = nullptr;
     for (const auto& c : page->children())
@@ -202,7 +202,7 @@ TEST_CASE("the usual keys button puts every command back")
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Keys);
     CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
-    auto* usual = dynamic_cast<Button*>(f.dialog->find("content/page1/usual_keys"));
+    auto* usual = dynamic_cast<Button*>(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys"));
     REQUIRE(usual != nullptr);
     usual->click();
     f.desktop.update({ });
@@ -247,7 +247,7 @@ TEST_CASE("rows of options nothing acts on show greyed and cannot be used")
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Scenic);
     f.desktop.update({ });
-    Widget* page = f.dialog->find("content/page3");
+    Widget* page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
     REQUIRE(page != nullptr);
     int usable = 0;
     int greyed = 0;

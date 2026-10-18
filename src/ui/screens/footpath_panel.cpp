@@ -54,7 +54,7 @@ namespace rct3::ui
         queues_tab_ = &tab("queues", style_.queues_icon, 4);
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
-            Button& b = body_->add<Button>(std::format("control{}", i), std::string { });
+            Button& b = body_->add<Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
             if (i >= 8)
                 b.icon_scale = footpath_panel::kControlRects.at(i).height() / footpath_panel::kLargeIcon;
             controls_.at(i) = &b;
@@ -139,7 +139,7 @@ namespace rct3::ui
         const std::vector<FootpathStyle>& list = queue ? queues_ : paths_;
         for (std::size_t i = 0; i < list.size(); ++i)
         {
-            Button& b = body_->add<Button>(std::format("style{}", i), std::string { }, list[i].icon);
+            Button& b = body_->add<Button>(list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].name;
             b.icon_scale = (footpath_panel::kStyleCell - 4) / footpath_panel::kStyleIcon;
             b.swell = 2;

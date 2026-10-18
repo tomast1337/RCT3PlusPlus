@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
+#include "ui/screens/about_window.hpp"
 #include "ui/skin_set.hpp"
 #include "ui/translation_file.hpp"
 #include "ui/truetype_font.hpp"
@@ -58,23 +59,21 @@ namespace rct3::ui
         assets.skins = skin_library(set->skins, assets.textures);
         game_skins::use_coded_skins(assets.skins);
 
-        // The language's strings, else English's: a language whose file is missing is shown in English.
+        // Our own strings; a key the language lacks falls back to English.
+        *assets.strings = own_strings(language);
+        // The credits and copyright lines stay the game's own words, read from the install: the language's,
+        // else English's.
         for (const std::string& name : { language, std::string(kDefaultLanguage) })
         {
             const auto path = install.find(text_overlay(name));
             if (!path)
                 continue;
-            if (auto strings = StringTable::load(*path))
+            if (auto game = StringTable::load(*path))
             {
-                *assets.strings = std::move(*strings);
+                add_game_credits(*assets.strings, *game);
                 break;
             }
         }
-        // The main overlay has the strings every language shares, such as the languages' own names.
-        if (auto shared = StringTable::load(*main_ovl))
-            assets.strings->merge(*shared);
-        // Ours fill in what the game's tables lack.
-        assets.strings->merge(own_strings(language));
         return assets;
     }
 

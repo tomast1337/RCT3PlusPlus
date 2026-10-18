@@ -132,7 +132,11 @@ namespace rct3::park
             const float ground = builder.cut_into_ground ? std::min(corners[corner], height) : corners[corner];
             level = level && std::abs(ground - height) <= kFlat;
         });
-        piece.ground = level && (builder.cut_into_ground || !piece.cut);
+        const auto top = static_cast<float>(std::max(piece.start, piece.end));
+        piece.tunnel = std::ranges::all_of(corners, [&](float corner) { return corner >= top + kTunnelCover; });
+        if (piece.tunnel)
+            piece.cut = false;
+        piece.ground = !piece.tunnel && level && (builder.cut_into_ground || !piece.cut);
         return piece;
     }
 
@@ -256,6 +260,7 @@ namespace rct3::park
             p.direction = stored_direction(builder.heading);
             p.elevation->slope = stored_slope(builder.slope);
             p.elevation->scenery_ref = deck;
+            p.elevation->underground = piece.tunnel;
         }
         paths.push_back(std::move(p));
         return true;
@@ -359,6 +364,13 @@ namespace rct3::park
         if (!raised || height <= 0)
             return ground_cost;
         return ground_cost + kRaisedPieceCost * static_cast<std::int64_t>(std::ceil(height));
+    }
+
+    std::int64_t piece_price(const NextPiece& piece, const save::TerrainGrid& grid, std::int32_t ground_cost)
+    {
+        if (piece.tunnel)
+            return ground_cost + kTunnelPieceCost;
+        return piece_cost(ground_cost, !piece.ground, height_above_ground(piece, grid));
     }
 
 } // namespace rct3::park

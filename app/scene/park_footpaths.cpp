@@ -10,6 +10,7 @@
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
 #include "park/path_supports.hpp"
+#include "park/path_tunnels.hpp"
 #include "park/queue_fences.hpp"
 #include "park/queue_lines.hpp"
 #include "park/relief_maps.hpp"
@@ -81,7 +82,7 @@ namespace rct3::scene
         /// The price of `piece` in `style`, dearer the higher it is raised.
         std::int64_t piece_price(const park::PathStyle& style, const park::NextPiece& piece, const save::TerrainGrid& grid)
         {
-            return park::piece_cost(style.piece_cost, !piece.ground, park::height_above_ground(piece, grid));
+            return park::piece_price(piece, grid, style.piece_cost);
         }
 
         /// The object drawing raised path `path` of `style`, with the piece the paths around it call for.
@@ -208,7 +209,9 @@ namespace rct3::scene
         void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             ParkFootpaths& f = scene.footpaths;
-            park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water);
+            const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
+            park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
+            park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
             const park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
             park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
             park::GroundQueues queues = park::ground_queues(f.paths, scene.grid);
@@ -720,7 +723,7 @@ namespace rct3::scene
                 return;
             objects_changed(scene);
             // A ground queue's picture follows its open sides, which laying the next tile changes.
-            if (piece.ground || piece.cut || f.builder.queue)
+            if (piece.ground || piece.cut || piece.tunnel || f.builder.queue)
                 rebuild_ground(device, scene, assets);
         }
 
@@ -754,7 +757,7 @@ namespace rct3::scene
             // A raised piece beside may lose a joined side.
             refresh_around(scene, assets, { removed->col, removed->row });
             objects_changed(scene);
-            if (!removed->elevation || park::is_ground_queue(*removed))
+            if (!removed->elevation || park::is_ground_queue(*removed) || removed->elevation->underground)
                 rebuild_ground(device, scene, assets);
         }
 

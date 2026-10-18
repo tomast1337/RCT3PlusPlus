@@ -5,6 +5,7 @@
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/build_rows.hpp"
+#include "ui/widgets/button.hpp"
 
 #include <string_view>
 
@@ -38,13 +39,16 @@ namespace rct3::scene
         if (ui::Widget* open = root.find(kListName))
             root.remove(*open);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
-        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, std::move(rows), menus.large, menus.grid);
+        const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
+        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows));
+        picker.styles_off = menus.styles_off;
+        picker.packs_only = menus.packs_only;
         if (!menus.offer.known())
             picker.note = std::u16string(strings.get(kAllShown));
         // To the right of the button, its middle level with the button's; layout keeps it on the screen.
         const ui::Rect& r = root.rect();
         const ui::Rect& b = button.rect();
-        const float x = b.x1 + ui::build_picker::kSide - r.x0;
+        const float x = b.x1 + ui::build_picker::kGap - r.x0;
         const ui::Point size = menus.size.value_or(ui::Point { ui::build_picker::kWidth, ui::build_picker::kHeight });
         const float y = (b.y0 + b.y1) / 2 - size.y / 2 - r.y0;
         picker.placement = ui::top_left(x, y, size.x, size.y);
@@ -61,11 +65,11 @@ namespace rct3::scene
         auto* picker = static_cast<ui::BuildPicker*>(root.find(kListName));
         if (picker == nullptr)
             return std::nullopt;
-        menus.large = picker->large();
-        menus.grid = picker->grid();
         picker->cash = cash;
-        if (const ui::Rect& o = picker->placement.offsets; !picker->folded())
-            menus.size = ui::Point { o.x1 - o.x0, o.y1 - o.y0 };
+        menus.styles_off = picker->styles_off;
+        menus.packs_only = picker->packs_only;
+        const ui::Rect& o = picker->placement.offsets;
+        menus.size = ui::Point { o.x1 - o.x0, o.y1 - o.y0 };
         if (const auto picked = picker->take_picked(); picked && menus.items.valid())
         {
             const auto& items = menus.items.get();

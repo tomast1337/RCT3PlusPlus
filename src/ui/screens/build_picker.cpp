@@ -5,6 +5,7 @@
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
+#include <map>
 #include <utility>
 
 namespace rct3::ui
@@ -15,50 +16,83 @@ namespace rct3::ui
 
         using namespace build_picker;
 
-        constexpr std::string_view kExpandAll = "RideSelectionWindow_ExpandAll";
-        constexpr std::string_view kCollapseAll = "RideSelectionWindow_ContractAll";
         constexpr std::string_view kNothing = "NoItemsMeetFilterCriteria";
-        constexpr std::string_view kShowGrid = "Rct3pp_BuildPicker_Grid";
-        constexpr std::string_view kShowList = "Rct3pp_BuildPicker_List";
         constexpr std::string_view kSearchHint = "Rct3pp_BuildPicker_Search";
-        constexpr float kSizeButtonWidth = 96;
-        constexpr float kSizeButtonHeight = 22;
+        constexpr std::string_view kPackPrefix = "pack";
+
+        /// The themes and add-on packs of `rows`; themes by name.
+        void collect(const std::vector<PickerRow>& rows, std::map<std::string, std::u16string, std::less<>>& styles, std::set<std::uint32_t>& packs)
+        {
+            for (const PickerRow& r : rows)
+            {
+                if (!r.style.empty())
+                    styles.try_emplace(r.style, r.style_title);
+                if (r.addon != 0 && r.children.empty())
+                    packs.insert(r.addon);
+                collect(r.children, styles, packs);
+            }
+        }
 
     } // namespace
 
-    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::vector<PickerRow> rows, bool large, bool grid)
-        : Widget(std::move(name))
+    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title_text, std::string icon_skin, std::vector<PickerRow> rows)
+        : Window(std::move(name), style.window, kWidth, kHeight)
         , style_(std::move(style))
         , strings_(strings)
-        , title_(std::move(title))
         , data_(std::move(rows))
-        , large_(large)
-        , grid_(grid)
     {
-        keep_inside = true;
-        clip_children = true;
-        close_ = &add<Button>("close", style_.title_button, style_.close_icon);
-        close_->placement = top_left(kCloseAt.x, kCloseAt.y, kTitleButton, kTitleButton);
-        fold_ = &add<Button>("fold", style_.title_button, style_.fold_icon);
-        fold_->placement = top_left(kFoldAt.x, kFoldAt.y, kTitleButton, kTitleButton);
+        title = std::move(title_text);
+        icon = std::move(icon_skin);
+        resizable = true;
+        min_size = { kCaptionX + 3 * kTile, kHeight / 2 };
+        Widget& body = content();
 
-        search_ = &add<EditBox>("search");
-        search_->placement = { { 0, 0, 1, 0 }, { kSide, kTitleHeight, -kSide, kTitleHeight + kSearchHeight - 2 } };
+        search_ = &body.add<EditBox>("search");
+        search_->placement = { { 0, 0, 1, 0 }, { kCaptionX, 0, 0, kBarHeight } };
         search_->skin = style_.search_box;
         search_->focused_skin = style_.search_box_focused;
 
-        list_ = &add<ScrollArea>("list", style_.scroll_bar);
-        list_->placement = { { 0, 0, 1, 1 }, { kSide, kTitleHeight + kSearchHeight, -kSide, -kBottomBar } };
-
-        view_ = &add<Button>("view", style_.text_button);
-        view_->placement = bottom_left(kSide, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
-        view_->text_colour = style_.button_text_colour;
-        size_ = &add<Button>("size", style_.text_button);
-        size_->placement = bottom_left(2 * kSide + kSizeButtonWidth, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
-        size_->text_colour = style_.button_text_colour;
-        label_buttons();
+        add_filters();
+        const float top = kBarHeight + kGap + (filters_.empty() ? 0 : kFilter + kGap);
+        list_ = &body.add<ScrollArea>("list", style_.scroll_bar);
+        list_->placement = { { 0, 0, 1, 1 }, { 0, top, 0, 0 } };
 
         add_rows(data_, nullptr);
+    }
+
+    void BuildPicker::add_filters()
+    {
+        std::map<std::string, std::u16string, std::less<>> styles;
+        std::set<std::uint32_t> packs;
+        collect(data_, styles, packs);
+        float x = 0;
+        const auto add = [&](std::string name, std::u16string help, std::string skin) -> Button& {
+            auto& b = content().add<Button>(std::move(name), std::move(skin));
+            b.toggle = true;
+            b.tooltip = std::move(help);
+            b.placement = top_left(x, kBarHeight + kGap, kFilter, kFilter);
+            x += kFilter;
+            filters_.push_back(&b);
+            return b;
+        };
+        if (styles.size() > 1)
+        {
+            const std::u16string help(strings_.get(style_.style_help));
+            for (const auto& [name, title_text] : styles)
+            {
+                add(name, title_text + u'\n' + help, { });
+                filter_styles_.push_back(name);
+            }
+            x += kPackGap;
+        }
+        for (const std::uint32_t pack : packs)
+        {
+            const std::string number = std::to_string(pack - 1);
+            Button& b = add(std::string(kPackPrefix) + number, std::u16string(strings_.get(style_.pack_name + number)), { });
+            b.icon = style_.pack_filter + number;
+            b.icon_scale = style_.pack_icon_scale;
+            filter_packs_.push_back(pack);
+        }
     }
 
     void BuildPicker::add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading)
@@ -76,143 +110,92 @@ namespace rct3::ui
         return std::exchange(picked_out_, std::nullopt);
     }
 
-    void BuildPicker::label_buttons()
-    {
-        view_->text = std::u16string(strings_.get(grid_ ? kShowList : kShowGrid));
-        size_->text = std::u16string(strings_.get(large_ ? kCollapseAll : kExpandAll));
-        size_->visible = !folded_ && !grid_;
-    }
-
-    bool BuildPicker::on_grip(Point p) const
-    {
-        const Rect& r = rect();
-        return !folded_ && p.x >= r.x1 - kGrip && p.y >= r.y1 - kGrip;
-    }
-
-    CursorKind BuildPicker::cursor(Point p) const
-    {
-        return on_grip(p) ? CursorKind::ResizeDiagonalDown : CursorKind::Arrow;
-    }
-
-    void BuildPicker::on_press(Point p)
-    {
-        if (on_grip(p))
-            resize_ = p;
-        else if (p.y < rect().y0 + kTitleHeight)
-            grab_ = p;
-    }
-
-    void BuildPicker::on_drag(Point p)
-    {
-        Rect& o = placement.offsets;
-        if (resize_)
-        {
-            o.x1 = std::max(o.x0 + kMinWidth, o.x1 + p.x - resize_->x);
-            o.y1 = std::max(o.y0 + kMinHeight, o.y1 + p.y - resize_->y);
-            resize_ = p;
-            return;
-        }
-        if (!grab_)
-            return;
-        const float dx = p.x - grab_->x;
-        const float dy = p.y - grab_->y;
-        o = { o.x0 + dx, o.y0 + dy, o.x1 + dx, o.y1 + dy };
-        grab_ = p;
-    }
-
-    void BuildPicker::on_release(Point, bool)
-    {
-        grab_.reset();
-        resize_.reset();
-    }
-
     bool BuildPicker::on_key(const KeyPress& key)
     {
-        if (key.key != Key::Escape)
-            return false;
-        if (search_->text.empty())
-            close();
-        else
+        if (key.key == Key::Escape && !search_->text.empty())
+        {
             search_->text.clear();
-        return true;
+            return true;
+        }
+        return Window::on_key(key);
+    }
+
+    bool BuildPicker::shows(const PickerRow& row) const
+    {
+        if (!row.children.empty())
+            return std::ranges::any_of(row.children, [&](const PickerRow& r) { return shows(r); });
+        if (!row.style.empty() && styles_off.contains(row.style))
+            return false;
+        if (!packs_only.empty() && !packs_only.contains(row.addon))
+            return false;
+        return query_.empty() || strings::search_folded(row.name).find(query_) != std::u16string::npos;
     }
 
     void BuildPicker::lay_out()
     {
-        float y = 0;
-        // The grid's columns; a heading takes a tile, and its open items follow it.
+        list_->placement.offsets.y1 = note.empty() ? 0 : -kNote;
+        laid_note_ = !note.empty();
+        // As many columns as fit; a heading takes a tile, and its open items follow it. While searching,
+        // headings show their matching items as if open.
         laid_width_ = list_->content().rect().width();
         const int columns = std::max(1, static_cast<int>(laid_width_ / kTile));
         int column = 0;
+        float y = 0;
         for (BuildPickerRow* row : rows_)
         {
-            row->large = large_;
-            row->grid = grid_;
-            bool shown = true;
-            float indent = 0;
-            for (const BuildPickerRow* h = row->heading(); h != nullptr; h = h->heading())
-            {
+            bool shown = shows(row->row());
+            for (const BuildPickerRow* h = row->heading(); h != nullptr && query_.empty(); h = h->heading())
                 shown = shown && h->open;
-                indent += kIndent;
-            }
-            // While searching, the rows that match, and their headings as if open.
-            if (!query_.empty())
-                shown = row->matches(query_) && (row->heading() == nullptr || row->heading()->matches(query_));
             row->visible = shown;
             if (!shown)
                 continue;
-            if (grid_)
+            const float x = static_cast<float>(column) * kTile;
+            row->placement = top_left(x, y, kTile, kTile);
+            if (++column == columns)
             {
-                const float x = static_cast<float>(column) * kTile;
-                row->placement = { { 0, 0, 0, 0 }, { x, y, x + kTile, y + kTile } };
-                if (++column == columns)
-                {
-                    column = 0;
-                    y += kTile;
-                }
-                continue;
+                column = 0;
+                y += kTile;
             }
-            const float height = large_ ? kLargeRow : kSmallRow;
-            row->placement = { { 0, 0, 1, 0 }, { indent, y, 0, y + height } };
-            y += height;
         }
         dirty_ = false;
     }
 
-    void BuildPicker::update(const UpdateContext&)
+    void BuildPicker::update(const UpdateContext& context)
     {
-        if (close_->take_click())
-            close();
-        if (fold_->take_click())
-        {
-            folded_ = !folded_;
-            if (folded_)
-                unfolded_height_ = placement.offsets.y1 - placement.offsets.y0;
-            list_->visible = !folded_;
-            view_->visible = !folded_;
-            search_->visible = !folded_;
-            label_buttons();
-            const float height = folded_ ? kTitleHeight : unfolded_height_;
-            placement.offsets.y1 = placement.offsets.y0 + height;
-        }
-        if (size_->take_click())
-        {
-            large_ = !large_;
-            label_buttons();
-            dirty_ = true;
-        }
-        if (view_->take_click())
-        {
-            grid_ = !grid_;
-            label_buttons();
-            dirty_ = true;
-        }
-        if (grid_ && list_->content().rect().width() != laid_width_)
+        Window::update(context);
+        if (list_->content().rect().width() != laid_width_ || note.empty() == laid_note_)
             dirty_ = true;
         if (std::u16string query = strings::search_folded(search_->text); query != query_)
         {
             query_ = std::move(query);
             dirty_ = true;
+        }
+        for (std::size_t i = 0; i < filters_.size(); ++i)
+        {
+            Button& b = *filters_[i];
+            if (i < filter_styles_.size())
+            {
+                const std::string& name = filter_styles_[i];
+                if (b.take_click())
+                {
+                    if (!styles_off.erase(name))
+                        styles_off.insert(name);
+                    dirty_ = true;
+                }
+                b.on = !styles_off.contains(name);
+                b.icon = (b.on ? style_.style_filter : style_.style_filter_off) + name;
+            }
+            else
+            {
+                const std::uint32_t pack = filter_packs_[i - filter_styles_.size()];
+                if (b.take_click())
+                {
+                    if (!packs_only.erase(pack))
+                        packs_only.insert(pack);
+                    dirty_ = true;
+                }
+                b.on = packs_only.contains(pack);
+            }
         }
         for (BuildPickerRow* row : rows_)
             row->dear = cash && row->row().cost > *cash;
@@ -237,27 +220,25 @@ namespace rct3::ui
 
     void BuildPicker::draw(DrawContext& context) const
     {
-        const Rect& r = rect();
-        draw_skin(context.list, context.skins.find(style_.background), r);
-        if (const SkinRef* strip = context.skins.find(style_.button_strip))
-            draw_skin(context.list, strip, { r.x0, r.y0, r.x0 + strip->size()[0], r.y0 + strip->size()[1] });
+        Window::draw(context);
+        for (std::size_t i = filter_styles_.size(); i < filters_.size(); ++i)
+        {
+            if (filters_[i]->on)
+                context.list.fill(filters_[i]->rect(), style_.pack_on_colour);
+        }
         const Font* small = context.fonts.get(FontRole::Small);
         if (small == nullptr)
             return;
-        const float title_x = kFoldAt.x + kTitleButton + 2 * kSide;
-        draw_text(context.list, *small, title_, { r.x0 + title_x, r.y0, r.x1 - kSide, r.y0 + kTitleHeight }, { style_.text_colour, Align::Start, Align::Centre, false });
-        if (folded_)
-            return;
+        const Rect& s = search_->rect();
         if (search_->text.empty() && !search_->has_keyboard_focus())
-            draw_text(context.list, *small, strings_.get(kSearchHint), { search_->rect().x0 + 4, search_->rect().y0, search_->rect().x1 - 4, search_->rect().y1 }, { hex("#7f7f7f"), Align::Start, Align::Centre, false });
-        if (rows_.empty() || (!query_.empty() && std::ranges::none_of(rows_, [](const BuildPickerRow* row) { return row->visible; })))
+            draw_text(context.list, *small, strings_.get(kSearchHint), { s.x0 + 4, s.y0, s.x1 - 4, s.y1 }, { style_.hint_colour, Align::Start, Align::Centre, false });
+        if (std::ranges::none_of(rows_, [](const BuildPickerRow* row) { return row->visible; }))
             draw_text(context.list, *small, strings_.get(kNothing), list_->rect(), { style_.text_colour, Align::Centre, Align::Centre, true });
         if (!note.empty())
         {
-            const Rect bar { r.x0 + 3 * kSide + 2 * kSizeButtonWidth, r.y1 - kBottomBar, r.x1 - kSide - kGrip, r.y1 };
-            draw_text(context.list, *small, note, bar, { style_.text_colour, Align::End, Align::Centre, true });
+            const Rect& l = list_->rect();
+            draw_text(context.list, *small, note, { l.x0, l.y1, l.x1, l.y1 + kNote }, { style_.text_colour, Align::End, Align::Centre, true });
         }
-        context.list.fill({ r.x1 - kGrip, r.y1 - kGrip, r.x1, r.y1 }, style_.grip_colour);
     }
 
     BuildPickerRow::BuildPickerRow(std::string name, const BuildPickerStyle& style, const PickerRow& row, BuildPickerRow* heading)
@@ -266,19 +247,13 @@ namespace rct3::ui
         , row_(row)
         , heading_(heading)
     {
-        tooltip = row_.price.empty() ? row_.name : row_.name + u" : " + row_.price;
-        const auto add_keys = [&](this const auto& self, const PickerRow& r) -> void {
-            if (r.children.empty())
-                keys_.push_back(strings::search_folded(r.name));
-            for (const PickerRow& child : r.children)
-                self(child);
-        };
-        add_keys(row_);
-    }
-
-    bool BuildPickerRow::matches(std::u16string_view query) const
-    {
-        return std::ranges::any_of(keys_, [&](const std::u16string& key) { return key.find(query) != std::u16string::npos; });
+        // Name, then what the list once showed under it: the size or what it starts, and the price.
+        tooltip = row_.name;
+        for (const std::u16string* line : { &row_.size, &row_.price })
+        {
+            if (!line->empty())
+                tooltip += u'\n' + *line;
+        }
     }
 
     void BuildPickerRow::on_release(Point, bool inside)
@@ -292,57 +267,14 @@ namespace rct3::ui
         const Rect& r = rect();
         if (picked || hovered())
             context.list.fill(r, picked ? style_.picked_colour : style_.hover_colour);
-
-        if (grid)
-        {
-            const float inset = (kTile - kTileIcon) / 2;
-            if (const SkinRef* skin = context.skins.find(row_.icon))
-                draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
-            const std::string& corner = is_heading() ? (open ? style_.open_heading : style_.closed_heading) : row_.badge;
-            if (const SkinRef* skin = context.skins.find(corner))
-                draw_skin(context.list, skin, { r.x1 - kSmallBadge, r.y0, r.x1, r.y0 + kSmallBadge });
-            if (dear)
-                context.list.fill(r, style_.dear_colour);
-            return;
-        }
-        if (dear)
-            context.list.fill(r, style_.dear_colour);
-        const float icon = large ? kLargeIcon : kSmallIcon;
-        const float inset = large ? 2.0f : 1.0f;
+        const float inset = (kTile - kTileIcon) / 2;
         if (const SkinRef* skin = context.skins.find(row_.icon))
-            draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + icon, r.y0 + inset + icon });
-
-        const float badge = large ? kLargeBadge : kSmallBadge;
+            draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
         const std::string& corner = is_heading() ? (open ? style_.open_heading : style_.closed_heading) : row_.badge;
         if (const SkinRef* skin = context.skins.find(corner))
-        {
-            const float size = is_heading() ? kSmallBadge : badge;
-            draw_skin(context.list, skin, { r.x1 - size, r.y0, r.x1, r.y0 + size });
-        }
-
-        const float text_x = r.x0 + 2 * inset + icon + 4;
-        const float right = r.x1 - (large ? 24.0f : 32.0f);
-        const Font* small = context.fonts.get(FontRole::Small);
-        if (small == nullptr)
-            return;
-        if (!context.list.push_clip(r))
-        {
-            context.list.pop_clip();
-            return;
-        }
-        if (!large)
-        {
-            draw_text(context.list, *small, row_.name, { text_x, r.y0, right, r.y1 }, { style_.text_colour, Align::Start, Align::Centre, false });
-            context.list.pop_clip();
-            return;
-        }
-        const Font* name_font = context.fonts.get(FontRole::Medium);
-        if (name_font == nullptr || break_lines(*name_font, row_.name, right - text_x).size() * name_font->line_height() > kNameBand)
-            name_font = small;
-        draw_text(context.list, *name_font, row_.name, { text_x, r.y0 + 2, right, r.y0 + kNameBand }, { style_.text_colour, Align::Start, Align::Centre, true });
-        draw_text(context.list, *small, row_.size, { text_x, r.y0 + kNameBand, right, r.y0 + kNameBand + kLine }, { style_.text_colour, Align::Start, Align::Centre, false });
-        draw_text(context.list, *small, row_.price, { text_x, r.y0 + kNameBand + kLine, right, r.y0 + kNameBand + 2 * kLine }, { style_.text_colour, Align::Start, Align::Centre, false });
-        context.list.pop_clip();
+            draw_skin(context.list, skin, { r.x1 - kBadge, r.y0, r.x1, r.y0 + kBadge });
+        if (dear)
+            context.list.fill(r, style_.dear_colour);
     }
 
 } // namespace rct3::ui

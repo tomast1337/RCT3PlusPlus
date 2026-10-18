@@ -118,8 +118,11 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kDrawerLipRight = "MessageConsole_Right";
     inline constexpr std::string_view kDrawerBack = "MessageConsole_Top";
     // The lists of things to build.
-    inline constexpr std::string_view kPickerButtonStrip = "ObjectSelectionWindow_ButtonContainer";
-    inline constexpr std::string_view kFoldIcon = "GUI2Dialog_MinimiseIcon";
+    inline constexpr std::string_view kStyleFilter = "StyleFilter_";                  ///< + a theme's name
+    inline constexpr std::string_view kStyleFilterOff = "StyleFilter_Grey_";          ///< + a theme's name
+    inline constexpr std::string_view kPackBadge = "ObjectSelectionWindow_AOPBadge_"; ///< + a pack's number from 0
+    inline constexpr std::string_view kPackName = "AOP_Name_";                        ///< + a pack's number from 0
+    inline constexpr std::string_view kStyleFilterHelp = "ASM_StyleFilterHelp";
     inline constexpr std::string_view kOpenHeading = "Box_Minus";
     inline constexpr std::string_view kClosedHeading = "Box_Plus";
     inline constexpr std::string_view kCurvedStrip = "BackgroundCurvedMirrored";
@@ -577,20 +580,20 @@ namespace rct3::ui::game_skins
         return s;
     }
 
-    /// The list beside the build menus, on the blue patch.
+    /// The window beside the build menus, in the options window's frame, with the game's theme filters.
     [[nodiscard]] inline BuildPickerStyle build_picker_style()
     {
         BuildPickerStyle s;
-        s.background = kSelectedRow; // The same blue patch, stretched over the panel
-        s.button_strip = kPickerButtonStrip;
-        s.title_button = kTitleButton;
-        s.close_icon = kCloseIcon;
-        s.fold_icon = kFoldIcon;
-        s.text_button = kTextButton;
+        s.window = window_style();
         s.open_heading = kOpenHeading;
         s.closed_heading = kClosedHeading;
         s.search_box = kListBox;
         s.search_box_focused = kListBoxFocused;
+        s.style_filter = kStyleFilter;
+        s.style_filter_off = kStyleFilterOff;
+        s.pack_filter = kPackBadge;
+        s.pack_name = kPackName;
+        s.style_help = kStyleFilterHelp;
         s.scroll_bar = scroll_bar_style(Orientation::Vertical);
         return s;
     }

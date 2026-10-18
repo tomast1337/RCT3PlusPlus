@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "scene/park_view.hpp"
+
+#include "logging/log.hpp"
+#include "park/camera.hpp"
+#include "park/view_lines.hpp"
+#include "scene/park_scene.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <format>
+#include <span>
+
+namespace rct3::scene
+{
+
+    namespace
+    {
+        constexpr glm::vec4 kGridColour { 0.0f, 0.0f, 0.0f, 0.35f };    ///< Our own value
+        constexpr glm::vec4 kContourColour { 1.0f, 1.0f, 1.0f, 0.45f }; ///< Our own value
+        /// How far from the middle of the view heights are labelled, in world units: farther, they crowd. Our
+        /// own value.
+        constexpr float kLabelReach = 48.0f;
+        constexpr float kLabelLift = 0.6f; ///< Over the path or track, so the label stands above it. Our own value.
+
+        void drop(render::Device& device, ViewLines& lines)
+        {
+            for (const render::BufferHandle b : { lines.vertices, lines.indices })
+            {
+                if (b)
+                    device.destroy_buffer(b);
+            }
+            lines = { .stale = lines.stale };
+        }
+
+        void update(render::Device& device, ViewLines& lines, bool shown, auto&& make)
+        {
+            if (!shown)
+            {
+                drop(device, lines);
+                return;
+            }
+            if (lines.vertices && !lines.stale)
+                return;
+            drop(device, lines);
+            lines.stale = false;
+            const park::TerrainMesh mesh = make();
+            if (mesh.indices.empty())
+                return;
+            auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "view line vertices" });
+            auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "view line indices" });
+            if (!vertices || !indices)
+            {
+                logging::logger("park").warning("view lines: {}", !vertices ? vertices.error() : indices.error());
+                if (vertices)
+                    device.destroy_buffer(*vertices);
+                if (indices)
+                    device.destroy_buffer(*indices);
+                return;
+            }
+            lines.vertices = *vertices;
+            lines.indices = *indices;
+            lines.count = static_cast<std::uint32_t>(mesh.indices.size());
+        }
+
+        std::u16string whole(float height)
+        {
+            const std::string text = std::format("{}", std::lround(height));
+            return { text.begin(), text.end() };
+        }
+    } // namespace
+
+    void update_view_lines(render::Device& device, ParkScene& scene)
+    {
+        update(device, scene.grid_lines, scene.show_grid, [&] { return park::grid_lines(scene.grid, kGridColour); });
+        update(device, scene.contour_lines, scene.show_contours, [&] { return park::contour_lines(scene.grid, park::kContourStep, kContourColour); });
+    }
+
+    void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+    {
+        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines })
+        {
+            if (lines->count == 0)
+                continue;
+            render::DrawCommand draw;
+            draw.pipeline = scene.ground_pipeline;
+            draw.vertices = { lines->vertices };
+            draw.indices = { lines->indices };
+            draw.index_type = render::IndexType::U32;
+            draw.first = 0;
+            draw.count = lines->count;
+            draw.transform = transform;
+            draw.texture = scene.blank;
+            draw.light = light;
+            device.draw(draw);
+        }
+    }
+
+    void drop_view_lines(render::Device& device, ParkScene& scene)
+    {
+        drop(device, scene.grid_lines);
+        drop(device, scene.contour_lines);
+    }
+
+    std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
+    {
+        if ((!scene.show_path_heights && !scene.show_ride_heights) || size.x <= 0 || size.y <= 0)
+            return { };
+        const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
+        const glm::vec3 middle = scene.camera.target;
+        std::vector<std::pair<float, ui::WorldLabel>> found;
+        const auto add = [&](glm::vec3 at, float height) {
+            if (glm::distance(glm::vec2(at.x, at.z), glm::vec2(middle.x, middle.z)) > kLabelReach)
+                return;
+            const glm::vec4 clip = view * glm::vec4(at.x, at.y + kLabelLift, at.z, 1.0f);
+            if (clip.w <= 0)
+                return;
+            const glm::vec2 ndc = glm::vec2(clip) / clip.w;
+            if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
+                return;
+            found.push_back({ clip.w, { { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, whole(height) } });
+        };
+        const save::TerrainGrid& g = scene.grid;
+        if (scene.show_path_heights)
+        {
+            for (const simulation::PathNode& n : scene.sim.paths.nodes())
+            {
+                if (!n.removed)
+                    add({ g.world_x(n.tile.col) + g.tile_size_x / 2, n.height, g.world_z(n.tile.row) + g.tile_size_z / 2 }, n.height);
+            }
+        }
+        if (scene.show_ride_heights)
+        {
+            for (const save::Ride& ride : scene.rides.rides)
+            {
+                if (!ride.track)
+                    continue;
+                for (const save::TrackPiece& p : ride.track->pieces)
+                {
+                    const auto height = static_cast<float>(p.height);
+                    add({ g.world_x(p.tile_x) + g.tile_size_x / 2, height, g.world_z(p.tile_z) + g.tile_size_z / 2 }, height);
+                }
+            }
+        }
+        std::ranges::sort(found, std::greater { }, &std::pair<float, ui::WorldLabel>::first);
+        std::vector<ui::WorldLabel> labels;
+        labels.reserve(found.size());
+        for (auto& [depth, label] : found)
+            labels.push_back(std::move(label));
+        return labels;
+    }
+
+} // namespace rct3::scene

@@ -238,6 +238,8 @@ namespace rct3::scene
             scene.ground_vertices = *vertices;
             scene.ground_indices = *indices;
             scene.batches = std::move(mesh.batches);
+            scene.grid_lines.stale = true;
+            scene.contour_lines.stale = true;
         }
 
         /// The stroke as it would be laid now, or the path a click on the tile pointed at would lay; nothing

@@ -15,6 +15,10 @@
 // it; an arrow also shows over the trail's next piece. Pressing on either and moving up or down picks the
 // slope (ramps, then stairs), and letting go lays the piece, which the trail then goes on from.
 //
+// With the panel's route tab on and a trail started, pointing at a tile shows the cheapest route from the
+// arrow to it (park/path_route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
+// right after takes the whole route away. With cutting on, the route may cut through hills.
+//
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
 
@@ -22,6 +26,7 @@
 #include "park/ground_queues.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_drag.hpp"
+#include "park/path_route.hpp"
 #include "park/path_styles.hpp"
 #include "park/support_sets.hpp"
 #include "park/terrain_mesh.hpp"
@@ -80,12 +85,18 @@ namespace rct3::scene
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, std::uint8_t>> hover_edge;
-        std::optional<park::PathSpot> hover_tile; ///< Bare ground pointed at, shown as the path a click would lay
-        bool drop = false;                        ///< The stroke ended, so its paths are laid
-        std::optional<park::DragPlan> plan;       ///< What the stroke would lay, worked out when it changes
-        std::vector<std::uint64_t> stroke;        ///< The paths the last stroke laid, until another piece is laid
-        bool dirty = false;                       ///< The next piece changed, so the ghost is built again
-        std::u16string notice;                    ///< Why the last piece was not laid, until the next control
+        std::optional<park::PathSpot> hover_tile;          ///< Bare ground pointed at, shown as the path a click would lay
+        bool drop = false;                                 ///< The stroke ended, so its paths are laid
+        std::optional<park::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
+        std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
+        bool routing = false;                              ///< The panel's route tab was on last frame
+        std::optional<park::PathSpot> route_goal;          ///< With routing on: the tile pointed at
+        std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes
+        bool route_press = false;                          ///< The button went down to lay the route
+        bool lay_route = false;                            ///< And came up, so the route is laid
+        std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid
+        bool dirty = false;                                ///< The next piece changed, so the ghost is built again
+        std::u16string notice;                             ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.

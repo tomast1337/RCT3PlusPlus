@@ -56,6 +56,8 @@ namespace rct3::render::vulkan
         void draw(const DrawCommand& command) override;
         void end_pass() override;
         bool copy_screen(TextureHandle target) override;
+        bool read_screen() override;
+        [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
         void set_wireframe(bool on) override
         {
             wireframe_ = on;
@@ -209,6 +211,11 @@ namespace rct3::render::vulkan
         std::vector<VkImage> images_;
         std::vector<VkImageView> views_;
         std::vector<VkSemaphore> render_finished_; // One per swapchain image
+
+        // What read_screen asked for: the screen copied into reading_ by the frame, read as the frame ends.
+        Buffer reading_;
+        VkExtent2D reading_extent_ { };
+        std::optional<ScreenPixels> read_; ///< Until taken
 
         static constexpr VkFormat kDepthFormat = VK_FORMAT_D32_SFLOAT;
         VkImage depth_image_ = VK_NULL_HANDLE;

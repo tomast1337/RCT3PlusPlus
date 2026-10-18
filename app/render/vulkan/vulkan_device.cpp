@@ -152,6 +152,7 @@ namespace rct3::render::vulkan
                 release(f.garbage);
             for (auto& [id, b] : buffers_) // Includes the transient blocks
                 destroy(b);
+            destroy(reading_);
             for (auto& [id, t] : textures_)
                 destroy(t);
             for (auto& [id, p] : pipelines_)
@@ -1121,6 +1122,39 @@ namespace rct3::render::vulkan
         return true;
     }
 
+    bool VulkanDevice::read_screen()
+    {
+        assert(state_ == State::InFrame);
+        const bool bgra = color_format_ == VK_FORMAT_B8G8R8A8_UNORM || color_format_ == VK_FORMAT_B8G8R8A8_SRGB;
+        const bool rgba = color_format_ == VK_FORMAT_R8G8B8A8_UNORM || color_format_ == VK_FORMAT_R8G8B8A8_SRGB;
+        if ((!bgra && !rgba) || reading_.buffer != VK_NULL_HANDLE)
+            return false;
+        try
+        {
+            reading_ = make_buffer(VkDeviceSize { extent_.width } * extent_.height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        }
+        catch (const std::exception& e)
+        {
+            logging::logger("vulkan").warning("screen read: {}", e.what());
+            return false;
+        }
+        reading_extent_ = extent_;
+        const VkCommandBuffer cmd = frames_[frame_index_].commands;
+        const VkImage screen = images_[image_index_];
+        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        VkBufferImageCopy region { };
+        region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+        region.imageExtent = { extent_.width, extent_.height, 1 };
+        vkCmdCopyImageToBuffer(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+        return true;
+    }
+
+    std::optional<ScreenPixels> VulkanDevice::take_screen()
+    {
+        return std::exchange(read_, std::nullopt);
+    }
+
     void VulkanDevice::end_frame()
     {
         assert(state_ == State::InFrame);
@@ -1138,6 +1172,27 @@ namespace rct3::render::vulkan
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores = &render_finished_[image_index_];
         check(vkQueueSubmit(queue_, 1, &submit, frame.in_flight), "vkQueueSubmit");
+        if (reading_.buffer != VK_NULL_HANDLE)
+        {
+            // shortcut: waits for the frame on the spot, a hitch per screenshot; read a frame later when shots
+            // come often (photos, video).
+            check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
+            ScreenPixels pixels { { reading_extent_.width, reading_extent_.height }, std::vector<std::uint8_t>(std::size_t { reading_extent_.width } * reading_extent_.height * 4) };
+            void* mapped = nullptr;
+            check(vkMapMemory(device_, reading_.memory, 0, pixels.rgba.size(), 0, &mapped), "vkMapMemory");
+            std::memcpy(pixels.rgba.data(), mapped, pixels.rgba.size());
+            vkUnmapMemory(device_, reading_.memory);
+            destroy(reading_);
+            reading_ = { };
+            const bool bgra = color_format_ == VK_FORMAT_B8G8R8A8_UNORM || color_format_ == VK_FORMAT_B8G8R8A8_SRGB;
+            for (std::size_t i = 0; i < pixels.rgba.size(); i += 4)
+            {
+                if (bgra)
+                    std::swap(pixels.rgba[i], pixels.rgba[i + 2]);
+                pixels.rgba[i + 3] = 255;
+            }
+            read_ = std::move(pixels);
+        }
 
         VkPresentInfoKHR present { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         present.waitSemaphoreCount = 1;

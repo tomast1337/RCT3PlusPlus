@@ -44,6 +44,8 @@ namespace rct3::render::null
         void draw(const DrawCommand& command) override;
         void end_pass() override;
         bool copy_screen(TextureHandle target) override;
+        bool read_screen() override;
+        [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
         void set_wireframe(bool /*on*/) override
         {
         }
@@ -91,6 +93,8 @@ namespace rct3::render::null
         std::uint64_t transient_used_ = 0;
         FrameStats frame_stats_;
         FrameStats last_stats_;
+        std::optional<Extent> reading_;    ///< The screen read_screen asked for, until its frame ends
+        std::optional<ScreenPixels> read_; ///< Its pixels, until taken
     };
 
 } // namespace rct3::render::null

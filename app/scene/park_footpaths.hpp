@@ -25,6 +25,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/ground_queues.hpp"
 #include "park/object_mesh.hpp"
+#include "park/path_clearance.hpp"
 #include "park/path_drag.hpp"
 #include "park/path_route.hpp"
 #include "park/path_styles.hpp"
@@ -94,6 +95,9 @@ namespace rct3::scene
         std::optional<park::PathSpot> route_goal;          ///< With routing on: the tile pointed at
         std::optional<std::int32_t> route_goal_height;     ///< And the height of the raised path pointed at there
         std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes
+        bool route_blocked = false;                        ///< Only through what is in the way, so it is shown refused
+        park::SolidTiles solids;                           ///< What stands in the paths' way
+        std::size_t solids_of = 0;                         ///< The scene's object count when worked out
         bool route_press = false;                          ///< The button went down to lay the route
         bool lay_route = false;                            ///< And came up, so the route is laid
         std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid

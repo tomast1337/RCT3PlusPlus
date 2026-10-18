@@ -44,7 +44,7 @@
             "NotOwned": "The park does not own this land",
             "OffMap": "Off the edge of the park",
             "Underground": "The path would go into the ground; turn on cutting to dig it in",
-            "NoQueues": "Queues cannot be laid yet"
+            "Occupied": "Another path is in the way"
         },
         "Command": {
             "Cancel": "Close, cancel, go back",

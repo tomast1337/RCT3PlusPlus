@@ -57,7 +57,7 @@ namespace rct3::render::null
         state_ = State::Off;
     }
 
-    Extent NullDevice::extent() const
+    Extent NullDevice::screen_extent() const
     {
         int width = 0;
         int height = 0;

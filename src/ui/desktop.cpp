@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/desktop.hpp"
 
+#include "ui/inspect.hpp"
 #include "ui/keyboard_focus.hpp"
 
 #include <cstddef>
@@ -70,18 +71,6 @@ namespace rct3::ui
                     return found;
             }
             return const_cast<Widget*>(&w);
-        }
-
-        bool in_tree(const Widget& root, const Widget* target)
-        {
-            if (&root == target)
-                return true;
-            for (const auto& c : root.children())
-            {
-                if (in_tree(*c, target))
-                    return true;
-            }
-            return false;
         }
 
         // The direct child of `root` that holds `w`.

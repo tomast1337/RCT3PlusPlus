@@ -47,12 +47,15 @@
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
+#include "strings/unicode.hpp"
+#include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
 #include "ui/language.hpp"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
@@ -62,6 +65,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <optional>
 #include <random>
 #include <string>
@@ -110,11 +114,8 @@ namespace
         return click || key;
     }
 
-    void draw_profiler_window(const rct3::render::Device& device)
+    void draw_profiler(const rct3::render::Device& device)
     {
-        ImGui::SetNextWindowPos({ 12, 12 }, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize({ 560, 420 }, ImGuiCond_FirstUseEver);
-        ImGui::Begin("Profiler");
         const rct3::render::FrameStats stats = device.stats();
         ImGui::Text("%.1f fps", static_cast<double>(ImGui::GetIO().Framerate));
         ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives));
@@ -212,14 +213,11 @@ namespace
                 draw(r, 0);
             ImGui::EndTable();
         }
-        ImGui::End();
     }
 
     // Switches for looking into the park while it runs.
-    void draw_debug_window(rct3::scene::ParkScene& park)
+    void draw_park_debug(rct3::scene::ParkScene& park)
     {
-        ImGui::SetNextWindowPos({ 584, 12 }, ImGuiCond_FirstUseEver);
-        ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::Checkbox("Wireframe", &park.wireframe);
         ImGui::Checkbox("Free camera", &park.free_camera);
         ImGui::SetItemTooltip("No tilt, zoom or map limits, and the camera leaves the ground");
@@ -240,7 +238,6 @@ namespace
         const rct3::park::ParkCamera& c = park.camera;
         ImGui::Text("Target %.1f %.1f %.1f", static_cast<double>(c.target.x), static_cast<double>(c.target.y), static_cast<double>(c.target.z));
         ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<double>(c.yaw), static_cast<double>(c.pitch), static_cast<double>(c.distance));
-        ImGui::End();
     }
 
     // Recent log entries, coloured like the console. The ring is polled with a sequence cursor, so each frame
@@ -252,7 +249,7 @@ namespace
         return { c.x, c.y, c.z, c.w };
     }
 
-    void draw_log_window()
+    void draw_log()
     {
         namespace logging = rct3::logging;
         static std::vector<logging::Entry> shown;
@@ -269,9 +266,6 @@ namespace
         if (shown.size() > kKeep)
             shown.erase(shown.begin(), shown.begin() + static_cast<std::ptrdiff_t>(shown.size() - kKeep));
 
-        ImGui::SetNextWindowPos({ 12, 290 }, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize({ 760, 240 }, ImGuiCond_FirstUseEver);
-        ImGui::Begin("Log");
         static constexpr std::array<const char*, 5> kLevels = { "Debug", "Info", "Warning", "Error", "Critical" };
         ImGui::SetNextItemWidth(110);
         ImGui::Combo("Minimum", &minimum, kLevels.data(), static_cast<int>(kLevels.size()));
@@ -305,6 +299,95 @@ namespace
         if (follow && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.0f)
             ImGui::SetScrollHereY(1.0f);
         ImGui::EndChild();
+    }
+
+    // What the interface has under the pointer: that widget, the ones holding it, and outlines over the game.
+    // Control held keeps the widget while the pointer goes over to the panel.
+    void draw_ui_inspector(const rct3::ui::Desktop& desktop, const rct3::render::ScreenView& view, const rct3::platform::Window::Pointer& p)
+    {
+        namespace ui = rct3::ui;
+        static const ui::Widget* picked = nullptr;
+        const ui::Rect root = desktop.root().rect();
+        const float scale = root.width() > 0 ? static_cast<float>(view.size.width) / root.width() : 1;
+        const float x = p.x - static_cast<float>(view.x);
+        const float y = p.y - static_cast<float>(view.y);
+        if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<float>(view.size.width) && y < static_cast<float>(view.size.height))
+            picked = desktop.deepest({ x / scale, y / scale });
+        if (!ui::in_tree(desktop.root(), picked)) // Gone since: a window closed, or another screen
+            picked = nullptr;
+        ImGui::TextDisabled("Hold Ctrl to keep the widget while moving here");
+        if (picked == nullptr)
+        {
+            ImGui::TextUnformatted("No widget");
+            return;
+        }
+
+        const std::string path = ui::widget_path(*picked);
+        ImGui::Text("Path: %s", path.empty() ? "(the desktop)" : path.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Copy"))
+            ImGui::SetClipboardText(path.c_str());
+        if (!picked->tooltip.empty())
+            ImGui::TextWrapped("Tooltip: %s", rct3::strings::to_utf8(picked->tooltip).c_str());
+        ImGui::Separator();
+
+        // The desktop down to the widget; the line under the pointer is outlined instead of the widget.
+        std::vector<const ui::Widget*> chain;
+        for (const ui::Widget* w = picked; w != nullptr; w = w->parent())
+            chain.insert(chain.begin(), w);
+        const ui::Widget* outlined = picked;
+        for (std::size_t depth = 0; depth < chain.size(); ++depth)
+        {
+            const ui::Widget& w = *chain[depth];
+            const ui::Rect& r = w.rect();
+            std::string flags;
+            for (const auto& [on, tag] : { std::pair { !w.visible, " hidden" }, { !w.enabled, " disabled" }, { w.takes_pointer(), " pointer" }, { w.hovered(), " hovered" }, { w.pressed(), " pressed" }, { w.focused(), " focused" }, { w.modal, " modal" }, { w.popup, " popup" } })
+            {
+                if (on)
+                    flags += tag;
+            }
+            ImGui::Text("%*s%s \"%s\"  %.0f,%.0f  %.0fx%.0f %s", static_cast<int>(depth * 2), "", ui::type_name(w).c_str(), std::string(w.name()).c_str(), static_cast<double>(r.x0), static_cast<double>(r.y0), static_cast<double>(r.width()), static_cast<double>(r.height()), flags.c_str());
+            if (ImGui::IsItemHovered())
+                outlined = &w;
+        }
+
+        const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
+        const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * scale) / to_ui.x, (static_cast<float>(view.y) + cy * scale) / to_ui.y }; };
+        ImDrawList& draw = *ImGui::GetForegroundDrawList();
+        if (const ui::Widget* holder = outlined->parent())
+            draw.AddRect(corner(holder->rect().x0, holder->rect().y0), corner(holder->rect().x1, holder->rect().y1), IM_COL32(255, 200, 60, 160));
+        const ui::Rect& r = outlined->rect();
+        draw.AddRectFilled(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 40));
+        draw.AddRect(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 255), 0.0f, 2.0f);
+        const std::string label = ui::type_name(*outlined) + " " + std::string(outlined->name());
+        const ImVec2 at = corner(r.x0, r.y0);
+        const ImVec2 size = ImGui::CalcTextSize(label.c_str());
+        const ImVec2 chip { at.x, at.y >= size.y + 4 ? at.y - size.y - 4 : at.y };
+        draw.AddRectFilled(chip, { chip.x + size.x + 8, chip.y + size.y + 4 }, IM_COL32(20, 20, 20, 230), 3);
+        draw.AddText({ chip.x + 4, chip.y + 2 }, IM_COL32(140, 200, 255, 255), label.c_str());
+    }
+
+    /// One developer panel: a fixed window at `pos`, `size` (framebuffer pixels) with a tab for each page.
+    void draw_panel(const char* id, ImVec2 pos, ImVec2 size, std::initializer_list<std::pair<const char*, std::function<void()>>> pages)
+    {
+        const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
+        ImGui::SetNextWindowPos({ pos.x / to_ui.x, pos.y / to_ui.y });
+        ImGui::SetNextWindowSize({ size.x / to_ui.x, size.y / to_ui.y });
+        constexpr ImGuiWindowFlags kFixed = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
+        if (ImGui::Begin(id, nullptr, kFixed) && ImGui::BeginTabBar("pages"))
+        {
+            for (const auto& [name, draw] : pages)
+            {
+                if (draw && ImGui::BeginTabItem(name))
+                {
+                    ImGui::BeginChild("page");
+                    draw();
+                    ImGui::EndChild();
+                    ImGui::EndTabItem();
+                }
+            }
+            ImGui::EndTabBar();
+        }
         ImGui::End();
     }
 
@@ -732,6 +815,17 @@ int main(int argc, char** argv)
         std::signal(SIGINT, request_stop);
         std::signal(SIGTERM, request_stop);
         const double start_time = window->time();
+        // The pointer from the corner of where the game draws, which the developer panels may have moved.
+        const auto game_pointer = [&] {
+            auto p = window->pointer();
+            if (const auto& v = device->view())
+            {
+                p.x -= static_cast<float>(v->x);
+                p.y -= static_cast<float>(v->y);
+                p.inside = p.inside && p.x >= 0 && p.y >= 0 && p.x < static_cast<float>(v->size.width) && p.y < static_cast<float>(v->size.height);
+            }
+            return p;
+        };
         double last_time = start_time;
         int frame = 0;
         for (; !window->should_close() && !quit && frame != max_frames && g_stop_requested == 0; ++frame)
@@ -780,17 +874,32 @@ int main(int argc, char** argv)
                                 k.text = window->clipboard();
                         }
                     }
+                    // The developer panels frame the game rather than cover it: the profiler on the left, the
+                    // log below, the interface and the park on the right. The game draws in what is left.
+                    device->set_view(std::nullopt);
                     if (phase == Phase::Running && developer_windows)
                     {
                         const prof::Scope zone("DeveloperWindows");
-                        draw_profiler_window(*device);
-                        draw_log_window();
-                        if (park)
-                            draw_debug_window(*park);
+                        const render::Extent screen = device->screen_extent();
+                        const auto w = static_cast<float>(screen.width);
+                        const auto h = static_cast<float>(screen.height);
+                        // Proportions. shortcut: fixed sizes, make them draggable when they get in the way.
+                        const float left = std::floor(w * 0.22f);
+                        const float right = std::floor(w * 0.24f);
+                        const float bottom = std::floor(h * 0.3f);
+                        const float middle = std::max(1.0f, w - left - right);
+                        const render::ScreenView view { static_cast<std::uint32_t>(left), 0, { static_cast<std::uint32_t>(middle), static_cast<std::uint32_t>(std::max(1.0f, h - bottom)) } };
+                        device->set_view(view);
+                        const rct3::ui::Desktop* desktop = park ? park->desktop.get() : widgets ? &widgets->desktop : front ? &front->live->desktop : nullptr;
+                        const auto inspect = [&] { draw_ui_inspector(*desktop, view, window->pointer()); };
+                        const auto park_debug = [&] { draw_park_debug(*park); };
+                        draw_panel("##left", { 0, 0 }, { left, h }, { { "Profiler", [&] { draw_profiler(*device); } } });
+                        draw_panel("##bottom", { left, h - bottom }, { middle, bottom }, { { "Log", draw_log } });
+                        draw_panel("##right", { left + middle, 0 }, { right, h }, { { "Interface", desktop ? std::function<void()>(inspect) : nullptr }, { "Park", park ? std::function<void()>(park_debug) : nullptr } });
                     }
                     if (phase == Phase::Running && park && front)
                     {
-                        const auto p = window->pointer();
+                        const auto p = game_pointer();
                         rct3::scene::ParkInput input;
                         input.pointer = { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
                         input.right = p.right && input.pointer.present;
@@ -841,7 +950,7 @@ int main(int argc, char** argv)
                     else if (phase == Phase::Running && (widgets || front))
                     {
                         // The developer windows come first: where they want the pointer, the game does not get it.
-                        const auto p = window->pointer();
+                        const auto p = game_pointer();
                         const rct3::ui::PointerState pointer { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
                         // Likewise keys, while a developer window has the keyboard.
                         const rct3::ui::KeyboardState no_keys;

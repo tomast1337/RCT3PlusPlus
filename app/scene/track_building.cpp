@@ -247,12 +247,9 @@ namespace rct3::scene
             return false;
         auto [found, added] = cache.try_emplace(object.overlay);
         TrackModels& m = found->second;
-        if (added)
-        {
-            // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
-            m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
-            if (const auto file = assets.install->find(slashes(object.overlay) + ".common.ovl"))
-                m.index->add_file(*file);
+        // Adds `file` and the overlays it takes assets from to the index.
+        const auto add_with_references = [&](const std::filesystem::path& file) {
+            const bool fresh = m.index->add_file(file);
             std::set<std::string, std::less<>> tried;
             for (auto missing = m.index->missing_references(); !missing.empty(); missing = m.index->missing_references())
             {
@@ -261,15 +258,35 @@ namespace rct3::scene
                 {
                     if (!tried.insert(reference).second)
                         continue;
-                    if (const auto file = assets.install->find(reference + ".common.ovl"))
-                        more = m.index->add_file(*file) || more;
+                    if (const auto found_file = assets.install->find(reference + ".common.ovl"))
+                        more = m.index->add_file(*found_file) || more;
                 }
                 if (!more)
                     break;
             }
+            return fresh;
+        };
+        if (added)
+        {
+            // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
+            m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
+            if (const auto file = assets.install->find(slashes(object.overlay) + ".common.ovl"))
+                (void)add_with_references(*file);
             m.loader = std::make_unique<park::ModelLoader>(*m.index);
         }
         auto model = m.loader->load(object.symbol, object.overlay);
+        if (!model)
+        {
+            // A path or queue style keeps each piece in an overlay of its own beside the one describing it,
+            // named after the piece, which the describing overlay does not refer to.
+            const std::string overlay = slashes(object.overlay);
+            const std::string sibling = overlay.substr(0, overlay.rfind('/') + 1) + object.symbol + ".common.ovl";
+            if (const auto file = assets.install->find(sibling); file && add_with_references(*file))
+            {
+                m.loader = std::make_unique<park::ModelLoader>(*m.index);
+                model = m.loader->load(object.symbol, object.overlay);
+            }
+        }
         if (!model)
             return false;
         scene.models.emplace(key, std::move(*model));

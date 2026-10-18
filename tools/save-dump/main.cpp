@@ -682,8 +682,8 @@ int main(int argc, char** argv)
                     ++s.pieces[symbol];
                     if (std::getenv("PATHS_RAW") != nullptr && s.count <= 4)
                         std::printf(
-                            "raw %s slope %d dir %d tile %d,%d corners %.2f %.2f %.2f %.2f quant %d | %s base %d rot %d adjust %.2f absolute %d offset %d\n", to_string(p.kind), p.elevation->slope, p.direction, p.col, p.row, world->terrain.at(p.col, p.row).corners[0], world->terrain.at(p.col, p.row).corners[1], world->terrain.at(p.col, p.row).corners[2], world->terrain.at(p.col, p.row).corners[3], quantised, o->second->symbol.c_str(), o->second->base_height.value_or(-999), o->second->rotation,
-                            o->second->height_adjust.value_or(-9), o->second->force_absolute_height, o->second->height_offset);
+                            "raw %s slope %d dir %d tile %d,%d corners %.2f %.2f %.2f %.2f quant %d | %s @%s base %d rot %d adjust %.2f absolute %d offset %d\n", to_string(p.kind), p.elevation->slope, p.direction, p.col, p.row, world->terrain.at(p.col, p.row).corners[0], world->terrain.at(p.col, p.row).corners[1], world->terrain.at(p.col, p.row).corners[2], world->terrain.at(p.col, p.row).corners[3], quantised, o->second->symbol.c_str(), o->second->overlay.c_str(), o->second->base_height.value_or(-999),
+                            o->second->rotation, o->second->height_adjust.value_or(-9), o->second->force_absolute_height, o->second->height_offset);
                     if (o->second->base_height)
                         ++s.piece_minus_base[*o->second->base_height * 4 - quantised];
                 }

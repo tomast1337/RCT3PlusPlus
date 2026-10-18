@@ -128,7 +128,10 @@ namespace rct3::park
         NotOwned,    ///< The park does not own the next tile
         Underground, ///< The piece would go into the ground and cutting is off
         Occupied,    ///< Another path is in the way
+        Blocked,     ///< Something else is in the way: scenery, a ride or a stall
     };
+
+    struct SolidTiles;
 
     /// Clearance kept between a piece and another path on its tile, in world units: room for guests to walk
     /// under a raised path. Our own value.
@@ -165,8 +168,9 @@ namespace rct3::park
     /// The next piece on `grid`; none before a tile is picked or beyond the grid.
     [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
 
-    /// Why the next piece cannot be laid on `grid` among `paths`.
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths);
+    /// Why the next piece cannot be laid on `grid` among `paths` and, when given, what else fills the tiles
+    /// (path_clearance.hpp).
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids = nullptr);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
     void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading);

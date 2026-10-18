@@ -75,6 +75,32 @@ TEST_CASE("guests stop to watch a sight, cheered by it, and vandals leave it be"
     CHECK_FALSE(r.get<PathItem>(fountain).broken);
 }
 
+TEST_CASE("a party with the player's guest in it has its photo taken at a photo spot, others do not")
+{
+    for (const bool avatar : { true, false })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 1, 0 });
+        park.item(PathItemKind::PhotoSpot, { 0, 0 });
+        const auto leader = park.guest({ 1, 0 });
+        const auto friend_ = park.guest({ 1, 0 });
+        park.party({ leader, friend_ });
+        auto& r = park.world().registry;
+        r.get<Visitor>(friend_).avatar = avatar;
+        CHECK(park.run_until([&] { return r.all_of<Linger>(leader); }, 120));
+        CHECK(r.get<Linger>(leader).at == PathItemKind::PhotoSpot);
+        const auto* photos = r.ctx().find<Photos>();
+        if (avatar)
+        {
+            REQUIRE(photos != nullptr);
+            REQUIRE(photos->taken.size() == 1);
+            CHECK(photos->taken[0].guest == friend_);
+        }
+        else
+            CHECK((photos == nullptr || photos->taken.empty()));
+    }
+}
+
 TEST_CASE("special attractions are told apart by the kind their item stores")
 {
     CHECK(facility_of(11) == Product::Toilet);

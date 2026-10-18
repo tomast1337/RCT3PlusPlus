@@ -451,16 +451,17 @@ namespace rct3::simulation
         return added;
     }
 
-    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_sight)
+    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of)
     {
         std::size_t added = 0;
         for (const save::PlacedObject& o : objects)
         {
-            if (o.hidden || !is_sight(o))
+            const auto kind = o.hidden ? std::nullopt : sight_of(o);
+            if (!kind)
                 continue;
             if (const auto at = path_by(world.paths, o))
             {
-                world.registry.emplace<PathItem>(world.registry.create(), PathItem { *at, PathItemKind::Sight });
+                world.registry.emplace<PathItem>(world.registry.create(), PathItem { *at, *kind });
                 ++added;
             }
         }

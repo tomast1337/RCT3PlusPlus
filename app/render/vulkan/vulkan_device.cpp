@@ -1122,29 +1122,46 @@ namespace rct3::render::vulkan
         return true;
     }
 
-    bool VulkanDevice::read_screen()
+    bool VulkanDevice::read_screen(TextureHandle from)
     {
         assert(state_ == State::InFrame);
         const bool bgra = color_format_ == VK_FORMAT_B8G8R8A8_UNORM || color_format_ == VK_FORMAT_B8G8R8A8_SRGB;
         const bool rgba = color_format_ == VK_FORMAT_R8G8B8A8_UNORM || color_format_ == VK_FORMAT_R8G8B8A8_SRGB;
         if ((!bgra && !rgba) || reading_.buffer != VK_NULL_HANDLE)
             return false;
+        const Texture* target = nullptr;
+        if (from)
+        {
+            const auto found = textures_.find(from.id);
+            if (found == textures_.end() || !found->second.target)
+                return false;
+            target = &found->second;
+        }
+        const VkExtent2D size = target != nullptr ? target->extent : extent_;
         try
         {
-            reading_ = make_buffer(VkDeviceSize { extent_.width } * extent_.height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+            reading_ = make_buffer(VkDeviceSize { size.width } * size.height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
         }
         catch (const std::exception& e)
         {
             logging::logger("vulkan").warning("screen read: {}", e.what());
             return false;
         }
-        reading_extent_ = extent_;
+        reading_extent_ = size;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        const VkImage screen = images_[image_index_];
-        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
         VkBufferImageCopy region { };
         region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-        region.imageExtent = { extent_.width, extent_.height, 1 };
+        region.imageExtent = { size.width, size.height, 1 };
+        if (target != nullptr)
+        {
+            // A target's pass left it ready for sampling; it goes back to that.
+            image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+            vkCmdCopyImageToBuffer(cmd, target->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+            image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+            return true;
+        }
+        const VkImage screen = images_[image_index_];
+        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
         vkCmdCopyImageToBuffer(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
         image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
         return true;

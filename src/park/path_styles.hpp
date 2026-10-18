@@ -5,6 +5,9 @@
 // style: its name, the strings key of the name it shows, the picture that stands for it in the interface and
 // one scenery item per piece. The pieces carry the price of laying one on the ground; every piece of a style
 // costs the same in the files seen, so the first piece's price stands for the style.
+//
+// A path style names its ground pictures, then each piece four times over (the four names are the same in
+// every file seen); a queue style names its pieces once each.
 #pragma once
 
 #include "ovl/overlay.hpp"
@@ -26,6 +29,10 @@ namespace rct3::park
         std::string icon;            ///< Skin that stands for it in the interface
         std::int32_t piece_cost = 0; ///< Of one piece laid on the ground, in hundredths of the currency unit
         bool queue = false;
+        std::vector<std::string> pieces; ///< Symbols of the pieces raised paths are drawn with, in the order named
+        /// The describing overlay, as a park names the overlay of a placed piece: relative to the install,
+        /// without its ".common.ovl" ending. Empty when not read from a folder.
+        std::string overlay;
     };
 
     /// The install's folders of path styles and of queue styles, relative to its root.

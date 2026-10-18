@@ -43,7 +43,7 @@
             "PickStart": "Click the ground to start a path",
             "NotOwned": "The park does not own this land",
             "OffMap": "Off the edge of the park",
-            "GroundOnly": "Only flat ground paths for now",
+            "Underground": "The path would go into the ground; turn on cutting to dig it in",
             "NoQueues": "Queues cannot be laid yet"
         },
         "Command": {

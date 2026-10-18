@@ -81,4 +81,21 @@ namespace rct3::scene
     /// Draws the ghost of the picked piece with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
+    // Shared with path building, which places objects the same way.
+
+    /// Makes sure the model of `object` is loaded, reading it through its overlay's own index kept in `cache`.
+    bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object);
+
+    /// Hands the scene's objects to the mesh builder again after a change.
+    void objects_changed(ParkScene& scene);
+
+    /// Waits for a mesh build that is reading the objects, before they change.
+    void wait_for_build(ParkScene& scene);
+
+    /// Paints and uploads the pictures of `ghost` the scene does not have yet.
+    void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost);
+
+    /// Draws `mesh` see-through with `transform` and `light`.
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light);
+
 } // namespace rct3::scene

@@ -88,47 +88,6 @@ namespace rct3::scene
             return park::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
         }
 
-        /// Makes sure the model of `object` is loaded, reading it through the overlay's own index.
-        bool load_model(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, const save::PlacedObject& object)
-        {
-            const std::string key = park::model_key(object);
-            if (scene.models.contains(key))
-                return true;
-            if (!assets.install)
-                return false;
-            auto [found, added] = b.models.try_emplace(object.overlay);
-            TrackModels& m = found->second;
-            if (added)
-            {
-                // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
-                m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
-                if (const auto file = assets.install->find(slashes(object.overlay) + ".common.ovl"))
-                    m.index->add_file(*file);
-                std::set<std::string, std::less<>> tried;
-                for (auto missing = m.index->missing_references(); !missing.empty(); missing = m.index->missing_references())
-                {
-                    bool more = false;
-                    for (const std::string& reference : missing)
-                    {
-                        if (!tried.insert(reference).second)
-                            continue;
-                        if (const auto file = assets.install->find(reference + ".common.ovl"))
-                            more = m.index->add_file(*file) || more;
-                    }
-                    if (!more)
-                        break;
-                }
-                m.loader = std::make_unique<park::ModelLoader>(*m.index);
-            }
-            auto model = m.loader->load(object.symbol, object.overlay);
-            if (!model)
-                return false;
-            scene.models.emplace(key, std::move(*model));
-            for (const auto& [name, picture] : m.loader->pictures())
-                scene.pictures.try_emplace(name, picture);
-            return true;
-        }
-
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
@@ -150,7 +109,7 @@ namespace rct3::scene
                 return;
             save::PlacedObject& o = b.ghost->object;
             o.overlay = b.overlay;
-            if (!load_model(scene, b, assets, o))
+            if (!load_object_model(scene, b.models, assets, o))
                 return;
             const std::array<save::PlacedObject, 1> one { o };
             b.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
@@ -210,20 +169,6 @@ namespace rct3::scene
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
             }
             return v;
-        }
-
-        /// Hands the scene's objects to the mesh builder again after a change.
-        void objects_changed(ParkScene& scene)
-        {
-            scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
-            scene.levels = { };
-            scene.since_rebuild = kObjectRebuildInterval;
-        }
-
-        void wait_for_build(ParkScene& scene)
-        {
-            if (scene.object_build.valid())
-                (void)scene.object_build.get();
         }
 
         /// Adds the ghost to the park and to the ride's track.
@@ -291,26 +236,78 @@ namespace rct3::scene
             refresh(scene, b, assets);
         }
 
-        /// Paints and uploads the ghost's pictures the scene does not have yet.
-        void ghost_textures(render::Device& device, ParkScene& scene, const TrackBuilding& b)
-        {
-            std::vector<park::ObjectBatch> missing;
-            for (const park::ObjectBatch& batch : b.ghost_mesh.batches)
-            {
-                if (!scene.object_textures.contains(batch.texture))
-                    missing.push_back(batch);
-            }
-            if (missing.empty())
-                return;
-            auto pictures = park::paint_batches(missing, scene.pictures);
-            if (scene.relief_maps)
-                park::add_relief_maps(pictures); // The pictures stay for the ride once it is built
-            auto uploaded = ui::upload_textures(device, pictures);
-            if (uploaded)
-                scene.object_textures.merge(*uploaded);
-        }
-
     } // namespace
+
+    bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object)
+    {
+        const std::string key = park::model_key(object);
+        if (scene.models.contains(key))
+            return true;
+        if (!assets.install)
+            return false;
+        auto [found, added] = cache.try_emplace(object.overlay);
+        TrackModels& m = found->second;
+        if (added)
+        {
+            // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
+            m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
+            if (const auto file = assets.install->find(slashes(object.overlay) + ".common.ovl"))
+                m.index->add_file(*file);
+            std::set<std::string, std::less<>> tried;
+            for (auto missing = m.index->missing_references(); !missing.empty(); missing = m.index->missing_references())
+            {
+                bool more = false;
+                for (const std::string& reference : missing)
+                {
+                    if (!tried.insert(reference).second)
+                        continue;
+                    if (const auto file = assets.install->find(reference + ".common.ovl"))
+                        more = m.index->add_file(*file) || more;
+                }
+                if (!more)
+                    break;
+            }
+            m.loader = std::make_unique<park::ModelLoader>(*m.index);
+        }
+        auto model = m.loader->load(object.symbol, object.overlay);
+        if (!model)
+            return false;
+        scene.models.emplace(key, std::move(*model));
+        for (const auto& [name, picture] : m.loader->pictures())
+            scene.pictures.try_emplace(name, picture);
+        return true;
+    }
+
+    void objects_changed(ParkScene& scene)
+    {
+        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
+        scene.levels = { };
+        scene.since_rebuild = kObjectRebuildInterval;
+    }
+
+    void wait_for_build(ParkScene& scene)
+    {
+        if (scene.object_build.valid())
+            (void)scene.object_build.get();
+    }
+
+    void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost)
+    {
+        std::vector<park::ObjectBatch> missing;
+        for (const park::ObjectBatch& batch : ghost.batches)
+        {
+            if (!scene.object_textures.contains(batch.texture))
+                missing.push_back(batch);
+        }
+        if (missing.empty())
+            return;
+        auto pictures = park::paint_batches(missing, scene.pictures);
+        if (scene.relief_maps)
+            park::add_relief_maps(pictures); // The pictures stay for the object once it is built
+        auto uploaded = ui::upload_textures(device, pictures);
+        if (uploaded)
+            scene.object_textures.merge(*uploaded);
+    }
 
     void close_track_building(ParkScene& scene)
     {
@@ -415,14 +412,19 @@ namespace rct3::scene
         }
         if (changed)
             refresh(scene, b, assets);
-        ghost_textures(device, scene, b);
+        ghost_textures(device, scene, b.ghost_mesh);
         panel->show(panel_view(scene, b, assets, currency));
     }
 
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        const park::ObjectMesh& mesh = scene.building.ghost_mesh;
-        if (!scene.building.ride || mesh.indices.empty() || !scene.see_through_pipeline)
+        if (scene.building.ride)
+            draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
+    }
+
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light)
+    {
+        if (mesh.indices.empty() || !scene.see_through_pipeline)
             return;
         const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
         const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));

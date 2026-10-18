@@ -138,9 +138,9 @@ int main(int argc, char** argv)
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
-    std::set<std::uint64_t> sights;                        // Placed objects guests stop to watch
-    std::set<std::uint64_t> gates;                         // Park entrances
-    std::map<std::uint64_t, std::uint32_t> facility_kinds; // Special attractions' kinds, by attraction
+    std::map<std::uint64_t, simulation::PathItemKind> sights; // Placed objects guests stop at
+    std::set<std::uint64_t> gates;                            // Park entrances
+    std::map<std::uint64_t, std::uint32_t> facility_kinds;    // Special attractions' kinds, by attraction
     if (game)
     {
         const auto install = config::open_game_install(game);
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
         park::ModelLoader loader(assets);
         for (const save::PlacedObject& o : world_model->objects)
             if (const auto model = loader.load(o.symbol, o.overlay); model && park::is_sight(model->category))
-                sights.insert(o.id);
+                sights.emplace(o.id, model->photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight);
             else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
                 gates.insert(o.id);
         for (const save::Ride& ride : rides->rides)
@@ -262,7 +262,10 @@ int main(int argc, char** argv)
         const auto found = facility_kinds.find(ride.base.id);
         return found != facility_kinds.end() ? std::optional(found->second) : std::nullopt;
     });
-    const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::PlacedObject& o) { return sights.contains(o.id); });
+    const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::PlacedObject& o) {
+        const auto found = sights.find(o.id);
+        return found != sights.end() ? std::optional(found->second) : std::nullopt;
+    });
     const bool gate = simulation::import_gate(world, world_model->objects, [&](const save::PlacedObject& o) { return gates.contains(o.id); }) != entt::null;
     std::printf("facilities %zu  sights %zu  gate %s\n", facilities, sight_count, gate ? "yes" : "none");
     // The park's time of day, as its file left it, run through every hour.

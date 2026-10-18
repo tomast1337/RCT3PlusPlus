@@ -6,6 +6,7 @@
         "PatrolWholePark": "The whole park",
         "PatrolPaint": "Paint patrol area",
         "ScreenshotSaved": "Screenshot saved: %NAME%",
+        "PhotoSaved": "Photo saved: %NAME%",
         "PatrolClear": "Clear patrol area",
         "PatrolBrush": "Brush:",
         "PatrolZone": "Shared zone:",

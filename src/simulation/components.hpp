@@ -40,6 +40,7 @@ namespace rct3::simulation
         bool female = false;
         std::string name;
         std::uint64_t arrived = 0; ///< Tick the visitor entered the park
+        bool avatar = false;       ///< Made by the player, who keeps the photos taken of them
     };
 
     /// Where an entity stands in the world.
@@ -345,7 +346,8 @@ namespace rct3::simulation
         Bin,
         Bench,
         Sign,
-        Sight, ///< Something to stop and watch: a fountain, an effect, an animatronic
+        Sight,     ///< Something to stop and watch: a fountain, an effect, an animatronic
+        PhotoSpot, ///< A view to stop at, where a player's guest has their photo taken
     };
 
     /// Something standing on a path tile that guests use and vandals break.
@@ -443,6 +445,19 @@ namespace rct3::simulation
     };
 
     /// The park's run of vandalism, kept in the registry's context.
+    /// A photo taken of a player's guest, with their party, at a photo spot.
+    struct Photo
+    {
+        entt::entity guest = entt::null; ///< The player's guest
+        NodeId at = kNoNode;             ///< The spot's path tile
+    };
+
+    /// In the registry's context: photos taken since whoever shows the park last took them away to save.
+    struct Photos
+    {
+        std::vector<Photo> taken;
+    };
+
     struct Vandalism
     {
         std::uint32_t broken = 0;   ///< Things broken since the run began

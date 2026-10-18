@@ -94,6 +94,12 @@ namespace rct3::scene
         constexpr float kViewTurn = 0.15f;          ///< Radians a second the round view turns round its attraction
         constexpr float kPersonViewDistance = 4.5f; ///< Of the round view's eye from the person it shows
         constexpr float kPersonViewHeight = 0.9f;   ///< Of the point it looks at, above the person's feet
+        // Our own values for photos at photo spots.
+        constexpr std::uint32_t kPhotoWidth = 640;
+        constexpr std::uint32_t kPhotoHeight = 480;
+        constexpr float kPhotoPitch = 0.15f;     ///< Radians down: near eye level
+        constexpr float kPhotoClosest = 3;       ///< Of the eye from the party
+        constexpr float kPhotoPersonTall = 1.8f; ///< Framed from the feet up to this high
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
@@ -1361,9 +1367,11 @@ namespace rct3::scene
                     const auto file = install.find(ride.base.overlay_path + ".common.ovl");
                     return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
                 });
-                simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
                     const auto model = scene.models.find(park::model_key(o));
-                    return model != scene.models.end() && park::is_sight(model->second.category);
+                    if (model == scene.models.end() || !park::is_sight(model->second.category))
+                        return std::nullopt;
+                    return model->second.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight;
                 });
                 simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
                     const auto model = scene.models.find(park::model_key(o));
@@ -2195,6 +2203,31 @@ namespace rct3::scene
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
                 }
+                // Photos of the player's guests at photo spots: from in front of them, framing their party.
+                if (auto* photos = scene.sim.registry.ctx().find<simulation::Photos>())
+                {
+                    const auto& r = scene.sim.registry;
+                    const bool wanted = options.flag(config::GameOption::AllPhotos) && options.flag(config::GameOption::PhotoSpotPhotos);
+                    for (const simulation::Photo& photo : std::exchange(photos->taken, { }))
+                    {
+                        // shortcut: photos past a few waiting are dropped, rather than stalling frame after frame; queue them over time if parks take many at once.
+                        if (!wanted || !r.valid(photo.guest) || scene.photos.size() >= 4)
+                            continue;
+                        std::vector<glm::vec3> points;
+                        const auto frame = [&](entt::entity e) {
+                            const glm::vec3 at = r.get<simulation::Pose>(e).position;
+                            points.push_back(at);
+                            points.push_back(at + glm::vec3(0, kPhotoPersonTall, 0));
+                        };
+                        if (const auto* member = r.try_get<simulation::Member>(photo.guest))
+                            std::ranges::for_each(r.get<simulation::Party>(member->party).members, frame);
+                        else
+                            frame(photo.guest);
+                        const float yaw = r.get<simulation::Pose>(photo.guest).heading + glm::pi<float>();
+                        const std::string& name = r.get<simulation::Visitor>(photo.guest).name;
+                        scene.photos.push_back({ park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
+                    }
+                }
                 // New thoughts go into the guests' saved thoughts, newest first, for their windows to show.
                 for (ShownPerson& p : scene.shown_people)
                 {
@@ -2663,6 +2696,37 @@ namespace rct3::scene
             device.begin_pass(back);
             panel.show_view(ui::texture_id(scene.view_target));
         }
+
+        /// Draws the first photo waiting into the photo target and asks for its pixels, for the app to save.
+        void draw_photo(render::Device& device, ParkScene& scene)
+        {
+            const PhotoShot shot = std::move(scene.photos.front());
+            scene.photos.erase(scene.photos.begin());
+            if (!scene.photo_target)
+            {
+                render::TextureDesc desc;
+                desc.width = kPhotoWidth;
+                desc.height = kPhotoHeight;
+                desc.target = true;
+                desc.label = "photo";
+                if (auto made = device.create_texture(desc))
+                    scene.photo_target = *made;
+            }
+            if (!scene.photo_target)
+                return;
+            device.end_pass();
+            render::PassDesc into;
+            into.target = scene.photo_target;
+            into.clear_color = scene.horizon;
+            device.begin_pass(into);
+            draw_world(device, scene, park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light);
+            device.end_pass();
+            if (device.read_screen(scene.photo_target))
+                scene.photo_reading = shot.name;
+            render::PassDesc back;
+            back.clear = false;
+            device.begin_pass(back);
+        }
     } // namespace
 
     ui::CursorKind park_scene_cursor(const ParkScene& scene)
@@ -2684,6 +2748,8 @@ namespace rct3::scene
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
+        if (!scene.photos.empty() && !scene.photo_reading)
+            profiling::section("Photo", [&] { draw_photo(device, scene); });
         const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));
         const glm::vec3 eye = park::eye(scene.camera);
         profiling::section("Shadows", [&] { draw_shadow_map(device, scene); });
@@ -2741,6 +2807,8 @@ namespace rct3::scene
         }
         if (scene.view_target)
             device.destroy_texture(scene.view_target);
+        if (scene.photo_target)
+            device.destroy_texture(scene.photo_target);
         for (const render::TextureHandle t : { scene.shadow_drawings[0].target, scene.shadow_drawings[0].view, scene.shadow_drawings[1].target, scene.shadow_drawings[1].view })
         {
             if (t)

@@ -625,16 +625,28 @@ namespace rct3::simulation
                 {
                     const NodeId here = stride.from;
                     const auto benches = static_cast<std::size_t>(std::ranges::count_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Bench && !r.get<PathItem>(i).broken; }));
-                    const bool sight = std::ranges::any_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight; });
+                    const auto sight = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight || r.get<PathItem>(i).kind == PathItemKind::PhotoSpot; });
                     if ((mood.energy < kTired || mood.nausea >= kWant) && seated[here] < benches * kBenchSeats && random::chance(dice.state, kSitChance))
                     {
                         r.emplace<Linger>(g, PathItemKind::Bench, kSitSeconds);
                         ++seated[here];
                         continue;
                     }
-                    if (sight && random::chance(dice.state, kWatchChance))
+                    if (sight != items(here).end() && random::chance(dice.state, kWatchChance))
                     {
-                        r.emplace<Linger>(g, PathItemKind::Sight, kWatchSeconds);
+                        const PathItemKind kind = r.get<PathItem>(*sight).kind;
+                        r.emplace<Linger>(g, kind, kWatchSeconds);
+                        // The player keeps a photo of each stop their own guest's party makes at a photo spot.
+                        if (kind == PathItemKind::PhotoSpot)
+                        {
+                            entt::entity avatar = r.get<Visitor>(g).avatar ? g : entt::null;
+                            if (const auto* member = r.try_get<Member>(g))
+                                for (const entt::entity m : r.get<Party>(member->party).members)
+                                    if (avatar == entt::null && r.get<Visitor>(m).avatar)
+                                        avatar = m;
+                            if (avatar != entt::null)
+                                r.ctx().emplace<Photos>().taken.push_back({ avatar, here });
+                        }
                         continue;
                     }
                 }
@@ -681,7 +693,7 @@ namespace rct3::simulation
                 }
                 if (mood.happiness < kVandalMood && !guarded.contains(at) && random::chance(dice.state, kVandalPerSecond * dt))
                 {
-                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && r.get<PathItem>(i).kind != PathItemKind::Sight; });
+                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && r.get<PathItem>(i).kind != PathItemKind::Sight && r.get<PathItem>(i).kind != PathItemKind::PhotoSpot; });
                     if (whole != items(at).end())
                     {
                         r.get<PathItem>(*whole).broken = true;

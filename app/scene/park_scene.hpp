@@ -187,6 +187,13 @@ namespace rct3::scene
         std::uint32_t thoughts_seen = 0; ///< Of the simulated guest's thoughts, those already in the saved person
     };
 
+    /// A photo of a player's guest to draw: where from, and the start of its file name.
+    struct PhotoShot
+    {
+        park::ParkCamera camera;
+        std::string name;
+    };
+
     struct ParkScene
     {
         save::TerrainGrid grid;
@@ -347,6 +354,9 @@ namespace rct3::scene
         park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                 ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                     ///< Across the view's target
+        std::vector<PhotoShot> photos;                     ///< Taken in the park, waiting to be drawn, one a frame
+        render::TextureHandle photo_target;                ///< A photo is drawn into
+        std::optional<std::string> photo_reading;          ///< The file name start of the photo read from the target this frame, for the app to save
         std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
         std::optional<ui::Point> right_press;              ///< Likewise the right button
         render::SceneLight light;                          ///< What the day clock shows, for this frame

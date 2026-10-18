@@ -263,7 +263,7 @@ namespace rct3::render::vulkan
             image.arrayLayers = 1;
             image.samples = VK_SAMPLE_COUNT_1_BIT;
             image.tiling = VK_IMAGE_TILING_OPTIMAL;
-            image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (desc.target ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : 0);
+            image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (desc.target ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0); // Source for read_screen
             image.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             image.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             check(vkCreateImage(device_, &image, nullptr, &t.image), "vkCreateImage");

@@ -34,14 +34,16 @@ namespace rct3::park
         std::multimap<std::pair<int, int>, const GroundOpening*> by_tile;
         for (const GroundOpening& h : hollows)
             by_tile.emplace(std::pair { h.col, h.row }, &h);
-        std::map<std::uint8_t, std::vector<GroundVertex>> by_cliff;
+        std::map<std::pair<GroundPaint, std::uint8_t>, std::vector<GroundVertex>> by_paint;
+        const glm::vec2 span { grid.tile_size_x, grid.tile_size_z };
         const auto quad = [&](std::uint8_t cliff, const std::array<glm::vec3, 4>& q, glm::vec3 normal, bool along_x) {
-            auto& out = by_cliff[cliff];
+            const GroundPaint paint = normal.y != 0 ? GroundPaint::TunnelCeiling : GroundPaint::TunnelWall;
+            auto& out = by_paint[{ paint, cliff }];
             for (const std::size_t i : { 0, 1, 2, 0, 2, 3 })
             {
                 const glm::vec3 p = q[i];
-                const glm::vec2 uv = normal.y != 0 ? glm::vec2 { p.x, p.z } : glm::vec2 { along_x ? p.x : p.z, -p.y };
-                out.push_back({ p, glm::vec4(1.0f), uv / kTextureSpan, normal });
+                const glm::vec2 uv = normal.y != 0 ? glm::vec2 { p.x, p.z } / span : glm::vec2 { along_x ? p.x / span.x : p.z / span.y, -p.y / kTunnelHeight };
+                out.push_back({ p, glm::vec4(1.0f), uv, normal });
             }
         };
         for (const GroundOpening& h : hollows)
@@ -84,9 +86,9 @@ namespace rct3::park
                 quad(cliff, wall, inward, along_x);
             }
         }
-        for (auto& [cliff, vertices] : by_cliff)
+        for (auto& [paint, vertices] : by_paint)
         {
-            mesh.batches.push_back({ GroundPaint::Cliff, cliff, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(vertices.size()) });
+            mesh.batches.push_back({ paint.first, paint.second, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(vertices.size()) });
             for (GroundVertex& v : vertices)
             {
                 mesh.indices.push_back(static_cast<std::uint32_t>(mesh.vertices.size()));

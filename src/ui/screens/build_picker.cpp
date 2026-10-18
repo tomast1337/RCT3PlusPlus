@@ -17,18 +17,21 @@ namespace rct3::ui
         constexpr std::string_view kExpandAll = "RideSelectionWindow_ExpandAll";
         constexpr std::string_view kCollapseAll = "RideSelectionWindow_ContractAll";
         constexpr std::string_view kNothing = "NoItemsMeetFilterCriteria";
+        constexpr std::string_view kShowGrid = "Rct3pp_BuildPicker_Grid";
+        constexpr std::string_view kShowList = "Rct3pp_BuildPicker_List";
         constexpr float kSizeButtonWidth = 96;
         constexpr float kSizeButtonHeight = 22;
 
     } // namespace
 
-    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::vector<PickerRow> rows, bool large)
+    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::vector<PickerRow> rows, bool large, bool grid)
         : Widget(std::move(name))
         , style_(std::move(style))
         , strings_(strings)
         , title_(std::move(title))
         , data_(std::move(rows))
         , large_(large)
+        , grid_(grid)
     {
         keep_inside = true;
         clip_children = true;
@@ -40,10 +43,13 @@ namespace rct3::ui
         list_ = &add<ScrollArea>("list", style_.scroll_bar);
         list_->placement = { { 0, 0, 1, 1 }, { kSide, kTitleHeight, -kSide, -kBottomBar } };
 
+        view_ = &add<Button>("view", style_.text_button);
+        view_->placement = bottom_left(kSide, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
+        view_->text_colour = style_.button_text_colour;
         size_ = &add<Button>("size", style_.text_button);
-        size_->placement = bottom_left(kSide, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
+        size_->placement = bottom_left(2 * kSide + kSizeButtonWidth, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
         size_->text_colour = style_.button_text_colour;
-        size_->text = std::u16string(strings_.get(large_ ? kCollapseAll : kExpandAll));
+        label_buttons();
 
         add_rows(data_, nullptr);
     }
@@ -63,17 +69,44 @@ namespace rct3::ui
         return std::exchange(picked_out_, std::nullopt);
     }
 
+    void BuildPicker::label_buttons()
+    {
+        view_->text = std::u16string(strings_.get(grid_ ? kShowList : kShowGrid));
+        size_->text = std::u16string(strings_.get(large_ ? kCollapseAll : kExpandAll));
+        size_->visible = !folded_ && !grid_;
+    }
+
+    bool BuildPicker::on_grip(Point p) const
+    {
+        const Rect& r = rect();
+        return !folded_ && p.x >= r.x1 - kGrip && p.y >= r.y1 - kGrip;
+    }
+
+    CursorKind BuildPicker::cursor(Point p) const
+    {
+        return on_grip(p) ? CursorKind::ResizeDiagonalDown : CursorKind::Arrow;
+    }
+
     void BuildPicker::on_press(Point p)
     {
-        if (p.y < rect().y0 + kTitleHeight)
+        if (on_grip(p))
+            resize_ = p;
+        else if (p.y < rect().y0 + kTitleHeight)
             grab_ = p;
     }
 
     void BuildPicker::on_drag(Point p)
     {
+        Rect& o = placement.offsets;
+        if (resize_)
+        {
+            o.x1 = std::max(o.x0 + kMinWidth, o.x1 + p.x - resize_->x);
+            o.y1 = std::max(o.y0 + kMinHeight, o.y1 + p.y - resize_->y);
+            resize_ = p;
+            return;
+        }
         if (!grab_)
             return;
-        Rect& o = placement.offsets;
         const float dx = p.x - grab_->x;
         const float dy = p.y - grab_->y;
         o = { o.x0 + dx, o.y0 + dy, o.x1 + dx, o.y1 + dy };
@@ -83,14 +116,20 @@ namespace rct3::ui
     void BuildPicker::on_release(Point, bool)
     {
         grab_.reset();
+        resize_.reset();
     }
 
     void BuildPicker::lay_out()
     {
         float y = 0;
+        // The grid's columns; a heading takes a tile, and its open items follow it.
+        laid_width_ = list_->content().rect().width();
+        const int columns = std::max(1, static_cast<int>(laid_width_ / kTile));
+        int column = 0;
         for (BuildPickerRow* row : rows_)
         {
             row->large = large_;
+            row->grid = grid_;
             bool shown = true;
             float indent = 0;
             for (const BuildPickerRow* h = row->heading(); h != nullptr; h = h->heading())
@@ -101,6 +140,17 @@ namespace rct3::ui
             row->visible = shown;
             if (!shown)
                 continue;
+            if (grid_)
+            {
+                const float x = static_cast<float>(column) * kTile;
+                row->placement = { { 0, 0, 0, 0 }, { x, y, x + kTile, y + kTile } };
+                if (++column == columns)
+                {
+                    column = 0;
+                    y += kTile;
+                }
+                continue;
+            }
             const float height = large_ ? kLargeRow : kSmallRow;
             row->placement = { { 0, 0, 1, 0 }, { indent, y, 0, y + height } };
             y += height;
@@ -115,17 +165,30 @@ namespace rct3::ui
         if (fold_->take_click())
         {
             folded_ = !folded_;
+            if (folded_)
+                unfolded_height_ = placement.offsets.y1 - placement.offsets.y0;
             list_->visible = !folded_;
-            size_->visible = !folded_;
-            const float height = folded_ ? kTitleHeight : kHeight;
+            view_->visible = !folded_;
+            label_buttons();
+            const float height = folded_ ? kTitleHeight : unfolded_height_;
             placement.offsets.y1 = placement.offsets.y0 + height;
         }
         if (size_->take_click())
         {
             large_ = !large_;
-            size_->text = std::u16string(strings_.get(large_ ? kCollapseAll : kExpandAll));
+            label_buttons();
             dirty_ = true;
         }
+        if (view_->take_click())
+        {
+            grid_ = !grid_;
+            label_buttons();
+            dirty_ = true;
+        }
+        if (grid_ && list_->content().rect().width() != laid_width_)
+            dirty_ = true;
+        for (BuildPickerRow* row : rows_)
+            row->dear = cash && row->row().cost > *cash;
         for (BuildPickerRow* row : rows_)
         {
             if (!row->take_click())
@@ -162,9 +225,10 @@ namespace rct3::ui
             draw_text(context.list, *small, strings_.get(kNothing), list_->rect(), { style_.text_colour, Align::Centre, Align::Centre, true });
         if (!note.empty())
         {
-            const Rect bar { r.x0 + kSide + kSizeButtonWidth + kSide, r.y1 - kBottomBar, r.x1 - kSide, r.y1 };
+            const Rect bar { r.x0 + 3 * kSide + 2 * kSizeButtonWidth, r.y1 - kBottomBar, r.x1 - kSide - kGrip, r.y1 };
             draw_text(context.list, *small, note, bar, { style_.text_colour, Align::End, Align::Centre, true });
         }
+        context.list.fill({ r.x1 - kGrip, r.y1 - kGrip, r.x1, r.y1 }, style_.grip_colour);
     }
 
     BuildPickerRow::BuildPickerRow(std::string name, const BuildPickerStyle& style, const PickerRow& row, BuildPickerRow* heading)
@@ -188,6 +252,20 @@ namespace rct3::ui
         if (picked || hovered())
             context.list.fill(r, picked ? style_.picked_colour : style_.hover_colour);
 
+        if (grid)
+        {
+            const float inset = (kTile - kTileIcon) / 2;
+            if (const SkinRef* skin = context.skins.find(row_.icon))
+                draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
+            const std::string& corner = is_heading() ? (open ? style_.open_heading : style_.closed_heading) : row_.badge;
+            if (const SkinRef* skin = context.skins.find(corner))
+                draw_skin(context.list, skin, { r.x1 - kSmallBadge, r.y0, r.x1, r.y0 + kSmallBadge });
+            if (dear)
+                context.list.fill(r, style_.dear_colour);
+            return;
+        }
+        if (dear)
+            context.list.fill(r, style_.dear_colour);
         const float icon = large ? kLargeIcon : kSmallIcon;
         const float inset = large ? 2.0f : 1.0f;
         if (const SkinRef* skin = context.skins.find(row_.icon))

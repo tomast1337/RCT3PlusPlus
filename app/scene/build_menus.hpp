@@ -27,7 +27,9 @@ namespace rct3::scene
     {
         std::shared_future<std::vector<park::BuildItem>> items;
         park::BuildOffer offer;
-        bool large = true; ///< Rows of every list are shown large; the lists share it
+        bool large = true;             ///< Rows of every list are shown large; the lists share it
+        bool grid = true;              ///< Items of every list are shown as a grid of icons
+        std::optional<ui::Point> size; ///< Of the last list resized, for the next one opened
     };
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if
@@ -38,7 +40,8 @@ namespace rct3::scene
     /// open before, titled with the button's help. False for an item that has no list.
     bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::StringTable& strings, const ui::Currency& currency);
 
-    /// Each frame: keeps what the open list changed; returns the item picked in it, if one was.
-    [[nodiscard]] std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root);
+    /// Each frame: keeps what the open list changed and shades its items dearer than `cash`; returns the item
+    /// picked in it, if one was.
+    [[nodiscard]] std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash);
 
 } // namespace rct3::scene

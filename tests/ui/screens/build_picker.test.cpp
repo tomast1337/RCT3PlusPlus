@@ -107,3 +107,56 @@ TEST_CASE("the fold button leaves the title band, the close button closes")
     f.press(f.picker->close_button());
     CHECK(f.desktop.root().find("list") == nullptr);
 }
+
+TEST_CASE("the view button lays the items out in a grid that fills the width")
+{
+    std::vector<PickerRow> rows;
+    for (std::size_t i = 0; i < 9; ++i)
+        rows.push_back(row(u"Item", i));
+    Fixture f(std::move(rows));
+    f.press(f.picker->view_button());
+    REQUIRE(f.picker->grid());
+    f.step();
+    const auto& tiles = f.picker->rows();
+    const auto columns = static_cast<std::size_t>(f.picker->rows()[0]->parent()->rect().width() / build_picker::kTile);
+    REQUIRE(columns >= 2);
+    CHECK(tiles[1]->rect().x0 == tiles[0]->rect().x0 + build_picker::kTile);
+    CHECK(tiles[columns]->rect().x0 == tiles[0]->rect().x0);
+    CHECK(tiles[columns]->rect().y0 == tiles[0]->rect().y0 + build_picker::kTile);
+    CHECK_FALSE(f.picker->size_button().visible);
+}
+
+TEST_CASE("dragging the bottom-right corner resizes the panel, not below its least size")
+{
+    Fixture f({ row(u"One", 1) });
+    const Rect r = f.picker->rect();
+    const Point grip { r.x1 - 2, r.y1 - 2 };
+    f.desktop.update({ grip, true });
+    f.desktop.update({ { grip.x + 100, grip.y + 50 }, true });
+    f.desktop.update({ { grip.x + 100, grip.y + 50 }, false });
+    f.step();
+    CHECK(f.picker->rect().width() == r.width() + 100);
+    CHECK(f.picker->rect().height() == r.height() + 50);
+    const Rect big = f.picker->rect();
+    const Point corner { big.x1 - 2, big.y1 - 2 };
+    f.desktop.update({ corner, true });
+    f.desktop.update({ { corner.x - 1000, corner.y - 1000 }, true });
+    f.desktop.update({ { corner.x - 1000, corner.y - 1000 }, false });
+    f.step();
+    CHECK(f.picker->rect().width() == build_picker::kMinWidth);
+    CHECK(f.picker->rect().height() == build_picker::kMinHeight);
+}
+
+TEST_CASE("items dearer than the cash are marked; none when money never runs out")
+{
+    PickerRow cheap = row(u"Cheap", 1);
+    cheap.cost = 500;
+    PickerRow dear = row(u"Dear", 2);
+    dear.cost = 5000;
+    Fixture f({ cheap, dear });
+    CHECK_FALSE(f.picker->rows()[1]->dear);
+    f.picker->cash = 1000;
+    f.step();
+    CHECK_FALSE(f.picker->rows()[0]->dear);
+    CHECK(f.picker->rows()[1]->dear);
+}

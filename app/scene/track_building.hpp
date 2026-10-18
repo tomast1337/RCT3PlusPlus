@@ -98,6 +98,9 @@ namespace rct3::scene
     void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost);
 
     /// Draws `mesh` see-through with `transform` and `light`.
+    /// `light` as ghosts are drawn in: lit evenly from every side, brighter than daylight, so they stand out at
+    /// any hour and the Bloom option glows round them.
+    [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light);
     void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light);
 
 } // namespace rct3::scene

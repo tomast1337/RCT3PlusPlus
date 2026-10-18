@@ -232,14 +232,20 @@ namespace rct3::scene
             scene.batches = std::move(mesh.batches);
         }
 
-        /// The stroke as it would be laid now; nothing when no stroke goes beyond one tile or a queue is chosen.
+        /// The stroke as it would be laid now, or the path a click on the tile pointed at would lay; nothing
+        /// when there is neither or a queue is chosen.
         std::optional<park::DragPlan> stroke_plan(const ParkScene& scene)
         {
             const ParkFootpaths& f = scene.footpaths;
             // shortcut: strokes lay paths on the ground only, no queues or raised runs; upgrade with the A-to-B route.
-            if (f.brush.empty() || !f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
+            if (!f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
                 return std::nullopt;
-            return park::plan_drag(f.brush, scene.grid, f.paths);
+            if (!f.brush.empty())
+                return park::plan_drag(f.brush, scene.grid, f.paths);
+            if (!f.hover_tile)
+                return std::nullopt;
+            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths);
+            return plan.lay.empty() ? std::nullopt : std::optional(std::move(plan));
         }
 
         std::int64_t stroke_cost(const ParkFootpaths& f, const park::DragPlan& plan)
@@ -328,7 +334,7 @@ namespace rct3::scene
             f.ghost = { };
             f.raised_ghost = { };
             f.arrow = { };
-            if (const auto next = park::next_piece(b, scene.grid); next && !f.plan)
+            if (const auto next = park::next_piece(b, scene.grid); next && f.brush.empty())
             {
                 f.arrow = park::heading_arrow(*next, b.heading, scene.grid);
                 for (park::GroundVertex& v : f.arrow.vertices)
@@ -727,6 +733,7 @@ namespace rct3::scene
         scene.footpaths.brush.clear();
         scene.footpaths.hover.reset();
         scene.footpaths.hover_edge.reset();
+        scene.footpaths.hover_tile.reset();
         scene.footpaths.slope_press.reset();
         scene.footpaths.arrow = { };
         scene.footpaths.plan.reset();
@@ -898,6 +905,15 @@ namespace rct3::scene
                 }
                 f.dirty = true;
             }
+            // Bare ground pointed at, away from the trail's next piece, which has its own arrow.
+            std::optional<park::PathSpot> tile = edge || over ? std::nullopt : controls_tile(scene, at, size);
+            if (tile && f.builder.start && tile == park::next_spot(f.builder))
+                tile.reset();
+            if (tile != f.hover_tile)
+            {
+                f.hover_tile = tile;
+                f.dirty = true;
+            }
             return;
         }
         const auto tile = controls_tile(scene, at, size);
@@ -978,7 +994,7 @@ namespace rct3::scene
                 draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
-                draw.light = light;
+                draw.light = ghost_light(light);
                 device.draw(draw);
             }
         }

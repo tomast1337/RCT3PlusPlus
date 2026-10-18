@@ -121,6 +121,12 @@ namespace rct3::park
         std::uint32_t width = 0;
         std::uint32_t length = 0;
         std::uint32_t addon = 0; ///< 0 for the base game, else the expansion it came with
+        /// The theme the item belongs to, as the theme's overlay numbers and names it: its name for skins
+        /// ("Space") and its title shown to the player ("Sci-fi"). -1 and empty for items of no theme. Overlays
+        /// that add to a theme give only its number.
+        std::int32_t style_index = -1;
+        std::string style;
+        std::string style_title;
         EnclosurePart part = EnclosurePart::None;
         /// Animals: the symbol of the shelter their species needs, in any case; empty for other items.
         std::string needs;
@@ -128,6 +134,9 @@ namespace rct3::park
         float strength = 0;
         float rarity = 0; ///< Animals: from 0, common, to 1, endangered
     };
+
+    /// Names the theme of each item that has only its number, after another item of that number.
+    void name_styles(std::vector<BuildItem>& items);
 
     /// Adds the items `overlay` offers. `path` is where it lies, in BuildItem::overlay's form.
     void add_build_items(const ovl::Overlay& overlay, std::string_view path, std::vector<BuildItem>& items);

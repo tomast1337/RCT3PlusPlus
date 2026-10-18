@@ -165,3 +165,19 @@ TEST_CASE("a park offers the species it unlocked, and every fence, shelter and t
     // A park that records no species offers them all.
     CHECK(BuildOffer(rct3::save::RequiredContent { }).offers(item(BuildKind::Animal, "koala")));
 }
+
+TEST_CASE("items of an overlay that gives only its theme's number take the theme's name")
+{
+    std::vector<BuildItem> items(4);
+    items[0].style_index = 3;
+    items[0].style = "Moon";
+    items[0].style_title = "Lunar";
+    items[1].style_index = 3;
+    items[2].style_index = 5;
+    std::vector<BuildItem> named = items;
+    name_styles(named);
+    CHECK(named[1].style == "Moon");
+    CHECK(named[1].style_title == "Lunar");
+    CHECK(named[2].style.empty());
+    CHECK(named[3].style.empty());
+}

@@ -19,9 +19,7 @@ namespace
 
         explicit Fixture(std::vector<PickerRow> rows)
         {
-            strings.add("RideSelectionWindow_ExpandAll", u"Bigger");
-            strings.add("RideSelectionWindow_ContractAll", u"Smaller");
-            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", std::move(rows), true);
+            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::move(rows));
             picker->placement = top_left(10, 10, build_picker::kWidth, build_picker::kHeight);
             step();
         }
@@ -58,13 +56,23 @@ TEST_CASE("picking a row marks it and gives its item once")
     Fixture f({ row(u"One", 7), row(u"Two", 9) });
     REQUIRE(f.picker->rows().size() == 2);
     const BuildPickerRow& two = *f.picker->rows()[1];
-    CHECK(two.rect().y0 == f.picker->rows()[0]->rect().y0 + build_picker::kLargeRow);
+    CHECK(two.rect().x0 == f.picker->rows()[0]->rect().x0 + build_picker::kTile);
     f.press(two);
     CHECK(f.picker->take_picked() == 9u);
     CHECK_FALSE(f.picker->take_picked().has_value());
     CHECK(two.picked);
     CHECK_FALSE(f.picker->rows()[0]->picked);
     CHECK(two.tooltip == u"Two");
+}
+
+TEST_CASE("an item's help tells its name, size and price, a line each")
+{
+    PickerRow r = row(u"Carousel", 1);
+    r.size = u"3 x 3";
+    r.price = u"$500";
+    Fixture f({ r, row(u"Free", 2) });
+    CHECK(f.picker->rows()[0]->tooltip == u"Carousel\n3 x 3\n$500");
+    CHECK(f.picker->rows()[1]->tooltip == u"Free");
 }
 
 TEST_CASE("a heading opens to show its rows and is not picked")
@@ -75,76 +83,28 @@ TEST_CASE("a heading opens to show its rows and is not picked")
     BuildPickerRow& piece = *f.picker->rows()[1];
     BuildPickerRow& after = *f.picker->rows()[2];
     CHECK_FALSE(piece.visible);
-    CHECK(after.rect().y0 == heading.rect().y0 + build_picker::kLargeRow);
+    CHECK(after.rect().x0 == heading.rect().x0 + build_picker::kTile);
     f.press(heading);
     CHECK_FALSE(f.picker->take_picked().has_value());
     CHECK(heading.open);
     CHECK(piece.visible);
-    CHECK(piece.rect().x0 == heading.rect().x0 + build_picker::kIndent);
-    CHECK(after.rect().y0 == heading.rect().y0 + 2 * build_picker::kLargeRow);
+    CHECK(piece.rect().x0 == heading.rect().x0 + build_picker::kTile);
+    CHECK(after.rect().x0 == heading.rect().x0 + 2 * build_picker::kTile);
 }
 
-TEST_CASE("the size button makes the rows small and large again")
-{
-    Fixture f({ row(u"One", 1), row(u"Two", 2) });
-    CHECK(f.picker->size_button().text == u"Smaller");
-    f.press(f.picker->size_button());
-    CHECK_FALSE(f.picker->large());
-    CHECK(f.picker->size_button().text == u"Bigger");
-    CHECK(f.picker->rows()[1]->rect().height() == build_picker::kSmallRow);
-    f.press(f.picker->size_button());
-    CHECK(f.picker->large());
-}
-
-TEST_CASE("the fold button leaves the title band, the close button closes")
-{
-    Fixture f({ row(u"One", 1) });
-    f.press(f.picker->fold_button());
-    CHECK(f.picker->folded());
-    CHECK(f.picker->rect().height() == build_picker::kTitleHeight);
-    f.press(f.picker->fold_button());
-    CHECK(f.picker->rect().height() == build_picker::kHeight);
-    f.press(f.picker->close_button());
-    CHECK(f.desktop.root().find("list") == nullptr);
-}
-
-TEST_CASE("the view button lays the items out in a grid that fills the width")
+TEST_CASE("the items fill as many columns as the panel is wide")
 {
     std::vector<PickerRow> rows;
     for (std::size_t i = 0; i < 9; ++i)
         rows.push_back(row(u"Item", i));
     Fixture f(std::move(rows));
-    f.press(f.picker->view_button());
-    REQUIRE(f.picker->grid());
     f.step();
     const auto& tiles = f.picker->rows();
-    const auto columns = static_cast<std::size_t>(f.picker->rows()[0]->parent()->rect().width() / build_picker::kTile);
+    const auto columns = static_cast<std::size_t>(tiles[0]->parent()->rect().width() / build_picker::kTile);
     REQUIRE(columns >= 2);
-    CHECK(tiles[1]->rect().x0 == tiles[0]->rect().x0 + build_picker::kTile);
+    CHECK(tiles[columns - 1]->rect().y0 == tiles[0]->rect().y0);
     CHECK(tiles[columns]->rect().x0 == tiles[0]->rect().x0);
     CHECK(tiles[columns]->rect().y0 == tiles[0]->rect().y0 + build_picker::kTile);
-    CHECK_FALSE(f.picker->size_button().visible);
-}
-
-TEST_CASE("dragging the bottom-right corner resizes the panel, not below its least size")
-{
-    Fixture f({ row(u"One", 1) });
-    const Rect r = f.picker->rect();
-    const Point grip { r.x1 - 2, r.y1 - 2 };
-    f.desktop.update({ grip, true });
-    f.desktop.update({ { grip.x + 100, grip.y + 50 }, true });
-    f.desktop.update({ { grip.x + 100, grip.y + 50 }, false });
-    f.step();
-    CHECK(f.picker->rect().width() == r.width() + 100);
-    CHECK(f.picker->rect().height() == r.height() + 50);
-    const Rect big = f.picker->rect();
-    const Point corner { big.x1 - 2, big.y1 - 2 };
-    f.desktop.update({ corner, true });
-    f.desktop.update({ { corner.x - 1000, corner.y - 1000 }, true });
-    f.desktop.update({ { corner.x - 1000, corner.y - 1000 }, false });
-    f.step();
-    CHECK(f.picker->rect().width() == build_picker::kMinWidth);
-    CHECK(f.picker->rect().height() == build_picker::kMinHeight);
 }
 
 TEST_CASE("items dearer than the cash are marked; none when money never runs out")
@@ -184,4 +144,59 @@ TEST_CASE("the search box keeps the items whose names hold it, and their heading
     f.desktop.update({ }, KeyboardState { .presses = { KeyPress { .key = Key::Escape } } });
     f.step();
     CHECK(f.desktop.root().find("list") == nullptr);
+}
+
+TEST_CASE("theme filters show while on and hide their theme's items while off")
+{
+    PickerRow moon = row(u"Moon rocket", 1);
+    moon.style = "Moon";
+    moon.style_title = u"Lunar";
+    PickerRow sea = row(u"Sea shell", 2);
+    sea.style = "Sea";
+    Fixture f({ moon, sea, row(u"Plain", 3) });
+    REQUIRE(f.picker->filters().size() == 2);
+    Button& moon_filter = *f.picker->filters()[0];
+    CHECK(moon_filter.name() == "Moon");
+    CHECK(moon_filter.on);
+    CHECK(moon_filter.tooltip.starts_with(u"Lunar\n"));
+    f.press(moon_filter);
+    CHECK_FALSE(moon_filter.on);
+    CHECK(f.picker->styles_off.contains("Moon"));
+    CHECK_FALSE(f.picker->rows()[0]->visible);
+    CHECK(f.picker->rows()[1]->visible);
+    CHECK(f.picker->rows()[2]->visible); // No theme: always shown
+}
+
+TEST_CASE("a pack filter that is on keeps only that pack's items")
+{
+    PickerRow wild = row(u"Lion", 1);
+    wild.addon = 2;
+    Fixture f({ wild, row(u"Bench", 2) });
+    REQUIRE(f.picker->filters().size() == 1); // One theme or none: no theme filters
+    Button& pack = *f.picker->filters()[0];
+    CHECK(pack.name() == "pack1");
+    CHECK_FALSE(pack.on);
+    CHECK(f.picker->rows()[1]->visible);
+    f.press(pack);
+    CHECK(f.picker->packs_only.contains(2u));
+    CHECK(f.picker->rows()[0]->visible);
+    CHECK_FALSE(f.picker->rows()[1]->visible);
+}
+
+TEST_CASE("filters set by the owner before the first update hold")
+{
+    PickerRow moon = row(u"Moon rocket", 1);
+    moon.style = "Moon";
+    PickerRow sea = row(u"Sea shell", 2);
+    sea.style = "Sea";
+    StringTable strings;
+    Desktop desktop;
+    auto& picker = desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::vector { moon, sea });
+    picker.styles_off = { "Sea" };
+    desktop.layout({ 0, 0, 800, 600 });
+    desktop.update({ });
+    desktop.layout({ 0, 0, 800, 600 });
+    CHECK(picker.rows()[0]->visible);
+    CHECK_FALSE(picker.rows()[1]->visible);
+    CHECK_FALSE(picker.filters()[1]->on);
 }

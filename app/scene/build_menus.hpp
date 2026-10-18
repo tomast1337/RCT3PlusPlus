@@ -18,6 +18,8 @@
 
 #include <future>
 #include <optional>
+#include <set>
+#include <string>
 #include <vector>
 
 namespace rct3::scene
@@ -27,9 +29,9 @@ namespace rct3::scene
     {
         std::shared_future<std::vector<park::BuildItem>> items;
         park::BuildOffer offer;
-        bool large = true;             ///< Rows of every list are shown large; the lists share it
-        bool grid = true;              ///< Items of every list are shown as a grid of icons
-        std::optional<ui::Point> size; ///< Of the last list resized, for the next one opened
+        std::optional<ui::Point> size;                 ///< Of the last list resized, for the next one opened
+        std::set<std::string, std::less<>> styles_off; ///< Theme filters turned off; the lists share them
+        std::set<std::uint32_t> packs_only;            ///< Pack filters turned on
     };
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if

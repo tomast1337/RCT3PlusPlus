@@ -38,6 +38,7 @@
 #include "save/value.hpp"
 #include "scene/park_management.hpp"
 #include "scene/park_patrol.hpp"
+#include "scene/park_view.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -87,6 +88,7 @@ namespace rct3::scene
         constexpr std::string_view kToolsName = "tools";
         constexpr float kPropViewClosest = 1.5f; ///< Small props fill the round view
         constexpr std::string_view kMessagesName = "messages";
+        constexpr std::string_view kHeightsName = "heights";
         constexpr std::string_view kInfoName = "info";
         constexpr float kViewPitch = 0.5f;          ///< Radians down, of the info panel's round view
         constexpr float kViewTurn = 0.15f;          ///< Radians a second the round view turns round its attraction
@@ -676,18 +678,24 @@ namespace rct3::scene
             }
         }
 
-        /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`. Reads only
-        /// what is set when the park loads besides its arguments, so it may run beside the frame.
-        std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band)
+        /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
+        /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
+        /// may run beside the frame.
+        std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, bool supports)
         {
             ObjectBuild built;
             built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band); });
+            const auto leave_out = [&](std::size_t i) {
+                built.plan.steady[i] = park::kNotDrawn;
+                built.plan.finer[i] = park::kNotDrawn;
+                built.plan.coarser[i] = park::kNotDrawn;
+            };
             for (const ParkScene::BonedRide& boned : scene.boned_rides)
+                leave_out(boned.object); // Drawn apart, moving
+            for (std::size_t i = 0; !supports && i < scene.objects.size() && i < built.plan.steady.size(); ++i)
             {
-                // Drawn apart, moving
-                built.plan.steady[boned.object] = park::kNotDrawn;
-                built.plan.finer[boned.object] = park::kNotDrawn;
-                built.plan.coarser[boned.object] = park::kNotDrawn;
+                if (scene.objects[i].overlay == park::kSupportOverlay)
+                    leave_out(i);
             }
             if (built.plan == shown)
                 return std::nullopt;
@@ -777,9 +785,9 @@ namespace rct3::scene
             if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
                 return;
             scene.since_rebuild = 0;
-            scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band] {
+            scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, supports = scene.show_supports] {
                 profiling::register_thread("ObjectWorker");
-                auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band); });
+                auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, supports); });
                 profiling::unregister_thread();
                 return built;
             });
@@ -1242,7 +1250,7 @@ namespace rct3::scene
             scene.front_only[made->id] = *front;
         }
         profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band))
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.show_supports))
                 show_objects(device, scene, std::move(*built));
         });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)
@@ -1255,6 +1263,8 @@ namespace rct3::scene
             if (model)
                 scene.park_model = *model;
         }
+        // Under everything else, as part of the park.
+        scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
         scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings).stays_behind = true;
@@ -1263,7 +1273,10 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                tools.set_available(
+                    entry.item,
+                    entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load
+                        || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -2273,6 +2286,20 @@ namespace rct3::scene
                     scene.show_scenery = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::SeeThroughGround)
                     scene.see_through_ground = !tools->switched_on(*item); // Switched on, the ground shows whole
+                else if (*item == ui::ToolItem::Grid)
+                    scene.show_grid = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::Contours)
+                    scene.show_contours = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::PathHeights)
+                    scene.show_path_heights = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::RideHeights)
+                    scene.show_ride_heights = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::Supports)
+                {
+                    scene.show_supports = tools->switched_on(*item);
+                    scene.levels = { };
+                    scene.since_rebuild = kObjectRebuildInterval;
+                }
                 else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
                 else if (const auto topic = ui::management_topic(*item))
@@ -2281,6 +2308,12 @@ namespace rct3::scene
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
             update_build_menus(scene.build, desktop.root());
+        }
+        update_view_lines(device, scene);
+        if (auto* heights = static_cast<ui::WorldLabels*>(desktop.root().find(kHeightsName)))
+        {
+            const ui::Rect view = desktop.root().rect();
+            heights->labels = height_labels(scene, { view.width(), view.height() });
         }
         if (const auto picked = update_park_map(device, scene.map, desktop, scene.grid, scene.camera, aspect(device), [&] { return map_people(scene); }, elapsed))
         {
@@ -2406,6 +2439,7 @@ namespace rct3::scene
             if (parts.terrain)
                 profiling::section("Ground", [&] {
                     draw_ground(scene.ground_pipeline, [&](const park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
+                    draw_view_lines(device, scene, transform, light);
                     draw_footpath_ghost(device, scene, transform, light);
                     draw_patrol(device, scene, transform, light);
                 });
@@ -2695,6 +2729,7 @@ namespace rct3::scene
             device.destroy_pipeline(p);
         scene.front_only.clear();
         destroy_park_map(device, scene.map);
+        drop_view_lines(device, scene);
         ui::destroy_textures(device, scene.ground_textures);
         ui::destroy_textures(device, scene.object_textures);
         ui::destroy_textures(device, scene.people_textures);

@@ -988,6 +988,36 @@ namespace rct3::scene
 
     } // namespace
 
+    void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index)
+    {
+        if (ride_index >= scene.rides.rides.size() || ride_index >= scene.ride_entities.size())
+            return;
+        const save::Ride& ride = scene.rides.rides[ride_index];
+        const entt::entity entity = scene.ride_entities[ride_index];
+        if (ride.kind != save::RideKind::Flat || ride.base.placement == 0 || entity == entt::null)
+            return;
+        for (std::size_t k = 0; k < scene.objects.size(); ++k)
+        {
+            const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
+            if (model != scene.models.end() && !model->second.seat_places.empty())
+            {
+                scene.ride_seats[entity] = k;
+                if (model->second.rig)
+                {
+                    ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
+                    boned.ride = entity;
+                    boned.object = k;
+                    boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
+                    std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
+                    boned.first_seat = scene.seat_carriers.size();
+                    scene.seat_carriers.resize(scene.seat_carriers.size() + model->second.seat_bones.size(), boned.placed);
+                    add_textures(device, scene, boned.mesh.mesh.batches);
+                }
+                return;
+            }
+        }
+    }
+
     std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
@@ -1405,33 +1435,8 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
                     if (const std::size_t ride = scene.car_spots[i].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
                         scene.ride_cars[scene.ride_entities[ride]].push_back(i);
-                // Flat rides seat their riders on the object that has the seats, as flat_ride_timings finds it.
-                for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.ride_entities.size(); ++i)
-                {
-                    const save::Ride& ride = scene.rides.rides[i];
-                    if (ride.kind != save::RideKind::Flat || ride.base.placement == 0 || scene.ride_entities[i] == entt::null)
-                        continue;
-                    for (std::size_t k = 0; k < scene.objects.size(); ++k)
-                    {
-                        const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
-                        if (model != scene.models.end() && !model->second.seat_places.empty())
-                        {
-                            scene.ride_seats[scene.ride_entities[i]] = k;
-                            if (model->second.rig)
-                            {
-                                ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
-                                boned.ride = scene.ride_entities[i];
-                                boned.object = k;
-                                boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
-                                std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
-                                boned.first_seat = scene.seat_carriers.size();
-                                scene.seat_carriers.resize(scene.seat_carriers.size() + model->second.seat_bones.size(), boned.placed);
-                                add_textures(device, scene, boned.mesh.mesh.batches);
-                            }
-                            break;
-                        }
-                    }
-                }
+                for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    seat_flat_ride(device, scene, i);
                 simulation::start_guests(scene.sim);
                 if (kept != nullptr)
                     parkfile::place_parties(scene.sim, *kept, placed);
@@ -2083,6 +2088,7 @@ namespace rct3::scene
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right);
+            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, keys);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -2094,6 +2100,8 @@ namespace rct3::scene
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
                 if (painting_patrol(scene))
+                    ;
+                else if (still && !over && ride_placing_click(device, scene, assets))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }))
                 {
@@ -2117,7 +2125,9 @@ namespace rct3::scene
             {
                 const ui::Point from = *std::exchange(scene.right_press, std::nullopt);
                 const ui::Rect screen = desktop.root().rect();
-                if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
+                if (ride_placing(scene))
+                    stop_ride_placing(scene); // A right click puts the placing away, as in the game
+                else if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
             }
             // The customers page follows the running park; it has no controls to lose a half-made change in.
@@ -2389,6 +2399,7 @@ namespace rct3::scene
             else if (pressed == ui::ParkTool::Paths)
             {
                 close_track_building(scene); // One tool panel at the bottom left at a time
+                stop_ride_placing(scene);
                 toggle_footpath_panel(device, scene, assets, options);
             }
             if (const auto item = tools->take_item())
@@ -2420,7 +2431,11 @@ namespace rct3::scene
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
-            update_build_menus(scene.build, desktop.root());
+            if (const auto picked = update_build_menus(scene.build, desktop.root()); picked && start_ride_placing(scene, *picked))
+            {
+                close_track_building(scene);
+                close_footpath_panel(scene);
+            }
         }
         update_view_lines(device, scene);
         if (auto* heights = static_cast<ui::WorldLabels*>(desktop.root().find(kHeightsName)))
@@ -2593,6 +2608,7 @@ namespace rct3::scene
             {
                 draw_track_ghost(device, scene, transform, light);
                 draw_raised_footpath_ghost(device, scene, transform, light);
+                draw_ride_placing_ghost(device, scene, transform, light);
             }
             // Last, so what it hides is drawn first and shows through it.
             if (parts.terrain && parts.faded_ground)

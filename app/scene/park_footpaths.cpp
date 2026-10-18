@@ -207,40 +207,43 @@ namespace rct3::scene
             }
         }
 
-        /// Builds the ground again with the paths as they are now.
-        void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
-        {
-            ParkFootpaths& f = scene.footpaths;
-            const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
-            park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
-            park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
-            const park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
-            park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
-            park::GroundQueues queues = park::ground_queues(f.paths, scene.grid);
-            park::add_ground(mesh, std::move(queues.mesh));
-            park::add_ground(mesh, park::surrounding_land(scene.grid, f.water));
-            picture_styles(device, scene, assets, paths.styles);
-            picture_queues(device, scene, assets, queues.paintings);
-            auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
-            auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });
-            if (!vertices || !indices)
-            {
-                logging::logger("park").warning("ground: {}", !vertices ? vertices.error() : indices.error());
-                if (vertices)
-                    device.destroy_buffer(*vertices);
-                if (indices)
-                    device.destroy_buffer(*indices);
-                return;
-            }
-            device.destroy_buffer(scene.ground_vertices);
-            device.destroy_buffer(scene.ground_indices);
-            scene.ground_vertices = *vertices;
-            scene.ground_indices = *indices;
-            scene.batches = std::move(mesh.batches);
-            scene.grid_lines.stale = true;
-            scene.contour_lines.stale = true;
-        }
+    } // namespace
 
+    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
+        park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
+        park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
+        const park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
+        park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
+        park::GroundQueues queues = park::ground_queues(f.paths, scene.grid);
+        park::add_ground(mesh, std::move(queues.mesh));
+        park::add_ground(mesh, park::surrounding_land(scene.grid, f.water));
+        picture_styles(device, scene, assets, paths.styles);
+        picture_queues(device, scene, assets, queues.paintings);
+        auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
+        auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });
+        if (!vertices || !indices)
+        {
+            logging::logger("park").warning("ground: {}", !vertices ? vertices.error() : indices.error());
+            if (vertices)
+                device.destroy_buffer(*vertices);
+            if (indices)
+                device.destroy_buffer(*indices);
+            return;
+        }
+        device.destroy_buffer(scene.ground_vertices);
+        device.destroy_buffer(scene.ground_indices);
+        scene.ground_vertices = *vertices;
+        scene.ground_indices = *indices;
+        scene.batches = std::move(mesh.batches);
+        scene.grid_lines.stale = true;
+        scene.contour_lines.stale = true;
+    }
+
+    namespace
+    {
         /// The stroke as it would be laid now, or the path a click on the tile pointed at would lay; nothing
         /// when there is neither or a queue is chosen.
         std::optional<park::DragPlan> stroke_plan(const ParkScene& scene)

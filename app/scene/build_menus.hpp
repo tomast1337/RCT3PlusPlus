@@ -4,7 +4,7 @@
 // park allows. The install is read once, away from the frame, when the park loads; a list asked for before
 // that is done waits for it.
 //
-// Picking an item in a list builds nothing yet: the list marks it and the pick is logged.
+// Picking a ride placed whole in a list starts placing it (ride_placing.hpp); other picks build nothing yet.
 #pragma once
 
 #include "config/game_install.hpp"
@@ -17,6 +17,7 @@
 #include "ui/widget.hpp"
 
 #include <future>
+#include <optional>
 #include <vector>
 
 namespace rct3::scene
@@ -37,7 +38,7 @@ namespace rct3::scene
     /// open before, titled with the button's help. False for an item that has no list.
     bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::StringTable& strings, const ui::Currency& currency);
 
-    /// Each frame: keeps what the open list changed and logs what was picked in it.
-    void update_build_menus(BuildMenus& menus, ui::Widget& root);
+    /// Each frame: keeps what the open list changed; returns the item picked in it, if one was.
+    [[nodiscard]] std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root);
 
 } // namespace rct3::scene

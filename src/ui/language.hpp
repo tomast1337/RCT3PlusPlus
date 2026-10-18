@@ -25,27 +25,28 @@ namespace rct3::ui
     {
         std::string_view name;   ///< As the overlay files are named, e.g. "German"
         std::string_view locale; ///< The locale prefix that picks it, e.g. "de" or "pt_BR"
+        std::string_view tag;    ///< Language and region code that names our translation file, e.g. "de-DE"
         bool cjk = false;        ///< Brings its own fonts and breaks lines between characters
     };
 
     /// Every language the game knows by name, installed or not. Longer locale prefixes come first, so
     /// "zh_TW" is matched before "zh".
     inline constexpr std::array<LanguageInfo, 15> kLanguages = { {
-        { "English", "en", false },
-        { "Dutch", "nl", false },
-        { "Finnish", "fi", false },
-        { "French", "fr", false },
-        { "Italian", "it", false },
-        { "German", "de", false },
-        { "Swedish", "sv", false },
-        { "BrazilianPortuguese", "pt", false },
-        { "Norwegian", "nb", false },
-        { "Danish", "da", false },
-        { "Spanish", "es", false },
-        { "Chinese", "zh_TW", true },
-        { "Korean", "ko", true },
-        { "SChinese", "zh", true },
-        { "Japanese", "ja", true },
+        { "English", "en", "en-US", false },
+        { "Dutch", "nl", "nl-NL", false },
+        { "Finnish", "fi", "fi-FI", false },
+        { "French", "fr", "fr-FR", false },
+        { "Italian", "it", "it-IT", false },
+        { "German", "de", "de-DE", false },
+        { "Swedish", "sv", "sv-SE", false },
+        { "BrazilianPortuguese", "pt", "pt-BR", false },
+        { "Norwegian", "nb", "nb-NO", false },
+        { "Danish", "da", "da-DK", false },
+        { "Spanish", "es", "es-ES", false },
+        { "Chinese", "zh_TW", "zh-TW", true },
+        { "Korean", "ko", "ko-KR", true },
+        { "SChinese", "zh", "zh-CN", true },
+        { "Japanese", "ja", "ja-JP", true },
     } };
 
     inline constexpr std::string_view kDefaultLanguage = "English";

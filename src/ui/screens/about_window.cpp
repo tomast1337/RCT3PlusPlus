@@ -49,7 +49,22 @@ namespace rct3::ui
             }
         }
 
+        /// Copies `prefix` + first, + first + 1, ... from `from` until one is missing.
+        void copy_numbered(StringTable& to, const StringTable& from, const std::string& prefix, int first)
+        {
+            for (int k = first; from.contains(prefix + std::to_string(k)); ++k)
+                to.add(prefix + std::to_string(k), std::u16string(from.get(prefix + std::to_string(k))));
+        }
+
     } // namespace
+
+    void add_game_credits(StringTable& to, const StringTable& game)
+    {
+        copy_numbered(to, game, std::string(kCopyright), 1);
+        copy_numbered(to, game, std::string(kBaseCredits), 0);
+        for (std::size_t pack = 0; pack < kPackNames.size(); ++pack)
+            copy_numbered(to, game, std::string(kPackCredits) + std::to_string(pack) + "_", 0);
+    }
 
     std::vector<std::u16string> about_info_lines(const StringTable& strings)
     {

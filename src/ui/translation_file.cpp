@@ -4,6 +4,7 @@
 #include "assets/embedded_files.hpp"
 #include "config/json_text.hpp"
 #include "strings/unicode.hpp"
+#include "ui/language.hpp"
 
 namespace rct3::ui
 {
@@ -49,7 +50,8 @@ namespace rct3::ui
 
     std::string translation_path(std::string_view language)
     {
-        return "lang/" + std::string(language) + ".json";
+        const LanguageInfo* info = find_language(language);
+        return "lang/" + std::string(info != nullptr ? info->tag : language) + ".json";
     }
 
     StringTable own_strings(std::string_view language)

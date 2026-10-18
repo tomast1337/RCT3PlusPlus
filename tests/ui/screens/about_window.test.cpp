@@ -37,6 +37,19 @@ TEST_CASE("the info page has the game's name and the copyright lines up to the f
     CHECK(about_info_lines(s) == std::vector<std::u16string> { u"A Park Game", u"Made by someone.", u"All rights kept." });
 }
 
+TEST_CASE("the game's credits and copyright lines are copied in, and nothing else")
+{
+    StringTable ours;
+    ours.add("ProgramInfo_Title", u"Ours");
+    add_game_credits(ours, sample_strings());
+    CHECK(ours.get("ProgramInfo_Title") == u"Ours");
+    CHECK(ours.get("ProgramInfo_Copyright2") == u"All rights kept.");
+    CHECK_FALSE(ours.contains("ProgramInfo_Copyright4"));
+    CHECK(ours.get("ProgramInfoDialog_GeneralCredits1") == u"Tester|Cy");
+    CHECK(ours.get("ProgramInfoDialog_GeneralCredits_AOP1_0") == u"Pack maker|Di");
+    CHECK_FALSE(ours.contains("RCT3_Name"));
+}
+
 TEST_CASE("credits split into a role and its people, packs first, alternating sides")
 {
     const StringTable s = sample_strings();

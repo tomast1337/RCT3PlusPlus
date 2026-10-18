@@ -2,7 +2,7 @@
 //
 // Files built into the program: everything under the repository's assets/ folder, so the program ships as
 // a single file. The build generates the table (see nob.cpp); each file is known by its path below assets/,
-// with forward slashes, for example "lang/English.json".
+// with forward slashes, for example "lang/en-US.json".
 #pragma once
 
 #include <array>

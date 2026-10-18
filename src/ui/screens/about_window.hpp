@@ -12,7 +12,9 @@
 //   alternately towards the right and the left edge, each moved in from it by a random amount, so the roll
 //   reads as a loose zig-zag.
 //
-// All text comes from the string table at run time. The layout is ours, after the game's.
+// All text comes from the string table at run time. The copyright lines and credits are the game's own words,
+// so our language files leave them out and they are copied from the game's installed text (add_game_credits).
+// The layout is ours, after the game's.
 #pragma once
 
 #include "random/generator.hpp"
@@ -53,6 +55,9 @@ namespace rct3::ui
 
     /// The game's name and the copyright lines, as the info page shows them.
     [[nodiscard]] std::vector<std::u16string> about_info_lines(const StringTable& strings);
+
+    /// Copies the copyright lines and every credit from `game`, the installed game's strings, into `to`.
+    void add_game_credits(StringTable& to, const StringTable& game);
 
     /// Every credit line in order: the packs in `packs` that have credits, newest first, then the base game.
     /// The insets come from `random`.

@@ -750,7 +750,13 @@ namespace
             {
                 const std::string name(item.name);
                 if (item.value)
-                    std::printf("  %s = %s\n", name.c_str(), rct3::strings::to_utf8(*item.value).c_str());
+                {
+                    // One line per text: line breaks and tabs inside it are written as \n, \r and \t, a backslash as \\.
+                    std::string text;
+                    for (const char c : rct3::strings::to_utf8(*item.value))
+                        text += c == '\n' ? "\\n" : c == '\r' ? "\\r" : c == '\t' ? "\\t" : c == '\\' ? "\\\\" : std::string(1, c);
+                    std::printf("  %s = %s\n", name.c_str(), text.c_str());
+                }
                 else
                     std::printf("  %s = <unreadable>\n", name.c_str());
             }

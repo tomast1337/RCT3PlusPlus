@@ -3,23 +3,29 @@
 // The park's paths as the player lays them: the path panel (ui/screens/footpath_panel.hpp) opened from the
 // tool row, the styles it offers, and the paths laid with it. Laying changes the park's paths in memory and
 // builds the ground again so they show at once; the piece the controls would lay next is drawn faintly over its
-// tile, tinted when it cannot be laid there.
+// tile, tinted when it cannot be laid there. A raised piece adds the object that draws it and the supports
+// under it to the park's objects, and the raised pieces around it take the pieces their new neighbour calls for.
 //
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
 
 #include "park/footpath_builder.hpp"
+#include "park/object_mesh.hpp"
 #include "park/path_styles.hpp"
+#include "park/support_sets.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
+#include "scene/track_building.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/footpath_panel.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace rct3::config
@@ -45,9 +51,14 @@ namespace rct3::scene
         save::WaterLayer water;            ///< To build the ground again with
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
-        park::TerrainMesh ghost; ///< The next piece, drawn over the ground
-        bool dirty = false;      ///< The next piece changed, so the ghost is built again
-        std::u16string notice;   ///< Why the last piece was not laid, until the next control
+        park::TerrainMesh ghost;                                ///< The next piece, drawn over the ground
+        park::ObjectMesh raised_ghost;                          ///< The next piece when it is raised
+        std::map<std::string, TrackModels, std::less<>> models; ///< Of the raised pieces and supports laid
+        std::optional<park::SupportSets> support_sets;          ///< Read when the first raised piece is laid
+        /// Of the raised paths laid here, the supports holding each up.
+        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> supports;
+        bool dirty = false;    ///< The next piece changed, so the ghost is built again
+        std::u16string notice; ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.
@@ -65,5 +76,8 @@ namespace rct3::scene
 
     /// Draws the next piece over the ground.
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+
+    /// Draws the next piece see-through when it is raised.
+    void draw_raised_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
 } // namespace rct3::scene

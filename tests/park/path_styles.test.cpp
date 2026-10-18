@@ -15,19 +15,25 @@ TEST_CASE("a path type and a queue type become styles with their first item's pr
     path.items.resize(2);
     path.items[0].cost = 900;
     path.items[1].cost = 50;
+    // Two ground pictures, then each piece four times.
+    path.piece_names = { "GroundA", "GroundB", "Gravel_Flat", "Gravel_Flat", "Gravel_Flat", "Gravel_Flat", "Gravel_Straight_A", "Gravel_Straight_A", "Gravel_Straight_A", "Gravel_Straight_A" };
     const PathStyle p = path_style(path);
     CHECK(p.name == "Gravel");
     CHECK(p.name_text == "Gravel_Name");
     CHECK(p.icon == "Gravel_Icon");
     CHECK(p.piece_cost == 900);
     CHECK_FALSE(p.queue);
+    CHECK(p.pieces == std::vector<std::string> { "Gravel_Flat", "Gravel_Straight_A" });
 
     ovl::QueueType queue;
     queue.name = "Ropes";
+    queue.piece_names[0] = "Straight";
     const PathStyle q = queue_style(queue);
     CHECK(q.name == "Ropes");
     CHECK(q.piece_cost == 0);
     CHECK(q.queue);
+    CHECK(q.pieces.front() == "Straight");
+    CHECK(q.pieces.size() == 7);
 }
 
 TEST_CASE("style overlays are told by their ending, whatever its case")

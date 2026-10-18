@@ -12,8 +12,14 @@
 // The pieces laid so far form a trail: the next piece goes one tile on from the trail's last, in the heading,
 // or on the tile the player picked when the trail is empty. Taking a piece away steps back along the trail; a
 // path the trail only walked over stays, since this trail did not lay it.
-// For now only flat pieces on the ground can be laid, on land the park owns; a tile that already has a path
-// on the ground is walked over without laying another.
+//
+// Each piece starts at the height the last one ended at; the first starts on the ground of its tile (above
+// its highest corner when the tile is not flat). A flat piece that meets the flat ground of its tile lies on
+// the ground; any other piece is raised, drawn by a deck object and held up by supports. A piece may not go
+// into the ground: every corner of its tile must be at most as high as the piece where it crosses that
+// corner's edge. With cutting on, the corners in the way are cut down to the piece instead, so a flat piece
+// cut into a hill lies on the ground it made. A tile that already has the same piece is walked over without
+// laying another. Pieces go only on land the park owns.
 //
 // A piece on the ground costs its style's price. A raised piece costs more the higher its middle is above the
 // ground under it: kRaisedPieceCost more for each started unit of height.
@@ -74,11 +80,12 @@ namespace rct3::park
         friend bool operator==(const PathSpot&, const PathSpot&) = default;
     };
 
-    /// A tile of the trail, and whether this trail laid the path on it or walked over one already there.
+    /// A tile of the trail: the path this trail laid on it, or 0 when it walked over one already there.
     struct TrailStep
     {
         PathSpot spot;
-        bool laid = false;
+        std::uint64_t laid = 0;
+        std::int32_t height = 0; ///< Where the piece ends, in whole world units
         friend bool operator==(const TrailStep&, const TrailStep&) = default;
     };
 
@@ -98,11 +105,22 @@ namespace rct3::park
     enum class LayProblem : std::uint8_t
     {
         None,
-        NoStart,  ///< No tile picked yet
-        OffMap,   ///< The next tile is beyond the park's ground
-        NotOwned, ///< The park does not own the next tile
-        Raised,   ///< A sloping piece, which would stand off the ground
-        Queue,    ///< A queue style is chosen
+        NoStart,     ///< No tile picked yet
+        OffMap,      ///< The next tile is beyond the park's ground
+        NotOwned,    ///< The park does not own the next tile
+        Underground, ///< The piece would go into the ground and cutting is off
+        Queue,       ///< A queue style is chosen
+    };
+
+    /// The next piece as it would be laid.
+    struct NextPiece
+    {
+        PathSpot spot;
+        std::int32_t start = 0; ///< Height it is entered at, in whole world units
+        std::int32_t end = 0;   ///< Height it is left at
+        bool ground = false;    ///< Lies on the ground; otherwise raised
+        bool cut = false;       ///< Goes into the ground, so the ground has to be cut down first
+        friend bool operator==(const NextPiece&, const NextPiece&) = default;
     };
 
     /// Applies `control` to `builder` and says what the park should do.
@@ -117,8 +135,17 @@ namespace rct3::park
     /// Where the next piece goes; none before a tile is picked.
     [[nodiscard]] std::optional<PathSpot> next_spot(const FootpathBuilder& builder);
 
+    /// The next piece on `grid`; none before a tile is picked or beyond the grid.
+    [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
+
     /// Why the next piece cannot be laid on `grid`, for a queue style or a path style.
     [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, bool queue);
+
+    /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
+    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading);
+
+    /// How far the middle of `piece` is above the ground of its tile, in world units.
+    [[nodiscard]] float height_above_ground(const NextPiece& piece, const save::TerrainGrid& grid);
 
     /// Of `paths`, the path on the ground at `spot`.
     [[nodiscard]] std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, PathSpot spot);
@@ -126,13 +153,17 @@ namespace rct3::park
     /// A path on the ground of `style` at `spot`, as a park keeps it.
     [[nodiscard]] save::PathTile ground_path(PathSpot spot, std::string_view style, std::uint64_t id);
 
-    /// Lays the next piece as a path on the ground of `style` with id `id`, or walks over the path already
-    /// there, and moves on. Returns whether a piece was added to `paths`. The caller checks lay_problem first.
-    bool lay_ground_path(FootpathBuilder& builder, std::vector<save::PathTile>& paths, std::string_view style, std::uint64_t id);
+    /// Of `paths`, one that is already `piece` laid heading `heading` with slope `slope`.
+    [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, std::uint8_t heading, PathSlope slope);
 
-    /// Steps back along the trail, taking its last piece away from `paths` when the trail laid it. Returns
-    /// whether a path was removed.
-    bool remove_last(FootpathBuilder& builder, std::vector<save::PathTile>& paths);
+    /// Lays `piece` (from next_piece; the caller checks lay_problem and cuts the ground first) as a path of
+    /// `style` with id `id`, drawn by object `deck` when raised, or walks over the same piece already there,
+    /// and moves on. Returns whether a path was added to `paths`.
+    bool lay_path(FootpathBuilder& builder, std::vector<save::PathTile>& paths, const NextPiece& piece, std::string_view style, std::uint64_t id, std::uint64_t deck);
+
+    /// Steps back along the trail, taking its last piece away from `paths` when the trail laid it. Returns the
+    /// path removed.
+    std::optional<save::PathTile> remove_last(FootpathBuilder& builder, std::vector<save::PathTile>& paths);
 
     /// Whether the turn controls can be used now.
     [[nodiscard]] bool can_turn(const FootpathBuilder& builder) noexcept;

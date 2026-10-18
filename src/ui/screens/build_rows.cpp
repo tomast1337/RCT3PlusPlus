@@ -115,6 +115,43 @@ namespace rct3::ui
 
     } // namespace
 
+    bool has_theme_filters(park::BuildList list) noexcept
+    {
+        using enum park::BuildList;
+        switch (list)
+        {
+            case JuniorRides:
+            case ThrillRides:
+            case GentleRides:
+            case FoodShops:
+            case DrinkShops:
+            case Stalls:
+            case Trees:
+            case Fences:
+            case Walls:
+            case PathExtras:
+            case Props:
+            case ParkEntrances:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    std::vector<PickerTheme> picker_themes(std::span<const park::BuildItem> items)
+    {
+        std::map<std::int32_t, PickerTheme> by_number;
+        for (const park::BuildItem& item : items)
+        {
+            if (item.style_index >= 0 && !item.style.empty())
+                by_number.try_emplace(item.style_index, PickerTheme { item.style, strings::to_utf16(item.style_title) });
+        }
+        std::vector<PickerTheme> themes;
+        for (auto& [number, theme] : by_number)
+            themes.push_back(std::move(theme));
+        return themes;
+    }
+
     std::string_view object_filter(const park::BuildItem& item) noexcept
     {
         // Matched to the filters' names by the items of each kind or category in the install: kind 16 holds
@@ -296,7 +333,6 @@ namespace rct3::ui
                 row.price = money_text(currency, item.price);
             row.cost = item.price;
             row.style = item.style;
-            row.style_title = strings::to_utf16(item.style_title);
             row.addon = item.addon;
             row.kind = object_filter(item);
             if (item.addon >= 1 && item.addon <= kBadges)

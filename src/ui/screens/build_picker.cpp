@@ -5,7 +5,6 @@
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
-#include <map>
 #include <utility>
 
 namespace rct3::ui
@@ -20,24 +19,22 @@ namespace rct3::ui
         constexpr std::string_view kSearchHint = "Rct3pp_BuildPicker_Search";
         constexpr std::string_view kPackPrefix = "pack";
 
-        /// The kinds, themes and add-on packs of `rows`; themes by name.
-        void collect(const std::vector<PickerRow>& rows, std::set<std::string, std::less<>>& kinds, std::map<std::string, std::u16string, std::less<>>& styles, std::set<std::uint32_t>& packs)
+        /// The kinds and add-on packs of `rows`.
+        void collect(const std::vector<PickerRow>& rows, std::set<std::string, std::less<>>& kinds, std::set<std::uint32_t>& packs)
         {
             for (const PickerRow& r : rows)
             {
                 if (!r.kind.empty())
                     kinds.insert(r.kind);
-                if (!r.style.empty())
-                    styles.try_emplace(r.style, r.style_title);
                 if (r.addon != 0 && r.children.empty())
                     packs.insert(r.addon);
-                collect(r.children, kinds, styles, packs);
+                collect(r.children, kinds, packs);
             }
         }
 
     } // namespace
 
-    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title_text, std::string icon_skin, std::vector<PickerRow> rows)
+    BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title_text, std::string icon_skin, std::vector<PickerRow> rows, std::vector<PickerTheme> themes)
         : Window(std::move(name), style.window, kWidth, kHeight)
         , style_(std::move(style))
         , strings_(strings)
@@ -54,7 +51,7 @@ namespace rct3::ui
         search_->skin = style_.search_box;
         search_->focused_skin = style_.search_box_focused;
 
-        add_filters();
+        add_filters(themes);
         const Rect& inset = style_.window.content_inset;
         if (!filters_.empty())
             min_size.x = std::max(min_size.x, filters_.back()->placement.offsets.x1 + inset.x0 + inset.x1);
@@ -65,12 +62,11 @@ namespace rct3::ui
         add_rows(data_, nullptr);
     }
 
-    void BuildPicker::add_filters()
+    void BuildPicker::add_filters(const std::vector<PickerTheme>& themes)
     {
         std::set<std::string, std::less<>> kinds;
-        std::map<std::string, std::u16string, std::less<>> styles;
         std::set<std::uint32_t> packs;
-        collect(data_, kinds, styles, packs);
+        collect(data_, kinds, packs);
         float x = 0;
         const auto add = [&](FilterKey key, std::u16string help) -> Button& {
             auto& b = content().add<Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
@@ -89,11 +85,11 @@ namespace rct3::ui
                 add({ FilterKey::Group::Object, kind }, std::u16string(strings_.get(style_.object_help + kind)));
             x += kGroupGap;
         }
-        if (styles.size() > 1)
+        if (themes.size() > 1)
         {
             const std::u16string help(strings_.get(style_.style_help));
-            for (const auto& [name, title_text] : styles)
-                add({ FilterKey::Group::Theme, name }, title_text + u'\n' + help);
+            for (const PickerTheme& theme : themes)
+                add({ FilterKey::Group::Theme, theme.name }, theme.title + u'\n' + help);
             x += kGroupGap;
         }
         for (const std::uint32_t pack : packs)

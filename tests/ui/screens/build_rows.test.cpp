@@ -198,3 +198,25 @@ TEST_CASE("items fall under the object filter of their kind of ride or category 
     const std::vector items { lamp };
     CHECK(picker_rows(BuildList::PathExtras, items, BuildOffer { }, strings, kCoins).front().kind == "Scenery_Tree");
 }
+
+TEST_CASE("themes come in the install's order, once each, for the lists that filter by theme")
+{
+    BuildItem space = scenery("Rocket", BuildList::Props, "R");
+    space.style_index = 3;
+    space.style = "Space";
+    space.style_title = "Sci-fi";
+    BuildItem plain = scenery("Bench", BuildList::Props, "B");
+    plain.style_index = 0;
+    plain.style = "Vanilla";
+    BuildItem none = scenery("Fence", BuildList::Props, "F");
+    const std::vector items { space, plain, space, none };
+    const auto themes = picker_themes(items);
+    REQUIRE(themes.size() == 2);
+    CHECK(themes[0].name == "Vanilla");
+    CHECK(themes[1].name == "Space");
+    CHECK(themes[1].title == u"Sci-fi");
+    CHECK(has_theme_filters(BuildList::GentleRides));
+    CHECK(has_theme_filters(BuildList::Walls));
+    CHECK_FALSE(has_theme_filters(BuildList::Coasters));
+    CHECK_FALSE(has_theme_filters(BuildList::Facilities));
+}

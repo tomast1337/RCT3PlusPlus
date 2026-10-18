@@ -17,9 +17,9 @@ namespace
         Desktop desktop;
         BuildPicker* picker = nullptr;
 
-        explicit Fixture(std::vector<PickerRow> rows)
+        explicit Fixture(std::vector<PickerRow> rows, std::vector<PickerTheme> themes = { })
         {
-            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::move(rows));
+            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::move(rows), std::move(themes));
             picker->placement = top_left(10, 10, build_picker::kWidth, build_picker::kHeight);
             step();
         }
@@ -150,11 +150,12 @@ TEST_CASE("theme filters show while on and hide their theme's items while off")
 {
     PickerRow moon = row(u"Moon rocket", 1);
     moon.style = "Moon";
-    moon.style_title = u"Lunar";
     PickerRow sea = row(u"Sea shell", 2);
     sea.style = "Sea";
-    Fixture f({ moon, sea, row(u"Plain", 3) });
-    REQUIRE(f.picker->filters().size() == 2);
+    // A theme none of the items belong to still gets its filter, in the order given.
+    Fixture f({ moon, sea, row(u"Plain", 3) }, { { "Moon", u"Lunar" }, { "Sea", u"Ocean" }, { "Dust", u"Desert" } });
+    REQUIRE(f.picker->filters().size() == 3);
+    CHECK(f.picker->filters()[2]->name() == "Dust");
     Button& moon_filter = *f.picker->filters()[0];
     CHECK(moon_filter.name() == "Moon");
     CHECK(moon_filter.on);
@@ -171,7 +172,7 @@ TEST_CASE("a pack filter that is on keeps only that pack's items")
 {
     PickerRow wild = row(u"Lion", 1);
     wild.addon = 2;
-    Fixture f({ wild, row(u"Bench", 2) });
+    Fixture f({ wild, row(u"Bench", 2) }, { { "Moon", u"Lunar" } });
     REQUIRE(f.picker->filters().size() == 1); // One theme or none: no theme filters
     Button& pack = *f.picker->filters()[0];
     CHECK(pack.name() == "pack1");
@@ -191,7 +192,7 @@ TEST_CASE("filters set by the owner before the first update hold")
     sea.style = "Sea";
     StringTable strings;
     Desktop desktop;
-    auto& picker = desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::vector { moon, sea });
+    auto& picker = desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::vector { moon, sea }, std::vector<PickerTheme> { { "Moon", u"Lunar" }, { "Sea", u"Ocean" } });
     picker.styles_off = { "Sea" };
     desktop.layout({ 0, 0, 800, 600 });
     desktop.update({ });
@@ -211,7 +212,7 @@ TEST_CASE("object filters come first and hide their kind's items while off")
     moon.style = "Moon";
     PickerRow sea = row(u"Sea", 4);
     sea.style = "Sea";
-    Fixture f({ steel, wood, moon, sea });
+    Fixture f({ steel, wood, moon, sea }, { { "Moon", u"Lunar" }, { "Sea", u"Ocean" } });
     REQUIRE(f.picker->filters().size() == 4);
     Button& steel_filter = *f.picker->filters()[0];
     CHECK(steel_filter.name() == "Coaster_Steel");

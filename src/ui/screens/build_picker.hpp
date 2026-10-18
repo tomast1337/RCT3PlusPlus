@@ -14,9 +14,9 @@
 //   heading stays, open, while any of its items match. Escape empties the box, then closes the window.
 // - Object filters, one for each kind of item (steel coasters, lamps, roofs) when there are more than one:
 //   a kind's items show while its filter is on and hide while it is off. Items of no kind always show.
-// - Theme filters, one for each theme the items belong to when they belong to more than one: a theme's
-//   items show while its filter is on (in colour) and hide while it is off (grey). Items of no theme always
-//   show.
+// - Theme filters, one for each theme the owner hands the window, in its order, when it hands more than one:
+//   a theme's items show while its filter is on (in colour) and hide while it is off (grey), whether the
+//   window holds any or not. Items of no theme always show.
 // - Pack filters, one for each add-on pack the items come from: while any is on, only the items of the packs
 //   that are on show.
 //
@@ -71,12 +71,18 @@ namespace rct3::ui
         std::int64_t cost = 0;           ///< The price in hundredths of the currency unit
         std::string badge;               ///< Skin in the right-hand corner, if any
         std::string style;               ///< The theme's name; empty for items of no theme
-        std::u16string style_title;      ///< The theme's name as the player reads it
         std::uint32_t addon = 0;         ///< 0 for the base game, else its add-on pack
         std::string kind;                ///< Its object filter's name ("Coaster_Steel"); empty for none
         std::size_t item = 0;            ///< The owner's number for the item
         int rank = 0;                    ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
+    };
+
+    /// A theme the window offers a filter for.
+    struct PickerTheme
+    {
+        std::string name;     ///< As rows name it, and its filter's skins
+        std::u16string title; ///< As the player reads it
     };
 
     struct BuildPickerStyle
@@ -109,8 +115,8 @@ namespace rct3::ui
     class BuildPicker : public Window
     {
     public:
-        /// `icon`: the skin in the window's corner.
-        BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::string icon, std::vector<PickerRow> rows);
+        /// `icon`: the skin in the window's corner. `themes`: those to offer filters for.
+        BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::string icon, std::vector<PickerRow> rows, std::vector<PickerTheme> themes = { });
 
         /// The item of each row picked since the last call, the last one.
         [[nodiscard]] std::optional<std::size_t> take_picked();
@@ -150,7 +156,7 @@ namespace rct3::ui
 
     private:
         void add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading);
-        void add_filters();
+        void add_filters(const std::vector<PickerTheme>& themes);
         /// Whether the filters and the search let `row` show; a heading while any of its rows do.
         [[nodiscard]] bool shows(const PickerRow& row) const;
         void lay_out();

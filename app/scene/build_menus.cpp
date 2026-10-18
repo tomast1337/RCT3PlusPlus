@@ -40,7 +40,7 @@ namespace rct3::scene
             root.remove(*open);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
-        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows));
+        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
         picker.kinds_off = menus.kinds_off;
         picker.styles_off = menus.styles_off;
         picker.packs_only = menus.packs_only;

@@ -78,6 +78,30 @@ namespace rct3::park
         return missing;
     }
 
+    std::expected<bool, std::string> add_named_image(GroundImages& images, const std::filesystem::path& path, std::string_view name, std::string_view key)
+    {
+        auto overlay = ovl::Overlay::load(path);
+        if (!overlay)
+            return std::unexpected(std::string(ovl::to_string(overlay.error())));
+        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        {
+            if (part == nullptr)
+                continue;
+            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            {
+                if (!item.texture || item.name != name)
+                    continue;
+                if (auto image = pixels.first_frame(*item.texture))
+                {
+                    images.insert_or_assign(std::string(key), std::move(*image));
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     std::string queue_texture_file(std::string_view style)
     {
         return std::format("Queue/{0}/{0}_Texture.common.ovl", style);

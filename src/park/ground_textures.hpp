@@ -42,6 +42,15 @@ namespace rct3::park
     /// park's style number `index`. Returns how many of the two were missing.
     [[nodiscard]] std::expected<std::size_t, std::string> add_path_images(GroundImages& images, const std::filesystem::path& path, std::string_view style, std::uint8_t index);
 
+    /// Where the path tool's own pictures are, relative to the game's folder, and the arrow it lays over the
+    /// ground: drawn pointing towards the picture's bottom edge.
+    inline constexpr std::string_view kPathToolFile = "Path/Path.common.ovl";
+    inline constexpr std::string_view kPathArrowPicture = "Path_ArrowFreeform";
+
+    /// Adds the picture named `name` from the overlay at `path` to `images` as `key`. Returns false when the
+    /// overlay has no such picture.
+    [[nodiscard]] std::expected<bool, std::string> add_named_image(GroundImages& images, const std::filesystem::path& path, std::string_view name, std::string_view key);
+
     /// Where a queue style's ground picture is, relative to the game's folder.
     [[nodiscard]] std::string queue_texture_file(std::string_view style);
 

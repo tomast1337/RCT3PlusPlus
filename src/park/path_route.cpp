@@ -63,7 +63,7 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
             return std::nullopt;
@@ -76,7 +76,7 @@ namespace rct3::park
         {
             first.spot = from.trail.back().spot;
             first.height = from.trail.back().height;
-            if (first.spot == goal)
+            if (first.spot == goal && (!goal_height || first.height == *goal_height))
                 return std::vector<RouteStep> { };
         }
         else
@@ -134,9 +134,14 @@ namespace rct3::park
                     const auto here = paths_at(piece->spot);
                     if (lay_problem(b, grid, here) != LayProblem::None)
                         continue;
-                    // The goal is reached only on its ground or onto a path already there.
-                    if (piece->spot == goal && !piece->ground && !same_piece_at(here, *piece, b))
-                        continue;
+                    // The goal is reached only on its ground or onto a path already there, the one asked for if any.
+                    if (piece->spot == goal)
+                    {
+                        const auto same = same_piece_at(here, *piece, b);
+                        const bool onto = same && here[*same].elevation && here[*same].elevation->quantised_height == goal_height;
+                        if (goal_height ? !onto : !piece->ground && !same)
+                            continue;
+                    }
                     Node next;
                     next.spot = piece->spot;
                     next.height = piece->end;

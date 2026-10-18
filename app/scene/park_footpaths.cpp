@@ -262,7 +262,7 @@ namespace rct3::scene
             const ParkFootpaths& f = scene.footpaths;
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
                 return std::nullopt;
-            return park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, static_cast<std::int32_t>(next_cost(f.styles[*f.style])));
+            return park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, static_cast<std::int32_t>(next_cost(f.styles[*f.style])), f.route_goal_height);
         }
 
         std::int64_t route_cost(const ParkScene& scene, const std::vector<park::RouteStep>& route)
@@ -868,6 +868,7 @@ namespace rct3::scene
         scene.footpaths.hover_edge.reset();
         scene.footpaths.hover_tile.reset();
         scene.footpaths.route_goal.reset();
+        scene.footpaths.route_goal_height.reset();
         scene.footpaths.route.reset();
         scene.footpaths.route_press = false;
         scene.footpaths.slope_press.reset();
@@ -910,6 +911,7 @@ namespace rct3::scene
         {
             f.routing = panel->routing();
             f.route_goal.reset();
+            f.route_goal_height.reset();
             f.dirty = true;
         }
         if (std::exchange(f.lay_route, false))
@@ -917,6 +919,7 @@ namespace rct3::scene
             f.notice.clear();
             lay_route(device, scene, assets);
             f.route_goal.reset();
+            f.route_goal_height.reset();
             f.dirty = true;
         }
         if (const auto control = panel->take_control(); control && *control < park::kPathControlCount)
@@ -1034,7 +1037,19 @@ namespace rct3::scene
         // With routing on, a click away from the arrow lays the route to where it was.
         if (f.routing && f.builder.start && f.brush.empty())
         {
-            const auto tile = over ? std::nullopt : controls_tile(scene, at, size);
+            auto tile = over ? std::nullopt : controls_tile(scene, at, size);
+            // A path off the ground pointed at is the goal itself, at its height.
+            std::optional<std::int32_t> height;
+            if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
+            {
+                if (const auto under = park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)))
+                {
+                    const save::PathTile& p = f.paths[under->path];
+                    tile = park::PathSpot { p.col, p.row };
+                    if (p.elevation && !park::is_ground_queue(p))
+                        height = p.elevation->quantised_height;
+                }
+            }
             const bool on_arrow = tile && tile == park::next_spot(f.builder);
             if (cancel)
             {
@@ -1054,9 +1069,10 @@ namespace rct3::scene
             if (!down)
             {
                 const auto goal = on_arrow ? std::nullopt : tile;
-                if (goal != f.route_goal)
+                if (goal != f.route_goal || height != f.route_goal_height)
                 {
                     f.route_goal = goal;
+                    f.route_goal_height = goal ? height : std::nullopt;
                     f.dirty = true;
                 }
                 return;
@@ -1082,7 +1098,7 @@ namespace rct3::scene
             std::optional<std::pair<std::size_t, std::uint8_t>> edge;
             if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
             {
-                if (const auto under = park::path_under(*ray, f.paths, scene.grid); under && under->side)
+                if (const auto under = park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
                     edge = std::pair { under->path, *under->side };
             }
             if (edge != f.hover_edge)
@@ -1191,6 +1207,11 @@ namespace rct3::scene
             }
         }
     } // namespace
+
+    bool ground_faded(const ParkScene& scene)
+    {
+        return scene.see_through_ground || scene.footpaths.under_ground;
+    }
 
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {

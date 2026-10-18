@@ -119,6 +119,27 @@ TEST_CASE("under a mountain a route tunnels rather than climb over or cut a tren
     }
 }
 
+TEST_CASE("a route to a raised path ends on it, not on the ground under it")
+{
+    const save::TerrainGrid g = owned_grid(10, 3);
+    save::PathTile raised = ground_path({ 7, 1 }, "Old", 9);
+    raised.kind = save::PathKind::Flying;
+    raised.elevation = save::PathElevation { };
+    raised.elevation->quantised_height = 4;
+    const std::vector<save::PathTile> paths { raised };
+    const auto route = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000, 4);
+    REQUIRE(route);
+    CHECK(joined(*route));
+    CHECK(route->back().piece.spot == PathSpot { 7, 1 });
+    CHECK(route->back().piece.end == 4);
+    CHECK_FALSE(route->back().piece.ground);
+    CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.slope != PathSlope::Flat; }));
+    // Without the height, the ground under it will do.
+    const auto ground = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000);
+    REQUIRE(ground);
+    CHECK(ground->back().piece.end == 0);
+}
+
 TEST_CASE("a route goes on from the trail's end and walks over paths already there")
 {
     const save::TerrainGrid g = owned_grid(8, 3);

@@ -67,6 +67,23 @@ TEST_CASE("the pointer over a raised path picks it and its edge; the next piece 
     CHECK(next->start == 3);
     CHECK_FALSE(next->ground);
 }
+TEST_CASE("a path in a tunnel is picked only when the ground is seen through")
+{
+    save::TerrainGrid g = owned_grid(4, 4);
+    g.cells[1 * 4 + 1].corners = { 8, 8, 8, 8 };
+    save::PathTile tunnel = ground_path({ 1, 1 }, "Old", 1);
+    tunnel.kind = save::PathKind::Flying;
+    tunnel.elevation = save::PathElevation { };
+    tunnel.elevation->quantised_height = 2;
+    tunnel.elevation->underground = true;
+    const std::vector<save::PathTile> paths { tunnel };
+    const Ray ray { { g.world_x(1) + 2.0f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
+    CHECK_FALSE(path_under(ray, paths, g));
+    const auto under = path_under(ray, paths, g, true);
+    REQUIRE(under);
+    CHECK(under->path == 0);
+}
+
 TEST_CASE("a stroke lays only where a path can lie on the ground")
 {
     save::TerrainGrid g = owned_grid(6, 3);

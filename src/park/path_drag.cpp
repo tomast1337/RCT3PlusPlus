@@ -63,11 +63,11 @@ namespace rct3::park
         return static_cast<std::uint8_t>(std::ranges::min_element(to_edge) - to_edge.begin());
     }
 
-    std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, bool through_ground)
     {
         const auto ground = ground_hit(ray, grid);
         std::optional<PathEdge> best;
-        float nearest = ground ? *ground + 0.01f : kFar;
+        float nearest = ground && !through_ground ? *ground + 0.01f : kFar;
         glm::vec3 best_hit { 0.0f };
         for (std::size_t i = 0; i < paths.size(); ++i)
         {

@@ -92,6 +92,7 @@ namespace rct3::scene
         std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
         bool routing = false;                              ///< The panel's route tab was on last frame
         std::optional<park::PathSpot> route_goal;          ///< With routing on: the tile pointed at
+        std::optional<std::int32_t> route_goal_height;     ///< And the height of the raised path pointed at there
         std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes
         bool route_press = false;                          ///< The button went down to lay the route
         bool lay_route = false;                            ///< And came up, so the route is laid
@@ -118,6 +119,10 @@ namespace rct3::scene
     void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel);
 
     /// Draws the next piece over the ground.
+    /// Whether the ground is drawn see-through, switched in the view menu or while building into a tunnel. Then
+    /// the pointer picks paths through it, as the game's pick does when its ground is see-through.
+    [[nodiscard]] bool ground_faded(const ParkScene& scene);
+
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     /// Draws the next piece see-through when it is raised.

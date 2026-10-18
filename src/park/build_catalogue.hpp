@@ -121,6 +121,9 @@ namespace rct3::park
         std::uint32_t width = 0;
         std::uint32_t length = 0;
         std::uint32_t addon = 0; ///< 0 for the base game, else the expansion it came with
+        /// The kind of attraction (ride_list's `kind`) or the scenery category (scenery_list's) that put the
+        /// item in its list; 0 for others.
+        std::uint32_t type = 0;
         /// The theme the item belongs to, as the theme's overlay numbers and names it: its name for skins
         /// ("Space") and its title shown to the player ("Sci-fi"). -1 and empty for items of no theme. Overlays
         /// that add to a theme give only its number.

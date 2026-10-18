@@ -12,6 +12,8 @@
 //
 // - The search box keeps only the items whose names hold what was typed, ignoring case and accents; a
 //   heading stays, open, while any of its items match. Escape empties the box, then closes the window.
+// - Object filters, one for each kind of item (steel coasters, lamps, roofs) when there are more than one:
+//   a kind's items show while its filter is on and hide while it is off. Items of no kind always show.
 // - Theme filters, one for each theme the items belong to when they belong to more than one: a theme's
 //   items show while its filter is on (in colour) and hide while it is off (grey). Items of no theme always
 //   show.
@@ -49,9 +51,9 @@ namespace rct3::ui
         inline constexpr float kCaptionX = 59;  ///< Right of the window's icon, under the title
         inline constexpr float kBarHeight = 20; ///< Of the search box and of the filters' row
         inline constexpr float kGap = 4;
-        inline constexpr float kFilter = 20; ///< Width and height of a filter
-        inline constexpr float kPackGap = 8; ///< Between the theme filters and the pack filters
-        inline constexpr float kNote = 16;   ///< Under the grid, while there is a note
+        inline constexpr float kFilter = 20;  ///< Width and height of a filter
+        inline constexpr float kGroupGap = 8; ///< Between the object, theme and pack filters
+        inline constexpr float kNote = 16;    ///< Under the grid, while there is a note
 
         /// The grid.
         inline constexpr float kTile = 72;
@@ -71,6 +73,7 @@ namespace rct3::ui
         std::string style;               ///< The theme's name; empty for items of no theme
         std::u16string style_title;      ///< The theme's name as the player reads it
         std::uint32_t addon = 0;         ///< 0 for the base game, else its add-on pack
+        std::string kind;                ///< Its object filter's name ("Coaster_Steel"); empty for none
         std::size_t item = 0;            ///< The owner's number for the item
         int rank = 0;                    ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
@@ -83,12 +86,15 @@ namespace rct3::ui
         std::string closed_heading;
         std::string search_box; ///< Behind the search box, and while it has the keyboard focus
         std::string search_box_focused;
-        std::string style_filter;     ///< + the theme's name: the skin of its filter while on
-        std::string style_filter_off; ///< ... and while off
-        std::string pack_filter;      ///< + the pack's number from 0: the picture of its filter
-        float pack_icon_scale = 0.5f; ///< The pictures are badges drawn larger elsewhere
-        std::string pack_name;        ///< + the pack's number from 0: the string key of its name
-        std::string style_help;       ///< String key of the theme filters' help, under the theme's name
+        std::string object_filter;     ///< + an object filter's name: its skin while on
+        std::string object_filter_off; ///< ... and while off
+        std::string object_help;       ///< + an object filter's name: the string key of its help
+        std::string style_filter;      ///< + the theme's name: the skin of its filter while on
+        std::string style_filter_off;  ///< ... and while off
+        std::string pack_filter;       ///< + the pack's number from 0: the picture of its filter
+        float pack_icon_scale = 0.5f;  ///< The pictures are badges drawn larger elsewhere
+        std::string pack_name;         ///< + the pack's number from 0: the string key of its name
+        std::string style_help;        ///< String key of the theme filters' help, under the theme's name
         ScrollBarStyle scroll_bar;
         Color text_colour = hex("#000000");
         Color hint_colour = hex("#7f7f7f");
@@ -116,8 +122,9 @@ namespace rct3::ui
         std::optional<std::int64_t> cash;
         /// A line under the grid, e.g. to say what the window leaves out.
         std::u16string note;
-        /// The themes whose filters are off, by name, and the packs whose filters are on. The owner may set
-        /// them before the first update to restore them.
+        /// The kinds and themes whose filters are off, by name, and the packs whose filters are on. The owner
+        /// may set them before the first update to restore them.
+        std::set<std::string, std::less<>> kinds_off;
         std::set<std::string, std::less<>> styles_off;
         std::set<std::uint32_t> packs_only;
 
@@ -130,7 +137,8 @@ namespace rct3::ui
         {
             return *search_;
         }
-        /// The theme filters, then the pack filters; their names are the theme's name and "pack" + its number.
+        /// The object filters, the theme filters, then the pack filters; named after the kind, the theme, and
+        /// "pack" + the pack's number.
         [[nodiscard]] std::span<Button* const> filters() const
         {
             return filters_;
@@ -151,9 +159,20 @@ namespace rct3::ui
         const StringTable& strings_;
         std::vector<PickerRow> data_;
         std::vector<BuildPickerRow*> rows_;
+        struct FilterKey
+        {
+            enum class Group : std::uint8_t
+            {
+                Object,
+                Theme,
+                Pack,
+            };
+            Group group = Group::Object;
+            std::string name; ///< Of the kind or the theme
+            std::uint32_t pack = 0;
+        };
         std::vector<Button*> filters_;
-        std::vector<std::string> filter_styles_; ///< Of each theme filter
-        std::vector<std::uint32_t> filter_packs_;
+        std::vector<FilterKey> keys_; ///< Of each filter
         EditBox* search_ = nullptr;
         ScrollArea* list_ = nullptr;
         std::u16string query_; ///< Folded, as the layout last filtered by

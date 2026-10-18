@@ -46,6 +46,9 @@ namespace rct3::scene
         constexpr std::string_view kUnderground = "Rct3pp_Paths_Underground";
         constexpr std::string_view kOccupied = "Rct3pp_Paths_Occupied";
         constexpr std::string_view kBlocked = "Rct3pp_Paths_Blocked";
+        /// How fast the following camera closes on the next piece, per second, and how near counts as there.
+        constexpr float kFollowRate = 6;
+        constexpr float kFollowNear = 0.05f;
         constexpr std::string_view kNoRoute = "Rct3pp_Paths_NoRoute";
         /// The railing new queues get: the one most queues in the parks seen use.
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
@@ -911,6 +914,7 @@ namespace rct3::scene
         scene.footpaths.hover_tile.reset();
         scene.footpaths.route_goal.reset();
         scene.footpaths.route_goal_height.reset();
+        scene.footpaths.camera_goal.reset();
         scene.footpaths.route.reset();
         scene.footpaths.route_press = false;
         scene.footpaths.slope_press.reset();
@@ -996,6 +1000,13 @@ namespace rct3::scene
             f.solids_of = scene.objects.size();
         }
         const park::LayProblem problem = park::lay_problem(f.builder, scene.grid, f.paths, &f.solids);
+        if (const auto next = park::next_piece(f.builder, scene.grid); panel->following() && next && next->spot != f.followed)
+        {
+            f.followed = next->spot;
+            f.camera_goal = glm::vec3 { scene.grid.world_x(next->spot.col) + scene.grid.tile_size_x / 2, static_cast<float>(next->start), scene.grid.world_z(next->spot.row) + scene.grid.tile_size_z / 2 };
+        }
+        else if (!panel->following())
+            f.camera_goal.reset();
         std::array<bool, ui::kFootpathControls> usable { };
         usable.fill(true);
         const bool turn = park::can_turn(f.builder);
@@ -1232,6 +1243,20 @@ namespace rct3::scene
         scene.footpaths.notice.clear();
         scene.footpaths.dirty = true;
         return true;
+    }
+
+    void follow_footpaths(ParkScene& scene, float elapsed)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (!f.camera_goal || scene.dragging || scene.turning)
+        {
+            f.camera_goal.reset();
+            return;
+        }
+        const glm::vec3 to = *f.camera_goal - scene.camera.target;
+        if (glm::length(to) < kFollowNear)
+            f.camera_goal.reset();
+        scene.camera.target += to * (1 - std::exp(-kFollowRate * elapsed));
     }
 
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size)

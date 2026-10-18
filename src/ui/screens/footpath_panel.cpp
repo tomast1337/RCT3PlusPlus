@@ -48,6 +48,7 @@ namespace rct3::ui
         };
         controls_tab_ = &tab("controls", style_.controls_icon, 0);
         follow_ = &tab("follow", style_.follow_icon, 1);
+        follow_->on = true;
         route_ = &tab("route", style_.route_icon, 2);
         paths_tab_ = &tab("paths", style_.paths_icon, 3);
         queues_tab_ = &tab("queues", style_.queues_icon, 4);

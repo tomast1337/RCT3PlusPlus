@@ -76,7 +76,12 @@ namespace rct3::ui
     {
         const SkinState s = state();
         const Rect r = face();
-        draw_skin_state(context.list, context.skins, skin, s, r);
+        // A toggle on a face with one picture for every state would look held down, so dimmed, while on: it
+        // shows lit while on and dimmed while off instead.
+        SkinState look = s;
+        if (toggle && s != SkinState::Pressed && s != SkinState::Disabled && context.skins.find(skin, SkinState::Down) == context.skins.find(skin, SkinState::Up))
+            look = on ? (hovered() ? SkinState::UpOver : SkinState::Up) : SkinState::Down;
+        draw_skin_state(context.list, context.skins, skin, look, r);
 
         // The face looks pushed in while held: what is on it moves by one unit.
         const float nudge = s == SkinState::Pressed ? 1.0f : 0.0f;

@@ -102,6 +102,8 @@ namespace rct3::scene
         bool lay_route = false;                            ///< And came up, so the route is laid
         std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid
         std::optional<std::uint64_t> sell;                 ///< A right click picked this path to sell
+        std::optional<park::PathSpot> followed;            ///< With camera follow on: the next piece's tile the camera went to
+        std::optional<glm::vec3> camera_goal;              ///< Where the camera glides to, until it is there or moved
         bool dirty = false;                                ///< The next piece changed, so the ghost is built again
         std::u16string notice;                             ///< Why the last piece was not laid, until the next control
     };
@@ -118,6 +120,10 @@ namespace rct3::scene
     /// Whether a click on the park at `at` (interface units, on a view `size` across) went to the path panel:
     /// while it shows its controls, a click on the ground picks where the path starts.
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size);
+
+    /// With the panel's camera follow on, glides the camera over `elapsed` seconds towards the next piece each
+    /// time the trail goes on; the player moving the camera stops it until the next piece.
+    void follow_footpaths(ParkScene& scene, float elapsed);
 
     /// A right click while the path panel shows its controls sells the path under the pointer, as in the game.
     /// Whether it picked one.

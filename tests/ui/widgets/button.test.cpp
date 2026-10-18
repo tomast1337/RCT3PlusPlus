@@ -113,6 +113,23 @@ TEST_CASE("buttons draw the family member for their state, then the icon")
     }
 }
 
+TEST_CASE("a toggle whose face has one picture shows lit while on and dimmed while off")
+{
+    Fixture f;
+    f.button.toggle = true;
+    SkinLibrary skins;
+    skins.add("Btn", skin(1));
+    DrawList list;
+    const FontSet fonts;
+    DrawContext context { list, skins, fonts };
+    f.desktop.draw(context);
+    CHECK(list.vertices()[0].color[0] < 255);
+    f.button.on = true;
+    list.clear();
+    f.desktop.draw(context);
+    CHECK(list.vertices()[0].color[0] == 255);
+}
+
 TEST_CASE("text is centred in the button, grey when disabled and cut to the button")
 {
     rct3::ovl::Font f;

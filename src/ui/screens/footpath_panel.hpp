@@ -5,7 +5,8 @@
 // it, and a strip running out to the right of the disc that shows one page at a time.
 //
 // Tabs, going round the ring: one shows the building controls, one keeps the camera on the build point while
-// building, and two open the path styles and the queue styles. A style page shows each style's picture; the
+// building, one switches route building on (paths find their own way to a tile picked), and two open the path
+// styles and the queue styles. A style page shows each style's picture; the
 // one chosen is marked, and choosing one goes back to the controls. The controls are three arrows that turn
 // left, go straight on or turn right, five slopes from steps down to steps up, a switch to cut into the
 // ground and a button that takes the last piece away. A line under them tells what the control under the
@@ -43,10 +44,11 @@ namespace rct3::ui
         std::string close_icon; ///< On the close button
         std::string controls_icon;
         std::string follow_icon;
+        std::string route_icon;
         std::string paths_icon;
         std::string queues_icon;
         /// Strings keys of the tabs' help, in the order above.
-        std::array<std::string, 4> tab_help;
+        std::array<std::string, 5> tab_help;
         /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
         /// pictures instead, for on and off.
         std::array<std::string, kFootpathControls> usable_icons;
@@ -66,6 +68,7 @@ namespace rct3::ui
         inline constexpr float kSlotAngle = -32;
         inline constexpr int kControlsSlot = 0;
         inline constexpr int kFollowSlot = 1;
+        inline constexpr int kRouteSlot = 2;
         inline constexpr int kPathsSlot = 4;
         inline constexpr int kQueuesSlot = 5;
         inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
@@ -160,6 +163,10 @@ namespace rct3::ui
         {
             return follow_->on;
         }
+        [[nodiscard]] bool routing() const
+        {
+            return route_->on;
+        }
 
         /// The control pressed since the last call, by its index.
         [[nodiscard]] std::optional<std::size_t> take_control()
@@ -187,6 +194,10 @@ namespace rct3::ui
         [[nodiscard]] Button& follow_tab() const
         {
             return *follow_;
+        }
+        [[nodiscard]] Button& route_tab() const
+        {
+            return *route_;
         }
         [[nodiscard]] std::size_t style_count() const
         {
@@ -224,6 +235,7 @@ namespace rct3::ui
         Button* close_ = nullptr;
         Button* controls_tab_ = nullptr;
         Button* follow_ = nullptr;
+        Button* route_ = nullptr;
         Button* paths_tab_ = nullptr;
         Button* queues_tab_ = nullptr;
         Widget* body_ = nullptr;

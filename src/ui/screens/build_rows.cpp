@@ -226,6 +226,7 @@ namespace rct3::ui
             }
             if (item.price > 0)
                 row.price = money_text(currency, item.price);
+            row.cost = item.price;
             if (item.addon >= 1 && item.addon <= kBadges)
                 row.badge = std::string(kBadgePrefix) + std::to_string(item.addon - 1);
 

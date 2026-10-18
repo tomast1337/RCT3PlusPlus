@@ -158,3 +158,19 @@ TEST_CASE("a ground path runs on into the foot of a raised path that meets the g
     CHECK(path_rise(5) == 1);
     CHECK(path_rise(0) == 0);
 }
+
+TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches")
+{
+    const save::TerrainGrid g = flat_grid(5, 3);
+    const std::vector<save::PathTile> paths { ground(1, 1), ground(2, 1), ground(3, 1) };
+    const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
+    std::vector<bool> keep(15, false);
+    keep[1 * 5 + 2] = true; // The middle tile only
+    const TerrainMesh middle = only_tiles(m, g, keep);
+    CHECK(middle.vertices.size() == 6);
+    CHECK(middle.indices.size() == 6);
+    REQUIRE(middle.batches.size() == 1);
+    CHECK(middle.batches[0].first == 0);
+    keep.assign(15, true);
+    CHECK(only_tiles(m, g, keep).vertices.size() == m.vertices.size());
+}

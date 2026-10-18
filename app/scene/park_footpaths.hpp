@@ -8,12 +8,17 @@
 // Queue tiles get railings on their closed sides, and a queue tile laid beside a ride's entrance joins the
 // station's line (park/queue_lines.hpp).
 //
+// Pressing on the ground and letting go on another tile lays paths on every tile between (park/path_drag.hpp),
+// shown faintly while the button is held; the right button calls the stroke off. Taking a piece away right
+// after a stroke takes the whole stroke away.
+//
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
 
 #include "park/footpath_builder.hpp"
 #include "park/ground_queues.hpp"
 #include "park/object_mesh.hpp"
+#include "park/path_drag.hpp"
 #include "park/path_styles.hpp"
 #include "park/support_sets.hpp"
 #include "park/terrain_mesh.hpp"
@@ -63,8 +68,13 @@ namespace rct3::scene
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> supports;
         /// Of the queue tiles laid here, the railings along them.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
-        bool dirty = false;    ///< The next piece changed, so the ghost is built again
-        std::u16string notice; ///< Why the last piece was not laid, until the next control
+        std::optional<park::PathSpot> drag_from; ///< While a stroke goes on: where it began
+        park::PathSpot drag_to;                  ///< And where the pointer is now
+        bool drop = false;                       ///< The stroke ended, so its paths are laid
+        std::optional<park::DragPlan> plan;      ///< What the stroke would lay, worked out when it changes
+        std::vector<std::uint64_t> stroke;       ///< The paths the last stroke laid, until another piece is laid
+        bool dirty = false;                      ///< The next piece changed, so the ghost is built again
+        std::u16string notice;                   ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.
@@ -79,6 +89,9 @@ namespace rct3::scene
     /// Whether a click on the park at `at` (interface units, on a view `size` across) went to the path panel:
     /// while it shows its controls, a click on the ground picks where the path starts.
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size);
+
+    /// Follows a stroke over the park at `at` while the left button is `down`; `cancel` calls it off.
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool cancel);
 
     /// Draws the next piece over the ground.
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

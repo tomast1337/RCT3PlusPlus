@@ -226,12 +226,53 @@ namespace rct3::scene
             scene.batches = std::move(mesh.batches);
         }
 
+        /// The stroke as it would be laid now; nothing when no stroke goes beyond one tile or a queue is chosen.
+        std::optional<park::DragPlan> stroke_plan(const ParkScene& scene)
+        {
+            const ParkFootpaths& f = scene.footpaths;
+            // shortcut: strokes lay paths on the ground only, no queues or raised runs; upgrade with the A-to-B route.
+            if (!f.drag_from || *f.drag_from == f.drag_to || !f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
+                return std::nullopt;
+            return park::plan_drag(park::drag_area(*f.drag_from, f.drag_to, scene.grid), scene.grid, f.paths);
+        }
+
+        std::int64_t stroke_cost(const ParkFootpaths& f, const park::DragPlan& plan)
+        {
+            return static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]);
+        }
+
         /// The next piece alone, faint over its tile, tinted when it cannot be laid.
         void build_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool allowed)
         {
             ParkFootpaths& f = scene.footpaths;
             f.ghost = { };
             f.raised_ghost = { };
+            if (const auto& plan = f.plan)
+            {
+                const bool affordable = !scene.park.cash || *scene.park.cash >= stroke_cost(f, *plan);
+                std::vector<save::PathTile> with = f.paths;
+                for (const park::PathSpot spot : plan->lay)
+                    with.push_back(park::ground_path(spot, f.styles[*f.style].name, 0));
+                park::GroundPathMap map = park::ground_path_map(with, scene.grid);
+                picture_styles(device, scene, assets, map.styles);
+                // Only the new tiles, numbered as the ground would number them.
+                std::vector<std::int16_t> tiles(map.tiles.size(), park::kNoPath);
+                for (const park::PathSpot spot : plan->lay)
+                {
+                    const std::size_t at = static_cast<std::size_t>(spot.row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(spot.col);
+                    tiles[at] = map.tiles[at];
+                }
+                map.tiles = std::move(tiles);
+                map.raised.clear();
+                map.queues.clear();
+                f.ghost = park::ground_path_mesh(map, scene.grid);
+                for (park::GroundVertex& v : f.ghost.vertices)
+                {
+                    v.colour = affordable ? kGhostTint : kRefusedTint;
+                    v.position.y += kGhostLift;
+                }
+                return;
+            }
             const auto piece = park::next_piece(f.builder, scene.grid);
             if (!piece || !f.style || *f.style >= f.styles.size())
                 return;
@@ -301,16 +342,22 @@ namespace rct3::scene
         }
 
         /// Gives the raised paths around `spot` the pieces their neighbours call for, loading new models.
-        void refresh_around(ParkScene& scene, const ui::InterfaceAssets& assets, park::PathSpot spot)
+        /// Gives the raised pieces on the tiles from `low` to `high` and those beside them the pieces they call for.
+        void refresh_area(ParkScene& scene, const ui::InterfaceAssets& assets, park::PathSpot low, park::PathSpot high)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (park::refresh_decks(f.paths, scene.objects, scene.grid, f.styles, spot.col - 1, spot.row - 1, spot.col + 1, spot.row + 1) == 0)
+            if (park::refresh_decks(f.paths, scene.objects, scene.grid, f.styles, low.col - 1, low.row - 1, high.col + 1, high.row + 1) == 0)
                 return;
             for (const save::PlacedObject& o : scene.objects)
             {
-                if (std::abs(o.col - spot.col) <= 1 && std::abs(o.row - spot.row) <= 1 && !o.hidden && !o.overlay.empty())
+                if (o.col >= low.col - 1 && o.col <= high.col + 1 && o.row >= low.row - 1 && o.row <= high.row + 1 && !o.hidden && !o.overlay.empty())
                     (void)load_object_model(scene, f.models, assets, o);
             }
+        }
+
+        void refresh_around(ParkScene& scene, const ui::InterfaceAssets& assets, park::PathSpot spot)
+        {
+            refresh_area(scene, assets, spot, spot);
         }
 
         /// Adds the supports under raised path `path`, which stands alone on its tile.
@@ -379,6 +426,59 @@ namespace rct3::scene
             }
         }
 
+        /// Lays the paths of the stroke just ended.
+        void lay_stroke(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            ParkFootpaths& f = scene.footpaths;
+            const auto plan = stroke_plan(scene);
+            const park::PathSpot from = *f.drag_from;
+            f.drag_from.reset();
+            if (!plan || plan->lay.empty())
+                return;
+            const std::int64_t cost = stroke_cost(f, *plan);
+            if (scene.park.cash && *scene.park.cash < cost)
+            {
+                f.notice = std::u16string(assets.strings->get(kNoMoney));
+                return;
+            }
+            wait_for_build(scene);
+            std::uint64_t id = unused_id(scene);
+            f.stroke.clear();
+            for (const park::PathSpot spot : plan->lay)
+            {
+                f.paths.push_back(park::ground_path(spot, f.styles[*f.style].name, id));
+                f.stroke.push_back(id++);
+            }
+            if (scene.park.cash)
+                *scene.park.cash -= cost;
+            park::start_at(f.builder, f.drag_to);
+            refresh_area(scene, assets, { std::min(from.col, f.drag_to.col), std::min(from.row, f.drag_to.row) }, { std::max(from.col, f.drag_to.col), std::max(from.row, f.drag_to.row) });
+            objects_changed(scene);
+            rebuild_ground(device, scene, assets);
+        }
+
+        /// Takes the paths of the last stroke away.
+        void remove_stroke(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            ParkFootpaths& f = scene.footpaths;
+            wait_for_build(scene);
+            const std::vector<std::uint64_t> gone = std::exchange(f.stroke, { });
+            park::PathSpot low { scene.grid.width, scene.grid.height };
+            park::PathSpot high { -1, -1 };
+            std::erase_if(f.paths, [&](const save::PathTile& p) {
+                if (!std::ranges::contains(gone, p.id))
+                    return false;
+                low = { std::min<int>(low.col, p.col), std::min<int>(low.row, p.row) };
+                high = { std::max<int>(high.col, p.col), std::max<int>(high.row, p.row) };
+                return true;
+            });
+            if (high.col < 0)
+                return;
+            refresh_area(scene, assets, low, high);
+            objects_changed(scene);
+            rebuild_ground(device, scene, assets);
+        }
+
         void lay(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             ParkFootpaths& f = scene.footpaths;
@@ -399,6 +499,7 @@ namespace rct3::scene
                 park::cut_down(scene.grid, piece, f.builder.heading);
             if (!park::lay_path(f.builder, f.paths, piece, style.name, id, piece.ground ? 0 : id + 1))
                 return;
+            f.stroke.clear();
             if (scene.park.cash)
                 *scene.park.cash -= cost;
             // The queue tile laid before may now open towards this one.
@@ -547,6 +648,9 @@ namespace rct3::scene
             panel->hide();
         scene.footpaths.ghost = { };
         scene.footpaths.raised_ghost = { };
+        scene.footpaths.drag_from.reset();
+        scene.footpaths.plan.reset();
+        scene.footpaths.drop = false;
     }
 
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options)
@@ -556,10 +660,7 @@ namespace rct3::scene
         if (panel == nullptr || !panel->showing())
         {
             if (panel != nullptr && panel->take_closed())
-            {
-                f.ghost = { };
-                f.raised_ghost = { };
-            }
+                close_footpath_panel(scene);
             return;
         }
         if (const auto pick = panel->take_style())
@@ -569,12 +670,20 @@ namespace rct3::scene
             f.dirty = true;
         }
         f.builder.queue = chosen_queue(f);
+        if (std::exchange(f.drop, false))
+        {
+            f.notice.clear();
+            lay_stroke(device, scene, assets);
+            f.dirty = true;
+        }
         if (const auto control = panel->take_control(); control && *control < park::kPathControlCount)
         {
             f.notice.clear();
             const park::PathStep step = park::press(f.builder, static_cast<park::PathControl>(*control));
             if (step == park::PathStep::Lay)
                 lay(device, scene, assets);
+            else if (step == park::PathStep::Remove && !f.stroke.empty())
+                remove_stroke(device, scene, assets);
             else if (step == park::PathStep::Remove)
                 remove(device, scene, assets);
             f.dirty = true;
@@ -587,13 +696,17 @@ namespace rct3::scene
         usable.at(static_cast<std::size_t>(park::PathControl::TurnLeft)) = turn;
         usable.at(static_cast<std::size_t>(park::PathControl::TurnRight)) = turn;
         usable.at(static_cast<std::size_t>(park::PathControl::Straight)) = problem == park::LayProblem::None;
-        usable.at(static_cast<std::size_t>(park::PathControl::Remove)) = !f.builder.trail.empty();
+        usable.at(static_cast<std::size_t>(park::PathControl::Remove)) = !f.builder.trail.empty() || !f.stroke.empty();
         panel->set_controls(usable, static_cast<std::size_t>(park::slope_control(f.builder.slope)), f.builder.cut_into_ground);
 
         std::u16string status = f.notice;
         if (status.empty())
             status = problem_text(assets, problem);
-        if (status.empty() && f.style && *f.style < f.styles.size())
+        if (f.dirty)
+            f.plan = stroke_plan(scene);
+        if (const auto& plan = f.plan)
+            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), stroke_cost(f, *plan));
+        else if (status.empty() && f.style && *f.style < f.styles.size())
         {
             const auto piece = park::next_piece(f.builder, scene.grid);
             const std::int64_t cost = piece ? piece_price(f.styles[*f.style], *piece, scene.grid) : next_cost(f.styles[*f.style]);
@@ -608,21 +721,58 @@ namespace rct3::scene
         }
     }
 
+    namespace
+    {
+        /// The tile of the ground under `at` while the path panel shows its controls.
+        std::optional<park::PathSpot> controls_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+        {
+            const ui::FootpathPanel* panel = panel_of(scene);
+            if (panel == nullptr || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
+                return std::nullopt;
+            const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
+            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
+            const auto distance = park::ground_hit(ray, scene.grid);
+            if (!distance)
+                return std::nullopt;
+            const glm::vec3 hit = ray.origin + ray.direction * *distance;
+            const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+            const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
+            if (!scene.grid.contains(col, row))
+                return std::nullopt;
+            return park::PathSpot { col, row };
+        }
+    } // namespace
+
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool cancel)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (cancel || (!down && f.drag_from && *f.drag_from == f.drag_to))
+        {
+            if (std::exchange(f.drag_from, std::nullopt))
+                f.dirty = true;
+            return;
+        }
+        if (!down)
+        {
+            f.drop = f.drag_from.has_value();
+            return;
+        }
+        const auto tile = controls_tile(scene, at, size);
+        if (!tile)
+            return;
+        if (!f.drag_from)
+            f.drag_from = *tile;
+        if (f.drag_to != *tile)
+            f.dirty = true;
+        f.drag_to = *tile;
+    }
+
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size)
     {
-        const ui::FootpathPanel* panel = panel_of(scene);
-        if (panel == nullptr || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
+        const auto tile = controls_tile(scene, at, size);
+        if (!tile)
             return false;
-        const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-        const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-        const auto distance = park::ground_hit(ray, scene.grid);
-        if (!distance)
-            return false;
-        const glm::vec3 hit = ray.origin + ray.direction * *distance;
-        const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-        const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
-        if (!scene.grid.contains(col, row))
-            return false;
+        const auto [col, row] = *tile;
         park::start_at(scene.footpaths.builder, { col, row });
         // A queue begun beside a ride's entrance goes away from it, so it leads guests there.
         if (chosen_queue(scene.footpaths))

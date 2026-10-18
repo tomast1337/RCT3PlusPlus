@@ -1954,6 +1954,8 @@ namespace rct3::scene
             const ui::Rect view = desktop.root().rect();
             if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
                 show_info_page(scene, *info, assets, options);
+            // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
+            footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (scene.footpaths.drag_from || !over), input.right);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;

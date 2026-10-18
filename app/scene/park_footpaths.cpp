@@ -15,6 +15,7 @@
 #include "park/relief_maps.hpp"
 #include "park/surrounding_land.hpp"
 #include "scene/park_scene.hpp"
+#include "simulation/import_park.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/money_text.hpp"
 #include "ui/ui_textures.hpp"
@@ -557,6 +558,17 @@ namespace rct3::scene
             }
         }
 
+        /// Tells the simulation about paths laid (or changed) and taken away, so guests use them at once and
+        /// rides find their way in.
+        void sim_paths(ParkScene& scene, std::span<const save::PathTile> laid, std::span<const save::PathTile> gone)
+        {
+            for (const save::PathTile& p : gone)
+                simulation::remove_path(scene.sim, p, scene.grid);
+            for (const save::PathTile& p : laid)
+                (void)simulation::add_path(scene.sim, p, scene.grid);
+            (void)simulation::relink_attractions(scene.sim, scene.rides);
+        }
+
         /// Lays the paths of the stroke just ended.
         void lay_stroke(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
         {
@@ -584,6 +596,7 @@ namespace rct3::scene
                 f.paths.push_back(park::ground_path(spot, f.styles[*f.style].name, id));
                 f.stroke.push_back(id++);
             }
+            sim_paths(scene, std::span(f.paths).last(plan->lay.size()), { });
             if (scene.park.cash)
                 *scene.park.cash -= cost;
             // The trail goes on from the last tile, the way the stroke last went.
@@ -616,15 +629,18 @@ namespace rct3::scene
             const std::vector<std::uint64_t> gone = std::exchange(f.stroke, { });
             park::PathSpot low { scene.grid.width, scene.grid.height };
             park::PathSpot high { -1, -1 };
+            std::vector<save::PathTile> taken;
             std::erase_if(f.paths, [&](const save::PathTile& p) {
                 if (!std::ranges::contains(gone, p.id))
                     return false;
+                taken.push_back(p);
                 low = { std::min<int>(low.col, p.col), std::min<int>(low.row, p.row) };
                 high = { std::max<int>(high.col, p.col), std::max<int>(high.row, p.row) };
                 return true;
             });
             if (high.col < 0)
                 return;
+            sim_paths(scene, { }, taken);
             refresh_area(scene, assets, low, high);
             objects_changed(scene);
             rebuild_ground(device, scene, assets);
@@ -697,6 +713,9 @@ namespace rct3::scene
                 if (const auto at = std::ranges::find(f.paths, changed, &save::PathTile::id); at != f.paths.end())
                     refresh_around(scene, assets, { at->col, at->row });
             }
+            std::vector<save::PathTile> changed;
+            std::ranges::copy_if(f.paths, std::back_inserter(changed), [&](const save::PathTile& p) { return std::ranges::contains(railed, p.id); });
+            sim_paths(scene, changed, { });
             if (!refresh)
                 return;
             objects_changed(scene);
@@ -720,6 +739,7 @@ namespace rct3::scene
             if (removed->elevation)
                 gone.push_back(removed->elevation->scenery_ref);
             hide(scene, gone);
+            sim_paths(scene, { }, std::span(&*removed, 1));
             if (removed->queue && removed->queue->queue_line_ref != 0)
             {
                 for (save::Ride& ride : scene.rides.rides)

@@ -110,7 +110,7 @@ namespace rct3::simulation
                 const auto& [dc, dr] = kSides[static_cast<std::size_t>((facing + k) % 4)];
                 for (const PathNode& n : paths.nodes())
                 {
-                    if (n.queue != queues || n.tile.col != spot.col + dc || n.tile.row != spot.row + dr)
+                    if (n.removed || n.queue != queues || n.tile.col != spot.col + dc || n.tile.row != spot.row + dr)
                         continue;
                     const int g = std::abs(n.tile.level - spot.height);
                     if (found == kNoNode || g < gap)
@@ -143,6 +143,51 @@ namespace rct3::simulation
                 line.push_back(next);
                 at = next;
             }
+        }
+
+        /// Where `path` on `grid` sits in the network: its tile and level, and the height of its middle.
+        std::pair<PathTileSpot, float> node_spot(const PathNetwork& paths, const save::PathTile& p, const save::TerrainGrid& grid)
+        {
+            float height = 0;
+            if (p.elevation && p.elevation->slope != save::kSlopeOnGround)
+            {
+                // The stored height is at one end of a sloped piece; its middle is half the rise up or down.
+                const float rise = park::path_rise(p.elevation->slope);
+                height = static_cast<float>(p.elevation->quantised_height) + (park::slope_falls(p.elevation->slope) ? -rise : rise) / 2;
+            }
+            else
+            {
+                const float x = paths.origin.x + (static_cast<float>(p.col) + 0.5f) * paths.tile_size;
+                const float z = paths.origin.y + (static_cast<float>(p.row) + 0.5f) * paths.tile_size;
+                height = grid.height_at(x, z).value_or(0.0f);
+            }
+            return { { p.col, p.row, static_cast<int>(std::lround(height / paths.level_height)) }, height };
+        }
+
+        /// How a ride's station meets the paths.
+        struct RideLinks
+        {
+            std::vector<NodeId> line; ///< Its queue line from the entrance back, or empty
+            NodeId entrance = kNoNode;
+            NodeId exit = kNoNode;
+        };
+
+        /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
+        /// neither reaches it.
+        std::optional<RideLinks> ride_links(const PathNetwork& paths, const save::Station& station)
+        {
+            if (!station.entrance_spot)
+                return std::nullopt;
+            const save::PlacementSpot& at = *station.entrance_spot;
+            RideLinks links;
+            if (const NodeId front = beside(paths, at, at.direction, true); front != kNoNode && station.queue_line != 0 && paths.nodes()[front].line == station.queue_line)
+                links.line = queue_line(paths, front);
+            links.entrance = links.line.empty() ? beside(paths, at, at.direction, false) : links.line.back();
+            if (links.entrance == kNoNode)
+                return std::nullopt;
+            if (station.exit_spot)
+                links.exit = beside(paths, *station.exit_spot, station.exit_spot->direction, false);
+            return links;
         }
 
         /// A rating as saved, about 0 to 10, as a fraction.
@@ -212,24 +257,86 @@ namespace rct3::simulation
         // if stacked paths two units apart ever join wrongly.
         paths.max_step = 2;
         for (const save::PathTile& p : world_model.paths)
+            (void)add_path(world, p, grid);
+    }
+
+    NodeId add_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid)
+    {
+        if (path.kind == save::PathKind::Unknown)
+            return kNoNode;
+        const auto [spot, height] = node_spot(world.paths, path, grid);
+        const std::uint64_t line = path.queue ? path.queue->queue_line_ref : 0;
+        const NodeId id = world.paths.add(spot, path.kind == save::PathKind::Queue, height, line);
+        world.paths.set_line(id, line);
+        return id;
+    }
+
+    void remove_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid)
+    {
+        PathNetwork& paths = world.paths;
+        const auto gone = paths.find(node_spot(paths, path, grid).first);
+        if (!gone)
+            return;
+        paths.remove(*gone);
+        auto& r = world.registry;
+        for (const auto [e, stride, pose] : r.view<Stride, const Pose>().each())
         {
-            if (p.kind == save::PathKind::Unknown)
+            const bool crossing = std::ranges::contains(stride.route, *gone);
+            if (stride.from != *gone && stride.to != *gone && !crossing)
                 continue;
-            float height = 0;
-            if (p.elevation && p.elevation->slope != save::kSlopeOnGround)
+            if (stride.from == *gone)
             {
-                // The stored height is at one end of a sloped piece; its middle is half the rise up or down.
-                const float rise = park::path_rise(p.elevation->slope);
-                height = static_cast<float>(p.elevation->quantised_height) + (park::slope_falls(p.elevation->slope) ? -rise : rise) / 2;
+                // Onto another path on the same tile, if there is one; otherwise left standing where it was.
+                // shortcut: someone on a tile left without paths stays there; move them to the nearest path
+                // by distance if that turns out to matter.
+                const auto other = paths.nearest(pose.position);
+                stride.from = other.value_or(*gone);
             }
-            else
-            {
-                const float x = paths.origin.x + (static_cast<float>(p.col) + 0.5f) * paths.tile_size;
-                const float z = paths.origin.y + (static_cast<float>(p.row) + 0.5f) * paths.tile_size;
-                height = grid.height_at(x, z).value_or(0.0f);
-            }
-            paths.add({ p.col, p.row, static_cast<int>(std::lround(height / paths.level_height)) }, p.kind == save::PathKind::Queue, height, p.queue ? p.queue->queue_line_ref : 0);
+            stride.to = stride.from;
+            stride.progress = 1;
+            stride.route.clear();
+            if (auto* errand = r.try_get<Errand>(e); errand != nullptr && errand->kind == ErrandKind::Heading)
+                *errand = { };
         }
+        std::vector<entt::entity> swept;
+        for (const auto [e, litter] : r.view<const Litter>().each())
+            if (litter.node == *gone)
+                swept.push_back(e);
+        r.destroy(swept.begin(), swept.end());
+    }
+
+    std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides)
+    {
+        auto& r = world.registry;
+        std::size_t changed = 0;
+        for (const auto [e, attraction] : r.view<Attraction>().each())
+        {
+            if (attraction.saved == 0)
+                continue;
+            if (auto* cycle = r.try_get<CycleRide>(e))
+            {
+                const auto ride = std::ranges::find(rides.rides, attraction.saved, [](const save::Ride& x) { return x.base.id; });
+                if (ride == rides.rides.end() || ride->stations.empty() || !cycle->queue.empty())
+                    continue;
+                const auto links = ride_links(world.paths, ride->stations.front());
+                if (!links || (links->entrance == attraction.entrance && links->line == cycle->line && links->exit == cycle->exit))
+                    continue;
+                attraction.entrance = links->entrance;
+                cycle->line = links->line;
+                cycle->exit = links->exit;
+                ++changed;
+                continue;
+            }
+            const auto stall = std::ranges::find(rides.stalls, attraction.saved, [](const save::Stall& x) { return x.base.id; });
+            if (stall == rides.stalls.end() || !stall->base.spot)
+                continue;
+            const NodeId entrance = beside(world.paths, *stall->base.spot, stall->base.facing, false);
+            if (entrance == kNoNode || entrance == attraction.entrance)
+                continue;
+            attraction.entrance = entrance;
+            ++changed;
+        }
+        return changed;
     }
 
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides)
@@ -412,18 +519,12 @@ namespace rct3::simulation
                 timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .seconds = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
             if (!timing || ride.stations.empty() || !ride.stations.front().entrance_spot)
                 continue;
-            const save::Station& station = ride.stations.front();
-            const save::PlacementSpot& at = *station.entrance_spot;
-            // Guests line up on the queue that reaches the entrance, or walk straight in from a path.
-            std::vector<NodeId> line;
-            if (const NodeId front = beside(world.paths, at, at.direction, true); front != kNoNode && station.queue_line != 0 && world.paths.nodes()[front].line == station.queue_line)
-                line = queue_line(world.paths, front);
-            const NodeId entrance = line.empty() ? beside(world.paths, at, at.direction, false) : line.back();
-            if (entrance == kNoNode)
+            auto links = ride_links(world.paths, ride.stations.front());
+            if (!links)
                 continue;
-            NodeId exit = kNoNode;
-            if (station.exit_spot)
-                exit = beside(world.paths, *station.exit_spot, station.exit_spot->direction, false);
+            const NodeId entrance = links->entrance;
+            const NodeId exit = links->exit;
+            std::vector<NodeId> line = std::move(links->line);
             auto& r = world.registry;
             const entt::entity e = r.create();
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open, .saved = ride.base.id });

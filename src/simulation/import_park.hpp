@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Brings the footpaths and stalls of an original save into the simulation, and sets the imported guests
-// walking on those paths.
+// walking on those paths. Paths laid or taken away later come in and go the same way, as they change: walkers
+// whose way crossed a tile taken away think again, and rides and stalls find their entrances and queue lines
+// again.
 #pragma once
 
 #include "park/object_models.hpp"
@@ -25,6 +27,21 @@ namespace rct3::simulation
 
     /// Adds a node for every ground, raised and queue path tile of `world_model`, laid on its terrain.
     void import_paths(SimWorld& world, const save::WorldModel& world_model);
+
+    /// Adds the node of path tile `path`, laid on `grid`, and joins it to the paths beside it; for a node already
+    /// there, takes the queue line the tile is in now. Call after import_paths, which sets the network's
+    /// measures.
+    NodeId add_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
+
+    /// Takes the node of path tile `path` away. Whoever stood on it moves to another path on its tile, if any;
+    /// whoever was walking onto it or meant to cross it stops at the tile they came from and thinks again;
+    /// litter on it goes with it.
+    void remove_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
+
+    /// Has each imported ride and stall of `rides` find its entrance on the paths again, and each ride its
+    /// queue line, after paths changed. A ride with guests in its queue keeps its line until the queue empties.
+    /// Returns how many changed.
+    std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides);
 
     /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
     /// many were added. Call after import_paths.

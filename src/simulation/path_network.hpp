@@ -7,6 +7,9 @@
 // Where four footpath tiles at one level make a full 2 by 2 square, each joined to the two beside it, a walk
 // may also cut across it from corner to opposite corner, at its true length. Queues never take part.
 //
+// A tile taken away keeps its node, so the nodes walkers and attractions hold stay valid, but the node is
+// joined to nothing and found by nothing; a tile laid there later gets a new node.
+//
 // Nothing is sized to the original game's maps: columns, rows and levels are full integers.
 #pragma once
 
@@ -42,6 +45,7 @@ namespace rct3::simulation
         std::uint64_t line = 0; ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
         bool covered = false;   ///< Under a roof that keeps the rain off
         bool shaded = false;    ///< Out of the sun: under a roof or trees
+        bool removed = false;   ///< Its tile was taken away
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -61,11 +65,20 @@ namespace rct3::simulation
         /// The middle of the tile is at `height`, or at its level when not given; a queue tile belongs to `line`.
         NodeId add(PathTileSpot tile, bool queue = false, std::optional<float> height = std::nullopt, std::uint64_t line = 0);
 
+        /// Takes a tile away: its node is joined to nothing any more, and the squares it made lose their
+        /// crossings.
+        void remove(NodeId node);
+
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
             return nodes_;
         }
         [[nodiscard]] std::optional<NodeId> find(PathTileSpot tile) const;
+        /// Puts a queue tile's node in queue line `line`.
+        void set_line(NodeId node, std::uint64_t line)
+        {
+            nodes_[node].line = line;
+        }
         /// Marks what is over a node's tile.
         void cover(NodeId node, bool covered, bool shaded)
         {

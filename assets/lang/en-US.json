@@ -43,7 +43,8 @@
         "AllItemsShown": "All shown: the park does not say which are available",
         "BuildPicker": {
             "Grid": "Icons",
-            "List": "List"
+            "List": "List",
+            "Search": "Search by name"
         },
         "Paths": {
             "PickStart": "Click the ground to start a path",

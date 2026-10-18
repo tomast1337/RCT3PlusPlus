@@ -1007,9 +1007,10 @@ int main(int argc, char** argv)
                         input.right = p.right && input.pointer.present;
                         input.in_window = p.inside && input.pointer.present;
                         input.middle = p.middle && input.pointer.present;
-                        if (!ImGui::GetIO().WantCaptureKeyboard)
+                        if (!ImGui::GetIO().WantCaptureKeyboard && !rct3::scene::typing(*park))
                         {
-                            // On the keys the player bound to the game's camera commands, unless they are being bound.
+                            // On the keys the player bound to the game's camera commands, unless they are being bound
+                            // or typed into a box.
                             using P = rct3::ui::PlayCommand;
                             const auto held = [&](P a, std::optional<P> b = std::nullopt) {
                                 const auto on = [&](P c) { return !binding && key_map.play_key(c) && window->held(*key_map.play_key(c)); };

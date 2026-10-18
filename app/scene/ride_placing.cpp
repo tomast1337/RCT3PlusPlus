@@ -141,7 +141,7 @@ namespace rct3::scene
         join_rides(device, scene);
         if (!p.item)
             return;
-        if (p.step == RidePlacing::Step::Ride)
+        if (p.step == RidePlacing::Step::Ride && !typing(scene))
         {
             for (const ui::KeyPress& k : keys.presses)
                 if (k.key == ui::Key::Letter && k.character == U'z')

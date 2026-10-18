@@ -18,7 +18,7 @@ namespace
         world.seed = 0xC0FF;
         auto& r = world.registry;
         const auto a = r.create();
-        r.emplace<simulation::Visitor>(a, simulation::AgeGroup::Teen, true, "Ada Example", std::uint64_t { 7 });
+        r.emplace<simulation::Visitor>(a, simulation::AgeGroup::Teen, true, "Ada Example", std::uint64_t { 7 }, true);
         r.emplace<simulation::Pose>(a, glm::vec3 { 1.5f, 2.0f, -3.25f }, 0.5f);
         r.emplace<simulation::Needs>(a, 0.1f, 0.9f, 0.3f);
         r.emplace<simulation::Mood>(a, 0.8f, 0.6f, 0.0f);
@@ -70,6 +70,7 @@ TEST_CASE("a park read back from its file is the park that was written")
     const auto& v = r.get<simulation::Visitor>(a);
     CHECK(v.age == simulation::AgeGroup::Teen);
     CHECK(v.female);
+    CHECK(v.avatar);
     CHECK(v.name == "Ada Example");
     CHECK(v.arrived == 7);
     CHECK(r.get<simulation::Pose>(a).position == glm::vec3 { 1.5f, 2.0f, -3.25f });

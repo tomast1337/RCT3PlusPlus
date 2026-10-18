@@ -43,7 +43,7 @@ namespace rct3::simulation
             const save::Person& p = g.person;
             const entt::entity e = r.create();
             out[i] = e;
-            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::Sex::Female), p.name, std::uint64_t { 0 });
+            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::Sex::Female), p.name, std::uint64_t { 0 }, g.is_avatar);
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
             r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));

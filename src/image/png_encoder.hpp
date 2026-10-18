@@ -27,7 +27,8 @@ namespace rct3::image
 
     /// Writes `image` into `folder` (which must exist) as `<prefix>NNNN.png`, numbered one past the highest
     /// number of the folder's files of that prefix, so it never replaces a file and numbers keep rising after
-    /// some are deleted. Returns the path written.
+    /// some are deleted. Characters of `prefix` that are not letters, digits, spaces, '-' or '_' become '_'.
+    /// Returns the path written.
     [[nodiscard]] std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view prefix, const ovl::RgbaImage& image);
 
 } // namespace rct3::image

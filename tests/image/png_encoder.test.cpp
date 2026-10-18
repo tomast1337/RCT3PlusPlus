@@ -66,3 +66,16 @@ TEST_CASE("numbered pictures go one past the highest number and never replace a 
     CHECK_FALSE(image::save_numbered_png(dir, "shot_", { }));
     fs::remove_all(dir);
 }
+
+TEST_CASE("a typed name in the prefix stays inside the folder")
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "rct3pp_named_png";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    const auto saved = image::save_numbered_png(dir, "../Ann: B/C at photo spot_", { 1, 1, { 1, 2, 3, 255 } });
+    REQUIRE(saved);
+    CHECK(saved->parent_path() == dir);
+    CHECK(saved->filename() == "___Ann_ B_C at photo spot_0001.png");
+    fs::remove_all(dir);
+}

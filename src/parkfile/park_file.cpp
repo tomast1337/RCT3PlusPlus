@@ -167,7 +167,7 @@ namespace rct3::parkfile
         template<> struct Stored<simulation::Visitor>
         {
             static constexpr std::string_view kTag = "VSTR";
-            static constexpr std::uint32_t kVersion = 1;
+            static constexpr std::uint32_t kVersion = 2; ///< 2 adds `avatar`
             static constexpr std::size_t kMinRecord = 4 + 1 + 1 + 4 + 8;
             static void write(Writer& w, const simulation::Visitor& v)
             {
@@ -175,8 +175,9 @@ namespace rct3::parkfile
                 w.number(std::uint8_t { v.female });
                 w.text(v.name);
                 w.number(v.arrived);
+                w.number(std::uint8_t { v.avatar });
             }
-            static std::expected<simulation::Visitor, std::string> read(Reader& r)
+            static std::expected<simulation::Visitor, std::string> read(Reader& r, std::uint32_t version)
             {
                 simulation::Visitor v;
                 const auto age = r.number<std::uint8_t>();
@@ -186,6 +187,7 @@ namespace rct3::parkfile
                 v.female = r.number<std::uint8_t>() != 0;
                 v.name = r.text();
                 v.arrived = r.number<std::uint64_t>();
+                v.avatar = version >= 2 && r.number<std::uint8_t>() != 0;
                 return v;
             }
         };
@@ -401,7 +403,7 @@ namespace rct3::parkfile
             end_chunk(w, at);
         }
 
-        template<typename T> std::expected<void, std::string> read_component(Reader& r, entt::registry& registry)
+        template<typename T> std::expected<void, std::string> read_component(Reader& r, entt::registry& registry, std::uint32_t version)
         {
             const auto count = r.number<std::uint32_t>();
             if (count > r.left() / Stored<T>::kMinRecord)
@@ -414,7 +416,12 @@ namespace rct3::parkfile
                 if ((i > 0 && e <= last) || !registry.valid(entity))
                     return std::unexpected(std::format("{}: record {} names entity {}, which is out of order or not in the park", Stored<T>::kTag, i, e));
                 last = e;
-                auto value = Stored<T>::read(r);
+                auto value = [&] {
+                    if constexpr (requires { Stored<T>::read(r, version); })
+                        return Stored<T>::read(r, version);
+                    else
+                        return Stored<T>::read(r);
+                }();
                 if (!value)
                     return std::unexpected(std::format("{}: {}", Stored<T>::kTag, value.error()));
                 if (!r.ok())
@@ -476,7 +483,7 @@ namespace rct3::parkfile
                 else if (!world.registry.storage<T>().empty())
                     result = std::unexpected(std::format("{}: more than one", tag));
                 else
-                    result = read_component<T>(r, world.registry);
+                    result = read_component<T>(r, world.registry, version);
             };
             std::apply([&](auto... c) { (component(std::type_identity<decltype(c)> { }), ...); }, Components { });
             return result;

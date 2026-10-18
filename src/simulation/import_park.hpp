@@ -90,9 +90,10 @@ namespace rct3::simulation
     /// gives a special attraction's kind from the game's files. Returns how many came over. Call after
     /// import_paths.
     std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of);
-    /// The objects `is_sight` picks out (fountains, effects, animatronics), each on the path tile it stands on
-    /// or one beside it, for guests to stop and watch. Returns how many came over. Call after import_paths.
-    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_sight);
+    /// The objects `sight_of` gives a kind (Sight for fountains, effects and animatronics, or PhotoSpot), each
+    /// on the path tile it stands on or one beside it, for guests to stop at. Returns how many came over. Call
+    /// after import_paths.
+    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);
     /// The first park entrance `is_gate` picks out, as the gate guests come in and leave by, at the path tile it
     /// stands on or one beside it. entt::null when there is none on the paths. Call after import_paths.
     entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate);

@@ -130,10 +130,13 @@ namespace rct3::render::null
         return found != textures_.end() && depths_.contains(target.id) && found->second.width == screen.width && found->second.height == screen.height;
     }
 
-    bool NullDevice::read_screen()
+    bool NullDevice::read_screen(TextureHandle from)
     {
         assert(state_ == State::InFrame);
-        const Extent screen = screen_extent();
+        const auto target = from ? textures_.find(from.id) : textures_.end();
+        if (from && target == textures_.end())
+            return false;
+        const Extent screen = from ? target->second : screen_extent();
         if (screen.width == 0 || screen.height == 0)
             return false;
         reading_ = screen;

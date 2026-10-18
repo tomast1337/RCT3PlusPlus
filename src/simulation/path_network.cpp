@@ -66,6 +66,32 @@ namespace rct3::simulation
         return id;
     }
 
+    void PathNetwork::remove(NodeId id)
+    {
+        if (id >= nodes_.size() || nodes_[id].removed)
+            return;
+        PathNode& n = nodes_[id];
+        const auto [first, last] = by_tile_.equal_range(key(n.tile.col, n.tile.row));
+        for (auto it = first; it != last; ++it)
+            if (it->second == id)
+            {
+                by_tile_.erase(it);
+                break;
+            }
+        for (std::size_t side = 0; side < 4; ++side)
+            if (const NodeId other = std::exchange(n.next[side], kNoNode); other != kNoNode)
+                nodes_[other].next[(side + 2) % 4] = kNoNode;
+        n.corner.fill(kNoNode);
+        n.removed = true;
+        for (int dc = -1; dc <= 1; ++dc)
+            for (int dr = -1; dr <= 1; ++dr)
+            {
+                const auto [near_first, near_last] = by_tile_.equal_range(key(n.tile.col + dc, n.tile.row + dr));
+                for (auto it = near_first; it != near_last; ++it)
+                    join_corners(it->second);
+            }
+    }
+
     void PathNetwork::join_corners(NodeId id)
     {
         // Corner k lies between side k and the side after it.

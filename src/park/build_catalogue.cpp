@@ -78,6 +78,7 @@ namespace rct3::park
             item.name_text = info.name_text;
             item.description_text = info.description_text;
             item.icon = info.icon;
+            item.type = info.type_id;
             if (placed != nullptr)
             {
                 if (item.icon.empty())
@@ -111,6 +112,7 @@ namespace rct3::park
             item.width = s.x_squares;
             item.length = s.z_squares;
             item.addon = s.addon;
+            item.type = s.type;
             if ((s.flags & kBillboardFlag) != 0)
             {
                 item.list = BuildList::Billboards;

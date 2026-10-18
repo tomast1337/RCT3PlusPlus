@@ -30,7 +30,8 @@ namespace rct3::scene
         std::shared_future<std::vector<park::BuildItem>> items;
         park::BuildOffer offer;
         std::optional<ui::Point> size;                 ///< Of the last list resized, for the next one opened
-        std::set<std::string, std::less<>> styles_off; ///< Theme filters turned off; the lists share them
+        std::set<std::string, std::less<>> kinds_off;  ///< Object filters turned off; the lists share them
+        std::set<std::string, std::less<>> styles_off; ///< Theme filters turned off
         std::set<std::uint32_t> packs_only;            ///< Pack filters turned on
     };
 

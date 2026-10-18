@@ -14,6 +14,12 @@ namespace rct3::park
 
         constexpr std::string_view kStubEnding = "_stub.common.ovl";
 
+        constexpr std::size_t kGroundNames = 2;
+        constexpr std::size_t kNamesPerPiece = 4;
+        /// The longer layout names more pieces after these, which only one style fills.
+        constexpr std::size_t kPieces = 19;
+        constexpr std::string_view kCommonEnding = ".common.ovl";
+
         std::int32_t first_cost(const std::vector<ovl::SceneryItem>& items)
         {
             return items.empty() ? 0 : items.front().cost;
@@ -23,12 +29,18 @@ namespace rct3::park
 
     PathStyle path_style(const ovl::PathType& type)
     {
-        return { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), false };
+        PathStyle style { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), false, { }, { } };
+        for (std::size_t at = kGroundNames; at < type.piece_names.size() && style.pieces.size() < kPieces; at += kNamesPerPiece)
+            style.pieces.emplace_back(type.piece_names[at]);
+        return style;
     }
 
     PathStyle queue_style(const ovl::QueueType& type)
     {
-        return { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), true };
+        PathStyle style { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), true, { }, { } };
+        for (const std::string_view name : type.piece_names)
+            style.pieces.emplace_back(name);
+        return style;
     }
 
     std::vector<PathStyle> path_styles(const ovl::Overlay& overlay)
@@ -88,10 +100,13 @@ namespace rct3::park
                 if (const auto overlay = ovl::Overlay::load(entry.path()))
                 {
                     std::vector<PathStyle> found = path_styles(*overlay);
+                    std::string file = entry.path().filename().string();
+                    file.resize(file.size() - kCommonEnding.size());
                     for (PathStyle& s : found)
                     {
                         if (s.name.empty())
                             s.name = style.filename().string();
+                        s.overlay = folder.filename().string() + "/" + style.filename().string() + "/" + file;
                     }
                     styles.insert(styles.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
                 }

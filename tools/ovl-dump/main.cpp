@@ -927,6 +927,10 @@ namespace
                 }
                 const std::string text(entry.path->name_text);
                 std::printf("  %-20s header %08x names %zu research %zu items %zu text %s\n", name.c_str(), entry.path->header_word, entry.path->piece_names.size(), entry.path->research.size(), entry.path->items.size(), text.c_str());
+                std::printf("    names");
+                for (const std::string_view n : entry.path->piece_names)
+                    std::printf(" %.*s", static_cast<int>(n.size()), n.empty() ? "-" : n.data());
+                std::printf("\n");
                 print_piece_items(entry.path->items);
             }
         }
@@ -947,6 +951,10 @@ namespace
                 }
                 const std::string text(entry.queue->name_text), ground(entry.queue->ground);
                 std::printf("  %-20s research %zu items %zu text %s ground %s\n", name.c_str(), entry.queue->research.size(), entry.queue->items.size(), text.c_str(), ground.c_str());
+                std::printf("    names");
+                for (const std::string_view n : entry.queue->piece_names)
+                    std::printf(" %.*s", static_cast<int>(n.size()), n.empty() ? "-" : n.data());
+                std::printf("\n");
                 print_piece_items(entry.queue->items);
             }
         }

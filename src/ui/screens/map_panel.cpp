@@ -100,7 +100,7 @@ namespace rct3::ui
         const std::vector<float> tops = legend_tops(style_, entries);
         for (std::size_t i = 0; i < entries.size(); ++i)
         {
-            MapLegendRow& row = content().add<MapLegendRow>("layer" + std::to_string(i), style_, entries[i].colour, entries[i].shown, entries[i].round);
+            MapLegendRow& row = content().add<MapLegendRow>(entries[i].name.empty() ? "layer" + std::to_string(i) : entries[i].name, style_, entries[i].colour, entries[i].shown, entries[i].round);
             row.placement = { { 1, 0, 1, 0 }, { -style.legend_width, tops[i], 0, tops[i] + style.row_height } };
             Label& label = row.add<Label>("text", std::move(entries[i].text), style.font);
             label.placement = { { 0, 0, 1, 1 }, { style.swatch + style.swatch_gap * 1.5f, 0, 0, 0 } };

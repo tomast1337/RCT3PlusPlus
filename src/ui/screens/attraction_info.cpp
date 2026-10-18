@@ -196,13 +196,13 @@ namespace rct3::ui
 
         void add(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
         {
-            page.lines.push_back({ text(strings, label), std::move(value) });
+            page.lines.push_back({ text(strings, label), std::move(value), false, std::string(label) });
         }
 
         /// A line sharing its row with the next such line.
         void add_half(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
         {
-            page.lines.push_back({ text(strings, label), std::move(value), true });
+            page.lines.push_back({ text(strings, label), std::move(value), true, std::string(label) });
         }
 
         std::u16string missing()
@@ -222,16 +222,18 @@ namespace rct3::ui
                 return;
             InfoControl c;
             c.id = control_id(AttractionControl::Colours);
+            c.name = "AttractionVehicleDialogHelpPaintAttraction";
             c.kind = InfoControlKind::Paint;
             c.label = text(strings, "AttractionVehicleDialogHelpPaintAttraction");
             c.paints = f.colours;
             page.controls.push_back(std::move(c));
         }
 
-        InfoControl price(int id, std::u16string label, std::int64_t value, int most)
+        InfoControl price(int id, std::string name, std::u16string label, std::int64_t value, int most)
         {
             InfoControl c;
             c.id = id;
+            c.name = std::move(name);
             c.kind = InfoControlKind::Number;
             c.label = std::move(label);
             c.value = static_cast<int>(std::clamp<std::int64_t>(value, 0, most));
@@ -253,7 +255,7 @@ namespace rct3::ui
             const bool ride = f.ride->kind != save::RideKind::Special;
             if (ride)
                 add(page, strings, "AttractionFinancesDialogLabel_CostPerInspection", missing());
-            page.controls.push_back(price(control_id(AttractionControl::Price), text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
+            page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
         }
 
         std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings)
@@ -371,10 +373,11 @@ namespace rct3::ui
             paints(page, f, strings);
         }
 
-        InfoControl tick(AttractionControl id, std::u16string label, bool on)
+        InfoControl tick(AttractionControl id, std::string_view name, std::u16string label, bool on)
         {
             InfoControl c;
             c.id = control_id(id);
+            c.name = name;
             c.kind = InfoControlKind::Tick;
             c.label = std::move(label);
             c.value = on ? 1 : 0;
@@ -382,11 +385,12 @@ namespace rct3::ui
         }
 
         /// A waiting time: its tick, and its seconds while ticked.
-        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::u16string label, std::int32_t value)
+        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::int32_t value)
         {
-            page.controls.push_back(tick(on, std::move(label), value >= 0));
+            page.controls.push_back(tick(on, key, text(strings, key), value >= 0));
             InfoControl c;
             c.id = control_id(seconds);
+            c.name = std::format("{}_seconds", key);
             c.kind = InfoControlKind::Number;
             c.value = std::max(value, 0);
             c.maximum = kMostWait;
@@ -413,14 +417,15 @@ namespace rct3::ui
                 // The page has room for these five rows only under the sections.
                 InfoControl c;
                 c.id = control_id(AttractionControl::WaitFor);
+                c.name = "RideOpModeDialog_WaitFor";
                 c.kind = InfoControlKind::Choice;
                 c.label = text(strings, "RideOpModeDialog_WaitFor");
                 for (const std::string_view key : kLoads)
                     c.items.push_back(text(strings, key));
                 c.value = o.wait_for_load >= 0 && std::cmp_less(o.wait_for_load, kLoads.size()) ? o.wait_for_load : -1;
                 page.controls.push_back(std::move(c));
-                wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, text(strings, "RideOpModeDialog_MinWaitTime"), o.min_wait);
-                wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, text(strings, "RideOpModeDialog_MaxWaitTime"), o.max_wait);
+                wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, "RideOpModeDialog_MinWaitTime", strings, o.min_wait);
+                wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, "RideOpModeDialog_MaxWaitTime", strings, o.max_wait);
                 return;
             }
             if (m < kModeNames.size())
@@ -476,6 +481,7 @@ namespace rct3::ui
             add(page, strings, "RideMaintenanceDialogLabel_LastBreakdownType", breakdown(ride.breakdown.last, strings));
             InfoControl c;
             c.id = control_id(AttractionControl::Inspection);
+            c.name = "RideMaintenanceDialogLabel_Inspection";
             c.kind = InfoControlKind::Choice;
             c.label = text(strings, "RideMaintenanceDialogLabel_Inspection");
             for (const std::string_view key : kInspectionIntervals)
@@ -488,7 +494,7 @@ namespace rct3::ui
         void items(InfoPage& page, const save::Stall& stall, const StringTable& strings)
         {
             for (std::size_t i = 0; i < stall.items.size(); ++i)
-                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostPrice));
+                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), std::format("ItemPrice{}", i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostPrice));
         }
 
     } // namespace

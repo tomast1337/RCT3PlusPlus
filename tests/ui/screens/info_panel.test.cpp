@@ -357,3 +357,10 @@ TEST_CASE("a page's controls tell the changes made to them by their ids")
     CHECK(change->value == 21);
     CHECK(f.panel->palette() == nullptr);
 }
+
+TEST_CASE("an info widget is named by its string key and part, or by its place without one")
+{
+    CHECK(keyed_name("Park_Name", "value", 3) == "Park_Name_value");
+    CHECK(keyed_name("Park_Name", "", 3) == "Park_Name");
+    CHECK(keyed_name("", "value", 3) == "value3");
+}

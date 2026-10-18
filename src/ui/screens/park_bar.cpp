@@ -158,7 +158,7 @@ namespace rct3::ui
         x = put(*objective_, x, kSmallIcon, kSmallIcon);
         for (std::size_t i = 0; i < speeds_.size(); ++i)
         {
-            speeds_[i] = &add<Button>(std::format("speed{}", i), std::string { }, style_.speed_icons[i]);
+            speeds_[i] = &add<Button>(style_.speed_icons[i], std::string { }, style_.speed_icons[i]);
             speeds_[i]->tooltip = strings_.get(kSpeedHelp[i]);
             x = put(*speeds_[i], x + kWide, kSpeedWidths[i], kSpeedHeight);
         }

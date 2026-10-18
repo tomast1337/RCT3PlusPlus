@@ -76,7 +76,8 @@ namespace rct3::ui
         /// Headings over the two slider columns of pair rows.
         void headings(std::u16string first, std::u16string second);
         /// A drop-down the owner handles.
-        Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
+        /// `widget` names the list, and its label with "_label"; by their place when empty.
+        Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { }, std::string widget = { });
         /// A name and a second text in the control column.
         Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
         /// A line of text across the page, as tall as `lines` rows.
@@ -144,7 +145,10 @@ namespace rct3::ui
         };
 
         Row& add_row();
-        Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip);
+        /// `widget` is the name of the control it labels; the label is named after it with "_label".
+        Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget = { });
+        /// A control's name: `widget`, or by its place when empty.
+        std::string control_name(std::string_view widget, std::string_view kind);
         void set_control(const Binding& b);
         void bind(Row& row, const Binding& binding);
         [[nodiscard]] bool holds(const OptionIs& c) const;

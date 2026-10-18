@@ -179,7 +179,7 @@ namespace rct3::ui
         void add_series(ManagementPage& page, const StringTable& strings, std::string_view key, const save::Series& series)
         {
             if (!series.empty())
-                page.graph.push_back({ text(strings, key), oldest_first(series) });
+                page.graph.push_back({ text(strings, key), oldest_first(series), std::string(key) });
         }
 
         // ----- park operations -----
@@ -187,20 +187,20 @@ namespace rct3::ui
         void park_view(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::ParkModel* m = f.park != nullptr && f.park->has_park ? f.park : nullptr;
-            page.lines.push_back({ text(strings, "Park_Name"), m != nullptr ? saved_name(m->park.name, m->park.scenario_name, strings) : std::u16string(kDash) });
+            page.lines.push_back({ text(strings, "Park_Name"), m != nullptr ? saved_name(m->park.name, m->park.scenario_name, strings) : std::u16string(kDash), false, "Park_Name" });
             std::u16string status(kDash);
             if (m != nullptr)
                 status = text(strings, m->park.flags.has(save::ParkFlag::Open) ? "AttractionStatusOpen" : "AttractionStatusClosed");
-            page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), status });
+            page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), status, false, "AttractionListDialogParameterStatus" });
             const bool finance = f.park != nullptr && f.park->has_finance;
-            page.lines.push_back({ text(strings, "FinancialSummary_EntranceFee"), finance ? money(units, f.park->finance.entrance_fee) : std::u16string(kDash) });
-            page.lines.push_back({ text(strings, "Park_OpeningTime"), m != nullptr ? clock_text(m->park.opening_minutes, false) : std::u16string(kDash) });
-            page.lines.push_back({ text(strings, "Park_ClosingTime"), m != nullptr ? clock_text(m->park.closing_minutes, false) : std::u16string(kDash) });
-            page.lines.push_back({ text(strings, "ObjectiveCondition_ParkGuests"), f.state != nullptr ? whole(f.state->guests) : std::u16string(kDash) });
+            page.lines.push_back({ text(strings, "FinancialSummary_EntranceFee"), finance ? money(units, f.park->finance.entrance_fee) : std::u16string(kDash), false, "FinancialSummary_EntranceFee" });
+            page.lines.push_back({ text(strings, "Park_OpeningTime"), m != nullptr ? clock_text(m->park.opening_minutes, false) : std::u16string(kDash), false, "Park_OpeningTime" });
+            page.lines.push_back({ text(strings, "Park_ClosingTime"), m != nullptr ? clock_text(m->park.closing_minutes, false) : std::u16string(kDash), false, "Park_ClosingTime" });
+            page.lines.push_back({ text(strings, "ObjectiveCondition_ParkGuests"), f.state != nullptr ? whole(f.state->guests) : std::u16string(kDash), false, "ObjectiveCondition_ParkGuests" });
             std::u16string rating(kDash);
             if (f.state != nullptr && f.state->rating)
                 rating = whole(std::lround(*f.state->rating * save::kMaxParkRating));
-            page.lines.push_back({ text(strings, "Graph_ParkRating"), rating });
+            page.lines.push_back({ text(strings, "Graph_ParkRating"), rating, false, "Graph_ParkRating" });
             if (finance && f.park->finance.entrance_fee_fixed())
                 page.note = text(strings, "FinancialSummary_EntranceFee_CannotBeChanged_TT");
 
@@ -227,8 +227,8 @@ namespace rct3::ui
 
         void park_campaigns(ManagementPage& page, const StringTable& strings)
         {
-            page.lines.push_back({ text(strings, "Campaign_Active"), std::u16string(kDash) });
-            page.lines.push_back({ text(strings, "Campaign_Availiable"), std::u16string(kDash) });
+            page.lines.push_back({ text(strings, "Campaign_Active"), std::u16string(kDash), false, "Campaign_Active" });
+            page.lines.push_back({ text(strings, "Campaign_Availiable"), std::u16string(kDash), false, "Campaign_Availiable" });
             page.note = text(strings, kNotRead);
             page.buttons.push_back(stub("Campaign_ParkVouchers", { }, text(strings, "Campaign_Park_Vouchers")));
             page.buttons.push_back(stub("Campaign_Advertising", { }, text(strings, "Campaign_Park_Advertise")));
@@ -239,7 +239,7 @@ namespace rct3::ui
         {
             if (f.park == nullptr || !f.park->has_awards)
             {
-                page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), std::u16string(kDash) });
+                page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), std::u16string(kDash), false, "PID_TT_AwardTabPopUp" });
                 return;
             }
             std::size_t held = 0;
@@ -251,7 +251,7 @@ namespace rct3::ui
                 return;
             }
             // Which award each held number is is not known yet: only how many there are.
-            page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), whole(static_cast<std::int64_t>(held)) });
+            page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), whole(static_cast<std::int64_t>(held)), false, "PID_TT_AwardTabPopUp" });
         }
 
         // ----- finances -----
@@ -291,7 +291,7 @@ namespace rct3::ui
         void finance_summary(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
-            const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value), true }); };
+            const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value), true, std::string(key) }); };
             std::u16string cash(kDash);
             if (f.state != nullptr)
                 cash = f.state->cash ? money(units, *f.state->cash) : text(strings, "FinancialSummary_MoneyOperates");
@@ -455,7 +455,7 @@ namespace rct3::ui
         void guest_stats(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
         {
             const std::vector<std::size_t> in_park = guests_in_park(f);
-            const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value) }); };
+            const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value), false, std::string(key) }); };
             if (f.people == nullptr)
             {
                 line("GuestStats_NumGuests", std::u16string(kDash));
@@ -484,7 +484,7 @@ namespace rct3::ui
             average("GuestStats_AverageToilet", [](const save::Guest& g) { return std::optional(g.needs.toilet); });
             average("GuestStats_AverageNausea", [](const save::Guest& g) { return std::optional(g.mood_now.nausea); });
             average("GuestStats_AverageSunburn", [](const save::Guest& g) { return g.mood_now.sunburn; });
-            page.lines.push_back({ text(strings, "GuestStats_GroupsOfType"), { } });
+            page.lines.push_back({ text(strings, "GuestStats_GroupsOfType"), { }, false, "GuestStats_GroupsOfType" });
             std::array<std::int64_t, kGroupTypes.size()> types { };
             for (const save::GuestGroup& g : f.people->groups)
             {
@@ -492,7 +492,7 @@ namespace rct3::ui
                     ++types.at(static_cast<std::size_t>(g.group_type));
             }
             for (std::size_t t = 0; t < types.size(); ++t)
-                page.lines.push_back({ text(strings, kGroupTypes.at(t)), whole(types.at(t)), true });
+                page.lines.push_back({ text(strings, kGroupTypes.at(t)), whole(types.at(t)), true, std::string(kGroupTypes.at(t)) });
         }
 
         void guest_families(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
@@ -703,9 +703,9 @@ namespace rct3::ui
             std::u16string state(kDash);
             if (objective != set.objectives.end() && objective->success)
                 state = text(strings, "Objectives_Completed");
-            page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), state });
+            page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), state, false, "AttractionListDialogParameterStatus" });
             // Which prize each saved number stands for is not known yet.
-            page.lines.push_back({ text(strings, "Objectives_Prize"), std::u16string(kDash) });
+            page.lines.push_back({ text(strings, "Objectives_Prize"), std::u16string(kDash), false, "Objectives_Prize" });
             const std::vector<const save::Condition*> conditions = set.conditions_for(level, 0);
             if (conditions.empty())
                 page.note = text(strings, kNotRead);
@@ -713,7 +713,7 @@ namespace rct3::ui
             {
                 // The condition and its target, then how long it must hold and whether it has been met.
                 const std::string_view key = condition_key(c->kind);
-                page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), condition_target(*c, units) });
+                page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), condition_target(*c, units), false, std::string(key) });
                 page.lines.push_back({ held_for(*c, strings), c->completed ? text(strings, "Objectives_Completed") : std::u16string(kDash) });
             }
             if (const std::u16string goal = text(strings, f.park->park.objective_text); !goal.empty() && page.note.empty())
@@ -725,7 +725,7 @@ namespace rct3::ui
         void research(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::ResearchState* r = f.park != nullptr && f.park->research.has_simple_research ? &f.park->research : nullptr;
-            page.lines.push_back({ text(strings, "Research_Label_Budget"), r != nullptr ? money(units, r->monthly_budget) : std::u16string(kDash) });
+            page.lines.push_back({ text(strings, "Research_Label_Budget"), r != nullptr ? money(units, r->monthly_budget) : std::u16string(kDash), false, "Research_Label_Budget" });
             page.columns = {
                 { text(strings, "Research_Label_TechTree"), 0, Align::Start, false },
                 { text(strings, "Research_Label_Priorities"), 120, Align::End, false },

@@ -281,7 +281,7 @@ namespace rct3::scene
         for (const LayerText& t : kLayerTexts)
         {
             const bool dots = t.layer >= park::MapLayer::Food && t.layer != park::MapLayer::Patrols;
-            entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots });
+            entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots, std::string(t.key) });
         }
         auto& panel = desktop.root().add<ui::MapPanel>(std::string(kMapName), panel_style(), text(strings, kTitleKey, u"Map"), std::move(entries));
         panel.icon = kMapIcon;

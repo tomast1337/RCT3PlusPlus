@@ -35,7 +35,7 @@ namespace rct3::ui
         caption_->placement = { { 0, 0, 1, 0 }, { style.caption_x, 0, -tabs_width - style.gap, style.caption_height } };
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
-            auto& tab = body.add<Button>(std::format("tab{}", i), std::move(tabs[i].icon));
+            auto& tab = body.add<Button>(tabs[i].icon, tabs[i].icon);
             tab.toggle = true;
             tab.tooltip = tabs[i].name;
             const float right = tabs_width - style.tab_step * static_cast<float>(i) - style.tab_size;
@@ -90,8 +90,8 @@ namespace rct3::ui
             if (l.half)
             {
                 const float x0 = right ? 0.5f : 0;
-                label(std::format("label{}", i), l.label, { { x0, 0, x0 + 0.5f, 0 }, { right ? style_.pair_gap / 2 : 0, y, -style_.pair_gap / 2 - 60, y + style_.line_height } }, style_.text_colour);
-                label(std::format("value{}", i), l.value, { { x0 + 0.5f, 0, x0 + 0.5f, 0 }, { -style_.pair_gap / 2 - 60, y, -style_.pair_gap / 2, y + style_.line_height } }, style_.text_colour, Align::End);
+                label(keyed_name(l.name, "label", i), l.label, { { x0, 0, x0 + 0.5f, 0 }, { right ? style_.pair_gap / 2 : 0, y, -style_.pair_gap / 2 - 60, y + style_.line_height } }, style_.text_colour);
+                label(keyed_name(l.name, "value", i), l.value, { { x0 + 0.5f, 0, x0 + 0.5f, 0 }, { -style_.pair_gap / 2 - 60, y, -style_.pair_gap / 2, y + style_.line_height } }, style_.text_colour, Align::End);
                 if (right)
                     y += style_.line_height;
                 right = !right;
@@ -107,12 +107,12 @@ namespace rct3::ui
                 // A heading over the lines below it, with a little room above unless it starts the page.
                 if (y > 0)
                     y += style_.gap / 2;
-                label(std::format("label{}", i), l.label, band(0, 1, y, style_.line_height), style_.heading_colour);
+                label(keyed_name(l.name, "label", i), l.label, band(0, 1, y, style_.line_height), style_.heading_colour);
             }
             else
             {
-                label(std::format("label{}", i), l.label, band(0, style_.value_column, y, style_.line_height), style_.text_colour);
-                label(std::format("value{}", i), l.value, band(style_.value_column, 1, y, style_.line_height), style_.text_colour);
+                label(keyed_name(l.name, "label", i), l.label, band(0, style_.value_column, y, style_.line_height), style_.text_colour);
+                label(keyed_name(l.name, "value", i), l.value, band(style_.value_column, 1, y, style_.line_height), style_.text_colour);
             }
             y += style_.line_height;
         }
@@ -147,7 +147,7 @@ namespace rct3::ui
                 Placement where = band(column / across, (column + 1) / across, y + style_.plot_height + 1 + row * style_.line_height, style_.line_height);
                 if (fill)
                     where = { { column / across, 1, (column + 1) / across, 1 }, { 0, -bottom - names + row * style_.line_height, 0, -bottom - names + (row + 1) * style_.line_height } };
-                label(std::format("series{}", i), shown.graph[i].name, where, colour);
+                label(keyed_name(shown.graph[i].key, shown.graph[i].key.empty() ? "series" : "", i), shown.graph[i].name, where, colour);
             }
             y += style_.plot_height + 1 + names;
         }
@@ -168,7 +168,7 @@ namespace rct3::ui
             for (std::size_t i = 0; i < shown.buttons.size(); ++i)
             {
                 const ManagementButton& b = shown.buttons[i];
-                Button& button = lines_->add<Button>(std::format("button{}", i), style_.button, b.icon);
+                Button& button = lines_->add<Button>(b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
                 button.text = b.text;
                 button.text_inset = style_.button_inset;
                 button.tooltip = b.help;

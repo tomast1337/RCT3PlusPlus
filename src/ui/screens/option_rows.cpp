@@ -31,9 +31,14 @@ namespace rct3::ui
         return row;
     }
 
-    Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip)
+    std::string OptionRows::control_name(std::string_view widget, std::string_view kind)
     {
-        auto& label = page_.add<Label>("name" + std::to_string(count_++), std::move(name), style_.font);
+        return widget.empty() ? std::string(kind) + std::to_string(count_++) : std::string(widget);
+    }
+
+    Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget)
+    {
+        auto& label = page_.add<Label>(widget.empty() ? control_name({ }, "name") : std::string(widget) + "_label", std::move(name), style_.font);
         label.style.colour = style_.text_colour;
         label.style.vertical = Align::Centre;
         label.tooltip = std::move(tip);
@@ -44,28 +49,29 @@ namespace rct3::ui
     Tickbox& OptionRows::tick(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        auto& box = page_.add<Tickbox>("tick" + std::to_string(count_++), style_.tick_box, style_.tick);
+        const std::string_view widget = config::game_option_info(option).name;
+        auto& box = page_.add<Tickbox>(control_name(widget, "tick"), style_.tick_box, style_.tick);
         box.tooltip = tip;
         row.parts.push_back({ &box, style_.left, style_.tick_size, style_.tick_size });
         const float text_x = style_.left + style_.tick_size + style_.tick_gap;
-        name_label(row, std::move(name), text_x, width_ - text_x, std::move(tip));
+        name_label(row, std::move(name), text_x, width_ - text_x, std::move(tip), widget);
         bind(row, { option, Kind::Tick, &box });
         return box;
     }
 
     Dropdown& OptionRows::choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip)
     {
-        Dropdown& d = list(std::move(name), std::move(items), std::move(tip));
+        Dropdown& d = list(std::move(name), std::move(items), std::move(tip), std::string(config::game_option_info(option).name));
         Row& row = rows_.back();
         bind(row, { option, Kind::Choice, &d });
         return d;
     }
 
-    Dropdown& OptionRows::list(std::u16string name, std::vector<std::u16string> items, std::u16string tip)
+    Dropdown& OptionRows::list(std::u16string name, std::vector<std::u16string> items, std::u16string tip, std::string widget)
     {
         Row& row = add_row();
-        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& d = page_.add<Dropdown>("list" + std::to_string(count_++), style_.dropdown);
+        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, widget);
+        auto& d = page_.add<Dropdown>(control_name(widget, "list"), style_.dropdown);
         d.items = std::move(items);
         d.tooltip = std::move(tip);
         row.parts.push_back({ &d, style_.control_x, style_.control_width, 0 });
@@ -87,9 +93,9 @@ namespace rct3::ui
     Slider& OptionRows::level(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& s = page_.add<Slider>("level" + std::to_string(count_++), style_.slider);
         const config::GameOptionInfo& info = config::game_option_info(option);
+        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
+        auto& s = page_.add<Slider>(control_name(info.name, "level"), style_.slider);
         s.minimum = info.minimum;
         s.maximum = info.maximum;
         s.step = info.step;
@@ -102,9 +108,9 @@ namespace rct3::ui
     Spinner& OptionRows::number(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& s = page_.add<Spinner>("number" + std::to_string(count_++), style_.spinner);
         const config::GameOptionInfo& info = config::game_option_info(option);
+        name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
+        auto& s = page_.add<Spinner>(control_name(info.name, "number"), style_.spinner);
         s.minimum = static_cast<int>(info.minimum);
         s.maximum = static_cast<int>(info.maximum);
         s.step = std::max(1, static_cast<int>(info.step));
@@ -117,11 +123,11 @@ namespace rct3::ui
     void OptionRows::pair(config::DetailPair options, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        name_label(row, std::move(name), style_.left, kFirstColumn - style_.left - kNameGap, std::move(tip));
+        name_label(row, std::move(name), style_.left, kFirstColumn - style_.left - kNameGap, std::move(tip), config::game_option_info(options.detail).name);
         for (const auto& [option, x] : { std::pair { options.detail, kFirstColumn }, std::pair { options.distance, kSecondColumn } })
         {
-            auto& s = page_.add<Slider>("level" + std::to_string(count_++), style_.slider);
             const config::GameOptionInfo& info = config::game_option_info(option);
+            auto& s = page_.add<Slider>(control_name(info.name, "level"), style_.slider);
             s.minimum = info.minimum;
             s.maximum = info.maximum;
             s.step = info.step;
@@ -158,7 +164,7 @@ namespace rct3::ui
     {
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& box = page_.add<KeyBox>("keys" + std::to_string(count_++), std::move(combos));
+        auto& box = page_.add<KeyBox>(control_name({ }, "keys"), std::move(combos));
         box.skin = style_.key_box;
         box.focused_skin = style_.key_box_focused;
         box.font = style_.font;

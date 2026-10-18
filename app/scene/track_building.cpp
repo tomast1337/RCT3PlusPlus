@@ -274,19 +274,36 @@ namespace rct3::scene
                 (void)add_with_references(*file);
             m.loader = std::make_unique<park::ModelLoader>(*m.index);
         }
+        if (m.missing.contains(object.symbol))
+            return false;
         auto model = m.loader->load(object.symbol, object.overlay);
         if (!model)
         {
-            // A path or queue style keeps each piece in an overlay of its own beside the one describing it,
-            // named after the piece, which the describing overlay does not refer to.
+            // Path and queue styles and support sets keep each piece in an overlay of its own, named after the
+            // piece, which the describing overlay does not refer to: beside it, or in a folder beside it.
             const std::string overlay = slashes(object.overlay);
-            const std::string sibling = overlay.substr(0, overlay.rfind('/') + 1) + object.symbol + ".common.ovl";
-            if (const auto file = assets.install->find(sibling); file && add_with_references(*file))
+            const std::string folder = overlay.substr(0, overlay.rfind('/') + 1);
+            const std::string file_name = object.symbol + ".common.ovl";
+            std::optional<std::filesystem::path> file = assets.install->find(folder + file_name);
+            if (const auto dir = assets.install->find(folder.empty() ? "." : folder); !file && dir)
+            {
+                std::error_code error;
+                for (const auto& entry : std::filesystem::directory_iterator(*dir, error))
+                {
+                    if (entry.is_directory(error))
+                        file = assets.install->find(folder + entry.path().filename().string() + "/" + file_name);
+                    if (file)
+                        break;
+                }
+            }
+            if (file && add_with_references(*file))
             {
                 m.loader = std::make_unique<park::ModelLoader>(*m.index);
                 model = m.loader->load(object.symbol, object.overlay);
             }
         }
+        if (!model)
+            m.missing.insert(object.symbol);
         if (!model)
             return false;
         scene.models.emplace(key, std::move(*model));

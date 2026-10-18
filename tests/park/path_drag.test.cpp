@@ -22,22 +22,58 @@ namespace
     }
 } // namespace
 
-TEST_CASE("a stroke covers the rectangle between its ends, on the map and within reach")
+TEST_CASE("a brush stroke fills the tiles between two looks at the pointer, side by side")
 {
-    const save::TerrainGrid g = owned_grid(100, 100);
-    CHECK(drag_area({ 3, 2 }, { 1, 2 }, g) == std::vector<PathSpot> { { 1, 2 }, { 2, 2 }, { 3, 2 } });
-    CHECK(drag_area({ 1, 1 }, { 2, 2 }, g).size() == 4);
-    CHECK(drag_area({ 98, 0 }, { 120, 0 }, g).size() == 2);
-    CHECK(drag_area({ 0, 0 }, { 99, 0 }, g).size() == static_cast<std::size_t>(kLongestStroke));
+    CHECK(brush_line({ 3, 2 }, { 1, 2 }) == std::vector<PathSpot> { { 3, 2 }, { 2, 2 }, { 1, 2 } });
+    CHECK(brush_line({ 1, 1 }, { 1, 1 }) == std::vector<PathSpot> { { 1, 1 } });
+    const std::vector<PathSpot> diagonal = brush_line({ 0, 0 }, { 2, 2 });
+    CHECK(diagonal.size() == 5);
+    for (std::size_t i = 1; i < diagonal.size(); ++i)
+        CHECK(std::abs(diagonal[i].col - diagonal[i - 1].col) + std::abs(diagonal[i].row - diagonal[i - 1].row) == 1);
+    CHECK(diagonal.back() == PathSpot { 2, 2 });
+    // A shallow line stays near the straight one.
+    for (const PathSpot spot : brush_line({ 0, 0 }, { 6, 1 }))
+        CHECK((spot.row == 0 ? spot.col <= 3 : spot.col >= 3));
 }
 
+TEST_CASE("the nearest side of a tile is found by its diagonals")
+{
+    CHECK(nearest_side(0.5f, 0.9f) == 0);
+    CHECK(nearest_side(0.9f, 0.5f) == 1);
+    CHECK(nearest_side(0.5f, 0.1f) == 2);
+    CHECK(nearest_side(0.1f, 0.5f) == 3);
+}
+
+TEST_CASE("the pointer over a raised path picks it and its edge; the next piece goes on from there")
+{
+    const save::TerrainGrid g = owned_grid(4, 4);
+    save::PathTile raised = ground_path({ 1, 1 }, "Old", 1);
+    raised.kind = save::PathKind::Flying;
+    raised.elevation = save::PathElevation { };
+    raised.elevation->quantised_height = 3;
+    const std::vector<save::PathTile> paths { raised };
+    // Looking straight down near the tile's higher-column edge.
+    const Ray ray { { g.world_x(1) + 3.5f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
+    const auto under = path_under(ray, paths, g);
+    REQUIRE(under);
+    CHECK(under->path == 0);
+    CHECK(under->side == std::uint8_t { 1 });
+
+    FootpathBuilder b;
+    REQUIRE(start_from_edge(b, raised, g, 1));
+    const auto next = next_piece(b, g);
+    REQUIRE(next);
+    CHECK(next->spot == PathSpot { 2, 1 });
+    CHECK(next->start == 3);
+    CHECK_FALSE(next->ground);
+}
 TEST_CASE("a stroke lays only where a path can lie on the ground")
 {
     save::TerrainGrid g = owned_grid(6, 3);
     g.cells[1 * 6 + 2].corners = { 0, 0, 4, 4 }; // A steep tile
     g.cells[1 * 6 + 4].flags = 0;                // Not the park's
     const std::vector<save::PathTile> paths { ground_path({ 3, 1 }, "Old", 1) };
-    const DragPlan plan = plan_drag(drag_area({ 0, 1 }, { 5, 1 }, g), g, paths);
+    const DragPlan plan = plan_drag(brush_line({ 0, 1 }, { 5, 1 }), g, paths);
     CHECK(plan.lay == std::vector<PathSpot> { { 0, 1 }, { 1, 1 }, { 5, 1 } });
     CHECK(plan.kept == 1);
     CHECK(plan.refused == 2);

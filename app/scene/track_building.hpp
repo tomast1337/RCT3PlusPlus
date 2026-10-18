@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -43,6 +44,7 @@ namespace rct3::scene
     {
         std::unique_ptr<park::AssetIndex> index;
         std::unique_ptr<park::ModelLoader> loader;
+        std::set<std::string, std::less<>> missing; ///< Symbols looked for and not found, so not looked for again
 
         TrackModels();
         ~TrackModels();

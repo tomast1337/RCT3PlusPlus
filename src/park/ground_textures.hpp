@@ -13,6 +13,7 @@
 #include "park/ground_queues.hpp"
 #include "park/terrain_mesh.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -50,6 +51,46 @@ namespace rct3::park
     /// Adds the picture named `name` from the overlay at `path` to `images` as `key`. Returns false when the
     /// overlay has no such picture.
     [[nodiscard]] std::expected<bool, std::string> add_named_image(GroundImages& images, const std::filesystem::path& path, std::string_view name, std::string_view key);
+
+    /// A part of a picture, in shares of its width and height.
+    struct PictureRegion
+    {
+        float left = 0;
+        float top = 0;
+        float right = 1;
+        float bottom = 1;
+    };
+
+    /// A tunnel style of the game's terrain surfaces, and where on its one picture, which the style's portal
+    /// pieces share, a tunnel's walls and ceiling are cut out from. Our own picks of plain runs that repeat.
+    struct TunnelStyle
+    {
+        std::string_view name;
+        PictureRegion wall;
+        PictureRegion ceiling;
+    };
+    inline constexpr std::array<TunnelStyle, 4> kTunnelStyles { {
+        { "Rock", { }, { } },
+        { "Concrete", { 0.63f, 0.02f, 0.99f, 0.98f }, { 0.63f, 0.02f, 0.99f, 0.98f } },
+        { "Metal", { 0.41f, 0.31f, 0.76f, 0.97f }, { 0.01f, 0.31f, 0.37f, 0.97f } },
+        { "Wooden", { 0.17f, 0.0f, 0.47f, 0.6f }, { 0.6f, 0.63f, 1.0f, 1.0f } },
+    } };
+
+    /// Where a tunnel style's picture is, relative to the game's folder.
+    [[nodiscard]] std::string tunnel_texture_file(std::string_view style);
+
+    struct TunnelPictures
+    {
+        ovl::RgbaImage wall;
+        ovl::RgbaImage ceiling;
+    };
+
+    /// The wall and ceiling pictures of `style`, cut out of the overlay at `path`. Nothing when it has no picture.
+    [[nodiscard]] std::expected<std::optional<TunnelPictures>, std::string> load_tunnel_pictures(const std::filesystem::path& path, const TunnelStyle& style);
+
+    /// Gives each cliff face in `images` the tunnel pictures of the style among `styles` nearest it in mean
+    /// colour, so a tunnel is lined like the ground it goes through.
+    void add_tunnel_images(GroundImages& images, std::span<const TunnelPictures> styles);
 
     /// Where a queue style's ground picture is, relative to the game's folder.
     [[nodiscard]] std::string queue_texture_file(std::string_view style);

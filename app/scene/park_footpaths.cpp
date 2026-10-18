@@ -35,6 +35,10 @@ namespace rct3::scene
         constexpr glm::vec4 kRefusedTint { 1.0f, 0.3f, 0.3f, 0.6f };
         /// Of the next piece over the paths already laid, so the two never fight for the same depth.
         constexpr float kGhostLift = 0.02f;
+        /// Of the arrow over the next piece, so it shows over the piece's own picture.
+        constexpr float kArrowLift = 0.04f;
+        /// The arrow's picture among the scene's ground pictures.
+        constexpr std::string_view kArrowKey = "PathArrow";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kPickStart = "Rct3pp_Paths_PickStart";
         constexpr std::string_view kNotOwned = "Rct3pp_Paths_NotOwned";
@@ -247,6 +251,16 @@ namespace rct3::scene
             ParkFootpaths& f = scene.footpaths;
             f.ghost = { };
             f.raised_ghost = { };
+            f.arrow = { };
+            if (const auto next = park::next_piece(f.builder, scene.grid); next && !f.plan)
+            {
+                f.arrow = park::heading_arrow(*next, f.builder.heading, scene.grid);
+                for (park::GroundVertex& v : f.arrow.vertices)
+                {
+                    v.colour = allowed ? glm::vec4(1.0f) : kRefusedTint;
+                    v.position.y += kArrowLift;
+                }
+            }
             if (const auto& plan = f.plan)
             {
                 const bool affordable = !scene.park.cash || *scene.park.cash >= stroke_cost(f, *plan);
@@ -632,6 +646,12 @@ namespace rct3::scene
                 }
             }
             logging::logger("park").info("{} path and queue styles, {} pictures", f.styles.size(), skins);
+            park::GroundImages arrow;
+            const auto tool = assets.install ? assets.install->find(park::kPathToolFile) : std::nullopt;
+            const auto added = tool ? park::add_named_image(arrow, *tool, park::kPathArrowPicture, kArrowKey) : std::expected<bool, std::string>(false);
+            if (!added || !*added)
+                logging::logger("park").warning("{}: no {}", park::kPathToolFile, park::kPathArrowPicture);
+            upload_ground(device, scene, arrow);
             const auto first = std::ranges::find_if(f.styles, [](const park::PathStyle& s) { return !s.queue; });
             if (first != f.styles.end())
                 f.style = static_cast<std::size_t>(first - f.styles.begin());
@@ -649,6 +669,8 @@ namespace rct3::scene
         scene.footpaths.ghost = { };
         scene.footpaths.raised_ghost = { };
         scene.footpaths.drag_from.reset();
+        scene.footpaths.slope_press.reset();
+        scene.footpaths.arrow = { };
         scene.footpaths.plan.reset();
         scene.footpaths.drop = false;
     }
@@ -670,6 +692,13 @@ namespace rct3::scene
             f.dirty = true;
         }
         f.builder.queue = chosen_queue(f);
+        if (std::exchange(f.lay_next, false))
+        {
+            f.notice.clear();
+            lay(device, scene, assets);
+            f.dirty = true;
+        }
+        f.took_click = false;
         if (std::exchange(f.drop, false))
         {
             f.notice.clear();
@@ -746,6 +775,36 @@ namespace rct3::scene
     void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool cancel)
     {
         ParkFootpaths& f = scene.footpaths;
+        // A press on the arrow picks the slope by moving up or down, and lays the piece when let go.
+        if (f.slope_press)
+        {
+            if (cancel)
+                f.builder.slope = f.slope_before;
+            else if (!down)
+                f.lay_next = f.took_click = true;
+            else
+            {
+                const auto steps = static_cast<int>(std::lround((*f.slope_press - at.y) / park::kSlopeDragStep));
+                if (const park::PathSlope slope = park::stepped_slope(f.slope_before, steps); slope != f.builder.slope)
+                {
+                    f.builder.slope = slope;
+                    f.dirty = true;
+                }
+                return;
+            }
+            f.slope_press.reset();
+            f.dirty = true;
+            return;
+        }
+        if (down && !f.drag_from && !cancel && f.builder.start)
+        {
+            if (const auto tile = controls_tile(scene, at, size); tile && tile == park::next_spot(f.builder))
+            {
+                f.slope_press = at.y;
+                f.slope_before = f.builder.slope;
+                return;
+            }
+        }
         if (cancel || (!down && f.drag_from && *f.drag_from == f.drag_to))
         {
             if (std::exchange(f.drag_from, std::nullopt))
@@ -769,6 +828,8 @@ namespace rct3::scene
 
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size)
     {
+        if (std::exchange(scene.footpaths.took_click, false))
+            return true;
         const auto tile = controls_tile(scene, at, size);
         if (!tile)
             return false;
@@ -785,32 +846,42 @@ namespace rct3::scene
         return true;
     }
 
+    namespace
+    {
+        /// Draws `ghost` with the ground's pictures, or all of it with picture `only` when given.
+        void draw_ground_ghost(render::Device& device, const ParkScene& scene, const park::TerrainMesh& ghost, std::optional<std::string_view> only, const glm::mat4& transform, const render::SceneLight& light)
+        {
+            if (ghost.indices.empty())
+                return;
+            const auto vertices = device.allocate_transient(std::as_bytes(std::span(ghost.vertices)));
+            const auto indices = device.allocate_transient(std::as_bytes(std::span(ghost.indices)));
+            if (!vertices || !indices)
+                return;
+            for (const park::GroundBatch& batch : ghost.batches)
+            {
+                const auto texture = only ? scene.ground_textures.find(*only) : scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                render::DrawCommand draw;
+                draw.pipeline = scene.ground_pipeline;
+                draw.vertices = *vertices;
+                draw.indices = *indices;
+                draw.index_type = render::IndexType::U32;
+                draw.first = batch.first;
+                draw.count = batch.count;
+                draw.transform = transform;
+                draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                draw.filter = render::Filter::Linear;
+                draw.address = render::AddressMode::Repeat;
+                draw.light = light;
+                device.draw(draw);
+            }
+        }
+    } // namespace
+
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        const park::TerrainMesh& ghost = scene.footpaths.ghost;
-        if (ghost.indices.empty())
-            return;
-        const auto vertices = device.allocate_transient(std::as_bytes(std::span(ghost.vertices)));
-        const auto indices = device.allocate_transient(std::as_bytes(std::span(ghost.indices)));
-        if (!vertices || !indices)
-            return;
-        for (const park::GroundBatch& batch : ghost.batches)
-        {
-            const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-            render::DrawCommand draw;
-            draw.pipeline = scene.ground_pipeline;
-            draw.vertices = *vertices;
-            draw.indices = *indices;
-            draw.index_type = render::IndexType::U32;
-            draw.first = batch.first;
-            draw.count = batch.count;
-            draw.transform = transform;
-            draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-            draw.filter = render::Filter::Linear;
-            draw.address = render::AddressMode::Repeat;
-            draw.light = light;
-            device.draw(draw);
-        }
+        draw_ground_ghost(device, scene, scene.footpaths.ghost, std::nullopt, transform, light);
+        if (scene.ground_textures.contains(kArrowKey))
+            draw_ground_ghost(device, scene, scene.footpaths.arrow, kArrowKey, transform, light);
     }
 
     void draw_raised_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)

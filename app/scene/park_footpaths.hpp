@@ -10,7 +10,8 @@
 //
 // Pressing on the ground and letting go on another tile lays paths on every tile between (park/path_drag.hpp),
 // shown faintly while the button is held; the right button calls the stroke off. Taking a piece away right
-// after a stroke takes the whole stroke away.
+// after a stroke takes the whole stroke away. An arrow over the next piece shows the way the trail goes;
+// pressing on it and moving up or down picks the slope, and letting go lays the piece.
 //
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
@@ -68,13 +69,18 @@ namespace rct3::scene
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> supports;
         /// Of the queue tiles laid here, the railings along them.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
-        std::optional<park::PathSpot> drag_from; ///< While a stroke goes on: where it began
-        park::PathSpot drag_to;                  ///< And where the pointer is now
-        bool drop = false;                       ///< The stroke ended, so its paths are laid
-        std::optional<park::DragPlan> plan;      ///< What the stroke would lay, worked out when it changes
-        std::vector<std::uint64_t> stroke;       ///< The paths the last stroke laid, until another piece is laid
-        bool dirty = false;                      ///< The next piece changed, so the ghost is built again
-        std::u16string notice;                   ///< Why the last piece was not laid, until the next control
+        park::TerrainMesh arrow;                              ///< Over the next piece, pointing the way it goes
+        std::optional<float> slope_press;                     ///< While dragging on the arrow: the pointer's height when pressed
+        park::PathSlope slope_before = park::PathSlope::Flat; ///< And the slope then, to step from
+        bool lay_next = false;                                ///< Letting go on the arrow lays the next piece
+        bool took_click = false;                              ///< That press was not a click picking a start
+        std::optional<park::PathSpot> drag_from;              ///< While a stroke goes on: where it began
+        park::PathSpot drag_to;                               ///< And where the pointer is now
+        bool drop = false;                                    ///< The stroke ended, so its paths are laid
+        std::optional<park::DragPlan> plan;                   ///< What the stroke would lay, worked out when it changes
+        std::vector<std::uint64_t> stroke;                    ///< The paths the last stroke laid, until another piece is laid
+        bool dirty = false;                                   ///< The next piece changed, so the ghost is built again
+        std::u16string notice;                                ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.

@@ -27,10 +27,15 @@
 // ride's entrance and laid away from it leads guests to the entrance. A queue tile on the ground covers its
 // whole tile; a raised one is drawn by a deck object like a raised path.
 //
+// The next piece is shown with an arrow over its tile pointing the way the trail goes. Pressing on that tile
+// and moving the pointer up or down before letting go steps the slope: each kSlopeDragStep up is one step
+// steeper upwards (flat, ramp up, stairs up), each down one step downwards; letting go lays the piece.
+//
 // A piece on the ground costs its style's price. A raised piece costs more the higher its middle is above the
 // ground under it: kRaisedPieceCost more for each started unit of height.
 #pragma once
 
+#include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
 #include <cstddef>
@@ -183,6 +188,17 @@ namespace rct3::park
     [[nodiscard]] PathControl slope_control(PathSlope slope) noexcept;
     [[nodiscard]] bool picks_slope(PathControl control) noexcept;
     [[nodiscard]] PathSlope control_slope(PathControl control) noexcept;
+
+    /// How far the pointer moves up or down, in interface units, for each step of slope while dragging on the
+    /// next piece.
+    inline constexpr float kSlopeDragStep = 24;
+
+    /// The slope `steps` steps up from `from` (down when negative), from steps down to steps up.
+    [[nodiscard]] PathSlope stepped_slope(PathSlope from, int steps) noexcept;
+
+    /// A square over `piece`'s tile, at the piece's height, whose pictures' bottom edge (v = 1) lies on the edge
+    /// the piece leaves by in `heading`: the arrow showing where the trail goes. One batch.
+    [[nodiscard]] TerrainMesh heading_arrow(const NextPiece& piece, std::uint8_t heading, const save::TerrainGrid& grid);
 
     /// The slope as a park stores it on a raised path piece.
     [[nodiscard]] std::uint8_t stored_slope(PathSlope slope) noexcept;

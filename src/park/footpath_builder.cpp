@@ -58,6 +58,34 @@ namespace rct3::park
 
     } // namespace
 
+    PathSlope stepped_slope(PathSlope from, int steps) noexcept
+    {
+        const int at = std::clamp(static_cast<int>(from) + steps, 0, static_cast<int>(kPathSlopeCount) - 1);
+        return static_cast<PathSlope>(at);
+    }
+
+    TerrainMesh heading_arrow(const NextPiece& piece, std::uint8_t heading, const save::TerrainGrid& grid)
+    {
+        TerrainMesh mesh;
+        if (!grid.contains(piece.spot.col, piece.spot.row))
+            return mesh;
+        std::array<float, 4> heights = grid.at(piece.spot.col, piece.spot.row).corners;
+        if (!piece.ground || piece.cut)
+            piece_corners(piece, heading, [&](std::size_t corner, float height) { heights[corner] = height; });
+        const auto front = edge_corners(heading);
+        const auto right = edge_corners(static_cast<std::uint8_t>((heading + 1) % kQuarterTurns));
+        for (std::size_t corner = 0; corner < 4; ++corner)
+        {
+            GroundVertex& v = mesh.vertices.emplace_back();
+            v.position = { grid.world_x(piece.spot.col + static_cast<int>(corner % 2)), heights[corner], grid.world_z(piece.spot.row + static_cast<int>(corner / 2)) };
+            v.uv = { std::ranges::contains(right, corner) ? 1.0f : 0.0f, std::ranges::contains(front, corner) ? 1.0f : 0.0f };
+            v.normal = { 0, 1, 0 };
+        }
+        mesh.indices = { 0, 1, 2, 3, 2, 1 }; // The ground's split
+        mesh.batches.push_back({ GroundPaint::Surface, 0, 0, 6 });
+        return mesh;
+    }
+
     PathSpot step(PathSpot from, std::uint8_t heading) noexcept
     {
         switch (heading % kQuarterTurns)

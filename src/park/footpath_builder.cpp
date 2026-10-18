@@ -2,7 +2,9 @@
 #include "park/footpath_builder.hpp"
 
 #include "park/ground_paths.hpp"
+#include "park/ground_queues.hpp"
 #include "park/path_decks.hpp"
+#include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 
 #include <algorithm>
@@ -24,6 +26,22 @@ namespace rct3::park
             if (cell.max_height() - cell.min_height() <= kFlat)
                 return static_cast<std::int32_t>(std::lround(cell.min_height()));
             return static_cast<std::int32_t>(std::ceil(cell.max_height() - kPathMeets));
+        }
+
+        /// The lowest and highest heights `path` takes on its tile.
+        std::pair<float, float> span_of(const save::PathTile& path, const save::TerrainGrid& grid)
+        {
+            if (path.elevation && !is_ground_queue(path))
+            {
+                const save::PathElevation& e = *path.elevation;
+                const float rise = path_rise(e.slope);
+                const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? rise : 0);
+                return { low, low + rise };
+            }
+            if (path.elevation)
+                return { static_cast<float>(path.elevation->quantised_height), static_cast<float>(path.elevation->quantised_height) };
+            const save::TerrainCell& cell = grid.at(path.col, path.row);
+            return { cell.min_height(), cell.max_height() };
         }
 
         /// Calls `visit(corner, height)` for each corner of `piece`'s tile with the piece's height over it: the
@@ -90,10 +108,8 @@ namespace rct3::park
         return piece;
     }
 
-    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, bool queue)
+    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths)
     {
-        if (queue)
-            return LayProblem::Queue;
         const auto spot = next_spot(builder);
         if (!spot)
             return LayProblem::NoStart;
@@ -104,6 +120,18 @@ namespace rct3::park
             return LayProblem::NotOwned;
         if (piece->cut && !builder.cut_into_ground)
             return LayProblem::Underground;
+        if (same_piece_at(paths, *piece, builder))
+            return LayProblem::None;
+        const auto low = static_cast<float>(std::min(piece->start, piece->end));
+        const auto high = static_cast<float>(std::max(piece->start, piece->end));
+        for (const save::PathTile& p : paths)
+        {
+            if (p.col != piece->spot.col || p.row != piece->spot.row)
+                continue;
+            const auto [other_low, other_high] = span_of(p, grid);
+            if (other_low < high + kPathHeadroom && low < other_high + kPathHeadroom)
+                return LayProblem::Occupied;
+        }
         return LayProblem::None;
     }
 
@@ -143,16 +171,17 @@ namespace rct3::park
         return p;
     }
 
-    std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, std::uint8_t heading, PathSlope slope)
+    std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder)
     {
-        if (piece.ground)
+        if (piece.ground && !builder.queue)
             return ground_path_at(paths, piece.spot);
-        const std::uint8_t stored = stored_slope(slope);
+        const std::uint8_t stored = piece.ground ? save::kSlopeOnGround : stored_slope(builder.slope);
         const auto found = std::ranges::find_if(paths, [&](const save::PathTile& p) {
-            if (p.col != piece.spot.col || p.row != piece.spot.row || p.kind == save::PathKind::Queue || !p.elevation)
+            if (p.col != piece.spot.col || p.row != piece.spot.row || (p.kind == save::PathKind::Queue) != builder.queue || !p.elevation)
                 return false;
             const save::PathElevation& e = *p.elevation;
-            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || p.direction == stored_direction(heading));
+            // A queue's direction is its line's business; any queue piece of the same shape is the same.
+            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || stored == save::kSlopeOnGround || builder.queue || p.direction == stored_direction(builder.heading));
         });
         if (found == paths.end())
             return std::nullopt;
@@ -162,19 +191,45 @@ namespace rct3::park
     bool lay_path(FootpathBuilder& builder, std::vector<save::PathTile>& paths, const NextPiece& piece, std::string_view style, std::uint64_t id, std::uint64_t deck)
     {
         builder.on_slope = builder.slope != PathSlope::Flat;
-        const bool there = same_piece_at(paths, piece, builder.heading, builder.slope).has_value();
+        const bool there = same_piece_at(paths, piece, builder).has_value();
+        const std::uint64_t before = builder.trail.empty() ? 0 : builder.trail.back().laid;
         builder.trail.push_back({ piece.spot, there ? 0 : id, piece.end });
         if (there)
             return false;
-        save::PathTile& p = paths.emplace_back(ground_path(piece.spot, style, id));
-        if (piece.ground)
-            return true;
-        p.kind = save::PathKind::Flying;
-        p.direction = stored_direction(builder.heading);
-        p.elevation = save::PathElevation { };
-        p.elevation->slope = stored_slope(builder.slope);
-        p.elevation->quantised_height = piece.start;
-        p.elevation->scenery_ref = deck;
+        save::PathTile p = ground_path(piece.spot, style, id);
+        if (builder.queue)
+        {
+            p.kind = save::PathKind::Queue;
+            p.queue = save::PathQueueInfo { };
+            p.queue->start_direction = stored_direction(builder.heading);
+            p.queue->end_direction = stored_direction(static_cast<std::uint8_t>((builder.heading + 2) % kQuarterTurns));
+            // The tile laid before now leads on to this one, on the same line.
+            const auto last = std::ranges::find(paths, before, &save::PathTile::id);
+            if (before != 0 && last != paths.end() && last->queue)
+            {
+                last->queue->start_direction = stored_direction(builder.heading);
+                p.queue->queue_line_ref = last->queue->queue_line_ref;
+            }
+        }
+        if (!piece.ground || builder.queue)
+        {
+            p.elevation = save::PathElevation { };
+            p.elevation->quantised_height = piece.start;
+        }
+        if (piece.ground && builder.queue)
+        {
+            p.direction = 0;
+            p.elevation->slope = save::kSlopeOnGround;
+        }
+        else if (!piece.ground)
+        {
+            if (!builder.queue)
+                p.kind = save::PathKind::Flying;
+            p.direction = stored_direction(builder.heading);
+            p.elevation->slope = stored_slope(builder.slope);
+            p.elevation->scenery_ref = deck;
+        }
+        paths.push_back(std::move(p));
         return true;
     }
 

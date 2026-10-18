@@ -628,6 +628,22 @@ int main(int argc, char** argv)
             std::map<std::uint64_t, const PlacedObject*> objects;
             for (const PlacedObject& o : world->objects)
                 objects[o.id] = &o;
+            if (std::getenv("PATHS_ALL") != nullptr)
+            {
+                for (const QueueLine& q : world->queue_lines)
+                    std::printf("line %s %llu %llu %d %llu %d\n", argv[i], static_cast<unsigned long long>(q.id), static_cast<unsigned long long>(q.head_ref), q.length, static_cast<unsigned long long>(q.ride_ref), q.station_index);
+                if (const auto rides = load_rides(*file, index))
+                {
+                    for (const Ride& ride : rides->rides)
+                    {
+                        for (const Station& st : ride.stations)
+                        {
+                            if (st.entrance_spot)
+                                std::printf("entrance %s %d %d %d %d %llu\n", argv[i], st.entrance_spot->col, st.entrance_spot->row, st.entrance_spot->height, st.entrance_spot->direction, static_cast<unsigned long long>(st.queue_line));
+                        }
+                    }
+                }
+            }
             for (const PathTile& p : world->paths)
             {
                 if (std::getenv("PATHS_ALL") != nullptr && world->terrain.contains(p.col, p.row))
@@ -636,6 +652,16 @@ int main(int argc, char** argv)
                     const auto o = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
                     std::printf("tile %s %s %d %d %d %d %d %.2f %.2f %.2f %.2f %s %d\n", argv[i], to_string(p.kind), p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
                 }
+                if (std::getenv("PATHS_ALL") != nullptr && p.queue)
+                {
+                    const auto deck = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
+                    if (deck != objects.end())
+                        std::printf("qdeck %s|%d %d %d %d %d %s %d %d\n", argv[i], p.elevation->slope, p.direction, p.queue->start_direction, p.queue->end_direction, p.elevation->quantised_height, deck->second->symbol.c_str(), deck->second->rotation, deck->second->base_height.value_or(-999));
+                }
+                if (std::getenv("PATHS_ALL") != nullptr && p.queue)
+                    std::printf(
+                        "queue %s %llu %d %d %d %d %d %d %llu %s %s %s %d,%d,%d %d,%d,%d\n", argv[i], static_cast<unsigned long long>(p.id), p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, p.elevation ? p.elevation->slope : -1, p.queue->start_direction, p.queue->end_direction, static_cast<unsigned long long>(p.queue->queue_line_ref), p.surface_name.c_str(), p.queue->fence_symbol.c_str(), p.queue->fence_overlay.c_str(), p.surface_colours ? (*p.surface_colours)[0] : -1,
+                        p.surface_colours ? (*p.surface_colours)[1] : -1, p.surface_colours ? (*p.surface_colours)[2] : -1, p.queue->fence_colours[0], p.queue->fence_colours[1], p.queue->fence_colours[2]);
                 if (!p.elevation)
                     continue;
                 Seen& s = seen[{ to_string(p.kind), p.elevation->slope }];

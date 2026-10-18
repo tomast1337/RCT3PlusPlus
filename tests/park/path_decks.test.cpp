@@ -163,3 +163,31 @@ TEST_CASE("a gentle slope beside another takes the wide pieces")
     CHECK(choose_deck(paths[1], paths, g).piece == DeckPiece::SlopeMid);
     CHECK(choose_deck(paths[2], paths, g).piece == DeckPiece::SlopeStraightRight);
 }
+
+TEST_CASE("a raised queue's piece follows its line")
+{
+    save::PathTile q = raised(1, 1, 2, 1);
+    q.kind = save::PathKind::Queue;
+    q.queue = save::PathQueueInfo { };
+    const auto line = [&](std::uint8_t start, std::uint8_t end) {
+        q.queue->start_direction = stored_direction(start);
+        q.queue->end_direction = stored_direction(end);
+        return queue_deck(q);
+    };
+    CHECK(line(0, 2) == std::pair { QueuePiece::Straight, std::uint8_t { 1 } });
+    CHECK(line(3, 1) == std::pair { QueuePiece::Straight, std::uint8_t { 0 } });
+    CHECK(line(2, 3) == std::pair { QueuePiece::TurnLeft, std::uint8_t { 3 } });
+    CHECK(line(3, 2) == std::pair { QueuePiece::TurnRight, std::uint8_t { 0 } });
+
+    q.elevation->slope = 1; // Steep up, heading +row
+    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeUp, std::uint8_t { 3 } });
+    q.elevation->slope = 2;
+    CHECK(queue_deck(q).first == QueuePiece::SlopeDown);
+    q.elevation->slope = 5;
+    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeStraight, std::uint8_t { 1 } });
+
+    PathStyle style;
+    style.queue = true;
+    style.pieces = { "Q_Straight", "Q_TurnL", "Q_TurnR", "Q_Up", "Q_Down", "Q_Gentle", "Q_Gentle" };
+    CHECK(deck_for(style, q, std::span(&q, 1), flat_grid(3, 3)).first == "Q_Gentle");
+}

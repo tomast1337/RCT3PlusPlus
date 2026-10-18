@@ -158,13 +158,13 @@ TEST_CASE("the open page's tab folds the strip away, and the close button hides 
     f.click(Fixture::middle(f.panel->tab(FootpathPage::Controls).rect()));
     CHECK(f.panel->page() == FootpathPage::Controls);
 
-    CHECK_FALSE(f.panel->following());
+    CHECK(f.panel->following()); // The camera follows from the start
     f.click(Fixture::middle(f.panel->follow_tab().rect()));
-    CHECK(f.panel->following());
+    CHECK_FALSE(f.panel->following());
     CHECK_FALSE(f.panel->routing());
     f.click(Fixture::middle(f.panel->route_tab().rect()));
     CHECK(f.panel->routing());
-    CHECK(f.panel->following());
+    CHECK_FALSE(f.panel->following());
 
     f.click({ footpath_panel::kCloseLeft + info_panel::kCloseSize / 2, 700 - footpath_panel::kCloseBottom - info_panel::kCloseSize / 2 });
     CHECK_FALSE(f.panel->showing());

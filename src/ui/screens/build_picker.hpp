@@ -6,6 +6,10 @@
 // rows, one that shows them large or small. Dragging the bottom-right corner resizes the panel; the grid
 // fills as many columns as fit.
 //
+// A box under the title searches by name: typing keeps only the items whose names hold what was typed,
+// ignoring case and accents; a heading stays, open, while any of its items match. Escape empties the box,
+// then closes the list.
+//
 // A tile of the grid shows the item's icon; resting the pointer on it tells its name and price. Items
 // dearer than the cash the owner hands the list are shaded red, in either view.
 //
@@ -21,6 +25,7 @@
 #include "ui/string_table.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/scroll_area.hpp"
 
 #include <cstddef>
@@ -38,7 +43,8 @@ namespace rct3::ui
         /// The panel's size and the parts round the list.
         inline constexpr float kWidth = 300; ///< Our own values
         inline constexpr float kHeight = 340;
-        inline constexpr float kTitleHeight = 22; ///< The band that drags the panel, with its buttons
+        inline constexpr float kTitleHeight = 22;  ///< The band that drags the panel, with its buttons
+        inline constexpr float kSearchHeight = 22; ///< The search box's band, under the title
         inline constexpr float kSide = 6;
         inline constexpr float kBottomBar = 34;
         inline constexpr float kTitleButton = 16;
@@ -61,7 +67,7 @@ namespace rct3::ui
         inline constexpr float kTileIcon = 64;
         inline constexpr float kGrip = 14;
         inline constexpr float kMinWidth = 2 * kSide + 2 * kTile + 16;
-        inline constexpr float kMinHeight = kTitleHeight + kTile + kBottomBar;
+        inline constexpr float kMinHeight = kTitleHeight + kSearchHeight + kTile + kBottomBar;
     } // namespace build_picker
 
     /// One row as the list shows it.
@@ -88,6 +94,8 @@ namespace rct3::ui
         std::string text_button;  ///< Family of the expand button
         std::string open_heading; ///< On an open heading
         std::string closed_heading;
+        std::string search_box; ///< Behind the search box, and while it has the keyboard focus
+        std::string search_box_focused;
         ScrollBarStyle scroll_bar;
         Color text_colour = hex("#ffffff");
         Color button_text_colour = hex("#000000");
@@ -137,6 +145,10 @@ namespace rct3::ui
         {
             return *size_;
         }
+        [[nodiscard]] EditBox& search_box() const
+        {
+            return *search_;
+        }
         [[nodiscard]] Button& view_button() const
         {
             return *view_;
@@ -163,6 +175,7 @@ namespace rct3::ui
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
+        bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
@@ -182,6 +195,8 @@ namespace rct3::ui
         Button* fold_ = nullptr;
         Button* size_ = nullptr;
         Button* view_ = nullptr;
+        EditBox* search_ = nullptr;
+        std::u16string query_; ///< Folded, as the layout last filtered by
         bool large_ = true;
         bool grid_ = false;
         bool folded_ = false;
@@ -212,6 +227,8 @@ namespace rct3::ui
         {
             return !row_.children.empty();
         }
+        /// Whether the name of this row, or for a heading of any row under it, holds `query` (folded).
+        [[nodiscard]] bool matches(std::u16string_view query) const;
         bool open = false;   ///< Headings: their rows show
         bool picked = false; ///< Drawn marked
         bool large = true;
@@ -239,6 +256,7 @@ namespace rct3::ui
         const BuildPickerStyle& style_;
         const PickerRow& row_;
         BuildPickerRow* heading_ = nullptr;
+        std::vector<std::u16string> keys_; ///< Folded names: this row's, or a heading's rows'
         bool clicked_ = false;
     };
 

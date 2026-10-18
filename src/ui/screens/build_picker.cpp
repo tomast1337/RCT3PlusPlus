@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build_picker.hpp"
 
+#include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -19,6 +20,7 @@ namespace rct3::ui
         constexpr std::string_view kNothing = "NoItemsMeetFilterCriteria";
         constexpr std::string_view kShowGrid = "Rct3pp_BuildPicker_Grid";
         constexpr std::string_view kShowList = "Rct3pp_BuildPicker_List";
+        constexpr std::string_view kSearchHint = "Rct3pp_BuildPicker_Search";
         constexpr float kSizeButtonWidth = 96;
         constexpr float kSizeButtonHeight = 22;
 
@@ -40,8 +42,13 @@ namespace rct3::ui
         fold_ = &add<Button>("fold", style_.title_button, style_.fold_icon);
         fold_->placement = top_left(kFoldAt.x, kFoldAt.y, kTitleButton, kTitleButton);
 
+        search_ = &add<EditBox>("search");
+        search_->placement = { { 0, 0, 1, 0 }, { kSide, kTitleHeight, -kSide, kTitleHeight + kSearchHeight - 2 } };
+        search_->skin = style_.search_box;
+        search_->focused_skin = style_.search_box_focused;
+
         list_ = &add<ScrollArea>("list", style_.scroll_bar);
-        list_->placement = { { 0, 0, 1, 1 }, { kSide, kTitleHeight, -kSide, -kBottomBar } };
+        list_->placement = { { 0, 0, 1, 1 }, { kSide, kTitleHeight + kSearchHeight, -kSide, -kBottomBar } };
 
         view_ = &add<Button>("view", style_.text_button);
         view_->placement = bottom_left(kSide, (kBottomBar - kSizeButtonHeight) / 2, kSizeButtonWidth, kSizeButtonHeight);
@@ -119,6 +126,17 @@ namespace rct3::ui
         resize_.reset();
     }
 
+    bool BuildPicker::on_key(const KeyPress& key)
+    {
+        if (key.key != Key::Escape)
+            return false;
+        if (search_->text.empty())
+            close();
+        else
+            search_->text.clear();
+        return true;
+    }
+
     void BuildPicker::lay_out()
     {
         float y = 0;
@@ -137,6 +155,9 @@ namespace rct3::ui
                 shown = shown && h->open;
                 indent += kIndent;
             }
+            // While searching, the rows that match, and their headings as if open.
+            if (!query_.empty())
+                shown = row->matches(query_) && (row->heading() == nullptr || row->heading()->matches(query_));
             row->visible = shown;
             if (!shown)
                 continue;
@@ -169,6 +190,7 @@ namespace rct3::ui
                 unfolded_height_ = placement.offsets.y1 - placement.offsets.y0;
             list_->visible = !folded_;
             view_->visible = !folded_;
+            search_->visible = !folded_;
             label_buttons();
             const float height = folded_ ? kTitleHeight : unfolded_height_;
             placement.offsets.y1 = placement.offsets.y0 + height;
@@ -187,6 +209,11 @@ namespace rct3::ui
         }
         if (grid_ && list_->content().rect().width() != laid_width_)
             dirty_ = true;
+        if (std::u16string query = strings::search_folded(search_->text); query != query_)
+        {
+            query_ = std::move(query);
+            dirty_ = true;
+        }
         for (BuildPickerRow* row : rows_)
             row->dear = cash && row->row().cost > *cash;
         for (BuildPickerRow* row : rows_)
@@ -221,7 +248,9 @@ namespace rct3::ui
         draw_text(context.list, *small, title_, { r.x0 + title_x, r.y0, r.x1 - kSide, r.y0 + kTitleHeight }, { style_.text_colour, Align::Start, Align::Centre, false });
         if (folded_)
             return;
-        if (rows_.empty())
+        if (search_->text.empty() && !search_->has_keyboard_focus())
+            draw_text(context.list, *small, strings_.get(kSearchHint), { search_->rect().x0 + 4, search_->rect().y0, search_->rect().x1 - 4, search_->rect().y1 }, { hex("#7f7f7f"), Align::Start, Align::Centre, false });
+        if (rows_.empty() || (!query_.empty() && std::ranges::none_of(rows_, [](const BuildPickerRow* row) { return row->visible; })))
             draw_text(context.list, *small, strings_.get(kNothing), list_->rect(), { style_.text_colour, Align::Centre, Align::Centre, true });
         if (!note.empty())
         {
@@ -238,6 +267,18 @@ namespace rct3::ui
         , heading_(heading)
     {
         tooltip = row_.price.empty() ? row_.name : row_.name + u" : " + row_.price;
+        const auto add_keys = [&](this const auto& self, const PickerRow& r) -> void {
+            if (r.children.empty())
+                keys_.push_back(strings::search_folded(r.name));
+            for (const PickerRow& child : r.children)
+                self(child);
+        };
+        add_keys(row_);
+    }
+
+    bool BuildPickerRow::matches(std::u16string_view query) const
+    {
+        return std::ranges::any_of(keys_, [&](const std::u16string& key) { return key.find(query) != std::u16string::npos; });
     }
 
     void BuildPickerRow::on_release(Point, bool inside)

@@ -2601,6 +2601,7 @@ namespace rct3::scene
             device.set_wireframe(scene.wireframe);
             draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye });
             draw_track_ghost(device, scene, view_projection, scene.light);
+            draw_raised_footpath_ghost(device, scene, view_projection, scene.light);
             device.set_wireframe(false);
         });
         if (scene.bloom)

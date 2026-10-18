@@ -4,6 +4,7 @@
 //
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
 //   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
+//   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -26,9 +27,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <span>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -595,6 +598,94 @@ int main(int argc, char** argv)
         };
         print("train", "front car states", trains);
         print("car", "train states", cars);
+        return 0;
+    }
+    // `save-dump --paths FILE...`: the raised paths and queues of the saves, grouped by kind and stored slope,
+    // with the pieces that draw them and how their heights stand against each other and the ground.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--paths") == 0; }))
+    {
+        using namespace rct3::save;
+        struct Seen
+        {
+            std::size_t count = 0, underground = 0, no_base = 0;
+            std::map<std::string, std::size_t> pieces;
+            std::map<int, std::size_t> quantised_minus_4base, base_minus_ground, piece_minus_base, direction;
+        };
+        std::map<std::pair<std::string, int>, Seen> seen;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+                continue;
+            const ObjectIndex index(*file);
+            const auto world = load_world(*file, index);
+            if (!world)
+                continue;
+            std::map<std::uint64_t, const PlacedObject*> objects;
+            for (const PlacedObject& o : world->objects)
+                objects[o.id] = &o;
+            for (const PathTile& p : world->paths)
+            {
+                if (std::getenv("PATHS_ALL") != nullptr && world->terrain.contains(p.col, p.row))
+                {
+                    const auto& c = world->terrain.at(p.col, p.row).corners;
+                    const auto o = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
+                    std::printf("tile %s %s %d %d %d %d %d %.2f %.2f %.2f %.2f %s %d\n", argv[i], to_string(p.kind), p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
+                }
+                if (!p.elevation)
+                    continue;
+                Seen& s = seen[{ to_string(p.kind), p.elevation->slope }];
+                ++s.count;
+                s.underground += p.elevation->underground;
+                ++s.direction[p.direction];
+                s.no_base += !p.elevation->base_height;
+                const int quantised = p.elevation->quantised_height;
+                const float ground = world->terrain.contains(p.col, p.row) ? world->terrain.at(p.col, p.row).min_height() : 0;
+                ++s.quantised_minus_4base[quantised % 4];
+                ++s.base_minus_ground[quantised - static_cast<int>(std::floor(ground * 4))];
+                if (const auto o = objects.find(p.elevation->scenery_ref); o != objects.end())
+                {
+                    std::string symbol = o->second->symbol;
+                    // Without the style's prefix: "Concrete_Slope" and "Tarmac_Slope" are the same piece.
+                    if (const auto at = symbol.find('_'); at != std::string::npos)
+                        symbol = symbol.substr(at + 1);
+                    ++s.pieces[symbol];
+                    if (std::getenv("PATHS_RAW") != nullptr && s.count <= 4)
+                        std::printf(
+                            "raw %s slope %d dir %d tile %d,%d corners %.2f %.2f %.2f %.2f quant %d | %s base %d rot %d adjust %.2f absolute %d offset %d\n", to_string(p.kind), p.elevation->slope, p.direction, p.col, p.row, world->terrain.at(p.col, p.row).corners[0], world->terrain.at(p.col, p.row).corners[1], world->terrain.at(p.col, p.row).corners[2], world->terrain.at(p.col, p.row).corners[3], quantised, o->second->symbol.c_str(), o->second->base_height.value_or(-999), o->second->rotation,
+                            o->second->height_adjust.value_or(-9), o->second->force_absolute_height, o->second->height_offset);
+                    if (o->second->base_height)
+                        ++s.piece_minus_base[*o->second->base_height * 4 - quantised];
+                }
+            }
+        }
+        const auto top = [](const auto& counts, std::size_t n) {
+            std::vector<std::pair<std::size_t, std::string>> sorted;
+            for (const auto& [k, c] : counts)
+            {
+                std::ostringstream key;
+                key << k;
+                sorted.emplace_back(c, key.str());
+            }
+            std::ranges::sort(sorted, std::greater { });
+            std::string out;
+            for (std::size_t i = 0; i < sorted.size() && i < n; ++i)
+                out += " " + sorted[i].second + " x" + std::to_string(sorted[i].first);
+            return out;
+        };
+        for (const auto& [key, s] : seen)
+        {
+            std::printf("%s slope %d: %zu (underground %zu, no base %zu)\n", key.first.c_str(), key.second, s.count, s.underground, s.no_base);
+            std::printf("  pieces            %s\n", top(s.pieces, 8).c_str());
+            std::printf("  quantised %% 4     %s\n", top(s.quantised_minus_4base, 6).c_str());
+            std::printf("  quantised - 4*grnd%s\n", top(s.base_minus_ground, 6).c_str());
+            std::printf("  4*piece - quant   %s\n", top(s.piece_minus_base, 6).c_str());
+            std::printf("  direction         %s\n", top(s.direction, 5).c_str());
+        }
         return 0;
     }
     // --- people sweep: save-dump --people PATH... (begin) ---

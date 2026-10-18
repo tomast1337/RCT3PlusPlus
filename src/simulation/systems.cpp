@@ -799,7 +799,7 @@ namespace rct3::simulation
                     NodeId home = kNoNode;
                     float best = std::numeric_limits<float>::infinity();
                     for (NodeId n = 0; n < paths.nodes().size(); ++n)
-                        if (!paths.nodes()[n].queue && area.covers(paths.nodes()[n].tile))
+                        if (!paths.nodes()[n].queue && !paths.nodes()[n].removed && area.covers(paths.nodes()[n].tile))
                             if (const float d = glm::distance(paths.centre(n), paths.centre(from)); d < best)
                             {
                                 best = d;
@@ -1002,7 +1002,7 @@ namespace rct3::simulation
         }
         if (areas.empty())
             return 0;
-        return static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), [&](const PathNode& n) { return !n.queue && std::ranges::none_of(areas, [&](const Patrol* a) { return a->covers(n.tile); }); }));
+        return static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), [&](const PathNode& n) { return !n.queue && !n.removed && std::ranges::none_of(areas, [&](const Patrol* a) { return a->covers(n.tile); }); }));
     }
 
     std::int32_t old_litter(const SimWorld& world)
@@ -1115,7 +1115,7 @@ namespace rct3::simulation
         for (NodeId n = 0; n < paths.nodes().size(); ++n)
         {
             const PathNode& node = paths.nodes()[n];
-            if (node.queue)
+            if (node.queue || node.removed)
                 continue;
             if (node.covered)
                 covers.push_back(n);

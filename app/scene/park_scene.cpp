@@ -2290,6 +2290,7 @@ namespace rct3::scene
         if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info != nullptr)
             open_row(scene, *info, *row, assets, options);
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
+        follow_footpaths(scene, elapsed);
         if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
             ask_leave(scene, *assets.strings);
         if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))

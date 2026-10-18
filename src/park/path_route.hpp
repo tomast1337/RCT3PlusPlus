@@ -49,8 +49,8 @@ namespace rct3::park
     /// The cheapest route from where `from` would lay its next piece to `goal`, laid with `from`'s cutting and
     /// queue settings among `paths`, whose ground pieces cost `ground_cost`; nothing when there is none within
     /// the search limit. An empty route when the trail already ends on the goal. With `goal_height`, the route
-    /// ends on the path on the goal tile standing at that height.
-    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height = std::nullopt);
+    /// ends on the path on the goal tile standing at that height. With `solids`, it goes round what fills them.
+    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height = std::nullopt, const SolidTiles* solids = nullptr);
 
     /// What laying `route` costs, as the pieces' prices add up (walking over a path already there is free).
     [[nodiscard]] std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost);

@@ -63,7 +63,7 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, const SolidTiles* solids)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
             return std::nullopt;
@@ -132,7 +132,7 @@ namespace rct3::park
                     if (!piece)
                         continue;
                     const auto here = paths_at(piece->spot);
-                    if (lay_problem(b, grid, here) != LayProblem::None)
+                    if (lay_problem(b, grid, here, solids) != LayProblem::None)
                         continue;
                     // The goal is reached only on its ground or onto a path already there, the one asked for if any.
                     if (piece->spot == goal)

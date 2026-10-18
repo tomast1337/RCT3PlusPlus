@@ -3,6 +3,7 @@
 
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
+#include "park/path_clearance.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
@@ -140,7 +141,7 @@ namespace rct3::park
         return piece;
     }
 
-    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths)
+    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids)
     {
         const auto spot = next_spot(builder);
         if (!spot)
@@ -164,6 +165,8 @@ namespace rct3::park
             if (other_low < high + kPathHeadroom && low < other_high + kPathHeadroom)
                 return LayProblem::Occupied;
         }
+        if (solids != nullptr && blocked(*solids, piece->spot, low, high))
+            return LayProblem::Blocked;
         return LayProblem::None;
     }
 

@@ -84,7 +84,7 @@ namespace rct3::ui
         {
             const save::BinState& bin = *facts.bin;
             const float full = bin.capacity > 0 ? std::clamp(bin.contents / bin.capacity, 0.0f, 1.0f) : 0.0f;
-            page.lines.push_back({ std::u16string(strings.get(kAmountFull)), ascii(std::format("{}%", std::lround(full * kPercent))), false });
+            page.lines.push_back({ std::u16string(strings.get(kAmountFull)), ascii(std::format("{}%", std::lround(full * kPercent))), false, std::string(kAmountFull) });
             std::u16string emptied(strings.get(kNeverEmptied));
             if (bin.last_emptied)
             {
@@ -94,7 +94,7 @@ namespace rct3::ui
                 emptied += strings.get(kYear);
                 emptied += ascii(std::format(" {}", date.year + 1));
             }
-            page.lines.push_back({ std::u16string(strings.get(kLastEmptied)), std::move(emptied), false });
+            page.lines.push_back({ std::u16string(strings.get(kLastEmptied)), std::move(emptied), false, std::string(kLastEmptied) });
         }
         else if (tab == SceneryTab::Sign && facts.sign != nullptr)
         {

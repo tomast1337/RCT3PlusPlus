@@ -171,3 +171,13 @@ TEST_CASE("every tool but paths, the map and leaving has a menu, and no item is 
         }
     }
 }
+
+TEST_CASE("each tool holds its button and its menu's items, named by their icons")
+{
+    Fixture f(1000, 800);
+    const Widget& view = *f.desktop.root().find("tools/View");
+    CHECK(f.row->button(ParkTool::View).parent() == &view);
+    CHECK(f.row->item(ToolItem::People).parent() == &view);
+    CHECK(f.desktop.root().find("tools/View/Land_PeopleOff") == &f.row->item(ToolItem::People));
+    CHECK(f.row->item(ToolItem::DeleteOne).parent()->name() == "Delete");
+}

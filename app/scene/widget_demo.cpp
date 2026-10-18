@@ -97,7 +97,7 @@ namespace rct3::scene
                 std::array<ui::Button*, kTextButtonKeys.size()> text_buttons { };
                 for (std::size_t i = 0; i < kTextButtonKeys.size(); ++i)
                 {
-                    auto& b = body.add<ui::Button>("text" + std::to_string(i), std::string(skins::kTextButton));
+                    auto& b = body.add<ui::Button>(std::string(kTextButtonKeys[i]), std::string(skins::kTextButton));
                     b.text = strings.get(kTextButtonKeys[i]);
                     b.text_inset = skins::kLozengeInset;
                     b.placement = ui::bottom_left(static_cast<float>(i) * (kTextButtonWidth + 6), 6, kTextButtonWidth, kTextButtonHeight);
@@ -148,11 +148,11 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
                 {
                     const float y = static_cast<float>(i) * kRowHeight;
-                    auto& tick = page.add<ui::Tickbox>("option" + std::to_string(i), std::string(skins::kTickbox), std::string(skins::kTick));
+                    auto& tick = page.add<ui::Tickbox>(std::string(kOptionKeys[i]), std::string(skins::kTickbox), std::string(skins::kTick));
                     tick.placement = ui::top_left(0, y + 3, 12, 12);
                     tick.ticked = i == 0;
                     tick.tooltip = strings.get(kOptionTips[i]);
-                    auto& label = page.add<ui::Label>("label" + std::to_string(i), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
+                    auto& label = page.add<ui::Label>(std::format("{}_label", kOptionKeys[i]), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
                     label.placement = { { 0, 0, 1, 0 }, { 18, y, -30, y + kRowHeight } };
                     label.style.vertical = ui::Align::Centre;
                 }

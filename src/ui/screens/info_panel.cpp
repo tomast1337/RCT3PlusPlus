@@ -61,13 +61,15 @@ namespace rct3::ui
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
             PaintButton* paint = nullptr;
+            // Named by its icon, the key its maker gave it; a paint tab by what it is.
+            const std::string tab_name = tabs[i].icon.empty() ? std::format("paint{}", i) : tabs[i].icon;
             if (!tabs[i].paints.empty())
             {
                 PaintButtonStyle look = style_.paint;
                 look.face = style_.tab_face;
-                paint = &add<PaintButton>(std::format("tab{}", i), std::move(look), std::move(tabs[i].paints));
+                paint = &add<PaintButton>(tab_name, std::move(look), std::move(tabs[i].paints));
             }
-            Button& b = paint != nullptr ? *paint : add<Button>(std::format("tab{}", i), style_.tab_face, std::move(tabs[i].icon));
+            Button& b = paint != nullptr ? *paint : add<Button>(tab_name, style_.tab_face, std::move(tabs[i].icon));
             paints_.push_back(paint);
             paint_colours_.push_back(tabs[i].colours);
             b.tooltip = std::move(tabs[i].help);
@@ -99,7 +101,7 @@ namespace rct3::ui
         const std::vector<InfoChoice>& list = tab_choices_[tab];
         for (std::size_t i = 0; i < list.size(); ++i)
         {
-            Button& b = add<Button>(std::format("choice{}", i), std::string { }, list[i].icon);
+            Button& b = add<Button>(list[i].icon.empty() ? std::format("choice{}", i) : list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].help;
             b.enabled = list[i].enabled;
             b.icon_scale = info_panel::kChoiceIconScale;
@@ -217,8 +219,8 @@ namespace rct3::ui
                 const float width = (info_panel::kPageWidth - info_panel::kRingReach) / 2 - info_panel::kPairGap;
                 const float x = right ? info_panel::kPageWidth - info_panel::kRingReach - width : 0;
                 // The value at the column's right edge, so a long label keeps the room a short value leaves it.
-                line(std::format("label{}", i), l.label, x, width, FontRole::Small);
-                line(std::format("value{}", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
+                line(keyed_name(l.name, "label", i), l.label, x, width, FontRole::Small);
+                line(keyed_name(l.name, "value", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
                 if (right)
                     y += info_panel::kLineHeight;
                 right = !right;
@@ -231,8 +233,8 @@ namespace rct3::ui
             }
             // A line without a value is text across the whole page.
             const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
-            line(std::format("label{}", i), l.label, 0, label_width, FontRole::Small);
-            line(std::format("value{}", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+            line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
+            line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
             y += info_panel::kLineHeight;
         }
         if (right)
@@ -252,7 +254,7 @@ namespace rct3::ui
             {
                 const Color colour = style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
                 plot.series.push_back({ page.graph[i].values, colour });
-                Label& name = body_->add<Label>(std::format("series{}", i), page.graph[i].name, FontRole::Small);
+                Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, FontRole::Small);
                 name.placement = top_left(width * static_cast<float>(i), y, width, info_panel::kLineHeight);
                 name.style.colour = colour;
             }
@@ -263,7 +265,7 @@ namespace rct3::ui
             const InfoControl& c = page.controls[i];
             const bool big = c.kind == InfoControlKind::Paint || !c.icon.empty();
             const float height = big ? info_panel::kPaintSize : info_panel::kControlHeight;
-            Label& label = line(std::format("controllabel{}", i), c.label, 0, 0, FontRole::Small);
+            Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, FontRole::Small);
             label.placement = top_left(0, y, c.icon.empty() ? info_panel::kValueColumn : info_panel::kPageWidth, height);
             label.style.vertical = Align::Centre;
             const float x = info_panel::kValueColumn;
@@ -273,7 +275,7 @@ namespace rct3::ui
             {
                 case InfoControlKind::Number:
                 {
-                    Spinner& n = body_->add<Spinner>(std::format("control{}", i), style_.spinner);
+                    Spinner& n = body_->add<Spinner>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.spinner);
                     n.minimum = c.minimum;
                     n.maximum = c.maximum;
                     n.step = c.step;
@@ -284,7 +286,7 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Choice:
                 {
-                    Dropdown& d = body_->add<Dropdown>(std::format("control{}", i), style_.dropdown);
+                    Dropdown& d = body_->add<Dropdown>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.dropdown);
                     d.items = c.items;
                     d.select(c.value >= 0 ? std::optional<std::size_t>(static_cast<std::size_t>(c.value)) : std::nullopt);
                     w = &d;
@@ -292,14 +294,14 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Tick:
                 {
-                    Tickbox& t = body_->add<Tickbox>(std::format("control{}", i), style_.tick_box, style_.tick);
+                    Tickbox& t = body_->add<Tickbox>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.tick_box, style_.tick);
                     t.ticked = c.value != 0;
                     w = &t;
                     break;
                 }
                 case InfoControlKind::Button:
                 {
-                    Button& b = body_->add<Button>(std::format("control{}", i), c.icon.empty() ? style_.button : std::string { }, c.icon);
+                    Button& b = body_->add<Button>(keyed_name(c.name, c.name.empty() ? "control" : "", i), c.icon.empty() ? style_.button : std::string { }, c.icon);
                     b.text = c.text;
                     b.font = FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
@@ -308,7 +310,7 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Text:
                 {
-                    EditBox& e = body_->add<EditBox>(std::format("control{}", i), c.text);
+                    EditBox& e = body_->add<EditBox>(keyed_name(c.name, c.name.empty() ? "control" : "", i), c.text);
                     e.skin = style_.spinner.field;
                     e.focused_skin = style_.spinner.field_focused;
                     e.max_length = static_cast<std::size_t>(std::max(c.maximum, 0));
@@ -319,7 +321,7 @@ namespace rct3::ui
                 {
                     PaintButtonStyle look = style_.paint;
                     look.face = style_.tab_face;
-                    w = &body_->add<PaintButton>(std::format("control{}", i), std::move(look), c.paints);
+                    w = &body_->add<PaintButton>(keyed_name(c.name, c.name.empty() ? "control" : "", i), std::move(look), c.paints);
                     break;
                 }
             }

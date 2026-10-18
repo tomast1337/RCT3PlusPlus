@@ -4,6 +4,7 @@
 #include "ui/screens/tool_menus.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <format>
 
@@ -50,16 +51,22 @@ namespace rct3::ui
     {
         // The row itself is only a frame for its buttons: it covers the screen and lets the pointer through.
         placement = fill();
+        // Each tool holds its button and its menu's items, named by their icons, so a widget path such as
+        // "tools/View/Land_People" leads to the tool and to the item's line in its menu table.
+        static constexpr std::array<std::string_view, kParkToolCount> kToolNames = { "Delete", "Land", "Paths", "Scenery", "Shops", "Rides", "Management", "Leave", "Files", "View", "Map" };
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
-            Button& b = add<Button>(std::format("tool{}", i), std::string { }, style_.icons[i]);
+            // Covers the row and lets the pointer through, as the row does.
+            Widget& group = add<Widget>(std::string(kToolNames[i]));
+            group.placement = fill();
+            Button& b = group.add<Button>(style_.icons[i], std::string { }, style_.icons[i]);
             b.swell = style_.swell;
             b.tooltip = help(strings_, style_.icons[i]);
             buttons_[i] = &b;
             const auto tool = static_cast<ParkTool>(i);
             for (const ToolMenuItem& entry : tool_menu(tool))
             {
-                Button& item = add<Button>(std::format("item{}", static_cast<int>(entry.item)), style_.item_face, std::string(entry.icon));
+                Button& item = group.add<Button>(std::string(entry.icon), style_.item_face, std::string(entry.icon));
                 item.swell = style_.item_swell;
                 item.icon_scale = tool_row::kItemIconScale;
                 item.tooltip = help(strings_, entry);

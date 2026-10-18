@@ -24,6 +24,9 @@ namespace rct3::scene
         constexpr std::string_view kFilesName = "park_files";
         /// The folder the park's games are saved to and loaded from: the sandbox parks, as in the game.
         constexpr config::UserFolder kFilesFolder = config::UserFolder::Parks;
+        /// A new sandbox starts from the blank landscape in the game's folder; its first save is offered this name.
+        constexpr std::string_view kBlankLandscape = "BlankLandscape";
+        constexpr std::u16string_view kNewSandbox = u"New Sandbox";
         /// An add-on pack is installed when its files are; numbered as the game numbers them.
         constexpr std::array<std::string_view, 2> kPackFiles = { "ContentPacks/ContentPack0000.common.ovl", "ContentPacks/ContentPack0001.common.ovl" };
 
@@ -77,7 +80,7 @@ namespace rct3::scene
             park.saves.game_saves = front.saves.game_saves;
             ++park.file_windows_opened;
             auto& dialog = root.add<ui::FileDialog>(std::string(kFilesName), skins::file_dialog_style(), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
-            dialog.set_file_name(park.file.filename().u16string());
+            dialog.set_file_name(park.file.stem() == kBlankLandscape ? std::u16string(kNewSandbox) : park.file.filename().u16string());
         }
 
     } // namespace
@@ -95,7 +98,11 @@ namespace rct3::scene
             else if (item == ui::ToolItem::Load)
                 open_files(park, front, ui::FileDialogMode::Load);
         }
-        if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, kFilesFolder))
+        if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, kFilesFolder, [&park](const std::filesystem::path& path) {
+                // Saved again, it is offered under this name.
+                park.file = path;
+                return save_park(park);
+            }))
             park.park_to_load = std::move(picked);
         if (!park.options)
             return;

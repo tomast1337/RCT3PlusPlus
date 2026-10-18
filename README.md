@@ -66,7 +66,10 @@ read with the vendored [JSON for Modern C++](third_party/nlohmann/).
 The load window lists the parks in `parks/` (and `scenarios/`, `new_scenarios/`) and then those the original
 game saved, found in its `RCT3` folder in Documents (for a Steam install played through Proton, inside the
 game's Proton prefix), or in `$RCT3PP_GAME_SAVES`. The game's own files are only read, never changed or
-deleted. rct3++ cannot write saves yet, so the save window's Save button stays greyed.
+deleted. Saving writes rct3++'s own format, as `<name>.park` in `parks/`: the original park it
+started from, kept whole, plus what you changed (ground, paths, objects, rides, money, date, camera).
+Guests and staff start again from the original park when a save is loaded. Sandbox, New starts from the
+game's blank landscape.
 
 `rct3pp --write-settings` writes the settings file with every setting, including any given on the same
 command line; `null` leaves a setting at its default:

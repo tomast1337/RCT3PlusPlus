@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/park_file.hpp"
 
+#include "parkfile/binary.hpp"
 #include "simulation/components.hpp"
 
 #include <algorithm>
@@ -18,145 +19,7 @@ namespace rct3::parkfile
     namespace
     {
         using simulation::SimWorld;
-
-        constexpr std::array<char, 8> kMagic { 'R', '3', 'P', 'P', 'P', 'A', 'R', 'K' };
-        constexpr std::size_t kChunkHeader = 16;
-
-        // ----- writing -----
-
-        class Writer
-        {
-        public:
-            void bytes(const void* data, std::size_t size)
-            {
-                const auto* p = static_cast<const std::byte*>(data);
-                out_.insert(out_.end(), p, p + size);
-            }
-            template<typename T> void number(T value)
-            {
-                if constexpr (std::is_floating_point_v<T>)
-                    number(std::bit_cast<std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>(value));
-                else
-                {
-                    if constexpr (std::endian::native == std::endian::big)
-                        value = std::byteswap(value);
-                    bytes(&value, sizeof value);
-                }
-            }
-            void text(std::string_view s)
-            {
-                number(static_cast<std::uint32_t>(s.size()));
-                bytes(s.data(), s.size());
-            }
-            void vec3(glm::vec3 v)
-            {
-                number(v.x);
-                number(v.y);
-                number(v.z);
-            }
-            std::size_t size() const
-            {
-                return out_.size();
-            }
-            /// Overwrites the eight bytes at `at` with `value`.
-            void patch(std::size_t at, std::uint64_t value)
-            {
-                if constexpr (std::endian::native == std::endian::big)
-                    value = std::byteswap(value);
-                std::memcpy(out_.data() + at, &value, sizeof value);
-            }
-            std::vector<std::byte> take()
-            {
-                return std::move(out_);
-            }
-
-        private:
-            std::vector<std::byte> out_;
-        };
-
-        // ----- reading -----
-
-        /// Reads within a span; past its end, reads give zero and the reader is no longer ok.
-        class Reader
-        {
-        public:
-            explicit Reader(std::span<const std::byte> in)
-                : in_(in)
-            {
-            }
-
-            bool take(void* to, std::size_t size)
-            {
-                if (size > in_.size() - at_)
-                {
-                    ok_ = false;
-                    at_ = in_.size();
-                    std::memset(to, 0, size);
-                    return false;
-                }
-                std::memcpy(to, in_.data() + at_, size);
-                at_ += size;
-                return true;
-            }
-            template<typename T> T number()
-            {
-                if constexpr (std::is_floating_point_v<T>)
-                    return std::bit_cast<T>(number<std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>());
-                else
-                {
-                    T value { };
-                    take(&value, sizeof value);
-                    if constexpr (std::endian::native == std::endian::big)
-                        value = std::byteswap(value);
-                    return value;
-                }
-            }
-            std::string text()
-            {
-                const auto size = number<std::uint32_t>();
-                if (size > left())
-                {
-                    ok_ = false;
-                    at_ = in_.size();
-                    return { };
-                }
-                std::string s(size, '\0');
-                take(s.data(), size);
-                return s;
-            }
-            glm::vec3 vec3()
-            {
-                const float x = number<float>();
-                const float y = number<float>();
-                const float z = number<float>();
-                return { x, y, z };
-            }
-            std::span<const std::byte> slice(std::size_t size)
-            {
-                if (size > left())
-                {
-                    ok_ = false;
-                    at_ = in_.size();
-                    return { };
-                }
-                const auto s = in_.subspan(at_, size);
-                at_ += size;
-                return s;
-            }
-            std::size_t left() const
-            {
-                return in_.size() - at_;
-            }
-            bool ok() const
-            {
-                return ok_;
-            }
-
-        private:
-            std::span<const std::byte> in_;
-            std::size_t at_ = 0;
-            bool ok_ = true;
-        };
+        using namespace detail;
 
         // ----- components -----
 
@@ -372,21 +235,6 @@ namespace rct3::parkfile
 
         // ----- chunks -----
 
-        /// Starts a chunk; returns where its length goes, filled in by end_chunk.
-        std::size_t begin_chunk(Writer& w, std::string_view tag, std::uint32_t version)
-        {
-            w.bytes(tag.data(), 4);
-            w.number(version);
-            const std::size_t at = w.size();
-            w.number(std::uint64_t { 0 });
-            return at;
-        }
-
-        void end_chunk(Writer& w, std::size_t length_at)
-        {
-            w.patch(length_at, w.size() - length_at - 8);
-        }
-
         template<typename T> void write_component(Writer& w, const entt::registry& registry)
         {
             std::vector<std::pair<std::uint32_t, const T*>> records;
@@ -493,9 +341,7 @@ namespace rct3::parkfile
     std::vector<std::byte> write_park_file(const SimWorld& world)
     {
         Writer w;
-        w.bytes(kMagic.data(), kMagic.size());
-        w.number(kParkFileVersion);
-        w.number(static_cast<std::uint32_t>(2 + std::tuple_size_v<Components>));
+        write_header(w, static_cast<std::uint32_t>(2 + std::tuple_size_v<Components>));
 
         std::size_t at = begin_chunk(w, "WRLD", 1);
         w.number(world.tick);
@@ -518,41 +364,57 @@ namespace rct3::parkfile
 
     std::expected<SimWorld, std::string> read_park_file(std::span<const std::byte> bytes)
     {
-        Reader r(bytes);
-        std::array<char, 8> magic { };
-        r.take(magic.data(), magic.size());
-        if (!r.ok() || magic != kMagic)
-            return std::unexpected("not a park file");
-        const auto version = r.number<std::uint32_t>();
-        const auto chunks = r.number<std::uint32_t>();
-        if (!r.ok())
-            return std::unexpected("the header is cut short");
-        if (version == 0 || version > kParkFileVersion)
-            return std::unexpected(std::format("file format version {} is newer than this build reads ({})", version, kParkFileVersion));
-        if (chunks > r.left() / kChunkHeader)
-            return std::unexpected(std::format("{} chunks cannot fit in {} bytes", chunks, r.left()));
-
         SimWorld world;
         bool have_entities = false;
-        for (std::uint32_t i = 0; i < chunks; ++i)
-        {
-            std::array<char, 4> tag { };
-            r.take(tag.data(), tag.size());
-            const auto chunk_version = r.number<std::uint32_t>();
-            const auto length = r.number<std::uint64_t>();
-            const std::span<const std::byte> payload = r.slice(length <= r.left() ? static_cast<std::size_t>(length) : r.left() + 1);
-            if (!r.ok())
-                return std::unexpected(std::format("chunk {} is cut short", i));
-            Reader body(payload);
-            const std::string_view name(tag.data(), tag.size());
-            if (auto read = read_chunk(name, chunk_version, body, world, have_entities); !read)
-                return std::unexpected(read.error());
-            if (!body.ok())
-                return std::unexpected(std::format("{}: ends early", name));
-        }
-        if (r.left() != 0)
-            return std::unexpected(std::format("{} bytes after the last chunk", r.left()));
+        if (auto read = read_chunks(bytes, [&](std::string_view tag, std::uint32_t version, Reader& body) { return read_chunk(tag, version, body, world, have_entities); }); !read)
+            return std::unexpected(read.error());
         return world;
     }
+
+    namespace detail
+    {
+        void write_header(Writer& w, std::uint32_t chunks)
+        {
+            w.bytes(kMagic.data(), kMagic.size());
+            w.number(kParkFileVersion);
+            w.number(chunks);
+        }
+
+        std::expected<void, std::string> read_chunks(std::span<const std::byte> bytes, const std::function<std::expected<void, std::string>(std::string_view tag, std::uint32_t version, Reader& body)>& chunk)
+        {
+            Reader r(bytes);
+            std::array<char, 8> magic { };
+            r.take(magic.data(), magic.size());
+            if (!r.ok() || magic != kMagic)
+                return std::unexpected("not a park file");
+            const auto version = r.number<std::uint32_t>();
+            const auto chunks = r.number<std::uint32_t>();
+            if (!r.ok())
+                return std::unexpected("the header is cut short");
+            if (version == 0 || version > kParkFileVersion)
+                return std::unexpected(std::format("file format version {} is newer than this build reads ({})", version, kParkFileVersion));
+            if (chunks > r.left() / kChunkHeader)
+                return std::unexpected(std::format("{} chunks cannot fit in {} bytes", chunks, r.left()));
+            for (std::uint32_t i = 0; i < chunks; ++i)
+            {
+                std::array<char, 4> tag { };
+                r.take(tag.data(), tag.size());
+                const auto chunk_version = r.number<std::uint32_t>();
+                const auto length = r.number<std::uint64_t>();
+                const std::span<const std::byte> payload = r.slice(length <= r.left() ? static_cast<std::size_t>(length) : r.left() + 1);
+                if (!r.ok())
+                    return std::unexpected(std::format("chunk {} is cut short", i));
+                Reader body(payload);
+                const std::string_view name(tag.data(), tag.size());
+                if (auto read = chunk(name, chunk_version, body); !read)
+                    return read;
+                if (!body.ok())
+                    return std::unexpected(std::format("{}: ends early", name));
+            }
+            if (r.left() != 0)
+                return std::unexpected(std::format("{} bytes after the last chunk", r.left()));
+            return { };
+        }
+    } // namespace detail
 
 } // namespace rct3::parkfile

@@ -28,6 +28,7 @@
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
 #include "park/water_flow.hpp"
+#include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -995,9 +996,19 @@ namespace rct3::scene
                 report(stage);
         };
         begin(ParkLoadStage::ReadFile);
-        const auto bytes = profiling::section("ReadFile", [&] { return read_file(path); });
+        auto bytes = profiling::section("ReadFile", [&] { return read_file(path); });
         if (!bytes)
             return std::unexpected(bytes.error());
+        // One of ours: the original park it started from, with the player's changes put over it below.
+        std::optional<parkfile::SavedPark> saved;
+        if (parkfile::is_park_file(*bytes))
+        {
+            auto read = parkfile::read_saved_park(*bytes);
+            if (!read)
+                return std::unexpected(read.error());
+            saved = std::move(*read);
+            *bytes = std::move(saved->base);
+        }
         const auto file = profiling::section("ParseSave", [&] { return save::read_save(*bytes, { .verify_checksum = false }); });
         if (!file)
             return std::unexpected(std::string(save::to_string(file.error())));
@@ -1005,10 +1016,19 @@ namespace rct3::scene
         auto world = save::load_world(*file, index);
         if (!world)
             return std::unexpected(std::string(save::to_string(world.error())));
+        if (saved)
+        {
+            world->terrain = std::move(saved->grid);
+            world->paths = std::move(saved->paths);
+            world->objects = std::move(saved->objects);
+            world->bins = std::move(saved->bins);
+            world->signs = std::move(saved->signs);
+        }
         if (world->terrain.empty())
             return std::unexpected("the park has no ground");
 
         ParkScene scene;
+        scene.base = *bytes;
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         scene.relief_maps = scene.surface_detail >= 2;
         scene.grid = std::move(world->terrain);
@@ -1018,6 +1038,11 @@ namespace rct3::scene
         log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
         scene.day = park_day(*file, index, *world, options);
+        if (saved)
+        {
+            scene.camera = saved->camera;
+            scene.day = simulation::start_day(saved->progress.day_time, scene.day.window, scene.day.transition);
+        }
         begin(ParkLoadStage::Ground);
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(world->paths, scene.grid);
         park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water, hollows); });
@@ -1138,9 +1163,12 @@ namespace rct3::scene
         }
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
+        scene.own_objects = scene.objects.size();
         scene.bins = std::move(world->bins);
         scene.signs = std::move(world->signs);
-        if (auto rides = save::load_rides(*file, index))
+        if (saved)
+            scene.rides = std::move(saved->rides);
+        else if (auto rides = save::load_rides(*file, index))
             scene.rides = std::move(*rides);
         else
             log.warning("rides: {}", save::to_string(rides.error()));
@@ -1268,6 +1296,20 @@ namespace rct3::scene
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
             if (model)
                 scene.park_model = *model;
+            if (saved)
+            {
+                const parkfile::SavedProgress& p = saved->progress;
+                scene.park.cash = p.cash;
+                scene.park.loan = p.loan;
+                scene.park.rating = p.rating;
+                scene.park.rating_parts = p.rating_parts;
+                scene.park.time = p.time;
+                scene.park.zero_time = p.zero_time;
+                scene.park.date = p.date;
+                scene.park.weather = p.weather;
+                scene.park.forecast = p.forecast;
+                scene.park.temperature = p.temperature;
+            }
         }
         // Under everything else, as part of the park.
         scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
@@ -2773,6 +2815,31 @@ namespace rct3::scene
         ui::DrawContext context { scene.list, assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts };
         scene.desktop->draw(context);
         ui::render_draw_list(device, assets.renderer, scene.list);
+    }
+
+    std::vector<std::byte> save_park(const ParkScene& scene)
+    {
+        parkfile::SavedPark saved;
+        saved.base = scene.base;
+        saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.footpaths.paths, scene.rides);
+        if (auto summary = save::read_summary(scene.base))
+            saved.summary = std::move(*summary);
+        // shortcut: the picture stays the original park's and the day is the week's first; draw the park and
+        // count days when the calendar does.
+        saved.summary.year = static_cast<std::int32_t>(scene.park.date.year) + 1;
+        saved.summary.month = scene.park.date.month;
+        saved.summary.day = scene.park.date.week * 7 + 1;
+        saved.summary.minutes = static_cast<std::int32_t>(scene.day.time * 24 * 60);
+        saved.summary.guests = scene.park.guests;
+        saved.grid = scene.grid;
+        saved.paths = scene.footpaths.paths;
+        saved.bins = scene.bins;
+        saved.signs = scene.signs;
+        saved.rides = scene.rides;
+        const simulation::ParkState& park = scene.park;
+        saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time };
+        saved.camera = scene.camera;
+        return parkfile::write_saved_park(saved);
     }
 
     void destroy_park_scene(render::Device& device, ParkScene& scene)

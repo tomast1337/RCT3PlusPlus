@@ -14,8 +14,9 @@
 // when a rename did not happen.
 //
 // Clicking a row picks it, and puts its name in the save box; clicking it again soon after opens it. Saving
-// checks the name first, as the game does: it may not be empty or start with a dot or a space, gets ".dat"
-// when it lacks it, and replacing a file in the list asks first. Deleting and renaming ask too.
+// checks the name first, as the game does: it may not be empty or start with a dot or a space, and replacing
+// a file in the list asks first. Saving writes our own format, so the name gets ".park"; the game's ".dat"
+// files show and load but are never written. Deleting and renaming ask too.
 //
 // Files the owner marks as kept (another program's, say) show and open but cannot be deleted, renamed or
 // saved over. Saving can be switched off as a whole, when the owner has no way to write the file: the
@@ -102,7 +103,7 @@ namespace rct3::ui
         /// `kept[i]` true marks file i as one the window must not delete, rename or save over; missing
         /// entries count as false.
         void set_files(std::vector<std::u16string> files, std::vector<bool> kept = { });
-        /// Puts `name` in the save box, without ".dat". Nothing when loading.
+        /// Puts `name` in the save box, without its extension. Nothing when loading.
         void set_file_name(std::u16string_view name);
         /// Whether saving can happen; when not, the save button is greyed and nothing is saved.
         void set_can_save(bool can);
@@ -223,9 +224,9 @@ namespace rct3::ui
         std::optional<std::size_t> last_clicked_;
     };
 
-    /// The file name without ".dat", as a row shows it.
+    /// The file name without ".park" or ".dat", as a row shows it.
     [[nodiscard]] std::u16string shown_file_name(std::u16string_view file);
-    /// `name` with ".dat" when it lacks it, any case.
+    /// `name` as saving writes it: without ".dat", with ".park".
     [[nodiscard]] std::u16string with_save_extension(std::u16string_view name);
 
 } // namespace rct3::ui

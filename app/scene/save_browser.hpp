@@ -4,7 +4,8 @@
 // the saves in its folder are listed, ours and then the original game's, and then read one a frame, each
 // one's summary and picture handed to the window. Deleting and renaming happen here, on the disk, only ever
 // in our folder, and the folder is listed again after them. The game's files are marked kept, so the
-// window offers neither. There is no way to write a save yet, so saving windows have saving switched off.
+// window offers neither. Saving writes our own format through the owner's writer, into our folder only;
+// without a writer the window has saving switched off.
 #pragma once
 
 #include "config/user_data.hpp"
@@ -13,6 +14,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -31,9 +33,13 @@ namespace rct3::scene
         std::vector<render::TextureHandle> pictures;
     };
 
+    /// The bytes of the save to write to the path given, made when the player saves.
+    using SaveWriter = std::function<std::vector<std::byte>(const std::filesystem::path&)>;
+
     /// Follows `dialog` (none when no window is open): lists `folder`, ours and the game's, whenever `opened`
-    /// changes, reads the next file and carries out the window's requests. Returns the file picked to load.
-    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder);
+    /// changes, reads the next file and carries out the window's requests, saving with `write`. Returns the file
+    /// picked to load.
+    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write = nullptr);
 
     void destroy_save_browser(render::Device& device, SaveBrowser& browser);
 

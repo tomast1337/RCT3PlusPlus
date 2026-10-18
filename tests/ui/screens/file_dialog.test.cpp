@@ -184,7 +184,7 @@ TEST_CASE("renaming in a row asks first, and a failed rename puts the name back"
 TEST_CASE("saving checks the name, adds the extension and asks before replacing")
 {
     Fixture f(FileDialogMode::Save);
-    f.dialog->set_files({ u"Old.dat" });
+    f.dialog->set_files({ u"Old.park" });
     EditBox& name = *f.dialog->name_box();
 
     f.dialog->open_button().click();
@@ -207,7 +207,7 @@ TEST_CASE("saving checks the name, adds the extension and asks before replacing"
     name.text = u"New Park";
     f.dialog->open_button().click();
     f.tick();
-    CHECK(f.dialog->take_open() == u"New Park.dat");
+    CHECK(f.dialog->take_open() == u"New Park.park");
     CHECK(f.dialog->closing());
 }
 
@@ -215,8 +215,10 @@ TEST_CASE("file names show without their extension, and get it when saved")
 {
     CHECK(shown_file_name(u"Park.DaT") == u"Park");
     CHECK(shown_file_name(u"Park.sav") == u"Park.sav");
-    CHECK(with_save_extension(u"Park") == u"Park.dat");
-    CHECK(with_save_extension(u"Park.DAT") == u"Park.DAT");
+    CHECK(shown_file_name(u"Park.park") == u"Park");
+    CHECK(with_save_extension(u"Park") == u"Park.park");
+    CHECK(with_save_extension(u"Park.DAT") == u"Park.park");
+    CHECK(with_save_extension(u"Park.park") == u"Park.park");
 }
 
 TEST_CASE("kept files open but are not deleted, renamed or saved over")
@@ -240,7 +242,7 @@ TEST_CASE("kept files open but are not deleted, renamed or saved over")
     f.dialog->open_button().click();
     f.tick();
     CHECK(f.dialog->question() == nullptr);
-    CHECK(f.dialog->take_open() == u"Theirs.dat");
+    CHECK(f.dialog->take_open() == u"Theirs.park");
 }
 
 TEST_CASE("with saving switched off the save button is greyed and nothing is saved")

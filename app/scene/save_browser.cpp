@@ -3,6 +3,7 @@
 
 #include "config/game_saves.hpp"
 #include "logging/log.hpp"
+#include "parkfile/saved_park.hpp"
 #include "save/summary.hpp"
 #include "strings/unicode.hpp"
 #include "ui/ui_renderer.hpp"
@@ -21,8 +22,6 @@ namespace rct3::scene
 
         namespace fs = std::filesystem;
 
-        constexpr std::string_view kExtension = ".dat";
-
         bool is_save(const fs::directory_entry& entry)
         {
             std::error_code error;
@@ -30,7 +29,7 @@ namespace rct3::scene
                 return false;
             std::string extension = entry.path().extension().string();
             std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            return extension == kExtension;
+            return extension == ".dat" || extension == ".park";
         }
 
         void free_pictures(render::Device& device, SaveBrowser& browser)
@@ -115,7 +114,14 @@ namespace rct3::scene
             std::optional<save::SaveSummary> summary;
             if (const auto bytes = read_bytes(path))
             {
-                if (auto read = save::read_summary(*bytes))
+                if (parkfile::is_park_file(*bytes))
+                {
+                    if (auto read = parkfile::read_saved_park(*bytes))
+                        summary = std::move(read->summary);
+                    else
+                        logging::logger("ui").info("saves: {}: {}", path.filename().string(), read.error());
+                }
+                else if (auto read = save::read_summary(*bytes))
                     summary = std::move(*read);
                 else
                     logging::logger("ui").info("saves: {}: {}", path.filename().string(), save::to_string(read.error()));
@@ -134,6 +140,29 @@ namespace rct3::scene
                     logging::logger("ui").warning("saves: {}: {}", label, texture.error());
             }
             dialog.set_summary(index, summary, picture);
+        }
+
+        /// Writes beside the file and then puts it in place, so a failed write leaves the old save whole.
+        void write_save(const fs::path& path, const std::vector<std::byte>& bytes)
+        {
+            const auto log = logging::logger("ui");
+            fs::path written = path;
+            written += ".new";
+            {
+                std::ofstream out(written, std::ios::binary | std::ios::trunc);
+                out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+                if (!out)
+                {
+                    log.warning("saves: writing {} failed", path.filename().string());
+                    return;
+                }
+            }
+            std::error_code error;
+            fs::rename(written, path, error);
+            if (error)
+                log.warning("saves: writing {}: {}", path.filename().string(), error.message());
+            else
+                log.info("saves: saved {} ({} bytes)", path.filename().string(), bytes.size());
         }
 
         void carry_out(render::Device& device, SaveBrowser& browser, ui::FileDialog& dialog, const fs::path& game_folder)
@@ -167,7 +196,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write)
     {
         if (dialog == nullptr)
         {
@@ -188,15 +217,19 @@ namespace rct3::scene
                 else
                     logging::logger("ui").warning("saves: {}", made.error());
             }
-            // Nothing writes a save yet; the window must not offer to.
-            dialog->set_can_save(false);
+            dialog->set_can_save(write != nullptr && !browser.folder.empty());
             list(device, browser, *dialog, game);
         }
-        if (dialog->take_open())
+        if (const auto name = dialog->take_open())
         {
             const auto picked = dialog->selected();
             if (dialog->mode() == ui::FileDialogMode::Load && picked && *picked < browser.files.size())
                 return browser.files[*picked];
+            if (dialog->mode() == ui::FileDialogMode::Save && write && !browser.folder.empty())
+            {
+                const fs::path path = browser.folder / *name;
+                write_save(path, write(path));
+            }
             return std::nullopt;
         }
         carry_out(device, browser, *dialog, game);

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <charconv>
 #include <cstdint>
 #include <format>
@@ -132,8 +133,13 @@ namespace rct3::image
         return { };
     }
 
-    std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view prefix, const ovl::RgbaImage& image)
+    std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view named, const ovl::RgbaImage& image)
     {
+        // Prefixes carry names players type, so nothing in them may lead out of the folder or upset a file system.
+        std::string prefix { named };
+        for (char& c : prefix)
+            if (static_cast<unsigned char>(c) < 0x80 && !std::isalnum(static_cast<unsigned char>(c)) && c != ' ' && c != '-' && c != '_')
+                c = '_';
         const std::vector<std::byte> bytes = encode_png(image);
         if (bytes.empty())
             return std::unexpected("empty image");

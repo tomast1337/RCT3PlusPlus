@@ -714,22 +714,22 @@ int main(int argc, char** argv)
     std::optional<std::filesystem::path> park_to_load = park_file; ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     bool screenshot = false; ///< Asked for this frame; read from the screen as the frame ends
-    // Writes what the screen showed to the user's screenshots, and tells the player where it went.
-    const auto save_screenshot = [&](rct3::render::ScreenPixels pixels) {
+    // Writes a screenshot or photo to the user's folder for it, and tells the player where it went.
+    const auto save_picture = [&](rct3::render::ScreenPixels pixels, config::UserFolder into, std::string_view prefix, std::string_view told) {
         if (!data)
         {
-            log.warning("screenshot: no folder for the user's data known; set {}", config::env_name(config::EnvVar::DataFolder));
+            log.warning("picture: no folder for the user's data known; set {}", config::env_name(config::EnvVar::DataFolder));
             return;
         }
-        auto saved = data->make_folder(config::UserFolder::Screenshots).and_then([&](const std::filesystem::path& folder) { return rct3::image::save_numbered_png(folder, "screenshot_", { pixels.size.width, pixels.size.height, std::move(pixels.rgba) }); });
+        auto saved = data->make_folder(into).and_then([&](const std::filesystem::path& folder) { return rct3::image::save_numbered_png(folder, prefix, { pixels.size.width, pixels.size.height, std::move(pixels.rgba) }); });
         if (!saved)
         {
-            log.warning("screenshot: {}", saved.error());
+            log.warning("picture: {}", saved.error());
             return;
         }
-        log.info("screenshot: {}", saved->string());
+        log.info("picture: {}", saved->string());
         if (park)
-            rct3::simulation::post(park->park.messages, { .text_key = "Rct3pp_ScreenshotSaved", .subject_name = saved->filename().string() });
+            rct3::simulation::post(park->park.messages, { .text_key = std::string { told }, .subject_name = saved->filename().string() });
     };
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.
@@ -1121,14 +1121,23 @@ int main(int argc, char** argv)
                             rct3::scene::draw_ui_demo(*device, *ui_demo, now);
                     }
                     prof::section("DeveloperUi", [&] { device->draw_ui(); });
+                    // A photo drawn this frame takes the one read the device has; a screenshot waits a frame.
+                    const bool photo = park && park->photo_reading;
                     prof::section("Submit", [&] {
                         device->end_pass();
-                        if (std::exchange(screenshot, false) && !device->read_screen())
+                        if (!photo && std::exchange(screenshot, false) && !device->read_screen())
                             log.warning("screenshot: the device cannot read the screen");
                         device->end_frame();
                     });
                     if (auto pixels = device->take_screen())
-                        save_screenshot(std::move(*pixels));
+                    {
+                        if (photo)
+                            save_picture(std::move(*pixels), config::UserFolder::Photos, *park->photo_reading, "Rct3pp_PhotoSaved");
+                        else
+                            save_picture(std::move(*pixels), config::UserFolder::Screenshots, "screenshot_", "Rct3pp_ScreenshotSaved");
+                    }
+                    if (photo)
+                        park->photo_reading.reset();
                     if (park_to_load && front)
                     {
                         load_park(*std::exchange(park_to_load, std::nullopt));

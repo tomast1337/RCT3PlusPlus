@@ -144,10 +144,10 @@ namespace rct3::render
         /// with `readable_depth`. Only between passes of a frame. False when the device cannot, or `target` does
         /// not fit; it is then left as it was.
         virtual bool copy_screen(TextureHandle target) = 0;
-        /// Asks for what the whole screen holds so far, the interface too, whatever the view. Only between
-        /// passes of a frame. The pixels arrive as the frame ends: take them with take_screen. False when the
-        /// device cannot.
-        virtual bool read_screen() = 0;
+        /// Asks for what the whole screen holds so far, the interface too, whatever the view; or, given `from`,
+        /// what that target holds. Only between passes of a frame. The pixels arrive as the frame ends: take
+        /// them with take_screen. False when the device cannot, or `from` is not a target.
+        virtual bool read_screen(TextureHandle from = { }) = 0;
         virtual void end_frame() = 0;
         /// The pixels read_screen asked for, once their frame ended; then none until asked again.
         [[nodiscard]] virtual std::optional<ScreenPixels> take_screen() = 0;

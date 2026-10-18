@@ -90,6 +90,7 @@ namespace rct3::park
         std::string support_group;                    ///< The set of supports it stands on, or the set a support belongs to
         std::int32_t lowest_level = 0;                ///< Lowest level its footprint takes, from its base height
         bool water_only = false;                      ///< A ride that stands only on water
+        bool photo_spot = false;                      ///< A path item guests stop at to have their photo taken
         bool ground_height = true;                    ///< On the ground, it stands at the ground's height there
         bool fits_ground = false;                     ///< A plant on the ground, its shape bends to follow it
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),

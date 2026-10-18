@@ -56,7 +56,7 @@ namespace rct3::render::vulkan
         void draw(const DrawCommand& command) override;
         void end_pass() override;
         bool copy_screen(TextureHandle target) override;
-        bool read_screen() override;
+        bool read_screen(TextureHandle from) override;
         [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
         void set_wireframe(bool on) override
         {

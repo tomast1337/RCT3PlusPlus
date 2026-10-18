@@ -1080,6 +1080,8 @@ namespace
                     name.c_str(), it.version, it.compact ? " compact" : "", it.type, it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
                 for (const auto& sq : it.squares)
                     std::printf("    square flags %03x levels %d..%d\n", sq.flags, sq.min_height, sq.max_height);
+                for (const auto& p : it.parameters)
+                    std::printf("    param %.*s = %.*s\n", static_cast<int>(p.name.size()), p.name.data(), static_cast<int>(p.value.size()), p.value.data());
             }
         }
     }

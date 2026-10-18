@@ -1263,7 +1263,7 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                tools.set_available(entry.item, entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -2261,6 +2261,8 @@ namespace rct3::scene
                     scene.show_people = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Scenery)
                     scene.show_scenery = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::SeeThroughGround)
+                    scene.see_through_ground = !tools->switched_on(*item); // Switched on, the ground shows whole
                 else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
                 else if (const auto topic = ui::management_topic(*item))
@@ -2647,7 +2649,7 @@ namespace rct3::scene
         });
         profiling::section("World", [&] {
             device.set_wireframe(scene.wireframe);
-            draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .ghosts = true, .faded_ground = scene.footpaths.under_ground, .eye = eye });
+            draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .ghosts = true, .faded_ground = ground_faded(scene), .eye = eye });
             device.set_wireframe(false);
         });
         if (scene.bloom)

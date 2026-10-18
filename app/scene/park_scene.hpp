@@ -326,6 +326,7 @@ namespace rct3::scene
         std::optional<ui::SceneryTab> prop_tab;            ///< Its open tab; none while only its name shows
         bool show_people = true;                           ///< Switched in the view menu
         bool show_scenery = true;                          ///< Objects and rides, switched in the view menu
+        bool see_through_ground = false;                   ///< Likewise the ground drawn faded
         park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                 ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                     ///< Across the view's target

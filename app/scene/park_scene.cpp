@@ -1330,14 +1330,30 @@ namespace rct3::scene
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
         scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
-        if (auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); }))
+        auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); });
+        // Saves made before people were kept start them again from the original park.
+        const parkfile::SavedPeople* kept = saved && saved->people ? &*saved->people : nullptr;
+        if (people && kept != nullptr)
+            *people = kept->model;
+        if (people)
         {
             scene.people = std::move(*people);
             load_people_models(device, scene, install, seed);
             profiling::section("Simulation", [&] {
                 scene.sim.seed = seed;
                 simulation::import_paths(scene.sim, *world);
-                const auto guests = simulation::import_guests(scene.sim, scene.people);
+                // The saved ones by their place in scene.people, null for those not drawn.
+                const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
+                    std::vector<entt::entity> out(count, entt::null);
+                    for (std::size_t i = 0; i < placed.size() && i < records.size(); ++i)
+                    {
+                        if (const std::int32_t look = records[i].look; look >= 0 && std::cmp_less(look, count))
+                            out[static_cast<std::size_t>(look)] = placed[i];
+                    }
+                    return out;
+                };
+                const auto placed = kept != nullptr ? parkfile::place_guests(scene.sim, *kept) : std::vector<entt::entity> { };
+                const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
                 simulation::import_stalls(scene.sim, scene.rides);
                 const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
                     const auto found = scene.models.find(park::model_key(o));
@@ -1400,8 +1416,13 @@ namespace rct3::scene
                     }
                 }
                 simulation::start_guests(scene.sim);
-                simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
-                simulation::import_parties(scene.sim, scene.people, guests);
+                if (kept != nullptr)
+                    parkfile::place_parties(scene.sim, *kept, placed);
+                else
+                {
+                    simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
+                    simulation::import_parties(scene.sim, scene.people, guests);
+                }
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
                 simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
@@ -1419,7 +1440,7 @@ namespace rct3::scene
                     const auto model = scene.models.find(park::model_key(o));
                     return model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
                 });
-                const auto staff = simulation::import_staff(scene.sim, scene.people);
+                const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);
                 for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
                     if (upkeep.broken)
                         scene.broken_rides.push_back(e);
@@ -2839,6 +2860,13 @@ namespace rct3::scene
         const simulation::ParkState& park = scene.park;
         saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time };
         saved.camera = scene.camera;
+        std::unordered_map<entt::entity, std::int32_t> looks;
+        for (const ShownPerson& p : scene.shown_people)
+        {
+            if (p.guest != entt::null)
+                looks.emplace(p.guest, static_cast<std::int32_t>(p.saved));
+        }
+        saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         return parkfile::write_saved_park(saved);
     }
 

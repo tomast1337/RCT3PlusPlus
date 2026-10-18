@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace rct3::render
 {
@@ -339,6 +340,14 @@ namespace rct3::render
         /// reads as `texture`.
         std::array<TextureHandle, kExtraTextures> extra_textures { };
         WaterView water; ///< For the Water shader
+    };
+
+    /// What the screen showed: `size.width * size.height` pixels in row order, top row first, 4 bytes each:
+    /// red, green, blue and alpha, opaque.
+    struct ScreenPixels
+    {
+        Extent size;
+        std::vector<std::uint8_t> rgba;
     };
 
     /// Counters for one finished frame.

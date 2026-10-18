@@ -3,10 +3,13 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstdint>
+#include <format>
 #include <fstream>
 #include <span>
 #include <string_view>
+#include <system_error>
 
 namespace rct3::image
 {
@@ -127,6 +130,42 @@ namespace rct3::image
         if (!file)
             return std::unexpected("cannot write " + path.string());
         return { };
+    }
+
+    std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view prefix, const ovl::RgbaImage& image)
+    {
+        const std::vector<std::byte> bytes = encode_png(image);
+        if (bytes.empty())
+            return std::unexpected("empty image");
+        std::uint32_t highest = 0;
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(folder, ec))
+        {
+            const std::string name = entry.path().filename().string();
+            if (!name.starts_with(prefix) || !name.ends_with(".png"))
+                continue;
+            const std::string_view digits = std::string_view(name).substr(prefix.size(), name.size() - prefix.size() - 4);
+            std::uint32_t n = 0;
+            const auto [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), n);
+            if (error == std::errc { } && end == digits.data() + digits.size() && !digits.empty())
+                highest = std::max(highest, n);
+        }
+        if (ec)
+            return std::unexpected("cannot read " + folder.string() + ": " + ec.message());
+        // A file made since the folder was read is passed over rather than replaced.
+        constexpr int kTries = 16;
+        for (std::uint32_t n = highest + 1; n <= highest + kTries; ++n)
+        {
+            std::filesystem::path path = folder / std::format("{}{:04}.png", prefix, n);
+            std::ofstream file(path, std::ios::binary | std::ios::noreplace);
+            if (!file.is_open())
+                continue;
+            file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+            if (!file)
+                return std::unexpected("cannot write " + path.string());
+            return path;
+        }
+        return std::unexpected("cannot make a new file in " + folder.string());
     }
 
 } // namespace rct3::image

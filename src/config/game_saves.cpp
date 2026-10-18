@@ -68,6 +68,24 @@ namespace rct3::config
                 return "Scenarios";
             case UserFolder::NewScenarios:
                 return "Start New Scenarios";
+            case UserFolder::Coasters:
+                return "Coasters";
+            case UserFolder::Structures:
+                return "Structures";
+            case UserFolder::Guests:
+                return "Peeps";
+            case UserFolder::Pools:
+                return "Pools";
+            case UserFolder::Fireworks:
+                return "Fireworks";
+            case UserFolder::FireworkEffects:
+                return "FireworkEffects";
+            case UserFolder::LaserWriting:
+                return "LaserWriting";
+            case UserFolder::LaserEffects:
+                return "LaserEffects";
+            case UserFolder::WaterJetEffects:
+                return "WaterJetEffects";
             default:
                 return std::nullopt;
         }

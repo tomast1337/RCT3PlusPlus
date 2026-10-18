@@ -187,6 +187,10 @@ namespace rct3::scene
         render::BufferHandle ground_vertices;
         render::BufferHandle ground_indices;
         render::PipelineHandle ground_pipeline;
+        /// The ground drawn see-through while building under it: its depth alone, then its colour faded over
+        /// what is behind, so only its nearest layer shows.
+        render::PipelineHandle ground_depth_pipeline;
+        render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
         bool bloom = false;     ///< The Bloom option: glow round bright parts

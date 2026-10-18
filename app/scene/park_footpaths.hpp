@@ -80,6 +80,7 @@ namespace rct3::scene
         std::optional<float> slope_press;                     ///< While dragging on the arrow: the pointer's height when pressed
         park::PathSlope slope_before = park::PathSlope::Flat; ///< And the slope then, to step from
         bool lay_next = false;                                ///< Letting go on the arrow lays the next piece
+        bool under_ground = false;                            ///< The ghost goes into a tunnel, so the ground is drawn faded
         bool took_click = false;                              ///< That press was not a click picking a start
         std::vector<park::PathSpot> brush;                    ///< While a stroke goes on: the tiles it passed over, in order
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.

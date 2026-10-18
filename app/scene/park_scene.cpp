@@ -205,6 +205,8 @@ namespace rct3::scene
         /// Paints and uploads the pictures of `batches` the scene does not have yet.
         /// The ground's grass and dirt get half the relief of walls and rock.
         constexpr float kGroundRelief = 0.35f;
+        /// How strongly the ground shows while building under it.
+        constexpr float kFadedGround = 0.35f;
 
         /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
         render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name)
@@ -1039,6 +1041,14 @@ namespace rct3::scene
         if (!ground)
             return fail(ground.error());
         scene.ground_pipeline = *ground;
+        auto ground_depth = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "ground depth" });
+        if (!ground_depth)
+            return fail(ground_depth.error());
+        scene.ground_depth_pipeline = *ground_depth;
+        auto ground_faded = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Faded, .depth_write = false, .fade = kFadedGround, .label = "faded ground" });
+        if (!ground_faded)
+            return fail(ground_faded.error());
+        scene.ground_faded_pipeline = *ground_faded;
         const std::vector<std::byte> noise = park::variation_texels();
         // Without it the ground is drawn plain.
         if (auto variation = device.create_texture({ .width = park::kVariationSize, .height = park::kVariationSize, .pixels = noise, .label = "ground variation" }))
@@ -2304,6 +2314,8 @@ namespace rct3::scene
             bool water = true;
             bool see_through = true;   ///< Blended parts, such as glass
             bool shaded_water = false; ///< With the water shader, seen from `eye`
+            bool ghosts = false;       ///< The track and raised path being built
+            bool faded_ground = false; ///< The ground's land, cliffs and tunnels drawn last, see-through
             glm::vec3 eye { 0.0f };
         };
 
@@ -2353,27 +2365,34 @@ namespace rct3::scene
                     device.draw(draw);
                 }
             };
+            // Land, cliffs and tunnels, as against the paths and queues drawn on the ground.
+            const auto earth = [](const park::GroundBatch& batch) { return batch.paint == park::GroundPaint::Surface || batch.paint == park::GroundPaint::Cliff || batch.paint == park::GroundPaint::TunnelWall || batch.paint == park::GroundPaint::TunnelCeiling; };
+            const auto draw_ground = [&](render::PipelineHandle pipeline, auto&& wanted) {
+                for (const park::GroundBatch& batch : scene.batches)
+                {
+                    if (!wanted(batch))
+                        continue;
+                    const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                    render::DrawCommand draw;
+                    draw.pipeline = pipeline;
+                    draw.vertices = { scene.ground_vertices };
+                    draw.indices = { scene.ground_indices };
+                    draw.index_type = render::IndexType::U32;
+                    draw.first = batch.first;
+                    draw.count = batch.count;
+                    draw.transform = transform;
+                    draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                    draw.filter = render::Filter::Linear;
+                    draw.address = render::AddressMode::Repeat;
+                    draw.light = light;
+                    draw.extra_textures[0] = scene.variation;
+                    draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
+                    device.draw(draw);
+                }
+            };
             if (parts.terrain)
                 profiling::section("Ground", [&] {
-                    for (const park::GroundBatch& batch : scene.batches)
-                    {
-                        const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-                        render::DrawCommand draw;
-                        draw.pipeline = scene.ground_pipeline;
-                        draw.vertices = { scene.ground_vertices };
-                        draw.indices = { scene.ground_indices };
-                        draw.index_type = render::IndexType::U32;
-                        draw.first = batch.first;
-                        draw.count = batch.count;
-                        draw.transform = transform;
-                        draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-                        draw.filter = render::Filter::Linear;
-                        draw.address = render::AddressMode::Repeat;
-                        draw.light = light;
-                        draw.extra_textures[0] = scene.variation;
-                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
-                        device.draw(draw);
-                    }
+                    draw_ground(scene.ground_pipeline, [&](const park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
                     draw_footpath_ghost(device, scene, transform, light);
                     draw_patrol(device, scene, transform, light);
                 });
@@ -2410,6 +2429,17 @@ namespace rct3::scene
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
             if (scene.show_scenery && parts.scenery && parts.see_through)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
+            if (parts.ghosts)
+            {
+                draw_track_ghost(device, scene, transform, light);
+                draw_raised_footpath_ghost(device, scene, transform, light);
+            }
+            // Last, so what it hides is drawn first and shows through it.
+            if (parts.terrain && parts.faded_ground)
+                profiling::section("FadedGround", [&] {
+                    draw_ground(scene.ground_depth_pipeline, earth);
+                    draw_ground(scene.ground_faded_pipeline, earth);
+                });
         }
 
         constexpr std::uint32_t kShadowTexels = 2048;
@@ -2617,9 +2647,7 @@ namespace rct3::scene
         });
         profiling::section("World", [&] {
             device.set_wireframe(scene.wireframe);
-            draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .eye = eye });
-            draw_track_ghost(device, scene, view_projection, scene.light);
-            draw_raised_footpath_ghost(device, scene, view_projection, scene.light);
+            draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .ghosts = true, .faded_ground = scene.footpaths.under_ground, .eye = eye });
             device.set_wireframe(false);
         });
         if (scene.bloom)
@@ -2645,7 +2673,7 @@ namespace rct3::scene
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

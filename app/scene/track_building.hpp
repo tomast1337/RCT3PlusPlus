@@ -97,6 +97,10 @@ namespace rct3::scene
     /// Paints and uploads the pictures of `ghost` the scene does not have yet.
     void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost);
 
+    /// Ghosts' tints: bluish where the piece can be built, red where it cannot.
+    inline constexpr glm::vec4 kGhostTint { 0.45f, 0.75f, 1.0f, 0.7f };
+    inline constexpr glm::vec4 kRefusedTint { 1.0f, 0.2f, 0.15f, 0.7f };
+
     /// Draws `mesh` see-through with `transform` and `light`.
     /// `light` as ghosts are drawn in: lit evenly from every side, brighter than daylight, so they stand out at
     /// any hour and the Bloom option glows round them.

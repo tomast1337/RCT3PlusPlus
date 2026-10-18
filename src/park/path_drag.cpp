@@ -35,7 +35,7 @@ namespace rct3::park
         return line;
     }
 
-    DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths)
+    DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids)
     {
         DragPlan plan;
         for (const PathSpot spot : area)
@@ -48,7 +48,7 @@ namespace rct3::park
             FootpathBuilder one;
             start_at(one, spot);
             const auto piece = next_piece(one, grid);
-            if (piece && piece->ground && lay_problem(one, grid, paths) == LayProblem::None)
+            if (piece && piece->ground && lay_problem(one, grid, paths, solids) == LayProblem::None)
                 plan.lay.push_back(spot);
             else
                 ++plan.refused;

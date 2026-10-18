@@ -45,6 +45,7 @@
             "OffMap": "Off the edge of the park",
             "Underground": "The path would go into the ground; turn on cutting to dig it in",
             "Occupied": "Another path is in the way",
+            "Blocked": "Something is in the way",
             "RouteHelp": "Route: point at a tile and the path finds its own way there from the arrow",
             "NoRoute": "No way there"
         },

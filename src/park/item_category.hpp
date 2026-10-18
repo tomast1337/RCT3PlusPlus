@@ -14,7 +14,8 @@ namespace rct3::park
         Tree = 0,
         Shrub = 2,
         Flowers = 3,
-        Wall = 5, ///< Building walls, arches and drapes
+        Fence = 4, ///< Fences and queue railings, along a tile's edges
+        Wall = 5,  ///< Building walls, arches and drapes
         SmallScenery = 7,
         MediumScenery = 8,
         Animatronic = 10,

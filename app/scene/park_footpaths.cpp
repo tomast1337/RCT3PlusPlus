@@ -45,6 +45,7 @@ namespace rct3::scene
         constexpr std::string_view kOffMap = "Rct3pp_Paths_OffMap";
         constexpr std::string_view kUnderground = "Rct3pp_Paths_Underground";
         constexpr std::string_view kOccupied = "Rct3pp_Paths_Occupied";
+        constexpr std::string_view kBlocked = "Rct3pp_Paths_Blocked";
         constexpr std::string_view kNoRoute = "Rct3pp_Paths_NoRoute";
         /// The railing new queues get: the one most queues in the parks seen use.
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
@@ -244,10 +245,10 @@ namespace rct3::scene
             if (!f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
                 return std::nullopt;
             if (!f.brush.empty())
-                return park::plan_drag(f.brush, scene.grid, f.paths);
+                return park::plan_drag(f.brush, scene.grid, f.paths, &f.solids);
             if (!f.hover_tile)
                 return std::nullopt;
-            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths);
+            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths, &f.solids);
             return plan.lay.empty() ? std::nullopt : std::optional(std::move(plan));
         }
 
@@ -256,13 +257,19 @@ namespace rct3::scene
             return static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]);
         }
 
-        /// The route to the tile pointed at, with routing on.
-        std::optional<std::vector<park::RouteStep>> route_for(const ParkScene& scene)
+        /// The route to the tile pointed at, with routing on, and whether it only goes through what is in the
+        /// way: then it is the route that ignores that, shown refused so the player sees what blocks it.
+        std::pair<std::optional<std::vector<park::RouteStep>>, bool> route_for(const ParkScene& scene)
         {
             const ParkFootpaths& f = scene.footpaths;
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
-                return std::nullopt;
-            return park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, static_cast<std::int32_t>(next_cost(f.styles[*f.style])), f.route_goal_height);
+                return { };
+            const auto cost = static_cast<std::int32_t>(next_cost(f.styles[*f.style]));
+            if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, &f.solids))
+                return { std::move(route), false };
+            auto through = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height);
+            const bool blocked = through.has_value();
+            return { std::move(through), blocked };
         }
 
         std::int64_t route_cost(const ParkScene& scene, const std::vector<park::RouteStep>& route)
@@ -347,7 +354,7 @@ namespace rct3::scene
             ParkFootpaths& f = scene.footpaths;
             const park::PathStyle& style = f.styles[*f.style];
             const bool affordable = !scene.park.cash || *scene.park.cash >= route_cost(scene, *f.route);
-            const glm::vec4 tint = affordable ? kGhostTint : kRefusedTint;
+            const glm::vec4 tint = affordable && !f.route_blocked ? kGhostTint : kRefusedTint;
             std::vector<save::PathTile> with = f.paths;
             park::FootpathBuilder trial = f.builder;
             std::uint64_t id = unused_id(scene);
@@ -402,7 +409,7 @@ namespace rct3::scene
             // Pointing at a path's edge shows what would go on from there instead of the trail's next piece.
             const park::FootpathBuilder& b = f.hover ? *f.hover : f.builder;
             if (f.hover)
-                allowed = park::lay_problem(b, scene.grid, f.paths) == park::LayProblem::None;
+                allowed = park::lay_problem(b, scene.grid, f.paths, &f.solids) == park::LayProblem::None;
             f.ghost = { };
             f.raised_ghost = { };
             f.arrow = { };
@@ -654,7 +661,7 @@ namespace rct3::scene
         void lay(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool refresh = true)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (park::lay_problem(f.builder, scene.grid, f.paths) != park::LayProblem::None)
+            if (park::lay_problem(f.builder, scene.grid, f.paths, &f.solids) != park::LayProblem::None)
                 return;
             const park::PathStyle& style = f.styles[*f.style];
             const park::NextPiece piece = *park::next_piece(f.builder, scene.grid);
@@ -804,6 +811,8 @@ namespace rct3::scene
                     return std::u16string(assets.strings->get(kUnderground));
                 case park::LayProblem::Occupied:
                     return std::u16string(assets.strings->get(kOccupied));
+                case park::LayProblem::Blocked:
+                    return std::u16string(assets.strings->get(kBlocked));
                 case park::LayProblem::None:
                     break;
             }
@@ -817,6 +826,11 @@ namespace rct3::scene
             const auto route = std::exchange(f.route, std::nullopt);
             if (!route || route->empty())
                 return;
+            if (f.route_blocked)
+            {
+                f.notice = std::u16string(assets.strings->get(kBlocked));
+                return;
+            }
             if (scene.park.cash && *scene.park.cash < route_cost(scene, *route))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
@@ -974,7 +988,14 @@ namespace rct3::scene
             f.dirty = true;
         }
 
-        const park::LayProblem problem = park::lay_problem(f.builder, scene.grid, f.paths);
+        // shortcut: worked out again only when objects come or go, not when one is moved or hidden; also on
+        // those once objects can move while the path panel is open.
+        if (f.solids_of != scene.objects.size())
+        {
+            f.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+            f.solids_of = scene.objects.size();
+        }
+        const park::LayProblem problem = park::lay_problem(f.builder, scene.grid, f.paths, &f.solids);
         std::array<bool, ui::kFootpathControls> usable { };
         usable.fill(true);
         const bool turn = park::can_turn(f.builder);
@@ -990,10 +1011,12 @@ namespace rct3::scene
         if (f.dirty)
         {
             f.plan = stroke_plan(scene);
-            f.route = route_for(scene);
+            std::tie(f.route, f.route_blocked) = route_for(scene);
         }
         if (const auto& plan = f.plan)
             status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), stroke_cost(f, *plan));
+        else if (f.route && f.route_blocked)
+            status = std::u16string(assets.strings->get(kBlocked));
         else if (f.route)
             status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), route_cost(scene, *f.route));
         else if (f.route_goal && f.routing && f.notice.empty())

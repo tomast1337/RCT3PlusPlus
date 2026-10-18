@@ -37,8 +37,8 @@ namespace rct3::park
     /// before it.
     [[nodiscard]] std::vector<PathSpot> brush_line(PathSpot from, PathSpot to);
 
-    /// What a stroke over `area` would do among `paths`.
-    [[nodiscard]] DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths);
+    /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
+    [[nodiscard]] DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids = nullptr);
 
     /// The side (as a heading) of a tile nearest a point on it `across` its width along columns and rows, each
     /// from 0 to 1.

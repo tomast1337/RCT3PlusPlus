@@ -96,7 +96,10 @@ namespace rct3::park
         /// whether it is inside the outline. Empty for every other item.
         std::vector<bool> fence_outline;
         std::optional<SupportFootprint> supports; ///< What it asks of the columns under it
-        std::vector<ModelLevel> levels;           ///< Finest first, never empty
+        /// Per square, row by row (X fastest): the lowest and highest level over its base it fills solid, or
+        /// nothing where nothing collides.
+        std::vector<std::optional<std::array<std::int32_t, 2>>> solid;
+        std::vector<ModelLevel> levels; ///< Finest first, never empty
         /// Of an animated model, the length in seconds of each animation its finest level lists, in the order
         /// listed; 0 for one that cannot be read. Flat rides list theirs as standing, starting, running and
         /// stopping.

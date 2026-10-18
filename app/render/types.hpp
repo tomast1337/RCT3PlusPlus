@@ -182,7 +182,8 @@ namespace rct3::render
         /// in world space. Both sides of a surface are lit as its normal says; a zero normal is lit as facing up.
         /// With a first extra texture (a tiling noise picture, park/ground_variation.hpp), its red channel,
         /// read at a few sizes over world x and z, makes the colour a little lighter or darker from place to
-        /// place.
+        /// place. A second extra texture is the texture's relief map (park/relief_maps.hpp), read as
+        /// `SceneLight::surface_detail` says.
         Lit,
         /// Lit, with TexturedCutout's holes.
         LitCutout,
@@ -288,6 +289,11 @@ namespace rct3::render
         /// eye. None when `haze_rate` is 0.
         glm::vec3 haze { 0.0f };
         float haze_rate = 0; ///< How quickly, per world unit beyond the haze's start
+        /// The Lit shaders only: 0 the textures as they are; 1 a fine grain where a texel spans several pixels;
+        /// 2 also, near the eye, the surface lit as bumped by its texture's relief map, with its hollows dark,
+        /// its bumps' short shadows and the texture shifted by the map's depth. Draws without a relief map get
+        /// only the grain.
+        int surface_detail = 0;
     };
 
     /// What the Water shader needs besides its light and pictures.

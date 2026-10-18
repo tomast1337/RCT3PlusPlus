@@ -76,6 +76,7 @@ namespace rct3::config
             { O::CompressTextures, "compress_textures", 0, 1, 1, 0 },
             { O::AggressiveDepthBias, "aggressive_depth_bias", 0, 1, 1, 0 },
             { O::TextureDetail, "texture_detail", 0, 1, kAny, 1 },
+            { O::SurfaceDetail, "surface_detail", 0, 2, 1, 0 },
             { O::Trees3D, "trees_3d", 0, 1, 1, 1 },
             { O::OffMapTrees, "off_map_trees", 0, 1, 1, 1 },
             { O::SimpleTerrain, "simple_terrain", 0, 1, 1, 0 },

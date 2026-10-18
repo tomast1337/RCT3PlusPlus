@@ -97,6 +97,8 @@ namespace rct3::scene
             // Stands on its low end: a piece going down is entered at its top.
             o.base_height = e.quantised_height - (park::slope_falls(e.slope) ? static_cast<std::int32_t>(park::path_rise(e.slope)) : 0);
             o.rotation = turns;
+            // Held at its own height: an object with no offset from the ground would be put on the ground.
+            o.force_absolute_height = true;
             return o;
         }
 
@@ -235,9 +237,9 @@ namespace rct3::scene
         {
             const ParkFootpaths& f = scene.footpaths;
             // shortcut: strokes lay paths on the ground only, no queues or raised runs; upgrade with the A-to-B route.
-            if (!f.drag_from || *f.drag_from == f.drag_to || !f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
+            if (f.brush.empty() || !f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
                 return std::nullopt;
-            return park::plan_drag(park::drag_area(*f.drag_from, f.drag_to, scene.grid), scene.grid, f.paths);
+            return park::plan_drag(f.brush, scene.grid, f.paths);
         }
 
         std::int64_t stroke_cost(const ParkFootpaths& f, const park::DragPlan& plan)
@@ -319,12 +321,16 @@ namespace rct3::scene
         void build_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool allowed)
         {
             ParkFootpaths& f = scene.footpaths;
+            // Pointing at a path's edge shows what would go on from there instead of the trail's next piece.
+            const park::FootpathBuilder& b = f.hover ? *f.hover : f.builder;
+            if (f.hover)
+                allowed = park::lay_problem(b, scene.grid, f.paths) == park::LayProblem::None;
             f.ghost = { };
             f.raised_ghost = { };
             f.arrow = { };
-            if (const auto next = park::next_piece(f.builder, scene.grid); next && !f.plan)
+            if (const auto next = park::next_piece(b, scene.grid); next && !f.plan)
             {
-                f.arrow = park::heading_arrow(*next, f.builder.heading, scene.grid);
+                f.arrow = park::heading_arrow(*next, b.heading, scene.grid);
                 for (park::GroundVertex& v : f.arrow.vertices)
                 {
                     v.colour = allowed ? glm::vec4(1.0f) : kRefusedTint;
@@ -340,13 +346,13 @@ namespace rct3::scene
                 f.ghost = ground_ghost(device, scene, assets, with, plan->lay, affordable ? kGhostTint : kRefusedTint);
                 return;
             }
-            const auto piece = park::next_piece(f.builder, scene.grid);
+            const auto piece = park::next_piece(b, scene.grid);
             if (!piece || !f.style || *f.style >= f.styles.size())
                 return;
             const glm::vec4 tint = allowed ? kGhostTint : kRefusedTint;
             const park::PathStyle& style = f.styles[*f.style];
             std::vector<save::PathTile> with = f.paths;
-            park::FootpathBuilder trial = f.builder;
+            park::FootpathBuilder trial = b;
             const std::uint64_t id = unused_id(scene);
             (void)park::lay_path(trial, with, *piece, style.name, id, piece->ground ? 0 : id + 1);
             if (with.size() == f.paths.size())
@@ -475,10 +481,14 @@ namespace rct3::scene
         {
             ParkFootpaths& f = scene.footpaths;
             const auto plan = stroke_plan(scene);
-            const park::PathSpot from = *f.drag_from;
-            f.drag_from.reset();
+            const std::vector<park::PathSpot> brush = std::exchange(f.brush, { });
             if (!plan || plan->lay.empty())
+            {
+                // A click where no path can lie picks where the trail starts instead, as raised paths may.
+                if (brush.size() == 1)
+                    park::start_at(f.builder, brush.front());
                 return;
+            }
             const std::int64_t cost = stroke_cost(f, *plan);
             if (scene.park.cash && *scene.park.cash < cost)
             {
@@ -495,8 +505,24 @@ namespace rct3::scene
             }
             if (scene.park.cash)
                 *scene.park.cash -= cost;
-            park::start_at(f.builder, f.drag_to);
-            refresh_area(scene, assets, { std::min(from.col, f.drag_to.col), std::min(from.row, f.drag_to.row) }, { std::max(from.col, f.drag_to.col), std::max(from.row, f.drag_to.row) });
+            // The trail goes on from the last tile, the way the stroke last went.
+            const park::PathSpot last = brush.back();
+            if (brush.size() > 1)
+            {
+                const park::PathSpot before = brush[brush.size() - 2];
+                f.builder.heading = last.row > before.row ? 0 : last.col > before.col ? 1 : last.row < before.row ? 2 : 3;
+            }
+            const auto there = park::ground_path_at(f.paths, last);
+            if (!there || !park::start_from_edge(f.builder, f.paths[*there], scene.grid, f.builder.heading))
+                park::start_at(f.builder, last);
+            park::PathSpot low = last;
+            park::PathSpot high = last;
+            for (const park::PathSpot spot : brush)
+            {
+                low = { std::min(low.col, spot.col), std::min(low.row, spot.row) };
+                high = { std::max(high.col, spot.col), std::max(high.row, spot.row) };
+            }
+            refresh_area(scene, assets, low, high);
             objects_changed(scene);
             rebuild_ground(device, scene, assets);
         }
@@ -698,7 +724,9 @@ namespace rct3::scene
             panel->hide();
         scene.footpaths.ghost = { };
         scene.footpaths.raised_ghost = { };
-        scene.footpaths.drag_from.reset();
+        scene.footpaths.brush.clear();
+        scene.footpaths.hover.reset();
+        scene.footpaths.hover_edge.reset();
         scene.footpaths.slope_press.reset();
         scene.footpaths.arrow = { };
         scene.footpaths.plan.reset();
@@ -782,14 +810,23 @@ namespace rct3::scene
 
     namespace
     {
-        /// The tile of the ground under `at` while the path panel shows its controls.
-        std::optional<park::PathSpot> controls_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+        /// The view's ray through `at` while the path panel shows its controls.
+        std::optional<park::Ray> controls_ray(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             const ui::FootpathPanel* panel = panel_of(scene);
             if (panel == nullptr || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
+            return park::view_ray(scene.camera, size.x / size.y, ndc);
+        }
+
+        /// The tile of the ground under `at` while the path panel shows its controls.
+        std::optional<park::PathSpot> controls_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+        {
+            const auto ray_at = controls_ray(scene, at, size);
+            if (!ray_at)
+                return std::nullopt;
+            const park::Ray& ray = *ray_at;
             const auto distance = park::ground_hit(ray, scene.grid);
             if (!distance)
                 return std::nullopt;
@@ -802,10 +839,10 @@ namespace rct3::scene
         }
     } // namespace
 
-    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool cancel)
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel)
     {
         ParkFootpaths& f = scene.footpaths;
-        // A press on the arrow picks the slope by moving up or down, and lays the piece when let go.
+        // A press on an arrow picks the slope by moving up or down, and lays the piece when let go.
         if (f.slope_press)
         {
             if (cancel)
@@ -826,34 +863,74 @@ namespace rct3::scene
             f.dirty = true;
             return;
         }
-        if (down && !f.drag_from && !cancel && f.builder.start)
+        if (cancel)
         {
-            if (const auto tile = controls_tile(scene, at, size); tile && tile == park::next_spot(f.builder))
+            if (!f.brush.empty())
             {
-                f.slope_press = at.y;
-                f.slope_before = f.builder.slope;
-                return;
-            }
-        }
-        if (cancel || (!down && f.drag_from && *f.drag_from == f.drag_to))
-        {
-            if (std::exchange(f.drag_from, std::nullopt))
+                f.brush.clear();
                 f.dirty = true;
+            }
             return;
         }
         if (!down)
         {
-            f.drop = f.drag_from.has_value();
+            if (!f.brush.empty())
+            {
+                f.drop = f.took_click = true;
+                return;
+            }
+            // The path edge pointed at, if any.
+            std::optional<std::pair<std::size_t, std::uint8_t>> edge;
+            if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
+            {
+                if (const auto under = park::path_under(*ray, f.paths, scene.grid); under && under->side)
+                    edge = std::pair { under->path, *under->side };
+            }
+            if (edge != f.hover_edge)
+            {
+                f.hover_edge = edge;
+                f.hover.reset();
+                if (edge)
+                {
+                    park::FootpathBuilder b = f.builder;
+                    if (park::start_from_edge(b, f.paths[edge->first], scene.grid, edge->second))
+                        f.hover = std::move(b);
+                }
+                f.dirty = true;
+            }
             return;
         }
         const auto tile = controls_tile(scene, at, size);
-        if (!tile)
-            return;
-        if (!f.drag_from)
-            f.drag_from = *tile;
-        if (f.drag_to != *tile)
+        if (f.brush.empty())
+        {
+            // Pressing on an arrow: at a path's edge, or over the trail's next piece.
+            const bool on_next = f.builder.start && tile && tile == park::next_spot(f.builder);
+            if (f.hover || on_next)
+            {
+                if (f.hover)
+                    f.builder = *std::exchange(f.hover, std::nullopt);
+                f.hover_edge.reset();
+                f.slope_press = at.y;
+                f.slope_before = f.builder.slope;
+                f.dirty = true;
+                return;
+            }
+            // shortcut: queues are not painted, a click picks where one starts; paint them once queue lines
+            // can be joined tile by tile in any order.
+            if (!tile || chosen_queue(f))
+                return;
+            f.brush.push_back(*tile);
             f.dirty = true;
-        f.drag_to = *tile;
+            return;
+        }
+        if (!tile || *tile == f.brush.back())
+            return;
+        for (const park::PathSpot spot : park::brush_line(f.brush.back(), *tile))
+        {
+            if (!std::ranges::contains(f.brush, spot))
+                f.brush.push_back(spot);
+        }
+        f.dirty = true;
     }
 
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size)

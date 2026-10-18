@@ -79,6 +79,7 @@ namespace rct3::park
             item.description_text = info.description_text;
             item.icon = info.icon;
             item.type = info.type_id;
+            item.addon = info.addon;
             if (placed != nullptr)
             {
                 if (item.icon.empty())
@@ -86,7 +87,8 @@ namespace rct3::park
                 if (item.name_text.empty())
                     item.name_text = placed->name_text;
                 item.price = placed->cost;
-                item.addon = placed->addon;
+                if (placed->addon != 0)
+                    item.addon = placed->addon;
                 item.placement = placed->positioning;
                 item.width = placed->x_squares;
                 item.length = placed->z_squares;

@@ -138,6 +138,16 @@ namespace rct3::scene
         glm::vec2 side { 0.0f };
     };
 
+    /// Lines over the ground in buffers for drawing (park/view_lines.hpp), made when first shown and again
+    /// when the ground changes.
+    struct ViewLines
+    {
+        render::BufferHandle vertices;
+        render::BufferHandle indices;
+        std::uint32_t count = 0;
+        bool stale = true; ///< The ground changed since they were made
+    };
+
     /// Objects' shapes in buffers for drawing, and their billboards, turned whenever the eye moves. For crossing
     /// objects, the buffers hold CrossingVertex, and `bands` each billboard corner's band and side.
     struct ShownObjects
@@ -327,6 +337,13 @@ namespace rct3::scene
         bool show_people = true;                           ///< Switched in the view menu
         bool show_scenery = true;                          ///< Objects and rides, switched in the view menu
         bool see_through_ground = false;                   ///< Likewise the ground drawn faded
+        bool show_grid = false;                            ///< Likewise the tile grid over the ground
+        bool show_contours = false;                        ///< Likewise contours over the ground
+        bool show_supports = true;                         ///< Likewise the supports under paths and track
+        bool show_path_heights = false;                    ///< Likewise a label of its height over each path
+        bool show_ride_heights = false;                    ///< Likewise over each piece of track
+        ViewLines grid_lines;                              ///< The tile grid over the ground, while the view menu shows it
+        ViewLines contour_lines;                           ///< Likewise the contours
         park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                 ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                     ///< Across the view's target

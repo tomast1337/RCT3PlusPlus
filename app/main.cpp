@@ -32,6 +32,7 @@
 #include "config/settings.hpp"
 #include "config/user_data.hpp"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "logging/log.hpp"
 #include "math/hex_colour.hpp"
 #include "platform/window.hpp"
@@ -301,65 +302,129 @@ namespace
         ImGui::EndChild();
     }
 
-    // What the interface has under the pointer: that widget, the ones holding it, and outlines over the game.
-    // Control held keeps the widget while the pointer goes over to the panel.
-    void draw_ui_inspector(const rct3::ui::Desktop& desktop, const rct3::render::ScreenView& view, const rct3::platform::Window::Pointer& p)
+    // Looking into the interface: the widget under the pointer, kept while the pointer is off the game (or
+    // Control is held), and the one a developer window points at, outlined over the game.
+    struct WidgetInspector
     {
-        namespace ui = rct3::ui;
-        static const ui::Widget* picked = nullptr;
-        const ui::Rect root = desktop.root().rect();
-        const float scale = root.width() > 0 ? static_cast<float>(view.size.width) / root.width() : 1;
+        const rct3::ui::Widget* picked = nullptr;
+        const rct3::ui::Widget* outlined = nullptr;
+        bool newly_picked = false; ///< The tree opens down to it
+        float scale = 1;           ///< Framebuffer pixels per interface unit
+    };
+    WidgetInspector g_inspector;
+
+    std::string widget_flags(const rct3::ui::Widget& w)
+    {
+        std::string flags;
+        for (const auto& [on, tag] : { std::pair { !w.visible, " hidden" }, { !w.enabled, " disabled" }, { w.takes_pointer(), " pointer" }, { w.hovered(), " hovered" }, { w.pressed(), " pressed" }, { w.focused(), " focused" }, { w.modal, " modal" }, { w.popup, " popup" } })
+        {
+            if (on)
+                flags += tag;
+        }
+        return flags;
+    }
+
+    std::string widget_label(const rct3::ui::Widget& w)
+    {
+        const rct3::ui::Rect& r = w.rect();
+        return std::format("{} \"{}\"  {:.0f},{:.0f}  {:.0f}x{:.0f}{}", rct3::ui::type_name(w), w.name(), r.x0, r.y0, r.width(), r.height(), widget_flags(w));
+    }
+
+    void pick_widget(const rct3::ui::Desktop& desktop, const rct3::render::ScreenView& view, const rct3::platform::Window::Pointer& p)
+    {
+        WidgetInspector& in = g_inspector;
+        const rct3::ui::Rect root = desktop.root().rect();
+        in.scale = root.width() > 0 ? static_cast<float>(view.size.width) / root.width() : 1;
         const float x = p.x - static_cast<float>(view.x);
         const float y = p.y - static_cast<float>(view.y);
+        const rct3::ui::Widget* before = in.picked;
         if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<float>(view.size.width) && y < static_cast<float>(view.size.height))
-            picked = desktop.deepest({ x / scale, y / scale });
-        if (!ui::in_tree(desktop.root(), picked)) // Gone since: a window closed, or another screen
-            picked = nullptr;
-        ImGui::TextDisabled("Hold Ctrl to keep the widget while moving here");
-        if (picked == nullptr)
+            in.picked = desktop.deepest({ x / in.scale, y / in.scale });
+        if (!rct3::ui::in_tree(desktop.root(), in.picked)) // Gone since: a window closed, or another screen
+            in.picked = nullptr;
+        in.newly_picked = in.picked != before;
+        in.outlined = in.picked;
+    }
+
+    void draw_ui_inspector()
+    {
+        namespace ui = rct3::ui;
+        WidgetInspector& in = g_inspector;
+        ImGui::TextDisabled("Point at the game; hold Ctrl to keep the widget while moving here");
+        if (in.picked == nullptr)
         {
             ImGui::TextUnformatted("No widget");
             return;
         }
-
-        const std::string path = ui::widget_path(*picked);
+        const std::string path = ui::widget_path(*in.picked);
         ImGui::Text("Path: %s", path.empty() ? "(the desktop)" : path.c_str());
         ImGui::SameLine();
         if (ImGui::SmallButton("Copy"))
             ImGui::SetClipboardText(path.c_str());
-        if (!picked->tooltip.empty())
-            ImGui::TextWrapped("Tooltip: %s", rct3::strings::to_utf8(picked->tooltip).c_str());
+        if (!in.picked->tooltip.empty())
+            ImGui::TextWrapped("Tooltip: %s", rct3::strings::to_utf8(in.picked->tooltip).c_str());
         ImGui::Separator();
-
-        // The desktop down to the widget; the line under the pointer is outlined instead of the widget.
+        // The desktop down to the widget; the line under the pointer is outlined instead.
         std::vector<const ui::Widget*> chain;
-        for (const ui::Widget* w = picked; w != nullptr; w = w->parent())
+        for (const ui::Widget* w = in.picked; w != nullptr; w = w->parent())
             chain.insert(chain.begin(), w);
-        const ui::Widget* outlined = picked;
         for (std::size_t depth = 0; depth < chain.size(); ++depth)
         {
-            const ui::Widget& w = *chain[depth];
-            const ui::Rect& r = w.rect();
-            std::string flags;
-            for (const auto& [on, tag] : { std::pair { !w.visible, " hidden" }, { !w.enabled, " disabled" }, { w.takes_pointer(), " pointer" }, { w.hovered(), " hovered" }, { w.pressed(), " pressed" }, { w.focused(), " focused" }, { w.modal, " modal" }, { w.popup, " popup" } })
-            {
-                if (on)
-                    flags += tag;
-            }
-            ImGui::Text("%*s%s \"%s\"  %.0f,%.0f  %.0fx%.0f %s", static_cast<int>(depth * 2), "", ui::type_name(w).c_str(), std::string(w.name()).c_str(), static_cast<double>(r.x0), static_cast<double>(r.y0), static_cast<double>(r.width()), static_cast<double>(r.height()), flags.c_str());
+            ImGui::Text("%*s%s", static_cast<int>(depth * 2), "", widget_label(*chain[depth]).c_str());
             if (ImGui::IsItemHovered())
-                outlined = &w;
+                in.outlined = chain[depth];
         }
+    }
 
+    void draw_widget_node(const rct3::ui::Widget& w)
+    {
+        WidgetInspector& in = g_inspector;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+        if (w.children().empty())
+            flags |= ImGuiTreeNodeFlags_Leaf;
+        if (&w == in.picked)
+            flags |= ImGuiTreeNodeFlags_Selected;
+        if (in.newly_picked && in.picked != nullptr && &w != in.picked && rct3::ui::in_tree(w, in.picked))
+            ImGui::SetNextItemOpen(true);
+        if (!w.visible)
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        const bool open = ImGui::TreeNodeEx(&w, flags, "%s", widget_label(w).c_str());
+        if (!w.visible)
+            ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            in.outlined = &w;
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+            in.picked = &w;
+        if (in.newly_picked && &w == in.picked)
+            ImGui::SetScrollHereY();
+        if (!open)
+            return;
+        for (const auto& c : w.children())
+            draw_widget_node(*c);
+        ImGui::TreePop();
+    }
+
+    // Every widget of the interface; a click picks one for the inspector.
+    void draw_widget_tree(const rct3::ui::Desktop& desktop)
+    {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+        draw_widget_node(desktop.root());
+    }
+
+    void draw_widget_outline(const rct3::render::ScreenView& view)
+    {
+        const WidgetInspector& in = g_inspector;
+        if (in.outlined == nullptr)
+            return;
         const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
-        const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * scale) / to_ui.x, (static_cast<float>(view.y) + cy * scale) / to_ui.y }; };
+        const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * in.scale) / to_ui.x, (static_cast<float>(view.y) + cy * in.scale) / to_ui.y }; };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
-        if (const ui::Widget* holder = outlined->parent())
+        if (const rct3::ui::Widget* holder = in.outlined->parent())
             draw.AddRect(corner(holder->rect().x0, holder->rect().y0), corner(holder->rect().x1, holder->rect().y1), IM_COL32(255, 200, 60, 160));
-        const ui::Rect& r = outlined->rect();
+        const rct3::ui::Rect& r = in.outlined->rect();
         draw.AddRectFilled(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 40));
         draw.AddRect(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 255), 0.0f, 2.0f);
-        const std::string label = ui::type_name(*outlined) + " " + std::string(outlined->name());
+        const std::string label = rct3::ui::type_name(*in.outlined) + " " + std::string(in.outlined->name());
         const ImVec2 at = corner(r.x0, r.y0);
         const ImVec2 size = ImGui::CalcTextSize(label.c_str());
         const ImVec2 chip { at.x, at.y >= size.y + 4 ? at.y - size.y - 4 : at.y };
@@ -367,28 +432,43 @@ namespace
         draw.AddText({ chip.x + 4, chip.y + 2 }, IM_COL32(140, 200, 255, 255), label.c_str());
     }
 
-    /// One developer panel: a fixed window at `pos`, `size` (framebuffer pixels) with a tab for each page.
-    void draw_panel(const char* id, ImVec2 pos, ImVec2 size, std::initializer_list<std::pair<const char*, std::function<void()>>> pages)
+    /// A developer window; docked where the layout puts it, or wherever the user drags it since.
+    template<typename F> void developer_window(const char* title, F&& draw)
     {
-        const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
-        ImGui::SetNextWindowPos({ pos.x / to_ui.x, pos.y / to_ui.y });
-        ImGui::SetNextWindowSize({ size.x / to_ui.x, size.y / to_ui.y });
-        constexpr ImGuiWindowFlags kFixed = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
-        if (ImGui::Begin(id, nullptr, kFixed) && ImGui::BeginTabBar("pages"))
-        {
-            for (const auto& [name, draw] : pages)
-            {
-                if (draw && ImGui::BeginTabItem(name))
-                {
-                    ImGui::BeginChild("page");
-                    draw();
-                    ImGui::EndChild();
-                    ImGui::EndTabItem();
-                }
-            }
-            ImGui::EndTabBar();
-        }
+        if (ImGui::Begin(title))
+            draw();
         ImGui::End();
+    }
+
+    /// The dock space over the whole screen, laid out the first time (later the user's layout, kept in
+    /// imgui.ini), and where the game draws: the empty node in the middle, in framebuffer pixels.
+    rct3::render::ScreenView dock_developer_windows()
+    {
+        const ImGuiID space = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+        ImGuiDockNode* node = ImGui::DockBuilderGetNode(space);
+        // Once a run, and only when imgui.ini kept no split of its own; windows the user floats later stay so.
+        static bool checked = false;
+        if (!std::exchange(checked, true) && node != nullptr && node->IsLeafNode())
+        {
+            // Our own proportions: the profiler on the left, the log below, the interface and the park on the right.
+            ImGuiID middle = space;
+            const ImGuiID left = ImGui::DockBuilderSplitNode(middle, ImGuiDir_Left, 0.22f, nullptr, &middle);
+            const ImGuiID right = ImGui::DockBuilderSplitNode(middle, ImGuiDir_Right, 0.3f, nullptr, &middle);
+            const ImGuiID bottom = ImGui::DockBuilderSplitNode(middle, ImGuiDir_Down, 0.3f, nullptr, &middle);
+            ImGuiID right_bottom = right;
+            const ImGuiID right_top = ImGui::DockBuilderSplitNode(right, ImGuiDir_Up, 0.45f, nullptr, &right_bottom);
+            ImGui::DockBuilderDockWindow("Profiler", left);
+            ImGui::DockBuilderDockWindow("Log", bottom);
+            ImGui::DockBuilderDockWindow("Interface", right_top);
+            ImGui::DockBuilderDockWindow("Park", right_top);
+            ImGui::DockBuilderDockWindow("Widgets", right_bottom);
+            ImGui::DockBuilderFinish(space);
+        }
+        const ImVec2 to_px = ImGui::GetIO().DisplayFramebufferScale;
+        const ImGuiDockNode* central = ImGui::DockBuilderGetCentralNode(space);
+        const ImVec2 pos = central != nullptr ? central->Pos : ImVec2 { };
+        const ImVec2 size = central != nullptr ? central->Size : ImGui::GetMainViewport()->Size;
+        return { static_cast<std::uint32_t>(std::max(0.0f, pos.x * to_px.x)), static_cast<std::uint32_t>(std::max(0.0f, pos.y * to_px.y)), { static_cast<std::uint32_t>(std::max(1.0f, size.x * to_px.x)), static_cast<std::uint32_t>(std::max(1.0f, size.y * to_px.y)) } };
     }
 
 } // namespace
@@ -874,28 +954,25 @@ int main(int argc, char** argv)
                                 k.text = window->clipboard();
                         }
                     }
-                    // The developer panels frame the game rather than cover it: the profiler on the left, the
-                    // log below, the interface and the park on the right. The game draws in what is left.
+                    // The developer windows dock around the game rather than cover it; the game draws in the
+                    // space left in the middle.
                     device->set_view(std::nullopt);
                     if (phase == Phase::Running && developer_windows)
                     {
                         const prof::Scope zone("DeveloperWindows");
-                        const render::Extent screen = device->screen_extent();
-                        const auto w = static_cast<float>(screen.width);
-                        const auto h = static_cast<float>(screen.height);
-                        // Our own proportions. shortcut: fixed sizes, make them draggable when they get in the way.
-                        const float left = std::floor(w * 0.22f);
-                        const float right = std::floor(w * 0.24f);
-                        const float bottom = std::floor(h * 0.3f);
-                        const float middle = std::max(1.0f, w - left - right);
-                        const render::ScreenView view { static_cast<std::uint32_t>(left), 0, { static_cast<std::uint32_t>(middle), static_cast<std::uint32_t>(std::max(1.0f, h - bottom)) } };
+                        const render::ScreenView view = dock_developer_windows();
                         device->set_view(view);
-                        const rct3::ui::Desktop* desktop = park ? park->desktop.get() : widgets ? &widgets->desktop : front ? &front->live->desktop : nullptr;
-                        const auto inspect = [&] { draw_ui_inspector(*desktop, view, window->pointer()); };
-                        const auto park_debug = [&] { draw_park_debug(*park); };
-                        draw_panel("##left", { 0, 0 }, { left, h }, { { "Profiler", [&] { draw_profiler(*device); } } });
-                        draw_panel("##bottom", { left, h - bottom }, { middle, bottom }, { { "Log", draw_log } });
-                        draw_panel("##right", { left + middle, 0 }, { right, h }, { { "Interface", desktop ? std::function<void()>(inspect) : nullptr }, { "Park", park ? std::function<void()>(park_debug) : nullptr } });
+                        developer_window("Profiler", [&] { draw_profiler(*device); });
+                        developer_window("Log", draw_log);
+                        if (park)
+                            developer_window("Park", [&] { draw_park_debug(*park); });
+                        if (const rct3::ui::Desktop* desktop = park ? park->desktop.get() : widgets ? &widgets->desktop : front ? &front->live->desktop : nullptr)
+                        {
+                            pick_widget(*desktop, view, window->pointer());
+                            developer_window("Interface", draw_ui_inspector);
+                            developer_window("Widgets", [&] { draw_widget_tree(*desktop); });
+                            draw_widget_outline(view);
+                        }
                     }
                     if (phase == Phase::Running && park && front)
                     {

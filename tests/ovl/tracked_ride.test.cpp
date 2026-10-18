@@ -71,7 +71,7 @@ TEST_CASE("later tracked rides point to their attraction fields")
         const std::uint32_t block = 0x140;                     // within the record, past its fixed part
         std::vector<std::byte> bytes(block + skip, std::byte { 0 });
         put(bytes, { version == 4 ? 512u + 3 : 768u + 3, 0, 0, 0 });
-        bytes.resize(block + skip + 0x28, std::byte { 0 });
+        bytes.resize(block + skip + 0x3C, std::byte { 0 });
         const std::uint32_t at = pool.base();
         auto word = [&](std::size_t offset, std::uint32_t value) {
             std::vector<std::byte> w;
@@ -79,6 +79,7 @@ TEST_CASE("later tracked rides point to their attraction fields")
             std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));
         };
         word(0x12C, at + block);
+        word(block + skip + 0x38, version - 3); // the pack: 1 or 2
         const auto overlay = make_record_overlay(version, pool, "Coaster:trr", bytes, { { block + skip + 4, "CoasterName:txt" }, { block + skip + 0xC, "CoasterIcon:gsi" } });
         const auto items = read_tracked_rides(overlay, overlay.common());
         REQUIRE(items[0].ride.has_value());
@@ -86,6 +87,7 @@ TEST_CASE("later tracked rides point to their attraction fields")
         CHECK(i.type_id == 3);
         CHECK(i.name_text == "CoasterName");
         CHECK(i.icon == "CoasterIcon");
+        CHECK(i.addon == version - 3);
     }
 }
 

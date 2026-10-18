@@ -10,7 +10,8 @@ namespace rct3::ovl
         constexpr std::string_view kTag = "trr";
         constexpr std::size_t kHeaderSize = 0x28; // the version 1 fields shared by all attractions
         constexpr std::size_t kLaterSize = 0x130; // up to and including the pointer to the attraction fields
-        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
+        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20, .addon = 0x38 };
+        constexpr std::size_t kLaterFieldsSize = 0x3C; // later items' fields run on to the add-on pack
 
         /// Later items point at 0x12C to a block whose attraction fields start 0x3C bytes in (version 4) or
         /// 0x44 bytes in (version 5).
@@ -83,7 +84,7 @@ namespace rct3::ovl
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
                 const std::uint32_t fields = record->u32(0x12C);
-                if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(version), kHeaderSize))
+                if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open_up_to(space, refs, fields + attraction_offset(version), kLaterFieldsSize, kHeaderSize))
                     ride.info = detail::read_attraction(*block, kFields, version);
                 ride.operating = read_operating(space, refs, symbol.data, version);
                 item.ride = ride;

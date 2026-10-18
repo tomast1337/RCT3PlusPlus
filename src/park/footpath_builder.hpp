@@ -19,7 +19,13 @@
 // into the ground: every corner of its tile must be at most as high as the piece where it crosses that
 // corner's edge. With cutting on, the corners in the way are cut down to the piece instead, so a flat piece
 // cut into a hill lies on the ground it made. A tile that already has the same piece is walked over without
-// laying another. Pieces go only on land the park owns.
+// laying another; a tile with another path within kPathHeadroom of the piece's height is taken. Pieces go
+// only on land the park owns.
+//
+// Queues are laid the same way, as a line of guests that flows back along the trail: each queue tile's end
+// side faces the tile laid before it and its start side the way the trail goes on, so a queue begun beside a
+// ride's entrance and laid away from it leads guests to the entrance. A queue tile on the ground covers its
+// whole tile; a raised one is drawn by a deck object like a raised path.
 //
 // A piece on the ground costs its style's price. A raised piece costs more the higher its middle is above the
 // ground under it: kRaisedPieceCost more for each started unit of height.
@@ -96,6 +102,7 @@ namespace rct3::park
         std::uint8_t heading = 0;
         PathSlope slope = PathSlope::Flat;
         bool cut_into_ground = false;
+        bool queue = false;            ///< Lays queue tiles rather than paths
         bool on_slope = false;         ///< The last piece laid slopes, so the heading cannot change
         std::optional<PathSpot> start; ///< Where the trail began
         std::vector<TrailStep> trail;  ///< The tiles laid or walked over since, oldest first
@@ -109,8 +116,12 @@ namespace rct3::park
         OffMap,      ///< The next tile is beyond the park's ground
         NotOwned,    ///< The park does not own the next tile
         Underground, ///< The piece would go into the ground and cutting is off
-        Queue,       ///< A queue style is chosen
+        Occupied,    ///< Another path is in the way
     };
+
+    /// Clearance kept between a piece and another path on its tile, in world units: room for guests to walk
+    /// under a raised path. Our own value.
+    inline constexpr std::int32_t kPathHeadroom = 2;
 
     /// The next piece as it would be laid.
     struct NextPiece
@@ -138,8 +149,8 @@ namespace rct3::park
     /// The next piece on `grid`; none before a tile is picked or beyond the grid.
     [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
 
-    /// Why the next piece cannot be laid on `grid`, for a queue style or a path style.
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, bool queue);
+    /// Why the next piece cannot be laid on `grid` among `paths`.
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
     void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading);
@@ -153,8 +164,8 @@ namespace rct3::park
     /// A path on the ground of `style` at `spot`, as a park keeps it.
     [[nodiscard]] save::PathTile ground_path(PathSpot spot, std::string_view style, std::uint64_t id);
 
-    /// Of `paths`, one that is already `piece` laid heading `heading` with slope `slope`.
-    [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, std::uint8_t heading, PathSlope slope);
+    /// Of `paths`, one that is already `piece` as `builder` would lay it.
+    [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder);
 
     /// Lays `piece` (from next_piece; the caller checks lay_problem and cuts the ground first) as a path of
     /// `style` with id `id`, drawn by object `deck` when raised, or walks over the same piece already there,

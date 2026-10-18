@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <tuple>
 #include <unordered_map>
 
 namespace rct3::park
@@ -227,6 +228,35 @@ namespace rct3::park
         return at < style.pieces.size() ? style.pieces[at] : std::string();
     }
 
+    std::pair<QueuePiece, std::uint8_t> queue_deck(const save::PathTile& queue)
+    {
+        if (!queue.elevation || !queue.queue)
+            return { };
+        const std::uint8_t slope = queue.elevation->slope;
+        if (slope != 0)
+        {
+            const std::uint8_t turns = slope_deck(slope, stored_direction(queue.direction), false, false).turns;
+            const QueuePiece piece = path_rise(slope) <= 1 ? QueuePiece::SlopeStraight : slope_falls(slope) ? QueuePiece::SlopeDown : QueuePiece::SlopeUp;
+            return { piece, turns };
+        }
+        const std::uint8_t start = stored_direction(queue.queue->start_direction) % kSides;
+        const std::uint8_t end = stored_direction(queue.queue->end_direction) % kSides;
+        const QueuePiece piece = end == next_side(start, 1) ? QueuePiece::TurnLeft : end == next_side(start, 3) ? QueuePiece::TurnRight : QueuePiece::Straight;
+        return { piece, next_side(start, 1) };
+    }
+
+    std::pair<std::string, std::uint8_t> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    {
+        if (path.kind == save::PathKind::Queue)
+        {
+            const auto [piece, turns] = queue_deck(path);
+            const auto at = static_cast<std::size_t>(piece);
+            return { at < style.pieces.size() ? style.pieces[at] : std::string(), turns };
+        }
+        const Deck deck = choose_deck(path, paths, grid);
+        return { deck_symbol(style, deck.piece), deck.turns };
+    }
+
     Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         if (!path.elevation)
@@ -247,18 +277,27 @@ namespace rct3::park
             {
                 for (const save::PathTile* p : tiles.at(col, row))
                 {
-                    if (p->kind != save::PathKind::Flying || !p->elevation)
+                    const bool queue = p->kind == save::PathKind::Queue;
+                    if ((p->kind != save::PathKind::Flying && !queue) || !p->elevation || is_ground_queue(*p))
                         continue;
                     const auto object = by_id.find(p->elevation->scenery_ref);
-                    const auto style = std::ranges::find_if(styles, [&](const PathStyle& s) { return !s.queue && strings::equals_ignoring_case(s.name, p->surface_name); });
+                    const auto style = std::ranges::find_if(styles, [&](const PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, p->surface_name); });
                     if (object == by_id.end() || style == styles.end())
                         continue;
-                    const Deck deck = choose(*p, tiles, grid);
-                    std::string symbol = deck_symbol(*style, deck.piece);
-                    if (symbol.empty() || (symbol == object->second->symbol && object->second->rotation == deck.turns))
+                    std::uint8_t turns = 0;
+                    std::string symbol;
+                    if (queue)
+                        std::tie(symbol, turns) = deck_for(*style, *p, paths, grid);
+                    else
+                    {
+                        const Deck deck = choose(*p, tiles, grid);
+                        symbol = deck_symbol(*style, deck.piece);
+                        turns = deck.turns;
+                    }
+                    if (symbol.empty() || (symbol == object->second->symbol && object->second->rotation == turns))
                         continue;
                     object->second->symbol = std::move(symbol);
-                    object->second->rotation = deck.turns;
+                    object->second->rotation = turns;
                     ++changed;
                 }
             }

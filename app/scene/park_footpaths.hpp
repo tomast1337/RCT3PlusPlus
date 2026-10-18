@@ -5,11 +5,14 @@
 // builds the ground again so they show at once; the piece the controls would lay next is drawn faintly over its
 // tile, tinted when it cannot be laid there. A raised piece adds the object that draws it and the supports
 // under it to the park's objects, and the raised pieces around it take the pieces their new neighbour calls for.
+// Queue tiles get railings on their closed sides, and a queue tile laid beside a ride's entrance joins the
+// station's line (park/queue_lines.hpp).
 //
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
 
 #include "park/footpath_builder.hpp"
+#include "park/ground_queues.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_styles.hpp"
 #include "park/support_sets.hpp"
@@ -51,12 +54,15 @@ namespace rct3::scene
         save::WaterLayer water;            ///< To build the ground again with
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
+        std::vector<park::QueuePainting> queues_pictured;       ///< The same for the ground queues' pictures
         park::TerrainMesh ghost;                                ///< The next piece, drawn over the ground
         park::ObjectMesh raised_ghost;                          ///< The next piece when it is raised
         std::map<std::string, TrackModels, std::less<>> models; ///< Of the raised pieces and supports laid
         std::optional<park::SupportSets> support_sets;          ///< Read when the first raised piece is laid
         /// Of the raised paths laid here, the supports holding each up.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> supports;
+        /// Of the queue tiles laid here, the railings along them.
+        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
         bool dirty = false;    ///< The next piece changed, so the ghost is built again
         std::u16string notice; ///< Why the last piece was not laid, until the next control
     };

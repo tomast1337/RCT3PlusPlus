@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
+#include "park/path_decks.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -84,24 +86,23 @@ TEST_CASE("what stops the next piece")
 {
     save::TerrainGrid g = owned_grid(4, 4);
     FootpathBuilder b;
-    CHECK(lay_problem(b, g, false) == LayProblem::NoStart);
-    CHECK(lay_problem(b, g, true) == LayProblem::Queue);
+    CHECK(lay_problem(b, g, { }) == LayProblem::NoStart);
     start_at(b, { 1, 3 });
-    CHECK(lay_problem(b, g, false) == LayProblem::None);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
     // Down from the ground goes into it, unless cutting.
     b.slope = PathSlope::Down;
-    CHECK(lay_problem(b, g, false) == LayProblem::Underground);
+    CHECK(lay_problem(b, g, { }) == LayProblem::Underground);
     b.cut_into_ground = true;
-    CHECK(lay_problem(b, g, false) == LayProblem::None);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
     b.cut_into_ground = false;
     b.slope = PathSlope::Flat;
     g.cells[3 * 4 + 1].flags = 0;
-    CHECK(lay_problem(b, g, false) == LayProblem::NotOwned);
+    CHECK(lay_problem(b, g, { }) == LayProblem::NotOwned);
     g.cells[3 * 4 + 1].flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
     std::vector<save::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 1, 0));
     // Heading 0 leaves the four-row park from row 3.
-    CHECK(lay_problem(b, g, false) == LayProblem::OffMap);
+    CHECK(lay_problem(b, g, { }) == LayProblem::OffMap);
 }
 
 TEST_CASE("laying walks on, over paths already there, and removing steps back")
@@ -180,10 +181,10 @@ TEST_CASE("a hill stops a piece, or is cut down to it")
     std::vector<save::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 10, 0));
     CHECK(next_piece(b, g)->cut);
-    CHECK(lay_problem(b, g, false) == LayProblem::Underground);
+    CHECK(lay_problem(b, g, { }) == LayProblem::Underground);
     b.cut_into_ground = true;
     const NextPiece cut = *next_piece(b, g);
-    CHECK(lay_problem(b, g, false) == LayProblem::None);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
     CHECK(cut.ground);
     cut_down(g, cut, b.heading);
     CHECK(g.at(2, 1).max_height() == 0);
@@ -204,4 +205,62 @@ TEST_CASE("a raised piece costs more for each started unit of height")
     CHECK(piece_cost(1200, true, 0.25f) == 1200 + kRaisedPieceCost);
     CHECK(piece_cost(1200, true, 1.0f) == 1200 + kRaisedPieceCost);
     CHECK(piece_cost(1200, true, 2.5f) == 1200 + 3 * kRaisedPieceCost);
+}
+
+TEST_CASE("another path within headroom takes the tile; one far enough above or below does not")
+{
+    const save::TerrainGrid g = owned_grid(4, 4);
+    FootpathBuilder b;
+    start_at(b, { 1, 1 });
+    std::vector<save::PathTile> paths;
+    save::PathTile above = ground_path({ 1, 1 }, "Old", 7);
+    above.kind = save::PathKind::Flying;
+    above.elevation = save::PathElevation { };
+    above.elevation->quantised_height = 1;
+    paths.push_back(above);
+    CHECK(lay_problem(b, g, paths) == LayProblem::Occupied);
+    paths.back().elevation->quantised_height = kPathHeadroom;
+    CHECK(lay_problem(b, g, paths) == LayProblem::None);
+    // A queue on the ground is in the way of a path there.
+    paths.back().kind = save::PathKind::Queue;
+    paths.back().queue = save::PathQueueInfo { };
+    paths.back().elevation->quantised_height = 0;
+    paths.back().elevation->slope = save::kSlopeOnGround;
+    CHECK(lay_problem(b, g, paths) == LayProblem::Occupied);
+}
+
+TEST_CASE("queue tiles lead guests back along the trail")
+{
+    const save::TerrainGrid g = owned_grid(6, 6);
+    FootpathBuilder b;
+    b.queue = true;
+    b.heading = 1;
+    start_at(b, { 1, 1 });
+    std::vector<save::PathTile> paths;
+    CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 10, 0));
+    const save::PathTile& first = paths.back();
+    CHECK(first.kind == save::PathKind::Queue);
+    CHECK(first.elevation->slope == save::kSlopeOnGround);
+    CHECK(first.direction == 0);
+    CHECK(first.queue->end_direction == 0);   // Back towards lower columns
+    CHECK(first.queue->start_direction == 1); // On towards higher columns
+    paths.back().queue->queue_line_ref = 5;
+
+    // Turning: the tile before now opens towards the new one, which carries the line on.
+    (void)press(b, PathControl::TurnLeft);
+    CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 11, 0));
+    CHECK(paths.back().row == 2);
+    CHECK(paths[0].queue->start_direction == stored_direction(0));
+    CHECK(paths.back().queue->queue_line_ref == 5);
+    (void)press(b, PathControl::TurnRight);
+    CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 12, 0));
+    CHECK(paths[1].queue->start_direction == stored_direction(1));
+    CHECK(paths[1].queue->end_direction == stored_direction(2));
+
+    // Going up off the ground makes a raised queue piece drawn by its own object.
+    b.slope = PathSlope::Up;
+    CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 13, 14));
+    CHECK(paths.back().elevation->slope == 4);
+    CHECK(paths.back().elevation->scenery_ref == 14);
+    CHECK(paths.back().direction == stored_direction(1));
 }

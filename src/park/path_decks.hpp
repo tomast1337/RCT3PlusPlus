@@ -27,6 +27,12 @@
 // A sloping tile takes the slope piece of its steepness. A gentle slope that has a gentle slope beside it,
 // climbing the same way from the same height, takes the wide pieces instead: the middle one with slopes on
 // both sides, else the left or right edge, as the parks store them.
+//
+// A raised queue tile's piece follows its own line, not its neighbours. Level, it is the straight piece when its
+// start and end sides face apart, else a turn: the left turn when the end side is a quarter turn clockwise
+// from the start side, the right turn otherwise; the piece is turned one more quarter than its start side.
+// Sloping, it is the up, down or gentle slope piece, turned as a path's slope is. This matches the queues the
+// parks store.
 #pragma once
 
 #include "park/path_styles.hpp"
@@ -38,6 +44,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace rct3::park
@@ -66,6 +73,17 @@ namespace rct3::park
         SlopeMid,
     };
     inline constexpr std::size_t kDeckPieceCount = 19;
+
+    /// A queue style's pieces, in the order its description names them.
+    enum class QueuePiece : std::uint8_t
+    {
+        Straight,
+        TurnLeft,
+        TurnRight,
+        SlopeUp,
+        SlopeDown,
+        SlopeStraight, ///< Gentle, either way
+    };
 
     struct Deck
     {
@@ -96,7 +114,14 @@ namespace rct3::park
     /// The deck piece of a raised path of `style` on a tile.
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
 
-    /// Gives each raised path (not queue) on the tiles from `low` to `high` (inclusive) the piece and turn
+    /// The piece of a raised queue tile and its turns (Deck::piece is left Flat).
+    [[nodiscard]] std::pair<QueuePiece, std::uint8_t> queue_deck(const save::PathTile& queue);
+
+    /// The symbol and turns of the object drawing raised path or queue `path` of `style` among `paths`; an empty
+    /// symbol when the style lacks the piece.
+    [[nodiscard]] std::pair<std::string, std::uint8_t> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+
+    /// Gives each raised path and queue on the tiles from `low` to `high` (inclusive) the piece and turn
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come
     /// from the path's style among `styles`. Returns how many objects changed.
     std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row);

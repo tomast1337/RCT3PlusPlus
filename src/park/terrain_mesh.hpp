@@ -104,4 +104,8 @@ namespace rct3::park
     /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more);
 
+    /// The triangles of `mesh` whose middle lies over a tile of `grid` set in `keep` (row by row), in the same
+    /// batches.
+    [[nodiscard]] TerrainMesh only_tiles(const TerrainMesh& mesh, const save::TerrainGrid& grid, const std::vector<bool>& keep);
+
 } // namespace rct3::park

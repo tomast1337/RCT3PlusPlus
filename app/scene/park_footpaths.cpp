@@ -245,7 +245,77 @@ namespace rct3::scene
             return static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]);
         }
 
-        /// The next piece alone, faint over its tile, tinted when it cannot be laid.
+        std::uint64_t unused_id(const ParkScene& scene)
+        {
+            std::uint64_t last = 0;
+            for (const save::PathTile& p : scene.footpaths.paths)
+                last = std::max(last, p.id);
+            for (const save::PlacedObject& o : scene.objects)
+                last = std::max(last, o.id);
+            return last + 1;
+        }
+
+        /// The tiles of `spots` and those beside them, as a mask over the grid.
+        std::vector<bool> around(const save::TerrainGrid& grid, std::span<const park::PathSpot> spots)
+        {
+            std::vector<bool> keep(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), false);
+            for (const park::PathSpot spot : spots)
+            {
+                for (const park::PathSpot near : { spot, park::step(spot, 0), park::step(spot, 1), park::step(spot, 2), park::step(spot, 3) })
+                {
+                    if (grid.contains(near.col, near.row))
+                        keep[static_cast<std::size_t>(near.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(near.col)] = true;
+                }
+            }
+            return keep;
+        }
+
+        /// The ground's paths and queues as they would be with `with`, on the tiles of `spots` and beside them:
+        /// the new tiles and the neighbours whose edges they change, as the ground will draw them.
+        park::TerrainMesh ground_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::PathTile> with, std::span<const park::PathSpot> spots, glm::vec4 tint)
+        {
+            const park::GroundPathMap map = park::ground_path_map(with, scene.grid);
+            picture_styles(device, scene, assets, map.styles);
+            park::TerrainMesh mesh = park::ground_path_mesh(map, scene.grid);
+            park::GroundQueues queues = park::ground_queues(with, scene.grid);
+            picture_queues(device, scene, assets, queues.paintings);
+            park::add_ground(mesh, queues.mesh);
+            park::TerrainMesh ghost = park::only_tiles(mesh, scene.grid, around(scene.grid, spots));
+            for (park::GroundVertex& v : ghost.vertices)
+            {
+                v.colour = tint;
+                v.position.y += kGhostLift;
+            }
+            return ghost;
+        }
+
+        /// The supports' pieces, read when first needed.
+        const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            ParkFootpaths& f = scene.footpaths;
+            if (!f.support_sets && assets.install)
+            {
+                if (const auto found = assets.install->find(std::string(park::kSupportOverlay) + ".common.ovl"))
+                {
+                    if (auto sets = park::load_support_sets(*found))
+                        f.support_sets = std::move(*sets);
+                    else
+                        logging::logger("park").warning("supports: {}", sets.error());
+                }
+            }
+            return f.support_sets ? &*f.support_sets : nullptr;
+        }
+
+        /// The style `path` was laid in.
+        const park::PathStyle* style_named(const ParkFootpaths& f, const save::PathTile& path)
+        {
+            const bool queue = path.kind == save::PathKind::Queue;
+            const auto found = std::ranges::find_if(f.styles, [&](const park::PathStyle& s) { return s.queue == queue && s.name == path.surface_name; });
+            return found != f.styles.end() ? &*found : nullptr;
+        }
+
+        /// The next piece faint, as it will look once laid: its deck and supports when raised, the ground's
+        /// pictures when on the ground, and the pieces beside it that it changes. Tinted when it cannot be laid.
         void build_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool allowed)
         {
             ParkFootpaths& f = scene.footpaths;
@@ -267,92 +337,61 @@ namespace rct3::scene
                 std::vector<save::PathTile> with = f.paths;
                 for (const park::PathSpot spot : plan->lay)
                     with.push_back(park::ground_path(spot, f.styles[*f.style].name, 0));
-                park::GroundPathMap map = park::ground_path_map(with, scene.grid);
-                picture_styles(device, scene, assets, map.styles);
-                // Only the new tiles, numbered as the ground would number them.
-                std::vector<std::int16_t> tiles(map.tiles.size(), park::kNoPath);
-                for (const park::PathSpot spot : plan->lay)
-                {
-                    const std::size_t at = static_cast<std::size_t>(spot.row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(spot.col);
-                    tiles[at] = map.tiles[at];
-                }
-                map.tiles = std::move(tiles);
-                map.raised.clear();
-                map.queues.clear();
-                f.ghost = park::ground_path_mesh(map, scene.grid);
-                for (park::GroundVertex& v : f.ghost.vertices)
-                {
-                    v.colour = affordable ? kGhostTint : kRefusedTint;
-                    v.position.y += kGhostLift;
-                }
+                f.ghost = ground_ghost(device, scene, assets, with, plan->lay, affordable ? kGhostTint : kRefusedTint);
                 return;
             }
             const auto piece = park::next_piece(f.builder, scene.grid);
             if (!piece || !f.style || *f.style >= f.styles.size())
                 return;
             const glm::vec4 tint = allowed ? kGhostTint : kRefusedTint;
-            const bool queue = f.styles[*f.style].queue;
-            if (!piece->ground || queue)
+            const park::PathStyle& style = f.styles[*f.style];
+            std::vector<save::PathTile> with = f.paths;
+            park::FootpathBuilder trial = f.builder;
+            const std::uint64_t id = unused_id(scene);
+            (void)park::lay_path(trial, with, *piece, style.name, id, piece->ground ? 0 : id + 1);
+            if (with.size() == f.paths.size())
+                return; // The same piece is already there
+            if (style.queue)
+                with.back().surface_colours = std::array<std::int32_t, 3> { };
+            if (piece->ground)
             {
-                std::vector<save::PathTile> with = f.paths;
-                park::FootpathBuilder trial = f.builder;
-                (void)park::lay_path(trial, with, *piece, f.styles[*f.style].name, 0, 0);
-                if (with.size() == f.paths.size())
-                    return; // The same piece is already there
-                if (piece->ground)
-                {
-                    with.back().surface_colours = std::array<std::int32_t, 3> { };
-                    // Numbered as the ground will number it, so it shows the picture the ground uses.
-                    const park::GroundQueues all = park::ground_queues(with, scene.grid);
-                    picture_queues(device, scene, assets, all.paintings);
-                    park::GroundQueues one = park::ground_queues(std::span(&with.back(), 1), scene.grid);
-                    const auto index = std::ranges::find(all.paintings, one.paintings.front()) - all.paintings.begin();
-                    for (park::GroundBatch& batch : one.mesh.batches)
-                        batch.index = static_cast<std::uint8_t>(index);
-                    f.ghost = std::move(one.mesh);
-                    for (park::GroundVertex& v : f.ghost.vertices)
-                    {
-                        v.colour = tint;
-                        v.position.y += kGhostLift;
-                    }
-                    return;
-                }
-                const std::array<save::PlacedObject, 1> one { deck_object(f.styles[*f.style], with.back(), with, scene.grid, 0) };
-                if (!load_object_model(scene, f.models, assets, one[0]))
-                    return;
-                f.raised_ghost = park::object_mesh(one, scene.models, scene.grid);
-                for (park::GroundVertex& v : f.raised_ghost.vertices)
-                    v.colour *= tint;
-                ghost_textures(device, scene, f.raised_ghost);
+                f.ghost = ground_ghost(device, scene, assets, with, std::span(&piece->spot, 1), tint);
                 return;
             }
-            const auto spot = std::optional(piece->spot);
-            // Numbered as the ground would number it once laid, so its pictures are those the ground uses.
-            std::vector<save::PathTile> with = f.paths;
-            with.push_back(park::ground_path(*spot, f.styles[*f.style].name, 0));
-            park::GroundPathMap map = park::ground_path_map(with, scene.grid);
-            picture_styles(device, scene, assets, map.styles);
-            const auto index = std::ranges::find(map.styles, f.styles[*f.style].name) - map.styles.begin();
-            std::ranges::fill(map.tiles, park::kNoPath);
-            map.raised.clear();
-            map.queues.clear();
-            map.tiles[static_cast<std::size_t>(spot->row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(spot->col)] = static_cast<std::int16_t>(index);
-            f.ghost = park::ground_path_mesh(map, scene.grid);
-            for (park::GroundVertex& v : f.ghost.vertices)
-            {
-                v.colour = tint;
-                v.position.y += kGhostLift;
-            }
-        }
 
-        std::uint64_t unused_id(const ParkScene& scene)
-        {
-            std::uint64_t last = 0;
-            for (const save::PathTile& p : scene.footpaths.paths)
-                last = std::max(last, p.id);
-            for (const save::PlacedObject& o : scene.objects)
-                last = std::max(last, o.id);
-            return last + 1;
+            // The new deck, the decks beside it that take another piece, and the supports under the new one.
+            std::vector<save::PlacedObject> shown { deck_object(style, with.back(), with, scene.grid, id + 1) };
+            for (const save::PathTile& p : std::span(with).first(with.size() - 1))
+            {
+                if (!p.elevation || park::is_ground_queue(p) || std::abs(p.col - piece->spot.col) > 1 || std::abs(p.row - piece->spot.row) > 1)
+                    continue;
+                const park::PathStyle* own = style_named(f, p);
+                const auto now = std::ranges::find(scene.objects, p.elevation->scenery_ref, &save::PlacedObject::id);
+                if (own == nullptr || now == scene.objects.end() || now->hidden)
+                    continue;
+                save::PlacedObject next = deck_object(*own, p, with, scene.grid, 0);
+                if (next.symbol != now->symbol || next.rotation != now->rotation)
+                    shown.push_back(std::move(next));
+            }
+            std::erase_if(shown, [&](const save::PlacedObject& o) { return !load_object_model(scene, f.models, assets, o); });
+            if (shown.empty() || shown.front().owner_ref != id)
+                return;
+            if (const park::SupportSets* sets = support_sets(scene, assets))
+            {
+                std::vector<save::PathTile> here { with.back() };
+                std::ranges::copy_if(f.paths, std::back_inserter(here), [&](const save::PathTile& p) { return p.col == piece->spot.col && p.row == piece->spot.row && !p.elevation; });
+                std::vector<save::PlacedObject> objects = scene.objects;
+                objects.push_back(shown.front());
+                for (save::PlacedObject& o : park::path_supports(here, objects, scene.models, scene.grid, *sets))
+                {
+                    if (load_object_model(scene, f.models, assets, o))
+                        shown.push_back(std::move(o));
+                }
+            }
+            f.raised_ghost = park::object_mesh(shown, scene.models, scene.grid);
+            for (park::GroundVertex& v : f.raised_ghost.vertices)
+                v.colour *= tint;
+            ghost_textures(device, scene, f.raised_ghost);
         }
 
         /// Gives the raised paths around `spot` the pieces their neighbours call for, loading new models.
@@ -378,23 +417,14 @@ namespace rct3::scene
         void hold_up(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& path)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (!f.support_sets && assets.install)
-            {
-                if (const auto found = assets.install->find(std::string(park::kSupportOverlay) + ".common.ovl"))
-                {
-                    if (auto sets = park::load_support_sets(*found))
-                        f.support_sets = std::move(*sets);
-                    else
-                        logging::logger("park").warning("supports: {}", sets.error());
-                }
-            }
-            if (!f.support_sets)
+            const park::SupportSets* sets = support_sets(scene, assets);
+            if (sets == nullptr)
                 return;
             // shortcut: only the new piece and paths on the ground of its tile are looked at, so a raised piece
             // laid over a lower one gets its own supports through it; look at the whole tile when that shows.
             std::vector<save::PathTile> here { path };
             std::ranges::copy_if(f.paths, std::back_inserter(here), [&](const save::PathTile& p) { return p.col == path.col && p.row == path.row && !p.elevation; });
-            std::vector<save::PlacedObject> built = park::path_supports(here, scene.objects, scene.models, scene.grid, *f.support_sets);
+            std::vector<save::PlacedObject> built = park::path_supports(here, scene.objects, scene.models, scene.grid, *sets);
             std::vector<std::uint64_t>& held = f.supports[path.id];
             for (save::PlacedObject& o : built)
             {

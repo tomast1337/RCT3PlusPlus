@@ -213,6 +213,38 @@ namespace rct3::park
         return mesh;
     }
 
+    TerrainMesh only_tiles(const TerrainMesh& mesh, const save::TerrainGrid& grid, const std::vector<bool>& keep)
+    {
+        TerrainMesh out;
+        const auto kept = [&](std::size_t first) {
+            glm::vec3 middle { 0.0f };
+            for (std::size_t i = 0; i < 3; ++i)
+                middle += mesh.vertices[mesh.indices[first + i]].position / 3.0f;
+            const auto col = static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x));
+            const auto row = static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z));
+            return grid.contains(col, row) && keep[static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(col)];
+        };
+        for (GroundBatch batch : mesh.batches)
+        {
+            const auto first = static_cast<std::uint32_t>(out.indices.size());
+            for (std::size_t at = batch.first; at + 3 <= std::size_t { batch.first } + batch.count; at += 3)
+            {
+                if (!kept(at))
+                    continue;
+                for (std::size_t i = 0; i < 3; ++i)
+                {
+                    out.indices.push_back(static_cast<std::uint32_t>(out.vertices.size()));
+                    out.vertices.push_back(mesh.vertices[mesh.indices[at + i]]);
+                }
+            }
+            batch.first = first;
+            batch.count = static_cast<std::uint32_t>(out.indices.size()) - first;
+            if (batch.count > 0)
+                out.batches.push_back(batch);
+        }
+        return out;
+    }
+
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more)
     {
         if (more.indices.empty())

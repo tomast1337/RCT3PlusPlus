@@ -118,6 +118,9 @@ namespace rct3::ui::game_skins
     inline constexpr std::string_view kDrawerLipRight = "MessageConsole_Right";
     inline constexpr std::string_view kDrawerBack = "MessageConsole_Top";
     // The lists of things to build.
+    inline constexpr std::string_view kObjectFilter = "ObjectFilter_Colour_";         ///< + a kind's name
+    inline constexpr std::string_view kObjectFilterOff = "ObjectFilter_Grey_";        ///< + a kind's name
+    inline constexpr std::string_view kObjectFilterHelp = "ObjectFilter_TT_";         ///< + a kind's name
     inline constexpr std::string_view kStyleFilter = "StyleFilter_";                  ///< + a theme's name
     inline constexpr std::string_view kStyleFilterOff = "StyleFilter_Grey_";          ///< + a theme's name
     inline constexpr std::string_view kPackBadge = "ObjectSelectionWindow_AOPBadge_"; ///< + a pack's number from 0
@@ -589,6 +592,9 @@ namespace rct3::ui::game_skins
         s.closed_heading = kClosedHeading;
         s.search_box = kListBox;
         s.search_box_focused = kListBoxFocused;
+        s.object_filter = kObjectFilter;
+        s.object_filter_off = kObjectFilterOff;
+        s.object_help = kObjectFilterHelp;
         s.style_filter = kStyleFilter;
         s.style_filter_off = kStyleFilterOff;
         s.pack_filter = kPackBadge;

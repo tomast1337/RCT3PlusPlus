@@ -20,16 +20,18 @@ namespace rct3::ui
         constexpr std::string_view kSearchHint = "Rct3pp_BuildPicker_Search";
         constexpr std::string_view kPackPrefix = "pack";
 
-        /// The themes and add-on packs of `rows`; themes by name.
-        void collect(const std::vector<PickerRow>& rows, std::map<std::string, std::u16string, std::less<>>& styles, std::set<std::uint32_t>& packs)
+        /// The kinds, themes and add-on packs of `rows`; themes by name.
+        void collect(const std::vector<PickerRow>& rows, std::set<std::string, std::less<>>& kinds, std::map<std::string, std::u16string, std::less<>>& styles, std::set<std::uint32_t>& packs)
         {
             for (const PickerRow& r : rows)
             {
+                if (!r.kind.empty())
+                    kinds.insert(r.kind);
                 if (!r.style.empty())
                     styles.try_emplace(r.style, r.style_title);
                 if (r.addon != 0 && r.children.empty())
                     packs.insert(r.addon);
-                collect(r.children, styles, packs);
+                collect(r.children, kinds, styles, packs);
             }
         }
 
@@ -53,6 +55,9 @@ namespace rct3::ui
         search_->focused_skin = style_.search_box_focused;
 
         add_filters();
+        const Rect& inset = style_.window.content_inset;
+        if (!filters_.empty())
+            min_size.x = std::max(min_size.x, filters_.back()->placement.offsets.x1 + inset.x0 + inset.x1);
         const float top = kBarHeight + kGap + (filters_.empty() ? 0 : kFilter + kGap);
         list_ = &body.add<ScrollArea>("list", style_.scroll_bar);
         list_->placement = { { 0, 0, 1, 1 }, { 0, top, 0, 0 } };
@@ -62,36 +67,41 @@ namespace rct3::ui
 
     void BuildPicker::add_filters()
     {
+        std::set<std::string, std::less<>> kinds;
         std::map<std::string, std::u16string, std::less<>> styles;
         std::set<std::uint32_t> packs;
-        collect(data_, styles, packs);
+        collect(data_, kinds, styles, packs);
         float x = 0;
-        const auto add = [&](std::string name, std::u16string help, std::string skin) -> Button& {
-            auto& b = content().add<Button>(std::move(name), std::move(skin));
+        const auto add = [&](FilterKey key, std::u16string help) -> Button& {
+            auto& b = content().add<Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
             b.toggle = true;
             b.tooltip = std::move(help);
             b.placement = top_left(x, kBarHeight + kGap, kFilter, kFilter);
             x += kFilter;
             filters_.push_back(&b);
+            keys_.push_back(std::move(key));
             return b;
         };
+        // A group of one filter would only hide everything; it is left out.
+        if (kinds.size() > 1)
+        {
+            for (const std::string& kind : kinds)
+                add({ FilterKey::Group::Object, kind }, std::u16string(strings_.get(style_.object_help + kind)));
+            x += kGroupGap;
+        }
         if (styles.size() > 1)
         {
             const std::u16string help(strings_.get(style_.style_help));
             for (const auto& [name, title_text] : styles)
-            {
-                add(name, title_text + u'\n' + help, { });
-                filter_styles_.push_back(name);
-            }
-            x += kPackGap;
+                add({ FilterKey::Group::Theme, name }, title_text + u'\n' + help);
+            x += kGroupGap;
         }
         for (const std::uint32_t pack : packs)
         {
             const std::string number = std::to_string(pack - 1);
-            Button& b = add(std::string(kPackPrefix) + number, std::u16string(strings_.get(style_.pack_name + number)), { });
+            Button& b = add({ FilterKey::Group::Pack, { }, pack }, std::u16string(strings_.get(style_.pack_name + number)));
             b.icon = style_.pack_filter + number;
             b.icon_scale = style_.pack_icon_scale;
-            filter_packs_.push_back(pack);
         }
     }
 
@@ -124,7 +134,7 @@ namespace rct3::ui
     {
         if (!row.children.empty())
             return std::ranges::any_of(row.children, [&](const PickerRow& r) { return shows(r); });
-        if (!row.style.empty() && styles_off.contains(row.style))
+        if ((!row.kind.empty() && kinds_off.contains(row.kind)) || (!row.style.empty() && styles_off.contains(row.style)))
             return false;
         if (!packs_only.empty() && !packs_only.contains(row.addon))
             return false;
@@ -173,29 +183,28 @@ namespace rct3::ui
         for (std::size_t i = 0; i < filters_.size(); ++i)
         {
             Button& b = *filters_[i];
-            if (i < filter_styles_.size())
+            const FilterKey& key = keys_[i];
+            if (key.group == FilterKey::Group::Pack)
             {
-                const std::string& name = filter_styles_[i];
                 if (b.take_click())
                 {
-                    if (!styles_off.erase(name))
-                        styles_off.insert(name);
+                    if (!packs_only.erase(key.pack))
+                        packs_only.insert(key.pack);
                     dirty_ = true;
                 }
-                b.on = !styles_off.contains(name);
-                b.icon = (b.on ? style_.style_filter : style_.style_filter_off) + name;
+                b.on = packs_only.contains(key.pack);
+                continue;
             }
-            else
+            const bool object = key.group == FilterKey::Group::Object;
+            auto& off = object ? kinds_off : styles_off;
+            if (b.take_click())
             {
-                const std::uint32_t pack = filter_packs_[i - filter_styles_.size()];
-                if (b.take_click())
-                {
-                    if (!packs_only.erase(pack))
-                        packs_only.insert(pack);
-                    dirty_ = true;
-                }
-                b.on = packs_only.contains(pack);
+                if (!off.erase(key.name))
+                    off.insert(key.name);
+                dirty_ = true;
             }
+            b.on = !off.contains(key.name);
+            b.icon = (b.on ? (object ? style_.object_filter : style_.style_filter) : (object ? style_.object_filter_off : style_.style_filter_off)) + key.name;
         }
         for (BuildPickerRow* row : rows_)
             row->dear = cash && row->row().cost > *cash;
@@ -221,9 +230,9 @@ namespace rct3::ui
     void BuildPicker::draw(DrawContext& context) const
     {
         Window::draw(context);
-        for (std::size_t i = filter_styles_.size(); i < filters_.size(); ++i)
+        for (std::size_t i = 0; i < filters_.size(); ++i)
         {
-            if (filters_[i]->on)
+            if (keys_[i].group == FilterKey::Group::Pack && filters_[i]->on)
                 context.list.fill(filters_[i]->rect(), style_.pack_on_colour);
         }
         const Font* small = context.fonts.get(FontRole::Small);

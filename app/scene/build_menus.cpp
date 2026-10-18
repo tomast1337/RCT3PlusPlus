@@ -41,6 +41,7 @@ namespace rct3::scene
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
         auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows));
+        picker.kinds_off = menus.kinds_off;
         picker.styles_off = menus.styles_off;
         picker.packs_only = menus.packs_only;
         if (!menus.offer.known())
@@ -66,6 +67,7 @@ namespace rct3::scene
         if (picker == nullptr)
             return std::nullopt;
         picker->cash = cash;
+        menus.kinds_off = picker->kinds_off;
         menus.styles_off = picker->styles_off;
         menus.packs_only = picker->packs_only;
         const ui::Rect& o = picker->placement.offsets;

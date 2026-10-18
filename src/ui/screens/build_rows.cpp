@@ -115,6 +115,74 @@ namespace rct3::ui
 
     } // namespace
 
+    std::string_view object_filter(const park::BuildItem& item) noexcept
+    {
+        // Matched to the filters' names by the items of each kind or category in the install: kind 16 holds
+        // the inverted and suspended coasters, category 6 the lamps, 31 the benches, 36 the towers and so on.
+        const bool ride = item.kind == park::BuildKind::TrackedRide || item.kind == park::BuildKind::FlatRide;
+        if (ride)
+        {
+            switch (item.type)
+            {
+                case 0:
+                    return "Transport_Standard";
+                case 3:
+                    return "Coaster_Steel";
+                case 15:
+                    return "Coaster_Wooden";
+                case 16:
+                    return "Coaster_Suspended";
+                case 17:
+                    return "Coaster_Water";
+                case 21:
+                    return "Transport_Safari";
+                default:
+                    return { };
+            }
+        }
+        if (item.kind != park::BuildKind::Scenery || item.list == park::BuildList::Billboards)
+            return { };
+        switch (item.type)
+        {
+            case 0:
+                return "Scenery_Tree";
+            case 1:
+                return "Scenery_Plant";
+            case 2:
+                return "Scenery_Shrub";
+            case 3:
+                return "Scenery_Flower";
+            case 5:
+                return "Scenery_Misc";
+            case 6:
+                return "Scenery_Lamp";
+            case 7:
+                return "Scenery_SmallProp";
+            case 8:
+                return "Scenery_MediumProp";
+            case 9:
+                return "Scenery_LargeProp";
+            case 10:
+                return "Scenery_AnimatronicProp";
+            case 30:
+                return "Scenery_Bin";
+            case 31:
+                return "Scenery_Seat";
+            case 32:
+                return "Scenery_Sign";
+            case 33:
+                return "Scenery_PhotoSpot";
+            case 34:
+                return "Scenery_Walls";
+            case 35:
+                return "Scenery_Roof";
+            case 36:
+                return "Scenery_Corners";
+            default:
+                return { };
+        }
+    }
+
     std::string_view rarity_text(float rarity) noexcept
     {
         if (rarity > 0.79f)
@@ -230,6 +298,7 @@ namespace rct3::ui
             row.style = item.style;
             row.style_title = strings::to_utf16(item.style_title);
             row.addon = item.addon;
+            row.kind = object_filter(item);
             if (item.addon >= 1 && item.addon <= kBadges)
                 row.badge = std::string(kBadgePrefix) + std::to_string(item.addon - 1);
 

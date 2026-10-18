@@ -200,3 +200,27 @@ TEST_CASE("filters set by the owner before the first update hold")
     CHECK_FALSE(picker.rows()[1]->visible);
     CHECK_FALSE(picker.filters()[1]->on);
 }
+
+TEST_CASE("object filters come first and hide their kind's items while off")
+{
+    PickerRow steel = row(u"Steel", 1);
+    steel.kind = "Coaster_Steel";
+    PickerRow wood = row(u"Wood", 2);
+    wood.kind = "Coaster_Wooden";
+    PickerRow moon = row(u"Moon", 3);
+    moon.style = "Moon";
+    PickerRow sea = row(u"Sea", 4);
+    sea.style = "Sea";
+    Fixture f({ steel, wood, moon, sea });
+    REQUIRE(f.picker->filters().size() == 4);
+    Button& steel_filter = *f.picker->filters()[0];
+    CHECK(steel_filter.name() == "Coaster_Steel");
+    CHECK(f.picker->filters()[2]->name() == "Moon");
+    CHECK(f.picker->filters()[2]->placement.offsets.x0 == 2 * build_picker::kFilter + build_picker::kGroupGap);
+    f.press(steel_filter);
+    CHECK_FALSE(steel_filter.on);
+    CHECK(steel_filter.icon == "ObjectFilter_Grey_Coaster_Steel");
+    CHECK_FALSE(f.picker->rows()[0]->visible);
+    CHECK(f.picker->rows()[1]->visible);
+    CHECK(f.picker->rows()[2]->visible); // No kind: always shown
+}

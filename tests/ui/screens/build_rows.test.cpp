@@ -177,3 +177,24 @@ TEST_CASE("animals sit under their species, which names the fence and shelter it
     CHECK(rows[0].children[0].name == u"Big wombat");
     CHECK(rows[0].children[0].size == u"Rarity: Rare");
 }
+
+TEST_CASE("items fall under the object filter of their kind of ride or category of scenery")
+{
+    BuildItem coaster = scenery("Woodie", BuildList::Coasters, "W");
+    coaster.kind = rct3::park::BuildKind::TrackedRide;
+    coaster.type = 15;
+    CHECK(object_filter(coaster) == "Coaster_Wooden");
+    coaster.type = 4;
+    CHECK(object_filter(coaster).empty());
+    BuildItem lamp = scenery("Lamp", BuildList::PathExtras, "L");
+    lamp.type = 6;
+    CHECK(object_filter(lamp) == "Scenery_Lamp");
+    lamp.type = 0; // Scenery category 0 is trees; ride kind 0 is transport
+    CHECK(object_filter(lamp) == "Scenery_Tree");
+    lamp.list = BuildList::Billboards;
+    CHECK(object_filter(lamp).empty());
+    StringTable strings;
+    lamp.list = BuildList::PathExtras;
+    const std::vector items { lamp };
+    CHECK(picker_rows(BuildList::PathExtras, items, BuildOffer { }, strings, kCoins).front().kind == "Scenery_Tree");
+}

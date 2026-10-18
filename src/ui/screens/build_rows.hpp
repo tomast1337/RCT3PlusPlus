@@ -23,6 +23,10 @@ namespace rct3::ui
     /// The string key of the word for an animal's rarity, from 0 (common) to 1 (endangered).
     [[nodiscard]] std::string_view rarity_text(float rarity) noexcept;
 
+    /// The object filter `item` falls under, by its kind of ride or category of scenery: the name its
+    /// pictures and help are known by ("Coaster_Steel"). Empty for items under none.
+    [[nodiscard]] std::string_view object_filter(const park::BuildItem& item) noexcept;
+
     /// What a large row says under a piece of scenery's name: how it sits on the grid, or its footprint.
     [[nodiscard]] std::u16string placement_text(const park::BuildItem& item, const StringTable& strings);
 

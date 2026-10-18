@@ -23,6 +23,32 @@ namespace rct3::ui
         return false;
     }
 
+    namespace
+    {
+        const Widget* shown_at(const Widget& w, Point p)
+        {
+            if (!w.visible || !contains(w.rect(), p))
+                return nullptr;
+            for (auto it = w.children().rbegin(); it != w.children().rend(); ++it)
+            {
+                if (const Widget* found = shown_at(**it, p))
+                    return found;
+            }
+            const bool shows = w.takes_pointer() ? w.covers(p) : w.children().empty();
+            return shows ? &w : nullptr;
+        }
+    } // namespace
+
+    const Widget& widget_at(const Widget& root, Point p)
+    {
+        for (auto it = root.children().rbegin(); it != root.children().rend(); ++it)
+        {
+            if (const Widget* found = shown_at(**it, p))
+                return *found;
+        }
+        return root;
+    }
+
     std::string type_name(const Widget& w)
     {
         std::string name = typeid(w).name();

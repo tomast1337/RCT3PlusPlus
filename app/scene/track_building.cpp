@@ -300,6 +300,28 @@ namespace rct3::scene
                 m.loader = std::make_unique<park::ModelLoader>(*m.index);
                 model = m.loader->load(object.symbol, object.overlay);
             }
+            // A theme keeps its rides and entrances in overlays of their own, named apart from the items they
+            // hold, below its folder (Rides/<ride>/, EntranceExit/<style>/) or, for some, below the folder above
+            // it (a sibling Rides/<theme>Rides/): the last resort reads all of those, each folder once.
+            std::string up = folder;
+            for (int level = 0; level < 2 && !model && !up.empty(); ++level, up = up.substr(0, up.rfind('/', up.size() - 2) + 1))
+            {
+                const auto dir = assets.install->find(up);
+                if (!dir || !m.folders_read.insert(up).second)
+                    continue;
+                bool added = false;
+                std::error_code error;
+                for (auto it = std::filesystem::recursive_directory_iterator(*dir, error); !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
+                {
+                    if (it->is_regular_file(error) && it->path().filename().string().ends_with(".common.ovl"))
+                        added = add_with_references(it->path()) || added;
+                }
+                if (added)
+                {
+                    m.loader = std::make_unique<park::ModelLoader>(*m.index);
+                    model = m.loader->load(object.symbol, object.overlay);
+                }
+            }
         }
         if (!model)
             m.missing.insert(object.symbol);

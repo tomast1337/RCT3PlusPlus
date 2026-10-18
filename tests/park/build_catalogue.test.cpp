@@ -69,6 +69,7 @@ TEST_CASE("a stall is offered in its shop list")
     CHECK(items[0].overlay == "Style/Made/Style");
     CHECK(items[0].name_text == "FizzName");
     CHECK(items[0].icon == "FizzIcon");
+    CHECK(items[0].scenery == "Fizz"); // It names none, so the one of its own name
 }
 
 TEST_CASE("a park offers what it made available and invented")

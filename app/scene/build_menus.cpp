@@ -50,18 +50,22 @@ namespace rct3::scene
         return true;
     }
 
-    void update_build_menus(BuildMenus& menus, ui::Widget& root)
+    std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root)
     {
         auto* picker = static_cast<ui::BuildPicker*>(root.find(kListName));
         if (picker == nullptr)
-            return;
+            return std::nullopt;
         menus.large = picker->large();
         if (const auto picked = picker->take_picked(); picked && menus.items.valid())
         {
             const auto& items = menus.items.get();
             if (*picked < items.size())
+            {
                 logging::logger("ui").info("picked {} from {}", items[*picked].symbol, items[*picked].overlay);
+                return items[*picked];
+            }
         }
+        return std::nullopt;
     }
 
 } // namespace rct3::scene

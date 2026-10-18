@@ -42,8 +42,6 @@
         "DetailBlendBandHelp": "How long the stretch is over which scenery blends from one level of detail to the next as the camera moves.",
         "AllItemsShown": "All shown: the park does not say which are available",
         "BuildPicker": {
-            "Grid": "Icons",
-            "List": "List",
             "Search": "Search by name"
         },
         "Paths": {

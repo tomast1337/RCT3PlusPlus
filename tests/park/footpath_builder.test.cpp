@@ -264,3 +264,27 @@ TEST_CASE("queue tiles lead guests back along the trail")
     CHECK(paths.back().elevation->scenery_ref == 14);
     CHECK(paths.back().direction == stored_direction(1));
 }
+
+TEST_CASE("dragging steps the slope one at a time, no further than stairs")
+{
+    CHECK(stepped_slope(PathSlope::Flat, 1) == PathSlope::Up);
+    CHECK(stepped_slope(PathSlope::Flat, 2) == PathSlope::SteepUp);
+    CHECK(stepped_slope(PathSlope::Up, 5) == PathSlope::SteepUp);
+    CHECK(stepped_slope(PathSlope::Up, -2) == PathSlope::Down);
+    CHECK(stepped_slope(PathSlope::Down, -4) == PathSlope::SteepDown);
+}
+
+TEST_CASE("the arrow lies over the next piece and points the way it goes")
+{
+    const save::TerrainGrid g = owned_grid(4, 4);
+    NextPiece piece { { 1, 2 }, 0, 1, false, false };
+    const park::TerrainMesh arrow = heading_arrow(piece, 1, g); // Up towards higher columns
+    REQUIRE(arrow.vertices.size() == 4);
+    for (const park::GroundVertex& v : arrow.vertices)
+    {
+        const bool far = v.position.x > g.world_x(1) + 1;
+        CHECK((v.uv.y == 1.0f) == far);             // The arrow's tip on the far edge
+        CHECK(v.position.y == (far ? 1.0f : 0.0f)); // Climbing with the piece
+    }
+    CHECK(arrow.indices.size() == 6);
+}

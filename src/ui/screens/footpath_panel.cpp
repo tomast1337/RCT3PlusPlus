@@ -48,8 +48,9 @@ namespace rct3::ui
         };
         controls_tab_ = &tab("controls", style_.controls_icon, 0);
         follow_ = &tab("follow", style_.follow_icon, 1);
-        paths_tab_ = &tab("paths", style_.paths_icon, 2);
-        queues_tab_ = &tab("queues", style_.queues_icon, 3);
+        route_ = &tab("route", style_.route_icon, 2);
+        paths_tab_ = &tab("paths", style_.paths_icon, 3);
+        queues_tab_ = &tab("queues", style_.queues_icon, 4);
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
             Button& b = body_->add<Button>(std::format("control{}", i), std::string { });
@@ -203,6 +204,7 @@ namespace rct3::ui
         };
         put_tab(*controls_tab_, footpath_panel::kControlsSlot);
         put_tab(*follow_, footpath_panel::kFollowSlot);
+        put_tab(*route_, footpath_panel::kRouteSlot);
         put_tab(*paths_tab_, footpath_panel::kPathsSlot);
         put_tab(*queues_tab_, footpath_panel::kQueuesSlot);
 
@@ -252,6 +254,7 @@ namespace rct3::ui
             return;
         }
         (void)follow_->take_click();
+        (void)route_->take_click();
         const std::array<std::pair<Button*, FootpathPage>, 3> pages { { { controls_tab_, FootpathPage::Controls }, { paths_tab_, FootpathPage::Paths }, { queues_tab_, FootpathPage::Queues } } };
         for (const auto& [button, page] : pages)
         {

@@ -44,7 +44,8 @@ namespace rct3::scene
     {
         std::unique_ptr<park::AssetIndex> index;
         std::unique_ptr<park::ModelLoader> loader;
-        std::set<std::string, std::less<>> missing; ///< Symbols looked for and not found, so not looked for again
+        std::set<std::string, std::less<>> missing;      ///< Symbols looked for and not found, so not looked for again
+        std::set<std::string, std::less<>> folders_read; ///< Folders every overlay below which was added
 
         TrackModels();
         ~TrackModels();

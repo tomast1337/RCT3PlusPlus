@@ -71,20 +71,26 @@ TEST_CASE("a cut or changed saved park is refused")
 
 TEST_CASE("a save keeps the park's objects and those the player built, not those loading makes")
 {
-    std::vector<save::PlacedObject> objects(5);
+    std::vector<save::PlacedObject> objects(7);
     for (std::size_t i = 0; i < objects.size(); ++i)
         objects[i].id = 10 + i;
-    // 10 and 11 are the park's; 12 a support made on loading; 13 a path's deck; 14 a track piece.
+    // 10 and 11 are the park's; 12 a support made on loading; 13 a path's deck; 14 a track piece; 15 a flat
+    // ride and 16 its entrance.
     std::vector<save::PathTile> paths(1);
     paths[0].elevation.emplace().scenery_ref = 13;
     save::RideModel rides;
     rides.rides.emplace_back().track.emplace().pieces.emplace_back().scenery = 14;
+    save::Ride& flat = rides.rides.emplace_back();
+    flat.base.spot = save::PlacementSpot { .object = 15 };
+    flat.stations.emplace_back().entrance_spot = save::PlacementSpot { .object = 16 };
     const auto kept = parkfile::kept_objects(objects, 2, paths, rides);
-    REQUIRE(kept.size() == 4);
+    REQUIRE(kept.size() == 6);
     CHECK(kept[0].id == 10);
     CHECK(kept[1].id == 11);
     CHECK(kept[2].id == 13);
     CHECK(kept[3].id == 14);
+    CHECK(kept[4].id == 15);
+    CHECK(kept[5].id == 16);
 }
 
 TEST_CASE("a save keeps the guests and staff, and loading puts them back")

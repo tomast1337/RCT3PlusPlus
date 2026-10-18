@@ -114,6 +114,9 @@ namespace rct3::scene
     /// Closes the path panel if it is open.
     void close_footpath_panel(ParkScene& scene);
 
+    /// Builds the ground again from the scene's grid, with the paths as they are now.
+    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);
 

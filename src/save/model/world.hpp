@@ -121,6 +121,10 @@ namespace rct3::save
         {
             return cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(col)];
         }
+        [[nodiscard]] TerrainCell& at(int col, int row) noexcept
+        {
+            return cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(col)];
+        }
         /// World X of the left edge of column `col`, and Z of the near edge of row `row`.
         [[nodiscard]] float world_x(int col) const noexcept
         {

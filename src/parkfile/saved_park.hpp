@@ -125,8 +125,9 @@ namespace rct3::parkfile
     /// on a path. In place of import_staff.
     std::vector<entt::entity> place_staff(simulation::SimWorld& world, const SavedPeople& people);
 
-    /// The objects a save keeps: the first `own` (the park's own) and those a path or a track piece stands on
-    /// (the player's); not those loading makes again (supports, railings, cars, trees).
+    /// The objects a save keeps: the first `own` (the park's own) and those a path, a track piece or a ride
+    /// placed whole stands on, with its entrance and exit (the player's); not those loading makes again
+    /// (supports, railings, cars, trees).
     [[nodiscard]] std::vector<save::PlacedObject> kept_objects(std::span<const save::PlacedObject> objects, std::size_t own, std::span<const save::PathTile> paths, const save::RideModel& rides);
 
     [[nodiscard]] std::vector<std::byte> write_saved_park(const SavedPark& park);

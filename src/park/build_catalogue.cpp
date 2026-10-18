@@ -9,11 +9,13 @@
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
 #include "ovl/tracked_ride.hpp"
+#include "park/item_category.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <map>
 #include <system_error>
+#include <utility>
 
 namespace rct3::park
 {
@@ -24,6 +26,7 @@ namespace rct3::park
         constexpr std::string_view kCommonEnding = ".common.ovl";
         constexpr std::string_view kStyleFolder = "Style";
         constexpr std::string_view kStyleOverlay = "Style";
+        constexpr std::string_view kPlainStyle = "Style/Vanilla/Style"; ///< The theme without a theme
         constexpr std::array<std::string_view, 2> kRideFolders = { "Tracks/Coasters", "Tracks/TrackedRides" };
         /// Each folder below it holds one kind of enclosure fence, in the overlay named after the folder with
         /// this ending; the rest of its overlays are the pieces' shapes.
@@ -80,6 +83,7 @@ namespace rct3::park
                 item.width = placed->x_squares;
                 item.length = placed->z_squares;
             }
+            item.scenery = info.style.empty() ? symbol : info.style;
             return item;
         }
 
@@ -358,6 +362,7 @@ namespace rct3::park
             std::ranges::move(more, std::back_inserter(scenery));
         }
         const auto placed = by_name(scenery);
+        const std::size_t first = items.size();
         // The scenery item an attraction is placed as: the one it names, or, in files where that is not read,
         // the one of the same name.
         const auto placed_as = [&](std::string_view named, std::string_view symbol) -> const ovl::SceneryItem* {
@@ -403,6 +408,22 @@ namespace rct3::park
                     continue;
                 if (const auto list = shop_list(e.stall->info.type_id))
                     items.push_back(attraction_item(*list, BuildKind::Shop, e.name, path, e.stall->info, placed_as(e.stall->info.style, e.name)));
+            }
+        }
+        // Rides placed whole take the first entrance and exit of their own theme.
+        const auto first_of = [&](ItemCategory category) {
+            const auto found = std::ranges::find_if(scenery, [&](const ovl::SceneryItemEntry& e) { return e.item && e.item->type == std::to_underlying(category); });
+            return found == scenery.end() ? std::string { } : std::string(found->name);
+        };
+        const std::string entrance = first_of(ItemCategory::RideEntrance);
+        const std::string exit = first_of(ItemCategory::RideExit);
+        for (std::size_t i = first; i < items.size(); ++i)
+        {
+            if (items[i].kind == BuildKind::FlatRide && !entrance.empty() && !exit.empty())
+            {
+                items[i].entrance = entrance;
+                items[i].exit = exit;
+                items[i].door_overlay = path;
             }
         }
     }
@@ -468,6 +489,17 @@ namespace rct3::park
         {
             if (const auto file = find(root, std::string(overlay) + std::string(kCommonEnding)))
                 read_file(root, *file, items);
+        }
+        // Rides of a theme without an entrance and exit of its own take the plain theme's, as parks show.
+        const auto plain = std::ranges::find_if(items, [](const BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.door_overlay, kPlainStyle); });
+        for (BuildItem& item : items)
+        {
+            if (item.kind == BuildKind::FlatRide && item.entrance.empty() && plain != items.end())
+            {
+                item.entrance = plain->entrance;
+                item.exit = plain->exit;
+                item.door_overlay = plain->door_overlay;
+            }
         }
         return items;
     }

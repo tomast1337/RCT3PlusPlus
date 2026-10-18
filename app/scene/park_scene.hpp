@@ -38,6 +38,7 @@
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/day_clock.hpp"
@@ -393,6 +394,7 @@ namespace rct3::scene
         ParkMap map;                                       ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                           ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                            ///< The construction panel's ride and the piece it would build
+        RidePlacing placing;                               ///< The ride picked in a build list, while it is placed
     };
 
     /// The stages of loading a park, in the order they run.
@@ -435,6 +437,10 @@ namespace rct3::scene
     /// The park as it stands, in our own format (see parkfile/saved_park.hpp): the original park it started
     /// from and the player's changes. Guests, staff and the simulation are not kept.
     [[nodiscard]] std::vector<std::byte> save_park(const ParkScene& scene);
+
+    /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
+    /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
+    void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);
 
     void destroy_park_scene(render::Device& device, ParkScene& scene);
 

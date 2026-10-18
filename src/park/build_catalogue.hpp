@@ -103,8 +103,12 @@ namespace rct3::park
     {
         BuildList list = BuildList::Props;
         BuildKind kind = BuildKind::Scenery;
-        std::string symbol;           ///< Without its tag
-        std::string overlay;          ///< Relative to the install, '/' separated, without ".common.ovl"
+        std::string symbol;  ///< Without its tag
+        std::string overlay; ///< Relative to the install, '/' separated, without ".common.ovl"
+        std::string scenery; ///< Rides and shops: the scenery item they are placed as
+        /// Rides placed whole: the scenery items of their entrance and exit, and the overlay they are in: their
+        /// own theme's, else the plain theme's; empty when neither has one.
+        std::string entrance, exit, door_overlay;
         std::string name_text;        ///< String key
         std::string description_text; ///< String key; empty when there is none
         std::string icon;             ///< Skin

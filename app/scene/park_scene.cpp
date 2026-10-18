@@ -18,6 +18,7 @@
 #include "park/path_supports.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
+#include "park/relief_maps.hpp"
 #include "park/ride_cars.hpp"
 #include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
@@ -200,6 +201,16 @@ namespace rct3::scene
         }
 
         /// Paints and uploads the pictures of `batches` the scene does not have yet.
+        /// Our own value: the ground's grass and dirt get half the relief of walls and rock.
+        constexpr float kGroundRelief = 0.35f;
+
+        /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
+        render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name)
+        {
+            const auto found = textures.find(std::string(name) + std::string(park::kReliefSuffix));
+            return found != textures.end() ? found->second.handle : render::TextureHandle { };
+        }
+
         void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches)
         {
             std::vector<park::ObjectBatch> missing;
@@ -210,7 +221,10 @@ namespace rct3::scene
             }
             if (missing.empty())
                 return;
-            auto uploaded = ui::upload_textures(device, park::paint_batches(missing, scene.pictures));
+            auto pictures = park::paint_batches(missing, scene.pictures);
+            if (scene.relief_maps)
+                park::add_relief_maps(pictures);
+            auto uploaded = ui::upload_textures(device, pictures);
             if (!uploaded)
             {
                 logging::logger("park").warning("object pictures: {}", uploaded.error());
@@ -949,6 +963,7 @@ namespace rct3::scene
             // Far land fades into the horizon's colour.
             scene.light.haze = { scene.horizon.r, scene.horizon.g, scene.horizon.b };
             scene.light.haze_rate = scene.haze_rate;
+            scene.light.surface_detail = scene.surface_detail;
         }
 
     } // namespace
@@ -976,6 +991,8 @@ namespace rct3::scene
             return std::unexpected("the park has no ground");
 
         ParkScene scene;
+        scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
+        scene.relief_maps = scene.surface_detail >= 2;
         scene.grid = std::move(world->terrain);
         scene.seed = seed;
         scene.file = path;
@@ -1051,6 +1068,8 @@ namespace rct3::scene
             else if (!*added)
                 log.warning("{}: no ground picture", name);
         }
+        if (scene.relief_maps)
+            park::add_relief_maps(images, kGroundRelief);
         auto textures = ui::upload_textures(device, images);
         if (!textures)
             return fail(textures.error());
@@ -2060,6 +2079,7 @@ namespace rct3::scene
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.bloom = options.flag(config::GameOption::Bloom);
+        scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
         auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
@@ -2295,6 +2315,7 @@ namespace rct3::scene
                     draw.filter = render::Filter::Linear;
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
+                    draw.extra_textures[1] = relief_of(scene.object_textures, batch.texture);
                     device.draw(draw);
                 }
             };
@@ -2316,6 +2337,7 @@ namespace rct3::scene
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
                         draw.extra_textures[0] = scene.variation;
+                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
                         device.draw(draw);
                     }
                     draw_footpath_ghost(device, scene, transform, light);

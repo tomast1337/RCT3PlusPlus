@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
+#include "park/relief_maps.hpp"
 #include "scene/park_scene.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -301,7 +302,10 @@ namespace rct3::scene
             }
             if (missing.empty())
                 return;
-            auto uploaded = ui::upload_textures(device, park::paint_batches(missing, scene.pictures));
+            auto pictures = park::paint_batches(missing, scene.pictures);
+            if (scene.relief_maps)
+                park::add_relief_maps(pictures); // The pictures stay for the ride once it is built
+            auto uploaded = ui::upload_textures(device, pictures);
             if (uploaded)
                 scene.object_textures.merge(*uploaded);
         }

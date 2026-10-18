@@ -21,6 +21,19 @@ layout(location = 2) out vec3 v_normal;
 layout(location = 3) out vec3 v_world;
 // How far through its band the object is, and its side; side 0 draws it whole.
 layout(location = 4) flat out vec2 v_cross;
+layout(location = 5) flat out vec4 v_eye;
+
+// Where the eye is, w 1: the point the transform sends to clip x = y = w = 0, where the planes of those three
+// rows meet. A view without perspective has no such point (its w row is flat): w 0.
+vec4 eye_of(mat4 m) {
+  vec4 x = vec4(m[0][0], m[1][0], m[2][0], m[3][0]);
+  vec4 y = vec4(m[0][1], m[1][1], m[2][1], m[3][1]);
+  vec4 w = vec4(m[0][3], m[1][3], m[2][3], m[3][3]);
+  float det = dot(x.xyz, cross(y.xyz, w.xyz));
+  if (abs(det) < 1e-30)
+    return vec4(0.0);
+  return vec4(-(x.w * cross(y.xyz, w.xyz) + y.w * cross(w.xyz, x.xyz) + w.w * cross(x.xyz, y.xyz)) / det, 1.0);
+}
 
 void main() {
   gl_Position = u_draw.transform * vec4(a_position, 1.0);
@@ -28,18 +41,12 @@ void main() {
   v_uv = a_uv;
   v_normal = a_normal;
   v_world = a_position;
-  // The eye is the point the transform sends to clip x = y = w = 0: where the planes of those three rows meet.
-  // A view without perspective has no such point (its w row is flat), and draws both levels whole.
-  mat4 m = u_draw.transform;
-  vec4 x = vec4(m[0][0], m[1][0], m[2][0], m[3][0]);
-  vec4 y = vec4(m[0][1], m[1][1], m[2][1], m[3][1]);
-  vec4 w = vec4(m[0][3], m[1][3], m[2][3], m[3][3]);
-  float det = dot(x.xyz, cross(y.xyz, w.xyz));
-  if (abs(det) < 1e-30) {
+  // A view without perspective draws both levels whole.
+  v_eye = eye_of(u_draw.transform);
+  if (v_eye.w < 0.5) {
     v_cross = vec2(0.0);
     return;
   }
-  vec3 eye = -(x.w * cross(y.xyz, w.xyz) + y.w * cross(w.xyz, x.xyz) + w.w * cross(x.xyz, y.xyz)) / det;
-  float through = clamp((distance(eye, a_band.xyz) - a_band.w) / max(a_side.x - a_band.w, 1e-3), 0.0, 1.0);
+  float through = clamp((distance(v_eye.xyz, a_band.xyz) - a_band.w) / max(a_side.x - a_band.w, 1e-3), 0.0, 1.0);
   v_cross = vec2(through, a_side.y);
 }

@@ -13,9 +13,9 @@ namespace rct3::ui
     [[nodiscard]] bool in_tree(const Widget& root, const Widget* target);
 
     /// The top-most visible widget at `p` that shows there: one taking the pointer over `p`, or one without
-    /// children, such as a label. Frames that only hold others and let the pointer through are passed over;
-    /// `root` when nothing else is there.
-    [[nodiscard]] const Widget& widget_at(const Widget& root, Point p);
+    /// children, such as a label. Frames that only hold others and let the pointer through are passed over,
+    /// and so is `root`: none when nothing else is there.
+    [[nodiscard]] const Widget* widget_at(const Widget& root, Point p);
 
     /// The widget's class without its namespaces, e.g. "Button".
     [[nodiscard]] std::string type_name(const Widget& w);

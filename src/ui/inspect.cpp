@@ -39,14 +39,14 @@ namespace rct3::ui
         }
     } // namespace
 
-    const Widget& widget_at(const Widget& root, Point p)
+    const Widget* widget_at(const Widget& root, Point p)
     {
         for (auto it = root.children().rbegin(); it != root.children().rend(); ++it)
         {
             if (const Widget* found = shown_at(**it, p))
-                return *found;
+                return found;
         }
-        return root;
+        return nullptr;
     }
 
     std::string type_name(const Widget& w)

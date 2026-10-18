@@ -119,6 +119,8 @@ namespace rct3::platform
         ImGui_ImplGlfw_InitForOther(window, true);
         // The game sets the cursor itself (set_cursor), from what the developer windows ask for among the rest.
         ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+        // The developer windows dock around the game.
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         // The game reads the button state once a frame; a click shorter than a frame must still show up.
         glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
         return Window(window, std::move(collected));

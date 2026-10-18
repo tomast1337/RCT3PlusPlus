@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <string>
 #include <utility>
@@ -153,13 +154,15 @@ namespace rct3::ui
     {
         std::u16string label;
         std::u16string value;
-        bool half = false; ///< Short enough to share its row with the next half line
+        bool half = false;      ///< Short enough to share its row with the next half line
+        std::string name = { }; ///< Its widgets' name: the label's string key, to find where it is made by
     };
 
     struct InfoSeries
     {
         std::u16string name;
         std::vector<float> values;
+        std::string key = { }; ///< Its name's string key, which its widget is named by
     };
 
     enum class InfoControlKind : std::uint8_t
@@ -177,6 +180,7 @@ namespace rct3::ui
     struct InfoControl
     {
         int id = 0;
+        std::string name; ///< Its widget's name: a string key from where it is made, to find it by
         InfoControlKind kind = InfoControlKind::Number;
         std::u16string label;
         int value = 0; ///< The number, the item picked, or whether ticked
@@ -215,6 +219,15 @@ namespace rct3::ui
         std::vector<InfoSeries> graph;
         std::vector<InfoControl> controls; ///< Under the note
     };
+
+    /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search
+    /// for the key finds where it is made; by its place, such as "value3", for what has no key.
+    [[nodiscard]] inline std::string keyed_name(std::string_view key, std::string_view part, std::size_t index)
+    {
+        if (key.empty())
+            return std::format("{}{}", part, index);
+        return part.empty() ? std::string(key) : std::format("{}_{}", key, part);
+    }
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
     [[nodiscard]] Point info_tab_offset(int slot);

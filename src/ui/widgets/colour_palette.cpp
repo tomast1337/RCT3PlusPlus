@@ -16,7 +16,8 @@ namespace rct3::ui
         for (std::size_t i = 0; i < count; ++i)
         {
             const std::string& ring = i == current ? style_.current_ring : style_.ring;
-            Button& b = add<Button>(std::format("swatch{}", i), ring, std::format("{}{}", style_.swatch_prefix, i));
+            const std::string swatch = std::format("{}{}", style_.swatch_prefix, i);
+            Button& b = add<Button>(swatch, ring, swatch);
             const float x = style_.margin + style_.pitch * static_cast<float>(i % columns);
             const float y = style_.margin + style_.pitch * static_cast<float>(i / columns);
             b.placement = top_left(x, y, style_.swatch, style_.swatch);

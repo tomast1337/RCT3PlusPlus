@@ -115,7 +115,7 @@ namespace rct3::ui
     {
         for (std::size_t i = 0; i < scenarios_.size(); ++i)
         {
-            auto& b = add<ScenarioButton>("scenario" + std::to_string(i), style_.scenario_button, scenarios_[i].info.icon);
+            auto& b = add<ScenarioButton>(scenarios_[i].info.id, style_.scenario_button, scenarios_[i].info.icon);
             b.mark = mark_of(style_, scenarios_[i].status);
             b.icon_own_size = true;
             b.enabled = career::is_open(scenarios_[i].status);

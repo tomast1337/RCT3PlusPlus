@@ -142,14 +142,14 @@ namespace rct3::ui
         caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.caption_height);
         for (std::size_t i = 0; i < kOptionsPageCount; ++i)
         {
-            auto& tab = body.add<Button>("tab" + std::to_string(i), std::string(kTabs[i].icon));
+            auto& tab = body.add<Button>(std::string(kTabs[i].icon), std::string(kTabs[i].icon));
             tab.toggle = true;
             tab.tooltip = str(strings, kTabs[i].caption_key);
             tab.placement = top_left(style.tabs_x + style.tab_step * static_cast<float>(i), 0, style.tab_size, style.tab_size);
             tabs_[i] = &tab;
             captions_[i] = tab.tooltip;
 
-            auto& page = body.add<Widget>("page" + std::to_string(i));
+            auto& page = body.add<Widget>(std::string(kTabs[i].caption_key));
             page.placement = top_left(0, style.tab_bar_height, style.page_width, style.page_height);
             pages_[i] = &page;
         }
@@ -191,7 +191,7 @@ namespace rct3::ui
             }
             // In the usual font: its fallback has every script, and the game's all-scripts font does not
             // draw right yet.
-            language_ = &rows.list(str(strings, "GameOptionsDialog_Language"), std::move(names));
+            language_ = &rows.list(str(strings, "GameOptionsDialog_Language"), std::move(names), { }, "GameOptionsDialog_Language");
             const auto at = std::ranges::find(choices_.languages, choices_.language);
             if (at != choices_.languages.end())
                 language_->select(static_cast<std::size_t>(at - choices_.languages.begin()));
@@ -227,7 +227,7 @@ namespace rct3::ui
                 tracks.push_back(ascii(name));
             tracks.push_back(str(strings, kShuffle));
             tracks.push_back(str(strings, kNoMusic));
-            music_ = &rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"));
+            music_ = &rows.list(str(strings, "GameOptionsDialog_BackgroundMusic"), std::move(tracks), str(strings, "GameOptionsDialog_BackgroundMusicTT"), "GameOptionsDialog_BackgroundMusic");
             show_background_music();
         }
     }
@@ -273,14 +273,14 @@ namespace rct3::ui
         area.placement = top_left(0, 0, width, k.height);
         Widget& list = area.content();
 
+        // Each row named by its string key: the box or the fixed keys by the key, its name with "_label".
         float y = k.top;
-        int count = 0;
-        const auto bar = [&](std::u16string text) {
+        const auto bar = [&](std::string_view key) {
             y += k.group_gap;
-            auto& fill = list.add<Panel>("bar" + std::to_string(count), std::string { });
+            auto& fill = list.add<Panel>(std::format("{}_bar", key), std::string { });
             fill.colour = k.bar_colour;
             fill.placement = top_left(0, y, width, k.bar_height);
-            auto& name = list.add<Label>("bar_name" + std::to_string(count++), std::move(text), style_.rows.font);
+            auto& name = list.add<Label>(std::string(key), str(strings, key), style_.rows.font);
             name.style.colour = k.bar_text_colour;
             name.style.vertical = Align::Centre;
             name.placement = top_left(k.bar_text_inset, y, width - 2 * k.bar_text_inset, k.bar_height);
@@ -288,23 +288,23 @@ namespace rct3::ui
         };
         const auto row = [&](std::u16string text, Widget& keys) {
             y += k.row_gap;
-            auto& name = list.add<Label>("name" + std::to_string(count++), std::move(text), style_.rows.font);
+            auto& name = list.add<Label>(std::format("{}_label", keys.name()), std::move(text), style_.rows.font);
             name.style.colour = style_.rows.text_colour;
             name.style.vertical = Align::Centre;
             name.placement = top_left(k.name_x, y, k.name_width, k.row_height);
             keys.placement = top_left(k.keys_x, y, width - k.keys_right - k.keys_x, k.row_height);
             y += k.row_height;
         };
-        const auto box = [&](std::vector<KeyCombo> combos) -> KeyBox& {
-            auto& b = list.add<KeyBox>("keys" + std::to_string(count++), std::move(combos));
+        const auto box = [&](std::string_view key, std::vector<KeyCombo> combos) -> KeyBox& {
+            auto& b = list.add<KeyBox>(std::string(key), std::move(combos));
             b.focused_skin = k.focused;
             b.font = style_.rows.font;
             b.text_colour = style_.rows.text_colour;
             b.padding = { 3, 0, 3, 0 };
             return b;
         };
-        const auto fixed = [&](std::u16string keys) -> Label& {
-            auto& l = list.add<Label>("fixed" + std::to_string(count++), std::move(keys), style_.rows.font);
+        const auto fixed = [&](std::string_view key, std::u16string keys) -> Label& {
+            auto& l = list.add<Label>(std::string(key), std::move(keys), style_.rows.font);
             l.style.colour = style_.rows.text_colour;
             l.style.vertical = Align::Centre;
             l.tooltip = str(strings, kNoKeyChange);
@@ -314,7 +314,7 @@ namespace rct3::ui
         // The game's commands, as the game groups and names them.
         for (const PlayKeyGroup group : { PlayKeyGroup::Universal, PlayKeyGroup::DuringPlay })
         {
-            bar(str(strings, play_key_group_key(group)));
+            bar(play_key_group_key(group));
             for (const PlayCommandInfo& info : play_commands_table())
             {
                 if (info.group != group)
@@ -324,14 +324,14 @@ namespace rct3::ui
                     name = ascii(info.label_key.substr(kKeySettingPrefix.size()));
                 if (!info.fixed.empty())
                 {
-                    Label& keys = fixed(std::u16string(info.fixed));
+                    Label& keys = fixed(info.label_key, std::u16string(info.fixed));
                     keys.style.horizontal = Align::Start;
                     row(std::move(name), keys);
                     keys.placement.offsets.x0 += 3;
                     continue;
                 }
                 const auto& combo = keys_.play_key(info.command);
-                KeyBox& b = box(combo ? std::vector { *combo } : std::vector<KeyCombo> { });
+                KeyBox& b = box(info.label_key, combo ? std::vector { *combo } : std::vector<KeyCombo> { });
                 b.game_key = true;
                 b.tooltip = str(strings, kKeyChange);
                 play_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
@@ -340,17 +340,17 @@ namespace rct3::ui
         }
 
         // Ours.
-        bar(str(strings, kInterfaceKeys));
+        bar(kInterfaceKeys);
         for (const CommandInfo& info : commands_table())
         {
-            KeyBox& b = box(keys_.keys(info.command));
+            KeyBox& b = box(info.label_key, keys_.keys(info.command));
             b.prompt = str(strings, kPressKeys);
             b.none = str(strings, kNoKeys);
             b.tooltip = str(strings, kKeysTip);
             key_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
             row(str(strings, info.label_key), b);
         }
-        row(str(strings, kMoveByWord), fixed(str(strings, kMoveByWordKeys)));
+        row(str(strings, kMoveByWord), fixed(kMoveByWordKeys, str(strings, kMoveByWordKeys)));
         auto& end = list.add<Widget>("end");
         end.placement = top_left(0, y, 1, k.bottom);
 
@@ -371,7 +371,7 @@ namespace rct3::ui
         std::vector<std::u16string> sizes;
         for (const ScreenSize& s : choices_.screen_sizes)
             sizes.push_back(ascii(std::to_string(s.width) + " x " + std::to_string(s.height)));
-        resolution_ = &top.list(str(strings, "GameOptionsDialog_ScreenResolution"), std::move(sizes));
+        resolution_ = &top.list(str(strings, "GameOptionsDialog_ScreenResolution"), std::move(sizes), { }, "GameOptionsDialog_ScreenResolution");
         resolution_->select(choices_.screen_size);
         resolution_->enabled = !choices_.screen_sizes.empty();
         top.choice(O::GraphicsQuality, str(strings, "QualityVsPerformanceLabel"), items(strings, { "QualityVsPerformance_HighPerformance", "QualityVsPerformance_Performance", "QualityVsPerformance_Balanced", "QualityVsPerformance_Quality", "QualityVsPerformance_HighQuality", "QualityVsPerformance_Custom" }));

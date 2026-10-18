@@ -235,11 +235,14 @@ namespace rct3::ui
     {
         for (std::size_t m = 0; m < kFrontMenuCount; ++m)
         {
+            // Each menu holds its buttons, named by their icons; it covers the screen and lets the pointer through.
             const auto& entries = kMenus[m].entries;
+            Widget& menu = add<Widget>(std::string(kMenus[m].title_key));
+            menu.placement = fill();
             for (std::size_t i = 0; i < entries.size(); ++i)
             {
                 const FrontEntry& e = entries[i];
-                auto& b = add<FrontButton>("menu" + std::to_string(m) + "_" + std::to_string(i), std::string(kButtonSkin), std::string(e.icon));
+                auto& b = menu.add<FrontButton>(std::string(e.icon), std::string(kButtonSkin), std::string(e.icon));
                 b.enabled = e.pack == 0 || expansions.at(static_cast<std::size_t>(e.pack - 1));
                 // Only the main menu's buttons fly in at first; the others wait out of sight.
                 const bool main = m == index(FrontMenu::Main);

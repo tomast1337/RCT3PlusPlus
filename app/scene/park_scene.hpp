@@ -385,6 +385,8 @@ namespace rct3::scene
         std::vector<ui::ToolItem> window_requests;         ///< Files menu items that open a window the owner opens (park_windows.hpp)
         std::unique_ptr<ui::OptionsSession> options;       ///< The options window over the park, once opened
         std::filesystem::path file;                        ///< The park file loaded, whose name saving offers
+        std::vector<std::byte> base;                       ///< The original park file the park started from, kept for saving
+        std::size_t own_objects = 0;                       ///< `objects` from the file; those after it were made on loading or built since
         SaveBrowser saves;                                 ///< Behind the save and load windows over the park
         std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
         std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
@@ -429,6 +431,10 @@ namespace rct3::scene
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// The park as it stands, in our own format (see parkfile/saved_park.hpp): the original park it started
+    /// from and the player's changes. Guests, staff and the simulation are not kept.
+    [[nodiscard]] std::vector<std::byte> save_park(const ParkScene& scene);
 
     void destroy_park_scene(render::Device& device, ParkScene& scene);
 

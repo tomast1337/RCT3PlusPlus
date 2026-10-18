@@ -133,7 +133,17 @@ namespace rct3::scene
         if (scene.live->front->take_options_closed())
             save_front_end_options(scene);
         while (const auto request = scene.live->front->take_unhandled())
-            logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<int>(request->action), request->pack);
+        {
+            // A new sandbox is the game's blank landscape, saved as one of ours.
+            if (request->action == ui::FrontAction::NewSandbox)
+            {
+                scene.park_to_play = scene.assets.install->find("Campaigns/Base/BlankLandscape.dat");
+                if (!scene.park_to_play)
+                    logging::logger("ui").warning("front screen: the blank landscape is missing from the game's folder");
+            }
+            else
+                logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<int>(request->action), request->pack);
+        }
         return over;
     }
 

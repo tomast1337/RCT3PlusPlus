@@ -33,6 +33,8 @@
 // version is newer than it knows, and a file whose version is newer than its own. Writing what was read
 // gives the same bytes.
 //
+// A park the player saves uses this container with chunks of its own; see saved_park.hpp.
+//
 // Parks may grow past what the original game allows, so nothing here is sized to its limits: counts and
 // entity ids are u32, chunk lengths u64, and map coordinates (when chunks for terrain and paths come) are
 // to be at least u16 per axis, never the original's single byte.

@@ -87,12 +87,12 @@ namespace rct3::render::vulkan
         }
 
         // The flip makes clip space Y point up, as the shared conventions in render/types.hpp promise.
-        void set_viewport(VkCommandBuffer cmd, VkExtent2D extent)
+        void set_viewport(VkCommandBuffer cmd, VkRect2D area)
         {
-            const auto width = static_cast<float>(extent.width);
-            const auto height = static_cast<float>(extent.height);
-            const VkViewport viewport { 0, height, width, -height, 0, 1 };
-            const VkRect2D scissor { { 0, 0 }, extent };
+            const auto width = static_cast<float>(area.extent.width);
+            const auto height = static_cast<float>(area.extent.height);
+            const VkViewport viewport { static_cast<float>(area.offset.x), static_cast<float>(area.offset.y) + height, width, -height, 0, 1 };
+            const VkRect2D scissor = area;
             vkCmdSetViewport(cmd, 0, 1, &viewport);
             vkCmdSetScissor(cmd, 0, 1, &scissor);
         }
@@ -957,7 +957,7 @@ namespace rct3::render::vulkan
         if (Frame& frame = frames_[frame_index_]; frame.timings != VK_NULL_HANDLE && frame.stamps + 2 <= kMostStamps)
             vkCmdWriteTimestamp2(cmd, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, frame.timings, frame.stamps++);
         vkCmdBeginRendering(cmd, &rendering);
-        set_viewport(cmd, area);
+        set_viewport(cmd, pass_target_ != nullptr ? VkRect2D { { 0, 0 }, area } : screen_area());
 
         ++frame_stats_.passes;
         state_ = State::InPass;
@@ -1051,6 +1051,16 @@ namespace rct3::render::vulkan
         frame_stats_.primitives += primitive_count(pipeline->second.topology, command.count);
     }
 
+    VkRect2D VulkanDevice::screen_area() const
+    {
+        if (!view())
+            return { { 0, 0 }, extent_ };
+        // Kept inside the screen, which may have shrunk since the view was set.
+        const std::uint32_t x = std::min(view()->x, extent_.width);
+        const std::uint32_t y = std::min(view()->y, extent_.height);
+        return { { static_cast<std::int32_t>(x), static_cast<std::int32_t>(y) }, { std::min(view()->size.width, extent_.width - x), std::min(view()->size.height, extent_.height - y) } };
+    }
+
     void VulkanDevice::draw_ui()
     {
         assert(state_ == State::InPass);
@@ -1059,7 +1069,7 @@ namespace rct3::render::vulkan
             return;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-        set_viewport(cmd, extent_); // ImGui leaves its own viewport behind
+        set_viewport(cmd, screen_area()); // ImGui leaves its own viewport behind
     }
 
     void VulkanDevice::end_pass()
@@ -1082,7 +1092,7 @@ namespace rct3::render::vulkan
     {
         assert(state_ == State::InFrame);
         const auto found = textures_.find(target.id);
-        if (found == textures_.end() || found->second.depth_id == 0 || found->second.extent.width != extent_.width || found->second.extent.height != extent_.height)
+        if (found == textures_.end() || found->second.depth_id == 0 || found->second.extent.width != extent().width || found->second.extent.height != extent().height)
             return false;
         const Texture& t = found->second;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
@@ -1099,7 +1109,8 @@ namespace rct3::render::vulkan
         VkImageCopy region { };
         region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
         region.dstSubresource = region.srcSubresource;
-        region.extent = { extent_.width, extent_.height, 1 };
+        region.srcOffset = { static_cast<std::int32_t>(screen_area().offset.x), static_cast<std::int32_t>(screen_area().offset.y), 0 };
+        region.extent = { extent().width, extent().height, 1 };
         vkCmdCopyImage(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
         region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         vkCmdCopyImage(cmd, depth_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);

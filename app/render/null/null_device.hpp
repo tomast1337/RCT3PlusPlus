@@ -27,7 +27,7 @@ namespace rct3::render::null
         {
             return "null device";
         }
-        [[nodiscard]] Extent extent() const override;
+        [[nodiscard]] Extent screen_extent() const override;
 
         [[nodiscard]] std::expected<BufferHandle, std::string> create_buffer(const BufferDesc& desc) override;
         void destroy_buffer(BufferHandle buffer) override;

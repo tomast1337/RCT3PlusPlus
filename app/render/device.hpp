@@ -29,6 +29,7 @@
 #include "render/types.hpp"
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -56,6 +57,14 @@ namespace rct3::render
         bool ui = true;
     };
 
+    /// A part of the screen, in pixels from its top-left corner.
+    struct ScreenView
+    {
+        std::uint32_t x = 0;
+        std::uint32_t y = 0;
+        Extent size;
+    };
+
     class Device
     {
     public:
@@ -80,8 +89,26 @@ namespace rct3::render
         /// Human-readable adapter name, for logs.
         [[nodiscard]] virtual std::string_view device_name() const = 0;
 
-        /// Size of the render target in pixels. Follows the window; may change between frames.
-        [[nodiscard]] virtual Extent extent() const = 0;
+        /// Size of the screen in pixels. Follows the window; may change between frames.
+        [[nodiscard]] virtual Extent screen_extent() const = 0;
+
+        /// Size the scene draws at: the view's when one is set, else the screen's.
+        [[nodiscard]] Extent extent() const
+        {
+            return view_ ? view_->size : screen_extent();
+        }
+
+        /// Passes into the screen draw into `view` only, which then acts as the whole screen for drawing and
+        /// copy_screen; the interface (draw_ui) still covers the whole screen. None for the whole screen.
+        void set_view(std::optional<ScreenView> view)
+        {
+            view_ = view;
+        }
+
+        [[nodiscard]] const std::optional<ScreenView>& view() const
+        {
+            return view_;
+        }
 
         // Resources -----------------------------------------------------------------------------------------
 
@@ -137,6 +164,9 @@ namespace rct3::render
 
         /// Finishes the ImGui frame and draws it into the current pass.
         virtual void draw_ui() = 0;
+
+    private:
+        std::optional<ScreenView> view_;
     };
 
 } // namespace rct3::render

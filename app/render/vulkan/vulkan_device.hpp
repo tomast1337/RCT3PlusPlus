@@ -36,7 +36,7 @@ namespace rct3::render::vulkan
         {
             return device_name_;
         }
-        [[nodiscard]] Extent extent() const override
+        [[nodiscard]] Extent screen_extent() const override
         {
             return { extent_.width, extent_.height };
         }
@@ -72,6 +72,8 @@ namespace rct3::render::vulkan
         void draw_ui() override;
 
     private:
+        /// The part of the screen passes into it draw to: the view, kept inside the screen, or all of it.
+        [[nodiscard]] VkRect2D screen_area() const;
         static constexpr std::uint32_t kFramesInFlight = 2;
 
         struct Buffer

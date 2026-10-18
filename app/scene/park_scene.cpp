@@ -2009,6 +2009,16 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
+            // A right click on a path while the path panel shows its controls sells it.
+            if (input.right && !scene.right_press && !over)
+                scene.right_press = pointer.position;
+            else if (!input.right && scene.right_press)
+            {
+                const ui::Point from = *std::exchange(scene.right_press, std::nullopt);
+                const ui::Rect screen = desktop.root().rect();
+                if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
+                    (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
+            }
             // The customers page follows the running park; it has no controls to lose a half-made change in.
             scene.since_info_page += elapsed;
             if (scene.shown && scene.simulate && scene.info_tab == ui::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)

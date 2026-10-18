@@ -728,38 +728,66 @@ namespace rct3::scene
                 rebuild_ground(device, scene, assets);
         }
 
-        /// Takes the last piece of the trail away, with what draws and holds it up.
-        void remove(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        /// Takes away what draws and holds up `removed`, just taken out of the paths.
+        void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& removed)
         {
             ParkFootpaths& f = scene.footpaths;
-            const auto removed = park::remove_last(f.builder, f.paths);
-            if (!removed)
-                return;
             wait_for_build(scene);
-            std::vector<std::uint64_t> gone = std::move(f.supports[removed->id]);
-            f.supports.erase(removed->id);
-            std::ranges::copy(f.railings[removed->id], std::back_inserter(gone));
-            f.railings.erase(removed->id);
-            if (removed->elevation)
-                gone.push_back(removed->elevation->scenery_ref);
+            std::vector<std::uint64_t> gone = std::move(f.supports[removed.id]);
+            f.supports.erase(removed.id);
+            std::ranges::copy(f.railings[removed.id], std::back_inserter(gone));
+            f.railings.erase(removed.id);
+            if (removed.elevation)
+                gone.push_back(removed.elevation->scenery_ref);
+            // shortcut: supports of paths loaded with the park are not known by path, so they stay; tie them to
+            // their path when the park's supports are read back per path.
             hide(scene, gone);
-            sim_paths(scene, { }, std::span(&*removed, 1));
-            if (removed->queue && removed->queue->queue_line_ref != 0)
+            sim_paths(scene, { }, std::span(&removed, 1));
+            if (removed.queue && removed.queue->queue_line_ref != 0)
             {
                 for (save::Ride& ride : scene.rides.rides)
                 {
                     for (save::Station& station : ride.stations)
                     {
-                        if (station.queue_line == removed->queue->queue_line_ref)
+                        if (station.queue_line == removed.queue->queue_line_ref)
                             station.queue_tiles = std::max(station.queue_tiles - 1, 0);
                     }
                 }
             }
             // A raised piece beside may lose a joined side.
-            refresh_around(scene, assets, { removed->col, removed->row });
+            refresh_around(scene, assets, { removed.col, removed.row });
             objects_changed(scene);
-            if (!removed->elevation || park::is_ground_queue(*removed) || removed->elevation->underground)
+            if (!removed.elevation || park::is_ground_queue(removed) || removed.elevation->underground)
                 rebuild_ground(device, scene, assets);
+        }
+
+        /// Takes the last piece of the trail away, with what draws and holds it up.
+        void remove(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            if (const auto removed = park::remove_last(scene.footpaths.builder, scene.footpaths.paths))
+                take_away(device, scene, assets, *removed);
+        }
+
+        /// Sells path `id`: takes it away and pays back its style's price on the ground.
+        void sell(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::uint64_t id)
+        {
+            ParkFootpaths& f = scene.footpaths;
+            const auto at = std::ranges::find(f.paths, id, &save::PathTile::id);
+            if (at == f.paths.end())
+                return;
+            // shortcut: pays back the ground price even for raised and tunnel pieces; pay what laying it cost
+            // once paths keep their price.
+            const park::PathStyle* style = style_named(f, *at);
+            const save::PathTile sold = std::move(*at);
+            f.paths.erase(at);
+            // Indices into the paths and the trail's last piece may point at what is gone.
+            f.hover.reset();
+            f.hover_edge.reset();
+            if (!f.builder.trail.empty() && f.builder.trail.back().laid == id)
+                f.builder.trail.pop_back();
+            if (scene.park.cash && style != nullptr)
+                *scene.park.cash += style->piece_cost;
+            take_away(device, scene, assets, sold);
         }
 
         std::u16string problem_text(const ui::InterfaceAssets& assets, park::LayProblem problem)
@@ -920,6 +948,12 @@ namespace rct3::scene
             lay_route(device, scene, assets);
             f.route_goal.reset();
             f.route_goal_height.reset();
+            f.dirty = true;
+        }
+        if (const auto id = std::exchange(f.sell, std::nullopt))
+        {
+            f.notice.clear();
+            sell(device, scene, assets, *id);
             f.dirty = true;
         }
         if (const auto control = panel->take_control(); control && *control < park::kPathControlCount)
@@ -1174,6 +1208,19 @@ namespace rct3::scene
         }
         scene.footpaths.notice.clear();
         scene.footpaths.dirty = true;
+        return true;
+    }
+
+    bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (!f.brush.empty() || f.slope_press)
+            return false;
+        const auto ray = controls_ray(scene, at, size);
+        const auto under = ray ? park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
+        if (!under)
+            return false;
+        f.sell = f.paths[under->path].id;
         return true;
     }
 

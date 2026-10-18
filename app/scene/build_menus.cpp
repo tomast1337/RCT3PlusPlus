@@ -51,6 +51,11 @@ namespace rct3::scene
         return true;
     }
 
+    bool build_list_open(const ui::Widget& root)
+    {
+        return root.find(kListName) != nullptr;
+    }
+
     std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
         auto* picker = static_cast<ui::BuildPicker*>(root.find(kListName));

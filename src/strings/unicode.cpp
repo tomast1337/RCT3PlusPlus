@@ -93,6 +93,21 @@ namespace rct3::strings
         out.push_back(static_cast<char16_t>(0xDC00 + (c & 0x3FF)));
     }
 
+    std::u16string search_folded(std::u16string_view text)
+    {
+        // The plain letter of each of U+00C0 to U+00FF, lower case; ß, æ, ð, þ and the signs stay.
+        constexpr std::u16string_view kPlain = u"aaaaaaæceeeeiiiiðnooooo×ouuuuyþßaaaaaaæceeeeiiiiðnooooo÷ouuuuyþy";
+        std::u16string out(text);
+        for (char16_t& c : out)
+        {
+            if (c >= u'A' && c <= u'Z')
+                c = static_cast<char16_t>(c - u'A' + u'a');
+            else if (c >= 0xC0 && c <= 0xFF)
+                c = kPlain[c - 0xC0];
+        }
+        return out;
+    }
+
     std::string to_utf8(std::u16string_view text)
     {
         std::string out;

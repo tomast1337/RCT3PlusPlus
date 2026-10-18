@@ -28,6 +28,9 @@ namespace rct3::ovl
         std::int32_t value_b = 0;
         /// 2500 or 4960 in nearly all items. Meaning unconfirmed.
         std::uint32_t value_c = 0;
+        /// The add-on pack the attraction came with: 0 for the base game, 1 for the first, 2 for the second.
+        /// Version 4 and 5 files only; 0 in older ones, which hold only base game attractions.
+        std::uint32_t addon = 0;
     };
 
     namespace detail
@@ -45,6 +48,7 @@ namespace rct3::ovl
             int value_a = -1;
             int value_b = -1;
             int value_c = -1;
+            int addon = -1; ///< Read from version 4 files on
         };
 
         [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, std::uint32_t version)
@@ -64,6 +68,7 @@ namespace rct3::ovl
             info.value_a = static_cast<std::int32_t>(word(at.value_a));
             info.value_b = static_cast<std::int32_t>(word(at.value_b));
             info.value_c = word(at.value_c);
+            info.addon = version >= 4 ? word(at.addon) : 0;
             return info;
         }
 

@@ -27,6 +27,12 @@ namespace rct3::ui
     /// pictures and help are known by ("Coaster_Steel"). Empty for items under none.
     [[nodiscard]] std::string_view object_filter(const park::BuildItem& item) noexcept;
 
+    /// Whether `list` offers a filter for each theme: the lists of rides placed whole, shops and scenery.
+    [[nodiscard]] bool has_theme_filters(park::BuildList list) noexcept;
+
+    /// Every theme the items belong to, in the order the install numbers them.
+    [[nodiscard]] std::vector<PickerTheme> picker_themes(std::span<const park::BuildItem> items);
+
     /// What a large row says under a piece of scenery's name: how it sits on the grid, or its footprint.
     [[nodiscard]] std::u16string placement_text(const park::BuildItem& item, const StringTable& strings);
 

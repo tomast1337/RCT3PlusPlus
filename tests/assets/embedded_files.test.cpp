@@ -18,7 +18,7 @@ TEST_CASE("built-in files are found by their path below assets")
         CHECK(found->data() == f.bytes.data());
         CHECK(found->size() == f.bytes.size());
     }
-    const auto english = embedded_file("lang/English.json");
+    const auto english = embedded_file("lang/en-US.json");
     REQUIRE(english);
     CHECK(as_text(*english).starts_with("{"));
     CHECK_FALSE(embedded_file("lang/missing.json"));

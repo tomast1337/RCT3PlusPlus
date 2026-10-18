@@ -39,11 +39,20 @@ TEST_CASE("anything but strings and groups fails, saying where")
     CHECK_FALSE(parse_translation(deep));
 }
 
+TEST_CASE("translation files are named by language and region code")
+{
+    CHECK(translation_path("English") == "lang/en-US.json");
+    CHECK(translation_path("braziliANPortuguese") == "lang/pt-BR.json");
+}
+
 TEST_CASE("our built-in English parses and backs other languages")
 {
     const StringTable english = own_strings(kOwnBaseLanguage);
     CHECK_FALSE(english.get("Rct3pp_UsualKeys").empty());
     CHECK_FALSE(english.get("Rct3pp_Command_Copy").empty());
+    // It also has the keys the game's windows use, with line breaks as real characters.
+    CHECK_FALSE(english.get("ProgramInfoDialog_Title").empty());
+    CHECK(english.get("TutorialText_Tutorial1_Step2_Text").find(u'\n') != std::u16string::npos);
     // A language without a file of its own falls back to English.
     CHECK(own_strings("Klingon").get("Rct3pp_UsualKeys") == english.get("Rct3pp_UsualKeys"));
 }

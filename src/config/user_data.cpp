@@ -23,6 +23,16 @@ namespace rct3::config
             { UserFolder::Scenarios, "scenarios", "Saved custom scenarios" },
             { UserFolder::NewScenarios, "new_scenarios", "Scenarios to start a custom scenario from" },
             { UserFolder::Careers, "careers", "Careers and their games" },
+            { UserFolder::Photos, "photos", "Photos the park's cameras take of guests" },
+            { UserFolder::Coasters, "coasters", "Saved ride designs" },
+            { UserFolder::Structures, "structures", "Saved scenery structures" },
+            { UserFolder::Guests, "guests", "Guests the player made" },
+            { UserFolder::Pools, "pools", "Saved pool designs" },
+            { UserFolder::Fireworks, "fireworks", "Firework displays" },
+            { UserFolder::FireworkEffects, "firework_effects", "The player's own fireworks" },
+            { UserFolder::LaserWriting, "laser_writing", "Laser show texts" },
+            { UserFolder::LaserEffects, "laser_effects", "The player's own laser effects" },
+            { UserFolder::WaterJetEffects, "water_jet_effects", "The player's own water jet effects" },
         } };
 
         constexpr std::array<UserFileInfo, kUserFileCount> kFiles = { {

@@ -5,6 +5,7 @@
 
 #include <GLFW/glfw3.h>
 #include <cassert>
+#include <utility>
 
 namespace rct3::render::null
 {
@@ -129,6 +130,21 @@ namespace rct3::render::null
         return found != textures_.end() && depths_.contains(target.id) && found->second.width == screen.width && found->second.height == screen.height;
     }
 
+    bool NullDevice::read_screen()
+    {
+        assert(state_ == State::InFrame);
+        const Extent screen = screen_extent();
+        if (screen.width == 0 || screen.height == 0)
+            return false;
+        reading_ = screen;
+        return true;
+    }
+
+    std::optional<ScreenPixels> NullDevice::take_screen()
+    {
+        return std::exchange(read_, std::nullopt);
+    }
+
     std::expected<BufferSlice, std::string> NullDevice::allocate_transient(std::span<const std::byte> data)
     {
         assert(state_ == State::InFrame || state_ == State::InPass);
@@ -198,6 +214,13 @@ namespace rct3::render::null
         assert(state_ == State::InFrame);
         last_stats_ = frame_stats_;
         state_ = State::Idle;
+        // Nothing is drawn, so the screen reads as black.
+        if (const auto size = std::exchange(reading_, std::nullopt))
+        {
+            read_ = ScreenPixels { *size, std::vector<std::uint8_t>(std::size_t { size->width } * size->height * 4, 0) };
+            for (std::size_t i = 3; i < read_->rgba.size(); i += 4)
+                read_->rgba[i] = 255;
+        }
     }
 
     void NullDevice::ui_new_frame()

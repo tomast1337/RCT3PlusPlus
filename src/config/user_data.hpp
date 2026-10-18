@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The folder that holds everything the program keeps for the user: its configuration, and the screenshots
-// and music the user adds. Every folder and file in it is registered once in the tables in user_data.cpp,
+// The folder that holds everything the program keeps for the user: its configuration, the games and designs
+// the player saves, the pictures taken in the park and the music the user adds. There is a folder for each
+// kind of file the original game keeps in the player's Documents, so each has its place before its tool comes. Every folder and file in it is registered once in the tables in user_data.cpp,
 // and code asks for them by id, never by a path of its own.
 //
 // The folder is RCT3PP_DATA when set, else rct3pp/ in the user's data folder: XDG_DATA_HOME, or
@@ -24,13 +25,23 @@ namespace rct3::config
 
     enum class UserFolder : std::uint8_t
     {
-        Config,       ///< config/: settings, game options, keys
-        Screenshots,  ///< screenshots/
-        Music,        ///< music/: the user's own music for the park
-        Parks,        ///< parks/: saved sandbox parks
-        Scenarios,    ///< scenarios/: saved custom scenarios
-        NewScenarios, ///< new_scenarios/: scenarios to start a custom scenario from
-        Careers,      ///< careers/: the player's careers and their games (career/career_file.hpp)
+        Config,          ///< config/: settings, game options, keys
+        Screenshots,     ///< screenshots/
+        Music,           ///< music/: the user's own music for the park
+        Parks,           ///< parks/: saved sandbox parks
+        Scenarios,       ///< scenarios/: saved custom scenarios
+        NewScenarios,    ///< new_scenarios/: scenarios to start a custom scenario from
+        Careers,         ///< careers/: the player's careers and their games (career/career_file.hpp)
+        Photos,          ///< photos/: what the park's cameras take of guests
+        Coasters,        ///< coasters/: saved ride designs
+        Structures,      ///< structures/: saved scenery structures
+        Guests,          ///< guests/: guests the player made
+        Pools,           ///< pools/: saved pool designs
+        Fireworks,       ///< fireworks/: firework displays
+        FireworkEffects, ///< firework_effects/: the player's own fireworks
+        LaserWriting,    ///< laser_writing/: laser show texts
+        LaserEffects,    ///< laser_effects/: the player's own laser effects
+        WaterJetEffects, ///< water_jet_effects/: the player's own water jet effects
 
         Count_, ///< Number of folders; not a folder
     };

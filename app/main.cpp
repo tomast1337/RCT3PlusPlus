@@ -31,6 +31,7 @@
 #include "config/game_saves.hpp"
 #include "config/settings.hpp"
 #include "config/user_data.hpp"
+#include "image/png_encoder.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "logging/log.hpp"
@@ -48,6 +49,7 @@
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
+#include "simulation/park_messages.hpp"
 #include "strings/unicode.hpp"
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
@@ -711,6 +713,24 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::ParkScene> park;                    ///< Played over the front end, which lends it the interface
     std::optional<std::filesystem::path> park_to_load = park_file; ///< Asked for this frame; its loading screen shows first
     bool quit = false;
+    bool screenshot = false; ///< Asked for this frame; read from the screen as the frame ends
+    // Writes what the screen showed to the user's screenshots, and tells the player where it went.
+    const auto save_screenshot = [&](rct3::render::ScreenPixels pixels) {
+        if (!data)
+        {
+            log.warning("screenshot: no folder for the user's data known; set {}", config::env_name(config::EnvVar::DataFolder));
+            return;
+        }
+        auto saved = data->make_folder(config::UserFolder::Screenshots).and_then([&](const std::filesystem::path& folder) { return rct3::image::save_numbered_png(folder, "screenshot_", { pixels.size.width, pixels.size.height, std::move(pixels.rgba) }); });
+        if (!saved)
+        {
+            log.warning("screenshot: {}", saved.error());
+            return;
+        }
+        log.info("screenshot: {}", saved->string());
+        if (park)
+            rct3::simulation::post(park->park.messages, { .text_key = "Rct3pp_ScreenshotSaved", .subject_name = saved->filename().string() });
+    };
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.
     std::optional<rct3::audio::AudioEngine> audio;
@@ -950,6 +970,7 @@ int main(int argc, char** argv)
                         auto translated = key_map.translate(keys);
                         keys = std::move(translated.keyboard);
                         play_commands = std::move(translated.play);
+                        screenshot = std::ranges::contains(play_commands, rct3::ui::PlayCommand::ScreenSnapshot);
                         const auto toggles = std::ranges::count(translated.commands, rct3::ui::Command::DeveloperWindows);
                         developer_windows = developer_windows != (toggles % 2 == 1);
                         for (auto& k : keys.presses)
@@ -1102,8 +1123,12 @@ int main(int argc, char** argv)
                     prof::section("DeveloperUi", [&] { device->draw_ui(); });
                     prof::section("Submit", [&] {
                         device->end_pass();
+                        if (std::exchange(screenshot, false) && !device->read_screen())
+                            log.warning("screenshot: the device cannot read the screen");
                         device->end_frame();
                     });
+                    if (auto pixels = device->take_screen())
+                        save_screenshot(std::move(*pixels));
                     if (park_to_load && front)
                     {
                         load_park(*std::exchange(park_to_load, std::nullopt));

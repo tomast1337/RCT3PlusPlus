@@ -19,7 +19,9 @@
 //       device->draw_ui();                     // in the last pass, so the UI is on top
 //     device->end_pass();
 //     device->copy_screen(target);             // between passes
+//     device->read_screen();                   // between passes, for a screenshot
 //     device->end_frame();                     // submits and presents
+//   device->take_screen();                     // what read_screen asked for
 //   device->shutdown();                        // also done by the destructor
 //
 // Calls out of this order are programming errors. Resources may be destroyed at any time, also while a frame
@@ -142,7 +144,13 @@ namespace rct3::render
         /// with `readable_depth`. Only between passes of a frame. False when the device cannot, or `target` does
         /// not fit; it is then left as it was.
         virtual bool copy_screen(TextureHandle target) = 0;
+        /// Asks for what the whole screen holds so far, the interface too, whatever the view. Only between
+        /// passes of a frame. The pixels arrive as the frame ends: take them with take_screen. False when the
+        /// device cannot.
+        virtual bool read_screen() = 0;
         virtual void end_frame() = 0;
+        /// The pixels read_screen asked for, once their frame ended; then none until asked again.
+        [[nodiscard]] virtual std::optional<ScreenPixels> take_screen() = 0;
         /// For debugging: while on, draws of triangles outline them instead of filling them, where the device can.
         virtual void set_wireframe(bool on) = 0;
 

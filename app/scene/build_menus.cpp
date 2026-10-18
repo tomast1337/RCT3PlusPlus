@@ -38,24 +38,29 @@ namespace rct3::scene
         if (ui::Widget* open = root.find(kListName))
             root.remove(*open);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
-        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, std::move(rows), menus.large);
+        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, std::move(rows), menus.large, menus.grid);
         if (!menus.offer.known())
             picker.note = std::u16string(strings.get(kAllShown));
         // To the right of the button, its middle level with the button's; layout keeps it on the screen.
         const ui::Rect& r = root.rect();
         const ui::Rect& b = button.rect();
         const float x = b.x1 + ui::build_picker::kSide - r.x0;
-        const float y = (b.y0 + b.y1) / 2 - ui::build_picker::kHeight / 2 - r.y0;
-        picker.placement = ui::top_left(x, y, ui::build_picker::kWidth, ui::build_picker::kHeight);
+        const ui::Point size = menus.size.value_or(ui::Point { ui::build_picker::kWidth, ui::build_picker::kHeight });
+        const float y = (b.y0 + b.y1) / 2 - size.y / 2 - r.y0;
+        picker.placement = ui::top_left(x, y, size.x, size.y);
         return true;
     }
 
-    std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root)
+    std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
         auto* picker = static_cast<ui::BuildPicker*>(root.find(kListName));
         if (picker == nullptr)
             return std::nullopt;
         menus.large = picker->large();
+        menus.grid = picker->grid();
+        picker->cash = cash;
+        if (const ui::Rect& o = picker->placement.offsets; !picker->folded())
+            menus.size = ui::Point { o.x1 - o.x0, o.y1 - o.y0 };
         if (const auto picked = picker->take_picked(); picked && menus.items.valid())
         {
             const auto& items = menus.items.get();

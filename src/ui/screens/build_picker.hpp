@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The list that opens beside the build menus' buttons: the rides, shops or scenery of one kind, a row
-// each, to pick one to build. A blue panel with close and fold buttons in its top-left corner, one column
-// of rows that scrolls, and along the bottom a button that shows the rows large or small.
+// The list that opens beside the build menus' buttons: the rides, shops or scenery of one kind, to pick one
+// to build. A blue panel with close and fold buttons in its top-left corner, the items in a grid of icons or
+// in one column of rows, scrolling, and along the bottom a button that switches between the two and, for
+// rows, one that shows them large or small. Dragging the bottom-right corner resizes the panel; the grid
+// fills as many columns as fit.
+//
+// A tile of the grid shows the item's icon; resting the pointer on it tells its name and price. Items
+// dearer than the cash the owner hands the list are shaded red, in either view.
 //
 // A large row shows the item's icon, its name and, under it, how it sits on the grid or what building it
 // starts, and its price; a small row shows the icon small and the name. Items of one set, such as the
@@ -50,6 +55,13 @@ namespace rct3::ui
         inline constexpr float kNameBand = 32; ///< The name's part of a large row, above its two lines
         inline constexpr float kLine = 16;
         inline constexpr float kIndent = 12; ///< Of rows under a heading
+
+        /// The grid, and the corner that resizes the panel.
+        inline constexpr float kTile = 72;
+        inline constexpr float kTileIcon = 64;
+        inline constexpr float kGrip = 14;
+        inline constexpr float kMinWidth = 2 * kSide + 2 * kTile + 16;
+        inline constexpr float kMinHeight = kTitleHeight + kTile + kBottomBar;
     } // namespace build_picker
 
     /// One row as the list shows it.
@@ -59,6 +71,7 @@ namespace rct3::ui
         std::string icon;                ///< Skin
         std::u16string size;             ///< First line under the name of a large row
         std::u16string price;            ///< Second line; empty when the item has no price
+        std::int64_t cost = 0;           ///< The price in hundredths of the currency unit
         std::string badge;               ///< Skin in the right-hand corner, if any
         std::size_t item = 0;            ///< The owner's number for the item
         int rank = 0;                    ///< Rows sort by this first, then by name
@@ -80,6 +93,8 @@ namespace rct3::ui
         Color button_text_colour = hex("#000000");
         Color hover_colour = hex("#ffffff28");
         Color picked_colour = hex("#ffffff50");
+        Color dear_colour = hex("#d0101070"); ///< Over items the park cannot pay for
+        Color grip_colour = hex("#ffffff40");
     };
 
     class BuildPickerRow;
@@ -87,8 +102,8 @@ namespace rct3::ui
     class BuildPicker : public Widget
     {
     public:
-        /// `large`: rows start large.
-        BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::vector<PickerRow> rows, bool large);
+        /// `large`: rows start large. `grid`: the items start as a grid of icons.
+        BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::vector<PickerRow> rows, bool large, bool grid = false);
 
         /// The item of each row picked since the last call, the last one.
         [[nodiscard]] std::optional<std::size_t> take_picked();
@@ -100,10 +115,16 @@ namespace rct3::ui
         {
             return large_;
         }
+        [[nodiscard]] bool grid() const
+        {
+            return grid_;
+        }
         [[nodiscard]] bool folded() const
         {
             return folded_;
         }
+        /// What the park can pay; items dearer are shaded. None: money never runs out.
+        std::optional<std::int64_t> cash;
         /// A line on the bottom bar beside the button, e.g. to say what the list leaves out.
         std::u16string note;
 
@@ -115,6 +136,10 @@ namespace rct3::ui
         [[nodiscard]] Button& size_button() const
         {
             return *size_;
+        }
+        [[nodiscard]] Button& view_button() const
+        {
+            return *view_;
         }
         [[nodiscard]] Button& fold_button() const
         {
@@ -132,8 +157,9 @@ namespace rct3::ui
         /// Moving while dragged by its title, as a window does.
         [[nodiscard]] CursorKind held_cursor(Point p) const override
         {
-            return grab_ ? CursorKind::Move : cursor(p);
+            return resize_ ? CursorKind::ResizeDiagonalDown : grab_ ? CursorKind::Move : cursor(p);
         }
+        [[nodiscard]] CursorKind cursor(Point p) const override;
         void on_press(Point p) override;
         void on_drag(Point p) override;
         void on_release(Point p, bool inside) override;
@@ -143,6 +169,8 @@ namespace rct3::ui
     private:
         void add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading);
         void lay_out();
+        [[nodiscard]] bool on_grip(Point p) const;
+        void label_buttons();
 
         BuildPickerStyle style_;
         const StringTable& strings_;
@@ -153,10 +181,15 @@ namespace rct3::ui
         Button* close_ = nullptr;
         Button* fold_ = nullptr;
         Button* size_ = nullptr;
+        Button* view_ = nullptr;
         bool large_ = true;
+        bool grid_ = false;
         bool folded_ = false;
         bool dirty_ = true;
+        float laid_width_ = 0; ///< Of the list when the grid was laid out
+        float unfolded_height_ = build_picker::kHeight;
         std::optional<Point> grab_;
+        std::optional<Point> resize_;
         std::optional<std::size_t> picked_;
         std::optional<std::size_t> picked_out_;
     };
@@ -182,6 +215,8 @@ namespace rct3::ui
         bool open = false;   ///< Headings: their rows show
         bool picked = false; ///< Drawn marked
         bool large = true;
+        bool grid = false; ///< Drawn as a tile of the grid: the icon only
+        bool dear = false; ///< Costs more than the park can pay
 
         /// True once for each click since the last call.
         [[nodiscard]] bool take_click()

@@ -496,6 +496,8 @@ namespace rct3::park
                 model.solid.push_back((s.flags & kSquareSolid) != 0 ? std::optional(std::array { s.min_height, s.max_height }) : std::nullopt);
         }
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
+        for (std::size_t i = 0; i < model.default_colours.size(); ++i)
+            model.default_colours[i] = static_cast<std::int32_t>(item->default_colours[i]);
         model.photo_spot = std::ranges::contains(item->parameters, std::string_view { "VistaPoint" }, &ovl::SceneryItemParameter::name);
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
         // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.

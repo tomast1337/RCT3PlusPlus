@@ -1012,6 +1012,14 @@ namespace rct3::save
             {
                 case Role::Park:
                     load_park_object(*decoded, index, m.park);
+                    if (const Object* fence = m.park.fence_entry ? index.find(*m.park.fence_entry) : nullptr)
+                    {
+                        if (const auto entry = decode_object(file, *fence))
+                        {
+                            m.park.fence_symbol = string_of(entry->find("SYMBOLNAME"));
+                            m.park.fence_overlay = string_of(entry->find("OVERLAYFILENAME"));
+                        }
+                    }
                     m.has_park = true;
                     break;
                 case Role::Money:

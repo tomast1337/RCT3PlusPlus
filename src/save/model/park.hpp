@@ -107,6 +107,8 @@ namespace rct3::save
         std::int32_t rating_penalty = 0;          ///< Raw; seen as zero in every sample
         std::int32_t guest_think_cycle = 0;       ///< Raw; seen as zero in every sample
         std::optional<std::uint64_t> fence_entry; ///< Object id of the park fence database entry
+        std::string fence_symbol;                 ///< Asset symbol of the fence round the park's land, empty when none
+        std::string fence_overlay;                ///< Overlay holding it, as PlacedObject::overlay
         bool pools_wanted = false;
         bool allow_adult_animals = false;
         bool allow_baby_animals = false;

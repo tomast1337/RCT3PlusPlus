@@ -26,30 +26,24 @@ namespace rct3::park
         return slope == 2 || slope == 5;
     }
 
-    namespace
+    glm::vec2 edge_lean(const save::TerrainGrid& grid, int col, int row, TileSide side)
     {
-
-        /// How the ground rises along `side`'s edge of a tile, per park unit along x and z.
-        glm::vec2 edge_lean(const save::TerrainGrid& grid, int col, int row, TileSide side)
-        {
-            if (!grid.contains(col, row))
-                return { };
-            const auto& h = grid.at(col, row).corners; // (x, z) corners: 0 at both low ends, 3 at both high
-            switch (side)
-            {
-                case TileSide::Back:
-                    return { (h[1] - h[0]) / grid.tile_size_x, 0 };
-                case TileSide::Front:
-                    return { (h[3] - h[2]) / grid.tile_size_x, 0 };
-                case TileSide::Left:
-                    return { 0, (h[2] - h[0]) / grid.tile_size_z };
-                case TileSide::Right:
-                    return { 0, (h[3] - h[1]) / grid.tile_size_z };
-            }
+        if (!grid.contains(col, row))
             return { };
+        const auto& h = grid.at(col, row).corners; // (x, z) corners: 0 at both low ends, 3 at both high
+        switch (side)
+        {
+            case TileSide::Back:
+                return { (h[1] - h[0]) / grid.tile_size_x, 0 };
+            case TileSide::Front:
+                return { (h[3] - h[2]) / grid.tile_size_x, 0 };
+            case TileSide::Left:
+                return { 0, (h[2] - h[0]) / grid.tile_size_z };
+            case TileSide::Right:
+                return { 0, (h[3] - h[1]) / grid.tile_size_z };
         }
-
-    } // namespace
+        return { };
+    }
 
     QueueFences queue_fences(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::uint64_t last_id)
     {

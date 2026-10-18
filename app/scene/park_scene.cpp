@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
+#include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/daylight.hpp"
 #include "park/ground_paths.hpp"
@@ -1146,6 +1147,7 @@ namespace rct3::scene
             return fail(blank.error());
         scene.blank = *blank;
 
+        const auto park_model = save::load_park(*file, index);
         begin(ParkLoadStage::Objects);
         if (const auto flow_file = install.find(park::kFlowFile))
         {
@@ -1242,7 +1244,22 @@ namespace rct3::scene
                 built.insert(built.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
             }
             log.info("{} ride fences", ride_fences);
+            // shortcut: built once on loading; rebuild it when land can be bought or sold, or a path laid across
+            // the park's edge.
+            static const std::string kNoFence;
+            park::BoundaryFence boundary = park::boundary_fence(park_model ? park_model->park.fence_symbol : kNoFence, park_model ? park_model->park.fence_overlay : kNoFence, scene.grid, world->paths, largest_id());
+            log.info("{} park fence panels", boundary.pieces.size());
+            const std::size_t first_panel = built.size();
+            const std::size_t panels = boundary.pieces.size();
+            built.insert(built.end(), std::make_move_iterator(boundary.pieces.begin()), std::make_move_iterator(boundary.pieces.end()));
+            scene.leans.merge(boundary.leans);
             load_models(install, built, false, scene.models, scene.pictures);
+            // The park names only the fence, so its panels take the fence's own colours.
+            for (std::size_t i = first_panel; i < first_panel + panels; ++i)
+            {
+                if (const auto found = scene.models.find(park::model_key(built[i])); found != scene.models.end())
+                    built[i].colours = found->second.default_colours;
+            }
             park::RideCars cars = park::ride_cars(scene.rides.rides, largest_id());
             load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
             scene.cars = std::move(cars.pieces);
@@ -1291,7 +1308,7 @@ namespace rct3::scene
             return fail(sky.error());
 
         {
-            const auto model = save::load_park(*file, index);
+            const auto& model = park_model;
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
             if (model)

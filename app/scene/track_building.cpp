@@ -38,7 +38,6 @@ namespace rct3::scene
         /// Above the tool row, so the two never overlap.
         constexpr float kPanelBottom = ui::tool_row::kMargin + ui::tool_row::kButtonSize + 8;
         /// The ghost's tint and how much of what is behind it shows through.
-        constexpr glm::vec4 kGhostTint { 0.75f, 0.9f, 1.0f, 0.55f };
 
         using park::kBankSteps;
 
@@ -480,7 +479,7 @@ namespace rct3::scene
 
     render::SceneLight ghost_light(render::SceneLight light)
     {
-        constexpr float kGhostGlow = 1.6f; // Bright enough to pass the glow's threshold through the ghost's see-through tint
+        constexpr float kGhostGlow = 2.4f; // Bright enough to pass the glow's threshold through the ghost's see-through tint
         light.sun = glm::vec3(0.0f);
         light.sky = glm::vec3(kGhostGlow);
         light.ground = glm::vec3(kGhostGlow);

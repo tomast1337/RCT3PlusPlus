@@ -238,6 +238,7 @@ namespace rct3::render
         Opaque,
         Alpha, ///< Straight (non-premultiplied) alpha
         Add,   ///< Added to what is there
+        Faded, ///< Over what is there at PipelineDesc::fade of its strength, whatever its own alpha
     };
 
     [[nodiscard]] constexpr std::uint32_t primitive_count(Topology topology, std::uint32_t vertices)
@@ -254,6 +255,8 @@ namespace rct3::render
         BlendMode blend = BlendMode::Opaque;
         bool depth_test = true;
         bool depth_write = true;
+        bool colour_write = true; ///< Without it, only depth is drawn
+        float fade = 1;           ///< For BlendMode::Faded
         std::string_view label;
     };
 

@@ -33,8 +33,6 @@ namespace rct3::scene
     {
 
         constexpr std::array<std::string_view, 2> kIconFiles { park::kPathIconFile, park::kQueueIconFile };
-        constexpr glm::vec4 kGhostTint { 1.0f, 1.0f, 1.0f, 0.6f };
-        constexpr glm::vec4 kRefusedTint { 1.0f, 0.3f, 0.3f, 0.6f };
         /// Of the next piece over the paths already laid, so the two never fight for the same depth.
         constexpr float kGhostLift = 0.02f;
         /// Of the arrow over the next piece, so it shows over the piece's own picture.
@@ -408,6 +406,7 @@ namespace rct3::scene
             f.ghost = { };
             f.raised_ghost = { };
             f.arrow = { };
+            f.under_ground = false;
             if (const auto next = park::next_piece(b, scene.grid); next && f.brush.empty())
             {
                 f.arrow = park::heading_arrow(*next, b.heading, scene.grid);
@@ -428,10 +427,12 @@ namespace rct3::scene
             }
             if (f.route && !f.route->empty() && f.style && *f.style < f.styles.size())
             {
+                f.under_ground = std::ranges::any_of(*f.route, [](const park::RouteStep& s) { return s.piece.tunnel; });
                 route_ghost(device, scene, assets);
                 return;
             }
             const auto piece = park::next_piece(b, scene.grid);
+            f.under_ground = piece && piece->tunnel;
             if (!piece || !f.style || *f.style >= f.styles.size())
                 return;
             const glm::vec4 tint = allowed ? kGhostTint : kRefusedTint;
@@ -861,6 +862,7 @@ namespace rct3::scene
             panel->hide();
         scene.footpaths.ghost = { };
         scene.footpaths.raised_ghost = { };
+        scene.footpaths.under_ground = false;
         scene.footpaths.brush.clear();
         scene.footpaths.hover.reset();
         scene.footpaths.hover_edge.reset();

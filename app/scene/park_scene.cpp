@@ -1053,6 +1053,18 @@ namespace rct3::scene
             if (const auto added = park::add_ground_images(images, *found); !added)
                 log.warning("{}: {}", name, added.error());
         }
+        std::vector<park::TunnelPictures> tunnels;
+        for (const park::TunnelStyle& style : park::kTunnelStyles)
+        {
+            const std::string name = park::tunnel_texture_file(style.name);
+            const auto found = install.find(name);
+            auto loaded = found ? park::load_tunnel_pictures(*found, style) : std::unexpected(std::string("not found"));
+            if (loaded && *loaded)
+                tunnels.push_back(std::move(**loaded));
+            else
+                log.warning("{}: {}", name, loaded ? "no picture" : loaded.error());
+        }
+        park::add_tunnel_images(images, tunnels);
         for (std::size_t i = 0; i < paths.styles.size(); ++i)
         {
             const std::string name = park::path_texture_file(paths.styles[i]);

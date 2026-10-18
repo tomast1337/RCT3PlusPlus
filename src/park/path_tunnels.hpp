@@ -4,7 +4,7 @@
 // just under its lowest point to kTunnelHeight over its highest. The ground's walls along that tile's edges
 // leave the hollow open, so a tunnel opens where it meets a slope or a cliff, and the hollow is lined: a
 // ceiling over it, and a wall on each side where neither another hollow nor open air lies beyond. The lining is
-// painted with the tile's cliff face.
+// painted with the tunnel pictures of the tile's cliff face (ground_textures.hpp), each repeating once a tile.
 //
 // A piece flagged as a tunnel whose ground was lowered since no longer has ground over it; it hollows nothing.
 #pragma once
@@ -28,7 +28,7 @@ namespace rct3::park
     /// The hollows of the tunnel pieces among `paths`.
     [[nodiscard]] std::vector<GroundOpening> tunnel_hollows(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
-    /// The lining of `hollows`, in cliff batches.
+    /// The lining of `hollows`, in TunnelWall and TunnelCeiling batches by the tiles' cliff faces.
     [[nodiscard]] TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::TerrainGrid& grid);
 
 } // namespace rct3::park

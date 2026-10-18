@@ -9,8 +9,11 @@
 #include "park/flexi_colours.hpp"
 #include "strings/ascii.hpp"
 
+#include <algorithm>
+#include <array>
 #include <format>
 #include <limits>
+#include <ranges>
 #include <vector>
 
 namespace rct3::park
@@ -39,6 +42,10 @@ namespace rct3::park
                 return "path B " + std::to_string(index);
             case GroundPaint::Queue:
                 return "queue " + std::to_string(index);
+            case GroundPaint::TunnelWall:
+                return "tunnel wall " + std::to_string(index);
+            case GroundPaint::TunnelCeiling:
+                return "tunnel ceiling " + std::to_string(index);
             case GroundPaint::Surface:
                 break;
         }
@@ -152,6 +159,88 @@ namespace rct3::park
             return false;
         images.insert_or_assign(ground_key(GroundPaint::Queue, index), paint(*picture, flexi_colours(painting.colours)));
         return true;
+    }
+
+    std::string tunnel_texture_file(std::string_view style)
+    {
+        return std::format("Style/Vanilla/TerrainSurfaces/{0}/{0}_TunnelTextures.common.ovl", style);
+    }
+
+    namespace
+    {
+        ovl::RgbaImage cut_out(const ovl::RgbaImage& from, const PictureRegion& region)
+        {
+            const auto at = [&](float share, std::uint32_t side) { return std::min(side, static_cast<std::uint32_t>(share * static_cast<float>(side))); };
+            const std::uint32_t left = at(region.left, from.width);
+            const std::uint32_t top = at(region.top, from.height);
+            ovl::RgbaImage out;
+            out.width = std::max(at(region.right, from.width), left + 1) - left;
+            out.height = std::max(at(region.bottom, from.height), top + 1) - top;
+            out.pixels.reserve(std::size_t { out.width } * out.height * 4);
+            for (std::uint32_t y = 0; y < out.height; ++y)
+            {
+                const std::size_t row = (std::size_t { std::min(top + y, from.height - 1) } * from.width + left) * 4;
+                out.pixels.insert(out.pixels.end(), from.pixels.begin() + static_cast<std::ptrdiff_t>(row), from.pixels.begin() + static_cast<std::ptrdiff_t>(row + std::size_t { out.width } * 4));
+            }
+            return out;
+        }
+
+        std::array<float, 3> mean_colour(const ovl::RgbaImage& image)
+        {
+            std::array<double, 3> sum { };
+            for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
+                for (std::size_t c = 0; c < 3; ++c)
+                    sum[c] += image.pixels[i + c];
+            const double count = std::max<double>(1, static_cast<double>(image.pixels.size() / 4));
+            return { static_cast<float>(sum[0] / count), static_cast<float>(sum[1] / count), static_cast<float>(sum[2] / count) };
+        }
+    } // namespace
+
+    std::expected<std::optional<TunnelPictures>, std::string> load_tunnel_pictures(const std::filesystem::path& path, const TunnelStyle& style)
+    {
+        auto overlay = ovl::Overlay::load(path);
+        if (!overlay)
+            return std::unexpected(std::string(ovl::to_string(overlay.error())));
+        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        {
+            if (part == nullptr)
+                continue;
+            for (const ovl::FlexiTextureItem& item : ovl::read_flexi_textures(*overlay, *part))
+            {
+                if (!item.texture || item.texture->frames.empty())
+                    continue;
+                const auto picture = ovl::decode_flexi_frame(item.texture->frames.front());
+                if (!picture)
+                    continue;
+                return TunnelPictures { cut_out(*picture, style.wall), cut_out(*picture, style.ceiling) };
+            }
+        }
+        return std::nullopt;
+    }
+
+    void add_tunnel_images(GroundImages& images, std::span<const TunnelPictures> styles)
+    {
+        if (styles.empty())
+            return;
+        std::vector<std::array<float, 3>> colours;
+        for (const TunnelPictures& s : styles)
+            colours.push_back(mean_colour(s.wall));
+        for (int cliff = 0; cliff <= std::numeric_limits<std::uint8_t>::max(); ++cliff)
+        {
+            const auto face = images.find(ground_key(GroundPaint::Cliff, static_cast<std::uint8_t>(cliff)));
+            if (face == images.end())
+                continue;
+            const auto colour = mean_colour(face->second);
+            const auto distance = [&](std::size_t s) {
+                float d = 0;
+                for (std::size_t c = 0; c < 3; ++c)
+                    d += (colours[s][c] - colour[c]) * (colours[s][c] - colour[c]);
+                return d;
+            };
+            const std::size_t nearest = std::ranges::min(std::views::iota(std::size_t { 0 }, styles.size()), { }, distance);
+            images.insert_or_assign(ground_key(GroundPaint::TunnelWall, static_cast<std::uint8_t>(cliff)), styles[nearest].wall);
+            images.insert_or_assign(ground_key(GroundPaint::TunnelCeiling, static_cast<std::uint8_t>(cliff)), styles[nearest].ceiling);
+        }
     }
 
     std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)

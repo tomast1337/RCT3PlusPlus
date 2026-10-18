@@ -85,7 +85,9 @@ TEST_CASE("a tunnel is lined with a ceiling, and walls where earth lies beyond")
     const TerrainMesh lining = tunnel_lining(hollows, g);
     // Two ceilings and the two long sides of each tile; the ends are the mouths, the middle is shared.
     CHECK(lining.indices.size() == 6 * (2 + 4));
-    REQUIRE(lining.batches.size() == 1);
+    REQUIRE(lining.batches.size() == 2);
+    CHECK(lining.batches[0].paint == GroundPaint::TunnelWall);
+    CHECK(lining.batches[1].paint == GroundPaint::TunnelCeiling);
     CHECK(lining.batches[0].index == 2);
     const auto ceiling = std::ranges::count_if(lining.vertices, [](const GroundVertex& v) { return v.normal.y < 0; });
     CHECK(ceiling == 12);

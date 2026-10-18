@@ -32,3 +32,17 @@ TEST_CASE("a queue style's ground is its picture that is not a mask, the one nam
     const std::vector<std::string_view> masks { "A.ALPHA" };
     CHECK_FALSE(queue_picture(masks, "A"));
 }
+
+TEST_CASE("each cliff face gets the tunnel pictures nearest it in colour")
+{
+    const auto plain = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) { return rct3::ovl::RgbaImage { 1, 1, { r, g, b, 255 } }; };
+    GroundImages images;
+    images.emplace(ground_key(GroundPaint::Cliff, 0), plain(200, 40, 30));
+    images.emplace(ground_key(GroundPaint::Cliff, 4), plain(20, 30, 220));
+    const std::vector<TunnelPictures> styles { { plain(10, 10, 250), plain(0, 0, 1) }, { plain(250, 10, 10), plain(1, 0, 0) } };
+    add_tunnel_images(images, styles);
+    CHECK(images.at(ground_key(GroundPaint::TunnelWall, 0)).pixels[0] == 250);
+    CHECK(images.at(ground_key(GroundPaint::TunnelCeiling, 0)).pixels[0] == 1);
+    CHECK(images.at(ground_key(GroundPaint::TunnelWall, 4)).pixels[2] == 250);
+    CHECK_FALSE(images.contains(ground_key(GroundPaint::TunnelWall, 1)));
+}

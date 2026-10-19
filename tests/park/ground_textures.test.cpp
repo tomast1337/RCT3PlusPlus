@@ -19,6 +19,7 @@ TEST_CASE("an overlay that is not there is an error")
 {
     GroundImages images;
     CHECK_FALSE(add_ground_images(images, "no such overlay.ovl").has_value());
+    CHECK_FALSE(ground_surfaces("no such overlay.ovl").has_value());
     CHECK(images.empty());
 }
 

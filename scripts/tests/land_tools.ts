@@ -68,11 +68,9 @@ expect(cash === undefined || park.cash()! < cash, "the digging to be paid for");
 
 const surface = map.tile(col + 2, row)!.surface;
 await pick("Land_Brush_Paint");
-expect(ui.find("paint_ground/content/Land_Paint_Base2") !== undefined, "the paint window to show the surfaces");
-expect(ui.find("paint_ground/content/Land_Brush_Radius") !== undefined, "the paint window to show the brush size");
-await ui.toggle("paint_ground/content/Rct3pp_BrushRound", true);
-await ui.toggle("paint_ground/content/Rct3pp_BrushRound", false);
-await ui.click("paint_ground/content/Land_Paint_Base2");
+await until(() => ui.find("land_panel/body/Land_Paint_Base2") !== undefined, 60, "the land panel to show the surfaces");
+expect(ui.find("land_panel/Land_Brush_Radius") !== undefined, "the land panel to show the brush size");
+await ui.click("land_panel/body/Land_Paint_Base2");
 await pointer.drag(on_view(col - 2, row), on_view(col + 2, row), 30);
 log("painted:", surface, "->", map.tile(col + 2, row)!.surface);
 await screenshot("painted");

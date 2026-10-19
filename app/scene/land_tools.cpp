@@ -11,9 +11,7 @@
 #include "scene/park_scene.hpp"
 #include "scene/ride_placing.hpp"
 #include "ui/game_style.hpp"
-#include "ui/widgets/button.hpp"
-#include "ui/widgets/spinner.hpp"
-#include "ui/widgets/window.hpp"
+#include "ui/screens/land_panel.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -30,16 +28,16 @@ namespace rct3::scene
         constexpr std::int32_t kWaterCost = 100; ///< A step of a lake's level
         constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units. Our own value.
 
-        constexpr std::string_view kPaintWindowName = "paint_ground";
-        constexpr std::string_view kPaintIcon = "Land_Brush_Paint";
-        constexpr std::string_view kPaintTitle = "Land_Brush_PaintHelp";
-        constexpr std::size_t kSwatchColumns = 7;
-        constexpr float kSwatch = 40; ///< A surface's picture and the room round it
-        constexpr std::string_view kBrushName = "Land_Brush_Radius";
-        constexpr std::string_view kRoundName = "Rct3pp_BrushRound";
-        constexpr float kBrushRow = 24; ///< Under the pictures: the brush's size and shape
-        constexpr float kBrushNumber = 60;
-        constexpr float kRoundWidth = 80;
+        constexpr std::string_view kPanelName = "land_panel";
+
+        /// A tab's tools by their pictures, `usable` the first of them that work so far.
+        ui::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
+        {
+            ui::LandTab t { std::string(icon), std::u16string(strings.get(std::string(icon) + "Help")), slot, { } };
+            for (const std::string_view tool : tools)
+                t.tools.push_back({ std::string(tool), std::u16string(strings.get(std::string(tool) + "Help")), t.tools.size() < usable });
+            return t;
+        }
 
         bool affordable(const ParkScene& scene, std::int32_t cost)
         {
@@ -97,7 +95,7 @@ namespace rct3::scene
             l.tile = tile;
             const std::uint8_t surface = l.surfaces[l.surface].index;
             bool painted = false;
-            for (const park::PathSpot t : park::brush_tiles(*tile, l.brush, l.round, scene.grid.width, scene.grid.height))
+            for (const park::PathSpot t : park::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
             {
                 save::TerrainCell& cell = scene.grid.at(t.col, t.row);
                 if (cell.surface == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
@@ -176,63 +174,40 @@ namespace rct3::scene
             }
         }
 
-        ui::Window* paint_window(const ParkScene& scene)
+        ui::LandPanel* panel_of(const ParkScene& scene)
         {
-            auto* window = static_cast<ui::Window*>(scene.desktop->root().find(kPaintWindowName));
-            return window == nullptr || window->closing() ? nullptr : window;
+            return static_cast<ui::LandPanel*>(scene.desktop->root().find(kPanelName));
         }
 
-        void open_paint_window(ParkScene& scene, const ui::InterfaceAssets& assets)
+        /// The panel with the tabs of the tool out: shaping's, or painting's with the surfaces read.
+        void open_panel(ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             const LandTools& l = scene.land;
-            const ui::WindowStyle style = ui::game_skins::window_style();
-            const std::size_t rows = (l.surfaces.size() + kSwatchColumns - 1) / kSwatchColumns;
-            const float width = style.content_inset.x0 + style.content_inset.x1 + kSwatchColumns * kSwatch;
-            const float swatches = static_cast<float>(std::max<std::size_t>(rows, 1)) * kSwatch;
-            const float height = style.content_inset.y0 + style.content_inset.y1 + swatches + kBrushRow;
-            auto& window = scene.desktop->root().add<ui::Window>(std::string(kPaintWindowName), style, width, height);
-            window.title = std::u16string(assets.strings->get(kPaintTitle));
-            window.icon = kPaintIcon;
-            window.placement = ui::top_left(16, 60, width, height);
-            for (std::size_t i = 0; i < l.surfaces.size(); ++i)
+            const ui::StringTable& strings = *assets.strings;
+            ui::LandPanel* panel = panel_of(scene);
+            if (panel == nullptr)
+                panel = &scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(), strings);
+            std::vector<ui::LandTab> tabs;
+            ui::LandPick chosen;
+            if (l.tool == LandTools::Tool::Paint)
             {
-                const park::GroundSurface& s = l.surfaces[i];
-                ui::Button& b = window.content().add<ui::Button>(s.icon, std::string(ui::game_skins::kMenuButtonSmall), s.icon);
-                b.placement = ui::top_left(static_cast<float>(i % kSwatchColumns) * kSwatch, static_cast<float>(i / kSwatchColumns) * kSwatch, kSwatch, kSwatch);
-                b.tooltip = std::u16string(assets.strings->get(s.help));
-                b.toggle = true;
-                b.on = i == l.surface;
+                ui::LandTab base { "Land_Brush_Paint_Base", std::u16string(strings.get("Land_Brush_Paint_BaseHelp")), 4, { } };
+                for (const park::GroundSurface& s : l.surfaces)
+                    base.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
+                tabs.push_back(std::move(base));
+                // Cliff faces are not painted yet.
+                tabs.push_back(tab_of(strings, "Land_Brush_Paint_Cliff", 5, { "Land_Paint_Cliff0", "Land_Paint_Cliff1", "Land_Paint_Cliff2", "Land_Paint_Cliff3", "Land_Paint_Cliff4", "Land_Paint_Cliff5" }, 0));
+                chosen = { 0, l.surface };
             }
-            ui::Spinner& brush = window.content().add<ui::Spinner>(std::string(kBrushName), ui::game_skins::spinner_style());
-            brush.minimum = 1;
-            brush.maximum = park::kLargestBrush;
-            brush.set_value(l.brush);
-            brush.tooltip = std::u16string(assets.strings->get("Land_Brush_RadiusHelp"));
-            brush.placement = ui::top_left(0, swatches + 4, kBrushNumber, kBrushRow - 8);
-            ui::Button& round = window.content().add<ui::Button>(std::string(kRoundName), std::string(ui::game_skins::kButton), std::string { });
-            round.text = std::u16string(assets.strings->get(kRoundName));
-            round.toggle = true;
-            round.on = l.round;
-            round.placement = ui::top_left(kBrushNumber + 8, swatches + 2, kRoundWidth, kBrushRow - 4);
-        }
-
-        /// Takes the surface picked in the window since the last frame, keeping only it pressed in.
-        void take_pick(LandTools& l, ui::Window& window)
-        {
-            // The surfaces' buttons come first, then the brush's controls.
-            const auto& buttons = window.content().children();
-            const std::size_t swatches = std::min(buttons.size(), l.surfaces.size());
-            for (std::size_t i = 0; i < swatches; ++i)
+            else
             {
-                if (static_cast<ui::Button&>(*buttons[i]).take_click())
-                    l.surface = i;
+                // Of the shaping tools only the tile one works so far; the others show what is to come.
+                tabs.push_back(tab_of(strings, "Land_Vertex", 2, { "Land_Vertex_Neighbour", "Land_Vertex_Neighbour2", "Land_Vertex_Freeform", "Land_Vertex_Freeform2", "Land_Vertex_Quantised1", "Land_Vertex_Quantised2" }, 1));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_Random", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Flat2", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, 0));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill" }, 0));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Lower", 5, { "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, 0));
             }
-            for (std::size_t i = 0; i < swatches; ++i)
-                static_cast<ui::Button&>(*buttons[i]).on = i == l.surface;
-            if (auto* brush = dynamic_cast<ui::Spinner*>(window.content().find(kBrushName)); brush != nullptr && brush->take_change())
-                l.brush = brush->value();
-            if (auto* round = dynamic_cast<ui::Button*>(window.content().find(kRoundName)); round != nullptr && round->take_click())
-                l.round = round->on;
+            panel->show(std::move(tabs), chosen, l.brush, park::kLargestBrush);
         }
     } // namespace
 
@@ -244,17 +219,16 @@ namespace rct3::scene
             return;
         scene.land.tool = tool;
         if (tool == LandTools::Tool::Paint)
-        {
             read_surfaces(scene.land, assets);
-            open_paint_window(scene, assets);
-        }
+        if (tool != LandTools::Tool::Water)
+            open_panel(scene, assets);
     }
 
     void stop_land_tools(ParkScene& scene)
     {
         LandTools& l = scene.land;
-        if (ui::Window* window = paint_window(scene))
-            window->close();
+        if (ui::LandPanel* panel = panel_of(scene))
+            panel->hide();
         l.tool = LandTools::Tool::None;
         l.tile.reset();
         l.solids = { };
@@ -269,15 +243,16 @@ namespace rct3::scene
     void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
     {
         LandTools& l = scene.land;
-        if (l.tool == LandTools::Tool::Paint)
+        if (ui::LandPanel* panel = panel_of(scene); panel != nullptr && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint))
         {
-            ui::Window* window = paint_window(scene);
-            if (window == nullptr)
+            if (panel->take_closed())
             {
                 stop_land_tools(scene); // Closed by the player
                 return;
             }
-            take_pick(l, *window);
+            l.brush = panel->brush();
+            if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Paint && pick->tab == 0)
+                l.surface = pick->tool;
         }
         if (l.tool == LandTools::Tool::None || !down)
         {

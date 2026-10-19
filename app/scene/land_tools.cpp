@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/footpath_builder.hpp"
+#include "park/ground_brush.hpp"
 #include "park/ride_placement.hpp"
 #include "park/water_fill.hpp"
 #include "scene/park_footpaths.hpp"
@@ -11,6 +12,7 @@
 #include "scene/ride_placing.hpp"
 #include "ui/game_style.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/spinner.hpp"
 #include "ui/widgets/window.hpp"
 
 #include <algorithm>
@@ -33,6 +35,11 @@ namespace rct3::scene
         constexpr std::string_view kPaintTitle = "Land_Brush_PaintHelp";
         constexpr std::size_t kSwatchColumns = 7;
         constexpr float kSwatch = 40; ///< A surface's picture and the room round it
+        constexpr std::string_view kBrushName = "Land_Brush_Radius";
+        constexpr std::string_view kRoundName = "Rct3pp_BrushRound";
+        constexpr float kBrushRow = 24; ///< Under the pictures: the brush's size and shape
+        constexpr float kBrushNumber = 60;
+        constexpr float kRoundWidth = 80;
 
         bool affordable(const ParkScene& scene, std::int32_t cost)
         {
@@ -88,13 +95,19 @@ namespace rct3::scene
             if (!tile || tile == l.tile || l.surface >= l.surfaces.size())
                 return;
             l.tile = tile;
-            save::TerrainCell& cell = scene.grid.at(tile->col, tile->row);
             const std::uint8_t surface = l.surfaces[l.surface].index;
-            if (cell.surface == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
-                return;
-            cell.surface = surface;
-            pay(scene, kPaintCost);
-            rebuild_ground(device, scene, assets);
+            bool painted = false;
+            for (const park::PathSpot t : park::brush_tiles(*tile, l.brush, l.round, scene.grid.width, scene.grid.height))
+            {
+                save::TerrainCell& cell = scene.grid.at(t.col, t.row);
+                if (cell.surface == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
+                    continue;
+                cell.surface = surface;
+                pay(scene, kPaintCost);
+                painted = true;
+            }
+            if (painted)
+                rebuild_ground(device, scene, assets);
         }
 
         /// Sets the water filled from the held tile to its level `steps` from the stroke's start; false when it
@@ -175,7 +188,8 @@ namespace rct3::scene
             const ui::WindowStyle style = ui::game_skins::window_style();
             const std::size_t rows = (l.surfaces.size() + kSwatchColumns - 1) / kSwatchColumns;
             const float width = style.content_inset.x0 + style.content_inset.x1 + kSwatchColumns * kSwatch;
-            const float height = style.content_inset.y0 + style.content_inset.y1 + static_cast<float>(std::max<std::size_t>(rows, 1)) * kSwatch;
+            const float swatches = static_cast<float>(std::max<std::size_t>(rows, 1)) * kSwatch;
+            const float height = style.content_inset.y0 + style.content_inset.y1 + swatches + kBrushRow;
             auto& window = scene.desktop->root().add<ui::Window>(std::string(kPaintWindowName), style, width, height);
             window.title = std::u16string(assets.strings->get(kPaintTitle));
             window.icon = kPaintIcon;
@@ -189,19 +203,36 @@ namespace rct3::scene
                 b.toggle = true;
                 b.on = i == l.surface;
             }
+            ui::Spinner& brush = window.content().add<ui::Spinner>(std::string(kBrushName), ui::game_skins::spinner_style());
+            brush.minimum = 1;
+            brush.maximum = park::kLargestBrush;
+            brush.set_value(l.brush);
+            brush.tooltip = std::u16string(assets.strings->get("Land_Brush_RadiusHelp"));
+            brush.placement = ui::top_left(0, swatches + 4, kBrushNumber, kBrushRow - 8);
+            ui::Button& round = window.content().add<ui::Button>(std::string(kRoundName), std::string(ui::game_skins::kButton), std::string { });
+            round.text = std::u16string(assets.strings->get(kRoundName));
+            round.toggle = true;
+            round.on = l.round;
+            round.placement = ui::top_left(kBrushNumber + 8, swatches + 2, kRoundWidth, kBrushRow - 4);
         }
 
         /// Takes the surface picked in the window since the last frame, keeping only it pressed in.
         void take_pick(LandTools& l, ui::Window& window)
         {
+            // The surfaces' buttons come first, then the brush's controls.
             const auto& buttons = window.content().children();
-            for (std::size_t i = 0; i < buttons.size() && i < l.surfaces.size(); ++i)
+            const std::size_t swatches = std::min(buttons.size(), l.surfaces.size());
+            for (std::size_t i = 0; i < swatches; ++i)
             {
                 if (static_cast<ui::Button&>(*buttons[i]).take_click())
                     l.surface = i;
             }
-            for (std::size_t i = 0; i < buttons.size(); ++i)
+            for (std::size_t i = 0; i < swatches; ++i)
                 static_cast<ui::Button&>(*buttons[i]).on = i == l.surface;
+            if (auto* brush = dynamic_cast<ui::Spinner*>(window.content().find(kBrushName)); brush != nullptr && brush->take_change())
+                l.brush = brush->value();
+            if (auto* round = dynamic_cast<ui::Button*>(window.content().find(kRoundName)); round != nullptr && round->take_click())
+                l.round = round->on;
         }
     } // namespace
 

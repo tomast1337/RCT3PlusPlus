@@ -37,9 +37,18 @@ float distance_of(float stored) {
   return u_draw.b.w / (stored - u_draw.b.z);
 }
 
+// Clip space x and y of texture place `uv`, and back: texture v runs down, clip Y up.
+vec2 clip_of(vec2 uv) {
+  return vec2(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+}
+
+vec2 uv_of(vec2 clip) {
+  return vec2(clip.x * 0.5 + 0.5, 0.5 - clip.y * 0.5);
+}
+
 // The point seen at `uv`, in eye space.
 vec3 eye_point(vec2 uv, float stored) {
-  vec4 p = u_draw.matrix * vec4(uv * 2.0 - 1.0, stored, 1.0);
+  vec4 p = u_draw.matrix * vec4(clip_of(uv), stored, 1.0);
   return p.xyz / p.w;
 }
 
@@ -94,7 +103,8 @@ float trace() {
     float angle_n = sign(dot(ortho, projected)) * acos(cos_n);
     vec2 horizon = vec2(-1.0);
     for (int side = 0; side < 2; ++side) {
-      vec2 way = omega * (side == 0 ? -1.0 : 1.0) * pixels * texel;
+      // The slice runs along omega in eye space, so down the texture where it rises.
+      vec2 way = vec2(omega.x, -omega.y) * (side == 0 ? -1.0 : 1.0) * pixels * texel;
       for (int j = 0; j < kSteps; ++j) {
         // Closer together near the pixel, where what is near counts most; at least a pixel out.
         float t = (float(j) + shift) / float(kSteps);
@@ -141,9 +151,9 @@ float blend() {
   float stored = stored_depth(u_extra1, v_uv);
   if (history <= 0.0 || stored >= 1.0)
     return now;
-  vec4 then = u_draw.matrix * vec4(v_uv * 2.0 - 1.0, stored, 1.0);
+  vec4 then = u_draw.matrix * vec4(clip_of(v_uv), stored, 1.0);
   then /= then.w;
-  vec2 uv = then.xy * 0.5 + 0.5;
+  vec2 uv = uv_of(then.xy);
   if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
     return now;
   float expected = distance_of(then.z);

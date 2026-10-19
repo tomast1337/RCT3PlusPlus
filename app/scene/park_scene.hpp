@@ -430,6 +430,9 @@ namespace rct3::scene
     /// The pointer's look over the park this frame (ui/park_cursor.hpp).
     [[nodiscard]] ui::CursorKind park_scene_cursor(const ParkScene& scene);
 
+    /// Device pixels to each unit of the park's interface.
+    [[nodiscard]] float park_interface_scale(const render::Device& device, const ParkScene& scene);
+
     /// Starts a ripple on the water under `at`, in interface units on a screen of `size`, if water is there. True
     /// if it did.
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size);

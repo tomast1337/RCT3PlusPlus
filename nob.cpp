@@ -4,6 +4,7 @@
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
+//   ./nob script FILE.ts [-- APP_ARGS...]         compiles scripts/ with tsc and runs the viewer with FILE
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
@@ -355,13 +356,15 @@ namespace
         return compile(c_config(cfg, { "-Ithird_party/ffmpeg_wma" }), find_files("third_party/ffmpeg_wma", ".c"), headers, objects, database);
     }
 
-    // Vendored code every target links: the stb_truetype and stb_image implementation units, built without our
-    // warnings.
+    // Vendored code every target links: the stb_truetype and stb_image implementation units and the QuickJS-NG
+    // script engine, built without our warnings.
     bool compile_vendored_core(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         Config vendored = cfg;
         vendored.compile_flags.push_back("-w");
-        return compile(vendored, { "third_party/stb/stb_truetype_impl.cpp", "third_party/stb/stb_image_impl.cpp" }, headers, objects, database);
+        if (!compile(vendored, { "third_party/stb/stb_truetype_impl.cpp", "third_party/stb/stb_image_impl.cpp" }, headers, objects, database))
+            return false;
+        return compile(c_config(cfg, { "-D_GNU_SOURCE" }), find_files("third_party/quickjs", ".c"), headers, objects, database);
     }
 
     Config with_audio_link(Config cfg)
@@ -675,6 +678,7 @@ int main(int argc, char** argv)
     bool tools = true;
     std::vector<std::string> test_args;
     std::string fuzz_target;
+    std::string script; ///< For ./nob script
     int fuzz_seconds = 30;
     int jobs = 0;
 
@@ -700,8 +704,10 @@ int main(int argc, char** argv)
             for (++i; i < argc; ++i)
                 test_args.emplace_back(argv[i]);
         }
-        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy" || arg == "fetch")
+        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy" || arg == "fetch" || arg == "script")
             command = arg;
+        else if (command == "script" && !arg.starts_with("-"))
+            script = arg;
         else if (arg == "--check")
             check = true;
         else if (command == "fuzz" && !arg.starts_with("-"))
@@ -710,7 +716,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch | ./nob script FILE.ts [-- APP_ARGS...]",
                 arg);
             return 2;
         }
@@ -747,7 +753,7 @@ int main(int argc, char** argv)
 
     const Config cfg = make_config(release, sanitize, false, job_count(jobs));
 
-    if (command == "app" || command == "run")
+    if (command == "app" || command == "run" || command == "script")
     {
         fs::path binary;
         if (!build_app(cfg, binary))
@@ -756,6 +762,16 @@ int main(int argc, char** argv)
             return 0;
         Cmd run_cmd;
         run_cmd << binary.string();
+        if (command == "script")
+        {
+            // TypeScript compiles to build/scripts with the same path under scripts/ (scripts/tsconfig.json).
+            Cmd tsc;
+            tsc << "tsc" << "-p" << "scripts";
+            if (script.empty() || !run(tsc))
+                return 1;
+            fs::path js = kBuildDir / "scripts" / fs::relative(script, "scripts").replace_extension(".js");
+            run_cmd << "--script" << js.string();
+        }
         run_cmd.append(test_args);
         return run(run_cmd) ? 0 : 1;
     }

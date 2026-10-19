@@ -103,6 +103,15 @@ export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"
 
 File names inside the install are matched without regard to case, as on Windows.
 
+## Scripts
+
+`rct3pp --script FILE.js` runs a JavaScript module that plays the game through its own pointer: it clicks
+widgets by name, drags over the ground, waits frames, reads the park back and takes screenshots. The game
+exits when the script ends, with 1 when it failed, so scripts serve as tests of the game as played.
+`scripts/types/rct3pp.d.ts` describes what scripts get; `./nob script scripts/tests/FILE.ts -- APP_ARGS`
+compiles the TypeScript in `scripts/` with `tsc` and runs it. Scripts run in the vendored
+[QuickJS-NG](third_party/quickjs/) (MIT), without its file, network or system modules.
+
 ## Clean-room policy
 
 rct3++ is a clean-room reimplementation. This repository contains original code and format descriptions

@@ -2843,6 +2843,11 @@ namespace rct3::scene
         }
     } // namespace
 
+    float park_interface_scale(const render::Device& device, const ParkScene& scene)
+    {
+        return scale_for(device, scene);
+    }
+
     ui::CursorKind park_scene_cursor(const ParkScene& scene)
     {
         ui::ParkPointer pointer;

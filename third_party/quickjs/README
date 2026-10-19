@@ -1,0 +1,2 @@
+QuickJS-NG v0.17.0 (https://github.com/quickjs-ng/quickjs), MIT. Core only: dtoa.c, libregexp.c, libunicode.c,
+quickjs.c and their headers, copied unchanged. quickjs-libc (files, OS access) is left out on purpose.

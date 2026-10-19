@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
 //   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos, 60 fps
@@ -17,6 +17,8 @@
 //   --audio           sound for this run, even when the settings turn it off
 //   --park FILE       load this park save straight away
 //   --no-simulate     show parks as saved, standing still, without running the simulation
+//   --script FILE     run the JavaScript FILE, which plays the game through its pointer (scene/script_host.hpp);
+//                     the game exits when it ends, with 1 when it failed
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
@@ -47,6 +49,7 @@
 #include "scene/park_loading.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_windows.hpp"
+#include "scene/script_host.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
@@ -84,7 +87,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -534,6 +537,7 @@ int main(int argc, char** argv)
     double max_seconds = -1;
     std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
+    std::optional<std::filesystem::path> script_file;
     std::optional<std::uint64_t> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
@@ -558,6 +562,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--park") == 0 && i + 1 < argc)
         {
             park_file = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--script") == 0 && i + 1 < argc)
+        {
+            script_file = argv[++i];
         }
         else if (std::strcmp(argv[i], "--no-simulate") == 0)
         {
@@ -926,6 +934,13 @@ int main(int argc, char** argv)
         load_widgets(false);
 
     int status = 0;
+    std::unique_ptr<rct3::scene::ScriptHost> script;
+    if (script_file)
+    {
+        script = rct3::scene::ScriptHost::start(*script_file);
+        if (!script)
+            return 1;
+    }
     try
     {
         prof::register_thread("Main");
@@ -935,6 +950,16 @@ int main(int argc, char** argv)
         // The pointer from the corner of where the game draws, which the developer panels may have moved.
         const auto game_pointer = [&] {
             auto p = window->pointer();
+            // A script plays in place of the real pointer once it has moved its own.
+            if (const auto held = script ? script->pointer(*device) : std::nullopt)
+            {
+                p = { };
+                p.x = held->x;
+                p.y = held->y;
+                p.left = held->down;
+                p.inside = true;
+                return p;
+            }
             if (const auto& v = device->view())
             {
                 p.x -= static_cast<float>(v->x);
@@ -964,6 +989,15 @@ int main(int argc, char** argv)
 
             prof::section("Frame", [&] {
                 prof::section("Ui", [&] {
+                    if (script)
+                    {
+                        script->tick(*device, phase == Phase::Running && park ? &*park : nullptr);
+                        if (const auto code = script->quit())
+                        {
+                            quit = true;
+                            status = *code;
+                        }
+                    }
                     device->ui_new_frame();
                     window->ui_new_frame();
                     ImGui::NewFrame();
@@ -984,6 +1018,8 @@ int main(int argc, char** argv)
                         keys = std::move(translated.keyboard);
                         play_commands = std::move(translated.play);
                         screenshot = std::ranges::contains(play_commands, rct3::ui::PlayCommand::ScreenSnapshot);
+                        if (script && script->take_screenshot())
+                            screenshot = true;
                         const auto toggles = std::ranges::count(translated.commands, rct3::ui::Command::DeveloperWindows);
                         developer_windows = developer_windows != (toggles % 2 == 1);
                         for (auto& k : keys.presses)

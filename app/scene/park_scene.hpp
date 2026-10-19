@@ -356,6 +356,7 @@ namespace rct3::scene
         bool show_ride_heights = false;                    ///< Likewise over each piece of track
         ViewLines grid_lines;                              ///< The tile grid over the ground, while the view menu shows it
         ViewLines contour_lines;                           ///< Likewise the contours
+        ViewLines land_marks;                              ///< What the land tool out would work on
         park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                 ///< The round view is drawn into
         std::uint32_t view_pixels = 0;                     ///< Across the view's target

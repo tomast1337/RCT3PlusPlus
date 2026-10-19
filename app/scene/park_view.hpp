@@ -5,6 +5,7 @@
 // building or just watching the park.
 #pragma once
 
+#include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/widgets/world_labels.hpp"
 
@@ -15,11 +16,15 @@ namespace rct3::scene
 {
 
     struct ParkScene;
+    struct ViewLines;
 
     /// Makes the grid and contours the view menu shows, and drops those it hides.
     void update_view_lines(render::Device& device, ParkScene& scene);
 
-    /// Draws the grid and contours over the ground.
+    /// Puts `mesh` in the lines' buffers, in place of what they held.
+    void set_view_lines(render::Device& device, ViewLines& lines, const park::TerrainMesh& mesh);
+
+    /// Draws the grid, the contours and the land tools' marks over the ground.
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     /// Drops the lines' buffers.

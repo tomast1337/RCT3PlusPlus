@@ -34,6 +34,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "scene/build_menus.hpp"
+#include "scene/ground_shaping.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
@@ -397,6 +398,7 @@ namespace rct3::scene
         ParkMap map;                                       ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                           ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                            ///< The construction panel's ride and the piece it would build
+        GroundShaping shaping;                             ///< The shape ground tool, while picked
         RidePlacing placing;                               ///< The ride picked in a build list, while it is placed
     };
 

@@ -49,6 +49,10 @@ namespace rct3::park
     /// Levels the ground under `site` to its height.
     void level_ground(save::TerrainGrid& grid, const RideSite& site);
 
+    /// The whole-unit height one step of the shape ground tool takes a tile to: a sloped tile is flattened to
+    /// its highest corner going `up` (its lowest going down), a flat one moves one unit.
+    [[nodiscard]] std::int32_t shaped_height(const save::TerrainCell& cell, bool up);
+
     /// A ride's entrance or exit: its tile and the quarter turn it faces the ride by.
     struct DoorSpot
     {

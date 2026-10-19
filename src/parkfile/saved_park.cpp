@@ -178,10 +178,12 @@ namespace rct3::parkfile
     std::vector<std::byte> write_saved_park(const SavedPark& park)
     {
         Writer w;
-        write_header(w, kChunks + (park.people ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
+        if (!park.no_queue_signs.empty())
+            put_chunk(w, "QSGN", 1, park.no_queue_signs);
         return w.take();
     }
 
@@ -196,6 +198,12 @@ namespace rct3::parkfile
                 if (park.people || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.people.emplace());
+            }
+            if (tag == "QSGN")
+            {
+                if (!park.no_queue_signs.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.no_queue_signs);
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

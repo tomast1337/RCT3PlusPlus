@@ -111,6 +111,8 @@ namespace rct3::ui
         std::optional<RideFlow> flow { };
         /// The park's guests, to tell how many the ride suits.
         std::span<const save::Guest> guests { };
+        /// Of a ride, whether signs stand over its queues.
+        std::optional<bool> queue_signs { };
     };
 
     struct GuestsSuited
@@ -133,6 +135,7 @@ namespace rct3::ui
         MaxWait,    ///< Seconds
         Inspection, ///< The interval's place in the list
         WaitFor,    ///< The load the trains wait for, its place in the list
+        QueueSigns, ///< Whether signs stand over a ride's queues
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

@@ -632,6 +632,7 @@ namespace rct3::park
         {
             level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
             set_texture(level.parts.back(), mesh.texture, mesh.style, file->first);
+            level.parts.back().board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
         }
         return true;
     }

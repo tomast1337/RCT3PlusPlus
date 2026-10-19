@@ -123,8 +123,9 @@ namespace rct3::logging
         Log& operator=(const Log&) = delete;
 
         /// Starts writing to a new timestamped file in `directory` (created if missing). Entries logged before
-        /// this call are not written to the file. Returns an error text when the file cannot be opened.
-        [[nodiscard]] std::expected<void, std::string> open_file(const std::filesystem::path& directory);
+        /// this call are not written to the file. Returns the file's path, or an error text when it cannot be
+        /// opened.
+        [[nodiscard]] std::expected<std::filesystem::path, std::string> open_file(const std::filesystem::path& directory);
 
         [[nodiscard]] Logger for_category(std::string category);
         [[nodiscard]] bool enabled(Level level) const;

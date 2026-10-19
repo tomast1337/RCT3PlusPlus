@@ -1072,7 +1072,7 @@ namespace rct3::scene
         scene.seed = seed;
         scene.file = path;
         scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
-        log.info("{}: seed {} (--seed repeats it)", path.filename().string(), random::seed_text(seed));
+        log.info("{}: seed {} (--seed repeats it)", path.string(), random::seed_text(seed));
         scene.camera = park::overview(scene.grid);
         scene.day = park_day(*file, index, *world, options);
         if (saved)

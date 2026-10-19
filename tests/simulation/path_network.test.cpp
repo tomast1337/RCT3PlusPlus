@@ -164,3 +164,17 @@ TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid
     CHECK(again != gone);
     CHECK(p.route(*p.find({ 0, 0, 0 }), *p.find({ 2, 0, 0 }))->size() == 2);
 }
+
+TEST_CASE("a walk down a ramp onto a sunken tile bends at the edge, not above the low floor")
+{
+    PathNetwork p;
+    const NodeId top = p.add({ 0, 0, 0 }, false, 0.0f);
+    const NodeId ramp = p.add({ 1, 0, -1 }, false, -1.0f); // Falls two units across the tile
+    const NodeId floor = p.add({ 2, 0, -2 }, false, -2.0f);
+    p.set_sloped(ramp, true);
+    CHECK(p.height_between(top, ramp, 0.5f) == doctest::Approx(0.0f));
+    CHECK(p.height_between(top, ramp, 0.75f) == doctest::Approx(-0.5f));
+    CHECK(p.height_between(ramp, floor, 0.5f) == doctest::Approx(-2.0f));
+    CHECK(p.height_between(floor, ramp, 0.25f) == doctest::Approx(-2.0f));
+    CHECK(p.height_between(top, floor, 0.5f) == doctest::Approx(-1.0f)); // Two flat tiles: a straight line
+}

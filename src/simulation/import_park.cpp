@@ -268,6 +268,7 @@ namespace rct3::simulation
         const std::uint64_t line = path.queue ? path.queue->queue_line_ref : 0;
         const NodeId id = world.paths.add(spot, path.kind == save::PathKind::Queue, height, line);
         world.paths.set_line(id, line);
+        world.paths.set_sloped(id, path.elevation && park::path_rise(path.elevation->slope) > 0);
         return id;
     }
 

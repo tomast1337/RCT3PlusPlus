@@ -2491,7 +2491,7 @@ namespace rct3::scene
                 else if (const auto topic = ui::management_topic(*item))
                     toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, info_units(assets, options));
                 else
-                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
+                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash); picked && start_ride_placing(scene, *picked))
             {

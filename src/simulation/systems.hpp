@@ -35,6 +35,7 @@ namespace rct3::simulation
     /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
     /// the middle; upgrade when paths of other widths are modelled.
     inline constexpr float kLaneReach = 1.3f;
+    inline constexpr float kLongQueue = 240; ///< Seconds of queueing that feel like ages; our own value
 
     struct Pose;
     /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.

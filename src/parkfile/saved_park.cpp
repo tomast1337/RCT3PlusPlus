@@ -94,7 +94,7 @@ namespace rct3::parkfile
             model.guests[i].in_park = in_park[i];
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
-            SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage, .position = pose.position, .heading = pose.heading });
+            SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness, .laziness = staff.laziness, .position = pose.position, .heading = pose.heading });
             if (const auto* patrol = r.try_get<Patrol>(e))
                 w.patrol = *patrol;
         }
@@ -165,7 +165,7 @@ namespace rct3::parkfile
             if (!at || world.paths.nodes()[*at].queue)
                 continue;
             const entt::entity e = r.create();
-            r.emplace<Staff>(e, Staff { .role = w.role, .wage = w.wage });
+            r.emplace<Staff>(e, Staff { .role = w.role, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness });
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
                 r.emplace<Patrol>(e, *w.patrol);

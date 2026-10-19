@@ -160,6 +160,26 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
     CHECK(r.get<simulation::Errand>(guests[3]).kind != simulation::ErrandKind::Riding);
 }
 
+TEST_CASE("a guest saved off the paths or on a queue no ride owns walks from the nearest path")
+{
+    simulation::SimWorld world;
+    const auto path = world.paths.add({ 0, 0, 0 });
+    const auto queue = world.paths.add({ 1, 0, 0 }, true);
+    save::PeopleModel people;
+    for (const glm::vec3 at : { world.paths.centre(queue), glm::vec3(60, 0, 60) })
+    {
+        save::Guest& g = people.guests.emplace_back();
+        g.in_park = true;
+        g.person.id = static_cast<save::PeopleObjectId>(people.guests.size());
+        g.person.state = save::PersonState::Swimming;
+        g.person.position = { at.x, at.y, at.z };
+    }
+    const auto guests = simulation::import_guests(world, people);
+    CHECK(simulation::start_guests(world) == 2);
+    for (const entt::entity g : guests)
+        CHECK(world.registry.get<simulation::Stride>(g).from == path);
+}
+
 TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path tiles they stand on")
 {
     simulation::SimWorld world;
@@ -203,7 +223,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Staff>(staff[0]).role == simulation::StaffRole::Handyman);
     CHECK(world.registry.get<simulation::Staff>(staff[1]).role == simulation::StaffRole::Guard);
     CHECK(world.registry.get<simulation::Stride>(staff[0]).to == tile);
-    CHECK(staff[2] == entt::null);
+    CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
 }
 
 TEST_CASE("paths laid and taken away come and go from the network; walkers and rides catch up")

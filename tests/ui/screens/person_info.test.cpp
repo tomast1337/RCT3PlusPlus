@@ -206,8 +206,11 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(person_page(PersonTab::General, staff(p), s, units).controls.size() == 2);
 
     const InfoPage stats = person_page(PersonTab::Stats, staff(p), s, units);
-    REQUIRE(stats.controls.size() == 1);
+    REQUIRE(stats.controls.size() == 2);
     CHECK(stats.controls[0].value == 2);
+    CHECK(stats.controls[1].id == person_control(PersonControl::Train));
+    mechanic.training = kMostTraining;
+    CHECK(person_page(PersonTab::Stats, staff(p), s, units).controls.size() == 1); // Fully trained: no Train
 
     mechanic.kind = save::StaffKind::Entertainer;
     mechanic.person.sub_type = 3;

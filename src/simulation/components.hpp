@@ -165,7 +165,7 @@ namespace rct3::simulation
         VerySick = 21,
         Broke = 24,
         CantAfford = 25,
-        QueueTooLong = 31,
+        QueueingForAges = 31,
         TooIntense = 34,
         Enjoyed = 42,
         GoHome = 19,
@@ -173,6 +173,8 @@ namespace rct3::simulation
         Thunder = 94,
         Cold = 95,
         Hot = 96,
+        GaveUpQueue = 131,
+        QueueTooLong = 201, ///< Put off a ride by its queue, before joining
         Soaked = 191,
     };
 
@@ -218,6 +220,7 @@ namespace rct3::simulation
         /// spread over the path instead of keeping to one line.
         glm::vec2 lane_from { 0.0f }, lane_to { 0.0f };
         float along = 0;               ///< While queueing, tiles from the front of the line
+        float side = 0;                ///< While queueing, world units right of the line's middle
         std::vector<NodeId> route { }; ///< Nodes still to reach after `to`, when heading somewhere
     };
 
@@ -386,6 +389,13 @@ namespace rct3::simulation
         float busy = 0;                 ///< Seconds left at the job in hand
         entt::entity ride = entt::null; ///< The ride a mechanic is going to, or working on, to repair or inspect
         std::int64_t wage = 0;          ///< Hundredths of the currency unit a game hour
+        std::int32_t wage_level = 2;    ///< 0 to 2, what `wage` follows (staff_care.hpp)
+        std::int32_t training = 3;      ///< 0 untrained to 3; new staff come fully trained until hiring costs money
+        std::int32_t warnings = 0;
+        float happiness = 1;  ///< 0 to 1
+        float laziness = 0;   ///< 0 to 1: how much longer each job takes, and how often they stop to rest
+        float load = 0;       ///< Share of the recent past spent at work, 0 to 1
+        bool resting = false; ///< `busy` is a rest, not a job
     };
 
     /// How a ride has broken down, numbered as saved parks number breakdowns.

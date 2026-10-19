@@ -5,6 +5,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/workers.hpp"
 
 #include <algorithm>
@@ -35,12 +36,18 @@ namespace rct3::simulation
         constexpr float kMaxNausea = 0.6f;              ///< Guests feeling sicker skip rides
         constexpr float kIdleSeconds = 5;               ///< Between thoughts while wandering
         constexpr float kTreat = 0.05f;                 ///< Happiness from buying what was wanted
-        /// Tiles between guests standing in a queue: queueing guests in saved parks stand a median 0.62 units
-        /// (0.15 tiles) from the nearest other.
-        constexpr float kQueueSpacing = 0.15f;
-        constexpr double kJoinChance = 0.6;    ///< Of a party member going on the ride their leader picked
-        constexpr double kHuddleChance = 0.08; ///< Of a wandering party stopping to stand together, each thought
-        constexpr float kShortestHuddle = 8;   ///< Seconds
+        // Queues. Our own values, tuned by eye against busy saved parks, whose queue tiles hold 7 to 16 waiting
+        // guests two to four abreast.
+        constexpr float kQueueSpacing = 0.08f;        ///< Tiles along the line from a guest to the one ahead
+        constexpr float kQueueReach = 0.9f;           ///< Farthest a queueing guest stands off the line's middle, world units
+        constexpr float kQueueGapSpread = 0.4f;       ///< Of a gap, how far guests stand off their even places in line, all told
+        constexpr float kQueueShuffle = 0.12f;        ///< Tiles the gap ahead opens before a guest steps up
+        constexpr float kGiveUpQueue = 480;           ///< Seconds of queueing after which an unhappy guest may give up
+        constexpr float kGiveUpMood = 0.3f;           ///< Happiness below which they may
+        constexpr float kGiveUpPerSecond = 1.0f / 30; ///< Chance a second of giving up then
+        constexpr double kJoinChance = 0.6;           ///< Of a party member going on the ride their leader picked
+        constexpr double kHuddleChance = 0.08;        ///< Of a wandering party stopping to stand together, each thought
+        constexpr float kShortestHuddle = 8;          ///< Seconds
         constexpr float kLongestHuddle = 20;
         constexpr float kHuddleRadius = 0.7f; ///< Of the ring a party stands in, world units
         constexpr float kCatchUp = 1.5f;      ///< How much faster than their walk a follower makes up ground
@@ -101,7 +108,6 @@ namespace rct3::simulation
         // Thoughts. Our own values.
         constexpr std::size_t kThoughtsKept = 6; ///< As many as saved parks keep
         constexpr float kRethinkSeconds = 300;   ///< Before the same thought about the same thing comes back
-        constexpr float kLongQueue = 240;        ///< Seconds of queueing that feel like ages
         constexpr float kEnjoyed = 0.5f;         ///< Excitement of a ride its riders enjoy
         // Litter, vandals and staff. Our own values, first guesses to tune against how saved parks look.
         constexpr std::size_t kDirtyPath = 3; ///< Pieces of litter on a tile that make guests on it glum
@@ -200,6 +206,15 @@ namespace rct3::simulation
             if (!found)
                 return std::nullopt;
             return std::pair { wanted[found->first], std::move(found->second) };
+        }
+
+        /// How many guests the queue line of `ride` holds; no limit for a ride guests walk straight into.
+        std::size_t queue_room(const CycleRide& ride)
+        {
+            if (ride.line.empty())
+                return std::numeric_limits<std::size_t>::max();
+            // Up to the middle of the line's far tile.
+            return static_cast<std::size_t>(static_cast<float>(ride.line.size() - 1) / kQueueSpacing) + 1;
         }
 
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
@@ -424,6 +439,13 @@ namespace rct3::simulation
         {
             std::uint64_t mix = world.seed ^ (std::uint64_t { entt::to_integral(e) } << 32);
             return { random::seeded(random::split_mix(mix)) };
+        }
+
+        /// A share, 0 to 1, fixed for each guest, so a queue looks the same every time it is shown.
+        float fixed_share(entt::entity e, std::uint64_t salt)
+        {
+            std::uint64_t mix = (std::uint64_t { entt::to_integral(e) } << 32) ^ salt;
+            return static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
         }
 
         void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose)
@@ -769,9 +791,18 @@ namespace rct3::simulation
                     continue;
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
+                care_for(staff, (staff.busy > 0 && !staff.resting) || staff.ride != entt::null, dt);
+                // A lazy one, with nothing to do, stops where they are now and then.
+                if (staff.busy == 0 && staff.ride == entt::null && random::chance(dice.state, rest_chance(staff) * dt))
+                {
+                    staff.busy = kRestSeconds;
+                    staff.resting = true;
+                }
                 if (staff.busy > 0)
                 {
                     staff.busy = std::max(staff.busy - dt, 0.0f);
+                    if (staff.busy == 0)
+                        staff.resting = false;
                     if (staff.busy == 0 && staff.ride != entt::null)
                     {
                         // Done at the ride: repaired and open again, or inspected.
@@ -863,14 +894,14 @@ namespace rct3::simulation
                     }
                     else
                     {
-                        staff.busy = r.get<Upkeep>(staff.ride).broken ? kRepairSeconds : kInspectSeconds;
+                        staff.busy = (r.get<Upkeep>(staff.ride).broken ? kRepairSeconds : kInspectSeconds) * work_slowdown(staff);
                         stride.to = at;
                         stride.progress = 1;
                     }
                 }
                 else if (const float busy = job(); busy > 0)
                 {
-                    staff.busy = busy;
+                    staff.busy = busy * work_slowdown(staff);
                     stride.to = at;
                     stride.progress = 1;
                 }
@@ -1429,11 +1460,24 @@ namespace rct3::simulation
             }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
+                // A full line puts them off: they think so and go elsewhere, and the party with them.
+                if (ride->queue.size() >= queue_room(*ride))
+                {
+                    think(r, guest, ThoughtKind::QueueTooLong, arrived[i], now);
+                    errand = { ErrandKind::Wandering, entt::null, ticks(kIdleSeconds) };
+                    continue;
+                }
                 // In at the far end of the line, with those of the party who want to come; the rest wait (phase 5).
+                // Each stands to the other side of the line's middle from the guest ahead.
                 const auto join = [&](entt::entity g) {
+                    auto& dice = r.get<Dice>(g).state;
+                    const float ahead = ride->queue.empty() || !r.valid(ride->queue.back()) ? 0 : r.get<Stride>(ride->queue.back()).side;
+                    const float side = kQueueReach * static_cast<float>(random::between(dice, 0.2, 1.0));
                     ride->queue.push_back(g);
                     r.get<Errand>(g) = { ErrandKind::Queueing, arrived[i], 0 };
-                    r.get<Stride>(g).along = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
+                    auto& stride = r.get<Stride>(g);
+                    stride.along = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
+                    stride.side = ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
                 };
                 join(guest);
                 for (const entt::entity m : followers)
@@ -1466,32 +1510,60 @@ namespace rct3::simulation
             }
             for (const entt::entity guest : ride.queue)
                 if (r.valid(guest) && (r.get<Errand>(guest).queued += dt) >= kLongQueue)
-                    think(r, guest, ThoughtKind::QueueTooLong, e, now);
+                    think(r, guest, ThoughtKind::QueueingForAges, e, now);
+            // Unhappy guests who have waited very long now and then give up and walk off.
+            std::erase_if(ride.queue, [&](entt::entity guest) {
+                if (!r.valid(guest) || r.get<Errand>(guest).queued < kGiveUpQueue || r.get<Mood>(guest).happiness >= kGiveUpMood || !random::chance(r.get<Dice>(guest).state, kGiveUpPerSecond * dt))
+                    return false;
+                think(r, guest, ThoughtKind::GaveUpQueue, e, now);
+                r.get<Errand>(guest) = after_ride(r, guest, e);
+                stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                return true;
+            });
             if (!ride.line.empty())
             {
                 const float last = static_cast<float>(ride.line.size() - 1);
+                float side_ahead = 0;
                 for (std::size_t k = 0; k < ride.queue.size(); ++k)
                 {
                     if (!r.valid(ride.queue[k]))
                         continue;
                     auto& stride = r.get<Stride>(ride.queue[k]);
-                    const float place_in_line = std::min(static_cast<float>(k) * kQueueSpacing, last);
-                    const float step = stride.speed * dt / paths.tile_size;
-                    stride.along = stride.along > place_in_line ? std::max(stride.along - step, place_in_line) : place_in_line;
-                    // Between the tile behind and the one ahead, facing the front; standing once in place.
+                    enum : std::uint64_t
+                    {
+                        Side = 1,
+                        Place = 2
+                    };
+                    // Guests brought in from a save have no side yet: across from the guest ahead too.
+                    if (stride.side == 0)
+                        stride.side = (side_ahead > 0 ? -kQueueReach : kQueueReach) * (0.2f + 0.8f * fixed_share(ride.queue[k], Side));
+                    side_ahead = stride.side;
+                    // Off their even place by a little, so the line is not spaced like a ruler.
+                    const float place_in_line = std::clamp((static_cast<float>(k) + kQueueGapSpread * (fixed_share(ride.queue[k], Place) - 0.5f)) * kQueueSpacing, 0.0f, last);
+                    // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
+                    const bool was_moving = stride.from != stride.to;
+                    const bool moving = stride.along > place_in_line && (was_moving || stride.along - place_in_line > kQueueShuffle);
+                    if (moving)
+                        stride.along = std::max(stride.along - stride.speed * dt / paths.tile_size, place_in_line);
+                    // Between the tile behind and the one ahead, facing the front.
                     const auto behind = static_cast<std::size_t>(std::ceil(stride.along));
                     const auto ahead = static_cast<std::size_t>(std::floor(stride.along));
-                    const bool moving = stride.along > place_in_line;
                     stride.from = ride.line[behind];
-                    stride.to = moving ? ride.line[ahead] : ride.line[behind];
+                    stride.to = moving && stride.along > place_in_line ? ride.line[ahead] : ride.line[behind];
                     stride.progress = static_cast<float>(behind) - stride.along;
                     auto& pose = r.get<Pose>(ride.queue[k]);
                     pose.position = glm::mix(paths.centre(ride.line[behind]), paths.centre(ride.line[ahead]), stride.progress);
                     pose.position.y = paths.height_between(ride.line[behind], ride.line[ahead], stride.progress);
-                    if (ahead != behind)
+                    // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
+                    const std::size_t from = ahead != behind ? behind : std::min(behind + 1, ride.line.size() - 1);
+                    const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
+                    const glm::vec3 d = paths.centre(ride.line[to]) - paths.centre(ride.line[from]);
+                    if (from != to && glm::length(glm::vec2(d.x, d.z)) > 0)
                     {
-                        const glm::vec3 d = paths.centre(ride.line[ahead]) - paths.centre(ride.line[behind]);
-                        pose.heading = std::atan2(d.x, d.z);
+                        const glm::vec2 way = glm::normalize(glm::vec2(d.x, d.z));
+                        pose.position.x += -way.y * stride.side;
+                        pose.position.z += way.x * stride.side;
+                        pose.heading = std::atan2(way.x, way.y);
                     }
                 }
             }

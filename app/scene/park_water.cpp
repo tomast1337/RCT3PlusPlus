@@ -138,13 +138,9 @@ namespace rct3::scene
 
     std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh, const render::VertexLayout& layout)
     {
-        water.surface = park::water_surface(mesh);
-        if (water.surface.vertices.empty())
-            return { };
-        auto vertices = device.create_buffer({ .usage = render::BufferUsage::Vertex, .data = std::as_bytes(std::span(water.surface.vertices)), .label = "water" });
-        if (!vertices)
-            return std::unexpected(vertices.error());
-        water.vertices = *vertices;
+        // Made even for a park without water, so water filled later can be drawn.
+        if (auto made = replace_park_water(device, water, mesh); !made)
+            return made;
         auto simple = device.create_pipeline({ .shader = render::Shader::Lit, .layout = layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water" });
         if (!simple)
             return std::unexpected(simple.error());
@@ -168,6 +164,21 @@ namespace rct3::scene
         // Without it the simple surface is drawn instead; that is no failure.
         if (auto shaded = device.create_pipeline({ .shader = render::Shader::Water, .layout = layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "water shaded" }))
             water.shaded = *shaded;
+        return { };
+    }
+
+    std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh)
+    {
+        water.surface = park::water_surface(mesh);
+        if (water.vertices)
+            device.destroy_buffer(water.vertices);
+        water.vertices = { };
+        if (water.surface.vertices.empty())
+            return { };
+        auto vertices = device.create_buffer({ .usage = render::BufferUsage::Vertex, .data = std::as_bytes(std::span(water.surface.vertices)), .label = "water" });
+        if (!vertices)
+            return std::unexpected(vertices.error());
+        water.vertices = *vertices;
         return { };
     }
 

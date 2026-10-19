@@ -42,6 +42,7 @@ namespace rct3::config
         LaserWriting,    ///< laser_writing/: laser show texts
         LaserEffects,    ///< laser_effects/: the player's own laser effects
         WaterJetEffects, ///< water_jet_effects/: the player's own water jet effects
+        Logs,            ///< logs/: a log of each run, ending with a crash report when it crashed
 
         Count_, ///< Number of folders; not a folder
     };

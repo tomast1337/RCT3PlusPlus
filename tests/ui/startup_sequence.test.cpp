@@ -8,13 +8,14 @@ using namespace rct3::ui;
 TEST_CASE("the step list depends on language and expansions")
 {
     const auto english = startup_steps({ });
-    REQUIRE(english.size() == 4);
-    CHECK(english[0].image == "FrontierLogo");
-    CHECK(english[1].image == "RCT3Logo");
-    CHECK(english[3].image == "AOPLogo_1");
+    REQUIRE(english.size() == 5);
+    CHECK(english[0].image == "AtariLogo");
+    CHECK(english[1].image == "FrontierLogo");
+    CHECK(english[2].image == "RCT3Logo");
+    CHECK(english[4].image == "AOPLogo_1");
 
     const auto chinese = startup_steps({ .simplified_chinese = true, .soaked = false, .wild = false });
-    REQUIRE(chinese.size() == 3);
+    REQUIRE(chinese.size() == 4);
     CHECK(chinese[0].seconds == kStartupWarningSeconds);
     CHECK_FALSE(chinese[0].skippable);
 }
@@ -33,6 +34,7 @@ TEST_CASE("a step fades in, holds, fades out, then the next one starts")
     CHECK(s.frame()->opacity == doctest::Approx(1));
     s.update(0.25f, false);
     CHECK(s.frame()->opacity == doctest::Approx(0.75f));
+    CHECK(s.frame()->time == doctest::Approx(4.25f));
     s.update(0.75f, false);
     REQUIRE(s.frame());
     CHECK(s.frame()->image == "b");

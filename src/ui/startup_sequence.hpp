@@ -33,13 +33,15 @@ namespace rct3::ui
         bool wild = true;                ///< Show the second expansion's logo
     };
 
-    /// The steps for an English install: developer logo, game logo, then one logo per expansion.
+    /// The steps for an English install: publisher logo (left out where the install lacks it), developer logo,
+    /// game logo, then one logo per expansion.
     [[nodiscard]] std::vector<StartupStep> startup_steps(const StartupOptions& options);
 
     struct StartupFrame
     {
         std::string_view image;
         float opacity = 0; ///< 0 transparent .. 1 opaque
+        float time = 0;    ///< Seconds since the step started fading in
     };
 
     class StartupSequence

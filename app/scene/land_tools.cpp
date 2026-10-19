@@ -278,7 +278,7 @@ namespace rct3::scene
                 const auto found = assets.install->find(name);
                 if (!found)
                     continue;
-                for (const auto [paint, into] : { std::pair { park::GroundPaint::Surface, &l.surfaces }, std::pair { park::GroundPaint::Cliff, &l.cliffs } })
+                for (const auto& [paint, into] : { std::pair { park::GroundPaint::Surface, &l.surfaces }, std::pair { park::GroundPaint::Cliff, &l.cliffs } })
                 {
                     auto more = park::ground_surfaces(*found, paint);
                     if (!more)

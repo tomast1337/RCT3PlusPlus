@@ -781,7 +781,10 @@ int main(int argc, char** argv)
     std::optional<rct3::audio::AudioEngine> audio;
     std::optional<rct3::scene::MenuAudio> menu_audio;
     config::GameOptions audio_options;
-    const auto start_audio = [&] {
+    // The engine starts before the menus' sound where the startup logos have sound of their own.
+    const auto create_audio = [&] {
+        if (audio)
+            return;
         auto engine = rct3::audio::AudioEngine::create();
         if (!engine)
         {
@@ -789,6 +792,11 @@ int main(int argc, char** argv)
             return;
         }
         audio.emplace(std::move(*engine));
+    };
+    const auto start_audio = [&] {
+        create_audio();
+        if (!audio)
+            return;
         const auto options_file = user_file(config::UserFile::GameOptions);
         bool keep = options_file.has_value();
         if (options_file)
@@ -814,6 +822,8 @@ int main(int argc, char** argv)
             startup = std::move(*created);
             startup->scale = scale;
             phase = intro ? Phase::Intro : Phase::Loading;
+            if (sound && intro && !startup->movies.empty())
+                create_audio();
         }
         else
         {
@@ -821,7 +831,7 @@ int main(int argc, char** argv)
         }
     }
     const auto load_widgets = [&](bool reload) {
-        if (sound && !reload && !audio)
+        if (sound && !reload && !menu_audio)
             start_audio();
         // The language set, else the locale's, of those installed.
         const auto gui = install->find("gui");
@@ -1035,7 +1045,11 @@ int main(int argc, char** argv)
                     {
                         startup->sequence.update(static_cast<float>(delta), skip_requested());
                         if (startup->sequence.finished())
+                        {
+                            if (audio)
+                                rct3::scene::stop_startup_sound(*startup, *audio);
                             phase = Phase::Loading;
+                        }
                     }
                     // The keys as the commands they are bound to, unless the interface is waiting for keys
                     // to bind: it then gets them as pressed, and they do nothing else.
@@ -1180,6 +1194,8 @@ int main(int argc, char** argv)
                         device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
                     }
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
+                    if (phase == Phase::Intro)
+                        rct3::scene::update_startup_movie(*device, *startup, audio ? &*audio : nullptr);
                     device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : kBackground });
                     if (phase == Phase::Intro)
                     {
@@ -1268,7 +1284,11 @@ int main(int argc, char** argv)
     if (audio && menu_audio)
         rct3::scene::stop_menu_audio(*audio, *menu_audio);
     if (startup)
+    {
+        if (audio)
+            rct3::scene::stop_startup_sound(*startup, *audio);
         rct3::scene::destroy_startup_screen(*device, *startup);
+    }
     if (widgets)
         rct3::scene::destroy_widget_demo(*device, *widgets);
     if (park)

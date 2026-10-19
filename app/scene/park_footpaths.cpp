@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iterator>
 #include <span>
 
 namespace rct3::scene
@@ -220,7 +221,13 @@ namespace rct3::scene
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         park::GroundQueues queues = park::ground_queues(f.paths, scene.grid);
         park::add_ground(mesh, std::move(queues.mesh));
-        park::add_ground(mesh, park::surrounding_land(scene.grid, f.water));
+        std::vector<park::WaterVertex> water = std::move(mesh.water);
+        std::ranges::copy(park::pool_water(scene.grid, f.pools), std::back_inserter(water));
+        park::TerrainMesh surroundings = park::surrounding_land(scene.grid, f.water);
+        water.insert(water.end(), surroundings.water.begin(), surroundings.water.end());
+        park::add_ground(mesh, std::move(surroundings));
+        if (auto replaced = replace_park_water(device, scene.water, water); !replaced)
+            logging::logger("park").warning("water: {}", replaced.error());
         picture_styles(device, scene, assets, paths.styles);
         picture_queues(device, scene, assets, queues.paintings);
         auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });

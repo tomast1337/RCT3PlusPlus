@@ -5,6 +5,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/ride_placement.hpp"
+#include "park/water_fill.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/ride_placing.hpp"
@@ -12,6 +13,7 @@
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/window.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -23,6 +25,8 @@ namespace rct3::scene
         // Our own prices, in hundredths: a step of one tile, and painting one tile.
         constexpr std::int32_t kStepCost = 100;
         constexpr std::int32_t kPaintCost = 50;
+        constexpr std::int32_t kWaterCost = 100; ///< A step of a lake's level
+        constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units. Our own value.
 
         constexpr std::string_view kPaintWindowName = "paint_ground";
         constexpr std::string_view kPaintIcon = "Land_Brush_Paint";
@@ -91,6 +95,53 @@ namespace rct3::scene
             cell.surface = surface;
             pay(scene, kPaintCost);
             rebuild_ground(device, scene, assets);
+        }
+
+        /// Sets the water filled from the held tile to its level `steps` from the stroke's start; false when it
+        /// may not go there.
+        bool flood(ParkScene& scene, int steps)
+        {
+            LandTools& l = scene.land;
+            if (!affordable(scene, kWaterCost))
+                return false;
+            const auto& paths = scene.footpaths.paths;
+            const auto allowed = [&](int c, int r) { return park::owned_outright(scene.grid.at(c, r)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == c && p.row == r && !p.elevation; }); };
+            const auto lake = park::fill_water(scene.grid, l.tile->col, l.tile->row, l.level_before + static_cast<float>(steps) * kWaterStep, allowed);
+            if (!lake)
+                return false;
+            // The lakes the new water reaches, and the one it was poured in, become part of it.
+            save::WaterLayer water = l.water_before;
+            std::erase_if(water.bodies, [&](const save::WaterBody& b) { return park::holds(b, l.tile->col, l.tile->row) || std::ranges::any_of(lake->tris, [&](const save::WaterTri& t) { return park::holds(b, t.col, t.row); }); });
+            if (!lake->tris.empty())
+                water.bodies.push_back(*lake);
+            scene.footpaths.water = std::move(water);
+            pay(scene, kWaterCost);
+            l.steps = steps;
+            return true;
+        }
+
+        void pour(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        {
+            LandTools& l = scene.land;
+            if (!l.tile)
+            {
+                l.tile = over ? std::nullopt : ground_tile(scene, at, size);
+                if (!l.tile)
+                    return;
+                l.press_y = at.y;
+                l.steps = 0;
+                l.water_before = scene.footpaths.water;
+                const auto& bodies = l.water_before.bodies;
+                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, l.tile->col, l.tile->row); });
+                l.level_before = lake != bodies.end() ? lake->level : std::floor(scene.grid.at(l.tile->col, l.tile->row).min_height());
+            }
+            const auto wanted = static_cast<int>(std::lround((l.press_y - at.y) / park::kSlopeDragStep));
+            bool moved = false;
+            // One step at a time, so the water stops at the last level it could reach.
+            while (l.steps != wanted && flood(scene, l.steps + (wanted > l.steps ? 1 : -1)))
+                moved = true;
+            if (moved)
+                rebuild_ground(device, scene, assets);
         }
 
         void read_surfaces(LandTools& l, const ui::InterfaceAssets& assets)
@@ -176,6 +227,7 @@ namespace rct3::scene
         l.tool = LandTools::Tool::None;
         l.tile.reset();
         l.solids = { };
+        l.water_before = { };
     }
 
     bool land_tool(const ParkScene& scene)
@@ -203,8 +255,10 @@ namespace rct3::scene
         }
         if (l.tool == LandTools::Tool::Shape)
             shape(device, scene, assets, at, size, over);
-        else
+        else if (l.tool == LandTools::Tool::Paint)
             paint(device, scene, assets, at, size, over);
+        else
+            pour(device, scene, assets, at, size, over);
     }
 
 } // namespace rct3::scene

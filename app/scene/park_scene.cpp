@@ -81,11 +81,6 @@ namespace rct3::scene
         namespace skins = ui::game_skins;
 
         /// The game's ground pictures; the later file adds the expansion's.
-        constexpr std::array<std::string_view, 2> kGroundFiles = {
-            "terrain/RCT3/Terrain_RCT3.common.ovl",
-            "terrain/CT/Terrain_CT.common.ovl",
-        };
-
         constexpr std::string_view kGuideName = "tutorial";
         constexpr std::string_view kBarName = "bar";
         constexpr std::string_view kToolsName = "tools";
@@ -1131,7 +1126,7 @@ namespace rct3::scene
             scene.variation = *variation;
 
         park::GroundImages images;
-        for (const std::string_view name : kGroundFiles)
+        for (const std::string_view name : park::kGroundFiles)
         {
             const auto found = install.find(name);
             if (!found)
@@ -1376,8 +1371,8 @@ namespace rct3::scene
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
                 tools.set_available(
                     entry.item,
-                    entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save
-                        || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                    entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About
+                        || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -2095,7 +2090,7 @@ namespace rct3::scene
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right);
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, keys);
-            update_ground_shaping(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
+            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -2106,7 +2101,7 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
-                if (painting_patrol(scene) || ground_shaping(scene))
+                if (painting_patrol(scene) || land_tool(scene))
                     ;
                 else if (still && !over && ride_placing_click(device, scene, assets))
                     ;
@@ -2134,8 +2129,8 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 if (ride_placing(scene))
                     stop_ride_placing(scene); // A right click puts the placing away, as in the game
-                else if (ground_shaping(scene))
-                    stop_ground_shaping(scene);
+                else if (land_tool(scene))
+                    stop_land_tools(scene);
                 else if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
             }
@@ -2233,7 +2228,7 @@ namespace rct3::scene
                 if (open_track_building(scene, asked->index, *overlay, assets))
                 {
                     close_footpath_panel(scene); // One tool panel at the bottom left at a time
-                    stop_ground_shaping(scene);
+                    stop_land_tools(scene);
                 }
             }
         }
@@ -2413,17 +2408,17 @@ namespace rct3::scene
             {
                 close_track_building(scene); // One tool panel at the bottom left at a time
                 stop_ride_placing(scene);
-                stop_ground_shaping(scene);
+                stop_land_tools(scene);
                 toggle_footpath_panel(device, scene, assets, options);
             }
             if (const auto item = tools->take_item())
             {
-                if (*item == ui::ToolItem::ShapeGround)
+                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
-                    toggle_ground_shaping(scene);
+                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? LandTools::Tool::Shape : LandTools::Tool::Paint, assets);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
@@ -2456,7 +2451,7 @@ namespace rct3::scene
             {
                 close_track_building(scene);
                 close_footpath_panel(scene);
-                stop_ground_shaping(scene);
+                stop_land_tools(scene);
             }
         }
         update_view_lines(device, scene);

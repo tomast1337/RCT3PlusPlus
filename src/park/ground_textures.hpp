@@ -23,6 +23,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rct3::park
 {
@@ -35,6 +36,24 @@ namespace rct3::park
     /// Adds the pictures of every terrain type in the overlay at `path` to `images`, replacing any with the
     /// same key. Returns how many types had no usable picture.
     [[nodiscard]] std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path);
+
+    /// The game's overlays of terrain types, relative to its folder.
+    inline constexpr std::array<std::string_view, 2> kGroundFiles = {
+        "terrain/RCT3/Terrain_RCT3.common.ovl",
+        "terrain/CT/Terrain_CT.common.ovl",
+    };
+
+    /// A land surface the ground can be painted with. Each terrain type names the interface picture that
+    /// shows it and the string that names it.
+    struct GroundSurface
+    {
+        std::uint8_t index = 0; ///< As the terrain cells store it
+        std::string icon;
+        std::string help; ///< Strings key
+    };
+
+    /// The land surfaces (not cliff faces) of the overlay at `path`, in file order.
+    [[nodiscard]] std::expected<std::vector<GroundSurface>, std::string> ground_surfaces(const std::filesystem::path& path);
 
     /// Where a path style's ground pictures are, relative to the game's folder.
     [[nodiscard]] std::string path_texture_file(std::string_view style);

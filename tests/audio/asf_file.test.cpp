@@ -2,6 +2,7 @@
 #include "audio/asf_file.hpp"
 
 #include "sine_wma.hpp"
+#include "tiny_wmv.hpp"
 
 #include <cstddef>
 #include <doctest/doctest.h>
@@ -111,4 +112,37 @@ TEST_CASE("media objects are put together and split into blocks")
     blocks.add({ 1, 7, 0, 0xFFFFFFFFu, all }); // Claims more than an audio object can be: not held
     blocks.add({ 1, 7, 6, 0xFFFFFFFFu, all });
     CHECK(blocks.empty());
+}
+
+TEST_CASE("a video stream gives its picture's size and codec, and its frames whole, timed and keyed")
+{
+    const auto file = std::as_bytes(std::span(rct3::test::kTinyWmv));
+    const auto size = asf_header_size(file.first(30));
+    REQUIRE(size);
+    const auto h = read_asf_header(file.first(*size));
+    REQUIRE(h);
+    REQUIRE(h->video);
+    CHECK(h->video->width == 32);
+    CHECK(h->video->height == 16);
+    CHECK(h->video->codec == 0x32564D57); // "WMV2"
+    CHECK(h->audio.codec == 0x161);       // The sound beside it is still read
+    CHECK(h->video_stream != h->stream);
+
+    AsfObjects frames(h->video_stream);
+    for (std::size_t at = h->first_packet; at + h->packet_size <= file.size(); at += h->packet_size)
+    {
+        const auto payloads = read_asf_packet(file.subspan(at, h->packet_size));
+        REQUIRE(payloads);
+        for (const AsfPayload& p : *payloads)
+            frames.add(p);
+    }
+    std::vector<AsfObject> got;
+    while (!frames.empty())
+        got.push_back(frames.take());
+    REQUIRE(got.size() == 3);
+    CHECK(got[0].key);
+    CHECK(got[0].time >= h->preroll);
+    CHECK(got[1].time == got[0].time + 100); // A tenth of a second apart
+    CHECK(got[2].time == got[0].time + 200);
+    CHECK_FALSE(got[1].data.empty());
 }

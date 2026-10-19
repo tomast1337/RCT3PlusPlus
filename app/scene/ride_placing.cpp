@@ -14,7 +14,7 @@
 namespace rct3::scene
 {
 
-    std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+    std::optional<glm::vec2> ground_spot(const ParkScene& scene, ui::Point at, ui::Point size)
     {
         if (size.x <= 0 || size.y <= 0)
             return std::nullopt;
@@ -23,8 +23,16 @@ namespace rct3::scene
         if (!distance)
             return std::nullopt;
         const glm::vec3 hit = ray.origin + ray.direction * *distance;
-        const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-        const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
+        return glm::vec2 { (hit.x - scene.grid.origin_x) / scene.grid.tile_size_x, (hit.z - scene.grid.origin_z) / scene.grid.tile_size_z };
+    }
+
+    std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        const auto spot = ground_spot(scene, at, size);
+        if (!spot)
+            return std::nullopt;
+        const auto col = static_cast<int>(std::floor(spot->x));
+        const auto row = static_cast<int>(std::floor(spot->y));
         if (!scene.grid.contains(col, row))
             return std::nullopt;
         return park::PathSpot { col, row };

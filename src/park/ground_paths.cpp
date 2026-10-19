@@ -141,6 +141,14 @@ namespace rct3::park
             }
             if (!level)
                 continue;
+            for (const save::Station& station : ride.stations)
+            {
+                for (const auto& door : { station.entrance_spot, station.exit_spot })
+                {
+                    if (door && grid.contains(door->col, door->row) && std::ranges::all_of(grid.at(door->col, door->row).corners, [&](float h) { return h == static_cast<float>(door->height); }))
+                        floor.doors.push_back({ door->col, door->row });
+                }
+            }
             if (!ride.stations.empty() && ride.stations.front().exit_spot)
             {
                 // A door faces the ride; what it lets out onto is behind it.
@@ -183,6 +191,12 @@ namespace rct3::park
                     if (tile == kNoPath)
                         tile = *style;
                 }
+            }
+            for (const auto [c, r] : floor.doors)
+            {
+                if (c < 0 || r < 0 || c >= map.width || r >= map.height || has_ground_path(map, c, r))
+                    continue;
+                map.tiles[static_cast<std::size_t>(r) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(c)] = *style;
             }
         }
     }

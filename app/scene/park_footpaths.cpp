@@ -753,7 +753,20 @@ namespace rct3::scene
                     }
                 }
             }
-            if (f.builder.queue)
+            // A queue's open end bends to a path beside it: the queue just laid, or those beside the path just laid.
+            bool turned = false;
+            const save::PathTile laid = f.paths.back();
+            for (std::size_t i = 0; i < f.paths.size(); ++i)
+            {
+                const bool candidate = f.builder.queue ? i + 1 == f.paths.size() : f.paths[i].queue && std::abs(f.paths[i].col - laid.col) + std::abs(f.paths[i].row - laid.row) == 1;
+                if (candidate && park::turn_to_path(f.paths, scene.grid, i))
+                {
+                    turned = true;
+                    if (!std::ranges::contains(railed, f.paths[i].id))
+                        railed.push_back(f.paths[i].id);
+                }
+            }
+            if (f.builder.queue || turned)
                 rail(scene, assets, railed);
             // Raised queue tiles whose line changed take new pieces too.
             for (const std::uint64_t changed : railed)

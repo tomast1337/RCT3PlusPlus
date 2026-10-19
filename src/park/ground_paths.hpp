@@ -24,8 +24,9 @@
 // corner" bends the edge out at the tile's corner to meet path across the corner; a "notched" cell is
 // open on both sides with the corner cut away, for the inside of a turn.
 //
-// A flat ride standing on the ground is paved under its footprint as if path lay there: in the style of the
-// ground path its exit lets out onto, or a plain grey style while there is none, so the paving joins the path.
+// A flat ride standing on the ground is paved under its footprint and its doors as if path lay there: in the
+// style of the ground path its exit lets out onto, or a plain grey style while there is none, so the paving
+// joins the path.
 #pragma once
 
 #include "park/terrain_mesh.hpp"
@@ -103,6 +104,7 @@ namespace rct3::park
         int col1 = -1;
         int row1 = -1;
         std::optional<std::array<int, 2>> beyond_exit; ///< The tile the exit lets out onto
+        std::vector<std::array<int, 2>> doors;         ///< The stations' entrance and exit tiles, paved alike
     };
 
     /// The plain grey path style floors take while their exit leads nowhere. Our own pick.

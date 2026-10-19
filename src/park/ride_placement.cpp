@@ -86,6 +86,18 @@ namespace rct3::park
         }
     }
 
+    std::int32_t shaped_height(const save::TerrainCell& cell, bool up)
+    {
+        constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
+        if (up)
+        {
+            const auto top = static_cast<std::int32_t>(std::ceil(cell.max_height() - kSlack));
+            return cell.min_height() >= static_cast<float>(top) - kSlack ? top + 1 : top;
+        }
+        const auto bottom = static_cast<std::int32_t>(std::floor(cell.min_height() + kSlack));
+        return cell.max_height() <= static_cast<float>(bottom) + kSlack ? bottom - 1 : bottom;
+    }
+
     DoorSpot door_spot(const RideSite& site, std::int32_t col, std::int32_t row)
     {
         const std::int32_t last_col = site.col + site.span[0] - 1;

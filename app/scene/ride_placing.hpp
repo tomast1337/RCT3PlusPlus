@@ -53,6 +53,9 @@ namespace rct3::scene
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
     };
 
+    /// The tile of the ground under `at`, in a view of `size`.
+    [[nodiscard]] std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
+
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);

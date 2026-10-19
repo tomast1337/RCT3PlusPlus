@@ -14,25 +14,24 @@
 namespace rct3::scene
 {
 
+    std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        if (size.x <= 0 || size.y <= 0)
+            return std::nullopt;
+        const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+        const auto distance = park::ground_hit(ray, scene.grid);
+        if (!distance)
+            return std::nullopt;
+        const glm::vec3 hit = ray.origin + ray.direction * *distance;
+        const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+        const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
+        if (!scene.grid.contains(col, row))
+            return std::nullopt;
+        return park::PathSpot { col, row };
+    }
+
     namespace
     {
-        /// The tile of the ground under `at`.
-        std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
-        {
-            if (size.x <= 0 || size.y <= 0)
-                return std::nullopt;
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-            const auto distance = park::ground_hit(ray, scene.grid);
-            if (!distance)
-                return std::nullopt;
-            const glm::vec3 hit = ray.origin + ray.direction * *distance;
-            const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-            const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
-            if (!scene.grid.contains(col, row))
-                return std::nullopt;
-            return park::PathSpot { col, row };
-        }
-
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::PlacedObject> ghost_object(const RidePlacing& p)
         {

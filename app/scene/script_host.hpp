@@ -12,10 +12,12 @@
 //   ui.click(path)      moves there, presses and lets go, a frame each
 //   screenshot()        saved to the screenshots folder; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
+//   park.open(path)     opens the park at `path` in the game's folder and waits until it shows
 //   park.loaded()       whether a park is open; park.ready() waits until one is
 //   park.cash()         hundredths of the currency, or undefined in a park without money
 //   map.size()          { width, height } in tiles
 //   map.tile(col, row)  { corners, surface, owned }, or undefined off the map
+//   map.screen(col, row) the middle of a tile on the view, or undefined when it is not in sight
 //   map.water()         [{ level, triangles }] for each lake
 //
 // types/rct3pp.d.ts describes them for TypeScript.
@@ -27,6 +29,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace rct3::scene
 {
@@ -51,6 +54,10 @@ namespace rct3::scene
             bool down = false;
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
+        /// The park the script asked for, once: a path in the game's folder.
+        [[nodiscard]] std::optional<std::string> take_park();
+        /// Stops the script, as failed with `why`.
+        void fail(const std::string& why);
         /// True once for each screenshot asked for.
         [[nodiscard]] bool take_screenshot();
         /// The exit code once the script asked to quit, finished or failed.
@@ -67,6 +74,7 @@ namespace rct3::scene
         std::optional<glm::vec2> at_; ///< Share of the view
         bool down_ = false;
         bool screenshot_ = false;
+        std::optional<std::string> open_;
         std::optional<int> quit_;
         const render::Device* device_ = nullptr; ///< While a tick runs
         ParkScene* park_ = nullptr;

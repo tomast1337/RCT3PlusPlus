@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The land tools in a park: digs a pit with Shape ground, paints round it with Paint ground and fills it with
-// Water. Run on a park with open, owned, flat ground under the lower left of the first view, such as the Fun
-// Valley fixture:
+// The land tools on the game's blank landscape: digs a pit with Shape ground, paints round it with Paint
+// ground and fills it with Water.
 //
-//   ./nob script scripts/tests/land_tools.ts -- --park "Fun Valley Amusment park.dat" --no-simulate --seed 1
+//   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
 export {};
 
@@ -20,39 +19,57 @@ async function pick(icon: string): Promise<void> {
     await ui.click(`tools/Land/${icon}`);
 }
 
-/** All the corner heights of the map added up. */
-function ground(): number {
-    const { width, height } = map.size();
-    let sum = 0;
-    for (let row = 0; row < height; ++row)
-        for (let col = 0; col < width; ++col)
-            sum += map.tile(col, row)!.corners.reduce((a, b) => a + b, 0);
-    return sum;
+/** Where tile (col, row) is on the view; throws when it is out of sight. */
+function on_view(col: number, row: number): [number, number] {
+    const at = map.screen(col, row);
+    if (!at)
+        throw new Error(`tile ${col}, ${row} is not in sight`);
+    return [at.x, at.y];
 }
 
-const spot: [number, number] = [0.3, 0.85];
-const down: [number, number] = [0.3, 0.95];
-const up: [number, number] = [0.3, 0.8];
+function low(col: number, row: number): number {
+    return Math.min(...map.tile(col, row)!.corners);
+}
 
-await park.ready();
+await park.open("Campaigns/Base/BlankLandscape.dat");
 await frames(30); // The interface settles in
-const cash = park.cash();
+
+// The owned tile nearest the middle of the map that is in sight.
+const { width, height } = map.size();
+let col = -1;
+let row = -1;
+for (let r = 0; r < Math.max(width, height) && col < 0; ++r)
+    for (let dc = -r; dc <= r && col < 0; ++dc)
+        for (const dr of [-r, r]) {
+            const c = (width >> 1) + dc;
+            const w = (height >> 1) + dr;
+            if (map.tile(c, w)?.owned && map.screen(c, w) && col < 0)
+                [col, row] = [c, w];
+        }
+expect(col >= 0, "an owned tile in sight");
+log("working on tile", col, row);
+
 const lakes = map.water().length;
-const before = ground();
+const before = low(col, row);
+const cash = park.cash();
 
 await pick("Land_Brush_Height");
-await pointer.drag(spot, down, 40);
-log("dug a pit; ground", before, "->", ground(), "cash", cash, "->", park.cash());
-expect(ground() < before, "the ground to be lower");
+const [x, y] = on_view(col, row);
+await pointer.drag([x, y], [x, y + 0.1], 40);
+log("dug a pit:", before, "->", low(col, row), "cash", cash, "->", park.cash());
+expect(low(col, row) < before, "the tile to be lower");
 expect(cash === undefined || park.cash()! < cash, "the digging to be paid for");
 
+const surface = map.tile(col + 2, row)!.surface;
 await pick("Land_Brush_Paint");
 expect(ui.find("paint_ground/content/Land_Paint_Base2") !== undefined, "the paint window to show the surfaces");
 await ui.click("paint_ground/content/Land_Paint_Base2");
-await pointer.drag([0.2, 0.9], [0.4, 0.9], 30);
+await pointer.drag(on_view(col - 2, row), on_view(col + 2, row), 30);
+log("painted:", surface, "->", map.tile(col + 2, row)!.surface);
+expect(map.tile(col + 2, row)!.surface !== surface, "the ground beside the pit to be painted");
 
 await pick("Land_Water");
-await pointer.drag(spot, up, 40);
+await pointer.drag(on_view(col, row), [x, y - 0.05], 40);
 const now = map.water();
 log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]));
 expect(now.length === lakes + 1, "a new lake in the pit");

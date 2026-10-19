@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="nob-debug" name="nob" defaultType="TOOL">
+      <configuration id="nob-debug-config" name="debug">
+        <build type="TOOL">
+          <tool actionId="Tool_nob_nob build" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_nob_nob clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="nob-app" name="nob app" defaultType="TOOL">
+      <configuration id="nob-app-config" name="debug">
+        <build type="TOOL">
+          <tool actionId="Tool_nob_nob app" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_nob_nob clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

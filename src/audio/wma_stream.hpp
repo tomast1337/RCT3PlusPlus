@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Windows Media Audio (versions 1 and 2) read from an ASF file a little at a time, for music too long to
-// hold decoded. The decoding is FFmpeg's WMA decoder, built in (third_party/ffmpeg_wma); the file is read
+// hold decoded. The decoding is FFmpeg's WMA decoder, built in (third_party/ffmpeg); the file is read
 // with asf_file.hpp.
 //
 // The decoder starts two frames late (its windows overlap); those samples are dropped, so the first sample

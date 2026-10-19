@@ -36,8 +36,9 @@ only for now.
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
-The game's music is Windows Media Audio, decoded by [FFmpeg's WMA decoder](third_party/ffmpeg_wma/)
-(LGPL-2.1-or-later), vendored on its own and built into the binary.
+The game's music is Windows Media Audio, and the first release's startup movies Windows Media Video 9, both
+decoded by [a cut of FFmpeg](third_party/ffmpeg/) (LGPL-2.1-or-later) holding only those decoders, vendored
+and built into the binary.
 
 Files under `assets/` are built into every binary with `#embed`, so rct3++ ships as one file. Among them
 are our own translations, `assets/lang/<Language>.json`, for text the game's string tables lack: a JSON

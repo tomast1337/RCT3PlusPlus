@@ -15,14 +15,15 @@ namespace rct3::audio
 
     } // namespace
 
-    MusicPlayer::MusicPlayer(WmaStream stream, VoiceHandle voice)
+    MusicPlayer::MusicPlayer(WmaStream stream, VoiceHandle voice, bool loop)
         : stream_(std::move(stream))
         , voice_(voice)
         , chunk_(kChunkFrames * stream_.channels())
+        , loop_(loop)
     {
     }
 
-    std::expected<MusicPlayer, std::string> MusicPlayer::start(AudioEngine& engine, const std::filesystem::path& file, float volume)
+    std::expected<MusicPlayer, std::string> MusicPlayer::start(AudioEngine& engine, const std::filesystem::path& file, float volume, bool loop)
     {
         auto stream = WmaStream::open(file);
         if (!stream)
@@ -35,7 +36,7 @@ namespace rct3::audio
         auto voice = engine.play_stream(format, { .volume = volume });
         if (!voice)
             return std::unexpected(std::string("music: ") + to_string(voice.error()));
-        MusicPlayer player(std::move(*stream), *voice);
+        MusicPlayer player(std::move(*stream), *voice, loop);
         if (auto first = player.update(engine); !first)
         {
             player.stop(engine);
@@ -62,8 +63,8 @@ namespace rct3::audio
             }
             if (*read == 0)
             {
-                // The end: round again, unless the file gave nothing since the last time round.
-                if (rewound)
+                // The end: round again, unless playing once or the file gave nothing since the last time round.
+                if (rewound || !loop_)
                 {
                     ended_ = true;
                     engine.end_stream(voice_);

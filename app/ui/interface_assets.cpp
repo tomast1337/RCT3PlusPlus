@@ -26,7 +26,13 @@ namespace rct3::ui
         for (const std::string_view name : more_skins)
         {
             const auto path = install.find(name);
-            auto more = path ? load_skin_set(*path) : std::unexpected(std::string("not found"));
+            if (!path)
+            {
+                // Older releases lack the newer files (the first one has no updated front screen logo).
+                log.info("skins {}: not in this install", name);
+                continue;
+            }
+            auto more = load_skin_set(*path);
             if (!more)
             {
                 log.warning("skins {}: {}", name, more.error());

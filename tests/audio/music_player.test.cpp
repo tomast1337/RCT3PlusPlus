@@ -42,5 +42,15 @@ TEST_CASE("music plays round and round from its file")
     music->stop(*engine);
     CHECK_FALSE(music->playing(*engine));
     CHECK_FALSE(MusicPlayer::start(*engine, fs::temp_directory_path() / "rct3pp_no_music.wma", 1.0f));
+
+    // Once, as a movie's sound: over by four times the file's length.
+    auto once = MusicPlayer::start(*engine, path, 1.0f, false);
+    REQUIRE(once);
+    for (int i = 0; i < 60; ++i)
+    {
+        REQUIRE(once->update(*engine));
+        (void)engine->render(frame);
+    }
+    CHECK_FALSE(once->playing(*engine));
     fs::remove(path);
 }

@@ -12,6 +12,7 @@ namespace rct3::ui
         std::vector<StartupStep> steps;
         if (options.simplified_chinese)
             steps.push_back({ "SChinese_WarningScreen", kStartupWarningSeconds, false });
+        steps.push_back({ "AtariLogo" }); // The publisher's, in early releases only
         steps.push_back({ "FrontierLogo" });
         steps.push_back({ "RCT3Logo" });
         if (options.soaked)
@@ -58,7 +59,7 @@ namespace rct3::ui
             return std::nullopt;
         const float fade_in = std::min(elapsed_ / kStartupFadeSeconds, 1.0f);
         const float fade_out = 1.0f - std::max(elapsed_ - steps_[step_].seconds, 0.0f) / kStartupFadeSeconds;
-        return StartupFrame { steps_[step_].image, std::clamp(std::min(fade_in, fade_out), 0.0f, 1.0f) };
+        return StartupFrame { steps_[step_].image, std::clamp(std::min(fade_in, fade_out), 0.0f, 1.0f), elapsed_ };
     }
 
 } // namespace rct3::ui

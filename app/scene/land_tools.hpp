@@ -19,10 +19,11 @@
 // on it stays, as do cliff edges. Each unit of ground moved is paid for, once.
 //
 // Smoothing: holding the button works the ground under the brush a little more every moment
-// (park/ground_smoothing.hpp), following the pointer. Its tools by their place in the tab: average, roughen,
-// level to the height under the pointer as it moves, level to the height where the stroke began, to whole
-// units, level to the whole unit where it began, join the tiles' edges, and square them. The ground moved is
-// paid for as it goes.
+// (park/ground_smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
+// the height under the pointer as it moves, level to the height where the stroke began, to whole units, join
+// the tiles' edges, and square them. The game's data also holds pictures for roughening and a second whole-unit
+// level, but they are not usable (one picture is malformed, the other repeats a third), so those are left out.
+// The ground moved is paid for as it goes.
 //
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
 // own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
@@ -98,7 +99,7 @@ namespace rct3::scene
         std::optional<std::size_t> smoothing;    ///< The smoothing brush chosen, by its place in its tab
         float target = 0;                        ///< Of a levelling stroke
         float held = 0;                          ///< Seconds of smoothing not yet applied
-        std::uint64_t passes = 0;                ///< Of smoothing, to vary the roughening
+        std::uint64_t passes = 0;                ///< Of smoothing, the seed of each pass
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

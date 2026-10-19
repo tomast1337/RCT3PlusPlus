@@ -4,7 +4,8 @@
 // over the ground, Z turns it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
 // round its rim. A right click puts the tool away; a ride left without an entrance or exit stays built but
-// takes no riders.
+// takes no riders. Once the exit stands, the ride is fenced round its rim and beside its doors, and the doors
+// take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
 #pragma once

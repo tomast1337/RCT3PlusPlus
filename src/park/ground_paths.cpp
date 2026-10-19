@@ -2,6 +2,7 @@
 #include "park/ground_paths.hpp"
 
 #include "park/ground_queues.hpp"
+#include "park/object_placement.hpp"
 
 #include <algorithm>
 #include <array>
@@ -107,6 +108,83 @@ namespace rct3::park
             map.tiles[at] = static_cast<std::int16_t>(style - map.styles.begin());
         }
         return map;
+    }
+
+    std::vector<RideFloor> ride_floors(std::span<const save::Ride> rides, const std::function<std::optional<std::array<std::int32_t, 2>>(std::uint64_t object)>& squares_of, const save::TerrainGrid& grid)
+    {
+        std::vector<RideFloor> floors;
+        for (const save::Ride& ride : rides)
+        {
+            if (ride.kind != save::RideKind::Flat || !ride.base.spot)
+                continue;
+            const save::PlacementSpot& spot = *ride.base.spot;
+            const auto squares = squares_of(spot.object);
+            if (!squares)
+                continue;
+            save::PlacedObject placed;
+            placed.col = spot.col;
+            placed.row = spot.row;
+            placed.rotation = spot.direction;
+            const std::array span = spot.direction % 2 == 0 ? *squares : std::array { (*squares)[1], (*squares)[0] };
+            const glm::vec2 middle = footprint_middle(placed, *squares);
+            RideFloor floor;
+            floor.col0 = static_cast<int>(std::lround(middle.x - static_cast<float>(span[0]) / 2));
+            floor.row0 = static_cast<int>(std::lround(middle.y - static_cast<float>(span[1]) / 2));
+            floor.col1 = floor.col0 + span[0] - 1;
+            floor.row1 = floor.row0 + span[1] - 1;
+            // A ride raised off the ground or sunk into it stands on its own platform, not on paving.
+            bool level = true;
+            for (int r = floor.row0; r <= floor.row1 && level; ++r)
+            {
+                for (int c = floor.col0; c <= floor.col1 && level; ++c)
+                    level = grid.contains(c, r) && std::ranges::all_of(grid.at(c, r).corners, [&](float h) { return h == static_cast<float>(spot.height); });
+            }
+            if (!level)
+                continue;
+            if (!ride.stations.empty() && ride.stations.front().exit_spot)
+            {
+                // A door faces the ride; what it lets out onto is behind it.
+                const save::PlacementSpot& exit = *ride.stations.front().exit_spot;
+                const glm::vec2 back = turned_x(exit.direction + 2);
+                floor.beyond_exit = std::array { exit.col + static_cast<int>(std::lround(back.x)), exit.row + static_cast<int>(std::lround(back.y)) };
+            }
+            floors.push_back(floor);
+        }
+        return floors;
+    }
+
+    void pave_ride_floors(GroundPathMap& map, std::span<const RideFloor> floors)
+    {
+        const auto style_index = [&](std::string_view name) -> std::optional<std::int16_t> {
+            auto style = std::ranges::find(map.styles, name);
+            if (style == map.styles.end())
+            {
+                if (map.styles.size() > static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max()))
+                    return std::nullopt;
+                map.styles.emplace_back(name);
+                style = std::prev(map.styles.end());
+            }
+            return static_cast<std::int16_t>(style - map.styles.begin());
+        };
+        for (const RideFloor& floor : floors)
+        {
+            std::optional<std::int16_t> style;
+            if (floor.beyond_exit && has_ground_path(map, (*floor.beyond_exit)[0], (*floor.beyond_exit)[1]))
+                style = map.tiles[static_cast<std::size_t>((*floor.beyond_exit)[1]) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>((*floor.beyond_exit)[0])];
+            else
+                style = style_index(kRideFloorStyle);
+            if (!style)
+                continue;
+            for (int r = std::max(floor.row0, 0); r <= std::min(floor.row1, map.height - 1); ++r)
+            {
+                for (int c = std::max(floor.col0, 0); c <= std::min(floor.col1, map.width - 1); ++c)
+                {
+                    std::int16_t& tile = map.tiles[static_cast<std::size_t>(r) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(c)];
+                    if (tile == kNoPath)
+                        tile = *style;
+                }
+            }
+        }
     }
 
     bool has_ground_path(const GroundPathMap& map, int col, int row) noexcept

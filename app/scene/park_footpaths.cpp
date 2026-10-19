@@ -210,13 +210,33 @@ namespace rct3::scene
 
     } // namespace
 
+    void refresh_ride_floors(ParkScene& scene)
+    {
+        std::unordered_map<std::uint64_t, const save::PlacedObject*> placed;
+        for (const save::PlacedObject& o : scene.objects)
+            placed.emplace(o.id, &o);
+        scene.footpaths.floors = park::ride_floors(
+            scene.rides.rides,
+            [&](std::uint64_t object) -> std::optional<std::array<std::int32_t, 2>> {
+                const auto o = placed.find(object);
+                if (o == placed.end())
+                    return std::nullopt;
+                const auto model = scene.models.find(park::model_key(*o->second));
+                return model != scene.models.end() ? std::optional(model->second.squares) : std::nullopt;
+            },
+            scene.grid);
+        scene.footpaths.floors_stale = true;
+    }
+
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         ParkFootpaths& f = scene.footpaths;
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
         park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
-        const park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
+        park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
+        park::pave_ride_floors(paths, f.floors);
+        f.floors_stale = false;
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         park::GroundQueues queues = park::ground_queues(f.paths, scene.grid);
         park::add_ground(mesh, std::move(queues.mesh));
@@ -322,7 +342,8 @@ namespace rct3::scene
         /// the new tiles and the neighbours whose edges they change, as the ground will draw them.
         park::TerrainMesh ground_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::PathTile> with, std::span<const park::PathSpot> spots, glm::vec4 tint)
         {
-            const park::GroundPathMap map = park::ground_path_map(with, scene.grid);
+            park::GroundPathMap map = park::ground_path_map(with, scene.grid);
+            park::pave_ride_floors(map, scene.footpaths.floors);
             picture_styles(device, scene, assets, map.styles);
             park::TerrainMesh mesh = park::ground_path_mesh(map, scene.grid);
             park::GroundQueues queues = park::ground_queues(with, scene.grid);

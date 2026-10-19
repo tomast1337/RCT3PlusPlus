@@ -1209,7 +1209,10 @@ namespace rct3::scene
         scene.bins = std::move(world->bins);
         scene.signs = std::move(world->signs);
         if (saved)
+        {
             scene.rides = std::move(saved->rides);
+            scene.queue_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
+        }
         else if (auto rides = save::load_rides(*file, index))
             scene.rides = std::move(*rides);
         else
@@ -1541,6 +1544,7 @@ namespace rct3::scene
             {
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
+                f.queue_signs = !scene.queue_signs.hidden.contains(f.ride->base.id);
             }
             // A running ride's seats, queue and riders an hour.
             if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
@@ -1842,6 +1846,14 @@ namespace rct3::scene
                 ride->options.max_wait = change.value;
             else if (change.id == ui::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
+            else if (change.id == ui::control_id(QueueSigns))
+            {
+                if (change.value != 0)
+                    scene.queue_signs.hidden.erase(ride->base.id);
+                else
+                    scene.queue_signs.hidden.insert(ride->base.id);
+                scene.queue_signs.stale = true;
+            }
             // The running ride leaves as its settings now say.
             if (ride != nullptr && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
                 if (auto* departure = scene.sim.registry.try_get<simulation::Departure>(scene.ride_entities[ref.index]))
@@ -2083,6 +2095,7 @@ namespace rct3::scene
         // The ground is built before the models that give the rides' floors their size are read.
         if (scene.footpaths.floors_stale)
             rebuild_ground(device, scene, assets);
+        update_queue_signs(device, scene, assets);
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = *scene.desktop;
@@ -2665,6 +2678,8 @@ namespace rct3::scene
                         draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (scene.show_scenery && parts.scenery)
+                profiling::section("QueueSigns", [&] { draw_queue_signs(device, scene, transform, light); });
+            if (scene.show_scenery && parts.scenery)
                 profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             profiling::section("Rides", [&] {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
@@ -2917,6 +2932,7 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
+        profiling::section("QueueSigns", [&] { roll_queue_signs(device, scene); });
         if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         if (!scene.photos.empty() && !scene.photo_reading)
@@ -2979,6 +2995,7 @@ namespace rct3::scene
                 looks.emplace(p.guest, static_cast<std::int32_t>(p.saved));
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
+        saved.no_queue_signs.assign(scene.queue_signs.hidden.begin(), scene.queue_signs.hidden.end());
         return parkfile::write_saved_park(saved);
     }
 
@@ -2986,6 +3003,7 @@ namespace rct3::scene
     {
         finish_builds(scene);
         destroy_park_water(device, scene.water);
+        destroy_queue_signs(device, scene.queue_signs);
         destroy_park_glow(device, scene.glow);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);

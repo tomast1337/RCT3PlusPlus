@@ -60,6 +60,7 @@ namespace rct3::park
         std::vector<std::uint32_t> indices; ///< Three per triangle
         /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part.
         std::int32_t bone = -1;
+        bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
     };
 
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.

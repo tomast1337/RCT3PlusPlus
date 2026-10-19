@@ -992,6 +992,12 @@ int main(int argc, char** argv)
                     if (script)
                     {
                         script->tick(*device, phase == Phase::Running && park ? &*park : nullptr);
+                        if (const auto wanted = script->take_park())
+                        {
+                            park_to_load = install ? install->find(*wanted) : std::nullopt;
+                            if (!park_to_load)
+                                script->fail(std::format("park.open: no {} in the game's folder", *wanted));
+                        }
                         if (const auto code = script->quit())
                         {
                             quit = true;

@@ -28,6 +28,8 @@ declare namespace ui {
 }
 
 declare namespace park {
+    /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
+    function open(path: string): Promise<void>;
     function loaded(): boolean;
     /** Waits until a park is open. */
     function ready(): Promise<void>;
@@ -54,5 +56,7 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
+    /** The middle of a tile on the view; undefined when it is not in sight. */
+    function screen(col: number, row: number): { x: number; y: number } | undefined;
     function water(): Lake[];
 }

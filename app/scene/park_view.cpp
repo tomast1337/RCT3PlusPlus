@@ -42,25 +42,7 @@ namespace rct3::scene
             }
             if (lines.vertices && !lines.stale)
                 return;
-            drop(device, lines);
-            lines.stale = false;
-            const park::TerrainMesh mesh = make();
-            if (mesh.indices.empty())
-                return;
-            auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "view line vertices" });
-            auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "view line indices" });
-            if (!vertices || !indices)
-            {
-                logging::logger("park").warning("view lines: {}", !vertices ? vertices.error() : indices.error());
-                if (vertices)
-                    device.destroy_buffer(*vertices);
-                if (indices)
-                    device.destroy_buffer(*indices);
-                return;
-            }
-            lines.vertices = *vertices;
-            lines.indices = *indices;
-            lines.count = static_cast<std::uint32_t>(mesh.indices.size());
+            set_view_lines(device, lines, make());
         }
 
         std::u16string whole(float height)
@@ -70,6 +52,28 @@ namespace rct3::scene
         }
     } // namespace
 
+    void set_view_lines(render::Device& device, ViewLines& lines, const park::TerrainMesh& mesh)
+    {
+        drop(device, lines);
+        lines.stale = false;
+        if (mesh.indices.empty())
+            return;
+        auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "view line vertices" });
+        auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "view line indices" });
+        if (!vertices || !indices)
+        {
+            logging::logger("park").warning("view lines: {}", !vertices ? vertices.error() : indices.error());
+            if (vertices)
+                device.destroy_buffer(*vertices);
+            if (indices)
+                device.destroy_buffer(*indices);
+            return;
+        }
+        lines.vertices = *vertices;
+        lines.indices = *indices;
+        lines.count = static_cast<std::uint32_t>(mesh.indices.size());
+    }
+
     void update_view_lines(render::Device& device, ParkScene& scene)
     {
         update(device, scene.grid_lines, scene.show_grid, [&] { return park::grid_lines(scene.grid, kGridColour); });
@@ -78,7 +82,7 @@ namespace rct3::scene
 
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines })
+        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks })
         {
             if (lines->count == 0)
                 continue;
@@ -100,6 +104,7 @@ namespace rct3::scene
     {
         drop(device, scene.grid_lines);
         drop(device, scene.contour_lines);
+        drop(device, scene.land_marks);
     }
 
     std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)

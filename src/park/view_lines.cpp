@@ -13,20 +13,9 @@ namespace rct3::park
     {
         constexpr float kLift = 0.03f; ///< Over the ground, so the line is not lost in it.
 
-        /// A strip from `a` to `b`, seen from above and below.
         void strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour)
         {
-            const glm::vec2 along { b.x - a.x, b.z - a.z };
-            const float length = glm::length(along);
-            if (length <= 0)
-                return;
-            const glm::vec3 side = glm::vec3 { -along.y, 0, along.x } * (kViewLineWidth / 2 / length);
-            const glm::vec3 up { 0, kLift, 0 };
-            const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
-            for (const glm::vec3 p : { a + up + side, a + up - side, b + up - side, b + up + side })
-                mesh.vertices.push_back({ .position = p, .colour = colour, .normal = { 0, 1, 0 } });
-            for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
-                mesh.indices.push_back(first + i);
+            ground_strip(mesh, a, b, colour, kViewLineWidth);
         }
 
         /// The tile's corners in world space, in the grid's corner order.
@@ -37,6 +26,21 @@ namespace rct3::park
             return { glm::vec3 { x0, c.corners[0], z0 }, glm::vec3 { x1, c.corners[1], z0 }, glm::vec3 { x0, c.corners[2], z1 }, glm::vec3 { x1, c.corners[3], z1 } };
         }
     } // namespace
+
+    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, float width)
+    {
+        const glm::vec2 along { b.x - a.x, b.z - a.z };
+        const float length = glm::length(along);
+        if (length <= 0)
+            return;
+        const glm::vec3 side = glm::vec3 { -along.y, 0, along.x } * (width / 2 / length);
+        const glm::vec3 up { 0, kLift, 0 };
+        const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+        for (const glm::vec3 p : { a + up + side, a + up - side, b + up - side, b + up + side })
+            mesh.vertices.push_back({ .position = p, .colour = colour, .normal = { 0, 1, 0 } });
+        for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
+            mesh.indices.push_back(first + i);
+    }
 
     TerrainMesh grid_lines(const save::TerrainGrid& grid, glm::vec4 colour)
     {

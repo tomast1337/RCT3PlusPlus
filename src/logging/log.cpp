@@ -143,7 +143,7 @@ namespace rct3::logging
             file_.flush();
     }
 
-    std::expected<void, std::string> Log::open_file(const std::filesystem::path& directory)
+    std::expected<std::filesystem::path, std::string> Log::open_file(const std::filesystem::path& directory)
     {
         std::error_code ec;
         std::filesystem::create_directories(directory, ec);
@@ -159,7 +159,7 @@ namespace rct3::logging
         file_.open(path, std::ios::out | std::ios::app);
         if (!file_)
             return std::unexpected(std::format("cannot open log file {}", path.string()));
-        return { };
+        return path;
     }
 
     Logger Log::for_category(std::string category)

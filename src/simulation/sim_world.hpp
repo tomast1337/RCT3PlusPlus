@@ -6,7 +6,7 @@
 // Includes EnTT, which is large: include this only where the registry is needed.
 #pragma once
 
-#include "entt/entt.hpp"
+#include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
 
 #include <cstdint>

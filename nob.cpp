@@ -180,6 +180,7 @@ namespace
         cmd << "-o" << output.string();
         for (const auto& o : objects)
             cmd << o.string();
+        cmd << "-lstdc++exp"; // std::stacktrace; a static library, so after the objects
         if (!run(cmd))
             return false;
 

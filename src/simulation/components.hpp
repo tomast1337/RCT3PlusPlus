@@ -12,10 +12,10 @@
 // simulation ticks (see simulation/systems.hpp).
 #pragma once
 
-#include "entt/entt.hpp"
 #include "math/glm.hpp"
 #include "random/generator.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
 
 #include <array>

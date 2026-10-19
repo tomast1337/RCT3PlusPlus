@@ -33,6 +33,7 @@ namespace rct3::config
             { UserFolder::LaserWriting, "laser_writing", "Laser show texts" },
             { UserFolder::LaserEffects, "laser_effects", "The player's own laser effects" },
             { UserFolder::WaterJetEffects, "water_jet_effects", "The player's own water jet effects" },
+            { UserFolder::Logs, "logs", "A log of each run" },
         } };
 
         constexpr std::array<UserFileInfo, kUserFileCount> kFiles = { {

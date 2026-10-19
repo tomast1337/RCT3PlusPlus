@@ -34,6 +34,7 @@
 #include "image/png_encoder.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "logging/crash.hpp"
 #include "logging/log.hpp"
 #include "math/hex_colour.hpp"
 #include "platform/window.hpp"
@@ -481,6 +482,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::install_crash_report();
     namespace prof = rct3::profiling;
     namespace render = rct3::render;
     namespace config = rct3::config;
@@ -491,6 +493,17 @@ int main(int argc, char** argv)
     const auto data = config::UserData::locate(env);
     if (!data)
         log.warning("no folder for the user's data known; set {}: settings, options and keys are not kept", config::env_name(config::EnvVar::DataFolder));
+    // Each run's log is kept; a crash appends its report there.
+    if (data)
+    {
+        if (auto opened = rct3::logging::global().open_file(data->folder(config::UserFolder::Logs)))
+        {
+            rct3::logging::install_crash_report(*opened);
+            log.info("log: {}", opened->string());
+        }
+        else
+            log.warning("{}", opened.error());
+    }
     const auto user_file = [&](config::UserFile file) { return data ? std::optional(data->file(file)) : std::nullopt; };
     // Reads one of the user's files; what cannot be read is logged, and the defaults stand in for it.
     const auto load_user_file = [&]<typename T>(config::UserFile file, T& into) {

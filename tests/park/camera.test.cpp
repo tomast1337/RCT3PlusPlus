@@ -145,3 +145,17 @@ TEST_CASE("a wheel zoom rolls in over its time, most of it early, all of it in t
     CHECK(pending == 0);
     CHECK(zoom_step(-2, 1, 0) == -2);
 }
+
+TEST_CASE("a camera set from an eye and a point looks from that eye")
+{
+    const glm::vec3 from { 10, 30, -20 };
+    const glm::vec3 at { 40, 2, 15 };
+    const ParkCamera c = looking(from, at);
+    CHECK(c.target == at);
+    const glm::vec3 back = eye(c);
+    CHECK(back.x == doctest::Approx(from.x).epsilon(1e-4));
+    CHECK(back.y == doctest::Approx(from.y).epsilon(1e-4));
+    CHECK(back.z == doctest::Approx(from.z).epsilon(1e-4));
+    // Straight down is past the tilt's limit.
+    CHECK(looking({ 0, 50, 0 }, { 0, 0, 0 }).pitch == doctest::Approx(kMaxPitch));
+}

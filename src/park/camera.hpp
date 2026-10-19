@@ -43,6 +43,8 @@ namespace rct3::park
     [[nodiscard]] Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at);
     /// World to clip space for a view `aspect` times as wide as it is tall.
     [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect);
+    /// The part of view_projection after the camera's turn and place: from the eye's space, looking along +z.
+    [[nodiscard]] glm::mat4 projection(float aspect);
 
     /// Looking at the middle of the map from the south-west, far enough to see much of it.
     [[nodiscard]] ParkCamera overview(const save::TerrainGrid& grid);

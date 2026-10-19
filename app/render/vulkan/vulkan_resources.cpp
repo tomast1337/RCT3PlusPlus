@@ -52,6 +52,12 @@ namespace
     const std::uint32_t kGlowFrag[] =
 #include "glow.frag.inc"
         ;
+    const std::uint32_t kOcclusionVert[] =
+#include "occlusion.vert.inc"
+        ;
+    const std::uint32_t kOcclusionFrag[] =
+#include "occlusion.frag.inc"
+        ;
 
 } // namespace
 
@@ -92,6 +98,8 @@ namespace rct3::render::vulkan
                     return { kWaterVert, kWaterFrag };
                 case Shader::Glow:
                     return { kTexturedVert, kGlowFrag };
+                case Shader::Occlusion:
+                    return { kOcclusionVert, kOcclusionFrag };
             }
             return { };
         }
@@ -464,7 +472,7 @@ namespace rct3::render::vulkan
             return std::unexpected("unknown shader");
         if (desc.shader == Shader::Water && set_count_ < kSetCount)
             return std::unexpected("the device binds too few descriptor sets for the water shader");
-        if (lit_shader(desc.shader) && set_count_ < 8)
+        if ((lit_shader(desc.shader) || desc.shader == Shader::Occlusion) && set_count_ < 8)
             return std::unexpected("the device binds too few descriptor sets for the lit shaders");
 
         Pipeline made { .topology = desc.topology, .shader = desc.shader, .desc = desc, .attributes = { desc.layout.attributes.begin(), desc.layout.attributes.end() } };

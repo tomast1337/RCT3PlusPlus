@@ -30,6 +30,8 @@ namespace rct3::park
     inline constexpr float kMaxPitch = 1.5f;
 
     [[nodiscard]] glm::vec3 eye(const ParkCamera& camera);
+    /// The camera with its eye at `from` looking at `at`, within the tilt's and distance's limits.
+    [[nodiscard]] ParkCamera looking(glm::vec3 from, glm::vec3 at);
 
     /// A half line from `origin` along `direction`, which has length 1.
     struct Ray

@@ -19,6 +19,7 @@
 //   --no-simulate     show parks as saved, standing still, without running the simulation
 //   --script FILE     run the JavaScript FILE, which plays the game through its pointer (scene/script_host.hpp);
 //                     the game exits when it ends, with 1 when it failed
+//   --script-report DIR  put the script's screenshots and log in DIR for review
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
@@ -538,6 +539,7 @@ int main(int argc, char** argv)
     std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::filesystem::path> script_file;
+    std::optional<std::filesystem::path> script_report;
     std::optional<std::uint64_t> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
@@ -566,6 +568,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--script") == 0 && i + 1 < argc)
         {
             script_file = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--script-report") == 0 && i + 1 < argc)
+        {
+            script_report = argv[++i];
         }
         else if (std::strcmp(argv[i], "--no-simulate") == 0)
         {
@@ -734,7 +740,8 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::ParkScene> park;                    ///< Played over the front end, which lends it the interface
     std::optional<std::filesystem::path> park_to_load = park_file; ///< Asked for this frame; its loading screen shows first
     bool quit = false;
-    bool screenshot = false; ///< Asked for this frame; read from the screen as the frame ends
+    bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends
+    std::filesystem::path script_shot; ///< Where the screenshot a script asked for goes; empty for the user's folder
     // Writes a screenshot or photo to the user's folder for it, and tells the player where it went.
     const auto save_picture = [&](rct3::render::ScreenPixels pixels, config::UserFolder into, std::string_view prefix, std::string_view told) {
         if (!data)
@@ -937,7 +944,7 @@ int main(int argc, char** argv)
     std::unique_ptr<rct3::scene::ScriptHost> script;
     if (script_file)
     {
-        script = rct3::scene::ScriptHost::start(*script_file);
+        script = rct3::scene::ScriptHost::start(*script_file, script_report);
         if (!script)
             return 1;
     }
@@ -1024,8 +1031,11 @@ int main(int argc, char** argv)
                         keys = std::move(translated.keyboard);
                         play_commands = std::move(translated.play);
                         screenshot = std::ranges::contains(play_commands, rct3::ui::PlayCommand::ScreenSnapshot);
-                        if (script && script->take_screenshot())
+                        if (const auto to = script ? script->take_screenshot() : std::nullopt)
+                        {
                             screenshot = true;
+                            script_shot = *to;
+                        }
                         const auto toggles = std::ranges::count(translated.commands, rct3::ui::Command::DeveloperWindows);
                         developer_windows = developer_windows != (toggles % 2 == 1);
                         for (auto& k : keys.presses)
@@ -1189,6 +1199,12 @@ int main(int argc, char** argv)
                     {
                         if (photo)
                             save_picture(std::move(*pixels), config::UserFolder::Photos, *park->photo_reading, "Rct3pp_PhotoSaved");
+                        else if (!script_shot.empty())
+                        {
+                            if (auto saved = rct3::image::save_png(script_shot, { pixels->size.width, pixels->size.height, std::move(pixels->rgba) }); !saved)
+                                log.warning("picture: {}", saved.error());
+                            script_shot.clear();
+                        }
                         else
                             save_picture(std::move(*pixels), config::UserFolder::Screenshots, "screenshot_", "Rct3pp_ScreenshotSaved");
                     }

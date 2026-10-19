@@ -6,7 +6,9 @@
 #include "park/camera.hpp"
 #include "scene/park_scene.hpp"
 
-#include <fstream>
+#include <algorithm>
+#include <cctype>
+#include <format>
 #include <sstream>
 
 namespace rct3::scene
@@ -18,6 +20,13 @@ namespace rct3::scene
 
         // The helpers scripts get that only wait on the natives below.
         constexpr std::string_view kHelpers = R"js(
+globalThis.until = async (check, limit = 300, what = "the wait") => {
+    for (let i = 0; i < limit; ++i) {
+        if (check()) return;
+        await frames(1);
+    }
+    if (!check()) throw new Error(`${what} timed out after ${limit} frames`);
+};
 pointer.drag = async (from, to, count = 10) => {
     pointer.move(from[0], from[1]);
     await frames(1);
@@ -31,7 +40,14 @@ pointer.drag = async (from, to, count = 10) => {
     await frames(1);
 };
 ui.click = async (path) => {
-    const at = ui.find(path);
+    // Waits for the widget to stop moving, as menus slide open.
+    let at = ui.find(path);
+    for (let i = 0; i < 60; ++i) {
+        await frames(1);
+        const now = ui.find(path);
+        if (now && at && now.x === at.x && now.y === at.y) break;
+        at = now;
+    }
     if (!at) throw new Error(`no widget ${path} is shown`);
     pointer.move(at.x, at.y);
     await frames(1);
@@ -43,8 +59,8 @@ ui.click = async (path) => {
 {
     // Read from the screen as the frame ends and written a frame later.
     const take = screenshot;
-    globalThis.screenshot = async () => {
-        take();
+    globalThis.screenshot = async (name = "shot") => {
+        take(name);
         await frames(3);
     };
 }
@@ -69,6 +85,18 @@ park.ready = async () => {
             return arguments[i].get<float>();
         }
 
+        /// A script's map point, { col, row, up }: a place in tiles (fractions between them) and how far above
+        /// the ground there, in world units.
+        glm::vec3 world_point(const save::TerrainGrid& g, const Json& p)
+        {
+            if (!p.is_object() || !p.contains("col") || !p.contains("row") || !p["col"].is_number() || !p["row"].is_number())
+                throw std::invalid_argument("a map point is { col, row, up }");
+            const float x = g.origin_x + p["col"].get<float>() * g.tile_size_x;
+            const float z = g.origin_z + p["row"].get<float>() * g.tile_size_z;
+            const float up = p.contains("up") && p["up"].is_number() ? p["up"].get<float>() : 0;
+            return { x, g.height_at(x, z).value_or(0) + up, z };
+        }
+
         const save::TerrainGrid& grid_of(const ParkScene* park)
         {
             if (park == nullptr)
@@ -77,7 +105,7 @@ park.ready = async () => {
         }
     } // namespace
 
-    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file)
+    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file, std::optional<std::filesystem::path> report)
     {
         std::ifstream in(file, std::ios::binary);
         if (!in)
@@ -88,6 +116,18 @@ park.ready = async () => {
         std::ostringstream text;
         text << in.rdbuf();
         std::unique_ptr<ScriptHost> host(new ScriptHost());
+        if (report)
+        {
+            std::error_code ec;
+            std::filesystem::create_directories(*report, ec);
+            host->report_log_.open(*report / "log.txt");
+            if (!host->report_log_)
+            {
+                logging::logger("script").error("{}: cannot write the report there", report->string());
+                return nullptr;
+            }
+            host->report_ = std::move(report);
+        }
         host->define();
         if (!host->engine_.evaluate(kHelpers, "rct3pp:helpers"))
         {
@@ -125,8 +165,24 @@ park.ready = async () => {
             const ui::Rect& r = w->rect();
             return { { "x", (r.x0 + r.x1) / 2 * scale / static_cast<float>(view.width) }, { "y", (r.y0 + r.y1) / 2 * scale / static_cast<float>(view.height) } };
         });
-        engine_.define("screenshot", [this](const Json&) {
-            screenshot_ = true;
+        engine_.define("log", [this](const Json& a) {
+            std::string line;
+            for (const Json& v : a)
+                line += (line.empty() ? "" : " ") + (v.is_string() ? v.get<std::string>() : v.dump());
+            write(line, false);
+            return Json(nullptr);
+        });
+        engine_.define("screenshot", [this](const Json& a) {
+            if (!report_)
+                screenshot_ = std::filesystem::path();
+            else
+            {
+                std::string name = !a.empty() && a[0].is_string() ? a[0].get<std::string>() : "shot";
+                // Only a plain file name: the script names the picture, not where it goes.
+                std::ranges::replace_if(name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_'; }, '_');
+                screenshot_ = *report_ / std::format("{:02}_{}.png", ++shots_, name);
+                write("screenshot " + screenshot_->filename().string(), false);
+            }
             return Json(nullptr);
         });
         engine_.define("quit", [this](const Json& a) {
@@ -175,6 +231,18 @@ park.ready = async () => {
                 return nullptr;
             return { { "x", share.x }, { "y", share.y } };
         });
+        engine_.define("camera.look", [this](const Json& a) {
+            const save::TerrainGrid& g = grid_of(park_);
+            const glm::vec3 at = world_point(g, a.empty() ? Json() : a[0]);
+            if (a.size() < 2 || a[1].is_null())
+            {
+                // Keeps the way it faces and how far back it is.
+                park_->camera.target = at;
+                return Json(nullptr);
+            }
+            park_->camera = park::looking(world_point(g, a[1]), at);
+            return Json(nullptr);
+        });
         engine_.define("map.water", [this](const Json&) {
             grid_of(park_);
             Json lakes = Json::array();
@@ -208,9 +276,19 @@ park.ready = async () => {
         return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_ };
     }
 
+    void ScriptHost::write(const std::string& line, bool error)
+    {
+        if (error)
+            logging::logger("script").error("{}", line);
+        else
+            logging::logger("script").info("{}", line);
+        if (report_log_)
+            report_log_ << (error ? "error: " : "") << line << std::endl;
+    }
+
     void ScriptHost::fail(const std::string& why)
     {
-        logging::logger("script").error("{}", why);
+        write(why, true);
         quit_ = 1;
     }
 
@@ -219,9 +297,9 @@ park.ready = async () => {
         return std::exchange(open_, std::nullopt);
     }
 
-    bool ScriptHost::take_screenshot()
+    std::optional<std::filesystem::path> ScriptHost::take_screenshot()
     {
-        return std::exchange(screenshot_, false);
+        return std::exchange(screenshot_, std::nullopt);
     }
 
 } // namespace rct3::scene

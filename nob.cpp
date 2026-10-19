@@ -4,8 +4,9 @@
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
-//   ./nob script FILE.ts|FILE.js [-- APP_ARGS...] runs the viewer with the script FILE; TypeScript compiles
-//                                                 with tsc (npm install -g typescript) from scripts/ first
+//   ./nob script [FILE.ts|FILE.js] [-- APP_ARGS...] runs the viewer with the script FILE, or each of
+//                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
+//                                                 typescript) first. Report: build/scripts/report/index.html
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
@@ -606,6 +607,73 @@ namespace
     };
 
     // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
+    struct ScriptRun
+    {
+        std::string name;
+        bool passed = false;
+    };
+
+    std::string html_escaped(std::string_view text)
+    {
+        std::string out;
+        for (const char c : text)
+        {
+            switch (c)
+            {
+                case '&':
+                    out += "&amp;";
+                    break;
+                case '<':
+                    out += "&lt;";
+                    break;
+                case '>':
+                    out += "&gt;";
+                    break;
+                default:
+                    out += c;
+            }
+        }
+        return out;
+    }
+
+    /// One page over the scripts run: whether each passed, its log and its screenshots, from the folder each
+    /// wrote under `report`.
+    bool write_script_report(const fs::path& report, std::span<const ScriptRun> runs)
+    {
+        std::string body;
+        for (const ScriptRun& r : runs)
+        {
+            std::ifstream in(report / r.name / "log.txt");
+            const std::string log_text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            body += std::format("<section><h2>{} <span class=\"{}\">{}</span></h2><pre>{}</pre>\n", html_escaped(r.name), r.passed ? "pass" : "fail", r.passed ? "passed" : "failed", html_escaped(log_text));
+            for (const fs::path& shot : find_files(report / r.name, ".png"))
+            {
+                const std::string src = (fs::path(r.name) / shot.filename()).generic_string();
+                body += std::format("<figure><a href=\"{0}\"><img src=\"{0}\" loading=\"lazy\"></a><figcaption>{1}</figcaption></figure>\n", html_escaped(src), html_escaped(shot.stem().string()));
+            }
+            body += "</section>\n";
+        }
+        std::ofstream out(report / "index.html");
+        out << R"(<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Script Report</title>
+<style>
+:root { --bg: #f6f6f4; --fg: #1d1d1b; --muted: #6b6b66; --card: #fff; --pass: #2e7d32; --fail: #c62828; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161615; --fg: #e8e8e4; --muted: #9a9a94; --card: #22221f; --pass: #81c784; --fail: #ef9a9a; } }
+:root[data-theme="dark"] { --bg: #161615; --fg: #e8e8e4; --muted: #9a9a94; --card: #22221f; --pass: #81c784; --fail: #ef9a9a; }
+body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; }
+section { background: var(--card); border-radius: 8px; padding: 16px; margin: 16px 0; }
+h2 { margin: 0 0 8px; font-size: 18px; }
+.pass { color: var(--pass); } .fail { color: var(--fail); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); font-size: 13px; }
+figure { margin: 12px 0; } img { width: 100%; height: auto; border-radius: 4px; display: block; }
+figcaption { color: var(--muted); font-size: 13px; }
+</style></head><body><main><h1>Script report</h1>
+)" << body << "</main></body></html>\n";
+        return static_cast<bool>(out);
+    }
+
     bool run_fetch()
     {
         if (!mkdir_p(kDownloadDir))
@@ -717,7 +785,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch | ./nob script FILE.ts [-- APP_ARGS...]",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
                 arg);
             return 2;
         }
@@ -765,13 +833,9 @@ int main(int argc, char** argv)
         run_cmd << binary.string();
         if (command == "script")
         {
-            fs::path js = script;
-            if (script.empty())
-            {
-                log(Level::Error, "./nob script takes a .ts or .js file");
-                return 1;
-            }
-            if (js.extension() == ".ts")
+            // Every script under scripts/tests when none is named.
+            const std::vector<fs::path> scripts = script.empty() ? find_files("scripts/tests", ".ts") : std::vector<fs::path> { script };
+            if (std::ranges::any_of(scripts, [](const fs::path& p) { return p.extension() == ".ts"; }))
             {
                 Cmd probe;
                 probe << "tsc" << "--version";
@@ -785,9 +849,25 @@ int main(int argc, char** argv)
                 tsc << "tsc" << "-p" << "scripts";
                 if (!run(tsc))
                     return 1;
-                js = kBuildDir / "scripts" / fs::relative(script, "scripts").replace_extension(".js");
             }
-            run_cmd << "--script" << js.string();
+            // Each script's log and screenshots go to build/scripts/report/NAME for review.
+            std::vector<std::string> failed;
+            for (const fs::path& file : scripts)
+            {
+                const fs::path js = file.extension() == ".ts" ? kBuildDir / "scripts" / fs::relative(file, "scripts").replace_extension(".js") : file;
+                const fs::path folder = kBuildDir / "scripts" / "report" / file.stem();
+                std::error_code ec;
+                fs::remove_all(folder, ec);
+                Cmd one;
+                one << binary.string() << "--script" << js.string() << "--script-report" << folder.string() << "--no-intro" << "--no-audio" << "--seed" << "1";
+                one.append(test_args);
+                const bool passed = run(one);
+                log(passed ? Level::Info : Level::Error, "{}: {}, report in {}", file.stem().string(), passed ? "passed" : "failed", folder.string());
+                if (!passed)
+                    failed.push_back(file.stem().string());
+            }
+            log(failed.empty() ? Level::Info : Level::Error, "{} of {} scripts passed", scripts.size() - failed.size(), scripts.size());
+            return failed.empty() ? 0 : 1;
         }
         run_cmd.append(test_args);
         return run(run_cmd) ? 0 : 1;

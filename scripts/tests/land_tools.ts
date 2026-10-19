@@ -32,7 +32,8 @@ function low(col: number, row: number): number {
 }
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await frames(30); // The interface settles in
+await until(() => ui.find("tools/Land/Land") !== undefined, 300, "the tool row");
+await screenshot("opened");
 
 // The owned tile nearest the middle of the map that is in sight.
 const { width, height } = map.size();
@@ -48,15 +49,20 @@ for (let r = 0; r < Math.max(width, height) && col < 0; ++r)
         }
 expect(col >= 0, "an owned tile in sight");
 log("working on tile", col, row);
+// From high up, so the bottom of the pit stays in sight.
+camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col - 3, row: row - 6, up: 40 });
+await frames(2);
 
 const lakes = map.water().length;
 const before = low(col, row);
 const cash = park.cash();
 
+// Aimed again before each drag: the camera may scroll while the pointer is in the tool row by the edge.
 await pick("Land_Brush_Height");
 const [x, y] = on_view(col, row);
 await pointer.drag([x, y], [x, y + 0.1], 40);
 log("dug a pit:", before, "->", low(col, row), "cash", cash, "->", park.cash());
+await screenshot("pit");
 expect(low(col, row) < before, "the tile to be lower");
 expect(cash === undefined || park.cash()! < cash, "the digging to be paid for");
 
@@ -66,12 +72,13 @@ expect(ui.find("paint_ground/content/Land_Paint_Base2") !== undefined, "the pain
 await ui.click("paint_ground/content/Land_Paint_Base2");
 await pointer.drag(on_view(col - 2, row), on_view(col + 2, row), 30);
 log("painted:", surface, "->", map.tile(col + 2, row)!.surface);
+await screenshot("painted");
 expect(map.tile(col + 2, row)!.surface !== surface, "the ground beside the pit to be painted");
 
 await pick("Land_Water");
-await pointer.drag(on_view(col, row), [x, y - 0.05], 40);
+const [wx, wy] = on_view(col, row);
+await pointer.drag([wx, wy], [wx, wy - 0.05], 40);
 const now = map.water();
 log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]));
+await screenshot("water");
 expect(now.length === lakes + 1, "a new lake in the pit");
-
-await screenshot();

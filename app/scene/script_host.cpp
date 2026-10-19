@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
+#include "park/ground_queues.hpp"
 #include "scene/park_scene.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -265,7 +266,7 @@ park.ready = async () => {
             Json paths = Json::array();
             for (const save::PathTile& p : park_->footpaths.paths)
             {
-                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", p.elevation.has_value() } });
+                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", p.elevation.has_value() }, { "queue", p.kind == save::PathKind::Queue || park::is_ground_queue(p) } });
                 if (p.elevation)
                     paths.back()["height"] = p.elevation->quantised_height;
             }

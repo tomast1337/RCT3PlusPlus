@@ -46,6 +46,7 @@ namespace rct3::simulation
         bool covered = false;   ///< Under a roof that keeps the rain off
         bool shaded = false;    ///< Out of the sun: under a roof or trees
         bool removed = false;   ///< Its tile was taken away
+        bool sloped = false;    ///< A ramp, whose height at its middle is halfway between its ends
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -79,6 +80,11 @@ namespace rct3::simulation
         {
             nodes_[node].line = line;
         }
+        /// Marks a node's tile as a ramp.
+        void set_sloped(NodeId node, bool sloped)
+        {
+            nodes_[node].sloped = sloped;
+        }
         /// Marks what is over a node's tile.
         void cover(NodeId node, bool covered, bool shaded)
         {
@@ -89,6 +95,8 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;
         /// The middle of a node's tile in world space.
         [[nodiscard]] glm::vec3 centre(NodeId node) const;
+        /// The height of the path a fraction `t` of the way from the middle of `from`'s tile to the middle of `to`'s.
+        [[nodiscard]] float height_between(NodeId from, NodeId to, float t) const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
         /// when no walk reaches it. Queues are only entered at `to`, never walked through.

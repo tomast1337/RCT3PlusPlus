@@ -307,6 +307,7 @@ namespace rct3::park
                     part.texture = whole.texture;
                     part.slots = whole.slots;
                     part.blend = whole.blend;
+                    part.board = whole.board;
                     part.bone = bone;
                     remap.assign(whole.vertices.size(), UINT32_MAX);
                 }
@@ -571,6 +572,7 @@ namespace rct3::park
                 {
                     ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
                     set_texture(part, mesh.texture, mesh.style, file->first);
+                    part.board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
                     if (rigged)
                         for (ModelPart& one : parts_by_bone(mesh, std::move(part)))
                             level.parts.push_back(std::move(one));

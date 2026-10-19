@@ -73,6 +73,40 @@ namespace rct3::park
         }
     }
 
+    bool turn_to_path(std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile)
+    {
+        save::PathTile& here = paths[tile];
+        if (!here.queue)
+            return false;
+        // A tile beside, on `side`, whose edge meets this tile's there.
+        const auto meets = [&](std::uint8_t side, bool any_kind) {
+            // A queue has edges only where its line passes: measure as if it came in on `side`.
+            save::PathTile turned = here;
+            turned.queue->start_direction = stored_direction(side);
+            const auto edge = edge_height(turned, grid, side);
+            const PathSpot next = step({ here.col, here.row }, side);
+            return edge && std::ranges::any_of(paths, [&](const save::PathTile& p) {
+                       if (p.col != next.col || p.row != next.row || (!any_kind && p.queue))
+                           return false;
+                       const auto other = edge_height(p, grid, opposite(side));
+                       return other && std::abs(*edge - *other) <= kPathMeets;
+                   });
+        };
+        const std::uint8_t start = stored_direction(here.queue->start_direction);
+        const std::uint8_t end = stored_direction(here.queue->end_direction);
+        if (meets(start, true))
+            return false;
+        for (std::uint8_t side = 0; side < kSides; ++side)
+        {
+            if (side != start && side != end && meets(side, false))
+            {
+                here.queue->start_direction = stored_direction(side);
+                return true;
+            }
+        }
+        return false;
+    }
+
     std::uint64_t join_entrance(save::RideModel& rides, std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line)
     {
         save::Station& station = rides.rides.at(entrance.ride).stations.at(entrance.station);

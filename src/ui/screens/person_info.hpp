@@ -80,6 +80,7 @@ namespace rct3::ui
         Sack, ///< Fires them at once, as the game does
         Warn,
         Wage,        ///< The wage level, 0 to 2
+        Train,       ///< Trains them a level up, for its cost
         Costume,     ///< An entertainer's, by its place in the list
         PatrolPaint, ///< Ticked while strokes on the ground add or take away tiles of their patrol area
         PatrolClear, ///< Empties it, and their zone's: the whole park again
@@ -104,6 +105,7 @@ namespace rct3::ui
     inline constexpr int kLongestName = 34;
     /// Warnings after which a member of staff cannot be warned again.
     inline constexpr int kMostWarnings = 4;
+    inline constexpr int kMostTraining = 3; ///< Training levels, as the simulation has them
     /// Colours a uniform can be in.
     inline constexpr std::size_t kUniformColours = 16;
     /// Where the clothes' colours are among a person's palettes: the upper's, then the lower's.

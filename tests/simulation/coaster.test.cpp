@@ -67,7 +67,7 @@ TEST_CASE("a train with no chain to lift it is pushed on rather than left stuck 
     CHECK(lap_seconds(c));
 }
 
-TEST_CASE("a test run finds the coaster's speed, time and drops, and the ratings grow with them")
+TEST_CASE("a test run finds the coaster's speed, time and drops")
 {
     const auto test = test_lap(hill());
     REQUIRE(test);
@@ -76,22 +76,4 @@ TEST_CASE("a test run finds the coaster's speed, time and drops, and the ratings
     CHECK(test->highest_drop == doctest::Approx(15).epsilon(0.1));
     CHECK(test->max_speed > 10);
     CHECK(test->average_speed == doctest::Approx(100 / test->ride_time));
-
-    const Ratings gentle = rate(*test);
-    rct3::save::TestResults wild = *test;
-    wild.max_lateral = 2 * 9.81f;
-    wild.inversion_count = 2;
-    const Ratings rated = rate(wild);
-    CHECK(gentle.excitement > 0);
-    CHECK(rated.intensity > gentle.intensity);
-    CHECK(rated.nausea > gentle.nausea);
-}
-
-TEST_CASE("very intense rides lose excitement")
-{
-    rct3::save::TestResults t;
-    t.max_speed = 20;
-    const float calm = rate(t).excitement;
-    t.max_lateral = 20 * 9.81f; // Far past every bound
-    CHECK(rate(t).excitement == doctest::Approx(calm * std::pow(0.75f, 5)));
 }

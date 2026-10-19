@@ -33,6 +33,7 @@
 #include "config/game_options.hpp"
 #include "config/game_saves.hpp"
 #include "config/settings.hpp"
+#include "config/text_file.hpp"
 #include "config/user_data.hpp"
 #include "image/png_encoder.hpp"
 #include "imgui.h"
@@ -55,6 +56,7 @@
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
 #include "simulation/park_messages.hpp"
+#include "simulation/ratings.hpp"
 #include "strings/unicode.hpp"
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
@@ -686,6 +688,21 @@ int main(int argc, char** argv)
     const auto keys_file = user_file(config::UserFile::Keys);
     rct3::ui::KeyMap key_map;
     load_user_file(config::UserFile::Keys, key_map);
+    // How rides are rated: the user's own model when they keep one, else the one built in.
+    rct3::simulation::RatingModel ride_ratings = rct3::simulation::builtin_rating_model();
+    if (const auto path = user_file(config::UserFile::RideRatings))
+    {
+        const auto text = config::read_text_file(*path);
+        if (!text)
+            log.warning("{}", text.error());
+        else if (*text)
+        {
+            if (auto parsed = rct3::simulation::parse_rating_model(**text))
+                ride_ratings = std::move(*parsed);
+            else
+                log.warning("{}: {}", path->string(), parsed.error());
+        }
+    }
     // The developer windows start hidden; a command shows and hides them.
     bool developer_windows = false;
 
@@ -927,7 +944,7 @@ int main(int argc, char** argv)
             device->end_pass();
             device->end_frame();
         };
-        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), report);
+        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
         if (loaded)
         {
             park = std::move(*loaded);

@@ -4,7 +4,8 @@
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
-//   ./nob script FILE.ts [-- APP_ARGS...]         compiles scripts/ with tsc and runs the viewer with FILE
+//   ./nob script FILE.ts|FILE.js [-- APP_ARGS...] runs the viewer with the script FILE; TypeScript compiles
+//                                                 with tsc (npm install -g typescript) from scripts/ first
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
@@ -764,12 +765,28 @@ int main(int argc, char** argv)
         run_cmd << binary.string();
         if (command == "script")
         {
-            // TypeScript compiles to build/scripts with the same path under scripts/ (scripts/tsconfig.json).
-            Cmd tsc;
-            tsc << "tsc" << "-p" << "scripts";
-            if (script.empty() || !run(tsc))
+            fs::path js = script;
+            if (script.empty())
+            {
+                log(Level::Error, "./nob script takes a .ts or .js file");
                 return 1;
-            fs::path js = kBuildDir / "scripts" / fs::relative(script, "scripts").replace_extension(".js");
+            }
+            if (js.extension() == ".ts")
+            {
+                Cmd probe;
+                probe << "tsc" << "--version";
+                if (!run(probe))
+                {
+                    log(Level::Error, "TypeScript scripts need tsc on PATH (npm install -g typescript); .js scripts run without it");
+                    return 1;
+                }
+                // TypeScript compiles to build/scripts with the same path under scripts/ (scripts/tsconfig.json).
+                Cmd tsc;
+                tsc << "tsc" << "-p" << "scripts";
+                if (!run(tsc))
+                    return 1;
+                js = kBuildDir / "scripts" / fs::relative(script, "scripts").replace_extension(".js");
+            }
             run_cmd << "--script" << js.string();
         }
         run_cmd.append(test_args);

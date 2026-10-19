@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
+#include "park/camera.hpp"
 #include "scene/park_scene.hpp"
 
 #include <fstream>
@@ -45,6 +46,15 @@ ui.click = async (path) => {
     globalThis.screenshot = async () => {
         take();
         await frames(3);
+    };
+}
+{
+    // The park asked for loads as the frame ends.
+    const open = park.open;
+    park.open = async (path) => {
+        open(path);
+        await frames(1);
+        await park.ready();
     };
 }
 park.ready = async () => {
@@ -123,6 +133,12 @@ park.ready = async () => {
             quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<int>();
             return Json(nullptr);
         });
+        engine_.define("park.open", [this](const Json& a) {
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("park.open takes a path in the game's folder");
+            open_ = a[0].get<std::string>();
+            return Json(nullptr);
+        });
         engine_.define("park.loaded", [this](const Json&) { return Json(park_ != nullptr); });
         engine_.define("park.cash", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -141,6 +157,23 @@ park.ready = async () => {
                 return nullptr;
             const save::TerrainCell& c = g.at(col, row);
             return { { "corners", c.corners }, { "surface", c.surface }, { "owned", park::owned_outright(c) } };
+        });
+        engine_.define("map.screen", [this](const Json& a) -> Json {
+            const save::TerrainGrid& g = grid_of(park_);
+            const auto col = static_cast<int>(number(a, 0));
+            const auto row = static_cast<int>(number(a, 1));
+            const render::Extent view = device_->extent();
+            if (!g.contains(col, row) || view.width == 0 || view.height == 0)
+                return nullptr;
+            const float x = g.world_x(col) + g.tile_size_x / 2;
+            const float z = g.world_z(row) + g.tile_size_z / 2;
+            const glm::vec4 clip = park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, g.height_at(x, z).value_or(0), z, 1);
+            if (clip.w <= 0)
+                return nullptr;
+            const glm::vec2 share { (clip.x / clip.w + 1) / 2, (1 - clip.y / clip.w) / 2 };
+            if (share.x < 0 || share.x > 1 || share.y < 0 || share.y > 1)
+                return nullptr;
+            return { { "x", share.x }, { "y", share.y } };
         });
         engine_.define("map.water", [this](const Json&) {
             grid_of(park_);
@@ -161,8 +194,7 @@ park.ready = async () => {
         device_ = nullptr;
         if (state == scripting::ScriptState::Failed)
         {
-            logging::logger("script").error("{}", engine_.error());
-            quit_ = 1;
+            fail(engine_.error());
         }
         else if (state == scripting::ScriptState::Finished && !quit_)
             quit_ = 0;
@@ -174,6 +206,17 @@ park.ready = async () => {
             return std::nullopt;
         const render::Extent view = device.extent();
         return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_ };
+    }
+
+    void ScriptHost::fail(const std::string& why)
+    {
+        logging::logger("script").error("{}", why);
+        quit_ = 1;
+    }
+
+    std::optional<std::string> ScriptHost::take_park()
+    {
+        return std::exchange(open_, std::nullopt);
     }
 
     bool ScriptHost::take_screenshot()

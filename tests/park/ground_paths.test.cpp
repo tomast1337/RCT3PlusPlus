@@ -174,3 +174,60 @@ TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches"
     keep.assign(15, true);
     CHECK(only_tiles(m, g, keep).vertices.size() == m.vertices.size());
 }
+
+namespace
+{
+    save::Ride flat_ride(int col, int row, std::uint8_t turns, std::int32_t height = 0)
+    {
+        save::Ride ride;
+        ride.kind = save::RideKind::Flat;
+        ride.base.spot = save::PlacementSpot { 7, col, row, height, turns };
+        return ride;
+    }
+
+    std::optional<std::array<std::int32_t, 2>> two_by_three(std::uint64_t)
+    {
+        return std::array<std::int32_t, 2> { 2, 3 };
+    }
+} // namespace
+
+TEST_CASE("a flat ride's floor covers its footprint, turned with it")
+{
+    const save::TerrainGrid g = flat_grid(10, 10);
+    const std::array rides { flat_ride(2, 2, 0), flat_ride(2, 2, 1) };
+    const std::vector<RideFloor> floors = ride_floors(rides, two_by_three, g);
+    REQUIRE(floors.size() == 2);
+    CHECK(floors[0].col1 - floors[0].col0 == 1);
+    CHECK(floors[0].row1 - floors[0].row0 == 2);
+    CHECK(floors[1].col1 - floors[1].col0 == 2);
+    CHECK(floors[1].row1 - floors[1].row0 == 1);
+    CHECK(floors[0].col0 == 2);
+    CHECK(floors[0].row0 == 2);
+}
+
+TEST_CASE("a ride off the ground has no floor, nor one whose model is unknown")
+{
+    const save::TerrainGrid g = flat_grid(10, 10);
+    const std::array rides { flat_ride(2, 2, 0, 3) };
+    CHECK(ride_floors(rides, two_by_three, g).empty());
+    const std::array level { flat_ride(2, 2, 0) };
+    CHECK(ride_floors(level, [](std::uint64_t) { return std::optional<std::array<std::int32_t, 2>> { }; }, g).empty());
+}
+
+TEST_CASE("a floor is paved like the path its exit lets out onto, else plain")
+{
+    const save::TerrainGrid g = flat_grid(10, 10);
+    RideFloor floor { 2, 2, 3, 4, std::array { 1, 3 } };
+    GroundPathMap map = ground_path_map({ }, g);
+    pave_ride_floors(map, std::span(&floor, 1));
+    REQUIRE(map.styles.size() == 1);
+    CHECK(map.styles[0] == kRideFloorStyle);
+    CHECK(has_ground_path(map, 3, 4));
+    CHECK_FALSE(has_ground_path(map, 4, 4));
+
+    const std::array paths { ground(1, 3, "Marble") };
+    map = ground_path_map(paths, g);
+    pave_ride_floors(map, std::span(&floor, 1));
+    CHECK(map.styles == std::vector<std::string> { "Marble" });
+    CHECK(map.tiles[static_cast<std::size_t>(2 * map.width + 2)] == 0);
+}

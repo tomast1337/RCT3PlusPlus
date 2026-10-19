@@ -1312,6 +1312,7 @@ namespace rct3::scene
             add_textures(device, scene, scene.car_meshes.mesh.batches);
             log.info("{} ride cars, {} vertices", scene.cars.size(), scene.car_meshes.own.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
+            refresh_ride_floors(scene);
         }
         if (options.flag(config::GameOption::OffMapTrees))
         {
@@ -2079,6 +2080,9 @@ namespace rct3::scene
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
+        // The ground is built before the models that give the rides' floors their size are read.
+        if (scene.footpaths.floors_stale)
+            rebuild_ground(device, scene, assets);
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = *scene.desktop;

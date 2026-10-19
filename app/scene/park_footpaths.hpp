@@ -23,6 +23,7 @@
 #pragma once
 
 #include "park/footpath_builder.hpp"
+#include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_clearance.hpp"
@@ -64,9 +65,11 @@ namespace rct3::scene
         bool loaded = false;
         std::optional<std::size_t> style; ///< Of styles, the one chosen
         park::FootpathBuilder builder;
-        std::vector<save::PathTile> paths;  ///< The park's paths as they are now
-        save::WaterLayer water;             ///< To build the ground again with
-        std::vector<save::PoolWater> pools; ///< The same
+        std::vector<save::PathTile> paths;   ///< The park's paths as they are now
+        save::WaterLayer water;              ///< To build the ground again with
+        std::vector<save::PoolWater> pools;  ///< The same
+        std::vector<park::RideFloor> floors; ///< The rides' floors, paved with the ground's paths
+        bool floors_stale = false;           ///< The ground was built without the floors as they are now
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
         std::vector<park::QueuePainting> queues_pictured;       ///< The same for the ground queues' pictures
@@ -115,8 +118,12 @@ namespace rct3::scene
     /// Closes the path panel if it is open.
     void close_footpath_panel(ParkScene& scene);
 
-    /// Builds the ground again from the scene's grid, with the paths as they are now.
+    /// Builds the ground again from the scene's grid, with the paths and the rides' floors as they are now.
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// Works out the rides' floors again from the scene's rides and the models of what they are placed as, and
+    /// marks the ground for building again.
+    void refresh_ride_floors(ParkScene& scene);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);

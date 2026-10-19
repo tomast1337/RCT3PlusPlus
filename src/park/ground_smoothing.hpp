@@ -9,11 +9,11 @@
 //   - Random roughens: each point goes up or down by up to half a unit.
 //   - Level goes towards `target` (the owner's: the height under the pointer, the brush's mean, a whole unit).
 //   - Whole units goes towards each point's nearest whole unit, for rides and scenery to stand on.
-// The other two work on whole tiles that the owner lets them change, all at once:
-//   - Join edges takes away the cliffs between those tiles: each corner the tiles round it disagree on goes to
-//     their mean.
-//   - Tile edges does the opposite: each tile goes flat at its mean height, to the nearest whole unit, so the
-//     edges between tiles show.
+// The other two work on whole tiles that the owner lets them change, easing them part of the way each pass too:
+//   - Join edges takes away the cliffs between those tiles: each corner the tiles round it disagree on goes
+//     towards their mean.
+//   - Tile edges does the opposite: each tile goes towards flat at its mean height, to the nearest whole unit,
+//     so the edges between tiles show.
 #pragma once
 
 #include "save/model/world.hpp"

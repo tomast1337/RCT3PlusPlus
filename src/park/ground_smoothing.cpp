@@ -19,6 +19,14 @@ namespace rct3::park
             return glm::length(point - middle) <= reach;
         }
 
+        /// Part of the way from `from` to `to`, all of it once within kSettled, so the ground comes to rest.
+        float ease(float from, float to, float strength)
+        {
+            constexpr float kSettled = 0.01f; ///< In height units.
+            const float next = from + (to - from) * strength;
+            return std::abs(to - next) < kSettled ? to : next;
+        }
+
         /// The tile's corners, each as the point it stands at.
         constexpr glm::vec2 kCornerAt[4] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
     } // namespace
@@ -58,8 +66,9 @@ namespace rct3::park
                     const float level = std::round((corners[0] + corners[1] + corners[2] + corners[3]) / 4);
                     for (float& h : corners)
                     {
-                        moved += std::abs(level - h);
-                        h = level;
+                        const float to = ease(h, level, strength);
+                        moved += std::abs(to - h);
+                        h = to;
                     }
                 }
             return moved;
@@ -99,8 +108,16 @@ namespace rct3::park
                     if (!all_free || count == 0 || high - low <= 0)
                         continue;
                     const float mean = sum / static_cast<float>(count);
-                    moved += (high - low) / 2 * static_cast<float>(count);
-                    set_corner_point(grid, c, r, mean);
+                    for (int dr = 0; dr < 2; ++dr)
+                        for (int dc = 0; dc < 2; ++dc)
+                        {
+                            if (!grid.contains(c - 1 + dc, r - 1 + dr))
+                                continue;
+                            float& h = grid.at(c - 1 + dc, r - 1 + dr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
+                            const float to = ease(h, mean, strength);
+                            moved += std::abs(to - h);
+                            h = to;
+                        }
                     continue;
                 }
                 if (before.held[at])

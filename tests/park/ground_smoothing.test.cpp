@@ -75,6 +75,17 @@ TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat 
         CHECK(h == doctest::Approx(3)); // The mean of 6, 2, 2, 2 to the nearest unit
     CHECK(s.at(4, 4).corners[0] == doctest::Approx(3));
 
+    // A weaker pass goes part of the way, and the cliff closes over several.
+    save::TerrainGrid eased = spiked(10);
+    eased.at(5, 5).corners = { 6, 6, 6, 6 };
+    smooth_ground(eased, GroundSmoothing::JoinEdges, { 5.5f, 5.5f }, 2, 0.5f, 0, 1, anywhere);
+    const float gap = eased.at(5, 5).corners[1] - eased.at(6, 5).corners[0];
+    CHECK(gap > 0);
+    CHECK(gap < 4);
+    for (int pass = 0; pass < 20; ++pass)
+        smooth_ground(eased, GroundSmoothing::JoinEdges, { 5.5f, 5.5f }, 2, 0.5f, 0, 1, anywhere);
+    CHECK(eased.at(5, 5).corners[1] == doctest::Approx(eased.at(6, 5).corners[0]));
+
     save::TerrainGrid held = spiked(10);
     smooth_ground(held, GroundSmoothing::TileEdges, { 5, 5 }, 1, 1, 0, 1, [](int, int) { return false; });
     CHECK(held.at(5, 5).corners[0] == 6);

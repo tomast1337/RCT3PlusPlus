@@ -53,6 +53,8 @@ namespace rct3::scene
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
     };
 
+    /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
+    [[nodiscard]] std::optional<glm::vec2> ground_spot(const ParkScene& scene, ui::Point at, ui::Point size);
     /// The tile of the ground under `at`, in a view of `size`.
     [[nodiscard]] std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 

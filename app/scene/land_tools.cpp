@@ -14,6 +14,7 @@
 #include "ui/screens/land_panel.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 
@@ -26,6 +27,7 @@ namespace rct3::scene
         constexpr std::int32_t kStepCost = 100;
         constexpr std::int32_t kPaintCost = 50;
         constexpr std::int32_t kWaterCost = 100; ///< A step of a lake's level
+        constexpr float kShapeCost = 25;         ///< A height unit of one corner point moved by a brush
         constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units.
 
         constexpr std::string_view kPanelName = "land_panel";
@@ -84,6 +86,52 @@ namespace rct3::scene
                 moved = true;
             if (moved)
                 rebuild_ground(device, scene, assets);
+        }
+
+        /// The raising and lowering brushes, by their place in the panel's tabs.
+        constexpr std::size_t kRaiseTab = 2;
+        constexpr std::size_t kLowerTab = 3;
+        constexpr std::array kRaiseShapes { park::GroundShape::Ridge, park::GroundShape::Mountain, park::GroundShape::Mesa, park::GroundShape::Hill };
+        constexpr std::array kLowerShapes { park::GroundShape::Canyon, park::GroundShape::Trough, park::GroundShape::Crater };
+
+        bool lowers(park::GroundShape shape)
+        {
+            return std::ranges::contains(kLowerShapes, shape);
+        }
+
+        void brush_shape(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        {
+            LandTools& l = scene.land;
+            if (!l.tile)
+            {
+                const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
+                if (!spot || !scene.grid.contains(static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y))))
+                    return;
+                l.tile = park::PathSpot { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                l.middle = *spot;
+                l.press_y = at.y;
+                l.amount = 0;
+                l.paid_for = 0;
+                // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
+                l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
+                const park::SolidTiles solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+                const auto& paths = scene.footpaths.paths;
+                l.before = park::corner_heights(scene.grid, [&](int c, int r) { return park::owned_outright(scene.grid.at(c, r)) && !park::blocked(solids, { c, r }, -1e6f, 1e6f) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == c && p.row == r; }); });
+            }
+            const float steps = (l.press_y - at.y) / park::kSlopeDragStep;
+            const float amount = std::round(std::max(lowers(*l.shape) ? -steps : steps, 0.0f) * 4) / 4; // In quarter units
+            if (amount == l.amount)
+                return;
+            save::TerrainGrid trial = scene.grid;
+            const float moved = park::shape_ground(trial, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount);
+            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * kShapeCost));
+            if (!affordable(scene, cost))
+                return;
+            scene.grid = std::move(trial);
+            pay(scene, cost);
+            l.paid_for = std::max(l.paid_for, moved);
+            l.amount = amount;
+            rebuild_ground(device, scene, assets);
         }
 
         void paint(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
@@ -204,8 +252,13 @@ namespace rct3::scene
                 // Of the shaping tools only the tile one works so far; the others show what is to come.
                 tabs.push_back(tab_of(strings, "Land_Vertex", 2, { "Land_Vertex_Neighbour", "Land_Vertex_Neighbour2", "Land_Vertex_Freeform", "Land_Vertex_Freeform2", "Land_Vertex_Quantised1", "Land_Vertex_Quantised2" }, 1));
                 tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_Random", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Flat2", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, 0));
-                tabs.push_back(tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill" }, 0));
-                tabs.push_back(tab_of(strings, "Land_Brush_Height_Lower", 5, { "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, 0));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill" }, kRaiseShapes.size()));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Lower", 5, { "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kLowerShapes.size()));
+                if (l.shape)
+                {
+                    const auto raise = std::ranges::find(kRaiseShapes, *l.shape);
+                    chosen = raise != kRaiseShapes.end() ? ui::LandPick { kRaiseTab, static_cast<std::size_t>(raise - kRaiseShapes.begin()) } : ui::LandPick { kLowerTab, static_cast<std::size_t>(std::ranges::find(kLowerShapes, *l.shape) - kLowerShapes.begin()) };
+                }
             }
             panel->show(std::move(tabs), chosen, l.brush, park::kLargestBrush);
         }
@@ -232,6 +285,7 @@ namespace rct3::scene
         l.tool = LandTools::Tool::None;
         l.tile.reset();
         l.solids = { };
+        l.before = { };
         l.water_before = { };
     }
 
@@ -253,13 +307,25 @@ namespace rct3::scene
             l.brush = panel->brush();
             if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Paint && pick->tab == 0)
                 l.surface = pick->tool;
+            else if (pick && l.tool == LandTools::Tool::Shape)
+            {
+                l.tile.reset();
+                if (pick->tab == kRaiseTab && pick->tool < kRaiseShapes.size())
+                    l.shape = kRaiseShapes[pick->tool];
+                else if (pick->tab == kLowerTab && pick->tool < kLowerShapes.size())
+                    l.shape = kLowerShapes[pick->tool];
+                else
+                    l.shape.reset();
+            }
         }
         if (l.tool == LandTools::Tool::None || !down)
         {
             l.tile.reset();
             return;
         }
-        if (l.tool == LandTools::Tool::Shape)
+        if (l.tool == LandTools::Tool::Shape && l.shape)
+            brush_shape(device, scene, assets, at, size, over);
+        else if (l.tool == LandTools::Tool::Shape)
             shape(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Paint)
             paint(device, scene, assets, at, size, over);

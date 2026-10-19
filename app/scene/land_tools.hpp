@@ -8,8 +8,14 @@
 // nothing solid standing over it.
 //
 // Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
-// Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes; only the first tile tool
-// works so far, the others are shown but cannot be picked.
+// Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes. The first tile tool and
+// the raising and lowering brushes work; the others are shown but cannot be picked yet.
+//
+// Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
+// there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
+// (park/ground_shapes.hpp). The shape is as wide as the brush's number, centred where the pointer pressed;
+// a ridge runs across the view. Ground the park does not own outright, under paths or under things standing
+// on it stays, as do cliff edges. Each unit of ground moved is paid for, once.
 //
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
 // own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
@@ -25,6 +31,7 @@
 // Every change is paid for. A right click puts either tool away.
 #pragma once
 
+#include "park/ground_shapes.hpp"
 #include "park/ground_textures.hpp"
 #include "park/path_clearance.hpp"
 #include "render/device.hpp"
@@ -62,8 +69,14 @@ namespace rct3::scene
         float level_before = 0;                    ///< Of the water on the pressed tile, as the stroke found it
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0; ///< Chosen, of `surfaces`
-        int brush = 3;           ///< Tiles across the paint brush covers
+        std::size_t surface = 0;                ///< Chosen, of `surfaces`
+        int brush = 3;                          ///< Tiles across the brushes cover
+        std::optional<park::GroundShape> shape; ///< The raising or lowering brush chosen; none for the tile tool
+        park::CornerHeights before;             ///< As a brush stroke found them
+        glm::vec2 middle { 0 };                 ///< Of a brush stroke, in tile units
+        glm::vec2 along { 1, 0 };               ///< Of a ridge: across the view as the stroke began
+        float amount = 0;                       ///< Of the brush stroke so far, in height units
+        float paid_for = 0;                     ///< The most ground the stroke has moved, already paid for
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

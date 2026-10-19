@@ -60,26 +60,89 @@ const cash = park.cash();
 // Aimed again before each drag: the camera may scroll while the pointer is in the tool row by the edge.
 await pick("Land_Brush_Height");
 const [x, y] = on_view(col, row);
+
 await pointer.drag([x, y], [x, y + 0.1], 40);
+
 log("dug a pit:", before, "->", low(col, row), "cash", cash, "->", park.cash());
+
 await screenshot("pit");
+
 expect(low(col, row) < before, "the tile to be lower");
 expect(cash === undefined || park.cash()! < cash, "the digging to be paid for");
 
 const surface = map.tile(col + 2, row)!.surface;
+
 await pick("Land_Brush_Paint");
 await until(() => ui.find("land_panel/body/Land_Paint_Base2") !== undefined, 60, "the land panel to show the surfaces");
+
 expect(ui.find("land_panel/Land_Brush_Radius") !== undefined, "the land panel to show the brush size");
+
 await ui.click("land_panel/body/Land_Paint_Base2");
 await pointer.drag(on_view(col - 2, row), on_view(col + 2, row), 30);
+
 log("painted:", surface, "->", map.tile(col + 2, row)!.surface);
+
 await screenshot("painted");
+
 expect(map.tile(col + 2, row)!.surface !== surface, "the ground beside the pit to be painted");
 
 await pick("Land_Water");
+
 const [wx, wy] = on_view(col, row);
+
 await pointer.drag([wx, wy], [wx, wy - 0.05], 40);
+
 const now = map.water();
+
 log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]));
+
 await screenshot("water");
+
 expect(now.length === lakes + 1, "a new lake in the pit");
+
+// Brushes: a hill raised beside the pit, then a crater sunk on the other side.
+function high(col: number, row: number): number {
+    return Math.max(...map.tile(col, row)!.corners);
+}
+
+const hill_at = col + 4;
+const hill_before = high(hill_at, row);
+
+await pick("Land_Brush_Height");
+
+await until(() => ui.find("land_panel/Land_Brush_Height_Raise") !== undefined, 60, "the land panel's raise tab");
+
+await ui.click("land_panel/Land_Brush_Height_Raise");
+
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Raise_Hill") !== undefined, 60, "the hill brush");
+
+await ui.click("land_panel/body/Land_Brush_Height_Raise_Hill");
+
+const [hx, hy] = on_view(hill_at, row);
+await pointer.drag([hx, hy], [hx, hy - 0.15], 40);
+
+log("hill:", hill_before, "->", high(hill_at, row));
+
+await screenshot("hill");
+
+expect(high(hill_at, row) > hill_before, "the hill to rise");
+
+const crater_at = col - 4;
+
+camera.look({ col: crater_at + 0.5, row: row + 0.5 }, { col: crater_at - 3, row: row - 6, up: 40 });
+
+await frames(2);
+const crater_before = low(crater_at, row);
+await ui.click("land_panel/Land_Brush_Height_Lower");
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Lower_Crater") !== undefined, 60, "the crater brush");
+await ui.click("land_panel/body/Land_Brush_Height_Lower_Crater");
+
+const [cx, cy] = on_view(crater_at, row);
+
+await pointer.drag([cx, cy], [cx, cy + 0.15], 40);
+
+log("crater:", crater_before, "->", low(crater_at, row));
+
+await screenshot("crater");
+
+expect(low(crater_at, row) < crater_before, "the crater to sink");

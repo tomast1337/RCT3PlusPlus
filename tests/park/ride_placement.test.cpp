@@ -79,6 +79,15 @@ TEST_CASE("placing a ride levels its footprint, and the tiles round it slope to 
     CHECK(grid.at(4, 6).corners == std::array<float, 4> { 2, 2, 2, 2 });
 }
 
+TEST_CASE("shaping flattens a sloped tile to its top or bottom, then moves a flat one a unit")
+{
+    const save::TerrainGrid grid = owned_land();
+    CHECK(shaped_height(grid.at(1, 1), true) == 3);
+    CHECK(shaped_height(grid.at(1, 1), false) == 1);
+    CHECK(shaped_height(grid.at(6, 6), true) == 7);
+    CHECK(shaped_height(grid.at(6, 6), false) == 5);
+}
+
 TEST_CASE("an entrance goes across the footprint's rim nearest the pointer, facing the ride")
 {
     const save::TerrainGrid grid = owned_land();

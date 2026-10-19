@@ -9,6 +9,7 @@
 // time each phase of a step took, as the profiler's table. Flat rides take
 // their timing from their models, so they come over only with --game, the game's folder.
 #include "config/game_install.hpp"
+#include "logging/crash.hpp"
 #include "park/asset_index.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/item_category.hpp"
@@ -73,6 +74,7 @@ namespace
 int main(int argc, char** argv)
 {
     using namespace rct3;
+    logging::install_crash_report();
     const char* path = nullptr;
     float seconds = 600;
     unsigned threads = 0;

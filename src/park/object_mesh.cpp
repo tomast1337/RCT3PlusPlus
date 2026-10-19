@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
+#include "park/ground_textures.hpp"
 #include "park/object_placement.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -29,6 +32,35 @@ namespace rct3::park
         {
             const auto custom = overrides.find(object.id);
             return custom != overrides.end() ? custom->second : flexi_colours(object.colours);
+        }
+
+        /// What `texture` paints like, when it is one of the ground's stand-ins.
+        std::optional<GroundPaint> ground_paint_of(std::string_view texture)
+        {
+            if (texture == kGroundSurfacePicture)
+                return GroundPaint::Surface;
+            if (texture == kGroundCliffPicture)
+                return GroundPaint::Cliff;
+            return std::nullopt;
+        }
+
+        std::string ground_texture(GroundPaint paint, const save::TerrainGrid& grid, glm::vec2 anchor)
+        {
+            const int col = grid.tile_size_x != 0 ? static_cast<int>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
+            const int row = grid.tile_size_z != 0 ? static_cast<int>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
+            if (!grid.contains(col, row))
+                return ground_key(paint, 0);
+            const save::TerrainCell& cell = grid.at(col, row);
+            return ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff : cell.surface);
+        }
+
+        /// Where a point of a ground-painted face falls on its picture, as the terrain mesh lays it.
+        glm::vec2 ground_uv(const glm::vec3& at, const glm::vec3& normal)
+        {
+            if (std::abs(normal.y) >= std::max(std::abs(normal.x), std::abs(normal.z)))
+                return { at.x / kTextureSpan, at.z / kTextureSpan };
+            const bool along_x = std::abs(normal.z) > std::abs(normal.x);
+            return { (along_x ? at.x : at.z) / kTextureSpan, -at.y / kTextureSpan };
         }
 
         void bake(std::map<Key, Run>& runs, ObjectMesh& mesh)
@@ -162,7 +194,8 @@ namespace rct3::park
             const bool fit = model->second.fits_ground && !stretched && on_ground(object);
             for (const ModelPart& part : shown.parts)
             {
-                Run& run = runs[{ part.blend, painted_name(part.texture, part.slots, colours), part.one_sided }];
+                const auto paint = ground_paint_of(part.texture);
+                Run& run = runs[{ part.blend, paint ? ground_texture(*paint, grid, anchor) : painted_name(part.texture, part.slots, colours), part.one_sided }];
                 run.picture = part.texture;
                 run.colours = used_colours(part.slots, colours);
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
@@ -175,7 +208,8 @@ namespace rct3::park
                         if (const auto ground = grid.height_at(at.x, at.z))
                             at.y += *ground - transform[3].y;
                     }
-                    run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, stretched ? glm::normalize(turn * v.normal) : turn * v.normal });
+                    const glm::vec3 normal = stretched ? glm::normalize(turn * v.normal) : turn * v.normal;
+                    run.vertices.push_back({ at, glm::vec4(1.0f), paint ? ground_uv(at, normal) : v.uv, normal });
                 }
                 run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
                 for (const std::uint32_t i : part.indices)

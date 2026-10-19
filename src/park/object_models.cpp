@@ -428,6 +428,15 @@ namespace rct3::park
                 v.position.y += kWaterLift;
             return;
         }
+        for (const auto& [placeholder, key] : { std::pair { kGroundSurfaceTexture, kGroundSurfacePicture }, std::pair { kGroundCliffTexture, kGroundCliffPicture } })
+        {
+            if (strings::equals_ignoring_case(name, placeholder))
+            {
+                part.texture = std::string(key);
+                part.slots = 0;
+                return;
+            }
+        }
         part.texture = texture_key(name, near);
         const auto picture = pictures_.find(part.texture);
         part.slots = picture != pictures_.end() ? picture->second.slots : 0;

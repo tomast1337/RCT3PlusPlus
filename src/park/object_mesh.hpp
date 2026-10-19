@@ -7,6 +7,11 @@
 // change when an object's level does, billboards whenever the viewer moves. Which billboards there are and
 // how they are batched also only changes with the levels, so billboards are gathered then, and only turned
 // when the viewer moves.
+//
+// Parts painted like the ground (kGroundSurfacePicture, kGroundCliffPicture) take the surface or cliff picture
+// of the tile under the object's anchor, by its ground key (ground_textures.hpp), and are laid on it as the
+// terrain is: tops by their place on the map, sides by their place along the face and their height, so they
+// meet the ground round them without a seam.
 #pragma once
 
 #include "park/object_models.hpp"

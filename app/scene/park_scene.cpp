@@ -227,7 +227,8 @@ namespace rct3::scene
             std::vector<park::ObjectBatch> missing;
             for (const park::ObjectBatch& batch : batches)
             {
-                if (!scene.object_textures.contains(batch.texture))
+                // Ground-painted parts draw with the ground's own pictures.
+                if (!scene.object_textures.contains(batch.texture) && !scene.ground_textures.contains(batch.texture))
                     missing.push_back(batch);
             }
             if (missing.empty())
@@ -2585,7 +2586,9 @@ namespace rct3::scene
                 {
                     if ((batch.blend == park::PartBlend::Blended) != see_through)
                         continue;
-                    const auto texture = scene.object_textures.find(batch.texture);
+                    // Parts painted like the ground take the ground's pictures (see object_mesh.hpp).
+                    const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
+                    const auto texture = textures.find(batch.texture);
                     render::DrawCommand draw;
                     draw.pipeline = sided(pipeline_for(shown, batch.blend), batch);
                     draw.vertices = { shown.vertices };
@@ -2594,11 +2597,11 @@ namespace rct3::scene
                     draw.first = batch.first;
                     draw.count = batch.count;
                     draw.transform = transform;
-                    draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                    draw.texture = texture != textures.end() ? texture->second.handle : scene.blank;
                     draw.filter = render::Filter::Linear;
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
-                    draw.extra_textures[1] = relief_of(scene.object_textures, batch.texture);
+                    draw.extra_textures[1] = relief_of(textures, batch.texture);
                     device.draw(draw);
                 }
             };

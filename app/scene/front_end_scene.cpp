@@ -4,10 +4,10 @@
 #include "config/option_effects.hpp"
 #include "logging/log.hpp"
 #include "scene/menu_audio.hpp"
+#include "scene/park_loading.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
-#include "ui/screens/loading_screen.hpp"
 
 #include <algorithm>
 #include <array>
@@ -22,11 +22,10 @@ namespace rct3::scene
 
         namespace skins = ui::game_skins;
 
-        /// The newest logo comes with its own skins, the career map's pictures come in a file per game, the
-        /// loading screen shown while a park loads has a file of its own, and the icons of the rides, shops and
-        /// scenery the park's build lists show have three.
-        constexpr std::array<std::string_view, 10> kMoreSkins = {
-            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl", "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl", ui::loading_screen::kSkinFile, "RideIcons/RideIcons.common.ovl", "Style/ShopsIcons.common.ovl", "Style/SceneryIcons.common.ovl", "Enclosures/EnclosureIcons.common.ovl", "WildAnimals/WildAnimals.common.ovl",
+        /// The newest logo comes with its own skins, the career map's pictures come in a file per game, and the
+        /// icons of the rides, shops and scenery the park's build lists show have three.
+        constexpr std::array<std::string_view, 9> kMoreSkins = {
+            "gui/FrontScreen/UpdatedTShirt/FrontScreen_UpdatedTShirt.common.ovl", "gui/FrontScreen/ScenarioLogos/Base/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/CapeTyphoon/FrontScreen.common.ovl", "gui/FrontScreen/ScenarioLogos/Wild/FrontScreen.common.ovl", "RideIcons/RideIcons.common.ovl", "Style/ShopsIcons.common.ovl", "Style/SceneryIcons.common.ovl", "Enclosures/EnclosureIcons.common.ovl", "WildAnimals/WildAnimals.common.ovl",
         };
 
         /// What the options show for the zoomed-out park's music, as the game does at first.
@@ -48,6 +47,7 @@ namespace rct3::scene
 
         FrontEndScene scene;
         scene.assets = std::move(*assets);
+        add_loading_logo(device, install, scene.assets);
         scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
         scene.picture_folders = std::move(setup.picture_folders);
         scene.picture_seed = setup.picture_seed;

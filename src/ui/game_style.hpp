@@ -18,7 +18,6 @@
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/screens/land_panel.hpp"
-#include "ui/screens/loading_screen.hpp"
 #include "ui/screens/management_window.hpp"
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
@@ -173,8 +172,6 @@ namespace rct3::ui::game_skins
             { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kStripRight) },
             { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch() },
             { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end() },
-            { loading_screen::kBarLeft, "loading-bar", Coded, game_frames::bar_end_left() },
-            { loading_screen::kBarRight, "loading-bar", Coded, game_frames::bar_end_right() },
         };
     }
 

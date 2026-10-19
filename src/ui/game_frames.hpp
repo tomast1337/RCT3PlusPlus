@@ -75,8 +75,4 @@ namespace rct3::ui::game_frames
     /// The pointed end of a label's band: white below the line from its top-left to its bottom-right.
     [[nodiscard]] CodedFrame label_end();
 
-    /// The loading bar's round ends: light blue with a darker edge.
-    [[nodiscard]] CodedFrame bar_end_left();
-    [[nodiscard]] CodedFrame bar_end_right();
-
 } // namespace rct3::ui::game_frames

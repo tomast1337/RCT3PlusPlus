@@ -754,8 +754,9 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
-    std::optional<rct3::scene::ParkScene> park;                    ///< Played over the front end, which lends it the interface
-    std::optional<std::filesystem::path> park_to_load = park_file; ///< Asked for this frame; its loading screen shows first
+    std::optional<rct3::scene::ParkScene> park; ///< Played over the front end, which lends it the interface
+    std::optional<std::filesystem::path> park_to_load = park_file;
+    std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends
     std::filesystem::path script_shot; ///< Where the screenshot a script asked for goes; empty for the user's folder
@@ -938,31 +939,41 @@ int main(int argc, char** argv)
     };
     // Loads a park while its loading screen shows, as the game does: on this thread, the screen drawn again
     // as each stage begins. The menus' music goes on meanwhile; the park quiets it once it shows.
+    // The log says how long each stage took, and where a load that failed stopped.
     const auto load_park = [&](const std::filesystem::path& path) {
         const prof::Scope zone("LoadingScreen");
         auto shown = rct3::scene::ParkLoadStage::ReadFile; // The frame before loading began drew it
+        const std::uint64_t log_from = park_log_from != 0 ? park_log_from : rct3::logging::global().latest_sequence();
+        const double started = window->time();
+        double stage_started = started;
+        log.info("loading park {}", path.string());
         const auto report = [&](rct3::scene::ParkLoadStage stage) {
             window->poll_events();
             if (audio && menu_audio)
                 rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { });
             if (stage == shown)
                 return;
+            const double now = window->time();
+            log.info("park loading: {} took {:.2f} s", rct3::scene::park_load_name(shown), now - stage_started);
+            stage_started = now;
             shown = stage;
             device->begin_frame();
             device->begin_pass({ .clear_color = kBackground });
-            rct3::scene::draw_park_loading(*device, front->assets, front->list, stage);
+            rct3::scene::draw_park_loading(*device, front->assets, front->list, stage, log_from);
             device->end_pass();
             device->end_frame();
         };
         auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
+        const double now = window->time();
         if (loaded)
         {
+            log.info("park loading: {} took {:.2f} s; loaded in {:.2f} s", rct3::scene::park_load_name(shown), now - stage_started, now - started);
             park = std::move(*loaded);
             park->simulate = simulate;
             park->scale = scale;
         }
         else
-            log.warning("{}: {}", path.string(), loaded.error());
+            log.error("park loading failed during {} after {:.2f} s: {}: {}", rct3::scene::park_load_name(shown), now - started, path.string(), loaded.error());
     };
     if (install && !startup)
         load_widgets(false);
@@ -1213,7 +1224,12 @@ int main(int argc, char** argv)
                         else if (park && front)
                             rct3::scene::draw_park_scene(*device, *park, front->assets);
                         else if (park_to_load && front)
-                            rct3::scene::draw_park_loading(*device, front->assets, front->list, rct3::scene::ParkLoadStage::ReadFile);
+                        {
+                            // Warnings from here on are this load's.
+                            if (park_log_from == 0)
+                                park_log_from = rct3::logging::global().latest_sequence();
+                            rct3::scene::draw_park_loading(*device, front->assets, front->list, rct3::scene::ParkLoadStage::ReadFile, park_log_from);
+                        }
                         else if (front)
                             rct3::scene::draw_front_end_scene(*device, *front);
                         else
@@ -1246,6 +1262,7 @@ int main(int argc, char** argv)
                     if (park_to_load && front)
                     {
                         load_park(*std::exchange(park_to_load, std::nullopt));
+                        park_log_from = 0;
                         // The park's time starts when it shows, not when it was asked for.
                         last_time = window->time();
                     }

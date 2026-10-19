@@ -177,19 +177,11 @@ namespace
         draw_skin_at(context, fs::kBandEndSkin, { { 112, 8, 207, 93 }, { 216, 8, 266, 58 }, { 276, 8, 316, 98 }, { 112, 100, 232, 130 } });
     }
 
-    // The loading bar's two ends at their own size, then twice it, as the bar is drawn on a larger band.
-    void draw_loading_bar(ui::DrawContext& context, PanelLook, ui::Rect)
-    {
-        namespace ls = ui::loading_screen;
-        draw_skin_at(context, ls::kBarLeft, { { 8, 8, 18, 24 }, { 40, 8, 60, 40 } });
-        draw_skin_at(context, ls::kBarRight, { { 24, 8, 33, 24 }, { 66, 8, 84, 40 } });
-    }
-
     std::vector<PanelCase> panel_cases()
     {
         return {
             { "info-panel", 520, 175, draw_info_panel },         { "lozenge", 256, 104, draw_lozenges },        { "menu", 298, 146, draw_menus },         { "selected-row", 198, 66, draw_selected_rows },           { "button-face", 170, 52, draw_button_faces },        { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc },
-            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "label-band", 324, 138, draw_label_band },   { "loading-bar", 92, 48, draw_loading_bar },
+            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "label-band", 324, 138, draw_label_band },
         };
     }
 

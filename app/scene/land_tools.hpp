@@ -8,8 +8,9 @@
 // nothing solid standing over it.
 //
 // Paint ground: a window shows the land surfaces the game's terrain files list, each by its own picture; the
-// one chosen is pressed in. Pressing the ground and moving over it paints each tile passed with that surface,
-// on land the park owns outright. Closing the window puts the tool away.
+// one chosen is pressed in. Under them, the brush: how many tiles across, and whether round or square
+// (park/ground_brush.hpp). Pressing the ground and moving over it paints the tiles the brush covers with that
+// surface, on land the park owns outright, each tile paid for. Closing the window puts the tool away.
 //
 // Water: press on a tile and move the pointer up or down to raise or lower the water there, a step for each
 // kSlopeDragStep moved. Starting on a lake moves its level; starting on dry ground pours a new one from the
@@ -58,6 +59,8 @@ namespace rct3::scene
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0; ///< Chosen, of `surfaces`
+        int brush = 1;           ///< Tiles across the paint brush covers
+        bool round = false;      ///< The brush is round, not square
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

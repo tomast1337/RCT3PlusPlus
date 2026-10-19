@@ -30,9 +30,12 @@ namespace rct3::park
 
     glm::mat4 view_projection(const ParkCamera& camera, float aspect)
     {
-        const glm::mat4 view = glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
-        const glm::mat4 projection = glm::perspective(kFieldOfView, aspect > 0 ? aspect : 1.0f, kNear, kFar);
-        return projection * view;
+        return projection(aspect) * glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
+    }
+
+    glm::mat4 projection(float aspect)
+    {
+        return glm::perspective(kFieldOfView, aspect > 0 ? aspect : 1.0f, kNear, kFar);
     }
 
     ParkCamera overview(const save::TerrainGrid& grid)

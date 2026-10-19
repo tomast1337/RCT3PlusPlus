@@ -37,6 +37,8 @@
         "SurfaceDetail": "Surface detail",
         "SurfaceDetailHelp": "Grain gives textures fine detail up close, where they would look blurred, at almost no cost. Grain and relief also makes height from the light and dark of each texture, so brick, rock and paths catch the sun near the camera; it costs more to draw and takes effect when a park is loaded.",
         "SurfaceDetailOff": "Off",
+        "AmbientOcclusion": "Ambient occlusion",
+        "AmbientOcclusionHelp": "Creases, corners and the ground under things are darker where less of the sky reaches them. Costs a little more to draw.",
         "SurfaceDetailRelief": "Grain",
         "SurfaceDetailGrain": "Grain and relief",
         "DetailBlendBandHelp": "How long the stretch is over which scenery blends from one level of detail to the next as the camera moves.",

@@ -37,6 +37,7 @@
 #include "scene/park_footpaths.hpp"
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
+#include "scene/park_occlusion.hpp"
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
@@ -211,8 +212,10 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
-        bool bloom = false;     ///< The Bloom option: glow round bright parts
-        int surface_detail = 0; ///< The Surface detail option (render::SceneLight::surface_detail)
+        bool bloom = false; ///< The Bloom option: glow round bright parts
+        ParkOcclusion occlusion;
+        bool ambient_occlusion = false; ///< Our Ambient occlusion option
+        int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)
         /// Relief maps are made for the pictures loaded, as the Surface detail option was when the park loaded:
         /// they cost memory and loading time, so a park loaded without them gets them only when loaded again.
         bool relief_maps = false;

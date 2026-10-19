@@ -422,6 +422,7 @@ namespace rct3::ui
         rows.choice(O::SurfaceDetail, str(strings, kSurfaceDetail), items(strings, { "Rct3pp_SurfaceDetailOff", "Rct3pp_SurfaceDetailRelief", "Rct3pp_SurfaceDetailGrain" }), str(strings, kSurfaceDetailHelp));
         rows.section();
         rows.tick(O::Bloom, str(strings, "GameOptionsDialog_Bloom"), str(strings, "GameOptionsDialog_Bloom_TT"));
+        rows.tick(O::AmbientOcclusion, str(strings, "Rct3pp_AmbientOcclusion"), str(strings, "Rct3pp_AmbientOcclusionHelp"));
         rows.tick(O::Refraction, str(strings, "GameOptionsDialog_Refraction"), str(strings, "GameOptionsDialog_Refraction_TT"));
         rows.tick(O::WaterDroplets, str(strings, "GameOptionsDialog_WaterDroplets"), str(strings, "GameOptionsDialog_WaterDroplets_TT"));
         rows.indent();

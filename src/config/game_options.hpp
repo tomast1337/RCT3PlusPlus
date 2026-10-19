@@ -113,6 +113,7 @@ namespace rct3::config
         Refraction,
         WaterDroplets,
         LaserOcclusion,
+        AmbientOcclusion, ///< Ours: creases and corners darkened where less of the sky reaches
 
         Count_, ///< Number of options; not an option
     };

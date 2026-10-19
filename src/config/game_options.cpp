@@ -97,6 +97,7 @@ namespace rct3::config
             { O::Refraction, "refraction", 0, 1, 1, 1 },
             { O::WaterDroplets, "water_droplets", 0, 1, 1, 1 },
             { O::LaserOcclusion, "laser_occlusion", 0, 1, 1, 1 },
+            { O::AmbientOcclusion, "ambient_occlusion", 0, 1, 1, 1 },
         } };
 
         // The table is indexed by GameOption, so its order must follow the enum.

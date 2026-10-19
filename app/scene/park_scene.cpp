@@ -2250,6 +2250,7 @@ namespace rct3::scene
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.bloom = options.flag(config::GameOption::Bloom);
+        scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
@@ -2865,6 +2866,10 @@ namespace rct3::scene
             draw_world(device, scene, view_projection, scene.light, { .shaded_water = true, .ghosts = true, .faded_ground = ground_faded(scene), .eye = eye });
             device.set_wireframe(false);
         });
+        if (scene.ambient_occlusion)
+            profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, park::projection(aspect(device))); });
+        else
+            scene.occlusion.before = false;
         if (scene.bloom)
             profiling::section("Glow", [&] { draw_park_glow(device, scene.glow); });
 
@@ -2914,6 +2919,7 @@ namespace rct3::scene
         finish_builds(scene);
         destroy_park_water(device, scene.water);
         destroy_park_glow(device, scene.glow);
+        destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
         {

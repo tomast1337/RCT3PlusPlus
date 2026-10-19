@@ -42,6 +42,12 @@ namespace rct3::render::vulkan
         PushBlock push_block(const DrawCommand& command, Shader shader)
         {
             const SceneLight& l = command.light;
+            if (shader == Shader::Occlusion)
+            {
+                // app/shaders/occlusion.frag
+                const OcclusionStep& o = command.occlusion;
+                return { command.transform, glm::vec4(static_cast<float>(o.kind), static_cast<float>(o.frame % 65536), o.radius, o.strength), glm::vec4(o.history, 0.0f, o.depth_terms), { }, { } };
+            }
             if (shader != Shader::Water)
             {
                 // The push block is full, so the haze colour goes as one number: its channels in 8 bits each.
@@ -1015,7 +1021,7 @@ namespace rct3::render::vulkan
             // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
             const Shader shader = pipeline->second.shader;
             const bool lit = lit_shader(shader);
-            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 8 : 2;
+            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 8 : shader == Shader::Occlusion ? 5 : 2;
             std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
             if (lit)
                 extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0], command.light.shadow_map_before, command.light.shadow_view_before, command.extra_textures[1] };

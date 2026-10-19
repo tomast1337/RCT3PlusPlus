@@ -40,6 +40,7 @@ namespace rct3::config
             { UserFile::Settings, UserFolder::Config, "settings.json" },
             { UserFile::GameOptions, UserFolder::Config, "options.json" },
             { UserFile::Keys, UserFolder::Config, "keys.json" },
+            { UserFile::RideRatings, UserFolder::Config, "ride_ratings.json" },
         } };
 
         // The tables are indexed by their ids, so their order must follow the enums.

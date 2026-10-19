@@ -230,7 +230,7 @@ int main(int argc, char** argv)
             const auto lap = coasters[index] ? simulation::lap_seconds(*coasters[index]) : std::nullopt;
             if (ride.stats.last_lap)
             {
-                const simulation::Ratings ours = simulation::rate(*ride.stats.last_lap);
+                const simulation::Ratings ours = simulation::rate(simulation::builtin_rating_model(), ride.base.symbol, *ride.stats.last_lap);
                 std::printf("  rated %.1f/%.1f/%.1f from its test, saved %.1f/%.1f/%.1f\n", static_cast<double>(ours.excitement), static_cast<double>(ours.intensity), static_cast<double>(ours.nausea), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea));
             }
             std::printf(
@@ -609,6 +609,20 @@ int main(int argc, char** argv)
             std::printf("patrols: %zu staff on 9x9 areas; %zu ticks walking outside on no job; litter %zu on handymen's areas, %zu off them; %zu outside their area now; paths no handyman patrols %zu, no mechanic %zu\n", patrolled, strays, on, off, away, simulation::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }
         std::printf("rides: %u breakdowns, %zu repaired, %zu inspections, %zu down now, reliability %.2f on average; %zu mechanics; wages paid %.2f\n", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid : 0) / 100);
+        {
+            float happy = 0, lazy = 0, load = 0;
+            std::size_t count = 0, resting = 0;
+            for (const auto [e, staff] : world.registry.view<const simulation::Staff>().each())
+            {
+                happy += staff.happiness;
+                lazy += staff.laziness;
+                load += staff.load;
+                resting += staff.resting;
+                ++count;
+            }
+            const auto mean = [&](float sum) { return static_cast<double>(count > 0 ? sum / static_cast<float>(count) : 0); };
+            std::printf("staff: %zu, happiness %.2f, laziness %.2f, at work %.2f of the time on average; %zu resting now\n", count, mean(happy), mean(lazy), mean(load), resting);
+        }
     }
     std::array<std::size_t, 6> doing { };
     double happiness = 0;

@@ -82,6 +82,11 @@ namespace rct3::parkfile
         std::int32_t look = -1; ///< Place in SavedPeople::model.staff; -1 none
         simulation::StaffRole role = simulation::StaffRole::Other;
         std::int64_t wage = 0;
+        std::int32_t wage_level = 2;
+        std::int32_t training = 0;
+        std::int32_t warnings = 0;
+        float happiness = 1;
+        float laziness = 0;
         glm::vec3 position { 0.0f };
         float heading = 0;
         std::optional<simulation::Patrol> patrol;

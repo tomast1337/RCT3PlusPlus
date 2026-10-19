@@ -32,7 +32,9 @@ TEST_CASE("each kind of thought is numbered as the language file's texts for it"
     CHECK(thought_key(std::to_underlying(ThoughtKind::VerySick)) == "Thought_IFeelVerySick");
     CHECK(thought_key(std::to_underlying(ThoughtKind::Broke)) == "Thought_IveSpentAllMyMoney");
     CHECK(thought_key(std::to_underlying(ThoughtKind::CantAfford)) == "Thought_ICantAffordThis");
-    CHECK(thought_key(std::to_underlying(ThoughtKind::QueueTooLong)) == "Thought_IveBeenQueueingAges");
+    CHECK(thought_key(std::to_underlying(ThoughtKind::QueueingForAges)) == "Thought_IveBeenQueueingAges");
+    CHECK(thought_key(std::to_underlying(ThoughtKind::GaveUpQueue)) == "Thought_GivenUpOnQueue");
+    CHECK(thought_key(std::to_underlying(ThoughtKind::QueueTooLong)) == "Thought_QueueTooLong");
     CHECK(thought_key(std::to_underlying(ThoughtKind::TooIntense)) == "Thought_IPreferLessIntenseRides");
     CHECK(thought_key(std::to_underlying(ThoughtKind::Enjoyed)) == "Thought_IEnjoyedThisRide");
 }
@@ -58,7 +60,7 @@ TEST_CASE("riders think of the ride: enjoyed it, and the queue was long")
     auto& r = park.world().registry;
     park.run_seconds(900);
     CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return times(park, g, ThoughtKind::Enjoyed) > 0 && r.get<Thoughts>(g).recent.front().about == ride; }));
-    CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return times(park, g, ThoughtKind::QueueTooLong) > 0; }));
+    CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return times(park, g, ThoughtKind::QueueingForAges) > 0; }));
 }
 
 TEST_CASE("a guest who cannot pay thinks so, and keeps no more than six thoughts")

@@ -7,6 +7,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>
+#include <limits>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -188,6 +190,26 @@ namespace rct3::simulation
             if (station.exit_spot)
                 links.exit = beside(paths, *station.exit_spot, station.exit_spot->direction, false);
             return links;
+        }
+
+        /// The path node, not a queue, nearest `at` anywhere in the park.
+        // shortcut: guests saved in a pool, on a ride we do not bring over or in its queue step out to the nearest
+        // path, as nothing moves them there; upgrade when swimming and those rides are simulated.
+        std::optional<NodeId> walkway_near(const PathNetwork& paths, glm::vec3 at)
+        {
+            std::optional<NodeId> best;
+            float gap = std::numeric_limits<float>::max();
+            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            {
+                if (paths.nodes()[n].removed || paths.nodes()[n].queue)
+                    continue;
+                if (const float g = glm::distance(paths.centre(n), at); g < gap)
+                {
+                    gap = g;
+                    best = n;
+                }
+            }
+            return best;
         }
 
         /// A rating as saved, about 0 to 10, as a fraction.
@@ -535,9 +557,9 @@ namespace rct3::simulation
             if (ride.assessment.valid)
                 rated = Ratings { ride.assessment.excitement, ride.assessment.intensity, ride.assessment.nausea };
             else if (ride.stats.last_lap)
-                rated = rate(*ride.stats.last_lap);
+                rated = rate(world.ratings, ride.base.symbol, *ride.stats.last_lap);
             else if (const auto test = coaster ? test_lap(*coaster) : std::nullopt)
-                rated = rate(*test);
+                rated = rate(world.ratings, ride.base.symbol, *test);
             CycleRide cycle { .capacity = timing->seats, .cycle_ticks = ticks(timing->seconds), .line = std::move(line), .exit = exit };
             if (rated)
             {
@@ -620,14 +642,19 @@ namespace rct3::simulation
         {
             const save::Person& p = people.staff[i].person;
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
-            const auto at = world.paths.nearest(position);
+            auto at = world.paths.nearest(position);
             if (!at || world.paths.nodes()[*at].queue)
+                at = walkway_near(world.paths, position);
+            if (!at)
                 continue;
             using enum save::StaffKind;
             const save::StaffKind kind = people.staff[i].kind;
             const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : StaffRole::Other;
             const entt::entity e = r.create();
-            r.emplace<Staff>(e, Staff { .role = role, .wage = kWagePerLevel * std::max(people.staff[i].wage_level, 1) });
+            const save::Staff& saved = people.staff[i];
+            Staff staff { .role = role, .training = std::clamp(saved.training, 0, kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
+            set_wage_level(staff, saved.wage_level);
+            r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             start_walking(world, e, *at);
             out[i] = e;
@@ -706,12 +733,16 @@ namespace rct3::simulation
         std::size_t started = 0;
         for (const entt::entity e : guests)
         {
-            const auto at = world.paths.nearest(r.get<Pose>(e).position);
+            const glm::vec3 position = r.get<Pose>(e).position;
+            auto at = world.paths.nearest(position);
+            if (!at || (world.paths.nodes()[*at].queue && !lines.contains(*at)))
+                at = walkway_near(world.paths, position);
             if (!at)
                 continue;
-            if (!world.paths.nodes()[*at].queue)
+            const auto on = lines.find(*at);
+            if (on == lines.end())
                 start_walking(world, e, *at);
-            else if (const auto on = lines.find(*at); on != lines.end())
+            else
             {
                 start_walking(world, e, *at);
                 auto& stride = r.get<Stride>(e);
@@ -719,8 +750,6 @@ namespace rct3::simulation
                 r.get<Errand>(e) = { ErrandKind::Queueing, on->second.first, 0 };
                 waiting.emplace_back(on->second.second, e);
             }
-            else
-                continue;
             ++started;
         }
         // Those nearer the front were there first.

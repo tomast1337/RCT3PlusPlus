@@ -44,6 +44,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
@@ -453,16 +454,22 @@ namespace rct3::scene
         const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
 
+        /// What guests who have queued for ages do now and then: look at their watch, tap a foot.
+        const std::array<std::int32_t, 2> kImpatientMotions { park::motion_number("lookwatch").value_or(park::motion::kIdle), park::motion_number("tapfoot").value_or(park::motion::kIdle) };
+        constexpr std::size_t kImpatientEvery = 3; ///< Of their turns, one is impatient; the others idle
+
         /// The motion of a simulated guest standing still: something from kChatMotions while their party
-        /// stands together, else idling.
+        /// stands together, now and then something impatient after queueing for ages, else idling.
         std::int32_t chat_motion(const ParkScene& scene, const ShownPerson& shown)
         {
             const auto& r = scene.sim.registry;
+            // Each by turns, offset by who they are so they do not all move at once.
+            const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
+            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued >= simulation::kLongQueue)
+                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
             if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
                 return park::motion::kIdle;
-            // Each by turns, offset by who they are so they do not all laugh at once.
-            const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
             return kChatMotions[turn % kChatMotions.size()];
         }
 
@@ -1019,7 +1026,7 @@ namespace rct3::scene
         }
     }
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const ParkLoadReport& report)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
@@ -1390,6 +1397,7 @@ namespace rct3::scene
             load_people_models(device, scene, install, seed);
             profiling::section("Simulation", [&] {
                 scene.sim.seed = seed;
+                scene.sim.ratings = ratings;
                 simulation::import_paths(scene.sim, *world);
                 // The saved ones by their place in scene.people, null for those not drawn.
                 const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
@@ -1551,6 +1559,16 @@ namespace rct3::scene
             if (ref.kind == park::AttractionRef::Kind::Stall)
                 return ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index].base : nullptr;
             return ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index].base : nullptr;
+        }
+
+        /// What the saved worker's window shows of `staff`'s pay, training and mood.
+        void copy_mood(const simulation::Staff& staff, save::Staff& saved)
+        {
+            saved.wage_level = staff.wage_level;
+            saved.training = staff.training;
+            saved.warnings = staff.warnings;
+            saved.happiness = staff.happiness;
+            saved.laziness = staff.laziness;
         }
 
         ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
@@ -1911,13 +1929,36 @@ namespace rct3::scene
                 copy_patrol(scene);
                 return true;
             }
+            // Pay, training and warnings change the walking worker, and the saved one shows it; without the
+            // simulation, the saved one alone.
+            const entt::entity worker = shown_staff(scene);
+            simulation::Staff loose { .wage_level = staff->wage_level, .training = staff->training, .warnings = staff->warnings, .happiness = staff->happiness, .laziness = staff->laziness };
+            simulation::Staff& care = worker != entt::null ? scene.sim.registry.get<simulation::Staff>(worker) : loose;
+            const auto show = [&] {
+                copy_mood(care, *staff);
+                return true;
+            };
             if (change.id == ui::person_control(Warn))
             {
-                staff->warnings = std::min(staff->warnings + 1, ui::kMostWarnings);
-                return true;
+                if (care.warnings < ui::kMostWarnings)
+                    simulation::warn(care);
+                return show();
+            }
+            if (change.id == ui::person_control(Train))
+            {
+                // Paid for at once, free in a park without money; none when the park cannot afford it.
+                const std::int64_t cost = simulation::training_cost(care);
+                if (scene.park.cash && *scene.park.cash < cost)
+                    return false;
+                if (simulation::train(care) && scene.park.cash)
+                    *scene.park.cash -= cost;
+                return show();
             }
             if (change.id == ui::person_control(Wage))
-                staff->wage_level = change.value;
+            {
+                simulation::set_wage_level(care, change.value);
+                (void)show();
+            }
             else if (change.id == ui::person_control(Costume))
                 person->sub_type = static_cast<std::uint8_t>(change.value);
             else if (change.id >= ui::person_control(Task))
@@ -2351,6 +2392,10 @@ namespace rct3::scene
                         *scene.park.cash -= payroll->paid - scene.wages_seen;
                     scene.wages_seen = payroll->paid;
                 }
+                // The staff's mood into the saved staff, for their windows to show.
+                for (const ShownPerson& p : scene.shown_people)
+                    if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)
+                        copy_mood(*staff, scene.people.staff[p.saved]);
                 // The rides' upkeep into the saved rides, for their windows to show.
                 for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                 {

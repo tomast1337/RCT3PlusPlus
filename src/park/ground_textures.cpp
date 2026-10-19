@@ -131,6 +131,14 @@ namespace rct3::park
         return chosen;
     }
 
+    void apply_queue_mask(ovl::RgbaImage& picture, const PaletteImage& mask)
+    {
+        if (mask.width != picture.width || mask.height != picture.height || mask.indices.size() * 4 != picture.pixels.size())
+            return;
+        for (std::size_t i = 0; i < mask.indices.size(); ++i)
+            picture.pixels[i * 4 + 3] = static_cast<std::uint8_t>(picture.pixels[i * 4 + 3] * mask.palette[mask.indices[i]].r / 255);
+    }
+
     std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index)
     {
         auto overlay = ovl::Overlay::load(path);
@@ -157,7 +165,16 @@ namespace rct3::park
         const auto picture = palette_image(chosen->frames.front(), chosen->flags);
         if (!picture)
             return false;
-        images.insert_or_assign(ground_key(GroundPaint::Queue, index), paint(*picture, flexi_colours(painting.colours)));
+        ovl::RgbaImage painted = paint(*picture, flexi_colours(painting.colours));
+        const std::string mask_name = std::string(names[*at]) + std::string(kMaskEnding);
+        const auto mask = std::ranges::find_if(names, [&](std::string_view n) { return strings::equals_ignoring_case(n, mask_name); });
+        if (mask != names.end())
+        {
+            const ovl::FlexiTexture& texture = *items[static_cast<std::size_t>(mask - names.begin())].texture;
+            if (const auto grey = palette_image(texture.frames.front(), 0))
+                apply_queue_mask(painted, *grey);
+        }
+        images.insert_or_assign(ground_key(GroundPaint::Queue, index), std::move(painted));
         return true;
     }
 

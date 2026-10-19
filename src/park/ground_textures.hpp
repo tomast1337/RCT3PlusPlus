@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ovl/texture_image.hpp"
+#include "park/flexi_colours.hpp"
 #include "park/ground_queues.hpp"
 #include "park/terrain_mesh.hpp"
 
@@ -119,8 +120,12 @@ namespace rct3::park
     /// the style is taken first, else the first that is not a mask. Nothing when all are masks.
     [[nodiscard]] std::optional<std::size_t> queue_picture(std::span<const std::string_view> names, std::string_view style);
 
+    /// Makes `picture` as see-through as `mask` is dark: the mask is a grey picture of the same size, white where
+    /// the queue shows and black where the ground below does. A mask of another size is left unused.
+    void apply_queue_mask(ovl::RgbaImage& picture, const PaletteImage& mask);
+
     /// Adds the ground picture of `painting`'s queue style, from the overlay at `path`, painted in its colours,
-    /// as the picture of the park's painting number `index`. Returns false when the overlay has no such picture.
+    /// as the picture of the park's painting number `index`, cut out by its mask when it has one. Returns false when the overlay has no such picture.
     [[nodiscard]] std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index);
 
 } // namespace rct3::park

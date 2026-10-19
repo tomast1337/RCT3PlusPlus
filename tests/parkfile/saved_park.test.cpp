@@ -128,7 +128,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Member>(ann, party);
     r.emplace<Member>(bob, party);
     const entt::entity sweeper = r.create();
-    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900 });
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900, .training = 1, .laziness = 0.25f });
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
     r.emplace<Patrol>(sweeper, Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 
@@ -145,6 +145,8 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(people.staff[0].look == 0);
     CHECK(people.staff[0].role == StaffRole::Handyman);
     CHECK(people.staff[0].wage == 900);
+    CHECK(people.staff[0].training == 1);
+    CHECK(people.staff[0].laziness == 0.25f);
     REQUIRE(people.staff[0].patrol);
     CHECK(people.staff[0].patrol->tiles == std::vector<glm::ivec2> { { 1, 2 }, { 3, 4 } });
     CHECK(people.staff[0].patrol->zone == 7);

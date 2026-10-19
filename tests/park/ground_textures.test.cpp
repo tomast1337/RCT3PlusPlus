@@ -34,6 +34,27 @@ TEST_CASE("a queue style's ground is its picture that is not a mask, the one nam
     CHECK_FALSE(queue_picture(masks, "A"));
 }
 
+TEST_CASE("a queue's mask leaves its dark parts to the ground below")
+{
+    rct3::ovl::RgbaImage picture { 3, 1, { 9, 9, 9, 255, 9, 9, 9, 255, 9, 9, 9, 255 } };
+    PaletteImage mask { .width = 3, .height = 1 };
+    mask.palette[1] = { 255, 255, 255 };
+    mask.palette[2] = { 102, 102, 102 };
+    mask.indices = { 0, 1, 2 };
+    apply_queue_mask(picture, mask);
+    CHECK(picture.pixels[3] == 0);
+    CHECK(picture.pixels[7] == 255);
+    CHECK(picture.pixels[11] == 102);
+    CHECK(picture.pixels[0] == 9);
+
+    SUBCASE("a mask of another size is left unused")
+    {
+        rct3::ovl::RgbaImage other { 1, 1, { 9, 9, 9, 255 } };
+        apply_queue_mask(other, mask);
+        CHECK(other.pixels[3] == 255);
+    }
+}
+
 TEST_CASE("each cliff face gets the tunnel pictures nearest it in colour")
 {
     const auto plain = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) { return rct3::ovl::RgbaImage { 1, 1, { r, g, b, 255 } }; };

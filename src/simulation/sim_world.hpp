@@ -8,6 +8,7 @@
 
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
+#include "simulation/ratings.hpp"
 
 #include <cstdint>
 
@@ -18,8 +19,9 @@ namespace rct3::simulation
     {
         entt::registry registry;
         PathNetwork paths;
-        std::uint64_t tick = 0; ///< Simulation steps run so far
-        std::uint64_t seed = 0; ///< Randomness of the whole run derives from it
+        std::uint64_t tick = 0;                       ///< Simulation steps run so far
+        std::uint64_t seed = 0;                       ///< Randomness of the whole run derives from it
+        RatingModel ratings = builtin_rating_model(); ///< How rides untested in the park get rated
     };
 
 } // namespace rct3::simulation

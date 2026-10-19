@@ -377,6 +377,17 @@ namespace rct3::ui
             wage.value = std::clamp(s.wage_level, 0, 2);
             wage.maximum = 2;
             page.controls.push_back(std::move(wage));
+            add_half(page, strings, "Rct3pp_Training", ascii(std::format("{}/{}", std::clamp(s.training, 0, kMostTraining), kMostTraining)));
+            if (s.training < kMostTraining)
+            {
+                InfoControl train;
+                train.id = person_control(PersonControl::Train);
+                train.name = "Rct3pp_Train";
+                train.kind = InfoControlKind::Button;
+                train.label = text(strings, "Rct3pp_Train");
+                train.text = train.label;
+                page.controls.push_back(std::move(train));
+            }
         }
 
         InfoControl name_control(const PersonFacts& f, const StringTable& strings)

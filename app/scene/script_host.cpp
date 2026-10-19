@@ -5,6 +5,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "scene/park_scene.hpp"
+#include "ui/widgets/button.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -38,6 +39,19 @@ pointer.drag = async (from, to, count = 10) => {
     await frames(1);
     pointer.release();
     await frames(1);
+};
+pointer.click = async (x, y) => {
+    pointer.move(x, y);
+    await frames(1);
+    pointer.press();
+    await frames(1);
+    pointer.release();
+    await frames(1);
+};
+ui.toggle = async (path, on) => {
+    const at = ui.find(path);
+    if (!at) throw new Error(`no widget ${path} is shown`);
+    if (at.on !== on) await ui.click(path);
 };
 ui.click = async (path) => {
     // Waits for the widget to stop moving, as menus slide open.
@@ -163,7 +177,10 @@ park.ready = async () => {
                 return nullptr;
             const float scale = park_interface_scale(*device_, *park_);
             const ui::Rect& r = w->rect();
-            return { { "x", (r.x0 + r.x1) / 2 * scale / static_cast<float>(view.width) }, { "y", (r.y0 + r.y1) / 2 * scale / static_cast<float>(view.height) } };
+            Json found { { "x", (r.x0 + r.x1) / 2 * scale / static_cast<float>(view.width) }, { "y", (r.y0 + r.y1) / 2 * scale / static_cast<float>(view.height) } };
+            if (const auto* b = dynamic_cast<const ui::Button*>(w); b != nullptr && b->toggle)
+                found["on"] = b->on;
+            return found;
         });
         engine_.define("log", [this](const Json& a) {
             std::string line;
@@ -242,6 +259,17 @@ park.ready = async () => {
             }
             park_->camera = park::looking(world_point(g, a[1]), at);
             return Json(nullptr);
+        });
+        engine_.define("map.paths", [this](const Json&) {
+            grid_of(park_);
+            Json paths = Json::array();
+            for (const save::PathTile& p : park_->footpaths.paths)
+            {
+                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", p.elevation.has_value() } });
+                if (p.elevation)
+                    paths.back()["height"] = p.elevation->quantised_height;
+            }
+            return paths;
         });
         engine_.define("map.water", [this](const Json&) {
             grid_of(park_);

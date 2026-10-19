@@ -8,9 +8,11 @@
 // shares of the game's view, 0 to 1 from the top-left corner:
 //
 //   until(check, limit, what)  waits frames until check() holds; throws after `limit` frames (300)
-//   pointer.move(x, y), pointer.press(), pointer.release(), pointer.drag(from, to, frames)
-//   ui.find(path)       the middle of the widget at `path` ("tools/Land"), or undefined when it is not shown
+//   pointer.move(x, y), pointer.press(), pointer.release(), pointer.click(x, y), pointer.drag(from, to, frames)
+//   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch, or undefined
+//                       when it is not shown
 //   ui.click(path)      moves there, presses and lets go, a frame each
+//   ui.toggle(path, on) clicks the switch at `path` when it is not already `on`
 //   screenshot(name)    saved to the screenshots folder, or as NN_name.png in the report folder when there is
 //                       one; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
@@ -23,6 +25,7 @@
 //   map.size()          { width, height } in tiles
 //   map.tile(col, row)  { corners, surface, owned }, or undefined off the map
 //   map.screen(col, row) the middle of a tile on the view, or undefined when it is not in sight
+//   map.paths()         [{ col, row, raised, height }] for each path tile; height only when raised
 //   map.water()         [{ level, triangles }] for each lake
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go

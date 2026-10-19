@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
+#include "park/ground_textures.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -309,4 +311,40 @@ TEST_CASE("one-sided parts get batches of their own, apart from two-sided ones i
     CHECK(m.batches[0].texture == m.batches[1].texture);
     CHECK(m.batches[0].one_sided != m.batches[1].one_sided);
     CHECK(m.batches[0].count == 3);
+}
+
+TEST_CASE("parts painted like the ground take the pictures of the tile they stand on, laid as the terrain is")
+{
+    ObjectModels models;
+    ObjectModel block;
+    ModelPart top = triangle(std::string(kGroundSurfacePicture), PartBlend::Opaque);
+    ModelPart side = triangle(std::string(kGroundCliffPicture), PartBlend::Opaque);
+    for (ModelVertex& v : side.vertices)
+        v.normal = { 0, 0, 1 };
+    block.levels = { { 100, { top, side }, { } } };
+    models.emplace("Things/Things|Block", block);
+
+    save::TerrainGrid grid = flat();
+    grid.at(0, 0).surface = 3;
+    grid.at(1, 0).surface = 5;
+    grid.at(1, 0).cliff = 2;
+    const std::vector<save::PlacedObject> objects { object("Block", 0), object("Block", 1) };
+    const ObjectMesh m = object_mesh(objects, models, grid);
+
+    std::vector<std::string> textures;
+    for (const ObjectBatch& b : m.batches)
+        textures.push_back(b.texture);
+    std::ranges::sort(textures);
+    CHECK(textures == std::vector<std::string> { ground_key(GroundPaint::Cliff, 0), ground_key(GroundPaint::Cliff, 2), ground_key(GroundPaint::Surface, 3), ground_key(GroundPaint::Surface, 5) });
+
+    // Laid by place, not by the model's own coordinates: a top by x and z, a side by x and height.
+    for (std::size_t i = 0; i < m.vertices.size(); ++i)
+    {
+        const GroundVertex& v = m.vertices[i];
+        CAPTURE(i);
+        if (std::abs(v.normal.y) > 0.5f)
+            CHECK(v.uv == glm::vec2 { v.position.x / kTextureSpan, v.position.z / kTextureSpan });
+        else
+            CHECK(v.uv == glm::vec2 { v.position.x / kTextureSpan, -v.position.y / kTextureSpan });
+    }
 }

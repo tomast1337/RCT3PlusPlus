@@ -5,7 +5,8 @@
 // line, which is made when the station has none yet. A queue laid towards the entrance flows the other way
 // until it gets there, so the tiles behind are turned round to lead to it.
 //
-// Two queue tiles are linked when one's end side meets the other's start side at the same height.
+// Two queue tiles are linked when one's end side meets the other's start side at the same height. A queue's
+// open start side turns to a path beside it, so the line bends to meet the path as it is laid.
 #pragma once
 
 #include "save/model/rides.hpp"
@@ -38,6 +39,11 @@ namespace rct3::park
 
     /// The queue tiles linked behind `paths[tile]` (following end sides), nearest first, not counting itself.
     [[nodiscard]] std::vector<std::size_t> tiles_behind(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::size_t tile);
+
+    /// Turns the start side of queue tile `paths[tile]` towards a path (not a queue) beside it, when nothing meets
+    /// that side yet and the path's edge meets the tile's there; the side guests come in by then opens onto the
+    /// path. Returns whether it turned.
+    bool turn_to_path(std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile);
 
     /// Joins queue tile `paths[tile]` to `entrance`, giving the station a line with id `new_line` when it has
     /// none. Returns the line's id.

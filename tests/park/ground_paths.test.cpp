@@ -194,9 +194,13 @@ namespace
 TEST_CASE("a flat ride's floor covers its footprint, turned with it")
 {
     const save::TerrainGrid g = flat_grid(10, 10);
-    const std::array rides { flat_ride(2, 2, 0), flat_ride(2, 2, 1) };
+    std::array rides { flat_ride(2, 2, 0), flat_ride(2, 2, 1) };
+    save::Station& station = rides[0].stations.emplace_back();
+    station.entrance_spot = save::PlacementSpot { 8, 1, 5, 0, 0 };
+    station.exit_spot = save::PlacementSpot { 9, 2, 5, 2, 0 }; // Not level with its tile
     const std::vector<RideFloor> floors = ride_floors(rides, two_by_three, g);
     REQUIRE(floors.size() == 2);
+    CHECK(floors[0].doors == std::vector { std::array { 1, 5 } });
     CHECK(floors[0].col1 - floors[0].col0 == 1);
     CHECK(floors[0].row1 - floors[0].row0 == 2);
     CHECK(floors[1].col1 - floors[1].col0 == 2);
@@ -230,4 +234,11 @@ TEST_CASE("a floor is paved like the path its exit lets out onto, else plain")
     pave_ride_floors(map, std::span(&floor, 1));
     CHECK(map.styles == std::vector<std::string> { "Marble" });
     CHECK(map.tiles[static_cast<std::size_t>(2 * map.width + 2)] == 0);
+
+    // Its doors are paved too, but never over a path, nor off the map.
+    floor.doors = { { 5, 5 }, { 1, 3 }, { 10, 2 } };
+    map = ground_path_map(paths, g);
+    pave_ride_floors(map, std::span(&floor, 1));
+    CHECK(has_ground_path(map, 5, 5));
+    CHECK(map.tiles[static_cast<std::size_t>(3 * map.width + 1)] == 0);
 }

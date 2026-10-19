@@ -95,3 +95,21 @@ TEST_CASE("a queue laid towards an entrance is turned round to lead to it")
     // The head is the tile nothing leads into.
     CHECK(tiles_behind(paths, g, 2).size() == 0);
 }
+
+TEST_CASE("a queue's open end turns to a path beside it")
+{
+    const save::TerrainGrid g = owned_grid(8, 8);
+    std::vector<save::PathTile> paths = lay_queue(g, { 1, 1 }, 1, 3); // (1..3, 1), open towards (4, 1)
+    paths.push_back(ground_path({ 3, 2 }, "Tarmac", 50));
+    paths.push_back(ground_path({ 2, 0 }, "Tarmac", 51));
+    CHECK_FALSE(turn_to_path(paths, g, 1)); // Its start meets the next queue tile
+    REQUIRE(turn_to_path(paths, g, 2));
+    CHECK(stored_direction(paths[2].queue->start_direction) == 0);
+    CHECK_FALSE(turn_to_path(paths, g, 2)); // Now it meets the path
+
+    // Nor does it turn while something meets its open end already.
+    std::vector<save::PathTile> met = lay_queue(g, { 1, 1 }, 1, 3);
+    met.push_back(ground_path({ 4, 1 }, "Tarmac", 50));
+    met.push_back(ground_path({ 3, 2 }, "Tarmac", 51));
+    CHECK_FALSE(turn_to_path(met, g, 2));
+}

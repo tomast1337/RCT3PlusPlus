@@ -108,8 +108,9 @@ File names inside the install are matched without regard to case, as on Windows.
 `rct3pp --script FILE.js` runs a JavaScript module that plays the game through its own pointer: it clicks
 widgets by name, drags over the ground, waits frames, reads the park back and takes screenshots. The game
 exits when the script ends, with 1 when it failed, so scripts serve as tests of the game as played.
-`scripts/types/rct3pp.d.ts` describes what scripts get; `./nob script scripts/tests/FILE.ts -- APP_ARGS`
-compiles the TypeScript in `scripts/` with `tsc` and runs it. Scripts run in the vendored
+`scripts/types/rct3pp.d.ts` describes what scripts get. `./nob script FILE.js -- APP_ARGS` runs a script;
+for `FILE.ts` it first compiles the TypeScript in `scripts/` with `tsc` (`npm install -g typescript`).
+Scripts in `scripts/tests/` open the game's own parks with `park.open`, so they need only the game installed. Scripts run in the vendored
 [QuickJS-NG](third_party/quickjs/) (MIT), without its file, network or system modules.
 
 ## Clean-room policy

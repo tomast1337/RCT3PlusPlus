@@ -53,8 +53,8 @@ namespace rct3::park
         std::string help; ///< Strings key
     };
 
-    /// The land surfaces (not cliff faces) of the overlay at `path`, in file order.
-    [[nodiscard]] std::expected<std::vector<GroundSurface>, std::string> ground_surfaces(const std::filesystem::path& path);
+    /// The land surfaces, or with `paint` the cliff faces, of the overlay at `path`, in file order.
+    [[nodiscard]] std::expected<std::vector<GroundSurface>, std::string> ground_surfaces(const std::filesystem::path& path, GroundPaint paint = GroundPaint::Surface);
 
     /// Where a path style's ground pictures are, relative to the game's folder.
     [[nodiscard]] std::string path_texture_file(std::string_view style);

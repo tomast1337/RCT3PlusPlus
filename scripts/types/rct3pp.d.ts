@@ -60,6 +60,8 @@ interface Tile {
     corners: [number, number, number, number];
     /** Index of the land surface it is painted with. */
     surface: number;
+    /** Index of the cliff face its cliffs are painted with. */
+    cliff: number;
     /** Whether the park owns it outright. */
     owned: boolean;
 }

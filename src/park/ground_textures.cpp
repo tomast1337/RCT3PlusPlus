@@ -299,7 +299,7 @@ namespace rct3::park
         return missing;
     }
 
-    std::expected<std::vector<GroundSurface>, std::string> ground_surfaces(const std::filesystem::path& path)
+    std::expected<std::vector<GroundSurface>, std::string> ground_surfaces(const std::filesystem::path& path, GroundPaint paint)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
@@ -311,7 +311,7 @@ namespace rct3::park
                 continue;
             for (const ovl::TerrainTypeEntry& entry : ovl::read_terrain_types(*overlay, *part))
             {
-                if (entry.terrain && ground_paint(entry.name) == GroundPaint::Surface && entry.terrain->index <= std::numeric_limits<std::uint8_t>::max())
+                if (entry.terrain && ground_paint(entry.name) == paint && entry.terrain->index <= std::numeric_limits<std::uint8_t>::max())
                     out.push_back({ static_cast<std::uint8_t>(entry.terrain->index), std::string(entry.terrain->label_name), std::string(entry.terrain->help_name) });
             }
         }

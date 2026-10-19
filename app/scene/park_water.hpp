@@ -73,6 +73,8 @@ namespace rct3::scene
 
     /// Makes the water's buffers, pictures and pipelines. `layout` is that of park::GroundVertex.
     [[nodiscard]] std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh, const render::VertexLayout& layout);
+    /// Puts the water's surface in place of the one it had, as the ground changed.
+    [[nodiscard]] std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh);
     void destroy_park_water(render::Device& device, ParkWater& water);
 
     /// Ages the ripples.

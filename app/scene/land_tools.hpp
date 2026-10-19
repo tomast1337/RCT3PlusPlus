@@ -11,6 +11,12 @@
 // one chosen is pressed in. Pressing the ground and moving over it paints each tile passed with that surface,
 // on land the park owns outright. Closing the window puts the tool away.
 //
+// Water: press on a tile and move the pointer up or down to raise or lower the water there, a step for each
+// kSlopeDragStep moved. Starting on a lake moves its level; starting on dry ground pours a new one from the
+// tile's lowest corner. The water spreads over every tile it can reach below its level (park/water_fill.hpp)
+// and takes in the lakes it meets. It only spreads over land the park owns outright without paths on the
+// ground; where it would go further it stops rising.
+//
 // Every change is paid for. A right click puts either tool away.
 #pragma once
 
@@ -40,12 +46,15 @@ namespace rct3::scene
             None,
             Shape,
             Paint,
+            Water,
         };
         Tool tool = Tool::None;
         std::optional<park::PathSpot> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
         int steps = 0; ///< Taken in this stroke, up positive
         park::SolidTiles solids;
+        save::WaterLayer water_before;             ///< As the water stroke found it
+        float level_before = 0;                    ///< Of the water on the pressed tile, as the stroke found it
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0; ///< Chosen, of `surfaces`

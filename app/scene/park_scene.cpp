@@ -1090,6 +1090,7 @@ namespace rct3::scene
         scene.batches = mesh.batches;
         scene.footpaths.paths = world->paths;
         scene.footpaths.water = world->water;
+        scene.footpaths.pools = world->pool_water;
         scene.footpaths.pictured = paths.styles;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
@@ -1371,8 +1372,8 @@ namespace rct3::scene
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
                 tools.set_available(
                     entry.item,
-                    entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About
-                        || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                    entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options
+                        || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
@@ -2413,12 +2414,12 @@ namespace rct3::scene
             }
             if (const auto item = tools->take_item())
             {
-                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround)
+                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround || *item == ui::ToolItem::Water)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
-                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? LandTools::Tool::Shape : LandTools::Tool::Paint, assets);
+                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? LandTools::Tool::Shape : (*item == ui::ToolItem::PaintGround ? LandTools::Tool::Paint : LandTools::Tool::Water), assets);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);

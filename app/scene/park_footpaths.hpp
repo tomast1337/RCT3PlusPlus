@@ -64,8 +64,9 @@ namespace rct3::scene
         bool loaded = false;
         std::optional<std::size_t> style; ///< Of styles, the one chosen
         park::FootpathBuilder builder;
-        std::vector<save::PathTile> paths; ///< The park's paths as they are now
-        save::WaterLayer water;            ///< To build the ground again with
+        std::vector<save::PathTile> paths;  ///< The park's paths as they are now
+        save::WaterLayer water;             ///< To build the ground again with
+        std::vector<save::PoolWater> pools; ///< The same
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
         std::vector<park::QueuePainting> queues_pictured;       ///< The same for the ground queues' pictures

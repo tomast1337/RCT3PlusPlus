@@ -17,6 +17,7 @@
 #include "ui/screens/footpath_panel.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/screens/info_panel.hpp"
+#include "ui/screens/land_panel.hpp"
 #include "ui/screens/loading_screen.hpp"
 #include "ui/screens/management_window.hpp"
 #include "ui/screens/message_drawer.hpp"
@@ -634,6 +635,19 @@ namespace rct3::ui::game_skins
         s.control_help = {
             "Path_Left", "Path_Straight", "Path_Right", "Path_DownwardSteps", "Path_DownwardSlope", "Path_NoSlope", "Path_UpwardSlope", "Path_UpwardSteps", "PathEditor_Delete", "PathEditor_CutIntoTerrain_TT",
         };
+        return s;
+    }
+
+    /// The round panel in the bottom-left corner that shapes and paints the ground, drawn in code like the path
+    /// panel.
+    [[nodiscard]] inline LandPanelStyle land_panel_style()
+    {
+        LandPanelStyle s;
+        s.coded = info_panel_style().coded;
+        s.tab_face = kMenuButtonSmall;
+        s.close_icon = kCloseIcon;
+        s.size = spinner_style();
+        s.bottom = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
         return s;
     }
 

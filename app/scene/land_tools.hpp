@@ -7,10 +7,14 @@
 // far corners and slope to it. A tile is only shaped on land the park owns outright, without a path and with
 // nothing solid standing over it.
 //
-// Paint ground: a window shows the land surfaces the game's terrain files list, each by its own picture; the
-// one chosen is pressed in. Under them, the brush: how many tiles across, and whether round or square
-// (park/ground_brush.hpp). Pressing the ground and moving over it paints the tiles the brush covers with that
-// surface, on land the park owns outright, each tile paid for. Closing the window puts the tool away.
+// Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
+// Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes; only the first tile tool
+// works so far, the others are shown but cannot be picked.
+//
+// Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
+// own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
+// number on the panel's disc (park/ground_brush.hpp), with the surface chosen, on land the park owns
+// outright, each tile paid for. Cliff faces are not painted yet. Closing the panel puts the tool away.
 //
 // Water: press on a tile and move the pointer up or down to raise or lower the water there, a step for each
 // kSlopeDragStep moved. Starting on a lake moves its level; starting on dry ground pours a new one from the
@@ -59,8 +63,7 @@ namespace rct3::scene
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0; ///< Chosen, of `surfaces`
-        int brush = 1;           ///< Tiles across the paint brush covers
-        bool round = false;      ///< The brush is round, not square
+        int brush = 3;           ///< Tiles across the paint brush covers
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

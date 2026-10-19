@@ -20,5 +20,5 @@ TEST_CASE("a land brush covers a square or a round of tiles round the pointer's,
     CHECK(brush_tiles({ 5, 5 }, 4, true, 20, 20).size() == 12);   // Four by four less its corners
 
     CHECK(brush_tiles({ 0, 0 }, 3, false, 20, 20).size() == 4); // Cut at the grid's edge
-    CHECK(brush_tiles({ 5, 5 }, 99, false, 20, 20).size() == kLargestBrush * kLargestBrush);
+    CHECK(brush_tiles({ 20, 20 }, 99, false, 50, 50).size() == kLargestBrush * kLargestBrush);
 }

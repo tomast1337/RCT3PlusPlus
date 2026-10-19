@@ -69,6 +69,7 @@ interface PathPiece {
     row: number;
     /** Off the ground, on supports. */
     raised: boolean;
+    queue: boolean;
     /** Of a raised piece, in the game's height steps. */
     height?: number;
 }

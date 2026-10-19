@@ -25,7 +25,7 @@
 //   map.size()          { width, height } in tiles
 //   map.tile(col, row)  { corners, surface, owned }, or undefined off the map
 //   map.screen(col, row) the middle of a tile on the view, or undefined when it is not in sight
-//   map.paths()         [{ col, row, raised, height }] for each path tile; height only when raised
+//   map.paths()         [{ col, row, raised, queue, height }] for each path tile; height only when raised
 //   map.water()         [{ level, triangles }] for each lake
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go

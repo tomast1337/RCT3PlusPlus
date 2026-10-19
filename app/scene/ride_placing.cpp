@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
+#include "park/ride_fences.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/import_park.hpp"
@@ -40,6 +41,12 @@ namespace rct3::scene
 
     namespace
     {
+        /// The fence new rides take, the plain scaffold most rides in the saves seen have.
+        // shortcut: the same for every theme; give themed rides their theme's fence once the ride window can
+        // change a ride's fence.
+        constexpr std::string_view kRideFence = "Van_Scaffold2";
+        constexpr std::string_view kRideFenceOverlay = "Style\\Vanilla\\style";
+
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::PlacedObject> ghost_object(const RidePlacing& p)
         {
@@ -90,6 +97,41 @@ namespace rct3::scene
             scene.objects.push_back(o);
             objects_changed(scene);
             return o.id;
+        }
+
+        /// Gives `ride`, now that its doors stand, its fence round it and beside its doors, and paints the doors
+        /// in the fence's colours.
+        void fence_ride(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride)
+        {
+            ride.fence_symbol = kRideFence;
+            ride.fence_overlay = kRideFenceOverlay;
+            const park::ObjectModel* item = nullptr;
+            for (const save::PlacedObject& o : scene.objects)
+            {
+                if (ride.base.spot && o.id == ride.base.spot->object)
+                {
+                    const auto found = scene.models.find(park::model_key(o));
+                    item = found != scene.models.end() ? &found->second : nullptr;
+                }
+            }
+            std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, last_id(scene));
+            if (pieces.empty() || !load_object_model(scene, scene.placing.models, assets, pieces.front()))
+                return;
+            const auto& colours = scene.models.at(park::model_key(pieces.front())).default_colours;
+            for (std::size_t i = 0; i < ride.fence_colours.size(); ++i)
+                ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
+            // The doors are painted as the fence is.
+            for (save::PlacedObject& o : scene.objects)
+            {
+                if (!ride.stations.empty() && (o.id == ride.stations.front().entrance || o.id == ride.stations.front().exit))
+                    o.colours = colours;
+            }
+            for (save::PlacedObject& piece : pieces)
+            {
+                piece.colours = colours;
+                scene.objects.push_back(std::move(piece));
+            }
+            objects_changed(scene);
         }
 
         /// Has the simulation run the rides placed here whose entrances now have a path behind them.
@@ -207,7 +249,6 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Ride)
         {
             park::level_ground(scene.grid, *p.site);
-            rebuild_ground(device, scene, assets);
             p.ride = scene.rides.rides.size();
             save::Ride& ride = scene.rides.rides.emplace_back();
             ride.kind = save::RideKind::Flat;
@@ -231,7 +272,6 @@ namespace rct3::scene
         {
             // The door stands on ground levelled to the ride's height, as the ride does.
             park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
-            rebuild_ground(device, scene, assets);
             const std::uint64_t object = add_object(scene, *o);
             save::Ride& ride = scene.rides.rides.at(p.ride);
             if (ride.stations.empty())
@@ -248,12 +288,15 @@ namespace rct3::scene
             {
                 ride.stations.front().exit = object;
                 ride.stations.front().exit_spot = spot;
+                fence_ride(scene, assets, ride);
                 p.unjoined.push_back(p.ride);
                 stop_ride_placing(scene);
             }
         }
         p.door.reset();
         p.ghost_mesh = { };
+        refresh_ride_floors(scene);
+        rebuild_ground(device, scene, assets);
         return true;
     }
 

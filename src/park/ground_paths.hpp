@@ -23,15 +23,23 @@
 // "Edge on x" is closed on the sides facing the tiles beside it along x and open along z. An "open
 // corner" bends the edge out at the tile's corner to meet path across the corner; a "notched" cell is
 // open on both sides with the corner cut away, for the inside of a turn.
+//
+// A flat ride standing on the ground is paved under its footprint as if path lay there: in the style of the
+// ground path its exit lets out onto, or a plain grey style while there is none, so the paving joins the path.
 #pragma once
 
 #include "park/terrain_mesh.hpp"
+#include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
+#include <array>
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::park
@@ -85,6 +93,28 @@ namespace rct3::park
     /// The ground paths among `paths` on a grid of the terrain's size, and the ends of the raised ones. Paths
     /// off the grid and ground paths without a style are left out.
     [[nodiscard]] GroundPathMap ground_path_map(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+
+    /// The floor of a flat ride standing on the ground: its footprint, paved like the ground path that leads
+    /// away from its exit, or in kRideFloorStyle while none does.
+    struct RideFloor
+    {
+        int col0 = 0; ///< Footprint, both ends in
+        int row0 = 0;
+        int col1 = -1;
+        int row1 = -1;
+        std::optional<std::array<int, 2>> beyond_exit; ///< The tile the exit lets out onto
+    };
+
+    /// The plain grey path style floors take while their exit leads nowhere. Our own pick.
+    inline constexpr std::string_view kRideFloorStyle = "Asphalt";
+
+    /// The floors of the flat rides among `rides` whose footprint lies level at their height. `squares_of`
+    /// gives the squares (along its own X and Z) of the object a ride is placed as, or nothing when unknown.
+    [[nodiscard]] std::vector<RideFloor> ride_floors(std::span<const save::Ride> rides, const std::function<std::optional<std::array<std::int32_t, 2>>(std::uint64_t object)>& squares_of, const save::TerrainGrid& grid);
+
+    /// Lays `floors` into `map` as ground paths, so they draw and join as paths do. Tiles that already hold a
+    /// path keep it.
+    void pave_ride_floors(GroundPathMap& map, std::span<const RideFloor> floors);
 
     /// True when there is a ground path at (col, row); false off the map.
     [[nodiscard]] bool has_ground_path(const GroundPathMap& map, int col, int row) noexcept;

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/script_host.hpp"
 
+#include "assets/embedded_files.hpp"
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
-#include "park/ground_queues.hpp"
 #include "scene/park_scene.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -20,78 +20,8 @@ namespace rct3::scene
     {
         using scripting::Json;
 
-        // The helpers scripts get that only wait on the natives below.
-        constexpr std::string_view kHelpers = R"js(
-globalThis.until = async (check, limit = 300, what = "the wait") => {
-    for (let i = 0; i < limit; ++i) {
-        if (check()) return;
-        await frames(1);
-    }
-    if (!check()) throw new Error(`${what} timed out after ${limit} frames`);
-};
-pointer.drag = async (from, to, count = 10) => {
-    pointer.move(from[0], from[1]);
-    await frames(1);
-    pointer.press();
-    for (let i = 1; i <= count; ++i) {
-        await frames(1);
-        pointer.move(from[0] + (to[0] - from[0]) * i / count, from[1] + (to[1] - from[1]) * i / count);
-    }
-    await frames(1);
-    pointer.release();
-    await frames(1);
-};
-pointer.click = async (x, y) => {
-    pointer.move(x, y);
-    await frames(1);
-    pointer.press();
-    await frames(1);
-    pointer.release();
-    await frames(1);
-};
-ui.toggle = async (path, on) => {
-    const at = ui.find(path);
-    if (!at) throw new Error(`no widget ${path} is shown`);
-    if (at.on !== on) await ui.click(path);
-};
-ui.click = async (path) => {
-    // Waits for the widget to stop moving, as menus slide open.
-    let at = ui.find(path);
-    for (let i = 0; i < 60; ++i) {
-        await frames(1);
-        const now = ui.find(path);
-        if (now && at && now.x === at.x && now.y === at.y) break;
-        at = now;
-    }
-    if (!at) throw new Error(`no widget ${path} is shown`);
-    pointer.move(at.x, at.y);
-    await frames(1);
-    pointer.press();
-    await frames(1);
-    pointer.release();
-    await frames(1);
-};
-{
-    // Read from the screen as the frame ends and written a frame later.
-    const take = screenshot;
-    globalThis.screenshot = async (name = "shot") => {
-        take(name);
-        await frames(3);
-    };
-}
-{
-    // The park asked for loads as the frame ends.
-    const open = park.open;
-    park.open = async (path) => {
-        open(path);
-        await frames(1);
-        await park.ready();
-    };
-}
-park.ready = async () => {
-    while (!park.loaded()) await frames(1);
-};
-)js";
+        // The helpers scripts get that only wait on the natives below, in assets/scripting/helpers.js.
+        constexpr std::string_view kHelpersPath = "scripting/helpers.js";
 
         float number(const Json& arguments, std::size_t i)
         {
@@ -144,9 +74,10 @@ park.ready = async () => {
             host->report_ = std::move(report);
         }
         host->define();
-        if (!host->engine_.evaluate(kHelpers, "rct3pp:helpers"))
+        const auto helpers = assets::embedded_file(kHelpersPath);
+        if (!helpers || !host->engine_.evaluate(assets::as_text(*helpers), "rct3pp:helpers"))
         {
-            logging::logger("script").error("helpers: {}", host->engine_.error());
+            logging::logger("script").error("helpers: {}", helpers ? host->engine_.error() : std::string("not built in"));
             return nullptr;
         }
         host->engine_.run(text.str(), file.filename().string());
@@ -266,8 +197,10 @@ park.ready = async () => {
             Json paths = Json::array();
             for (const save::PathTile& p : park_->footpaths.paths)
             {
-                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", p.elevation.has_value() }, { "queue", p.kind == save::PathKind::Queue || park::is_ground_queue(p) } });
-                if (p.elevation)
+                // Ground queues keep an elevation too, with the on-ground slope.
+                const bool raised = p.elevation && p.elevation->slope != save::kSlopeOnGround;
+                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", raised }, { "queue", p.kind == save::PathKind::Queue } });
+                if (raised)
                     paths.back()["height"] = p.elevation->quantised_height;
             }
             return paths;

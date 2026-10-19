@@ -859,7 +859,8 @@ int main(int argc, char** argv)
                 std::error_code ec;
                 fs::remove_all(folder, ec);
                 Cmd one;
-                one << binary.string() << "--script" << js.string() << "--script-report" << folder.string() << "--no-intro" << "--no-audio" << "--seed" << "1";
+                // Without vsync: with it, frames stop while the screen sleeps and the script never moves on.
+                one << binary.string() << "--script" << js.string() << "--script-report" << folder.string() << "--no-intro" << "--no-audio" << "--no-vsync" << "--seed" << "1";
                 one.append(test_args);
                 const bool passed = run(one);
                 log(passed ? Level::Info : Level::Error, "{}: {}, report in {}", file.stem().string(), passed ? "passed" : "failed", folder.string());

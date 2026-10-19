@@ -136,6 +136,82 @@ TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for th
     CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers == 3; }, 120));
 }
 
+TEST_CASE("a queue fills two or three abreast, round its turn, and a full one puts newcomers off")
+{
+    Sandbox park;
+    // An L-shaped line: (6, 0) and (5, 0), then round the turn up to (5, 2), where it meets the path.
+    park.path({ 0, 3 }, { 5, 3 }).queue({ 5, 0 }, { 5, 2 }).queue({ 6, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 7, 0 }, 100, { .capacity = 1, .cycle_seconds = 600, .line = { { 6, 0 }, { 5, 0 }, { 5, 1 }, { 5, 2 } } });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 60; ++i)
+    {
+        const auto g = park.guest({ i % 5, 3 }, { .cash = 1000 });
+        r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+        guests.push_back(g);
+    }
+    park.run_seconds(240);
+    const auto& queue = r.get<CycleRide>(ride).queue;
+    // Three tiles of line hold far more than single file would, but not everyone.
+    CHECK(queue.size() > 25);
+    CHECK(queue.size() < 50);
+    CHECK(std::ranges::any_of(guests, [&](entt::entity g) {
+        const auto* thoughts = r.try_get<Thoughts>(g);
+        return thoughts != nullptr && std::ranges::count(thoughts->recent, ThoughtKind::QueueTooLong, &Thought::kind) > 0;
+    }));
+    const PathNetwork& paths = park.world().paths;
+    const auto& line = r.get<CycleRide>(ride).line;
+    for (std::size_t i = 0; i < queue.size(); ++i)
+    {
+        const glm::vec3 at = r.get<Pose>(queue[i]).position;
+        // Inside the line's tiles, also at the turn.
+        CHECK(std::ranges::any_of(line, [&](NodeId n) {
+            const glm::vec3 off = at - paths.centre(n);
+            return std::max(std::abs(off.x), std::abs(off.z)) <= paths.tile_size / 2;
+        }));
+        for (std::size_t j = 0; j < i; ++j)
+            CHECK(glm::distance(at, r.get<Pose>(queue[j]).position) > 0.05f);
+    }
+}
+
+TEST_CASE("guests a save put in a queue stand off its middle, to each side in turn")
+{
+    Sandbox park;
+    park.path({ 0, 1 }, { 2, 1 }).queue({ 3, 1 }, { 5, 1 });
+    const auto ride = park.flat_ride("Spinner", { 6, 1 }, 100, { .capacity = 1, .cycle_seconds = 600, .line = { { 5, 1 }, { 4, 1 }, { 3, 1 } } });
+    auto& r = park.world().registry;
+    auto& cycle = r.get<CycleRide>(ride);
+    for (int i = 0; i < 2; ++i)
+    {
+        const auto g = park.guest({ 3, 1 }, { .cash = 1000 });
+        r.get<Errand>(g) = { ErrandKind::Queueing, ride, 0 };
+        r.get<Stride>(g).along = 2;
+        cycle.queue.push_back(g);
+    }
+    park.run_seconds(1);
+    const float a = r.get<Stride>(cycle.queue[0]).side;
+    const float b = r.get<Stride>(cycle.queue[1]).side;
+    CHECK(a != 0);
+    CHECK(a * b < 0);
+}
+
+TEST_CASE("an unhappy guest who has queued very long gives up and walks off")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 }).queue({ 3, 0 }, { 5, 0 });
+    // Takes nobody, so the line never moves.
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 0, .cycle_seconds = 10, .line = { { 5, 0 }, { 4, 0 }, { 3, 0 } } });
+    auto& r = park.world().registry;
+    const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 1; }, 30));
+    r.get<Errand>(g).queued = 1000;
+    r.get<Mood>(g).happiness = 0.1f;
+    CHECK(park.run_until([&] { return r.get<CycleRide>(ride).queue.empty(); }, 600));
+    CHECK(std::ranges::count(r.get<Thoughts>(g).recent, ThoughtKind::GaveUpQueue, &Thought::kind) == 1);
+    CHECK(r.get<Errand>(g).kind != ErrandKind::Queueing);
+}
+
 TEST_CASE("bored guests find the flat ride by themselves")
 {
     Sandbox park;

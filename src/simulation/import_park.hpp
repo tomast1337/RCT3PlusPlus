@@ -80,7 +80,8 @@ namespace rct3::simulation
     std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
 
     /// The park's staff, walking the paths at their work from where they stand; each one's entity by their
-    /// place in `people.staff`, null for those off the paths. Call after import_paths.
+    /// place in `people.staff`; one off the paths or on a queue starts from the nearest walkway, null only when the
+    /// park has none. Call after import_paths.
     std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people);
 
     /// The facility of a special attraction's kind, as its item in the game's files stores it; nothing for
@@ -105,9 +106,6 @@ namespace rct3::simulation
     /// A saved ride's reliability, whether it stands broken down, and its inspections.
     [[nodiscard]] Upkeep upkeep_of(const save::Ride& ride);
 
-    /// Hundredths of the currency unit a game hour a member of staff earns for each wage level. Our own value.
-    inline constexpr std::int64_t kWagePerLevel = 50;
-
     /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
     [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
 
@@ -123,7 +121,8 @@ namespace rct3::simulation
     /// import_paths.
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { });
 
-    /// Sets every guest standing on a path walking; returns how many. Call after import_paths.
+    /// Sets every guest walking from the path they stand on, or from the nearest path for one saved off the paths;
+    /// returns how many. Call after import_paths.
     std::size_t start_guests(SimWorld& world);
 
     /// Puts the guests the park had on a ride (`guests` by place in `people`, `rides` as import_rides made

@@ -130,6 +130,14 @@ namespace rct3::park
     /// name is in no file, so the look is ours.
     inline constexpr std::string_view kWaterPicture = "rct3pp:water";
 
+    /// Keys given to parts painted like the ground they stand on, such as the terrain blocks: they name no
+    /// picture of their own but these two, one for the land's surface and one for its cliffs. The object mesh
+    /// gives them the pictures of the tile under the object (see object_mesh.hpp).
+    inline constexpr std::string_view kGroundSurfaceTexture = "useterraintexture";
+    inline constexpr std::string_view kGroundCliffTexture = "useclifftexture";
+    inline constexpr std::string_view kGroundSurfacePicture = "rct3pp:ground surface";
+    inline constexpr std::string_view kGroundCliffPicture = "rct3pp:ground cliff";
+
     /// How far those parts are lifted: they lie on the basin they fill, and would fight it for depth. Our own
     /// value, small enough not to show.
     inline constexpr float kWaterLift = 0.03f;

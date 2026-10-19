@@ -42,6 +42,7 @@ namespace rct3::config
             O::BlendDetailLevels, // Scenery between levels of detail
             O::DetailBlendBand,
             O::Bloom,
+            O::AmbientOcclusion,
             O::AntiAliasing,  // The screen's passes
             O::SurfaceDetail, // The lit shaders
         };

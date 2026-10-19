@@ -20,6 +20,7 @@ namespace rct3::audio
         constexpr Guid kFileProperties = { 0xA1, 0xDC, 0xAB, 0x8C, 0x47, 0xA9, 0xCF, 0x11, 0x8E, 0xE4, 0x00, 0xC0, 0x0C, 0x20, 0x53, 0x65 };
         constexpr Guid kStreamProperties = { 0x91, 0x07, 0xDC, 0xB7, 0xB7, 0xA9, 0xCF, 0x11, 0x8E, 0xE6, 0x00, 0xC0, 0x0C, 0x20, 0x53, 0x65 };
         constexpr Guid kAudioMedia = { 0x40, 0x9E, 0x69, 0xF8, 0x4D, 0x5B, 0xCF, 0x11, 0xA8, 0xFD, 0x00, 0x80, 0x5F, 0x5C, 0x44, 0x2B };
+        constexpr Guid kVideoMedia = { 0xC0, 0xEF, 0x19, 0xBC, 0x4D, 0x5B, 0xCF, 0x11, 0xA8, 0xFD, 0x00, 0x80, 0x5F, 0x5C, 0x44, 0x2B };
         constexpr Guid kAudioSpread = { 0x50, 0xCD, 0xC3, 0xBF, 0x8F, 0x61, 0xCF, 0x11, 0x8B, 0xB2, 0x00, 0xAA, 0x00, 0xB4, 0xE2, 0x20 };
 
         constexpr std::size_t kObjectHeader = 24;     ///< GUID and size
@@ -27,6 +28,8 @@ namespace rct3::audio
         constexpr std::size_t kMaxHeader = 16u << 20;
         // Far more than an audio object needs; bounds what a bad object length makes us hold.
         constexpr std::uint32_t kMaxObject = 1u << 20;
+        constexpr std::size_t kBitmapHeader = 40; ///< BITMAPINFOHEADER without the codec bytes
+        constexpr std::uint32_t kMaxPicture = 4096;
 
         /// Reads little-endian values in order; past the end everything fails and reads as zero.
         class Reader
@@ -114,7 +117,29 @@ namespace rct3::audio
         {
             std::uint8_t number = 0;
             AsfAudioFormat format;
+            std::optional<AsfVideoFormat> video; ///< In place of `format`, for a video stream
         };
+
+        std::expected<AsfVideoFormat, std::string> read_video(Reader w)
+        {
+            AsfVideoFormat f;
+            f.width = w.u32();
+            f.height = w.u32();
+            w.skip(1); // Reserved
+            const std::uint16_t format_size = w.u16();
+            Reader b(w.bytes(format_size));
+            const std::uint32_t header_size = b.u32();
+            b.skip(4 + 4 + 2 + 2); // Width, height, planes, bits per pixel
+            f.codec = b.u32();
+            b.skip(4 + 4 + 4 + 4 + 4); // Image size, pixels per metre twice, colours used and important
+            if (!w.ok() || !b.ok() || header_size < kBitmapHeader || header_size > format_size)
+                return std::unexpected("cut short video format");
+            if (f.width == 0 || f.height == 0 || f.width > kMaxPicture || f.height > kMaxPicture)
+                return std::unexpected("bad video picture size");
+            const auto extra = b.bytes(header_size - kBitmapHeader);
+            f.extra.assign(extra.begin(), extra.end());
+            return f;
+        }
 
         std::expected<std::optional<StreamInfo>, std::string> read_stream(Reader r)
         {
@@ -127,6 +152,18 @@ namespace rct3::audio
             r.skip(4);
             if (!r.ok())
                 return std::unexpected("cut short stream properties");
+            if (type == kVideoMedia)
+            {
+                auto video = read_video(Reader(r.bytes(specific_size)));
+                if (!r.ok())
+                    return std::unexpected("cut short video stream properties");
+                if (!video)
+                    return std::unexpected(video.error());
+                StreamInfo s;
+                s.number = static_cast<std::uint8_t>(flags & 0x7F);
+                s.video = std::move(*video);
+                return s;
+            }
             if (type != kAudioMedia)
                 return std::nullopt;
             Reader w(r.bytes(specific_size));
@@ -209,15 +246,24 @@ namespace rct3::audio
                 if (min_packet != max_packet || min_packet == 0)
                     return std::unexpected("ASF packets of different sizes are not read");
                 h.packet_size = min_packet;
+                h.preroll = static_cast<std::uint32_t>(std::min<std::uint64_t>(preroll, 0xFFFFFFFF));
                 h.seconds = std::max(0.0, static_cast<double>(play) / 1e7 - static_cast<double>(preroll) / 1e3);
                 have_file = true;
             }
-            else if (id == kStreamProperties && !have_audio)
+            else if (id == kStreamProperties)
             {
                 auto stream = read_stream(body);
                 if (!stream)
                     return std::unexpected(stream.error());
-                if (*stream)
+                if (*stream && (*stream)->video)
+                {
+                    if (!h.video)
+                    {
+                        h.video_stream = (*stream)->number;
+                        h.video = std::move((*stream)->video);
+                    }
+                }
+                else if (*stream && !have_audio)
                 {
                     h.stream = (*stream)->number;
                     h.audio = std::move((*stream)->format);
@@ -276,7 +322,9 @@ namespace rct3::audio
         for (std::uint32_t i = 0; i < count; ++i)
         {
             AsfPayload p;
-            p.stream = r.u8() & 0x7F;
+            const std::uint8_t stream = r.u8();
+            p.stream = stream & 0x7F;
+            p.key = (stream & 0x80) != 0;
             p.object = r.sized(properties >> 4);
             p.offset = r.sized(properties >> 2);
             const std::uint32_t replicated = r.sized(properties);
@@ -284,7 +332,11 @@ namespace rct3::audio
                 return std::unexpected("compressed ASF payloads are not read");
             const auto extra = r.bytes(replicated);
             if (replicated >= 8)
-                p.object_size = Reader(extra).u32();
+            {
+                Reader e(extra);
+                p.object_size = e.u32();
+                p.time = e.u32();
+            }
             const std::uint32_t size = multiple ? r.sized(length_type) : static_cast<std::uint32_t>(r.position() <= end ? end - r.position() : 0);
             if (!r.ok() || r.position() > end || size > end - r.position())
                 return std::unexpected("ASF payload past the end of its packet");
@@ -333,6 +385,45 @@ namespace rct3::audio
     {
         auto out = std::move(blocks_.front());
         blocks_.pop_front();
+        return out;
+    }
+
+    AsfObjects::AsfObjects(std::uint8_t stream)
+        : stream_(stream)
+    {
+    }
+
+    void AsfObjects::add(const AsfPayload& payload)
+    {
+        if (payload.stream != stream_)
+            return;
+        if (!open_ || payload.object != number_)
+        {
+            open_ = payload.offset == 0 && payload.object_size > 0 && payload.object_size <= kMaxObject;
+            if (!open_)
+                return; // The middle of an object whose start was missed, or one too big
+            number_ = payload.object;
+            open_object_ = { payload.time, payload.key, std::vector<std::byte>(payload.object_size) };
+            filled_ = 0;
+        }
+        std::vector<std::byte>& pieces = open_object_.data;
+        if (payload.offset != filled_ || payload.data.size() > pieces.size() - filled_)
+        {
+            open_ = false; // A piece out of order: the object is lost
+            return;
+        }
+        std::ranges::copy(payload.data, pieces.begin() + static_cast<std::ptrdiff_t>(filled_));
+        filled_ += payload.data.size();
+        if (filled_ < pieces.size())
+            return;
+        done_.push_back(std::move(open_object_));
+        open_ = false;
+    }
+
+    AsfObject AsfObjects::take()
+    {
+        AsfObject out = std::move(done_.front());
+        done_.pop_front();
         return out;
     }
 

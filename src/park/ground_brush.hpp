@@ -12,7 +12,7 @@
 namespace rct3::park
 {
 
-    inline constexpr int kLargestBrush = 9; ///< Tiles across
+    inline constexpr int kLargestBrush = 16; ///< Tiles across
 
     /// The tiles covered round `middle`, those inside a grid `columns` by `rows` only.
     [[nodiscard]] std::vector<PathSpot> brush_tiles(PathSpot middle, int size, bool round, int columns, int rows);

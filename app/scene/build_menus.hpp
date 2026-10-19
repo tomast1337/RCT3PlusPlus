@@ -39,9 +39,10 @@ namespace rct3::scene
     /// it was read.
     [[nodiscard]] BuildMenus start_build_menus(const config::GameInstall& install, const save::RequiredContent* content);
 
-    /// Opens the list of `item` beside `button`, the menu button that asked for it, in place of any list
-    /// open before, titled with the button's help. False for an item that has no list.
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::StringTable& strings, const ui::Currency& currency);
+    /// Opens the list of `item` above `bar`, the tool bar, in the middle of its shown buttons, in place of any
+    /// list open before, titled with the help of `button`, the menu button that asked for it. False for an item
+    /// that has no list.
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Currency& currency);
 
     /// Whether a list is open.
     [[nodiscard]] bool build_list_open(const ui::Widget& root);

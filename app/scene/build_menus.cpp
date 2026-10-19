@@ -7,6 +7,7 @@
 #include "ui/screens/build_rows.hpp"
 #include "ui/widgets/button.hpp"
 
+#include <algorithm>
 #include <string_view>
 
 namespace rct3::scene
@@ -31,7 +32,24 @@ namespace rct3::scene
         return menus;
     }
 
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::StringTable& strings, const ui::Currency& currency)
+    namespace
+    {
+        /// Widens `into` to take in every shown button under `w`; the groups holding them span the screen.
+        void take_in_shown(const ui::Widget& w, ui::Rect& into)
+        {
+            if (!w.visible)
+                return;
+            if (w.children().empty())
+            {
+                const ui::Rect& r = w.rect();
+                into = { std::min(into.x0, r.x0), std::min(into.y0, r.y0), std::max(into.x1, r.x1), std::max(into.y1, r.y1) };
+            }
+            for (const auto& child : w.children())
+                take_in_shown(*child, into);
+        }
+    } // namespace
+
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Currency& currency)
     {
         const auto list = ui::build_list(item);
         if (!list || !menus.items.valid())
@@ -46,12 +64,14 @@ namespace rct3::scene
         picker.packs_only = menus.packs_only;
         if (!menus.offer.known())
             picker.note = std::u16string(strings.get(kAllShown));
-        // To the right of the button, its middle level with the button's; layout keeps it on the screen.
+        // Above the tool bar and its open menu, so it hides none of their buttons, and in the middle of them;
+        // layout keeps it on the screen.
         const ui::Rect& r = root.rect();
-        const ui::Rect& b = button.rect();
-        const float x = b.x1 + ui::build_picker::kGap - r.x0;
+        ui::Rect shown = button.rect();
+        take_in_shown(bar, shown);
         const ui::Point size = menus.size.value_or(ui::Point { ui::build_picker::kWidth, ui::build_picker::kHeight });
-        const float y = (b.y0 + b.y1) / 2 - size.y / 2 - r.y0;
+        const float x = (shown.x0 + shown.x1) / 2 - size.x / 2 - r.x0;
+        const float y = shown.y0 - ui::build_picker::kGap - size.y - r.y0;
         picker.placement = ui::top_left(x, y, size.x, size.y);
         return true;
     }

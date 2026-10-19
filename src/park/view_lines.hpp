@@ -16,6 +16,9 @@ namespace rct3::park
     /// Height between contours, in world units.
     inline constexpr float kContourStep = 1.0f;
 
+    /// A strip `width` across from `a` to `b`, just over them, seen from above and below.
+    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, float width);
+
     /// A strip along every edge of every tile.
     [[nodiscard]] TerrainMesh grid_lines(const save::TerrainGrid& grid, glm::vec4 colour);
     /// A strip wherever the ground crosses a whole multiple of `step`, through each triangle of each tile.

@@ -2,14 +2,15 @@
 //
 // The land menu's tools that work on the ground itself.
 //
-// Shape ground: press on a tile and move the pointer up or down to raise or lower it, a step for each
-// kSlopeDragStep moved. A sloped tile is flattened to its top or bottom first. The tiles round it keep their
-// far corners and slope to it. A tile is only shaped on land the park owns outright, without a path and with
-// nothing solid standing over it.
-//
 // Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
-// Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes. The first tile tool and
-// the brushes work; the other tile tools are shown but cannot be picked yet.
+// Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes.
+//
+// Tile tools: press on the ground and move the pointer up or down to move it, a height unit for each
+// kSlopeDragStep moved (park/tile_shaping.hpp). The tools stand in pairs: the first of each works on the one
+// tile under the pointer, where the pointer's place in it picks the whole tile, an edge or a corner; the second
+// on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
+// move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
+// on land the park owns outright, without a path and with nothing solid standing over it.
 //
 // Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
 // there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
@@ -35,6 +36,9 @@
 // and takes in the lakes it meets. It only spreads over land the park owns outright without paths on the
 // ground; where it would go further it stops rising.
 //
+// While a tool is out, marks on the ground show what it would work on: the tiles under the brush, the tile
+// being poured on, or the one tile, edge or corner a tile tool picks.
+//
 // Every change is paid for. A right click puts either tool away.
 #pragma once
 
@@ -42,6 +46,7 @@
 #include "park/ground_smoothing.hpp"
 #include "park/ground_textures.hpp"
 #include "park/path_clearance.hpp"
+#include "park/tile_shaping.hpp"
 #include "render/device.hpp"
 #include "ui/widget.hpp"
 
@@ -71,7 +76,10 @@ namespace rct3::scene
         Tool tool = Tool::None;
         std::optional<park::PathSpot> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
-        int steps = 0; ///< Taken in this stroke, up positive
+        int steps = 0;                 ///< Taken in this stroke, up positive
+        std::size_t tile_tool = 0;     ///< The tile tool chosen, by its place in its tab
+        park::TileStroke stroke;       ///< Of a tile tool
+        std::vector<glm::vec3> marked; ///< Where the marks on the ground were made, to make them again only on a change
         park::SolidTiles solids;
         save::WaterLayer water_before;             ///< As the water stroke found it
         float level_before = 0;                    ///< Of the water on the pressed tile, as the stroke found it

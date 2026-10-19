@@ -604,6 +604,11 @@ namespace rct3::ui
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
                     paints(page, f, strings);
+                if (f.queue_signs)
+                {
+                    constexpr std::string_view key = "TT_AttractionDialogIconToggleQueueSigns";
+                    page.controls.push_back(tick(AttractionControl::QueueSigns, key, text(strings, key), *f.queue_signs));
+                }
                 break;
             case AttractionTab::State:
                 page.note = status(*f.common, strings);

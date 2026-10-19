@@ -56,7 +56,14 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->progress.day_time == 0.25f);
     CHECK(read->camera.target == glm::vec3 { 1, 2, 3 });
     CHECK_FALSE(read->people); // As in saves made before people were kept
+    CHECK(read->no_queue_signs.empty());
     CHECK(parkfile::write_saved_park(*read) == bytes);
+
+    parkfile::SavedPark hidden = *read;
+    hidden.no_queue_signs = { 7, 9 };
+    const auto again = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(again);
+    CHECK(again->no_queue_signs == std::vector<save::ObjectId> { 7, 9 });
 }
 
 TEST_CASE("a cut or changed saved park is refused")

@@ -213,6 +213,10 @@ namespace rct3::render
         /// colour red texels of it out from the point on each diagonal, and gives the average's part above colour
         /// green, times colour blue, opaque.
         Glow,
+        /// Ambient occlusion worked out on the screen, one step of it a draw (app/scene/park_occlusion.hpp).
+        /// Input: location 0 the position in clip space (Float2), drawn as is. The step and what it reads are
+        /// in `DrawCommand::occlusion`; `DrawCommand::transform` is a matrix the step needs, not applied.
+        Occlusion,
     };
 
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.
@@ -318,6 +322,35 @@ namespace rct3::render
         bool underwater = false;
     };
 
+    /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.
+    struct OcclusionStep
+    {
+        enum class Kind : std::uint8_t
+        {
+            /// How open to the sky each pixel is (1 open, 0 shut in), from the depth in `DrawCommand::texture`,
+            /// by looking for the horizon round it in a few directions on the screen (ground truth ambient
+            /// occlusion). The directions and steps turn from pixel to pixel over 4 by 4 pixels, and from
+            /// `frame` to frame. `transform`: clip to eye space.
+            Trace,
+            /// The traced picture in `texture` averaged over 4 by 4 pixels, which evens out the turning, leaving
+            /// out pixels much nearer or farther; the depth is the first extra texture.
+            Blur,
+            /// The averaged picture in `texture` mixed with the last frame's result (the first extra texture)
+            /// where the same surface was seen then: `transform` takes this frame's clip space to the last's, and
+            /// the second and third extra textures are this frame's depth and the last's.
+            Blend,
+            /// Darkens what is drawn by the result in `texture`. Needs BlendMode::Alpha.
+            Apply,
+        };
+        Kind kind = Kind::Trace;
+        std::uint32_t frame = 0;
+        float radius = 1;   ///< Trace: how far round a point is looked at, in world units
+        float strength = 1; ///< Apply: 0 none to 1 full
+        float history = 0;  ///< Blend: the last frame's share; 0 when there is none
+        /// The two numbers of the projection that give depth from the eye: depth = b / (stored - a).
+        glm::vec2 depth_terms { 0.0f, 1.0f };
+    };
+
     /// How many pictures a draw can take besides DrawCommand::texture.
     inline constexpr std::size_t kExtraTextures = 6;
 
@@ -339,7 +372,8 @@ namespace rct3::render
         /// For shaders that read more than one picture, bound after `texture` with the same sampler. A missing one
         /// reads as `texture`.
         std::array<TextureHandle, kExtraTextures> extra_textures { };
-        WaterView water; ///< For the Water shader
+        WaterView water;         ///< For the Water shader
+        OcclusionStep occlusion; ///< For the Occlusion shader
     };
 
     /// What the screen showed: `size.width * size.height` pixels in row order, top row first, 4 bytes each:

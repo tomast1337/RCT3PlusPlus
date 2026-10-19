@@ -18,15 +18,19 @@ declare namespace pointer {
     function move(x: number, y: number): void;
     function press(): void;
     function release(): void;
+    /** Moves to (x, y), presses and lets go. */
+    function click(x: number, y: number): Promise<void>;
     /** Presses at `from`, moves to `to` over `count` frames and lets go. */
     function drag(from: [number, number], to: [number, number], count?: number): Promise<void>;
 }
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land"), or undefined when it is not shown. */
-    function find(path: string): { x: number; y: number } | undefined;
+    function find(path: string): { x: number; y: number; on?: boolean } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
+    /** Clicks the switch at `path` unless it is already `on`. */
+    function toggle(path: string, on: boolean): Promise<void>;
 }
 
 declare namespace park {
@@ -60,6 +64,15 @@ interface Tile {
     owned: boolean;
 }
 
+interface PathPiece {
+    col: number;
+    row: number;
+    /** Off the ground, on supports. */
+    raised: boolean;
+    /** Of a raised piece, in the game's height steps. */
+    height?: number;
+}
+
 interface Lake {
     level: number;
     /** Half-tiles it covers. */
@@ -72,5 +85,6 @@ declare namespace map {
     function tile(col: number, row: number): Tile | undefined;
     /** The middle of a tile on the view; undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
+    function paths(): PathPiece[];
     function water(): Lake[];
 }

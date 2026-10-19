@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="rct3pp" type="CLionExternalRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--no-intro" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" WORKING_DIR="file://$PROJECT_DIR$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="rct3++" TARGET_NAME="nob app" CONFIG_NAME="debug" RUN_PATH="$PROJECT_DIR$/build/debug/rct3pp">
+    <envs>
+      <env name="RCT3PP_GAME_PATH" value="/Games/Steam/steamapps/common/RollerCoaster Tycoon 3 Complete Edition" />
+    </envs>
+    <method v="2">
+      <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+    </method>
+  </configuration>
+</component>

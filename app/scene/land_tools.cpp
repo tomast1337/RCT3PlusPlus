@@ -28,6 +28,8 @@ namespace rct3::scene
         constexpr std::int32_t kPaintCost = 50;
         constexpr std::int32_t kWaterCost = 100; ///< A step of a lake's level
         constexpr float kShapeCost = 25;         ///< A height unit of one corner point moved by a brush
+        constexpr float kSmoothRate = 2.5f;      ///< Of the way to where a smoothing brush wants the ground, a second
+        constexpr float kSmoothPass = 0.05f;     ///< Seconds between smoothing passes
         constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units. Our own value.
 
         constexpr std::string_view kPanelName = "land_panel";
@@ -91,8 +93,34 @@ namespace rct3::scene
         /// The raising and lowering brushes, by their place in the panel's tabs.
         constexpr std::size_t kRaiseTab = 2;
         constexpr std::size_t kLowerTab = 3;
+        constexpr std::size_t kSmoothTab = 1;
+        constexpr std::size_t kCliffTab = 1; ///< Of painting
+
+        /// The smoothing tab's tools, in its order, and where a levelling one levels to.
+        enum class Level : std::uint8_t
+        {
+            None,
+            Pointer, ///< The height under the pointer, as it moves
+            Press,   ///< The height where the stroke began
+            PressWhole,
+        };
+        struct SmoothTool
+        {
+            park::GroundSmoothing tool;
+            Level level = Level::None;
+        };
+        constexpr std::array kSmoothTools {
+            SmoothTool { park::GroundSmoothing::Average }, SmoothTool { park::GroundSmoothing::Random }, SmoothTool { park::GroundSmoothing::Level, Level::Pointer }, SmoothTool { park::GroundSmoothing::Level, Level::Press }, SmoothTool { park::GroundSmoothing::WholeUnits }, SmoothTool { park::GroundSmoothing::Level, Level::PressWhole }, SmoothTool { park::GroundSmoothing::JoinEdges }, SmoothTool { park::GroundSmoothing::TileEdges },
+        };
         constexpr std::array kRaiseShapes { park::GroundShape::Ridge, park::GroundShape::Mountain, park::GroundShape::Mesa, park::GroundShape::Hill };
         constexpr std::array kLowerShapes { park::GroundShape::Canyon, park::GroundShape::Trough, park::GroundShape::Crater };
+
+        /// Whether a brush may move the ground of tile (`c`, `r`): owned outright, without paths or things
+        /// standing on it (the stroke's solids).
+        bool shapeable(const ParkScene& scene, int c, int r)
+        {
+            return park::owned_outright(scene.grid.at(c, r)) && !park::blocked(scene.land.solids, { c, r }, -1e6f, 1e6f) && std::ranges::none_of(scene.footpaths.paths, [&](const save::PathTile& p) { return p.col == c && p.row == r; });
+        }
 
         bool lowers(park::GroundShape shape)
         {
@@ -114,9 +142,8 @@ namespace rct3::scene
                 l.paid_for = 0;
                 // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
                 l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
-                const park::SolidTiles solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
-                const auto& paths = scene.footpaths.paths;
-                l.before = park::corner_heights(scene.grid, [&](int c, int r) { return park::owned_outright(scene.grid.at(c, r)) && !park::blocked(solids, { c, r }, -1e6f, 1e6f) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == c && p.row == r; }); });
+                l.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+                l.before = park::corner_heights(scene.grid, [&](int c, int r) { return shapeable(scene, c, r); });
             }
             const float steps = (l.press_y - at.y) / park::kSlopeDragStep;
             const float amount = std::round(std::max(lowers(*l.shape) ? -steps : steps, 0.0f) * 4) / 4; // In quarter units
@@ -134,21 +161,60 @@ namespace rct3::scene
             rebuild_ground(device, scene, assets);
         }
 
+        void smooth(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, float elapsed)
+        {
+            LandTools& l = scene.land;
+            const SmoothTool tool = kSmoothTools[*l.smoothing];
+            const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
+            const float reach = static_cast<float>(l.brush) / 2;
+            if (!l.tile)
+            {
+                if (!spot || !scene.grid.contains(static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y))))
+                    return;
+                l.tile = park::PathSpot { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                l.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+                l.held = kSmoothPass; // A click smooths once
+                l.target = park::mean_height(scene.grid, *spot, std::max(reach, 1.0f));
+                if (tool.level == Level::PressWhole)
+                    l.target = std::round(l.target);
+            }
+            if (!spot)
+                return;
+            if (tool.level == Level::Pointer)
+                l.target = park::mean_height(scene.grid, *spot, 1);
+            l.held += elapsed;
+            bool moved = false;
+            for (; l.held >= kSmoothPass; l.held -= kSmoothPass)
+            {
+                save::TerrainGrid trial = scene.grid;
+                const float amount = park::smooth_ground(trial, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, ++l.passes, [&](int c, int r) { return shapeable(scene, c, r); });
+                const auto cost = static_cast<std::int32_t>(std::lround(amount * kShapeCost));
+                if (amount <= 0 || !affordable(scene, cost))
+                    continue;
+                scene.grid = std::move(trial);
+                pay(scene, cost);
+                moved = true;
+            }
+            if (moved)
+                rebuild_ground(device, scene, assets);
+        }
+
         void paint(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             const auto tile = over ? std::nullopt : ground_tile(scene, at, size);
-            if (!tile || tile == l.tile || l.surface >= l.surfaces.size())
+            if (!tile || tile == l.tile || (l.cliff ? *l.cliff >= l.cliffs.size() : l.surface >= l.surfaces.size()))
                 return;
             l.tile = tile;
-            const std::uint8_t surface = l.surfaces[l.surface].index;
+            const std::uint8_t surface = l.cliff ? l.cliffs[*l.cliff].index : l.surfaces[l.surface].index;
             bool painted = false;
             for (const park::PathSpot t : park::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
             {
                 save::TerrainCell& cell = scene.grid.at(t.col, t.row);
-                if (cell.surface == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
+                std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
+                if (face == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
                     continue;
-                cell.surface = surface;
+                face = surface;
                 pay(scene, kPaintCost);
                 painted = true;
             }
@@ -212,13 +278,16 @@ namespace rct3::scene
                 const auto found = assets.install->find(name);
                 if (!found)
                     continue;
-                auto more = park::ground_surfaces(*found);
-                if (!more)
+                for (const auto [paint, into] : { std::pair { park::GroundPaint::Surface, &l.surfaces }, std::pair { park::GroundPaint::Cliff, &l.cliffs } })
                 {
-                    logging::logger("park").warning("{}: {}", name, more.error());
-                    continue;
+                    auto more = park::ground_surfaces(*found, paint);
+                    if (!more)
+                    {
+                        logging::logger("park").warning("{}: {}", name, more.error());
+                        break;
+                    }
+                    into->insert(into->end(), std::make_move_iterator(more->begin()), std::make_move_iterator(more->end()));
                 }
-                l.surfaces.insert(l.surfaces.end(), std::make_move_iterator(more->begin()), std::make_move_iterator(more->end()));
             }
         }
 
@@ -243,18 +312,22 @@ namespace rct3::scene
                 for (const park::GroundSurface& s : l.surfaces)
                     base.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
                 tabs.push_back(std::move(base));
-                // Cliff faces are not painted yet.
-                tabs.push_back(tab_of(strings, "Land_Brush_Paint_Cliff", 5, { "Land_Paint_Cliff0", "Land_Paint_Cliff1", "Land_Paint_Cliff2", "Land_Paint_Cliff3", "Land_Paint_Cliff4", "Land_Paint_Cliff5" }, 0));
-                chosen = { 0, l.surface };
+                ui::LandTab cliff { "Land_Brush_Paint_Cliff", std::u16string(strings.get("Land_Brush_Paint_CliffHelp")), 5, { } };
+                for (const park::GroundSurface& s : l.cliffs)
+                    cliff.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
+                tabs.push_back(std::move(cliff));
+                chosen = l.cliff ? ui::LandPick { kCliffTab, *l.cliff } : ui::LandPick { 0, l.surface };
             }
             else
             {
-                // Of the shaping tools only the tile one works so far; the others show what is to come.
+                // Of the tile tools only the first works so far; the others show what is to come.
                 tabs.push_back(tab_of(strings, "Land_Vertex", 2, { "Land_Vertex_Neighbour", "Land_Vertex_Neighbour2", "Land_Vertex_Freeform", "Land_Vertex_Freeform2", "Land_Vertex_Quantised1", "Land_Vertex_Quantised2" }, 1));
-                tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_Random", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Flat2", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, 0));
+                tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_Random", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Flat2", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, kSmoothTools.size()));
                 tabs.push_back(tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill" }, kRaiseShapes.size()));
                 tabs.push_back(tab_of(strings, "Land_Brush_Height_Lower", 5, { "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kLowerShapes.size()));
-                if (l.shape)
+                if (l.smoothing)
+                    chosen = { kSmoothTab, *l.smoothing };
+                else if (l.shape)
                 {
                     const auto raise = std::ranges::find(kRaiseShapes, *l.shape);
                     chosen = raise != kRaiseShapes.end() ? ui::LandPick { kRaiseTab, static_cast<std::size_t>(raise - kRaiseShapes.begin()) } : ui::LandPick { kLowerTab, static_cast<std::size_t>(std::ranges::find(kLowerShapes, *l.shape) - kLowerShapes.begin()) };
@@ -294,7 +367,7 @@ namespace rct3::scene
         return scene.land.tool != LandTools::Tool::None;
     }
 
-    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
+    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
     {
         LandTools& l = scene.land;
         if (ui::LandPanel* panel = panel_of(scene); panel != nullptr && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint))
@@ -305,11 +378,23 @@ namespace rct3::scene
                 return;
             }
             l.brush = panel->brush();
-            if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Paint && pick->tab == 0)
-                l.surface = pick->tool;
+            if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Paint)
+            {
+                l.tile.reset();
+                if (pick->tab == kCliffTab)
+                    l.cliff = pick->tool;
+                else
+                {
+                    l.cliff.reset();
+                    l.surface = pick->tool;
+                }
+            }
             else if (pick && l.tool == LandTools::Tool::Shape)
             {
                 l.tile.reset();
+                l.smoothing.reset();
+                if (pick->tab == kSmoothTab && pick->tool < kSmoothTools.size())
+                    l.smoothing = pick->tool;
                 if (pick->tab == kRaiseTab && pick->tool < kRaiseShapes.size())
                     l.shape = kRaiseShapes[pick->tool];
                 else if (pick->tab == kLowerTab && pick->tool < kLowerShapes.size())
@@ -323,7 +408,9 @@ namespace rct3::scene
             l.tile.reset();
             return;
         }
-        if (l.tool == LandTools::Tool::Shape && l.shape)
+        if (l.tool == LandTools::Tool::Shape && l.smoothing)
+            smooth(device, scene, assets, at, size, over, elapsed);
+        else if (l.tool == LandTools::Tool::Shape && l.shape)
             brush_shape(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Shape)
             shape(device, scene, assets, at, size, over);

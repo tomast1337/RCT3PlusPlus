@@ -2132,7 +2132,7 @@ namespace rct3::scene
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right);
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, keys);
-            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
+            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;

@@ -161,7 +161,7 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::TerrainCell& c = g.at(col, row);
-            return { { "corners", c.corners }, { "surface", c.surface }, { "owned", park::owned_outright(c) } };
+            return { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) } };
         });
         engine_.define("map.screen", [this](const Json& a) -> Json {
             const save::TerrainGrid& g = grid_of(park_);

@@ -98,6 +98,19 @@ namespace rct3::park
         return out;
     }
 
+    void set_corner_point(save::TerrainGrid& grid, int col, int row, float height)
+    {
+        for (int dr = 0; dr < 2; ++dr)
+            for (int dc = 0; dc < 2; ++dc)
+            {
+                // The tile whose corner (1 - dc, 1 - dr) is this point.
+                const int tc = col - 1 + dc;
+                const int tr = row - 1 + dr;
+                if (grid.contains(tc, tr))
+                    grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))] = height;
+            }
+    }
+
     float shape_ground(save::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
     {
         if (reach <= 0 || before.columns != grid.width + 1)
@@ -118,15 +131,7 @@ namespace rct3::park
                 const glm::vec2 offset = glm::vec2 { c, r } - middle;
                 const float share = shape == GroundShape::Ridge ? shape_share(shape, glm::dot(offset, side) / reach, glm::dot(offset, line) / reach) : shape_share(shape, glm::length(offset) / reach);
                 const float height = before.heights[at] + share * amount;
-                for (int dr = 0; dr < 2; ++dr)
-                    for (int dc = 0; dc < 2; ++dc)
-                    {
-                        const int tc = c - 1 + dc;
-                        const int tr = r - 1 + dr;
-                        if (!grid.contains(tc, tr))
-                            continue;
-                        grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))] = height;
-                    }
+                set_corner_point(grid, c, r, height);
                 // Measured from the stroke's start, so the owner pays the difference between two calls.
                 moved += std::abs(height - before.heights[at]);
             }

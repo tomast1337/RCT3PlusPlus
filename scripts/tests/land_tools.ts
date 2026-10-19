@@ -146,3 +146,28 @@ log("crater:", crater_before, "->", low(crater_at, row));
 await screenshot("crater");
 
 expect(low(crater_at, row) < crater_before, "the crater to sink");
+
+// Smoothing: averaging wears the hill down while the button is held.
+camera.look({ col: hill_at + 0.5, row: row + 0.5 }, { col: hill_at - 3, row: row - 6, up: 40 });
+await frames(2);
+const hill_top = high(hill_at, row);
+await ui.click("land_panel/Land_Brush_Height_Smooth");
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Smooth_Average") !== undefined, 60, "the averaging brush");
+await ui.click("land_panel/body/Land_Brush_Height_Smooth_Average");
+const [sx, sy] = on_view(hill_at, row);
+await pointer.drag([sx, sy], [sx + 0.01, sy], 40);
+log("smoothed hill:", hill_top, "->", high(hill_at, row));
+await screenshot("smoothed");
+expect(high(hill_at, row) < hill_top, "the hill to wear down");
+
+// Cliff faces: painted on the tiles under the brush, like surfaces.
+await pick("Land_Brush_Paint");
+await until(() => ui.find("land_panel/Land_Brush_Paint_Cliff") !== undefined, 60, "the cliff tab");
+await ui.click("land_panel/Land_Brush_Paint_Cliff");
+await until(() => ui.find("land_panel/body/Land_Paint_Cliff3") !== undefined, 60, "the cliff faces");
+await ui.click("land_panel/body/Land_Paint_Cliff3");
+const cliff_before = map.tile(hill_at, row)!.cliff;
+const [px, py] = on_view(hill_at, row);
+await pointer.drag([px, py], [px + 0.01, py], 10);
+log("cliff:", cliff_before, "->", map.tile(hill_at, row)!.cliff);
+expect(map.tile(hill_at, row)!.cliff !== cliff_before, "the cliff face to change");

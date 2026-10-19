@@ -9,7 +9,7 @@
 //
 // Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
 // Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes. The first tile tool and
-// the raising and lowering brushes work; the others are shown but cannot be picked yet.
+// the brushes work; the other tile tools are shown but cannot be picked yet.
 //
 // Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
 // there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
@@ -17,10 +17,17 @@
 // a ridge runs across the view. Ground the park does not own outright, under paths or under things standing
 // on it stays, as do cliff edges. Each unit of ground moved is paid for, once.
 //
+// Smoothing: holding the button works the ground under the brush a little more every moment
+// (park/ground_smoothing.hpp), following the pointer. Its tools by their place in the tab: average, roughen,
+// level to the height under the pointer as it moves, level to the height where the stroke began, to whole
+// units, level to the whole unit where it began, join the tiles' edges, and square them. The ground moved is
+// paid for as it goes.
+//
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
 // own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
 // number on the panel's disc (park/ground_brush.hpp), with the surface chosen, on land the park owns
-// outright, each tile paid for. Cliff faces are not painted yet. Closing the panel puts the tool away.
+// outright, each tile paid for. The cliff tab paints the faces of the cliffs on the tiles under the brush
+// the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
 // Water: press on a tile and move the pointer up or down to raise or lower the water there, a step for each
 // kSlopeDragStep moved. Starting on a lake moves its level; starting on dry ground pours a new one from the
@@ -32,6 +39,7 @@
 #pragma once
 
 #include "park/ground_shapes.hpp"
+#include "park/ground_smoothing.hpp"
 #include "park/ground_textures.hpp"
 #include "park/path_clearance.hpp"
 #include "render/device.hpp"
@@ -69,14 +77,20 @@ namespace rct3::scene
         float level_before = 0;                    ///< Of the water on the pressed tile, as the stroke found it
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0;                ///< Chosen, of `surfaces`
-        int brush = 3;                          ///< Tiles across the brushes cover
-        std::optional<park::GroundShape> shape; ///< The raising or lowering brush chosen; none for the tile tool
-        park::CornerHeights before;             ///< As a brush stroke found them
-        glm::vec2 middle { 0 };                 ///< Of a brush stroke, in tile units
-        glm::vec2 along { 1, 0 };               ///< Of a ridge: across the view as the stroke began
-        float amount = 0;                       ///< Of the brush stroke so far, in height units
-        float paid_for = 0;                     ///< The most ground the stroke has moved, already paid for
+        std::size_t surface = 0;                 ///< Chosen, of `surfaces`
+        std::vector<park::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
+        std::optional<std::size_t> cliff;        ///< Chosen, of `cliffs`, in place of a surface
+        int brush = 3;                           ///< Tiles across the brushes cover
+        std::optional<park::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
+        park::CornerHeights before;              ///< As a brush stroke found them
+        glm::vec2 middle { 0 };                  ///< Of a brush stroke, in tile units
+        glm::vec2 along { 1, 0 };                ///< Of a ridge: across the view as the stroke began
+        float amount = 0;                        ///< Of the brush stroke so far, in height units
+        float paid_for = 0;                      ///< The most ground the stroke has moved, already paid for
+        std::optional<std::size_t> smoothing;    ///< The smoothing brush chosen, by its place in its tab
+        float target = 0;                        ///< Of a levelling stroke
+        float held = 0;                          ///< Seconds of smoothing not yet applied
+        std::uint64_t passes = 0;                ///< Of smoothing, to vary the roughening
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.
@@ -86,6 +100,6 @@ namespace rct3::scene
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
     /// button is `down`.
-    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
+    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed);
 
 } // namespace rct3::scene

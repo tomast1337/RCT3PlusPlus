@@ -5,6 +5,9 @@
 // Under the title a search box; under that a row of filters; then the items as a grid of icons that scrolls,
 // filling as many columns as fit. The window resizes from its edges and the grid reflows.
 //
+// An item's tile shows its add-on pack's badge in the top-right corner and its theme's filter picture in
+// the top-left one.
+//
 // Resting the pointer on an item tells its name, how it sits on the grid or what building it starts, and
 // its price. Items dearer than the cash the owner hands the window are shaded red. Items of one set, such as
 // the pieces of a building, follow a heading that opens to show them; headings start closed. Items are in
@@ -58,7 +61,7 @@ namespace rct3::ui
         /// The grid.
         inline constexpr float kTile = 72;
         inline constexpr float kTileIcon = 64;
-        inline constexpr float kBadge = 16; ///< In a tile's top-right corner
+        inline constexpr float kBadge = 16; ///< In a tile's top corners
     } // namespace build_picker
 
     /// One item, or a heading over a set of them, as the window shows it.

@@ -70,9 +70,9 @@ namespace rct3::scene
 
         std::expected<void, std::string> load(render::Device& device, const config::GameInstall& install, StartupScreen& screen)
         {
-            const auto banner = install.find("gui/Banner/Banner.common.ovl");
+            const auto banner = install.find(ui::loading_screen::kLogoFile);
             if (!banner)
-                return std::unexpected("gui/Banner/Banner.common.ovl not found");
+                return std::unexpected(std::string(ui::loading_screen::kLogoFile) + " not found");
             auto images = ui::load_image_set(*banner);
             if (!images)
                 return std::unexpected("banner: " + images.error());
@@ -81,19 +81,6 @@ namespace rct3::scene
                 return std::unexpected(logos.error());
             screen.logos = std::move(*logos);
 
-            // The loading screen is optional: without it the screen stays black.
-            if (const auto path = install.find(ui::loading_screen::kSkinFile))
-            {
-                auto set = ui::load_skin_set(*path);
-                if (!set)
-                    return std::unexpected("loading screen: " + set.error());
-                auto textures = ui::upload_textures(device, set->images);
-                if (!textures)
-                    return std::unexpected(textures.error());
-                screen.loading_textures = std::move(*textures);
-                if (const auto skin = set->skins.find(std::string(ui::loading_screen::kBand)); skin != set->skins.end())
-                    screen.loading = skin->second;
-            }
             return { };
         }
 
@@ -201,19 +188,15 @@ namespace rct3::scene
 
     void draw_loading_screen(render::Device& device, StartupScreen& screen)
     {
-        // In pixels, like the park's loading screen: the band is fitted to the window.
+        // In pixels, like the park's loading screen. Only the logo: the strings and fonts are what is loading.
+        namespace loading = ui::loading_screen;
         const render::Extent extent = device.extent();
         screen.list.clear();
         screen.list.set_scale(1);
-        std::optional<ui::SkinRef> band;
-        if (screen.loading)
-        {
-            if (const auto texture = screen.loading_textures.find(screen.loading->texture); texture != screen.loading_textures.end())
-                band = ui::SkinRef { screen.loading->layout, ui::texture_id(texture->second.handle), texture->second.width, texture->second.height };
-        }
-        // Nothing to name and no steps to count yet: the strings and fonts are what is being loaded.
-        const ui::loading_screen::Look look { .band = band ? &*band : nullptr };
-        ui::loading_screen::draw(screen.list, { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) }, look, { });
+        loading::Look look;
+        if (const auto logo = screen.logos.find(loading::kLogo); logo != screen.logos.end())
+            look.logo = loading::Picture { ui::texture_id(logo->second.handle), logo->second.width, logo->second.height };
+        loading::draw(screen.list, { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) }, look, { });
         ui::render_draw_list(device, screen.renderer, screen.list);
     }
 
@@ -222,7 +205,6 @@ namespace rct3::scene
         for (auto& [logo, m] : screen.movies)
             device.destroy_texture(m.picture.handle);
         ui::destroy_textures(device, screen.logos);
-        ui::destroy_textures(device, screen.loading_textures);
         ui::destroy_ui_renderer(device, screen.renderer);
         screen = { };
     }

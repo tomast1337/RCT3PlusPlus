@@ -127,6 +127,17 @@ namespace rct3::simulation
         return best;
     }
 
+    float PathNetwork::height_between(NodeId from, NodeId to, float t) const
+    {
+        const PathNode& a = nodes_[from];
+        const PathNode& b = nodes_[to];
+        if (a.sloped == b.sloped)
+            return std::lerp(a.height, b.height, t);
+        // A ramp meets a flat tile at the flat tile's height, on the edge halfway between their middles.
+        const float edge = a.sloped ? b.height : a.height;
+        return t < 0.5f ? std::lerp(a.height, edge, t * 2) : std::lerp(edge, b.height, t * 2 - 1);
+    }
+
     glm::vec3 PathNetwork::centre(NodeId node) const
     {
         const PathTileSpot& t = nodes_[node].tile;

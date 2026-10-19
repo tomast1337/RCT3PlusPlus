@@ -302,6 +302,7 @@ namespace rct3::simulation
             const glm::vec3 a = lane_point(paths, s.from, s.lane_from);
             const glm::vec3 b = lane_point(paths, s.to, s.lane_to);
             pose.position = glm::mix(a, b, s.progress);
+            pose.position.y = paths.height_between(s.from, s.to, s.progress);
             if (glm::distance(a, b) > 0.01f)
                 pose.heading = std::atan2(b.x - a.x, b.z - a.z);
         }
@@ -1486,6 +1487,7 @@ namespace rct3::simulation
                     stride.progress = static_cast<float>(behind) - stride.along;
                     auto& pose = r.get<Pose>(ride.queue[k]);
                     pose.position = glm::mix(paths.centre(ride.line[behind]), paths.centre(ride.line[ahead]), stride.progress);
+                    pose.position.y = paths.height_between(ride.line[behind], ride.line[ahead], stride.progress);
                     if (ahead != behind)
                     {
                         const glm::vec3 d = paths.centre(ride.line[ahead]) - paths.centre(ride.line[behind]);

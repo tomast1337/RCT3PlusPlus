@@ -6,7 +6,7 @@
 #include <doctest/doctest.h>
 
 extern "C" {
-#include <ffmpeg_wma/libavutil/tx.h>
+#include <ffmpeg/libavutil/tx.h>
 }
 
 #include <algorithm>

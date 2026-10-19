@@ -232,13 +232,14 @@ namespace
         return headers;
     }
 
-    // The audio module (src/audio/) is its own target: it pulls in vendored miniaudio and its link flags, so
-    // the core library and the fuzz targets that do not need it build without it. Tools and fuzz targets that
-    // include "audio/...", the viewer and the test binary link it. It needs no audio device (miniaudio loads backends at run time, and the tests
+    // The audio module (src/audio/, and the movies in src/video/) is its own target: it pulls in vendored
+    // miniaudio, the FFmpeg cut and their link flags, so the core library and the fuzz targets that do not need
+    // it build without it. Tools and fuzz targets that include "audio/..." or "video/...", the viewer and the
+    // test binary link it. It needs no audio device (miniaudio loads backends at run time, and the tests
     // use its offline mode), only -ldl -lpthread -lm.
     bool is_audio_source(const fs::path& p)
     {
-        return p.generic_string().starts_with("src/audio/");
+        return p.generic_string().starts_with("src/audio/") || p.generic_string().starts_with("src/video/");
     }
 
     // Files under assets/ are built into every binary, so the program ships as one file. A generated source
@@ -307,7 +308,7 @@ namespace
         std::string line;
         while (std::getline(in, line))
         {
-            if (line.starts_with("#include \"audio/"))
+            if (line.starts_with("#include \"audio/") || line.starts_with("#include \"video/"))
                 return true;
         }
         return false;
@@ -355,7 +356,21 @@ namespace
         vendored.compile_flags.push_back("-w");
         if (!compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database))
             return false;
-        return compile(c_config(cfg, { "-Ithird_party/ffmpeg_wma" }), find_files("third_party/ffmpeg_wma", ".c"), headers, objects, database);
+        // The FFmpeg cut and our parts of it: the sources its sources.txt lists (the others are included by
+        // them), with the defines FFmpeg's own build compiles them with.
+        std::vector<fs::path> ffmpeg;
+        std::ifstream list("third_party/ffmpeg/sources.txt");
+        for (std::string line; std::getline(list, line);)
+        {
+            if (!line.empty())
+                ffmpeg.push_back(fs::path("third_party/ffmpeg") / line);
+        }
+        if (ffmpeg.empty())
+        {
+            log(Level::Error, "third_party/ffmpeg/sources.txt is missing or empty");
+            return false;
+        }
+        return compile(c_config(cfg, { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" }), ffmpeg, headers, objects, database);
     }
 
     // Vendored code every target links: the stb_truetype and stb_image implementation units and the QuickJS-NG

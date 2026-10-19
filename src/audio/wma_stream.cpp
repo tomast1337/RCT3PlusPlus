@@ -4,7 +4,7 @@
 #include "audio/asf_file.hpp"
 
 #include <algorithm>
-#include <ffmpeg_wma/rct3_wma.h>
+#include <ffmpeg/rct3_wma.h>
 #include <format>
 #include <fstream>
 #include <vector>

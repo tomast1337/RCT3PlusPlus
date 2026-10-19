@@ -8,6 +8,7 @@
         "Training": "Training:",
         "Train": "Train",
         "ScreenshotSaved": "Screenshot saved: %NAME%",
+        "LoadingWarnings": "Warnings so far: {count} (the log has them)",
         "PhotoSaved": "Photo saved: %NAME%",
         "PatrolClear": "Clear patrol area",
         "PatrolBrush": "Brush:",

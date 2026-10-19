@@ -3,7 +3,7 @@
 // What the game shows before the front end: the logo sequence, then the loading screen while data loads.
 // Logos fill as much of the window as they can without changing shape, centred on white (their art is
 // dark on transparent). The loading screen is the one shown while a park loads (ui/screens/loading_screen.hpp),
-// without text or bar: the strings and fonts are among what is loading.
+// with only the logo: the strings and fonts are among what is loading.
 //
 // The first release has its publisher's and developer's logos as movies (Movies/, Windows Media Video 9) with
 // their sound; where the install has one, it plays in place of that logo's picture, as long as the movie
@@ -44,14 +44,12 @@ namespace rct3::scene
         std::map<std::string, StartupMovie, std::less<>> movies; ///< By the logo they replace
         ui::UiRenderer renderer;
         ui::UiTextures logos;
-        ui::UiTextures loading_textures;
-        std::optional<ui::NamedSkin> loading;
         ui::StartupSequence sequence { { } };
         ui::DrawList list;
         std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
     };
 
-    /// Loads the banner logos and the loading screen from the install.
+    /// Loads the banner logos (the game's logo among them, for the loading screen) and the logo movies.
     [[nodiscard]] std::expected<StartupScreen, std::string> create_startup_screen(render::Device& device, const config::GameInstall& install, const ui::StartupOptions& options);
 
     /// Brings the current logo's movie, if it is one, to its time: its picture into its texture and its

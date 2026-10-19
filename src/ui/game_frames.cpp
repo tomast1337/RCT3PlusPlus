@@ -418,41 +418,6 @@ namespace rct3::ui::game_frames
         return f;
     }
 
-    namespace
-    {
-
-        // The loading bar is a pill 15 units high; each end shows its half, measured on ends 10 and 9 wide.
-        constexpr Color kBarLight = hex("#a5d0f2");
-        constexpr Color kBarRim = hex("#3578ac");
-
-        Shape bar_pill()
-        {
-            // The pictures' edges are soft: a thin rim, blurred into the fill and the background.
-            Shape s = outlined(kBarLight, kBarRim, 1, round_corners(7.5f));
-            s.softness = 1.5f;
-            return s;
-        }
-
-    } // namespace
-
-    CodedFrame bar_end_left()
-    {
-        CodedFrame f;
-        f.width = 10;
-        f.height = 16;
-        f.layers.push_back({ corner_box(0.4f, 1, 30, 15), bar_pill(), corner_box(0, 0, 10, 16) });
-        return f;
-    }
-
-    CodedFrame bar_end_right()
-    {
-        CodedFrame f;
-        f.width = 9;
-        f.height = 16;
-        f.layers.push_back({ corner_box(8.9f - 30, 1, 30, 15), bar_pill(), corner_box(0, 0, 9, 16) });
-        return f;
-    }
-
     CodedFrame curved_strip()
     {
         constexpr float kRadius = 20;

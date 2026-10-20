@@ -6,9 +6,8 @@
 //
 // On a queue laid on the ground each piece stands on the ground at the middle of its edge and leans with
 // the edge's two corners. On a level raised queue it stands at the path's height. On a sloping queue piece
-// only the two sides along the slope are fenced: each stands at the height halfway up and leans with the
-// slope. A sloping piece's stored height is its start end's, and its slope says whether it climbs or falls
-// from there towards its end.
+// only the two sides along the slope are fenced, by the way the piece faces, not the way the line runs: each
+// stands at the height halfway up and leans as the deck rises.
 #pragma once
 
 #include "park/ground_queues.hpp"

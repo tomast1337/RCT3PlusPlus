@@ -92,18 +92,19 @@ namespace rct3::park
             }
             meshes.places[i] = m;
             // Plain arithmetic: thousands of vertices a frame, and vector types cost calls in unoptimised builds.
-            const float* t = &m[0][0];
+            const glm::vec4* c = &m[0]; // The four columns
             for (std::uint32_t v = first; v < meshes.ends[i]; ++v)
             {
-                const float* p = &meshes.own[v].position.x;
-                const float* n = &meshes.own[v].normal.x;
-                float* to_p = &meshes.mesh.vertices[v].position.x;
-                float* to_n = &meshes.mesh.vertices[v].normal.x;
-                for (int r = 0; r < 3; ++r)
-                {
-                    to_p[r] = t[r] * p[0] + t[4 + r] * p[1] + t[8 + r] * p[2] + t[12 + r];
-                    to_n[r] = t[r] * n[0] + t[4 + r] * n[1] + t[8 + r] * n[2];
-                }
+                const glm::vec3& p = meshes.own[v].position;
+                const glm::vec3& n = meshes.own[v].normal;
+                glm::vec3& to_p = meshes.mesh.vertices[v].position;
+                glm::vec3& to_n = meshes.mesh.vertices[v].normal;
+                to_p.x = c[0].x * p.x + c[1].x * p.y + c[2].x * p.z + c[3].x;
+                to_p.y = c[0].y * p.x + c[1].y * p.y + c[2].y * p.z + c[3].y;
+                to_p.z = c[0].z * p.x + c[1].z * p.y + c[2].z * p.z + c[3].z;
+                to_n.x = c[0].x * n.x + c[1].x * n.y + c[2].x * n.z;
+                to_n.y = c[0].y * n.x + c[1].y * n.y + c[2].y * n.z;
+                to_n.z = c[0].z * n.x + c[1].z * n.y + c[2].z * n.z;
             }
             first = meshes.ends[i];
         }

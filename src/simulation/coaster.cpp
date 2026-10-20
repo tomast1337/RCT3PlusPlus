@@ -43,9 +43,10 @@ namespace rct3::simulation
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
             return false;
-        for (float left = seconds; left > 0; left -= kStep)
+        const int steps = static_cast<int>(std::ceil(seconds / kStep));
+        for (int step = 0; step < steps; ++step)
         {
-            const float dt = std::min(left, kStep);
+            const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
             const Stretch under = c.kinds[point_at(c, c.at)];
             const bool chained = under == Stretch::Chain || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Chain;
             if (c.fixed_speed)
@@ -106,8 +107,9 @@ namespace rct3::simulation
         c.travelled = 0;
         c.speed = 0;
         constexpr float kTick = 0.25f;
-        for (float t = kTick; t <= most; t += kTick)
+        for (int tick = 1; static_cast<float>(tick) * kTick <= most; ++tick)
         {
+            const float t = static_cast<float>(tick) * kTick;
             if (drive(c, kTick))
                 return t;
         }

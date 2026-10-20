@@ -166,8 +166,9 @@ namespace rct3::simulation
                 t.highest_drop = std::max(t.highest_drop, top - last);
             }
         };
-        for (float time = kStep; time <= most; time += kStep)
+        for (int step = 1; static_cast<float>(step) * kStep <= most; ++step)
         {
+            const float time = static_cast<float>(step) * kStep;
             const bool back = drive(c, kStep);
             t.max_speed = std::max(t.max_speed, std::abs(c.speed));
             const float h = height();

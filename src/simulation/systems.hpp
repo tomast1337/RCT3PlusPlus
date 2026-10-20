@@ -53,12 +53,7 @@ namespace rct3::simulation
     /// seconds of loading, as `departure` says.
     [[nodiscard]] bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited);
 
-    /// Weight of the newest departure in a ride's riders an hour (CycleRide::per_hour); our own figure.
-    inline constexpr float kFlowSmoothing = 0.25f;
-
-    /// Seconds litter lies before it counts against the park's rating. Our own value.
-    inline constexpr float kOldLitterSeconds = 400;
-    /// Pieces of litter lying long enough to count against the park's rating (kOldLitterSeconds).
+    /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old_seconds).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
 
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has

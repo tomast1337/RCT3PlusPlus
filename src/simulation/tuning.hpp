@@ -4,6 +4,7 @@
 // watching parks run, unless a comment names where they come from.
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -77,6 +78,7 @@ namespace rct3::simulation::tuning
         double sick_per_second = 1.0 / 120;        ///< Chance a second, walking
         float relief = 0.25f;                      ///< Nausea gone with it
         float vomit_gloom_per_second = 1.0f / 300; ///< Happiness lost beside vomit
+        float tolerance_per_saved_level = 0.25f;   ///< Saves keep one of four stomach tolerances; each is this much more
         float queasy_per_second = 1.0f / 600;      ///< Nausea gained beside it
     };
 
@@ -171,6 +173,7 @@ namespace rct3::simulation::tuning
         float dirt_gloom_per_second = 1.0f / 900;
         float carry_seconds = 60;       ///< A guest looks for a bin this long before dropping their rubbish
         double litterbug_chance = 0.03; ///< Of dropping it at once, for a happy guest
+        float old_seconds = 400;        ///< Litter lying this long counts against the park's rating
         double grumpy_chance = 0.3;     ///< Added as happiness falls to nothing
     };
 
@@ -195,7 +198,7 @@ namespace rct3::simulation::tuning
         float empty_at = 0.5f; ///< Share of a bin's room filled before a handyman empties it
     };
 
-    /// Ride wear and mechanics. To tune against saved rides' reliability and downtime.
+    /// Ride wear, mechanics and flow. To tune against saved rides' reliability and downtime.
     struct Wear
     {
         float per_run = 0.004f;          ///< Reliability a run costs
@@ -203,8 +206,50 @@ namespace rct3::simulation::tuning
         float breakdown_gloom = 0.1f;    ///< Happiness lost by those queueing when their ride breaks down
         float repair_seconds = 20;
         float inspect_seconds = 10;
-        float repair_gain = 0.02f;  ///< Reliability a repair wins back
-        float inspect_gain = 0.05f; ///< And an inspection
+        float repair_gain = 0.02f;    ///< Reliability a repair wins back
+        float inspect_gain = 0.05f;   ///< And an inspection
+        float flow_smoothing = 0.25f; ///< Weight of the newest departure in a ride's riders an hour
+    };
+
+    /// How content and lazy staff are, and their pay and training.
+    struct Staff
+    {
+        std::int64_t lowest_wage = 50;      ///< Hundredths an hour at level 0; each level adds half as much
+        float load_seconds = 600;           ///< Over how long their share of time at work is judged
+        float content_base = 0.45f;         ///< Happiness of an untrained worker on the lowest wage
+        float content_per_training = 0.1f;  ///< More for each level of training
+        float content_per_wage = 0.1f;      ///< More for each wage level
+        float overworked = 0.85f;           ///< Share of time at work past which they feel overworked
+        float bored = 0.15f;                ///< Share below which they feel idle
+        float overwork_gloom = 2;           ///< Happiness lost for each share past overworked
+        float bored_gloom = 3;              ///< And for each share below idle
+        float mood_per_second = 1.0f / 900; ///< How fast happiness goes to where it is heading
+        float lazy_below = 0.5f;            ///< Happiness below which laziness grows
+        float lazy_per_second = 1.0f / 600; ///< Laziness grown a second for each share below that, untrained
+        float lazy_fade_per_second = 1.0f / 3600;
+        float lazy_after_warning = 0.3f;                                  ///< Laziness at which a warning is deserved
+        float warning_gloom = 0.2f;                                       ///< Happiness a warning not deserved takes away
+        float rest_per_second = 1.0f / 60;                                ///< Chance to rest a second, for a worker wholly lazy
+        std::array<std::int64_t, 3> training_cost { 5000, 10000, 20000 }; ///< Hundredths, for each level from untrained up
+    };
+
+    /// The park rating: each part's share of the 1000, and the shapes inside them.
+    struct Rating
+    {
+        float happiness_share = 500;
+        float rides_share = 300;
+        float reliability_share = 100;
+        float guests_share = 300;
+        float empty_park_happiness = 0.5f;
+        float good_excitement = 7;   ///< A ride this exciting scores in full
+        float harsh_intensity = 7;   ///< Above this, a ride starts to put guests off
+        float intensity_range = 4;   ///< How far above harsh a ride stops scoring at all
+        float rides_for_variety = 3; ///< About two thirds of the variety at this many rides
+        float guests_for_busy = 300; ///< About two thirds of the guests part at this many guests
+        std::int32_t per_litter = 3;
+        std::int32_t most_litter = 500;
+        float harder_share = 0.15f; ///< Taken off the score by the harder rating
+        float weekly_move = 0.5f;   ///< Share of the way the rating moves towards the week's score
     };
 
     struct Tuning
@@ -223,6 +268,8 @@ namespace rct3::simulation::tuning
         Vandals vandals;
         Handymen handymen;
         Wear wear;
+        Staff staff;
+        Rating rating;
     };
 
 } // namespace rct3::simulation::tuning

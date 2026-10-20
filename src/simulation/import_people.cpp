@@ -2,6 +2,7 @@
 #include "simulation/import_people.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <unordered_map>
@@ -47,8 +48,7 @@ namespace rct3::simulation
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
             r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
-            // Our own values for the four tolerances saves keep.
-            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, 0.25f + 0.25f * static_cast<float>(std::to_underlying(g.nausea_tolerance)));
+            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
             r.emplace<Wallet>(e, std::int64_t { g.cash.current });
             // Saved on the rides' rating scale, about 0 to 10.
             if (g.ride_preference.max > g.ride_preference.min)

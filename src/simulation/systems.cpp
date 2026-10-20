@@ -1021,7 +1021,7 @@ namespace rct3::simulation
     std::int32_t old_litter(const SimWorld& world)
     {
         const auto view = world.registry.view<const Litter>();
-        return static_cast<std::int32_t>(std::ranges::count_if(view, [&](entt::entity e) { return view.get<const Litter>(e).age >= kOldLitterSeconds; }));
+        return static_cast<std::int32_t>(std::ranges::count_if(view, [&](entt::entity e) { return view.get<const Litter>(e).age >= kTuning.litter.old_seconds; }));
     }
 
     bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
@@ -1574,7 +1574,7 @@ namespace rct3::simulation
                 if (ride.since_departure > 0)
                 {
                     const float rate = static_cast<float>(riding) * 3600 / ride.since_departure;
-                    ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kFlowSmoothing) : rate;
+                    ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kTuning.wear.flow_smoothing) : rate;
                 }
                 ride.since_departure = 0;
                 ride.loading = 0;

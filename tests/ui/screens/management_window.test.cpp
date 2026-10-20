@@ -108,8 +108,8 @@ TEST_CASE("an enabled button under the page reports its press; a stub does not")
     page.buttons = { { { }, u"Open all", { }, true }, { { }, u"Close all", { }, false } };
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
-    auto* open = dynamic_cast<Button*>(f.window->find("content/page/lines/button0"));
-    auto* close = dynamic_cast<Button*>(f.window->find("content/page/lines/button1"));
+    auto open = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/button0")));
+    auto close = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/button1")));
     REQUIRE(open != nullptr);
     REQUIRE(close != nullptr);
     CHECK_FALSE(close->enabled);

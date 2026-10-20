@@ -88,8 +88,8 @@ namespace rct3::ui
 
         float text_height(const UpdateContext& context, FontRole role, std::u16string_view text, float width)
         {
-            const Font* font = context.fonts != nullptr ? context.fonts->get(role) : nullptr;
-            if (font == nullptr || text.empty())
+            const auto font = context.fonts ? context.fonts->get(role) : std::nullopt;
+            if (!font || text.empty())
                 return 0;
             return static_cast<float>(break_lines(*font, text, width).size()) * font->line_height();
         }
@@ -198,7 +198,7 @@ namespace rct3::ui
 
     void CareerBoard::ask(Asking what)
     {
-        if (question_ != nullptr || parent() == nullptr)
+        if (question_ || !parent())
             return;
         asking_ = what;
         const Confirm& c = kConfirms.at(static_cast<std::size_t>(what));
@@ -365,11 +365,11 @@ namespace rct3::ui
         if (picked_ < scenarios_.size())
         {
             const CareerScenarioInfo& info = scenarios_[picked_].info;
-            const SkinRef* picture = context.skins.find(info.picture);
-            const SkinRef* front = context.skins.find(info.picture_front);
-            if (picture == nullptr)
+            auto picture = context.skins.find(info.picture);
+            const auto front = context.skins.find(info.picture_front);
+            if (!picture)
                 picture = context.skins.find(style_.no_picture);
-            const float scale = front != nullptr ? cm::kPictureScale : 1;
+            const float scale = front ? cm::kPictureScale : 1;
             const float bottom = frame.at({ 0, fs::kDesignHeight - cm::kPictureBottom }).y;
             const auto rect_of = [&](const SkinRef& skin, float k) {
                 const auto [w, h] = skin.size();
@@ -379,9 +379,9 @@ namespace rct3::ui
                 const float x = rect().x0 + (base_width - width) / 2;
                 return Rect { x, bottom - height, x + width, bottom };
             };
-            if (picture != nullptr)
+            if (picture)
                 draw_skin(context.list, picture, rect_of(*picture, 1));
-            if (front != nullptr)
+            if (front)
                 draw_skin(context.list, front, rect_of(*front, cm::pop(since_pick_)));
         }
 
@@ -389,9 +389,9 @@ namespace rct3::ui
         if (picked_ < scenarios_.size())
         {
             const CareerScenarioInfo& info = scenarios_[picked_].info;
-            if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
+            if (const auto f = context.fonts.get(FontRole::ScaledLarge))
                 draw_text(context.list, *f, info.title, title_box_, { style_.text_colour, Align::Start, Align::Centre, true });
-            if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
+            if (const auto f = context.fonts.get(FontRole::ScaledSmall))
                 draw_text(context.list, *f, info.description, description_box_, { style_.text_colour, Align::Start, Align::Start, true });
         }
         draw_front_help(context, frame, help_title_, help_text_);

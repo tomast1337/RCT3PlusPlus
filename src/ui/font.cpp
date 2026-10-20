@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/font.hpp"
 
+#include "core/maybe.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui
@@ -81,7 +83,7 @@ namespace rct3::ui
         Font out = *this;
         for (const auto& [code, index] : fallback.index_)
         {
-            if (find(code) != nullptr)
+            if (find(code))
                 continue;
             out.index_.emplace_back(code, static_cast<std::uint32_t>(out.glyphs_.size()));
             out.glyphs_.push_back(fallback.glyphs_[index]);
@@ -98,12 +100,12 @@ namespace rct3::ui
         index_.erase(first, last);
     }
 
-    const Glyph* Font::find(char16_t code) const
+    std::optional<const Glyph&> Font::find(char16_t code) const
     {
         const auto it = std::ranges::lower_bound(index_, code, { }, &std::pair<char16_t, std::uint32_t>::first);
         if (it == index_.end() || it->first != code)
-            return nullptr;
-        return &glyphs_[it->second];
+            return std::nullopt;
+        return glyphs_[it->second];
     }
 
 } // namespace rct3::ui

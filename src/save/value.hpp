@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -100,8 +101,8 @@ namespace rct3::save
             return raw_;
         }
 
-        /// First field of a Struct with this name, or nullptr (also for non-structs).
-        [[nodiscard]] const Value* field(std::string_view name) const noexcept;
+        /// First field of a Struct with this name; none for non-structs.
+        [[nodiscard]] std::optional<const Value&> field(std::string_view name) const noexcept;
 
         // Construction, used by the decoder and by tests.
         static Value make_bool(bool v);
@@ -137,8 +138,8 @@ namespace rct3::save
         Value fields; ///< A Struct with one field per class attribute, in schema order
         DecodeStats stats;
 
-        /// Attribute value by name, or nullptr.
-        [[nodiscard]] const Value* find(std::string_view name) const noexcept
+        /// Attribute value by name.
+        [[nodiscard]] std::optional<const Value&> find(std::string_view name) const noexcept
         {
             return fields.field(name);
         }
@@ -153,7 +154,7 @@ namespace rct3::save
     {
     public:
         explicit ObjectIndex(const SaveFile& file);
-        [[nodiscard]] const Object* find(std::uint64_t id) const noexcept;
+        [[nodiscard]] std::optional<const Object&> find(std::uint64_t id) const noexcept;
         [[nodiscard]] std::size_t size() const noexcept
         {
             return by_id_.size();

@@ -11,8 +11,8 @@ namespace rct3::ui
 
         float advance(const Font& font, char16_t c)
         {
-            const Glyph* g = font.find(c);
-            return g == nullptr ? 0 : g->advance;
+            const auto g = font.find(c);
+            return !g ? 0 : g->advance;
         }
 
         float offset(Align align, float space, float used)
@@ -128,8 +128,8 @@ namespace rct3::ui
             float pen = box.x0 + offset(style.horizontal, box.width(), line.width);
             for (const char16_t c : line.text)
             {
-                const Glyph* g = font.find(c);
-                if (g == nullptr)
+                const auto g = font.find(c);
+                if (!g)
                     continue;
                 if (!g->box.empty())
                     list.image({ pen + g->box.x0, baseline + g->box.y0, pen + g->box.x1, baseline + g->box.y1 }, g->page, g->uv, style.colour);

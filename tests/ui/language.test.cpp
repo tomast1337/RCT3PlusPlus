@@ -16,11 +16,11 @@ TEST_CASE("languages are found by their overlay names, in the known order")
 
 TEST_CASE("a language is looked up ignoring case")
 {
-    REQUIRE(find_language("schinese") != nullptr);
+    REQUIRE(find_language("schinese"));
     CHECK(find_language("schinese")->name == "SChinese");
     CHECK(find_language("SChinese")->cjk);
     CHECK_FALSE(find_language("German")->cjk);
-    CHECK(find_language("Esperanto") == nullptr);
+    CHECK(!find_language("Esperanto"));
 }
 
 TEST_CASE("a locale names its language")

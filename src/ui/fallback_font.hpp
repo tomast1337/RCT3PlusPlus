@@ -36,8 +36,8 @@ namespace rct3::ui
     /// How far a capital H reaches above the baseline in `font`; its ascent when it has no H.
     [[nodiscard]] inline float cap_height(const Font& font)
     {
-        const Glyph* h = font.find(u'H');
-        return h != nullptr && h->box.y0 < 0 ? -h->box.y0 : font.ascent();
+        auto h = font.find(u'H');
+        return h && h->box.y0 < 0 ? -h->box.y0 : font.ascent();
     }
 
     /// How a pixel font is sized. Its glyphs sit on a grid of `grid` pixels per em, so they are drawn exactly

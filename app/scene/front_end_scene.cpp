@@ -58,7 +58,7 @@ namespace rct3::scene
         if (scene.options_file)
         {
             std::vector<config::FileProblem> problems;
-            if (auto loaded = config::GameOptions::load(*scene.options_file, &problems))
+            if (auto loaded = config::GameOptions::load(*scene.options_file, problems))
                 scene.live->options = std::move(*loaded);
             else
                 log.warning("options: {}", loaded.error());
@@ -118,7 +118,7 @@ namespace rct3::scene
             }
             scene.slideshow.show.set_pictures(ui::slideshow_pictures(scene.slideshow_shown ? folders : scene.picture_folders, scene.picture_seed));
         }
-        if (ui::TutorialPicker* picker = scene.live->front->tutorial_picker())
+        if (auto picker = scene.live->front->tutorial_picker())
         {
             // A new menu: say which tutorials' parks are there.
             if (scene.live->front->tutorial_pickers_opened() != scene.tutorials_seen)
@@ -193,7 +193,7 @@ namespace rct3::scene
 
     void destroy_front_end_scene(render::Device& device, FrontEndScene& scene)
     {
-        if (scene.live && scene.live->front && scene.live->front->options_window() != nullptr)
+        if (scene.live && scene.live->front && scene.live->front->options_window())
             save_front_end_options(scene);
         destroy_slideshow_view(device, scene.slideshow);
         destroy_save_browser(device, scene.saves);

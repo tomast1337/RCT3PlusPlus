@@ -42,7 +42,7 @@ namespace rct3::simulation
             return out;
         }
 
-        void share(Workers* workers, std::size_t count, const std::function<void(std::size_t, std::size_t)>& body)
+        void share(std::optional<Workers&> workers, std::size_t count, const std::function<void(std::size_t, std::size_t)>& body)
         {
             if (workers)
                 workers->for_ranges(count, body);
@@ -1051,7 +1051,7 @@ namespace rct3::simulation
         return room;
     }
 
-    void step(SimWorld& world, Workers* workers)
+    void step(SimWorld& world, std::optional<Workers&> workers)
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;

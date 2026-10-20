@@ -178,6 +178,6 @@ TEST_CASE("each tool holds its button and its menu's items, named by their icons
     const Widget& view = *f.desktop.root().find("tools/View");
     CHECK(f.row->button(ParkTool::View).parent() == &view);
     CHECK(f.row->item(ToolItem::People).parent() == &view);
-    CHECK(f.desktop.root().find("tools/View/Land_PeopleOff") == &f.row->item(ToolItem::People));
+    CHECK(rct3::as_pointer(f.desktop.root().find("tools/View/Land_PeopleOff")) == &f.row->item(ToolItem::People));
     CHECK(f.row->item(ToolItem::DeleteOne).parent()->name() == "Delete");
 }

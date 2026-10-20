@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/inspect.hpp"
 
+#include "core/maybe.hpp"
+
 #include <cstdlib>
 #include <memory>
 #include <typeinfo>
@@ -39,14 +41,14 @@ namespace rct3::ui
         }
     } // namespace
 
-    const Widget* widget_at(const Widget& root, Point p)
+    std::optional<const Widget&> widget_at(const Widget& root, Point p)
     {
         for (auto it = root.children().rbegin(); it != root.children().rend(); ++it)
         {
             if (const Widget* found = shown_at(**it, p))
-                return found;
+                return *found;
         }
-        return nullptr;
+        return std::nullopt;
     }
 
     std::string type_name(const Widget& w)
@@ -65,7 +67,7 @@ namespace rct3::ui
     std::string widget_path(const Widget& w)
     {
         std::string path;
-        for (const Widget* at = &w; at->parent() != nullptr; at = at->parent())
+        for (const Widget* at = &w; at->parent(); at = at->parent())
             path = path.empty() ? std::string(at->name()) : std::string(at->name()) + "/" + path;
         return path;
     }

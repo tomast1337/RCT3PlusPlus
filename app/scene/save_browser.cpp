@@ -196,9 +196,9 @@ namespace rct3::scene
 
     } // namespace
 
-    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write)
     {
-        if (dialog == nullptr)
+        if (!dialog)
         {
             free_pictures(device, browser);
             browser.files.clear();

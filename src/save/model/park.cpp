@@ -196,22 +196,22 @@ namespace rct3::save
         // Attribute access with defaults
         // ---------------------------------------------------------------------------------------------------------
 
-        [[nodiscard]] bool is_numeric(const Value* v) noexcept
+        [[nodiscard]] bool is_numeric(std::optional<const Value&> v) noexcept
         {
             return v && (v->kind() == ValueKind::Integer || v->kind() == ValueKind::Bool);
         }
 
-        [[nodiscard]] std::int64_t int_of(const Value* v, std::int64_t def) noexcept
+        [[nodiscard]] std::int64_t int_of(std::optional<const Value&> v, std::int64_t def) noexcept
         {
             return is_numeric(v) ? v->as_integer() : def;
         }
 
-        [[nodiscard]] std::int32_t i32_of(const Value* v, std::int32_t def) noexcept
+        [[nodiscard]] std::int32_t i32_of(std::optional<const Value&> v, std::int32_t def) noexcept
         {
             return is_numeric(v) ? static_cast<std::int32_t>(v->as_integer()) : def;
         }
 
-        [[nodiscard]] float float_of(const Value* v, float def) noexcept
+        [[nodiscard]] float float_of(std::optional<const Value&> v, float def) noexcept
         {
             if (!v)
                 return def;
@@ -222,7 +222,7 @@ namespace rct3::save
             return def;
         }
 
-        [[nodiscard]] bool bool_of(const Value* v, bool def) noexcept
+        [[nodiscard]] bool bool_of(std::optional<const Value&> v, bool def) noexcept
         {
             if (!v)
                 return def;
@@ -233,7 +233,7 @@ namespace rct3::save
             return def;
         }
 
-        [[nodiscard]] std::string string_of(const Value* v)
+        [[nodiscard]] std::string string_of(std::optional<const Value&> v)
         {
             if (v && v->kind() == ValueKind::String)
                 return std::string(v->text());
@@ -241,7 +241,7 @@ namespace rct3::save
         }
 
         /// The object id a reference points at, when it is non-null and present in the file.
-        [[nodiscard]] std::optional<std::uint64_t> ref_of(const Value* v, const ObjectIndex& index) noexcept
+        [[nodiscard]] std::optional<std::uint64_t> ref_of(std::optional<const Value&> v, const ObjectIndex& index) noexcept
         {
             if (!v || v->kind() != ValueKind::Reference || v->as_reference() == 0)
                 return std::nullopt;
@@ -253,11 +253,11 @@ namespace rct3::save
         /// An integer that is either the item itself or the named field of a one-field struct.
         [[nodiscard]] std::optional<std::int32_t> item_int(const Value& item, std::string_view field) noexcept
         {
-            if (is_numeric(&item))
+            if (is_numeric(item))
                 return static_cast<std::int32_t>(item.as_integer());
             if (item.kind() == ValueKind::Struct)
             {
-                if (const auto* f = item.field(field); is_numeric(f))
+                if (const auto f = item.field(field); is_numeric(f))
                     return static_cast<std::int32_t>(f->as_integer());
             }
             return std::nullopt;
@@ -278,14 +278,14 @@ namespace rct3::save
 
         /// Series from a graphed value. The value decoder yields a struct for the current layout; an older layout
         /// (capacity, count, floats with no leading marker) arrives as raw bytes and is parsed here.
-        [[nodiscard]] Series series_of(const Value* v)
+        [[nodiscard]] Series series_of(std::optional<const Value&> v)
         {
             Series s;
             if (!v)
                 return s;
             if (v->kind() == ValueKind::Struct)
             {
-                const auto* values = v->field(names::kGraphValues);
+                const auto values = v->field(names::kGraphValues);
                 if (!values || values->kind() != ValueKind::FloatArray)
                     return s;
                 const auto f = values->floats();
@@ -321,7 +321,7 @@ namespace rct3::save
             p.scenario_name = string_of(o.find(kScenarioName));
             p.scenario_description = string_of(o.find(kScenarioDescription));
             p.objective_text = string_of(o.find(kObjectiveText));
-            if (const auto* t = o.find(kBreakdownText); t && t->kind() == ValueKind::String)
+            if (const auto t = o.find(kBreakdownText); t && t->kind() == ValueKind::String)
             {
                 p.rating_breakdown_text = std::string(t->text());
             }
@@ -403,7 +403,7 @@ namespace rct3::save
                 p.*c.member = i32_of(v.field(c.name), 0);
             for (const auto& c : kOptionalCounters)
             {
-                if (const auto* f = v.field(c.name); is_numeric(f))
+                if (const auto f = v.field(c.name); is_numeric(f))
                     p.*c.member = static_cast<std::int32_t>(f->as_integer());
             }
             return p;
@@ -431,7 +431,7 @@ namespace rct3::save
             f.park_value = series_of(o.find(kParkValue));
             f.share_price = series_of(o.find(kSharePrice));
             f.weekly_profit = series_of(o.find(kWeeklyProfit));
-            if (const auto* l = o.find(kLedger); l && l->kind() == ValueKind::List)
+            if (const auto l = o.find(kLedger); l && l->kind() == ValueKind::List)
             {
                 const auto items = l->items();
                 const auto n = std::min(items.size(), kLedgerPeriods);
@@ -439,11 +439,11 @@ namespace rct3::save
                     f.ledger[i] = ledger_of(items[i]);
                 f.ledger_periods_loaded = n;
             }
-            if (const auto* c = o.find(kCumulative); c && c->kind() == ValueKind::Struct)
+            if (const auto c = o.find(kCumulative); c && c->kind() == ValueKind::Struct)
                 f.cumulative = ledger_of(*c);
         }
 
-        [[nodiscard]] std::optional<float> unset_if_negative(const Value* v) noexcept
+        [[nodiscard]] std::optional<float> unset_if_negative(std::optional<const Value&> v) noexcept
         {
             if (!v || v->kind() != ValueKind::Float)
                 return std::nullopt;
@@ -459,7 +459,7 @@ namespace rct3::save
             c.time = float_of(o.find(kTime), 0.0f);
             c.zero_time = float_of(o.find(kZeroTime), 0.0f);
             c.day_night_phase = unset_if_negative(o.find(kDayNight));
-            if (const auto* m = o.find(kDayNightMode); is_numeric(m))
+            if (const auto m = o.find(kDayNightMode); is_numeric(m))
                 c.day_night_mode = static_cast<std::int32_t>(m->as_integer());
             c.day_night_rendered_phase = unset_if_negative(o.find(kDayNightRendered));
         }
@@ -469,12 +469,12 @@ namespace rct3::save
             using namespace names;
             a.available_mask = static_cast<std::uint32_t>(i32_of(o.find(kAwardsAvailable), 0));
             a.months_before_start = i32_of(o.find(kMonthsBeforeAwards), 0);
-            if (const auto* arr = o.find(kAwardsArray); arr && arr->kind() == ValueKind::List)
+            if (const auto arr = o.find(kAwardsArray); arr && arr->kind() == ValueKind::List)
             {
                 for (const auto& cat : arr->items())
                 {
                     std::vector<std::int32_t> ids;
-                    const Value* list = &cat;
+                    std::optional<const Value&> list = cat;
                     if (cat.kind() == ValueKind::Struct)
                         list = cat.field(kAwardTypes);
                     if (list && list->kind() == ValueKind::List)
@@ -488,14 +488,14 @@ namespace rct3::save
                     a.earned.push_back(std::move(ids));
                 }
             }
-            if (const auto* arr = o.find(kSettingArray); arr && arr->kind() == ValueKind::List)
+            if (const auto arr = o.find(kSettingArray); arr && arr->kind() == ValueKind::List)
             {
                 for (const auto& item : arr->items())
                     a.prize_money.push_back(item_int(item, kPrizeMoney).value_or(0));
             }
-            if (const auto* v = o.find(kDangerousCoaster); is_numeric(v))
+            if (const auto v = o.find(kDangerousCoaster); is_numeric(v))
                 a.dangerous_coaster_events = i32_of(v, 0);
-            if (const auto* v = o.find(kDangerousPool); is_numeric(v))
+            if (const auto v = o.find(kDangerousPool); is_numeric(v))
                 a.dangerous_pool_events = i32_of(v, 0);
         }
 
@@ -529,9 +529,9 @@ namespace rct3::save
             c.start_time = float_of(o.find(kStartTime), 0.0f);
             c.next_check_time = float_of(o.find(kNextCheckTime), 0.0f);
             c.consistency_flags = static_cast<std::uint32_t>(i32_of(o.find(kConsistantFlags), 0));
-            if (const auto* v = o.find(kValue); is_numeric(v))
+            if (const auto v = o.find(kValue); is_numeric(v))
                 c.value = v->as_integer();
-            if (const auto* v = o.find(kGreaterThan); v && v->kind() == ValueKind::Bool)
+            if (const auto v = o.find(kGreaterThan); v && v->kind() == ValueKind::Bool)
                 c.greater_than = v->as_bool();
             set.conditions.push_back(std::move(c));
         }
@@ -565,7 +565,7 @@ namespace rct3::save
             c.develop_cost = float_of(o.find(kDevelopCost), 0.0f);
             c.available = bool_of(o.find(kIsAvailable), false);
             c.hidden = bool_of(o.find(kIsHidden), false);
-            if (const auto* v = o.find(kIsInvented); v && v->kind() == ValueKind::Bool)
+            if (const auto v = o.find(kIsInvented); v && v->kind() == ValueKind::Bool)
                 c.invented = v->as_bool();
             r.categories.push_back(std::move(c));
         }
@@ -579,7 +579,7 @@ namespace rct3::save
             r.money_spent_on_current = i32_of(o.find(kSpentOnCurrent), 0);
             r.monthly_budget = i32_of(o.find(kMonthlyBudget), 0);
             r.time_since_last_spend = float_of(o.find(kSinceLastSpend), 0.0f);
-            if (const auto* p = o.find(kPriorities); p && p->kind() == ValueKind::List)
+            if (const auto p = o.find(kPriorities); p && p->kind() == ValueKind::List)
             {
                 for (const auto& item : p->items())
                 {
@@ -679,7 +679,7 @@ namespace rct3::save
         void load_entry_object(const DecodedObject& o, RequiredContent& content)
         {
             using namespace names;
-            const auto* overlay = o.find(kOverlayFile);
+            const auto overlay = o.find(kOverlayFile);
             std::optional<std::string> stem;
             if (overlay && overlay->kind() == ValueKind::String)
                 stem = normalise_overlay_stem(overlay->text());
@@ -704,7 +704,7 @@ namespace rct3::save
         void load_console(const SaveFile& file, const DecodedObject& o, const ObjectIndex& index, MessageLog& log)
         {
             using namespace names;
-            const auto* list = o.find(kMessages);
+            const auto list = o.find(kMessages);
             if (!list || list->kind() != ValueKind::List)
                 return;
             const auto slots = list->items();
@@ -715,14 +715,14 @@ namespace rct3::save
                 const auto& ref = slots[slot];
                 if (ref.kind() != ValueKind::Reference || ref.as_reference() == 0)
                     continue;
-                const auto* target = index.find(ref.as_reference());
+                const auto target = index.find(ref.as_reference());
                 if (!target)
                     continue;
                 const auto decoded = decode_object(file, *target);
                 if (!decoded)
                     continue;
-                const auto* text = decoded->find(kMessageText);
-                const auto* time = decoded->find(kMessageTime);
+                const auto text = decoded->find(kMessageText);
+                const auto time = decoded->find(kMessageTime);
                 if (!text && !time)
                     continue; // not a message entry
                 Message m;
@@ -731,10 +731,10 @@ namespace rct3::save
                 m.text_key = string_of(text);
                 m.time = float_of(time, 0.0f);
                 m.object = ref_of(decoded->find(kMessageObject), index);
-                if (const auto* p = decoded->find(kMessagePanel); is_numeric(p))
+                if (const auto p = decoded->find(kMessagePanel); is_numeric(p))
                     m.panel = i32_of(p, 0);
                 m.object_name = string_of(decoded->find(kMessageObjectName));
-                if (const auto* a = decoded->find(kMessageAward); is_numeric(a))
+                if (const auto a = decoded->find(kMessageAward); is_numeric(a))
                     m.award = i32_of(a, 0);
                 log.ordered.push_back(std::move(m));
             }
@@ -975,7 +975,7 @@ namespace rct3::save
             roles[i] = role_of(file.classes[i]);
 
         ParkModel m;
-        const Object* console = nullptr;
+        std::optional<const Object&> console;
         for (const auto& obj : file.objects)
         {
             if (obj.class_index >= roles.size())
@@ -999,7 +999,7 @@ namespace rct3::save
             if (role == Role::Console)
             {
                 if (!console)
-                    console = &obj;
+                    console = obj;
                 continue;
             }
             if (role == Role::SimpleResearch && m.research.has_simple_research)
@@ -1012,7 +1012,7 @@ namespace rct3::save
             {
                 case Role::Park:
                     load_park_object(*decoded, index, m.park);
-                    if (const Object* fence = m.park.fence_entry ? index.find(*m.park.fence_entry) : nullptr)
+                    if (std::optional<const Object&> fence = m.park.fence_entry ? index.find(*m.park.fence_entry) : std::nullopt)
                     {
                         if (const auto entry = decode_object(file, *fence))
                         {

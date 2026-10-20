@@ -55,7 +55,7 @@ TEST_CASE("pressing a title opens its menu, and choosing reports both indices")
     f.at(70, 10, true);
     f.at(70, 10, false);
     CHECK(f.bar.open_menu() == 1u);
-    REQUIRE(f.bar.menu() != nullptr);
+    REQUIRE(f.bar.menu());
     CHECK(f.bar.menu()->rect().x0 == 60);
     CHECK(f.bar.menu()->rect().y0 == 20);
 

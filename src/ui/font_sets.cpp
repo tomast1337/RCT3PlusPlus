@@ -10,8 +10,8 @@ namespace rct3::ui
 
     std::string font_overlay(std::string_view language, int width)
     {
-        const LanguageInfo* info = find_language(language);
-        const std::string_view stem = info != nullptr && info->cjk ? info->name : std::string_view("Resolution");
+        const auto info = find_language(language);
+        const std::string_view stem = info && info->cjk ? info->name : std::string_view("Resolution");
         return "gui/" + std::to_string(width) + "/" + std::string(stem) + ".common.ovl";
     }
 

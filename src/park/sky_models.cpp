@@ -105,9 +105,9 @@ namespace rct3::park
         const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
 
         LoadedSky sky;
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (const ovl::StaticShapeItem& item : ovl::read_static_shapes(*overlay, *part))
             {

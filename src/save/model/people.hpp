@@ -48,8 +48,8 @@ namespace rct3::save
         friend bool operator==(const PeopleRef&, const PeopleRef&) = default;
     };
 
-    /// The object a reference names, or nullptr for none.
-    [[nodiscard]] const Object* resolve(const PeopleRef& ref, const ObjectIndex& index) noexcept;
+    /// The object a reference names; none for the null reference.
+    [[nodiscard]] std::optional<const Object&> resolve(const PeopleRef& ref, const ObjectIndex& index) noexcept;
 
     struct PeopleVec3
     {

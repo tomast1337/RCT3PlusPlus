@@ -42,7 +42,7 @@ namespace rct3::park
     };
 
     /// The shape of `piece`, standing as `object`; nothing when not known.
-    using PieceShapeOf = std::function<const PieceShape*(const save::TrackPiece& piece, const save::PlacedObject& object)>;
+    using PieceShapeOf = std::function<std::optional<const PieceShape&>(const save::TrackPiece& piece, const save::PlacedObject& object)>;
 
     /// The course of `ride`'s track, its pieces standing as `objects` place them. Nothing when the ride has no
     /// track, or a piece's object or shape is missing.

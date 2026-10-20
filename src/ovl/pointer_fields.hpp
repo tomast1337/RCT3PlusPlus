@@ -21,7 +21,7 @@ namespace rct3::ovl
         explicit PointerFields(const Overlay& overlay)
         {
             add(overlay.common());
-            if (const Part* unique = overlay.unique())
+            if (const auto unique = overlay.unique())
                 add(*unique);
         }
 

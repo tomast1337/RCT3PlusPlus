@@ -15,7 +15,7 @@ namespace rct3::ui
         Widget& root_of(Widget& w)
         {
             Widget* r = &w;
-            while (r->parent() != nullptr)
+            while (r->parent())
                 r = r->parent();
             return *r;
         }
@@ -157,8 +157,8 @@ namespace rct3::ui
         const SkinState state = !enabled ? SkinState::Disabled : menu_ != nullptr || pressed() ? SkinState::Pressed : hovered() ? SkinState::UpOver : SkinState::Up;
         draw_skin_state(context.list, context.skins, style.opener, state, arrow);
 
-        const Font* f = context.fonts.get(style.font);
-        if (f == nullptr || !selected_ || *selected_ >= items.size())
+        const auto f = context.fonts.get(style.font);
+        if (!f || !selected_ || *selected_ >= items.size())
             return;
         const Rect text { r.x0 + style.text_indent, r.y0, arrow.x0 - 2, r.y1 };
         if (context.list.push_clip(text))

@@ -90,7 +90,7 @@ TEST_CASE("nested clips intersect and fully clipped drawing produces nothing")
     DrawList list;
     CHECK(list.push_clip({ 0, 0, 50, 50 }));
     CHECK(list.push_clip({ 40, 40, 80, 80 }));
-    REQUIRE(list.clip() != nullptr);
+    REQUIRE(list.clip());
     CHECK(*list.clip() == Rect { 40, 40, 50, 50 });
     CHECK_FALSE(list.push_clip({ 60, 60, 70, 70 }));
     list.fill({ 0, 0, 100, 100 }, kRed);
@@ -100,7 +100,7 @@ TEST_CASE("nested clips intersect and fully clipped drawing produces nothing")
     CHECK(list.vertices().size() == 4);
     list.pop_clip();
     list.pop_clip();
-    CHECK(list.clip() == nullptr);
+    CHECK(!list.clip());
 }
 
 TEST_CASE("clear starts the next frame empty")
@@ -112,7 +112,7 @@ TEST_CASE("clear starts the next frame empty")
     CHECK(list.vertices().empty());
     CHECK(list.indices().empty());
     CHECK(list.batches().empty());
-    CHECK(list.clip() == nullptr);
+    CHECK(!list.clip());
 }
 
 TEST_CASE("the scale turns logical units into pixels before rounding")

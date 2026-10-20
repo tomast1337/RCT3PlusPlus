@@ -36,7 +36,7 @@ TEST_CASE("the tabs pick the page, its name showing beside them")
     Fixture f;
     CHECK(f.dialog->page() == OptionsPage::General);
     CHECK(f.dialog->tab(OptionsPage::General).on);
-    REQUIRE(f.dialog->find("content/caption") != nullptr);
+    REQUIRE(f.dialog->find("content/caption"));
     f.dialog->tab(OptionsPage::Graphics).click();
     f.desktop.update({ });
     CHECK(f.dialog->page() == OptionsPage::Graphics);
@@ -67,8 +67,8 @@ TEST_CASE("the scenic page sets the surroundings whatever the quality level")
     f.dialog->tab(OptionsPage::Scenic).click();
     f.desktop.update({ });
     CHECK(f.dialog->page() == OptionsPage::Scenic);
-    Widget* page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
-    REQUIRE(page != nullptr);
+    auto page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
+    REQUIRE(page);
     const bool sky = f.options.flag(O::Sky);
     const bool clouds = f.options.flag(O::Clouds);
     const bool trees = f.options.flag(O::Trees3D);
@@ -87,11 +87,11 @@ TEST_CASE("the scenic page sets the surroundings whatever the quality level")
 TEST_CASE("the language list shows with two languages, each by its own name")
 {
     Fixture one({ { "English" }, "English", { }, std::nullopt, { } });
-    CHECK(one.dialog->language_list() == nullptr);
+    CHECK(!one.dialog->language_list());
 
     Fixture two({ { "English", "Dutch" }, "English", { }, std::nullopt, { } });
-    Dropdown* list = two.dialog->language_list();
-    REQUIRE(list != nullptr);
+    auto list = two.dialog->language_list();
+    REQUIRE(list);
     CHECK(list->items == std::vector<std::u16string> { u"English", u"Nederlands" });
     CHECK(list->selected() == 0);
     list->on_key({ Key::Down });
@@ -103,14 +103,14 @@ TEST_CASE("the language list shows with two languages, each by its own name")
 TEST_CASE("the park's music is picked from the files, shuffled or none, and kept in the options")
 {
     Fixture none;
-    CHECK(none.dialog->background_music_list() == nullptr);
+    CHECK(!none.dialog->background_music_list());
 
     OptionsChoices choices;
     choices.background_music = { "A.wma", "B.wma" };
     choices.background_track = 1;
     Fixture f(choices);
-    Dropdown* list = f.dialog->background_music_list();
-    REQUIRE(list != nullptr);
+    auto list = f.dialog->background_music_list();
+    REQUIRE(list);
     CHECK(list->items.size() == 4); // The files, shuffle, no music
     CHECK(list->selected() == 1);   // Not chosen yet: the owner's pick
 
@@ -131,8 +131,8 @@ TEST_CASE("controls change the options at once")
 {
     Fixture f;
     // The first tick box on the graphics page is full screen.
-    Widget* page = f.dialog->find("content/GameOptionsDialog_GraphicSettingsTabHelp");
-    REQUIRE(page != nullptr);
+    auto page = f.dialog->find("content/GameOptionsDialog_GraphicSettingsTabHelp");
+    REQUIRE(page);
     Tickbox* fullscreen = nullptr;
     for (const auto& c : page->children())
     {
@@ -202,7 +202,7 @@ TEST_CASE("the usual keys button puts every command back")
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Keys);
     CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
-    auto* usual = dynamic_cast<Button*>(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys"));
+    auto usual = dynamic_cast<Button*>(rct3::as_pointer(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
     REQUIRE(usual != nullptr);
     usual->click();
     f.desktop.update({ });
@@ -215,15 +215,15 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
     Fixture f;
     f.strings.add("KeyGroup_Universal", u"Everywhere");
     f.dialog->show_page(OptionsPage::Keys);
-    CHECK(f.dialog->play_key_box(PlayCommand::FlattenTerrain) == nullptr); // Fixed: only shown
-    KeyBox* pause = f.dialog->play_key_box(PlayCommand::TogglePause);
-    KeyBox* reset = f.dialog->play_key_box(PlayCommand::ResetCamera);
-    REQUIRE(pause != nullptr);
-    REQUIRE(reset != nullptr);
+    CHECK(!f.dialog->play_key_box(PlayCommand::FlattenTerrain)); // Fixed: only shown
+    auto pause = f.dialog->play_key_box(PlayCommand::TogglePause);
+    auto reset = f.dialog->play_key_box(PlayCommand::ResetCamera);
+    REQUIRE(pause);
+    REQUIRE(reset);
     CHECK(pause->game_key);
 
     // Plain letters and Escape bind; the key leaves the command that had it.
-    f.desktop.set_keyboard_focus(reset);
+    f.desktop.set_keyboard_focus(rct3::as_pointer(reset));
     press(f, { Key::Enter });
     press(f, { Key::Letter, false, false, U'p' });
     CHECK(reset->combos == std::vector { KeyCombo { Key::Letter, U'p' } });
@@ -233,7 +233,7 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
     CHECK(keys->play_key(PlayCommand::ResetCamera) == KeyCombo { Key::Letter, U'p' });
     CHECK_FALSE(keys->play_key(PlayCommand::TogglePause));
 
-    f.desktop.set_keyboard_focus(pause);
+    f.desktop.set_keyboard_focus(rct3::as_pointer(pause));
     press(f, { Key::Enter });
     press(f, { Key::Escape });
     CHECK(pause->combos == std::vector { KeyCombo { Key::Escape } });
@@ -247,8 +247,8 @@ TEST_CASE("rows of options nothing acts on show greyed and cannot be used")
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Scenic);
     f.desktop.update({ });
-    Widget* page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
-    REQUIRE(page != nullptr);
+    auto page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
+    REQUIRE(page);
     int usable = 0;
     int greyed = 0;
     for (const auto& c : page->children())
@@ -265,8 +265,8 @@ TEST_CASE("the language shows but cannot change when locked")
     OptionsChoices choices { { "English", "Dutch" }, "English", { }, std::nullopt, { } };
     choices.language_locked = true;
     Fixture f(choices);
-    Dropdown* list = f.dialog->language_list();
-    REQUIRE(list != nullptr);
+    auto list = f.dialog->language_list();
+    REQUIRE(list);
     CHECK(list->visible);
     CHECK_FALSE(list->enabled);
 }

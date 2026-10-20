@@ -10,9 +10,9 @@ namespace rct3::ovl
     TexturePixels TexturePixels::index(const Overlay& overlay)
     {
         TexturePixels out;
-        for (const Part* part : { &overlay.common(), overlay.unique() })
+        for (const auto part : { maybe(&overlay.common()), overlay.unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (FlicItem& item : read_flics(overlay, *part))
             {

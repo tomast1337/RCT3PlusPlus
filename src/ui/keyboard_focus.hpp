@@ -6,6 +6,7 @@
 // focus was last moved by the keyboard, and hides it again when the pointer presses.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/widget.hpp"
 
 namespace rct3::ui
@@ -24,7 +25,7 @@ namespace rct3::ui
     /// The widget after `current` (or before it, `backwards`) among those below `scope` that take the
     /// focus and are usable, wrapping around. From the first or last one when `current` is not among them.
     /// Nothing when none takes it.
-    [[nodiscard]] Widget* next_focus(const Widget& scope, const Widget* current, bool backwards);
+    [[nodiscard]] std::optional<Widget&> next_focus(const Widget& scope, std::optional<const Widget&> current, bool backwards);
 
     /// Draws the mark around `w`, cut by every ancestor that clips its children.
     void draw_focus_mark(DrawList& list, const Widget& w, const FocusMarkStyle& style);

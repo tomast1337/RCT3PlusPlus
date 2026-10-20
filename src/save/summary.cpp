@@ -30,8 +30,8 @@ namespace rct3::save
 
         std::int32_t integer(const DecodedObject& o, std::string_view name)
         {
-            const Value* v = o.find(name);
-            if (v == nullptr || v->kind() != ValueKind::Integer)
+            std::optional<const Value&> v = o.find(name);
+            if (!v || v->kind() != ValueKind::Integer)
                 return 0;
             const std::int64_t n = v->as_integer();
             if (n < std::numeric_limits<std::int32_t>::min() || n > std::numeric_limits<std::int32_t>::max())
@@ -41,15 +41,15 @@ namespace rct3::save
 
         std::uint8_t channel(const Value& pixel, std::string_view name)
         {
-            const Value* v = pixel.field(name);
-            return v != nullptr && v->kind() == ValueKind::Integer ? static_cast<std::uint8_t>(v->as_integer()) : 0;
+            std::optional<const Value&> v = pixel.field(name);
+            return v && v->kind() == ValueKind::Integer ? static_cast<std::uint8_t>(v->as_integer()) : 0;
         }
 
         std::vector<std::uint8_t> preview(const DecodedObject& o)
         {
-            const Value* v = o.find("DatPreview");
+            std::optional<const Value&> v = o.find("DatPreview");
             constexpr std::size_t kPixels = std::size_t { kPreviewWidth } * kPreviewHeight;
-            if (v == nullptr || v->kind() != ValueKind::List || v->items().size() != kPixels)
+            if (!v || v->kind() != ValueKind::List || v->items().size() != kPixels)
                 return { };
             std::vector<std::uint8_t> rgba;
             rgba.reserve(kPixels * 4);
@@ -66,13 +66,13 @@ namespace rct3::save
         std::vector<std::string> packs(const DecodedObject& o)
         {
             std::vector<std::string> names;
-            const Value* v = o.find("AddOnPacksNeeded");
-            if (v == nullptr || v->kind() != ValueKind::List)
+            std::optional<const Value&> v = o.find("AddOnPacksNeeded");
+            if (!v || v->kind() != ValueKind::List)
                 return names;
             for (const Value& pack : v->items())
             {
-                const Value* name = pack.field("Name");
-                if (name != nullptr && name->kind() == ValueKind::String)
+                std::optional<const Value&> name = pack.field("Name");
+                if (name && name->kind() == ValueKind::String)
                     names.emplace_back(name->text());
             }
             return names;
@@ -81,7 +81,7 @@ namespace rct3::save
         SaveSummary summary(const DecodedObject& o)
         {
             SaveSummary s;
-            if (const Value* name = o.find("DatParkName"); name != nullptr && name->kind() == ValueKind::String)
+            if (std::optional<const Value&> name = o.find("DatParkName"); name && name->kind() == ValueKind::String)
                 s.park_name = name->text();
             s.day = integer(o, "DatDay");
             s.month = integer(o, "DatMonth");
@@ -105,11 +105,11 @@ namespace rct3::save
                 if (o.class_index != *current_class)
                     continue;
                 const auto current = decode_object(file, o);
-                const Value* ref = current ? current->find(kCurrent) : nullptr;
-                if (ref == nullptr || ref->kind() != ValueKind::Reference)
+                std::optional<const Value&> ref = current ? current->find(kCurrent) : std::nullopt;
+                if (!ref || ref->kind() != ValueKind::Reference)
                     return std::nullopt;
-                const Object* target = ObjectIndex(file).find(ref->as_reference());
-                if (target == nullptr || target->class_index != summary_class)
+                std::optional<const Object&> target = ObjectIndex(file).find(ref->as_reference());
+                if (!target || target->class_index != summary_class)
                     return std::nullopt;
                 auto decoded = decode_object(file, *target);
                 return decoded ? std::optional(std::move(*decoded)) : std::nullopt;

@@ -169,8 +169,8 @@ namespace rct3::ui
     {
         if (!style.background.empty())
             draw_skin(context.list, context.skins.find(style.background), rect());
-        const Font* heading_font = context.fonts.get(style.heading_font);
-        const Font* font = context.fonts.get(style.font);
+        const auto heading_font = context.fonts.get(style.heading_font);
+        const auto font = context.fonts.get(style.font);
         const auto edges = column_edges();
         const auto cell = [&](const Rect& row, std::size_t c) { return Rect { row.x0 + edges[c].first + style.cell_indent, row.y0, row.x0 + edges[c].second - style.cell_indent, row.y1 }; };
 
@@ -200,7 +200,7 @@ namespace rct3::ui
                     else
                         box.x1 -= mark + 2;
                 }
-                if (heading_font != nullptr)
+                if (heading_font)
                     draw_text(context.list, *heading_font, columns[c].heading, box, { style.heading_text_colour, columns[c].align, Align::Centre, false });
             }
         }
@@ -218,7 +218,7 @@ namespace rct3::ui
                 const Rect row { box.x0, y, box.x1, y + style.row_height };
                 if (selected_ == i)
                 {
-                    if (const SkinRef* s = style.selection_skin.empty() ? nullptr : context.skins.find(style.selection_skin))
+                    if (const auto s = style.selection_skin.empty() ? std::nullopt : context.skins.find(style.selection_skin))
                         draw_skin(context.list, s, row);
                     else
                         context.list.fill(row, style.selection_colour);
@@ -227,7 +227,7 @@ namespace rct3::ui
                 {
                     context.list.fill(row, style.stripe_colour);
                 }
-                if (font == nullptr)
+                if (!font)
                     continue;
                 for (std::size_t c = 0; c < columns.size() && c < rows[i].cells.size(); ++c)
                 {

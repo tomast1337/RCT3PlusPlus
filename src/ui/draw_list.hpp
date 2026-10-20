@@ -13,6 +13,7 @@
 // batches index that list. Batches stay in painter's order whichever list they draw from.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "math/hex_colour.hpp"
 
 #include <array>
@@ -159,7 +160,7 @@ namespace rct3::ui
         bool push_clip(const Rect& rect);
         void pop_clip();
         /// The rectangle drawing is limited to, or nothing when no clip is pushed.
-        [[nodiscard]] const Rect* clip() const;
+        [[nodiscard]] std::optional<const Rect&> clip() const;
 
         [[nodiscard]] std::span<const Vertex> vertices() const
         {

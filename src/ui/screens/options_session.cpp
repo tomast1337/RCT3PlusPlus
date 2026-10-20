@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options_session.hpp"
 
+#include "core/maybe.hpp"
+
 #include <utility>
 
 namespace rct3::ui
@@ -15,14 +17,14 @@ namespace rct3::ui
     {
     }
 
-    OptionsDialog* OptionsSession::window() const
+    std::optional<OptionsDialog&> OptionsSession::window() const
     {
-        return static_cast<OptionsDialog*>(desktop_.root().find(kName));
+        return desktop_.root().find_as<OptionsDialog>(kName);
     }
 
     void OptionsSession::open()
     {
-        if (OptionsDialog* shown = window())
+        if (auto shown = window())
         {
             desktop_.root().raise(*shown);
             return;
@@ -33,7 +35,7 @@ namespace rct3::ui
 
     void OptionsSession::close()
     {
-        if (OptionsDialog* shown = window())
+        if (auto shown = window())
         {
             update(); // What it still holds
             desktop_.root().remove(*shown);
@@ -43,8 +45,8 @@ namespace rct3::ui
 
     void OptionsSession::update()
     {
-        OptionsDialog* dialog = window();
-        if (dialog == nullptr)
+        auto dialog = window();
+        if (!dialog)
         {
             closed_ = closed_ || std::exchange(open_, false);
             return;
@@ -85,8 +87,8 @@ namespace rct3::ui
 
     bool OptionsSession::waiting_for_keys() const
     {
-        const OptionsDialog* dialog = window();
-        return dialog != nullptr && dialog->waiting_for_keys();
+        const auto dialog = window();
+        return dialog && dialog->waiting_for_keys();
     }
 
 } // namespace rct3::ui

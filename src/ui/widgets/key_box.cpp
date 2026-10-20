@@ -64,8 +64,8 @@ namespace rct3::ui
         const std::string& back = has_keyboard_focus() && !focused_skin.empty() ? focused_skin : skin;
         if (!back.empty())
             draw_skin(context.list, context.skins.find(back), rect());
-        const Font* f = context.fonts.get(font);
-        if (f == nullptr)
+        const auto f = context.fonts.get(font);
+        if (!f)
             return;
         const Rect& r = rect();
         const Rect box { r.x0 + padding.x0, r.y0 + padding.y0, r.x1 - padding.x1, r.y1 - padding.y1 };

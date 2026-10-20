@@ -67,7 +67,7 @@ TEST_CASE("a scroll area sizes its bar from the children and moves them")
         const FontSet fonts;
         DrawContext context { list, skins, fonts };
         desktop.draw(context);
-        CHECK(list.clip() == nullptr);
+        CHECK(!list.clip());
         CHECK_FALSE(desktop.hit({ 20, 150 }));
     }
 }
@@ -113,8 +113,8 @@ TEST_CASE("a horizontal bar scrolls content wider than the view")
     Desktop desktop;
     ScrollArea& area = desktop.root().add<ScrollArea>("area", std::nullopt, style());
     area.placement = top_left(0, 0, 100, 60);
-    REQUIRE(area.vertical() == nullptr);
-    REQUIRE(area.horizontal() != nullptr);
+    REQUIRE(!area.vertical());
+    REQUIRE(area.horizontal());
     Widget& wide = area.content().add<Widget>("wide");
     wide.placement = top_left(0, 0, 300, 20);
     Widget& stretched = area.content().add<Widget>("stretched");
@@ -204,7 +204,7 @@ TEST_CASE("a focused scroll area moves with the keys")
     desktop.layout({ 0, 0, 300, 300 });
     desktop.update({ { 20, 20 }, true, true });
     desktop.update({ { 20, 20 }, false, true });
-    REQUIRE(desktop.keyboard_focus() == &area);
+    REQUIRE(rct3::as_pointer(desktop.keyboard_focus()) == &area);
     ScrollBar& v = *area.vertical();
     ScrollBar& h = *area.horizontal();
     REQUIRE(v.visible == 100);

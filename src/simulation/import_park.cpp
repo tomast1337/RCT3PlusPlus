@@ -267,9 +267,9 @@ namespace rct3::simulation
             const auto file = added ? find(ride.base.overlay_path + ".common.ovl") : std::nullopt;
             if (auto overlay = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error::MissingFile))
             {
-                for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
                 {
-                    if (part == nullptr)
+                    if (!part)
                         continue;
                     for (const auto& item : ovl::read_tracked_rides(*overlay, *part))
                         if (item.ride && item.ride->guests)

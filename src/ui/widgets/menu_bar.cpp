@@ -17,7 +17,7 @@ namespace rct3::ui
         Widget& root_of(Widget& w)
         {
             Widget* r = &w;
-            while (r->parent() != nullptr)
+            while (r->parent())
                 r = r->parent();
             return *r;
         }
@@ -137,8 +137,8 @@ namespace rct3::ui
             }
         }
 
-        const Font* f = context.fonts != nullptr ? context.fonts->get(style.font) : nullptr;
-        if (f == nullptr)
+        const auto f = context.fonts ? context.fonts->get(style.font) : std::nullopt;
+        if (!f)
             return;
         widths_.clear();
         for (const MenuBarEntry& m : menus)
@@ -149,19 +149,19 @@ namespace rct3::ui
     {
         if (!style.background.empty())
             draw_skin(context.list, context.skins.find(style.background), rect());
-        const Font* f = context.fonts.get(style.font);
+        const auto f = context.fonts.get(style.font);
         for (std::size_t i = 0; i < menus.size(); ++i)
         {
             const Rect title = title_rect(i);
             const bool lit = (menu_ != nullptr && open_ == i) || (has_keyboard_focus() && menu_ == nullptr && marked_ == i);
             if (lit)
             {
-                if (const SkinRef* s = style.highlight_skin.empty() ? nullptr : context.skins.find(style.highlight_skin))
+                if (const auto s = style.highlight_skin.empty() ? std::nullopt : context.skins.find(style.highlight_skin))
                     draw_skin(context.list, s, title);
                 else
                     context.list.fill(title, style.highlight_colour);
             }
-            if (f != nullptr)
+            if (f)
                 draw_text(context.list, *f, menus[i].title, title, { style.text_colour, Align::Centre, Align::Centre, false });
         }
     }

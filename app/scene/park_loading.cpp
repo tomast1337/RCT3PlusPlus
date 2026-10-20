@@ -91,9 +91,9 @@ namespace rct3::scene
         list.set_scale(1);
         const ui::FontSet& fonts = ui::fonts_for(device, assets, screen.width());
         loading::Look look {
-            .heading_font = fonts.get(ui::FontRole::Large),
-            .stage_font = fonts.get(ui::FontRole::Medium),
-            .detail_font = fonts.get(ui::FontRole::Small),
+            .heading_font = as_pointer(fonts.get(ui::FontRole::Large)),
+            .stage_font = as_pointer(fonts.get(ui::FontRole::Medium)),
+            .detail_font = as_pointer(fonts.get(ui::FontRole::Small)),
         };
         if (const auto logo = assets.textures.find(loading::kLogo); logo != assets.textures.end())
             look.logo = loading::Picture { ui::texture_id(logo->second.handle), logo->second.width, logo->second.height };

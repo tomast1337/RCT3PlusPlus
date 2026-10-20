@@ -14,6 +14,7 @@
 #pragma once
 
 #include "career/career.hpp"
+#include "core/maybe.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -126,9 +127,9 @@ namespace rct3::ui
         {
             return *hover_;
         }
-        [[nodiscard]] QuestionBox* question() const
+        [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return question_;
+            return maybe(question_);
         }
         void click_row(std::size_t index);
 

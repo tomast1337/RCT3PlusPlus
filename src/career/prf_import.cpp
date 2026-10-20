@@ -18,9 +18,9 @@ namespace rct3::career
         constexpr std::string_view kClass = "ManagedPlayerProfile";
         constexpr int kExpansions = 2;
 
-        std::int32_t integer(const save::Value* v, std::int32_t fallback)
+        std::int32_t integer(std::optional<const save::Value&> v, std::int32_t fallback)
         {
-            if (v == nullptr || v->kind() != save::ValueKind::Integer)
+            if (!v || v->kind() != save::ValueKind::Integer)
                 return fallback;
             const std::int64_t n = v->as_integer();
             if (n < std::numeric_limits<std::int32_t>::min() || n > std::numeric_limits<std::int32_t>::max())
@@ -28,9 +28,9 @@ namespace rct3::career
             return static_cast<std::int32_t>(n);
         }
 
-        std::string text(const save::Value* v)
+        std::string text(std::optional<const save::Value&> v)
         {
-            return v != nullptr && v->kind() == save::ValueKind::String ? std::string(v->text()) : std::string { };
+            return v && v->kind() == save::ValueKind::String ? std::string(v->text()) : std::string { };
         }
 
         ScenarioStatus status_of(std::int32_t status)
@@ -86,7 +86,7 @@ namespace rct3::career
                 return std::unexpected(PrfError::UnknownPack);
             prf.pack = pack + 1;
             prf.current = integer(decoded->find("CurrentScenario"), 0);
-            if (const save::Value* list = decoded->find("ScenarioData"); list != nullptr && list->kind() == save::ValueKind::List)
+            if (const auto list = decoded->find("ScenarioData"); list && list->kind() == save::ValueKind::List)
             {
                 for (const save::Value& item : list->items())
                     prf.scenarios.push_back({ integer(item.field("Status"), 0), text(item.field("LastSaveName")) });

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "career/career.hpp"
+#include "core/maybe.hpp"
 #include "ui/career_scenarios.hpp"
 #include "ui/screens/front_screen.hpp"
 #include "ui/string_table.hpp"
@@ -165,9 +166,9 @@ namespace rct3::ui
         {
             return *quit_;
         }
-        [[nodiscard]] QuestionBox* question() const
+        [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return question_;
+            return maybe(question_);
         }
         /// The panel's text and the two lines along the bottom.
         [[nodiscard]] std::u16string_view title() const

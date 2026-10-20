@@ -322,8 +322,8 @@ namespace rct3::ui
         blink_time_ = std::fmod(blink_time_ + context.elapsed, kBlinkPeriod);
         caret_ = boundary(text, caret_);
         anchor_ = boundary(text, anchor_);
-        const Font* f = context.fonts != nullptr ? context.fonts->get(font) : nullptr;
-        if (f == nullptr)
+        const auto f = context.fonts ? context.fonts->get(font) : std::nullopt;
+        if (!f)
             return;
         const Rect box = text_box();
         if (pointer_pending_)
@@ -344,8 +344,8 @@ namespace rct3::ui
         const std::string& back = has_keyboard_focus() && !focused_skin.empty() ? focused_skin : skin;
         if (!back.empty())
             draw_skin(context.list, context.skins.find(back), rect());
-        const Font* f = context.fonts.get(font);
-        if (f == nullptr)
+        const auto f = context.fonts.get(font);
+        if (!f)
             return;
         const Rect box = text_box();
         if (context.list.push_clip(box))

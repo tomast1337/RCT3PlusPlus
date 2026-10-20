@@ -69,7 +69,7 @@ TEST_CASE("from_bytes resolves the unique file's names through the common file")
     REQUIRE(overlay.has_value());
 
     CHECK(overlay->common().base == 0);
-    REQUIRE(overlay->unique() != nullptr);
+    REQUIRE(overlay->unique());
     CHECK(overlay->unique()->base == overlay->common().file.data_size);
 
     REQUIRE(overlay->unique()->symbols.size() == 1);
@@ -85,7 +85,7 @@ TEST_CASE("an overlay survives being moved")
     REQUIRE(overlay.has_value());
 
     Overlay moved = std::move(*overlay);
-    REQUIRE(moved.unique() != nullptr);
+    REQUIRE(moved.unique());
     REQUIRE(moved.unique()->symbols.size() == 1);
     // The name views must still point at live bytes after the move.
     CHECK(moved.unique()->symbols[0].name == "gamma:txt");
@@ -95,7 +95,7 @@ TEST_CASE("a common file alone loads without a unique part")
 {
     auto overlay = Overlay::from_bytes(common_bytes(), std::nullopt);
     REQUIRE(overlay.has_value());
-    CHECK(overlay->unique() == nullptr);
+    CHECK(!overlay->unique());
 }
 
 TEST_CASE("bad bytes surface the parser error")
@@ -115,7 +115,7 @@ TEST_CASE("load finds the pair from either file or the stem")
         CAPTURE(name);
         auto overlay = Overlay::load(dir.path / name);
         REQUIRE(overlay.has_value());
-        REQUIRE(overlay->unique() != nullptr);
+        REQUIRE(overlay->unique());
         CHECK(overlay->unique()->symbols[0].name == "gamma:txt");
     }
 }
@@ -128,7 +128,7 @@ TEST_CASE("load tolerates a missing unique file but not a missing common file")
 
     auto solo = Overlay::load(dir.path / "solo.common.ovl");
     REQUIRE(solo.has_value());
-    CHECK(solo->unique() == nullptr);
+    CHECK(!solo->unique());
 
     CHECK(Overlay::load(dir.path / "orphan.unique.ovl").error() == Error::MissingFile);
     CHECK(Overlay::load(dir.path / "nothing").error() == Error::MissingFile);

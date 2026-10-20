@@ -12,6 +12,7 @@
 // wherever the skin is drawn.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "strings/ascii.hpp"
 #include "ui/coded_frame.hpp"
 #include "ui/draw_list.hpp"
@@ -62,10 +63,10 @@ namespace rct3::ui
 
         /// Whatever the case of `name`: the game finds its pictures that way, and its text names some of
         /// them in another case than their own.
-        [[nodiscard]] const SkinRef* find(std::string_view name) const;
+        [[nodiscard]] std::optional<const SkinRef&> find(std::string_view name) const;
 
         /// The family member for `state`, or the nearest one that exists, or the skin named `base`.
-        [[nodiscard]] const SkinRef* find(std::string_view base, SkinState state) const;
+        [[nodiscard]] std::optional<const SkinRef&> find(std::string_view base, SkinState state) const;
 
         [[nodiscard]] std::size_t size() const
         {
@@ -76,9 +77,9 @@ namespace rct3::ui
         std::map<std::string, SkinRef, strings::LessIgnoringCase> skins_;
     };
 
-    /// Draws `skin` stretched over `rect`, or its coded frame laid out over it. Nothing when `skin` is null, so a missing skin leaves a gap
+    /// Draws `skin` stretched over `rect`, or its coded frame laid out over it. Nothing when there is no skin, so a missing one leaves a gap
     /// instead of failing.
-    void draw_skin(DrawList& list, const SkinRef* skin, const Rect& rect, Color tint = kWhite);
+    void draw_skin(DrawList& list, std::optional<const SkinRef&> skin, const Rect& rect, Color tint = kWhite);
 
     /// What draw_skin_state tints a resting face with when a family lacks the member for the state.
     inline constexpr Color kPressedTint = hex("#bebebe");

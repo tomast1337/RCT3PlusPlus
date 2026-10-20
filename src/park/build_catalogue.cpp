@@ -352,8 +352,8 @@ namespace rct3::park
         const auto overlay = ovl::Overlay::load(file);
         if (!overlay)
             return std::nullopt;
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
-            if (part != nullptr)
+        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+            if (part)
                 for (const auto& e : ovl::read_special_attractions(*overlay, *part))
                     if (e.attraction && strings::equals_ignoring_case(e.name, name))
                         return e.attraction->info.type_id;
@@ -363,8 +363,8 @@ namespace rct3::park
     void add_build_items(const ovl::Overlay& overlay, std::string_view path, std::vector<BuildItem>& items)
     {
         std::vector<const ovl::Part*> parts { &overlay.common() };
-        if (const ovl::Part* unique = overlay.unique())
-            parts.push_back(unique);
+        if (const auto unique = overlay.unique())
+            parts.push_back(&*unique);
 
         std::vector<ovl::SceneryItemEntry> scenery;
         for (const ovl::Part* part : parts)

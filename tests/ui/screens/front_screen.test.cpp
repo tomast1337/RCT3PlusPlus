@@ -37,9 +37,9 @@ namespace
             screen = &desktop.root().add<FrontScreen>("front", table, expansions, "English");
             desktop.layout({ 0, 0, 1024, 768 });
         }
-        void click(FrontButton* b)
+        void click(std::optional<FrontButton&> b)
         {
-            REQUIRE(b != nullptr);
+            REQUIRE(b);
             b->click();
             desktop.update({ }, { 1.0f / 30, nullptr });
         }
@@ -79,7 +79,7 @@ TEST_CASE("buttons open menus, back returns, other buttons are requests")
     f.click(f.screen->button(FrontMenu::Sandbox, 0));
     CHECK(f.screen->take_request() == FrontRequest { FrontAction::NewSandbox, 0 });
 
-    f.click(&f.screen->back_button());
+    f.click(f.screen->back_button());
     CHECK(f.screen->current() == FrontMenu::Play);
     CHECK(f.screen->on_key({ Key::Escape }));
     CHECK(f.screen->current() == FrontMenu::Main);
@@ -87,7 +87,7 @@ TEST_CASE("buttons open menus, back returns, other buttons are requests")
 
     f.click(f.screen->button(FrontMenu::Main, 2));
     CHECK(f.screen->take_request() == FrontRequest { FrontAction::Options, 0 });
-    f.click(&f.screen->quit_button());
+    f.click(f.screen->quit_button());
     CHECK(f.screen->take_request() == FrontRequest { FrontAction::Quit, 0 });
     CHECK_FALSE(f.screen->take_request());
 }
@@ -104,18 +104,18 @@ TEST_CASE("only the open menu's buttons count, and only those of installed packs
     f.click(f.screen->button(FrontMenu::Campaigns, 1));
     CHECK(f.screen->take_request() == FrontRequest { FrontAction::Campaign, 1 });
     // One badge, for the installed pack.
-    CHECK(f.screen->find("badge0") != nullptr);
-    CHECK(f.screen->find("badge1") == nullptr);
+    CHECK(f.screen->find("badge0"));
+    CHECK(!f.screen->find("badge1"));
 }
 
 TEST_CASE("the last pack's badge comes first round the circle")
 {
     Fixture f;
     f.desktop.update({ }, { 1.0f / 30, nullptr });
-    const Widget* first = f.screen->find("badge0");
-    const Widget* last = f.screen->find("badge1");
-    REQUIRE(first != nullptr);
-    REQUIRE(last != nullptr);
+    auto first = f.screen->find("badge0");
+    auto last = f.screen->find("badge1");
+    REQUIRE(first);
+    REQUIRE(last);
     CHECK(last->rect().x0 > first->rect().x0);
     CHECK(last->rect().width() == doctest::Approx(front_screen::kBadgeSize));
 }

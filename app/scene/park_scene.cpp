@@ -817,7 +817,7 @@ namespace rct3::scene
                 show_info_page(scene, *info, assets, options);
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
-            footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right);
+            footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right, input.shift, input.control);
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             // A click is the left button pressed and let go over the park without the pointer going far.
@@ -834,7 +834,7 @@ namespace rct3::scene
                     ;
                 else if (still && !over && ride_placing_click(device, scene, assets))
                     ;
-                else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }))
+                else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
                 {
                     const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
                     if (picked.person)

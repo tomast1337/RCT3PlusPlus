@@ -41,6 +41,8 @@ namespace rct3::park
             b.on_slope = node.on_slope;
             b.heading = node.heading;
             b.start = node.started ? node.spot : *from.start;
+            if (!node.started)
+                b.start_height = from.start_height;
             if (node.started)
                 b.trail.push_back({ node.spot, 0, node.height });
             return b;

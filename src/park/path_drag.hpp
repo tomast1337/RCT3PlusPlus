@@ -11,10 +11,14 @@
 // Pointing at a tile that has a path picks that path's edge nearest the pointer (the tile split along its
 // diagonals) and the tile beyond it: the next piece goes there, going away from the path, starting at the
 // height the path meets that edge. Edges a path does not reach, such as the sides of a slope, offer nothing.
+//
+// A ride's entrance or exit is pointed at the same way, at its own height, so a raised ride's doors are reached
+// in the air: the edge of the door's tile nearest the pointer gives the next piece's tile and heading.
 #pragma once
 
 #include "park/camera.hpp"
 #include "park/footpath_builder.hpp"
+#include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
 #include <cstddef>
@@ -60,5 +64,20 @@ namespace rct3::park
     /// the height the path meets the edge. False, leaving the builder as it was, when the path does not reach
     /// that edge.
     bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, std::uint8_t side);
+
+    /// A door under the pointer, and the edge of its tile the pointer is nearest.
+    struct DoorEdge
+    {
+        std::size_t door = 0; ///< Of the doors
+        std::uint8_t side = 0;
+    };
+
+    /// The door of `doors` that `ray` meets first, met flat across its tile at its height, if it meets one before
+    /// the ground (or at all, `through_ground`).
+    [[nodiscard]] std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::PlacementSpot> doors, const save::TerrainGrid& grid, bool through_ground = false);
+
+    /// Has `builder` go on from `door`'s edge on `side`: the next piece on the tile beyond, heading away, at the
+    /// door's height.
+    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, std::uint8_t side);
 
 } // namespace rct3::park

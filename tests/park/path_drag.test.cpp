@@ -95,3 +95,34 @@ TEST_CASE("a stroke lays only where a path can lie on the ground")
     CHECK(plan.kept == 1);
     CHECK(plan.refused == 2);
 }
+TEST_CASE("a door is picked at its own height, and the trail goes on from its edge at that height")
+{
+    const save::TerrainGrid g = owned_grid(4, 4);
+    const std::vector<save::PlacementSpot> doors { { 0, 1, 1, 6, 0 } };
+    // Down onto the door's tile, nearer its higher-column edge.
+    const Ray down { { g.world_x(1) + 3.5f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
+    const auto under = door_under(down, doors, g);
+    REQUIRE(under);
+    CHECK(under->door == 0);
+    CHECK(under->side == std::uint8_t { 1 });
+    // Beside the tile, the ray meets the ground and no door.
+    CHECK_FALSE(door_under({ { g.world_x(2) + 2.0f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } }, doors, g));
+
+    FootpathBuilder b;
+    start_from_door(b, doors[0], under->side);
+    const auto next = next_piece(b, g);
+    REQUIRE(next);
+    CHECK(next->spot == PathSpot { 2, 1 });
+    CHECK(next->start == 6);
+    CHECK_FALSE(next->ground);
+}
+TEST_CASE("a door under the ground is picked only when the ground is seen through")
+{
+    save::TerrainGrid g = owned_grid(4, 4);
+    for (save::TerrainCell& c : g.cells)
+        c.corners = { 8, 8, 8, 8 };
+    const std::vector<save::PlacementSpot> doors { { 0, 1, 1, 2, 0 } };
+    const Ray down { { g.world_x(1) + 2.0f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
+    CHECK_FALSE(door_under(down, doors, g));
+    CHECK(door_under(down, doors, g, true));
+}

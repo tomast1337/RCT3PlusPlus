@@ -98,6 +98,10 @@ namespace rct3::scene
             down_ = false;
             return Json(nullptr);
         });
+        engine_.define("pointer.shift", [this](const Json& a) {
+            shift_ = !a.empty() && a[0].is_boolean() && a[0].get<bool>();
+            return Json(nullptr);
+        });
         engine_.define("ui.find", [this](const Json& a) -> Json {
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("ui.find takes a widget path");
@@ -235,7 +239,7 @@ namespace rct3::scene
         if (!at_)
             return std::nullopt;
         const render::Extent view = device.extent();
-        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_ };
+        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_ };
     }
 
     void ScriptHost::write(const std::string& line, bool error)

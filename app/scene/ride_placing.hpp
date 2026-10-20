@@ -11,7 +11,8 @@
 //
 // Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
-// the thing pointed at, which is how roofs go onto walls.
+// the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
+// rises and sinks with the pointer. An item may not take room another solid item or a path fills.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -51,6 +52,13 @@ namespace rct3::scene
         std::optional<park::DoorSpot> entrance;
         std::int32_t quadrant = 0; ///< Of the tile, for scenery that takes a quarter of one
         std::int32_t ground = 0;   ///< Height of the ground under the scenery's site
+        /// While Shift is held: where the pointer met the park when it went down, and the height then.
+        struct Lift
+        {
+            glm::vec3 at { 0.0f };
+            std::int32_t height = 0;
+        };
+        std::optional<Lift> lift;
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
         std::size_t ride = 0; ///< Of the scene's rides, once placed
@@ -76,8 +84,9 @@ namespace rct3::scene
     [[nodiscard]] bool ride_placing(const ParkScene& scene);
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) and the keys, and
-    /// has the simulation take on the rides placed here as their entrances join the paths.
-    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, const ui::KeyboardState& keys);
+    /// has the simulation take on the rides placed here as their entrances join the paths. `shift`: whether
+    /// Shift is held, which raises and lowers scenery.
+    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, const ui::KeyboardState& keys);
 
     /// A click on the park while placing: places what the ghost shows. False when not placing.
     bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);

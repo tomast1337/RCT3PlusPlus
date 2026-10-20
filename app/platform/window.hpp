@@ -62,6 +62,7 @@ namespace rct3::platform
             float wheel_x = 0;   ///< Notches turned sideways since the last poll_events, positive to the left
             float wheel_y = 0;   ///< Notches turned since the last poll_events, positive away from the user
             bool inside = false; ///< Over the window's content, with the window focused
+            bool shift = false;  ///< Either Shift key held down
         };
         [[nodiscard]] Pointer pointer() const;
         /// Whether `key` is held down now; for keys that act for as long as they are held.

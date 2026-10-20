@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
+#include "park/path_decks.hpp"
 #include "park/ride_fences.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
@@ -199,7 +200,7 @@ namespace rct3::scene
         return scene.placing.item.has_value();
     }
 
-    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, const ui::KeyboardState& keys)
+    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, const ui::KeyboardState& keys)
     {
         RidePlacing& p = scene.placing;
         join_rides(device, scene);
@@ -232,50 +233,93 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Scenery)
         {
             // Scenery goes where the pointer meets the ground or, nearer, an object: then on top of it.
-            std::optional<glm::vec2> spot;
+            std::optional<glm::vec3> hit;
             std::optional<float> top;
+            std::optional<park::Ray> ray;
             if (!over && size.x > 0 && size.y > 0)
             {
-                const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (scene.pick_boxes_of != scene.objects.size())
                 {
                     scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
                     scene.pick_boxes_of = scene.objects.size();
                 }
-                auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return scene.show_scenery && !scene.objects[i].hidden; });
+                auto object = park::pick_object(*ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return scene.show_scenery && !scene.objects[i].hidden; });
                 if (object)
                 {
                     // Only a top pointed at takes the item; past a side, as of a tree's crown, it goes on the ground.
                     const auto box = std::ranges::find(scene.pick_boxes, object->index, &park::PickBox::index);
-                    if ((ray.origin + ray.direction * object->distance).y >= box->park_high.y - kTopSlack)
+                    if ((ray->origin + ray->direction * object->distance).y >= box->park_high.y - kTopSlack)
                         top = box->park_high.y;
                     else
                         object.reset();
                 }
-                if (const auto distance = object ? std::optional(object->distance) : park::ground_hit(ray, scene.grid))
-                {
-                    const glm::vec3 hit = ray.origin + ray.direction * *distance;
-                    spot = glm::vec2 { (hit.x - scene.grid.origin_x) / scene.grid.tile_size_x, (hit.z - scene.grid.origin_z) / scene.grid.tile_size_z };
-                }
-            }
-            const auto col = spot ? static_cast<std::int32_t>(std::floor(spot->x)) : -1;
-            const auto row = spot ? static_cast<std::int32_t>(std::floor(spot->y)) : -1;
-            if (!scene.grid.contains(col, row))
-            {
-                p.site.reset();
-                p.ghost_mesh = { };
-                return;
+                if (const auto distance = object ? std::optional(object->distance) : park::ground_hit(*ray, scene.grid))
+                    hit = ray->origin + ray->direction * *distance;
             }
             const std::array squares { std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->width)), std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->length)) };
-            p.site = park::ride_site(col, row, squares, p.turns, scene.grid);
-            p.ground = p.site->height;
-            // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
-            if (top)
-                p.site->height = std::max(p.site->height, static_cast<std::int32_t>(std::ceil(*top - 0.005f)));
-            p.quadrant = (spot->x - static_cast<float>(col) >= 0.5f ? 1 : 0) + (spot->y - static_cast<float>(row) >= 0.5f ? 2 : 0);
-            // shortcut: only the land is checked, so scenery may stand inside other scenery or rides; check what
-            // stands there once objects can be moved or sold.
-            p.problem = park::on_owned_land(*ghost_object(p), squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
+            if (shift && p.site && p.lift)
+            {
+                // The height follows the pointer up and down an upright plane through where Shift went down,
+                // square to the view.
+                if (ray)
+                {
+                    const glm::vec3 across = glm::normalize(glm::vec3 { ray->direction.x, 0.0f, ray->direction.z });
+                    const float along = glm::dot(ray->direction, across);
+                    if (along > 1e-4f)
+                    {
+                        const float y = ray->origin.y + ray->direction.y * glm::dot(p.lift->at - ray->origin, across) / along;
+                        p.site->height = std::max(p.ground, p.lift->height + static_cast<std::int32_t>(std::lround(y - p.lift->at.y)));
+                    }
+                }
+            }
+            else
+            {
+                const glm::vec2 spot = hit ? glm::vec2 { (hit->x - scene.grid.origin_x) / scene.grid.tile_size_x, (hit->z - scene.grid.origin_z) / scene.grid.tile_size_z } : glm::vec2 { -1.0f };
+                const auto col = static_cast<std::int32_t>(std::floor(spot.x));
+                const auto row = static_cast<std::int32_t>(std::floor(spot.y));
+                if (!hit || !scene.grid.contains(col, row))
+                {
+                    p.site.reset();
+                    p.lift.reset();
+                    p.ghost_mesh = { };
+                    return;
+                }
+                p.site = park::ride_site(col, row, squares, p.turns, scene.grid);
+                p.ground = p.site->height;
+                // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
+                if (top)
+                    p.site->height = std::max(p.site->height, static_cast<std::int32_t>(std::ceil(*top - 0.005f)));
+                p.quadrant = (spot.x - static_cast<float>(col) >= 0.5f ? 1 : 0) + (spot.y - static_cast<float>(row) >= 0.5f ? 2 : 0);
+                p.lift = shift ? std::optional(RidePlacing::Lift { *hit, p.site->height }) : std::nullopt;
+            }
+            const save::PlacedObject o = *ghost_object(p);
+            p.problem = park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
+            if (p.problem == park::SiteProblem::None && load_object_model(scene, p.models, assets, o))
+            {
+                // The room the item's solid squares take may not be taken already, by a solid item or a path.
+                // shortcut: a solid square fills its whole tile, so two solid quarter-tile items cannot share one;
+                // split solid room by quarters if that gets in the way.
+                const park::SolidTiles mine = park::solid_tiles(std::span(&o, 1), scene.models, scene.grid);
+                for (const auto& [key, spans] : mine.tiles)
+                {
+                    const park::PathSpot tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
+                    const auto there = p.solids.tiles.find(key);
+                    for (const park::SolidSpan& s : spans)
+                    {
+                        if (there != p.solids.tiles.end() && std::ranges::any_of(there->second, [&](const park::SolidSpan& t) { return t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
+                            p.problem = park::SiteProblem::Blocked;
+                    }
+                    for (const save::PathTile& path : scene.footpaths.paths)
+                    {
+                        // shortcut: a path's height is taken at one edge, so a slope's lower end may pass under an
+                        // item; take its lowest edge if that shows.
+                        const auto deck = park::edge_height(path, scene.grid, 0);
+                        if (path.col == tile.col && path.row == tile.row && deck && park::blocked(mine, tile, *deck, *deck))
+                            p.problem = park::SiteProblem::Path;
+                    }
+                }
+            }
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();
             return;

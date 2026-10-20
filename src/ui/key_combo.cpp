@@ -80,7 +80,7 @@ namespace rct3::ui
 
         bool is_bindable_character(char32_t c)
         {
-            return (c >= U'a' && c <= U'z') || (c >= U'0' && c <= U'9');
+            return (c >= U'a' && c <= U'z') || (c >= U'0' && c <= U'9') || c == U',' || c == U'.';
         }
 
         std::string key_name(const KeyCombo& combo, bool shown)

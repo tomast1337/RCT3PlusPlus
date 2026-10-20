@@ -512,7 +512,7 @@ namespace rct3::scene
         return light;
     }
 
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light)
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid)
     {
         if (mesh.indices.empty() || !scene.see_through_pipeline)
             return;
@@ -524,7 +524,7 @@ namespace rct3::scene
         {
             const auto texture = scene.object_textures.find(ghost_texture(batch));
             render::DrawCommand draw;
-            draw.pipeline = scene.see_through_pipeline;
+            draw.pipeline = !solid || batch.blend == park::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);
             draw.vertices = *vertices;
             draw.indices = *indices;
             draw.index_type = render::IndexType::U32;
@@ -534,7 +534,7 @@ namespace rct3::scene
             draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
             draw.filter = render::Filter::Linear;
             draw.address = render::AddressMode::Repeat;
-            draw.light = ghost_light(light);
+            draw.light = solid ? light : ghost_light(light);
             device.draw(draw);
         }
     }

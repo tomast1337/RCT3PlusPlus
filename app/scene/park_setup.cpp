@@ -742,6 +742,10 @@ namespace rct3::scene
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
         scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
+        ui::InfoPanelStyle placing = skins::info_panel_style();
+        placing.left = true;
+        placing.raise = skins::land_panel_style().bottom - ui::info_panel::kDiscMargin; // Over the tool row, as the land panel stands
+        scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
         scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
         auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); });
@@ -896,6 +900,8 @@ namespace rct3::scene
         }
         if (scene.view_target)
             device.destroy_texture(scene.view_target);
+        if (scene.placing.preview_target)
+            device.destroy_texture(scene.placing.preview_target);
         if (scene.photo_target)
             device.destroy_texture(scene.photo_target);
         for (const render::TextureHandle t : { scene.shadow_drawings[0].target, scene.shadow_drawings[0].view, scene.shadow_drawings[1].target, scene.shadow_drawings[1].view })

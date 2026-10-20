@@ -49,6 +49,8 @@
         "BuildPicker": {
             "Search": "Search by name"
         },
+        "TurnItemLeft": "Turn the item being placed counterclockwise",
+        "TurnItemRight": "Turn the item being placed clockwise",
         "Paths": {
             "PickStart": "Click the ground to start a path",
             "NotOwned": "The park does not own this land",

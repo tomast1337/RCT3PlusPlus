@@ -107,6 +107,8 @@ namespace rct3::platform
                 presses.push_back({ letter, shift, control, static_cast<char32_t>(U'a' + (key - GLFW_KEY_A)), { }, alt });
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
                 presses.push_back({ letter, shift, control, static_cast<char32_t>(U'0' + (key - GLFW_KEY_0)), { }, alt });
+            else if (key == GLFW_KEY_COMMA || key == GLFW_KEY_PERIOD)
+                presses.push_back({ letter, shift, control, key == GLFW_KEY_COMMA ? U',' : U'.', { }, alt });
         });
         // Text in the order it was typed, between the key presses. Input method text arrives here once
         // confirmed; GLFW does not report what is still being composed, so the composition stays empty.

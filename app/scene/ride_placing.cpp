@@ -8,10 +8,13 @@
 #include "park/ride_fences.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
 #include "simulation/import_park.hpp"
+#include "ui/screens/scenery_info.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace rct3::scene
 {
@@ -49,6 +52,14 @@ namespace rct3::scene
         constexpr std::string_view kRideFenceOverlay = "Style\\Vanilla\\style";
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
+        /// The placing panel's round view: a whole turn every ten seconds, looking down a little, near enough for
+        /// small items to fill it.
+        constexpr float kPreviewTurn = 2 * std::numbers::pi_v<float> / 10;
+        constexpr float kPreviewPitch = 0.5f;
+        constexpr float kPreviewClosest = 1.5f;
+        /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
+        constexpr int kTurnSlot = 1;
+        constexpr int kColourSlot = 2;
 
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::PlacedObject> ghost_object(const RidePlacing& p)
@@ -66,6 +77,7 @@ namespace rct3::scene
                 o.rotation = p.site->turns;
                 o.quadrant = p.quadrant;
                 o.height_offset = p.site->height - p.ground;
+                o.colours = p.colours;
                 return o;
             }
             o.force_absolute_height = true;
@@ -105,10 +117,13 @@ namespace rct3::scene
         {
             o.id = last_id(scene) + 1;
             o.owner_ref = o.id;
-            if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
-                o.colours = model->second.default_colours;
+            // Scenery comes in the colours its ghost shows.
             if (scene.placing.step != RidePlacing::Step::Scenery)
+            {
+                if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
+                    o.colours = model->second.default_colours;
                 scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
+            }
             scene.objects.push_back(o);
             objects_changed(scene);
             return o.id;
@@ -186,6 +201,7 @@ namespace rct3::scene
         p.door.reset();
         p.entrance.reset();
         p.ghost_mesh = { };
+        p.panel_item.clear();
         return true;
     }
 
@@ -193,6 +209,8 @@ namespace rct3::scene
     {
         scene.placing.item.reset();
         scene.placing.ghost_mesh = { };
+        scene.placing.preview_mesh = { };
+        scene.placing.panel_item.clear();
     }
 
     bool ride_placing(const ParkScene& scene)
@@ -200,17 +218,84 @@ namespace rct3::scene
         return scene.placing.item.has_value();
     }
 
-    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, const ui::KeyboardState& keys)
+    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands)
     {
         RidePlacing& p = scene.placing;
         join_rides(device, scene);
+        auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        if (panel && panel->take_closed())
+            stop_ride_placing(scene);
+        if (panel && panel->showing() && (!p.item || p.step != RidePlacing::Step::Scenery))
+            panel->hide();
         if (!p.item)
             return;
         if ((p.step == RidePlacing::Step::Ride || p.step == RidePlacing::Step::Scenery) && !typing(scene))
         {
-            for (const ui::KeyPress& k : keys.presses)
-                if (k.key == ui::Key::Letter && k.character == U'z')
+            for (const ui::PlayCommand c : commands)
+            {
+                if (c == ui::PlayCommand::TurnItemRight)
                     p.turns = (p.turns + 1) % 4;
+                else if (c == ui::PlayCommand::TurnItemLeft)
+                    p.turns = (p.turns + 3) % 4;
+            }
+        }
+        if (p.step == RidePlacing::Step::Scenery)
+        {
+            // The item alone, at the grid's corner, for the round view.
+            save::PlacedObject alone;
+            alone.symbol = p.item->symbol;
+            alone.overlay = p.item->overlay;
+            alone.force_absolute_height = true;
+            alone.colours = p.colours;
+            const auto show_alone = [&] {
+                alone.colours = p.colours;
+                const std::array<save::PlacedObject, 1> one { alone };
+                p.preview_mesh = park::object_mesh(one, scene.models, scene.grid);
+                ghost_textures(device, scene, p.preview_mesh);
+            };
+            if (p.panel_item != p.item->symbol && load_object_model(scene, p.models, assets, alone))
+            {
+                // A new pick starts in the item's own colours.
+                p.panel_item = p.item->symbol;
+                p.colours = scene.models.at(park::model_key(alone)).default_colours;
+                show_alone();
+                if (panel)
+                {
+                    std::vector<ui::InfoTab> tabs(1);
+                    tabs[0].icon = "IconAttractionEditorRotate";
+                    tabs[0].help = assets.strings->get("ATE_TT_Rotate");
+                    tabs[0].slot = kTurnSlot;
+                    tabs[0].action = true;
+                    for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours }))
+                    {
+                        if (t.tab != ui::SceneryTab::Colour)
+                            continue;
+                        ui::InfoTab& colour = tabs.emplace_back();
+                        colour.icon = t.icon;
+                        colour.help = assets.strings->get(t.help);
+                        colour.slot = kColourSlot;
+                        colour.paints = t.paints;
+                    }
+                    const std::size_t none = tabs.size();
+                    panel->show(std::move(tabs), none);
+                }
+            }
+            if (panel && panel->showing() && p.panel_item == p.item->symbol)
+            {
+                // Each press of the tab turns it a quarter, always the same way.
+                if (panel->take_action())
+                    p.turns = (p.turns + 1) % 4;
+                if (const auto paint = panel->take_paint())
+                {
+                    const auto slots = ui::scenery_paint_slots({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours });
+                    if (paint->pot < slots.size())
+                    {
+                        p.colours.at(slots[paint->pot]) = static_cast<std::int32_t>(paint->colour);
+                        show_alone();
+                    }
+                }
+                p.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            }
         }
         // shortcut: worked out again only when objects come or go, as path building does.
         if (p.solids_of != scene.objects.size())

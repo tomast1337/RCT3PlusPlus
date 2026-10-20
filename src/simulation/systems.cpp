@@ -123,6 +123,15 @@ namespace rct3::simulation
         constexpr double kArrivalsPerSecond = 1.0 / 30; ///< Guests coming in at the gate
         constexpr double kFamilyArrivals = 0.15;        ///< Of those at night that are not teens; teens the same by day
         constexpr double kGoHomePerSecond = 1.0 / 60;   ///< Chance a second of a family heading home in the dark
+        // Guests done with the park. To tune so busy saved parks keep their guest counts.
+        constexpr float kFedUp = 0.25f;                  ///< Happiness under which a guest has had enough
+        constexpr double kFedUpPerSecond = 1.0 / 60;     ///< Chance a second of such a guest heading home
+        constexpr float kWornOut = 0.2f;                 ///< Energy under which a guest not enjoying themselves tires of it
+        constexpr float kEnjoying = 0.5f;                ///< Happiness from which a worn out guest stays on
+        constexpr double kWornOutPerSecond = 1.0 / 90;   ///< Chance a second of a worn out guest heading home
+        constexpr float kLongStayHours = 4;              ///< Game hours in the park after which guests start to drift home
+        constexpr double kLongStayPerSecond = 1.0 / 400; ///< Chance a second of it after that, twice that after twice as long
+        constexpr double kBrokePerSecond = 1.0;          ///< A guest who cannot pay for anything and has no cash machine goes at once
         constexpr float kArrivingMood = 0.7f;
         constexpr float kTeenTolerance = 0.75f;
         constexpr std::int64_t kArrivingCash = 5000; ///< Hundredths
@@ -413,11 +422,33 @@ namespace rct3::simulation
             return found != nullptr ? found->time : Daylight { }.time;
         }
 
-        /// A wandering guest (with their party, all walking with them) that may go home now, by night for
-        /// families, in a storm for anyone: the gate and the way there.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm)
+        /// A wandering guest (with their party, all walking with them) that may go home now: one done with
+        /// the park, by night a family, in a storm anyone. The gate and the way there. A party goes by how done
+        /// its members are on average. `cash_machine` is whether the park has one open.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm, bool cash_machine, std::uint64_t tick)
         {
-            const double chance = (night && age_of(r, guest) != AgeGroup::Teen ? kGoHomePerSecond : 0) + (storm ? kStormHomePerSecond : 0);
+            const auto done = [&](entt::entity g) {
+                double chance = 0;
+                if (const auto* mood = r.try_get<Mood>(g))
+                    chance = mood->happiness < kFedUp ? kFedUpPerSecond : mood->energy < kWornOut && mood->happiness < kEnjoying ? kWornOutPerSecond : 0;
+                // shortcut: guests from a save count their stay from when the park was loaded; read their saved
+                // time in the park once its unit is settled.
+                const float hours = static_cast<float>(tick - r.get<Visitor>(g).arrived) * kTickSeconds / kSecondsPerHour;
+                chance += hours > 2 * kLongStayHours ? 2 * kLongStayPerSecond : hours > kLongStayHours ? kLongStayPerSecond : 0;
+                if (const auto* wallet = r.try_get<Wallet>(g); wallet != nullptr && wallet->cash < kLowCash && !cash_machine)
+                    chance += kBrokePerSecond;
+                return chance;
+            };
+            double fed_up = done(guest);
+            if (const auto* member = r.try_get<Member>(guest))
+            {
+                const auto& members = r.get<Party>(member->party).members;
+                fed_up = 0;
+                for (const entt::entity m : members)
+                    fed_up += done(m);
+                fed_up /= static_cast<double>(std::max<std::size_t>(members.size(), 1));
+            }
+            const double chance = fed_up + (night && age_of(r, guest) != AgeGroup::Teen ? kGoHomePerSecond : 0) + (storm ? kStormHomePerSecond : 0);
             if (chance == 0 || !random::chance(dice.state, chance * kIdleSeconds))
                 return std::nullopt;
             if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
@@ -1169,6 +1200,8 @@ namespace rct3::simulation
         std::optional<profiling::Scope> phase; // Each phase timed in turn, for the profiler's table
         const Weather weather = weather_in(r);
         const bool night = is_night(time_of_day(r));
+        const auto shops = r.view<const Shop>();
+        const bool cash_machine = std::ranges::any_of(shops, [&](entt::entity e) { return shops.get<const Shop>(e).product == Product::CashMachine; });
         // Under cover (roof), or in the shade (roof or trees): on a ride under cover, or on a path tile.
         const auto under = [&](entt::entity guest, bool shade) {
             const auto* errand = r.try_get<Errand>(guest);
@@ -1330,7 +1363,7 @@ namespace rct3::simulation
                                     feel.heat = std::max(feel.heat, r.get<Mood>(m).heat);
                                 }
                             }
-                            auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm);
+                            auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
                             if (!goal)
                                 goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kNightDaring : 0, taste_of(r, movers[i]), weather.temperature);
                             // Nowhere to go: out of the rain under the nearest roof (in a storm even with an

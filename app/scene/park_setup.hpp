@@ -26,6 +26,7 @@ namespace rct3::scene
     inline constexpr std::string_view kMessagesName = "messages";
     inline constexpr std::string_view kHeightsName = "heights";
     inline constexpr std::string_view kInfoName = "info";
+    inline constexpr std::string_view kPlacingName = "placing"; ///< The round panel of the scenery being placed
 
     template<typename T> std::expected<render::BufferHandle, std::string> upload(render::Device& device, render::BufferUsage usage, const std::vector<T>& items, std::string_view label)
     {

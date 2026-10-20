@@ -102,10 +102,11 @@ namespace rct3::scene
     inline constexpr glm::vec4 kGhostTint { 0.45f, 0.75f, 1.0f, 0.7f };
     inline constexpr glm::vec4 kRefusedTint { 1.0f, 0.2f, 0.15f, 0.7f };
 
-    /// Draws `mesh` see-through with `transform` and `light`.
     /// `light` as ghosts are drawn in: lit evenly from every side, brighter than daylight, so they stand out at
     /// any hour and the Bloom option glows round them.
     [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light);
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light);
+    /// Draws `mesh` see-through with `transform` and `light`; `solid`, as a built object is drawn instead, for a
+    /// picture of it alone.
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
 
 } // namespace rct3::scene

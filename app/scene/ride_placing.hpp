@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Placing a ride whole (a flat ride) picked in the build lists: its see-through ghost follows the pointer
-// over the ground, Z turns it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
+// over the ground, the turn keys turn it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
 // round its rim. A right click puts the tool away; a ride left without an entrance or exit stays built but
 // takes no riders. Once the exit stands, the ride is fenced round its rim and beside its doors, and the doors
@@ -12,21 +12,25 @@
 // Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
 // the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
-// rises and sinks with the pointer. An item may not take room another solid item or a path fills.
+// rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round
+// panel in the bottom-left corner shows the item alone, slowly turning, with a tab that turns it and, for
+// items that take colours, one that paints them; the colours start as the item's own each time it is picked.
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "park/camera.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_clearance.hpp"
 #include "park/ride_placement.hpp"
 #include "render/device.hpp"
 #include "scene/track_building.hpp"
-#include "ui/keyboard.hpp"
+#include "ui/key_map.hpp"
 #include "ui/widget.hpp"
 
 #include <cstddef>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -63,6 +67,12 @@ namespace rct3::scene
         bool affordable = true;
         std::size_t ride = 0; ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
+        std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
+        std::string panel_item;                  ///< The scenery the placing panel is set up for
+        park::ObjectMesh preview_mesh;           ///< The scenery alone, for the panel's round view
+        park::ParkCamera preview_camera;
+        render::TextureHandle preview_target;
+        std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         park::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
@@ -83,10 +93,10 @@ namespace rct3::scene
 
     [[nodiscard]] bool ride_placing(const ParkScene& scene);
 
-    /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) and the keys, and
-    /// has the simulation take on the rides placed here as their entrances join the paths. `shift`: whether
-    /// Shift is held, which raises and lowers scenery.
-    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, const ui::KeyboardState& keys);
+    /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface), the game's
+    /// `commands` and the placing panel, and has the simulation take on the rides placed here as their entrances
+    /// join the paths. `shift`: whether Shift is held, which raises and lowers scenery.
+    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands);
 
     /// A click on the park while placing: places what the ghost shows. False when not placing.
     bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);

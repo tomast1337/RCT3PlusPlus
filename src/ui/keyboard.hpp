@@ -57,7 +57,7 @@ namespace rct3::ui
         F10,
         F11,
         F12,
-        Letter, ///< A letter or digit key without Control: `character` holds it, lower case. Comes besides the
+        Letter, ///< A letter, digit, comma or full stop key without Control: `character` holds it, lower case. Comes besides the
                 ///< text the key types, for keys bound to the game (see key_map.hpp); widgets leave it alone
     };
 

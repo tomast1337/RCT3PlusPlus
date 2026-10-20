@@ -342,42 +342,43 @@ namespace rct3::scene
             device.begin_pass(back);
         }
 
-        /// Draws the attraction the info panel shows into the panel's round view, from its own camera.
-        void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel)
+        /// Draws into the round view of `panel`, by `draw` given the view's transform: into `target`, made again
+        /// when the view's size in pixels (`pixels`) changes, cleared to `back`.
+        template<typename Draw> void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
         {
             const float scale = scale_for(device, scene);
-            const auto pixels = static_cast<std::uint32_t>(std::lround(ui::info_panel::kView * scale));
-            if (scene.view_target && scene.view_pixels != pixels)
+            const auto wanted = static_cast<std::uint32_t>(std::lround(ui::info_panel::kView * scale));
+            if (target && pixels != wanted)
             {
-                device.destroy_texture(scene.view_target);
-                scene.view_target = { };
+                device.destroy_texture(target);
+                target = { };
             }
-            if (!scene.view_target && pixels > 0)
+            if (!target && wanted > 0)
             {
                 render::TextureDesc desc;
-                desc.width = pixels;
-                desc.height = pixels;
+                desc.width = wanted;
+                desc.height = wanted;
                 desc.target = true;
-                desc.label = "attraction view";
+                desc.label = label;
                 if (auto made = device.create_texture(desc))
                 {
-                    scene.view_target = *made;
-                    scene.view_pixels = pixels;
+                    target = *made;
+                    pixels = wanted;
                 }
             }
-            if (!scene.view_target)
+            if (!target)
                 return;
             device.end_pass();
             render::PassDesc into;
-            into.target = scene.view_target;
-            into.clear_color = scene.horizon;
+            into.target = target;
+            into.clear_color = back;
             device.begin_pass(into);
-            draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light);
+            draw();
             device.end_pass();
-            render::PassDesc back;
-            back.clear = false;
-            device.begin_pass(back);
-            panel.show_view(ui::texture_id(scene.view_target));
+            render::PassDesc rest;
+            rest.clear = false;
+            device.begin_pass(rest);
+            panel.show_view(ui::texture_id(target));
         }
 
         /// Draws the first photo waiting into the photo target and asks for its pixels, for the app to save.
@@ -423,7 +424,12 @@ namespace rct3::scene
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
-            profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", scene.horizon, [&] { draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
+        // The item being placed, alone on the disc's grey, lit as the park is.
+        // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
+        // preview shows a part hidden behind glass.
+        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
+            profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_mesh, park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)
             profiling::section("Photo", [&] { draw_photo(device, scene); });
         const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));

@@ -71,6 +71,10 @@ namespace rct3::ui
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
         Color picked_section_colour = hex("#ffffff"); ///< Of the shown section's
         float glass_alpha = 0.15f;
+        /// In the bottom-left corner instead, turned the other way: tabs mirrored, the strip on the right.
+        /// Drawn only in code.
+        bool left = false;
+        float raise = 0; ///< Of the disc and its close button, clear of what stands below them
         Color text_colour = hex("#ffffff");
         /// The colours of a graph's series, in turn.
         std::vector<Color> series_colours { hex("#ffe14a"), hex("#6be36b"), hex("#ff7a5c"), hex("#7ac8ff") };

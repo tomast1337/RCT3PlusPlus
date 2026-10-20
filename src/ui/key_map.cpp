@@ -78,6 +78,8 @@ namespace rct3::ui
             { P::FlattenTerrain, G::DuringPlay, "flatten_terrain", "KeySetting_FlattenTerrain", std::nullopt, u"Alt" },
             { P::TogglePause, G::DuringPlay, "toggle_pause", "KeySetting_TogglePaused", letter(U'p') },
             { P::CloseTopmostWindow, G::DuringPlay, "close_topmost_window", "KeySetting_CloseTopmostWindow", key(K::Backspace) },
+            { P::TurnItemLeft, G::DuringPlay, "turn_item_left", "Rct3pp_TurnItemLeft", letter(U',') },
+            { P::TurnItemRight, G::DuringPlay, "turn_item_right", "Rct3pp_TurnItemRight", letter(U'.') },
         } };
 
         std::size_t index(Command c)

@@ -382,9 +382,8 @@ namespace rct3::scene
             p.problem = park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
             if (p.problem == park::SiteProblem::None && load_object_model(scene, p.models, assets, o))
             {
-                // The room the item's solid squares take may not be taken already, by a solid item or a path.
-                // shortcut: a solid square fills its whole tile, so two solid quarter-tile items cannot share one;
-                // split solid room by quarters if that gets in the way.
+                // The room the item's solid squares take may not be taken already, by a solid item or a path: two
+                // items share a tile when they take different quarters or edges of it, or stand at other heights.
                 const park::SolidTiles mine = park::solid_tiles(std::span(&o, 1), scene.models, scene.grid);
                 for (const auto& [key, spans] : mine.tiles)
                 {
@@ -392,7 +391,7 @@ namespace rct3::scene
                     const auto there = p.solids.tiles.find(key);
                     for (const park::SolidSpan& s : spans)
                     {
-                        if (there != p.solids.tiles.end() && std::ranges::any_of(there->second, [&](const park::SolidSpan& t) { return t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
+                        if (there != p.solids.tiles.end() && std::ranges::any_of(there->second, [&](const park::SolidSpan& t) { return (t.room & s.room) != 0 && t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
                             p.problem = park::SiteProblem::Blocked;
                     }
                     for (const save::PathTile& path : scene.footpaths.paths)
@@ -448,6 +447,7 @@ namespace rct3::scene
         {
             // The tool stays out for the next one, as in the game.
             add_object(scene, *o);
+            animate_scenery(device, scene, scene.objects.size() - 1);
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, o->col, o->row, p.site->height);

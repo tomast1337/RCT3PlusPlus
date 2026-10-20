@@ -22,11 +22,25 @@
 namespace rct3::park
 {
 
-    /// Levels filled on one tile, in world units.
+    /// The room of a tile an item takes, as bits: one per quarter, as save::PlacedObject::quadrant counts them,
+    /// then one per edge, as the item's quarter turns count them. Items whose rooms share no bit stand side by
+    /// side on one tile, as small props in different quarters do, or a wall along an edge over a floor.
+    inline constexpr std::uint8_t kWholeTile = 0x0F;
+    [[nodiscard]] constexpr std::uint8_t quarter_room(std::int32_t quadrant) noexcept
+    {
+        return static_cast<std::uint8_t>(1U << (quadrant & 3));
+    }
+    [[nodiscard]] constexpr std::uint8_t edge_room(std::int32_t turns) noexcept
+    {
+        return static_cast<std::uint8_t>(0x10U << (turns & 3));
+    }
+
+    /// Levels filled on one tile, in world units, and the room of the tile they fill.
     struct SolidSpan
     {
         float low = 0;
         float high = 0;
+        std::uint8_t room = kWholeTile;
     };
 
     /// What fills each tile, by tile (row << 16 | column).

@@ -428,33 +428,39 @@ namespace rct3::scene
 
         /// Changes the object `index` by `change`. The objects' meshes are built beside the frame from the
         /// objects, so the build in hand is dropped first and another started with the change.
-        template<typename Change> void change_object(ParkScene& scene, std::size_t index, Change&& change)
+        template<typename Change> void change_object(render::Device& device, ParkScene& scene, std::size_t index, Change&& change)
         {
             if (index >= scene.objects.size())
                 return;
             if (scene.object_build.valid())
                 (void)scene.object_build.get();
             change(scene.objects[index]);
+            // Scenery its bones move is built again, in its new colours or not at all.
+            if (const auto boned = std::ranges::find_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object == index && b.ride == entt::null; }); boned != scene.boned_rides.end())
+            {
+                scene.boned_rides.erase(boned);
+                animate_scenery(device, scene, index);
+            }
             scene.levels = { };
             scene.since_rebuild = kObjectRebuildInterval;
         }
 
         /// Takes the prop `index` out of the park.
-        void destroy_prop(ParkScene& scene, std::size_t index)
+        void destroy_prop(render::Device& device, ParkScene& scene, std::size_t index)
         {
-            change_object(scene, index, [](save::PlacedObject& o) { o.hidden = true; });
+            change_object(device, scene, index, [](save::PlacedObject& o) { o.hidden = true; });
         }
 
         /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
-        void paint_prop(ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
+        void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
         {
             if (slot < park::kFlexiSlotCount)
-                change_object(scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
+                change_object(device, scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
         }
 
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
-        void change_attraction(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change)
+        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change)
         {
             using enum ui::AttractionControl;
             save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
@@ -476,7 +482,7 @@ namespace rct3::scene
                 {
                     const auto owner = scene.attractions.find(scene.objects[i].id);
                     if (owner != scene.attractions.end() && owner->second == ref)
-                        paint_prop(scene, i, slot, change.value);
+                        paint_prop(device, scene, i, slot, change.value);
                 }
             }
             else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
@@ -868,14 +874,14 @@ namespace rct3::scene
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {
                 // Pulled down at once, as in the game; the panel goes with it.
-                destroy_prop(scene, *scene.shown_prop);
+                destroy_prop(device, scene, *scene.shown_prop);
                 scene.shown_prop.reset();
                 info->hide();
             }
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
             if (const auto change = info->take_change(); change && scene.shown)
-                change_attraction(scene, *info, *scene.shown, *change);
+                change_attraction(device, scene, *info, *scene.shown, *change);
             else if (change && scene.shown_person)
             {
                 if (change->id == ui::person_control(ui::PersonControl::Sack))
@@ -895,7 +901,7 @@ namespace rct3::scene
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
                 const std::vector<std::size_t> slots = ui::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
                 if (paint->pot < slots.size())
-                    paint_prop(scene, *scene.shown_prop, slots[paint->pot], static_cast<std::int32_t>(paint->colour));
+                    paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<std::int32_t>(paint->colour));
             }
             if (const auto tab = info->take_picked(); tab && scene.shown_prop)
             {

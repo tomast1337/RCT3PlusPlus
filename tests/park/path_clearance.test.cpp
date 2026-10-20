@@ -2,6 +2,7 @@
 #include "park/path_clearance.hpp"
 
 #include "park/item_category.hpp"
+#include "park/object_placement.hpp"
 #include "park/path_drag.hpp"
 #include "park/path_route.hpp"
 
@@ -79,4 +80,22 @@ TEST_CASE("a route goes round a stall in its way")
     REQUIRE(route);
     CHECK(route->back().piece.spot == PathSpot { 4, 1 });
     CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == PathSpot { 2, 1 } && s.piece.end < 4; }));
+}
+
+TEST_CASE("items in different quarters or along different edges of a tile take different room of it")
+{
+    const save::TerrainGrid g = owned_grid(5, 3);
+    auto [objects, models] = one_item(ItemCategory::Stall);
+    models.begin()->second.positioning = std::to_underlying(Positioning::Quarter);
+    objects.push_back(objects[0]);
+    objects[1].quadrant = 3;
+    const SolidTiles solids = solid_tiles(objects, models, g);
+    const auto& spans = solids.tiles.at(1 << 16 | 2);
+    REQUIRE(spans.size() == 2);
+    CHECK(spans[0].room == quarter_room(0));
+    CHECK((spans[0].room & spans[1].room) == 0);
+    CHECK(blocked(solids, { 2, 1 }, 0, 0)); // A path still needs the whole tile
+
+    CHECK((edge_room(0) & edge_room(1)) == 0);
+    CHECK((edge_room(2) & kWholeTile) == 0);
 }

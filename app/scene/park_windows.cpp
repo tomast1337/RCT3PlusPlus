@@ -104,6 +104,11 @@ namespace rct3::scene
                 return save_park(park);
             }))
             park.park_to_load = std::move(picked);
+        if (const auto follow = std::exchange(park.footpaths.follow_changed, std::nullopt))
+        {
+            front.live->options.set(config::GameOption::PathCameraFollow, *follow ? 1.0f : 0.0f);
+            save_front_end_options(front);
+        }
         if (!park.options)
             return;
         park.options->update();

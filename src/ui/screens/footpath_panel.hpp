@@ -45,10 +45,11 @@ namespace rct3::ui
         std::string controls_icon;
         std::string follow_icon;
         std::string route_icon;
+        std::string remove_icon;
         std::string paths_icon;
         std::string queues_icon;
         /// Strings keys of the tabs' help, in the order above.
-        std::array<std::string, 5> tab_help;
+        std::array<std::string, 6> tab_help; ///< Controls, follow, route, remove, paths, queues
         /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
         /// pictures instead, for on and off.
         std::array<std::string, kFootpathControls> usable_icons;
@@ -69,6 +70,7 @@ namespace rct3::ui
         inline constexpr int kControlsSlot = 0;
         inline constexpr int kFollowSlot = 1;
         inline constexpr int kRouteSlot = 2;
+        inline constexpr int kRemoveSlot = 3;
         inline constexpr int kPathsSlot = 4;
         inline constexpr int kQueuesSlot = 5;
         inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
@@ -163,9 +165,18 @@ namespace rct3::ui
         {
             return follow_->on;
         }
+        void set_following(bool on)
+        {
+            follow_->on = on;
+        }
         [[nodiscard]] bool routing() const
         {
             return route_->on;
+        }
+        /// Clicks take paths away rather than lay them.
+        [[nodiscard]] bool removing() const
+        {
+            return remove_->on;
         }
 
         /// The control pressed since the last call, by its index.
@@ -198,6 +209,10 @@ namespace rct3::ui
         [[nodiscard]] Button& route_tab() const
         {
             return *route_;
+        }
+        [[nodiscard]] Button& remove_tab() const
+        {
+            return *remove_;
         }
         [[nodiscard]] std::size_t style_count() const
         {
@@ -236,6 +251,7 @@ namespace rct3::ui
         Button* controls_tab_ = nullptr;
         Button* follow_ = nullptr;
         Button* route_ = nullptr;
+        Button* remove_ = nullptr;
         Button* paths_tab_ = nullptr;
         Button* queues_tab_ = nullptr;
         Widget* body_ = nullptr;

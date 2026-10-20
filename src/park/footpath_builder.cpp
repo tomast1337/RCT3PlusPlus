@@ -289,6 +289,27 @@ namespace rct3::park
         return removed;
     }
 
+    std::vector<save::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::PathTile>& paths, std::span<const std::uint64_t> ids)
+    {
+        std::vector<save::PathTile> out;
+        while (!builder.trail.empty() && builder.trail.back().laid != 0 && std::ranges::contains(ids, builder.trail.back().laid))
+        {
+            if (auto removed = remove_last(builder, paths))
+                out.push_back(std::move(*removed));
+        }
+        if (std::ranges::any_of(builder.trail, [&](const TrailStep& s) { return s.laid != 0 && std::ranges::contains(ids, s.laid); }))
+            builder = FootpathBuilder { .heading = builder.heading, .slope = builder.slope, .cut_into_ground = builder.cut_into_ground, .queue = builder.queue };
+        for (const std::uint64_t id : ids)
+        {
+            if (const auto at = std::ranges::find(paths, id, &save::PathTile::id); at != paths.end())
+            {
+                out.push_back(std::move(*at));
+                paths.erase(at);
+            }
+        }
+        return out;
+    }
+
     bool can_turn(const FootpathBuilder& builder) noexcept
     {
         return !builder.on_slope;
@@ -309,6 +330,31 @@ namespace rct3::park
         if (!picks_slope(control))
             return PathSlope::Flat;
         return static_cast<PathSlope>(static_cast<std::uint8_t>(control) - static_cast<std::uint8_t>(PathControl::SteepDown));
+    }
+
+    std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    {
+        FootpathBuilder trial = builder;
+        const auto fits = [&](std::uint8_t heading, PathSlope slope) {
+            trial.heading = heading;
+            trial.slope = slope;
+            return lay_problem(trial, grid, paths, solids) == LayProblem::None;
+        };
+        constexpr std::array kSlopes { PathControl::SteepDown, PathControl::Down, PathControl::Flat, PathControl::Up, PathControl::SteepUp };
+        const auto some_slope = [&](std::uint8_t heading) { return std::ranges::any_of(kSlopes, [&](PathControl c) { return fits(heading, control_slope(c)); }); };
+
+        std::array<bool, kPathControlCount> out { };
+        const auto at = [&](PathControl c) -> bool& { return out.at(static_cast<std::size_t>(c)); };
+        if (can_turn(builder))
+        {
+            at(PathControl::TurnLeft) = some_slope(static_cast<std::uint8_t>((builder.heading + kQuarterTurns - 1) % kQuarterTurns));
+            at(PathControl::TurnRight) = some_slope(static_cast<std::uint8_t>((builder.heading + 1) % kQuarterTurns));
+        }
+        for (const PathControl c : kSlopes)
+            at(c) = fits(builder.heading, control_slope(c));
+        at(PathControl::Straight) = at(slope_control(builder.slope));
+        at(PathControl::CutIntoGround) = true;
+        return out;
     }
 
     PathStep press(FootpathBuilder& builder, PathControl control)
@@ -378,6 +424,17 @@ namespace rct3::park
         if (piece.tunnel)
             return ground_cost + kTunnelPieceCost;
         return piece_cost(ground_cost, !piece.ground, height_above_ground(piece, grid));
+    }
+
+    std::int64_t laid_price(const save::PathTile& path, const save::TerrainGrid& grid, std::int32_t ground_cost)
+    {
+        if (!path.elevation || is_ground_queue(path))
+            return ground_cost;
+        const std::uint8_t slope = path.elevation->slope;
+        const bool down = slope == stored_slope(PathSlope::Down) || slope == stored_slope(PathSlope::SteepDown);
+        const auto rise = static_cast<std::int32_t>(std::lround(path_rise(slope)));
+        const std::int32_t start = path.elevation->quantised_height;
+        return piece_price(NextPiece { { path.col, path.row }, start, down ? start - rise : start + rise, false, false, path.elevation->underground }, grid, ground_cost);
     }
 
 } // namespace rct3::park

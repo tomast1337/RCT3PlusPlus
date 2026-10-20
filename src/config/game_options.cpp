@@ -44,6 +44,7 @@ namespace rct3::config
             { O::CameraFocusOnMiddle, "camera_focus_on_middle", 0, 1, 1, 0 },
             { O::FreeLookSpeed, "free_look_speed", 0, 1, 0.01f, 0.5f },
             { O::IsometricRotation, "isometric_rotation", 0.05f, 5, 0.05f, 1 },
+            { O::PathCameraFollow, "path_camera_follow", 0, 1, 1, 1 },
 
             { O::GraphicsQuality, "graphics_quality", 0, 5, 1, 2 },
             { O::AntiAliasing, "anti_aliasing", 0, 8, 1, 0 },

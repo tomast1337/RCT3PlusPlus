@@ -20,7 +20,13 @@
 // its first piece with the pointer, as for scenery; below the ground it is a tunnel piece. A press while Shift
 // is held lays it; let go, the height stays for the arrow. With Control held, a trail started on bare ground,
 // or raised with Shift, starts at the height the last piece laid here ended at.
-// A right click lets go of the trail, so the arrow stops showing; with no trail, it sells the path pointed at.
+// A right click or Escape lets go of the trail, so the arrow stops showing; with no trail, a right click sells
+// the path pointed at. While a trail goes on, pointing at paths and ground shows nothing more: the arrow holds
+// still until a click starts a trail elsewhere or the trail is let go.
+//
+// With the panel's remove tab on, the path pointed at shows red; a press takes it away, and so does every
+// path the pointer passes over while the button is held. Paths at the trail's end are taken newest first,
+// backing the arrow up over them. Taking a path away, by any means, pays back what laying it cost.
 //
 // With the panel's route tab on and a trail started, pointing at a tile shows the cheapest route from the
 // arrow to it (park/path_route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
@@ -125,6 +131,11 @@ namespace rct3::scene
         bool lay_route = false;                            ///< And came up, so the route is laid
         std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid
         std::optional<std::uint64_t> sell;                 ///< A right click picked this path to sell
+        bool removing = false;                             ///< The panel's remove tab was on last frame
+        std::optional<std::uint64_t> remove_hover;         ///< With removing on: the path pointed at
+        std::vector<std::uint64_t> remove_marked;          ///< And the paths a press went over, until let go
+        bool remove_now = false;                           ///< Let go, so the marked paths are taken away
+        std::optional<bool> follow_changed;                ///< The follow tab was switched, for the options to keep
         std::optional<save::Tile> followed;                ///< With camera follow on: the next piece's tile the camera went to
         std::optional<glm::vec3> camera_goal;              ///< Where the camera glides to, until it is there or moved
         bool dirty = false;                                ///< The next piece changed, so the ghost is built again
@@ -162,6 +173,9 @@ namespace rct3::scene
     /// A right click while the path panel shows its controls lets go of the trail's arrow, or with no trail
     /// going on sells the path under the pointer, as in the game. Whether it did either.
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size);
+
+    /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
+    bool drop_footpath_trail(ParkScene& scene);
 
     /// Follows the pointer over the park at `at` (`over` the interface or not): strokes while the left button is
     /// `down`, slope drags on an arrow, and the path edge or door pointed at; `cancel` calls a stroke or drag off.

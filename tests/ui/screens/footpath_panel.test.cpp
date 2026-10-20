@@ -165,6 +165,13 @@ TEST_CASE("the open page's tab folds the strip away, and the close button hides 
     f.click(Fixture::middle(f.panel->route_tab().rect()));
     CHECK(f.panel->routing());
     CHECK_FALSE(f.panel->following());
+    // Removing and routing turn each other off.
+    f.click(Fixture::middle(f.panel->remove_tab().rect()));
+    CHECK(f.panel->removing());
+    CHECK_FALSE(f.panel->routing());
+    f.click(Fixture::middle(f.panel->route_tab().rect()));
+    CHECK(f.panel->routing());
+    CHECK_FALSE(f.panel->removing());
 
     f.click({ footpath_panel::kCloseLeft + info_panel::kCloseSize / 2, 700 - footpath_panel::kCloseBottom - info_panel::kCloseSize / 2 });
     CHECK_FALSE(f.panel->showing());

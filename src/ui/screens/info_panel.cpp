@@ -42,7 +42,8 @@ namespace rct3::ui
         body_ = &add<Widget>("body");
         body_->clip_children = true;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);
-        close_->placement = bottom_right(info_panel::kCloseRight, info_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
+        const float close_bottom = info_panel::kCloseBottom + style_.raise;
+        close_->placement = style_.left ? bottom_left(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize) : bottom_right(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize);
         visible = false;
         set_body_size(0, 0);
     }
@@ -402,8 +403,8 @@ namespace rct3::ui
     Rect InfoPanel::disc() const
     {
         const Rect r = rect();
-        const float right = r.x1 - info_panel::kDiscMargin;
-        const float bottom = r.y1 - info_panel::kDiscMargin;
+        const float right = style_.left ? r.x0 + info_panel::kDiscMargin + info_panel::kDisc : r.x1 - info_panel::kDiscMargin;
+        const float bottom = r.y1 - info_panel::kDiscMargin - style_.raise;
         return { right - info_panel::kDisc, bottom - info_panel::kDisc, right, bottom };
     }
 
@@ -421,6 +422,8 @@ namespace rct3::ui
         const float height = info_panel::kStripHeight;
         // Level with the disc's top, so the band along its top runs on into the disc's.
         const Rect d = disc();
+        if (style_.left)
+            return { d.x1 - info_panel::kStripOverlap, d.y0, d.x1 - info_panel::kStripOverlap + width, d.y0 + height };
         const float right = d.x0 + info_panel::kStripOverlap;
         return { right - width, d.y0, right, d.y0 + height };
     }
@@ -430,17 +433,23 @@ namespace rct3::ui
         const Rect r = rect();
         const Rect d = disc();
         const Point middle { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
+        const auto tab_offset = [&](int slot) {
+            const Point at = info_tab_offset(slot);
+            return style_.left ? Point { -at.x, at.y } : at;
+        };
         for (std::size_t i = 0; i < tabs_.size(); ++i)
         {
-            const Point at = info_tab_offset(slots_[i]);
+            const Point at = tab_offset(slots_[i]);
             tabs_[i]->placement = top_left(middle.x + at.x - info_panel::kTabSize / 2, middle.y + at.y - info_panel::kTabSize / 2, info_panel::kTabSize, info_panel::kTabSize);
         }
         if (choosing_)
         {
-            const Point tab = info_tab_offset(slots_[*choosing_]);
+            const Point tab = tab_offset(slots_[*choosing_]);
             for (std::size_t i = 0; i < choices_.size(); ++i)
             {
-                const Point at = info_choice_offset(slots_[*choosing_], i, choices_.size());
+                Point at = info_choice_offset(slots_[*choosing_], i, choices_.size());
+                if (style_.left)
+                    at.x = -at.x;
                 choices_[i]->placement = top_left(middle.x + tab.x + at.x - info_panel::kChoiceSize / 2, middle.y + tab.y + at.y - info_panel::kChoiceSize / 2, info_panel::kChoiceSize, info_panel::kChoiceSize);
             }
         }
@@ -448,7 +457,7 @@ namespace rct3::ui
         {
             // Above its tab, as near the tab's middle as the screen allows.
             const Point size = ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
-            const Point tab = info_tab_offset(slots_[*painting_]);
+            const Point tab = tab_offset(slots_[*painting_]);
             const float m = info_panel::kScreenMargin;
             const float x = std::clamp(middle.x + tab.x - size.x / 2, m, std::max(m, r.width() - m - size.x));
             const float y = std::clamp(middle.y + tab.y - info_panel::kTabSize / 2 - info_panel::kPaletteGap - size.y, m, std::max(m, r.height() - m - size.y));
@@ -480,7 +489,7 @@ namespace rct3::ui
         const float dx = p.x - (d.x0 + d.x1) / 2;
         const float dy = p.y - (d.y0 + d.y1) / 2;
         const float radius = info_panel::kDisc / 2;
-        return dx * dx + dy * dy <= radius * radius || contains(strip(), p);
+        return dx * dx + dy * dy <= radius * radius || ((!style_.left || body_width_ > 0) && contains(strip(), p));
     }
 
     void InfoPanel::update(const UpdateContext&)
@@ -567,7 +576,7 @@ namespace rct3::ui
 
     void InfoPanel::draw(DrawContext& context) const
     {
-        if (style_.look == PanelLook::Coded)
+        if (style_.look == PanelLook::Coded || style_.left)
             draw_coded(context.list);
         else
             draw_skins(context);
@@ -600,11 +609,15 @@ namespace rct3::ui
         // The disc: flat where it meets the strip, round on the right.
         const Rect d = disc();
         const float half = d.width() / 2;
-        const Corners flat_left { 0, half, half, 0 };
-        plain(shifted(d, info_panel::kShadowOffset), flat_left, c.shadow);
+        // Turned the other way, round on the left and flat on the right only while the strip shows.
+        const Corners flat = style_.left ? (body_width_ > 0 ? Corners { half, 0, 0, half } : round_corners(half)) : Corners { 0, half, half, 0 };
+        plain(shifted(d, info_panel::kShadowOffset), flat, c.shadow);
         plain(shifted(d, info_panel::kShadowOffset), round_corners(half), c.shadow);
-        plain(d, flat_left, c.disc);
-        plain({ d.x0, d.y0, d.x0 + half, d.y0 + c.band_height }, { }, c.band);
+        plain(d, flat, c.disc);
+        if (!style_.left)
+            plain({ d.x0, d.y0, d.x0 + half, d.y0 + c.band_height }, { }, c.band);
+        else if (body_width_ > 0)
+            plain({ d.x0 + half, d.y0, d.x1, d.y0 + c.band_height }, { }, c.band);
         Shape rim = shape(d, round_corners(half), c.disc, c.disc);
         rim.ring = c.rim;
         list.shape(rim);

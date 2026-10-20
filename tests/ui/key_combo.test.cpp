@@ -57,4 +57,8 @@ TEST_CASE("game keys can be any key, shown as the game shows them")
     CHECK(parse_play_key_combo("Left") == KeyCombo { Key::Left });
     CHECK(parse_play_key_combo("B") == KeyCombo { Key::Letter, U'b' });
     CHECK_FALSE(parse_key_combo("B"));
+    // The comma and full stop keys, the < and > keys of US keyboards, turn the item being placed.
+    CHECK(parse_play_key_combo(",") == KeyCombo { Key::Letter, U',' });
+    CHECK(play_key_combo({ Key::Letter, false, false, U'.' }) == KeyCombo { Key::Letter, U'.' });
+    CHECK(to_string(KeyCombo { Key::Letter, U'.' }) == ".");
 }

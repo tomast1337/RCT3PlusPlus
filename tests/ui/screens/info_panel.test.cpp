@@ -364,3 +364,22 @@ TEST_CASE("an info widget is named by its string key and part, or by its place w
     CHECK(keyed_name("Park_Name", "", 3) == "Park_Name");
     CHECK(keyed_name("", "value", 3) == "value3");
 }
+
+TEST_CASE("turned the other way, the panel stands in the bottom-left corner with its tabs mirrored")
+{
+    Desktop desktop;
+    InfoPanelStyle style = game_skins::info_panel_style();
+    style.left = true;
+    style.raise = 50;
+    auto& panel = desktop.root().add<InfoPanel>("placing", style);
+    desktop.layout({ 0, 0, 1000, 700 });
+    panel.show(three(), 3);
+    desktop.update({ });
+    const Rect d = panel.disc();
+    CHECK(d.x0 == doctest::Approx(info_panel::kDiscMargin));
+    CHECK(d.y1 == doctest::Approx(700 - info_panel::kDiscMargin - 50));
+    const Rect tab = desktop.root().find("placing/A")->rect();
+    CHECK((tab.x0 + tab.x1) / 2 - (d.x0 + d.x1) / 2 == doctest::Approx(-info_tab_offset(0).x));
+    // With no page there is no strip to take the pointer.
+    CHECK_FALSE(panel.covers({ d.x1 + 40, (d.y0 + d.y1) / 2 }));
+}

@@ -117,6 +117,8 @@ namespace rct3::ui
         FlattenTerrain,
         TogglePause,
         CloseTopmostWindow,
+        TurnItemLeft,  ///< Turns the item being placed a quarter anticlockwise; ours, the game has none
+        TurnItemRight, ///< A quarter clockwise
 
         Count_, ///< Number of commands; not a command
     };

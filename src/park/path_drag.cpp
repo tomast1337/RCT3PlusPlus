@@ -120,4 +120,36 @@ namespace rct3::park
         return true;
     }
 
+    std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::PlacementSpot> doors, const save::TerrainGrid& grid, bool through_ground)
+    {
+        if (std::abs(ray.direction.y) < 1e-6f)
+            return std::nullopt;
+        const auto ground = through_ground ? std::nullopt : ground_hit(ray, grid);
+        float nearest = ground ? *ground + 0.01f : kFar;
+        std::optional<DoorEdge> best;
+        for (std::size_t i = 0; i < doors.size(); ++i)
+        {
+            const save::PlacementSpot& d = doors[i];
+            const float t = (static_cast<float>(d.height) - ray.origin.y) / ray.direction.y;
+            if (t <= 0 || t > nearest)
+                continue;
+            const glm::vec3 hit = ray.origin + ray.direction * t;
+            const float across_col = (hit.x - grid.world_x(d.col)) / grid.tile_size_x;
+            const float across_row = (hit.z - grid.world_z(d.row)) / grid.tile_size_z;
+            if (across_col < 0 || across_col >= 1 || across_row < 0 || across_row >= 1)
+                continue;
+            nearest = t;
+            best = DoorEdge { i, nearest_side(across_col, across_row) };
+        }
+        return best;
+    }
+
+    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, std::uint8_t side)
+    {
+        const PathSpot spot { door.col, door.row };
+        start_at(builder, spot);
+        builder.heading = side;
+        builder.trail.push_back({ spot, 0, door.height });
+    }
+
 } // namespace rct3::park

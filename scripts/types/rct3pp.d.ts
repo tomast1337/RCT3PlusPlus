@@ -20,6 +20,8 @@ declare namespace pointer {
     function release(): void;
     /** Holds Shift down with the pointer, or lets it go. */
     function shift(on: boolean): void;
+    /** Holds Control down with the pointer, or lets it go. */
+    function control(on: boolean): void;
     /** Moves to (x, y), presses and lets go. */
     function click(x: number, y: number): Promise<void>;
     /** Presses at `from`, moves to `to` over `count` frames and lets go. */

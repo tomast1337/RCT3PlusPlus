@@ -10,6 +10,7 @@
 //   until(check, limit, what)  waits frames until check() holds; throws after `limit` frames (300)
 //   pointer.move(x, y), pointer.press(), pointer.release(), pointer.click(x, y), pointer.drag(from, to, frames)
 //   pointer.shift(on)   holds Shift down with the pointer, or lets it go
+//   pointer.control(on) holds Control down with the pointer, or lets it go
 //   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch, or undefined
 //                       when it is not shown
 //   ui.click(path)      moves there, presses and lets go, a frame each
@@ -67,6 +68,7 @@ namespace rct3::scene
             float y = 0;
             bool down = false;
             bool shift = false;
+            bool control = false;
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         /// The park the script asked for, once: a path in the game's folder.
@@ -92,6 +94,7 @@ namespace rct3::scene
         std::optional<glm::vec2> at_; ///< Share of the view
         bool down_ = false;
         bool shift_ = false;
+        bool control_ = false;
         std::optional<std::filesystem::path> screenshot_;
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;

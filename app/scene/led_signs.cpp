@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "scene/queue_signs.hpp"
+#include "scene/led_signs.hpp"
 
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
-#include "park/queue_signs.hpp"
+#include "park/item_category.hpp"
+#include "park/led_signs.hpp"
 #include "scene/park_scene.hpp"
 #include "strings/ascii.hpp"
 #include "ui/font_images.hpp"
 #include "ui/font_sets.hpp"
 #include "ui/screens/attraction_info.hpp"
+#include "ui/screens/management_pages.hpp"
 
 #include <algorithm>
 #include <array>
@@ -26,7 +28,7 @@ namespace rct3::scene
         /// The plain theme's overlay, whose sign rides of no theme take.
         constexpr std::string_view kPlainTheme = "Style/Vanilla/Style";
         /// Stands in for a board's own picture in its model, so its batch can be told apart.
-        constexpr std::string_view kBoardPicture = "queue sign board";
+        constexpr std::string_view kBoardPicture = "LED sign board";
         /// The font the boards are written in, from the largest set.
         constexpr std::string_view kBoardFont = "GUIFontScaledLarge";
 
@@ -48,7 +50,7 @@ namespace rct3::scene
         }
 
         /// The queue sign of the theme in `overlay`, read once; empty when it has none.
-        const std::string& sign_of(QueueSigns& q, const ui::InterfaceAssets& assets, const std::string& overlay)
+        const std::string& sign_of(LedSigns& q, const ui::InterfaceAssets& assets, const std::string& overlay)
         {
             auto [found, added] = q.sign_of.try_emplace(overlay);
             if (!added || !assets.install)
@@ -117,7 +119,7 @@ namespace rct3::scene
 
         void put_up(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
         {
-            QueueSigns& q = scene.queue_signs;
+            LedSigns& q = scene.led_signs;
             ui::destroy_textures(device, q.textures);
             q.signs.clear();
             std::map<std::uint64_t, std::size_t> ride_of_line;
@@ -132,10 +134,45 @@ namespace rct3::scene
                         ride_of_line.emplace(station.queue_line, r);
                 }
             }
-            if (ride_of_line.empty())
-                return;
+            // Writes `sign`'s board into its mesh and gives it a blank picture; false when `model` has no board.
+            const auto hang = [&](LedSign& sign, park::ObjectModels& model) {
+                const float aspect = prepare_board(model.begin()->second);
+                if (aspect <= 0)
+                    return false;
+                sign.width = std::max<std::uint32_t>(static_cast<std::uint32_t>(std::lround(aspect * park::kSignTextHeight / park::kSignLamp)), 1) * park::kSignLamp;
+                sign.board = std::format("LED sign {}", q.signs.size());
+                sign.mesh = park::object_mesh(std::span(&sign.object, 1), model, scene.grid);
+                for (park::ObjectBatch& batch : sign.mesh.batches)
+                {
+                    if (batch.picture == kBoardPicture)
+                        batch.texture = sign.board;
+                }
+                ovl::RgbaImage blank;
+                blank.width = sign.width;
+                blank.height = park::kSignTextHeight;
+                blank.pixels.assign(static_cast<std::size_t>(blank.width) * blank.height * 4, park::kSignDark);
+                auto made = ui::upload_textures(device, { { sign.board, std::move(blank) } });
+                if (!made)
+                    return false;
+                q.textures.merge(*made);
+                return true;
+            };
             // The models are read by the build beside the frame.
             wait_for_build(scene);
+            for (const save::PlacedObject& o : scene.objects)
+            {
+                const auto found = scene.models.find(park::model_key(o));
+                if (found == scene.models.end() || found->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))
+                    continue;
+                LedSign sign;
+                sign.object = o;
+                park::ObjectModels model { *found };
+                if (!hang(sign, model))
+                    continue;
+                // The entrance itself is drawn with the objects.
+                std::erase_if(sign.mesh.batches, [&](const park::ObjectBatch& batch) { return batch.texture != sign.board; });
+                q.signs.push_back(std::move(sign));
+            }
             for (const park::QueueSignSpot& spot : park::queue_sign_spots(scene.footpaths.paths, scene.grid))
             {
                 const auto ride = ride_of_line.find(spot.line);
@@ -147,7 +184,7 @@ namespace rct3::scene
                 const std::string& symbol = sign_of(q, assets, theme);
                 if (symbol.empty())
                     continue;
-                QueueSign sign;
+                LedSign sign;
                 sign.ride = ride->second;
                 save::PlacedObject& o = sign.object;
                 o.id = std::numeric_limits<std::uint64_t>::max() - q.signs.size();
@@ -162,31 +199,14 @@ namespace rct3::scene
                     continue;
                 // A copy: the same item placed as scenery keeps its own board.
                 park::ObjectModels model { { park::model_key(o), scene.models.at(park::model_key(o)) } };
-                const float aspect = prepare_board(model.begin()->second);
-                if (aspect <= 0)
+                if (!hang(sign, model))
                     continue;
-                sign.width = std::max<std::uint32_t>(static_cast<std::uint32_t>(std::lround(aspect * park::kSignTextHeight / park::kSignLamp)), 1) * park::kSignLamp;
-                sign.board = std::format("queue sign {}", q.signs.size());
-                sign.mesh = park::object_mesh(std::span(&o, 1), model, scene.grid);
-                for (park::ObjectBatch& batch : sign.mesh.batches)
-                {
-                    if (batch.picture == kBoardPicture)
-                        batch.texture = sign.board;
-                }
                 frame_textures(device, scene, sign.mesh);
-                ovl::RgbaImage blank;
-                blank.width = sign.width;
-                blank.height = park::kSignTextHeight;
-                blank.pixels.assign(static_cast<std::size_t>(blank.width) * blank.height * 4, park::kSignDark);
-                auto made = ui::upload_textures(device, { { sign.board, std::move(blank) } });
-                if (!made)
-                    continue;
-                q.textures.merge(*made);
                 q.signs.push_back(std::move(sign));
             }
         }
 
-        const ui::Font* board_font(QueueSigns& q, const ui::InterfaceAssets& assets)
+        const ui::Font* board_font(LedSigns& q, const ui::InterfaceAssets& assets)
         {
             if (!std::exchange(q.font_tried, true) && assets.install)
             {
@@ -194,7 +214,7 @@ namespace rct3::scene
                 const auto path = assets.install->find(relative);
                 auto loaded = path ? ui::load_font_images(*path) : std::unexpected(relative + " not found");
                 if (!loaded)
-                    logging::logger("park").warning("queue signs: {}", loaded.error());
+                    logging::logger("park").warning("LED signs: {}", loaded.error());
                 for (ui::FontImages& f : loaded ? *loaded : std::vector<ui::FontImages> { })
                 {
                     if (f.name != kBoardFont)
@@ -210,22 +230,30 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_queue_signs(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void update_led_signs(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
-        QueueSigns& q = scene.queue_signs;
-        const std::array counts { scene.footpaths.paths.size(), scene.rides.rides.size() };
+        LedSigns& q = scene.led_signs;
+        const std::array counts { scene.footpaths.paths.size(), scene.rides.rides.size(), scene.objects.size() };
         if (std::exchange(q.stale, false) || std::exchange(q.counted, counts) != counts)
             put_up(device, scene, assets);
         const ui::Font* font = board_font(q, assets);
         if (font == nullptr)
             return;
-        for (QueueSign& sign : q.signs)
+        for (LedSign& sign : q.signs)
         {
-            if (sign.ride >= scene.rides.rides.size())
+            if (sign.ride && *sign.ride >= scene.rides.rides.size())
                 continue;
-            const save::AttractionCommon& ride = scene.rides.rides[sign.ride].base;
-            // Open, it shows its name; else what it is doing.
-            std::u16string words = ride.state == save::AttractionState::Open && ride.repair_status == save::RepairStatus::Fine ? ui::attraction_name(ride, *assets.strings) : ui::attraction_status(ride, *assets.strings);
+            const save::Park& park = scene.park_model.park;
+            // An entrance shows the park's name, or that the park is closed. A ride's sign, open, shows the ride's
+            // name; else what it is doing.
+            std::u16string words;
+            if (!sign.ride)
+                words = park.flags.has(save::ParkFlag::Open) ? ui::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
+            else
+            {
+                const save::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
+                words = ride.state == save::AttractionState::Open && ride.repair_status == save::RepairStatus::Fine ? ui::attraction_name(ride, *assets.strings) : ui::attraction_status(ride, *assets.strings);
+            }
             if (words == sign.shown)
                 continue;
             sign.shown = std::move(words);
@@ -234,14 +262,14 @@ namespace rct3::scene
         }
     }
 
-    void roll_queue_signs(render::Device& device, ParkScene& scene)
+    void roll_led_signs(render::Device& device, ParkScene& scene)
     {
         bool in_pass = true;
-        for (QueueSign& sign : scene.queue_signs.signs)
+        for (LedSign& sign : scene.led_signs.signs)
         {
             const std::uint32_t shift = park::sign_shift(scene.clock, sign.loop.width);
-            const auto texture = scene.queue_signs.textures.find(sign.board);
-            if (shift == sign.shift || sign.loop.width == 0 || texture == scene.queue_signs.textures.end())
+            const auto texture = scene.led_signs.textures.find(sign.board);
+            if (shift == sign.shift || sign.loop.width == 0 || texture == scene.led_signs.textures.end())
                 continue;
             sign.shift = shift;
             if (std::exchange(in_pass, false))
@@ -257,14 +285,14 @@ namespace rct3::scene
         }
     }
 
-    void draw_queue_signs(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+    void draw_led_signs(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         // Boards give their own light.
         render::SceneLight unlit = light;
         unlit.sun = glm::vec3(0.0f);
         unlit.sky = glm::vec3(1.0f);
         unlit.ground = glm::vec3(1.0f);
-        for (const QueueSign& sign : scene.queue_signs.signs)
+        for (const LedSign& sign : scene.led_signs.signs)
         {
             const park::ObjectMesh& mesh = sign.mesh;
             if (mesh.indices.empty())
@@ -276,7 +304,7 @@ namespace rct3::scene
             for (const park::ObjectBatch& batch : mesh.batches)
             {
                 const bool board = batch.texture == sign.board;
-                const ui::UiTextures& textures = board ? scene.queue_signs.textures : scene.object_textures;
+                const ui::UiTextures& textures = board ? scene.led_signs.textures : scene.object_textures;
                 const auto texture = textures.find(batch.texture);
                 render::PipelineHandle pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
                 if (const auto front = scene.front_only.find(pipeline.id); batch.one_sided && front != scene.front_only.end())
@@ -298,7 +326,7 @@ namespace rct3::scene
         }
     }
 
-    void destroy_queue_signs(render::Device& device, QueueSigns& signs)
+    void destroy_led_signs(render::Device& device, LedSigns& signs)
     {
         ui::destroy_textures(device, signs.textures);
         signs.signs.clear();

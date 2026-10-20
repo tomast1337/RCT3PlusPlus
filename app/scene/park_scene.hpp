@@ -35,12 +35,12 @@
 #include "save/model/rides.hpp"
 #include "scene/build_menus.hpp"
 #include "scene/land_tools.hpp"
+#include "scene/led_signs.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
 #include "scene/park_water.hpp"
-#include "scene/queue_signs.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
 #include "scene/track_building.hpp"
@@ -402,7 +402,7 @@ namespace rct3::scene
         TrackBuilding building;                            ///< The construction panel's ride and the piece it would build
         LandTools land;                                    ///< The land menu's shape and paint tools
         RidePlacing placing;                               ///< The ride picked in a build list, while it is placed
-        QueueSigns queue_signs;                            ///< The signs over the rides' queues
+        LedSigns led_signs;                                ///< The scrolling boards over queues and on park entrances
     };
 
     /// The stages of loading a park, in the order they run.

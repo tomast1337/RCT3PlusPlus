@@ -133,20 +133,6 @@ namespace rct3::ui
             return amount ? money(units, std::llround(*amount)) : std::u16string(kDash);
         }
 
-        /// A saved name: a string key, a placeholder the player was to replace, or the name itself.
-        std::u16string saved_name(std::string_view name, std::string_view fallback, const StringTable& strings)
-        {
-            if (const auto found = strings.get(name); !name.empty() && !found.empty())
-                return std::u16string(found);
-            if (name.empty() || name.find('#') != std::string_view::npos)
-            {
-                if (const auto found = strings.get(fallback); !fallback.empty() && !found.empty())
-                    return std::u16string(found);
-                return fallback.empty() ? std::u16string(kDash) : strings::to_utf16(fallback);
-            }
-            return strings::to_utf16(name);
-        }
-
         std::vector<float> oldest_first(const save::Series& series)
         {
             // Series keep their newest sample first.
@@ -187,7 +173,7 @@ namespace rct3::ui
         void park_view(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::ParkModel* m = f.park != nullptr && f.park->has_park ? f.park : nullptr;
-            page.lines.push_back({ text(strings, "Park_Name"), m != nullptr ? saved_name(m->park.name, m->park.scenario_name, strings) : std::u16string(kDash), false, "Park_Name" });
+            page.lines.push_back({ text(strings, "Park_Name"), m != nullptr ? park_name(m->park, strings) : std::u16string(kDash), false, "Park_Name" });
             std::u16string status(kDash);
             if (m != nullptr)
                 status = text(strings, m->park.flags.has(save::ParkFlag::Open) ? "AttractionStatusOpen" : "AttractionStatusClosed");
@@ -771,6 +757,23 @@ namespace rct3::ui
             }
         }
     } // namespace
+
+    std::u16string park_name(const save::Park& park, const StringTable& strings)
+    {
+        if (const auto found = strings.get(park.name); !park.name.empty() && !found.empty())
+            return std::u16string(found);
+        // A sandbox's scenario is named by its own text.
+        const std::string_view key = park.scenario_name == "#SANDBOX#" ? std::string_view("SandboxScenario_Name") : std::string_view(park.scenario_name);
+        const auto found = strings.get(key);
+        const std::u16string scenario = !key.empty() && !found.empty() ? std::u16string(found) : strings::to_utf16(park.scenario_name);
+        if (park.name.empty())
+            return scenario.empty() ? std::u16string(kDash) : scenario;
+        std::u16string name = strings::to_utf16(park.name);
+        constexpr std::u16string_view kMe = u"#ME#";
+        for (auto at = name.find(kMe); at != std::u16string::npos; at = name.find(kMe, at + scenario.size()))
+            name.replace(at, kMe.size(), scenario);
+        return name;
+    }
 
     std::optional<ManagementTopic> management_topic(ToolItem item)
     {

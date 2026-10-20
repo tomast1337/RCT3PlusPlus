@@ -102,9 +102,9 @@ namespace rct3::park
         if (path.size() <= kCommonEnding.size() || path.starts_with(".."))
             return false;
         path.resize(path.size() - kCommonEnding.size());
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (const ovl::Symbol& symbol : part->symbols)
             {

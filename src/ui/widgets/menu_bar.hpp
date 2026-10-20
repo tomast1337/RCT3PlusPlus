@@ -10,6 +10,7 @@
 // The owner asks with take_choice() which command was chosen: the menu's index and the row's.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/widgets/menu.hpp"
 
 #include <cstddef>
@@ -71,9 +72,9 @@ namespace rct3::ui
         {
             return menu_ != nullptr ? std::optional(open_) : std::nullopt;
         }
-        [[nodiscard]] Menu* menu() const
+        [[nodiscard]] std::optional<Menu&> menu() const
         {
-            return menu_;
+            return maybe(menu_);
         }
         /// Where title `index` is, in desktop units, as of the last update.
         [[nodiscard]] Rect title_rect(std::size_t index) const;

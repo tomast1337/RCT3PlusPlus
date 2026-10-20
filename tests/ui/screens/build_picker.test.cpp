@@ -143,7 +143,7 @@ TEST_CASE("the search box keeps the items whose names hold it, and their heading
     CHECK(rows[0]->visible);
     f.desktop.update({ }, KeyboardState { .presses = { KeyPress { .key = Key::Escape } } });
     f.step();
-    CHECK(f.desktop.root().find("list") == nullptr);
+    CHECK(!f.desktop.root().find("list"));
 }
 
 TEST_CASE("theme filters show while on and hide their theme's items while off")

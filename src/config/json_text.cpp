@@ -6,7 +6,7 @@
 namespace rct3::config
 {
 
-    std::optional<Json> parse_json_object(std::string_view text, std::vector<FileProblem>* problems)
+    std::optional<Json> parse_json_object(std::string_view text, std::optional<std::vector<FileProblem>&> problems)
     {
         if (std::ranges::all_of(text, [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }))
             return Json::object();
@@ -29,9 +29,9 @@ namespace rct3::config
         return json.dump(4) + '\n';
     }
 
-    void report(std::vector<FileProblem>* problems, std::string message)
+    void report(std::optional<std::vector<FileProblem>&> problems, std::string message)
     {
-        if (problems != nullptr)
+        if (problems)
             problems->push_back({ std::move(message) });
     }
 

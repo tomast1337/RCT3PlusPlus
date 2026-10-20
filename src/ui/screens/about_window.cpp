@@ -113,8 +113,8 @@ namespace rct3::ui
 
     void CreditsScroller::update(const UpdateContext& context)
     {
-        const Font* f = context.fonts != nullptr ? context.fonts->get(style_.font) : nullptr;
-        if (f != nullptr && !lines_.empty())
+        const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt;
+        if (f && !lines_.empty())
             length_ = line_y(lines_.back(), f->line_height()) + f->line_height();
 
         // Up until the last line is in sight at the bottom, then from the top again.
@@ -131,8 +131,8 @@ namespace rct3::ui
 
     void CreditsScroller::draw(DrawContext& context) const
     {
-        const Font* f = context.fonts.get(style_.font);
-        if (f == nullptr)
+        const auto f = context.fonts.get(style_.font);
+        if (!f)
             return;
         if (!context.list.push_clip(rect()))
         {

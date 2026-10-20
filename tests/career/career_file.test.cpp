@@ -133,7 +133,7 @@ TEST_CASE("careers are listed by game, numbered from the first free name and del
     REQUIRE(save_career(free_career_path(folder.path), two));
 
     std::vector<config::FileProblem> problems;
-    const auto careers = list_careers(folder.path, 0, &problems);
+    const auto careers = list_careers(folder.path, 0, problems);
     REQUIRE(careers.size() == 2);
     CHECK(careers[0].data.career.name == "One");
     CHECK(careers[1].data.career.name == "Two");

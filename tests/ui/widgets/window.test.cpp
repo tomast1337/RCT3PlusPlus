@@ -36,7 +36,7 @@ TEST_CASE("a window starts centred with its content inset")
     CHECK(w.rect() == Rect { 100, 100, 300, 200 });
     const Rect& in = style().content_inset;
     CHECK(w.content().rect() == Rect { 100 + in.x0, 100 + in.y0, 300 - in.x1, 200 - in.y1 });
-    CHECK(w.find("close") != nullptr);
+    CHECK(w.find("close"));
 }
 
 TEST_CASE("dragging the title bar moves the window")
@@ -139,7 +139,7 @@ TEST_CASE("the title is drawn in the title font, clipped to the title box")
     const float right = w.rect().x1 - style().title_box.x1;
     for (const Vertex& v : list.vertices())
         CHECK(v.x <= right);
-    CHECK(list.clip() == nullptr);
+    CHECK(!list.clip());
 }
 
 TEST_CASE("a resizable window follows the edge or corner it is pressed on")

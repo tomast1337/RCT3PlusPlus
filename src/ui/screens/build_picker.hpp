@@ -27,6 +27,7 @@
 // the owner hands it rows (build_rows.hpp makes them) and gets back the number it gave the row picked.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
@@ -202,9 +203,9 @@ namespace rct3::ui
         {
             return row_;
         }
-        [[nodiscard]] BuildPickerRow* heading() const
+        [[nodiscard]] std::optional<BuildPickerRow&> heading() const
         {
-            return heading_;
+            return maybe(heading_);
         }
         [[nodiscard]] bool is_heading() const
         {

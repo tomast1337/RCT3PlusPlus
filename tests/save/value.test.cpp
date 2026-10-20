@@ -146,7 +146,7 @@ TEST_CASE("fixed scalars decode with the right sign and width")
     CHECK(o.find("s32")->as_integer() == -2);
     CHECK(o.find("u32")->as_integer() == 4294967294LL);
     CHECK(o.find("real")->as_float() == 2.5f);
-    CHECK(o.find("missing") == nullptr);
+    CHECK(!o.find("missing"));
     CHECK(o.stats.fallbacks == 0);
     CHECK(o.stats.opaque == 0);
     CHECK(o.stats.values == 7);
@@ -493,9 +493,9 @@ TEST_CASE("object index resolves ids, first one wins on duplicates")
     CHECK(index.size() == 2);
     REQUIRE(index.find(100));
     CHECK(index.find(100)->id == 100);
-    CHECK(index.find(101) == &file->objects[1]);
-    CHECK(index.find(0) == nullptr);
-    CHECK(index.find(9999) == nullptr);
+    CHECK(&*index.find(101) == &file->objects[1]);
+    CHECK(!index.find(0));
+    CHECK(!index.find(9999));
 }
 
 TEST_CASE("every truncation and every single byte flip decodes without crashing")

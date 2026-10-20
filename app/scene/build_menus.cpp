@@ -54,7 +54,7 @@ namespace rct3::scene
         const auto list = ui::build_list(item);
         if (!list || !menus.items.valid())
             return false;
-        if (ui::Widget* open = root.find(kListName))
+        if (auto open = root.find(kListName))
             root.remove(*open);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
@@ -78,13 +78,13 @@ namespace rct3::scene
 
     bool build_list_open(const ui::Widget& root)
     {
-        return root.find(kListName) != nullptr;
+        return root.find(kListName).has_value();
     }
 
     std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
-        auto* picker = static_cast<ui::BuildPicker*>(root.find(kListName));
-        if (picker == nullptr)
+        auto picker = root.find_as<ui::BuildPicker>(kListName);
+        if (!picker)
             return std::nullopt;
         picker->cash = cash;
         menus.kinds_off = picker->kinds_off;

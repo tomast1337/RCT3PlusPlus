@@ -171,10 +171,10 @@ namespace rct3::ui
         };
         [[nodiscard]] Translated translate(const KeyboardState& keyboard) const;
 
-        [[nodiscard]] static KeyMap parse(std::string_view text, std::vector<config::FileProblem>* problems = nullptr);
+        [[nodiscard]] static KeyMap parse(std::string_view text, std::optional<std::vector<config::FileProblem>&> problems = std::nullopt);
         [[nodiscard]] std::string text() const;
         /// A file that is not there gives the usual keys.
-        [[nodiscard]] static std::expected<KeyMap, std::string> load(const std::filesystem::path& path, std::vector<config::FileProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<KeyMap, std::string> load(const std::filesystem::path& path, std::optional<std::vector<config::FileProblem>&> problems = std::nullopt);
         [[nodiscard]] std::expected<void, std::string> save(const std::filesystem::path& path) const;
 
         friend bool operator==(const KeyMap&, const KeyMap&) = default;

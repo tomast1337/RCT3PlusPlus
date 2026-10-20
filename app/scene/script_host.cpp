@@ -103,14 +103,14 @@ namespace rct3::scene
                 throw std::invalid_argument("ui.find takes a widget path");
             if (park_ == nullptr || device_ == nullptr)
                 return nullptr;
-            const ui::Widget* w = park_->desktop->root().find(a[0].get<std::string>());
+            auto w = park_->desktop->root().find(a[0].get<std::string>());
             const render::Extent view = device_->extent();
-            if (w == nullptr || !w->visible || view.width == 0 || view.height == 0)
+            if (!w || !w->visible || view.width == 0 || view.height == 0)
                 return nullptr;
             const float scale = park_interface_scale(*device_, *park_);
             const ui::Rect& r = w->rect();
             Json found { { "x", (r.x0 + r.x1) / 2 * scale / static_cast<float>(view.width) }, { "y", (r.y0 + r.y1) / 2 * scale / static_cast<float>(view.height) } };
-            if (const auto* b = dynamic_cast<const ui::Button*>(w); b != nullptr && b->toggle)
+            if (const auto* b = dynamic_cast<const ui::Button*>(as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
             return found;
         });

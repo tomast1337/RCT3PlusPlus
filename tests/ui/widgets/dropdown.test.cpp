@@ -44,29 +44,29 @@ TEST_CASE("pressing a drop-down opens its menu below it")
 {
     Fixture f;
     f.at(50, 20, true);
-    REQUIRE(f.list.menu() != nullptr);
+    REQUIRE(f.list.menu());
     CHECK(f.list.menu()->rect().y0 == 30);
     CHECK(f.list.menu()->rect().x0 == 10);
     CHECK(f.list.menu()->rect().width() >= 100);
     CHECK(f.list.menu()->highlighted() == 1u);
     CHECK(f.list.menu()->items[1].checked);
     f.at(50, 20, false);
-    REQUIRE(f.list.menu() != nullptr);
+    REQUIRE(f.list.menu());
 
     SUBCASE("a press on a row chooses it")
     {
         f.at(50, 75, true);
         f.at(50, 75, false);
-        CHECK(f.list.menu() == nullptr);
+        CHECK(!f.list.menu());
         CHECK(f.list.selected() == 2u);
         CHECK(f.list.take_change());
-        CHECK(f.desktop.keyboard_focus() == &f.list); // Back from the menu
+        CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.list); // Back from the menu
     }
     SUBCASE("a press on the field closes it")
     {
         f.at(50, 20, true);
         f.at(50, 20, false);
-        CHECK(f.list.menu() == nullptr);
+        CHECK(!f.list.menu());
         CHECK(f.desktop.root().children().size() == 1);
         CHECK(f.list.selected() == 1u);
     }
@@ -80,7 +80,7 @@ TEST_CASE("dragging from the field into the menu and releasing chooses")
     CHECK(f.list.menu()->highlighted() == 0u);
     f.at(50, 35, false);
     f.at(50, 35, false);
-    CHECK(f.list.menu() == nullptr);
+    CHECK(!f.list.menu());
     CHECK(f.list.selected() == 0u);
 }
 
@@ -92,18 +92,18 @@ TEST_CASE("the keys step a drop-down without opening it, enter opens it")
     keys.presses = { { Key::Down }, { Key::Down } };
     f.desktop.update({ { 390, 390 }, false, true }, keys);
     CHECK(f.list.selected() == 2u);
-    CHECK(f.list.menu() == nullptr);
+    CHECK(!f.list.menu());
     keys.presses = { { Key::Home }, { Key::Enter } };
     f.desktop.update({ { 390, 390 }, false, true }, keys);
     CHECK(f.list.selected() == 0u);
-    REQUIRE(f.list.menu() != nullptr);
+    REQUIRE(f.list.menu());
     f.desktop.update({ { 390, 390 }, false, true });
-    CHECK(f.desktop.keyboard_focus() == f.list.menu());
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == rct3::as_pointer(f.list.menu()));
     keys.presses = { { Key::Down }, { Key::Enter } };
     f.desktop.update({ { 390, 390 }, false, true }, keys);
     f.desktop.update({ { 390, 390 }, false, true });
     CHECK(f.list.selected() == 1u);
-    CHECK(f.desktop.keyboard_focus() == &f.list);
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.list);
 }
 
 TEST_CASE("removing a drop-down closes its menu")

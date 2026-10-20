@@ -9,6 +9,7 @@
 // shown as missing.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "ui/screens/attraction_info.hpp"
@@ -64,9 +65,9 @@ namespace rct3::ui
         std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none
         std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
 
-        [[nodiscard]] const save::Person* person() const
+        [[nodiscard]] std::optional<const save::Person&> person() const
         {
-            return guest != nullptr ? &guest->person : staff != nullptr ? &staff->person : nullptr;
+            return guest != nullptr ? maybe(&guest->person) : staff != nullptr ? maybe(&staff->person) : std::nullopt;
         }
     };
 

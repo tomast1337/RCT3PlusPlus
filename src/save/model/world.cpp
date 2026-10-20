@@ -482,61 +482,61 @@ namespace rct3::save
         };
 
         // Typed reads over a decoded value. Missing attributes and attributes kept raw give empty results.
-        std::optional<std::int64_t> get_int(const Value* v) noexcept
+        std::optional<std::int64_t> get_int(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Integer)
                 return v->as_integer();
             return std::nullopt;
         }
-        std::optional<float> get_float(const Value* v) noexcept
+        std::optional<float> get_float(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Float)
                 return v->as_float();
             return std::nullopt;
         }
-        std::optional<bool> get_bool(const Value* v) noexcept
+        std::optional<bool> get_bool(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Bool)
                 return v->as_bool();
             return std::nullopt;
         }
-        std::optional<std::uint64_t> get_ref(const Value* v) noexcept
+        std::optional<std::uint64_t> get_ref(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Reference)
                 return v->as_reference();
             return std::nullopt;
         }
-        std::optional<std::span<const std::byte>> get_blob(const Value* v) noexcept
+        std::optional<std::span<const std::byte>> get_blob(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Raw)
                 return v->raw();
             return std::nullopt;
         }
 
-        std::int32_t int_or(const Value* v, std::int32_t d = 0) noexcept
+        std::int32_t int_or(std::optional<const Value&> v, std::int32_t d = 0) noexcept
         {
             const auto x = get_int(v);
             return x ? static_cast<std::int32_t>(*x) : d;
         }
-        float float_or(const Value* v, float d = 0) noexcept
+        float float_or(std::optional<const Value&> v, float d = 0) noexcept
         {
             return get_float(v).value_or(d);
         }
 
-        std::string string_or(const Value* v)
+        std::string string_or(std::optional<const Value&> v)
         {
             if (v && v->kind() == ValueKind::String)
                 return std::string(v->text());
             return { };
         }
 
-        std::uint8_t byte_or(const Value* v, std::uint8_t d = 0) noexcept
+        std::uint8_t byte_or(std::optional<const Value&> v, std::uint8_t d = 0) noexcept
         {
             const auto x = get_int(v);
             return x ? static_cast<std::uint8_t>(*x) : d;
         }
 
-        WorldColour colour_of(const Value* v) noexcept
+        WorldColour colour_of(std::optional<const Value&> v) noexcept
         {
             WorldColour c;
             if (!v || v->kind() != ValueKind::Struct)
@@ -601,7 +601,7 @@ namespace rct3::save
                         return s;
                     if (const auto next = get_ref(o.find(names::kEntryQueueType)); next && *next != 0 && *next != o.id)
                     {
-                        if (const auto* obj = index_.find(*next))
+                        if (const auto obj = index_.find(*next))
                         {
                             if (const auto d = decode_object(file_, *obj))
                                 return text_of(*d, names::kEntrySystemName);
@@ -619,11 +619,11 @@ namespace rct3::save
                 if (const auto it = colours_.find(ref); it != colours_.end())
                     return it->second;
                 std::optional<std::array<std::int32_t, 3>> out;
-                if (const auto* obj = index_.find(ref))
+                if (const auto obj = index_.find(ref))
                 {
                     if (const auto d = decode_object(file_, *obj))
                     {
-                        if (const Value* c = d->find(names::kSurfaceColours); c && c->kind() == ValueKind::Struct)
+                        if (std::optional<const Value&> c = d->find(names::kSurfaceColours); c && c->kind() == ValueKind::Struct)
                             out = std::array<std::int32_t, 3> { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
                     }
                 }
@@ -633,7 +633,7 @@ namespace rct3::save
         private:
             static std::string text_of(const DecodedObject& o, std::string_view attr)
             {
-                const Value* v = o.find(attr);
+                std::optional<const Value&> v = o.find(attr);
                 if (v && v->kind() == ValueKind::String)
                     return std::string(v->text());
                 return { };
@@ -647,7 +647,7 @@ namespace rct3::save
                 if (const auto it = cache.find(ref); it != cache.end())
                     return it->second;
                 std::string s;
-                if (const auto* obj = index_.find(ref))
+                if (const auto obj = index_.find(ref))
                 {
                     if (const auto d = decode_object(file_, *obj))
                         s = make(*d);
@@ -704,9 +704,9 @@ namespace rct3::save
             t.surface_name = res.surface(t.surface_ref);
             t.surface_colours = res.surface_colours(t.surface_ref);
 
-            const Value* slope = o.find(names::kPathSlope);
-            const Value* quant = o.find(names::kPathQuantised);
-            const Value* base = o.find(names::kPathBaseHeight);
+            std::optional<const Value&> slope = o.find(names::kPathSlope);
+            std::optional<const Value&> quant = o.find(names::kPathQuantised);
+            std::optional<const Value&> base = o.find(names::kPathBaseHeight);
             if (slope || quant || base)
             {
                 PathElevation e;
@@ -718,8 +718,8 @@ namespace rct3::save
                 e.underground = get_bool(o.find(names::kPathUnderground)).value_or(false);
                 t.elevation = e;
             }
-            const Value* fence = o.find(names::kPathFence);
-            const Value* line = o.find(names::kPathQueueLine);
+            std::optional<const Value&> fence = o.find(names::kPathFence);
+            std::optional<const Value&> line = o.find(names::kPathQueueLine);
             if (fence || line || o.find(names::kPathStartDir))
             {
                 PathQueueInfo q;
@@ -729,7 +729,7 @@ namespace rct3::save
                 q.fence_symbol = res.symbol(q.fence_ref);
                 q.fence_overlay = res.overlay(q.fence_ref);
                 q.queue_line_ref = get_ref(line).value_or(0);
-                if (const Value* c = o.find(names::kPathFenceColours); c && c->kind() == ValueKind::Struct)
+                if (std::optional<const Value&> c = o.find(names::kPathFenceColours); c && c->kind() == ValueKind::Struct)
                 {
                     q.fence_colours = { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
                 }
@@ -742,7 +742,7 @@ namespace rct3::save
         {
             PlacedObject p;
             p.id = o.id;
-            if (const Value* d = o.find(names::kSceneryData); d && d->kind() == ValueKind::Struct)
+            if (std::optional<const Value&> d = o.find(names::kSceneryData); d && d->kind() == ValueKind::Struct)
             {
                 p.col = int_or(d->field(names::kDataCol));
                 p.row = int_or(d->field(names::kDataRow));
@@ -754,7 +754,7 @@ namespace rct3::save
             }
             p.definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(0);
             p.owner_ref = get_ref(o.find(names::kSceneryOwner)).value_or(0);
-            if (const Value* c = o.find(names::kSceneryColours); c && c->kind() == ValueKind::Struct)
+            if (std::optional<const Value&> c = o.find(names::kSceneryColours); c && c->kind() == ValueKind::Struct)
             {
                 p.colours = { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
             }
@@ -764,7 +764,7 @@ namespace rct3::save
             p.hidden = get_bool(o.find(names::kSceneryHidden)).value_or(false);
             p.break_flags = int_or(o.find(names::kSceneryBreakFlags));
             p.break_time = float_or(o.find(names::kSceneryBreakTime));
-            if (const Value* b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
+            if (std::optional<const Value&> b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
                 p.behaviour_count = static_cast<std::uint32_t>(b->items().size());
             return p;
         }
@@ -790,7 +790,7 @@ namespace rct3::save
             w.sound = int_or(o.find("SoundType"));
             w.forecast_sound = int_or(o.find("ForecastSound"));
             w.thunder_time = get_float(o.find("ThunderTime"));
-            if (const Value* f = o.find("FogSetting"); f && f->kind() == ValueKind::Struct)
+            if (std::optional<const Value&> f = o.find("FogSetting"); f && f->kind() == ValueKind::Struct)
             {
                 FogSetting fog;
                 fog.colour = colour_of(f->field("FColourValue"));
@@ -799,11 +799,11 @@ namespace rct3::save
                 fog.shadow_damper = float_or(f->field("ShadowDamper"));
                 w.fog = fog;
             }
-            if (const Value* c = o.find("CloudSetting"); c && c->kind() == ValueKind::Struct)
+            if (std::optional<const Value&> c = o.find("CloudSetting"); c && c->kind() == ValueKind::Struct)
             {
                 w.cloud_colours = { colour_of(c->field("ColourValue1")), colour_of(c->field("ColourValue2")) };
             }
-            if (const Value* c = o.find("ColourSetting"); c && c->kind() == ValueKind::Struct)
+            if (std::optional<const Value&> c = o.find("ColourSetting"); c && c->kind() == ValueKind::Struct)
             {
                 w.light_colours = { colour_of(c->field("AColourValue")), colour_of(c->field("DColourValue")), colour_of(c->field("SColourValue")) };
             }
@@ -822,7 +822,7 @@ namespace rct3::save
             return t;
         }
 
-        WorldPoint3 point_of(const Value* v) noexcept
+        WorldPoint3 point_of(std::optional<const Value&> v) noexcept
         {
             WorldPoint3 p;
             if (v && v->floats().size() >= 3)
@@ -1045,7 +1045,7 @@ namespace rct3::save
         for (auto& t : m.skirt_trees)
         {
             // A skirt tree refers to a placed object, whose own definition names the asset.
-            if (const auto* obj = index.find(t.scenery_ref))
+            if (const auto obj = index.find(t.scenery_ref))
             {
                 if (const auto d = decode_object(file, *obj))
                 {

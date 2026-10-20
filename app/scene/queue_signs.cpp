@@ -58,7 +58,7 @@ namespace rct3::scene
             if (!read)
                 return found->second;
             std::vector<ovl::SceneryItemEntry> items = ovl::read_scenery_items(*read, read->common());
-            if (const ovl::Part* unique = read->unique())
+            if (auto unique = read->unique())
                 std::ranges::move(ovl::read_scenery_items(*read, *unique), std::back_inserter(items));
             found->second = park::queue_sign_item(items);
             return found->second;

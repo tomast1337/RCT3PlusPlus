@@ -56,7 +56,7 @@ namespace rct3::simulation
 
     std::expected<RatingModel, std::string> parse_rating_model(std::string_view json)
     {
-        const auto root = config::parse_json_object(json, nullptr);
+        const auto root = config::parse_json_object(json);
         if (!root)
             return std::unexpected("not a JSON object");
         RatingModel model;

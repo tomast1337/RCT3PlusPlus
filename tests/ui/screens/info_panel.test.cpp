@@ -182,10 +182,10 @@ TEST_CASE("a page's sections are buttons that ask for another section")
     page.section = 1;
     f.panel->show_page(page);
     f.desktop.update({ });
-    const Widget* second = f.panel->body().find("section1");
-    const Widget* first = f.panel->body().find("section0");
-    REQUIRE(first != nullptr);
-    REQUIRE(second != nullptr);
+    auto second = f.panel->body().find("section1");
+    auto first = f.panel->body().find("section0");
+    REQUIRE(first);
+    REQUIRE(second);
     CHECK(second->rect().width() > first->rect().width());
     f.click(Fixture::middle(first->rect()));
     CHECK(f.panel->take_section() == 0u);
@@ -193,7 +193,7 @@ TEST_CASE("a page's sections are buttons that ask for another section")
     // A single section needs no buttons.
     page.sections = { u"Only" };
     f.panel->show_page(page);
-    CHECK(f.panel->body().find("section0") == nullptr);
+    CHECK(!f.panel->body().find("section0"));
 }
 
 TEST_CASE("a page's graph is plotted with each series named under it")
@@ -203,8 +203,8 @@ TEST_CASE("a page's graph is plotted with each series named under it")
     InfoPage page;
     page.graph = { { u"Up", { 0, 1, 2 } }, { u"Down", { 2, 1, 0 } } };
     f.panel->show_page(page);
-    CHECK(f.panel->body().find("graph") != nullptr);
-    CHECK(f.panel->body().find("series1") != nullptr);
+    CHECK(f.panel->body().find("graph"));
+    CHECK(f.panel->body().find("series1"));
 }
 
 TEST_CASE("the round view sits in the middle of the disc")
@@ -232,7 +232,7 @@ TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells
 
     f.click(Fixture::middle(f.panel->tab(1).rect()));
     REQUIRE(f.panel->painting() == 1);
-    REQUIRE(f.panel->palette() != nullptr);
+    REQUIRE(f.panel->palette());
     ColourPalette& palette = *f.panel->palette();
     CHECK(palette.count() == game_skins::info_panel_style().palette_count);
     CHECK(palette.rect().y1 < f.panel->tab(1).rect().y0);
@@ -249,7 +249,7 @@ TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells
     CHECK_FALSE(f.panel->take_paint());
     // Picking puts the colours away.
     CHECK_FALSE(f.panel->painting());
-    CHECK(f.panel->palette() == nullptr);
+    CHECK(!f.panel->palette());
 }
 
 TEST_CASE("the colours go away when their tab is pressed again, another tab is, or the owner asks")
@@ -337,8 +337,8 @@ TEST_CASE("a page's controls tell the changes made to them by their ids")
     page.controls = { tick, pots };
     f.panel->show_page(page);
     f.desktop.update({ });
-    REQUIRE(f.panel->control(5) != nullptr);
-    CHECK(f.panel->control(6) == nullptr);
+    REQUIRE(f.panel->control(5));
+    CHECK(!f.panel->control(6));
 
     f.click(Fixture::middle(f.panel->control(5)->rect()));
     auto change = f.panel->take_change();
@@ -348,14 +348,14 @@ TEST_CASE("a page's controls tell the changes made to them by their ids")
     CHECK_FALSE(f.panel->take_change());
 
     f.click(Fixture::middle(f.panel->control(7)->rect()));
-    REQUIRE(f.panel->palette() != nullptr);
+    REQUIRE(f.panel->palette());
     CHECK(f.panel->palette()->rect().y1 < f.panel->control(7)->rect().y0);
     f.click(Fixture::middle(f.panel->palette()->swatch(21).rect()));
     change = f.panel->take_change();
     REQUIRE(change);
     CHECK(change->id == 7);
     CHECK(change->value == 21);
-    CHECK(f.panel->palette() == nullptr);
+    CHECK(!f.panel->palette());
 }
 
 TEST_CASE("an info widget is named by its string key and part, or by its place without one")

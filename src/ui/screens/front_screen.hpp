@@ -14,6 +14,7 @@
 // it; what is missing is left out.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/screens/front_screen_layout.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -154,7 +155,7 @@ namespace rct3::ui
         [[nodiscard]] std::optional<FrontRequest> take_request();
 
         /// The button of entry `index` of `menu`; null when there is none.
-        [[nodiscard]] FrontButton* button(FrontMenu menu, std::size_t index) const;
+        [[nodiscard]] std::optional<FrontButton&> button(FrontMenu menu, std::size_t index) const;
         [[nodiscard]] FrontButton& back_button() const
         {
             return *back_;

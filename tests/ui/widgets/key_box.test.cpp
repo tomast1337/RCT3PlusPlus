@@ -73,7 +73,7 @@ TEST_CASE("while waiting the key box takes tab and shifted escape")
     Fixture f;
     f.press({ Key::Enter });
     f.press({ Key::Tab, true });
-    CHECK(f.desktop.keyboard_focus() == f.box);
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == f.box);
     CHECK(f.box->combos == std::vector { KeyCombo { Key::Tab, 0, false, true } });
     f.press({ Key::Enter });
     f.press({ Key::Escape, true });
@@ -94,8 +94,8 @@ TEST_CASE("a box cut off entirely leaves the cut as it found it")
     DrawContext context { list, skins, fonts };
     REQUIRE(list.push_clip({ 200, 200, 300, 300 })); // Away from the box: nothing of it shows
     fx.box->draw(context);
-    REQUIRE(list.clip() != nullptr);
+    REQUIRE(list.clip());
     CHECK(list.clip()->x0 == 200);
     list.pop_clip();
-    CHECK(list.clip() == nullptr);
+    CHECK(!list.clip());
 }

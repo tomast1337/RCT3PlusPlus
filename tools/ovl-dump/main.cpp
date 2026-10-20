@@ -1354,18 +1354,18 @@ int main(int argc, char** argv)
     }
 
     print_part("common", *overlay, overlay->common(), opt);
-    if (const auto* unique = overlay->unique())
+    if (const auto unique = overlay->unique())
         print_part("unique", *overlay, *unique, opt);
     else
         std::printf("== unique\n(none)\n");
     if (g_tex_export_dir)
     {
         export_textures("common", *overlay, overlay->common());
-        if (const auto* unique = overlay->unique())
+        if (const auto unique = overlay->unique())
             export_textures("unique", *overlay, *unique);
     }
     print_scenery_types("common", *overlay, overlay->common());
-    if (const auto* unique = overlay->unique())
+    if (const auto unique = overlay->unique())
         print_scenery_types("unique", *overlay, *unique);
     // --- mesh export ---
     if (obj_dir)
@@ -1390,7 +1390,7 @@ int main(int argc, char** argv)
         }
         std::size_t written = 0, failed = 0;
         bool ok = export_part_meshes(obj_dir, stem + "_c", *overlay, overlay->common(), written, failed);
-        if (const auto* unique = overlay->unique())
+        if (const auto unique = overlay->unique())
             ok = export_part_meshes(obj_dir, stem + "_u", *overlay, *unique, written, failed) && ok;
         std::printf("exported meshes %zu (%zu failed)\n", written, failed);
         if (!ok || failed != 0)

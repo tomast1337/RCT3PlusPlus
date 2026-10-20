@@ -77,7 +77,7 @@ namespace rct3::park
         float width = 0;
         for (const char16_t c : text)
         {
-            if (const ui::Glyph* g = font.find(c))
+            if (const auto g = font.find(c))
                 width += g->advance;
         }
         ovl::RgbaImage loop;
@@ -92,8 +92,8 @@ namespace rct3::park
         float pen = 0;
         for (const char16_t c : text)
         {
-            const ui::Glyph* g = font.find(c);
-            if (g == nullptr)
+            const auto g = font.find(c);
+            if (!g)
                 continue;
             if (g->page < pages.size() && g->box.width() > 0 && g->box.height() > 0)
             {

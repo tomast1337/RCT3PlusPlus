@@ -532,8 +532,8 @@ namespace rct3::ui
 
     std::u16string person_name(const PersonFacts& facts, const StringTable& strings)
     {
-        const save::Person* p = facts.person();
-        if (p == nullptr)
+        const auto p = facts.person();
+        if (!p)
             return { };
         const std::u16string work = facts.staff != nullptr ? job(*facts.staff, strings) : std::u16string { };
         const std::string_view name = p->name;
@@ -546,8 +546,8 @@ namespace rct3::ui
 
     std::u16string person_doing(const PersonFacts& facts, const StringTable& strings)
     {
-        const save::Person* p = facts.person();
-        if (p == nullptr)
+        const auto p = facts.person();
+        if (!p)
             return { };
         const std::string_view key = state_key(*p, facts.guest != nullptr);
         if (key.empty())
@@ -564,7 +564,7 @@ namespace rct3::ui
     InfoPage person_page(PersonTab tab, const PersonFacts& facts, const StringTable& strings, const InfoUnits& units)
     {
         InfoPage page;
-        if (facts.person() == nullptr)
+        if (!facts.person())
             return page;
         page.title = person_name(facts, strings);
         switch (tab)

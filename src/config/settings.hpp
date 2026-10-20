@@ -71,11 +71,11 @@ namespace rct3::config
         Settings() = default;
 
         /// Reads settings from file text. Bad values are reported and skipped; the rest still apply.
-        [[nodiscard]] static Settings parse(std::string_view text, std::vector<FileProblem>* problems = nullptr);
+        [[nodiscard]] static Settings parse(std::string_view text, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
 
         /// Reads the file at `path`. A file that is not there gives the defaults; one that cannot be read is
         /// an error.
-        [[nodiscard]] static std::expected<Settings, std::string> load(const std::filesystem::path& path, std::vector<FileProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<Settings, std::string> load(const std::filesystem::path& path, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
 
         /// The value set in the file, or the default; nothing when neither gives one.
         [[nodiscard]] std::optional<std::string_view> get(Setting setting) const;

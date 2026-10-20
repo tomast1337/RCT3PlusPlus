@@ -126,8 +126,8 @@ namespace rct3::ui
         const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect(), style_.round));
         for (std::size_t q = 0; q < style_.quarters.size(); ++q)
         {
-            const SkinRef* skin = context.skins.find(style_.quarters[q]);
-            if (skin == nullptr)
+            const auto skin = context.skins.find(style_.quarters[q]);
+            if (!skin)
                 continue;
             const auto [w, h] = skin->size();
             const float x = q % 2 == 0 ? disc.centre.x - w * disc.scale : disc.centre.x;
@@ -135,12 +135,12 @@ namespace rct3::ui
             draw_skin(context.list, skin, { x, y, x + w * disc.scale, y + h * disc.scale });
         }
 
-        const Font* name_font = context.fonts.get(FontRole::ScaledMedium);
-        const Font* picked_font = context.fonts.get(FontRole::ScaledLarge);
+        const auto name_font = context.fonts.get(FontRole::ScaledMedium);
+        const auto picked_font = context.fonts.get(FontRole::ScaledLarge);
         for (std::size_t i = 0; i < tutorials_.size(); ++i)
         {
-            const Font* f = i == picked_ ? picked_font : name_font;
-            if (f == nullptr)
+            const auto f = i == picked_ ? picked_font : name_font;
+            if (!f)
                 continue;
             Color c = style_.text_colour;
             if (!buttons_[i]->enabled)
@@ -149,7 +149,7 @@ namespace rct3::ui
         }
         if (picked_ < tutorials_.size())
         {
-            if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
+            if (const auto f = context.fonts.get(FontRole::ScaledSmall))
                 draw_text(context.list, *f, tutorials_[picked_].description, disc.rect(tm::kDescription), { style_.text_colour, Align::Start, Align::Centre, true });
         }
     }

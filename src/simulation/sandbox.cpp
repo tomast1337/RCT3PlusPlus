@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/sandbox.hpp"
 
+#include "core/maybe.hpp"
 #include "simulation/systems.hpp"
 
 #include <format>
@@ -124,7 +125,7 @@ namespace rct3::simulation
     void Sandbox::run(std::uint32_t count)
     {
         for (std::uint32_t i = 0; i < count; ++i)
-            step(world_, workers_.get());
+            step(world_, maybe(workers_.get()));
     }
 
     void Sandbox::run_seconds(float seconds)
@@ -138,7 +139,7 @@ namespace rct3::simulation
         {
             if (done())
                 return true;
-            step(world_, workers_.get());
+            step(world_, maybe(workers_.get()));
         }
         return done();
     }

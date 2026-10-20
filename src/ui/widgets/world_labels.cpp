@@ -18,8 +18,8 @@ namespace rct3::ui
 
     void WorldLabels::draw(DrawContext& context) const
     {
-        const Font* font = context.fonts.get(FontRole::Small);
-        if (font == nullptr)
+        const auto font = context.fonts.get(FontRole::Small);
+        if (!font)
             return;
         const TextStyle style { .colour = text, .horizontal = Align::Centre, .vertical = Align::Centre };
         for (const WorldLabel& l : labels)

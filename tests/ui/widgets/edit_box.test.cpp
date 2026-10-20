@@ -169,7 +169,7 @@ TEST_CASE("the pointer places the caret and drags a selection")
     const float x0 = box.padding.x0;
 
     desktop.update({ { x0 + 21, 10 }, true, true }, context); // Nearer the end of b than the middle of c
-    CHECK(desktop.keyboard_focus() == &box);
+    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &box);
     CHECK(box.caret() == 2);
     desktop.update({ { x0 + 44, 10 }, true, true }, context);
     CHECK(box.anchor() == 2);

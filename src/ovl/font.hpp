@@ -3,6 +3,7 @@
 // Fonts: a face description plus a glyph table that maps character codes to rectangles of a texture.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -70,7 +71,7 @@ namespace rct3::ovl
     /// wins, code 0 and anything above 0xFFFF never match and a row with code 0 ends the search. Without one,
     /// the glyphs cover consecutive codes starting at `first_char`. There is no fallback glyph and surrogate
     /// halves are looked up like any other unit.
-    [[nodiscard]] const FontGlyph* find_glyph(const Font& font, std::uint32_t code) noexcept;
+    [[nodiscard]] std::optional<const FontGlyph&> find_glyph(const Font& font, std::uint32_t code) noexcept;
 
     /// Fonts of one part of an overlay: pointer symbols tagged "fct". Views in the result point into the
     /// overlay's bytes.

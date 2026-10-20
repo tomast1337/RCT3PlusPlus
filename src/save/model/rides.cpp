@@ -279,18 +279,18 @@ namespace rct3::save
         {
         public:
             View() = default;
-            explicit View(const Value* v)
+            explicit View(std::optional<const Value&> v)
                 : v_(v)
             {
             }
 
             [[nodiscard]] View operator[](std::string_view name) const
             {
-                return View(v_ ? v_->field(name) : nullptr);
+                return View(v_ ? v_->field(name) : std::nullopt);
             }
             [[nodiscard]] bool present() const
             {
-                return v_ != nullptr;
+                return v_.has_value();
             }
 
             [[nodiscard]] std::int64_t integer(std::int64_t def = 0) const
@@ -372,7 +372,7 @@ namespace rct3::save
             }
 
         private:
-            const Value* v_ = nullptr;
+            std::optional<const Value&> v_;
         };
 
         [[nodiscard]] RideColours colours_of(View v, std::string_view a, std::string_view b, std::string_view c)
@@ -489,7 +489,7 @@ namespace rct3::save
             [[nodiscard]] ObjectId live(View v) const
             {
                 const ObjectId r = v.ref();
-                return (r != 0 && index_.find(r) != nullptr) ? r : 0;
+                return (r != 0 && index_.find(r).has_value()) ? r : 0;
             }
 
             /// Decodes the object with this id when it exists and has the wanted role.
@@ -497,7 +497,7 @@ namespace rct3::save
             {
                 if (oid == 0)
                     return std::nullopt;
-                const Object* o = index_.find(oid);
+                std::optional<const Object&> o = index_.find(oid);
                 if (!o || roles_[o->class_index] != want)
                     return std::nullopt;
                 return decode(*o);
@@ -525,7 +525,7 @@ namespace rct3::save
                     auto d = decode(o);
                     if (!d)
                         return;
-                    const View f(&d->fields);
+                    const View f(d->fields);
                     if (r == Role::Piece)
                     {
                         PieceRecord rec;
@@ -584,13 +584,13 @@ namespace rct3::save
             /// Where the placement record `oid` puts its object; nothing when it is none or carries no position.
             std::optional<PlacementSpot> spot_of(ObjectId oid)
             {
-                const Object* o = oid != 0 ? index_.find(oid) : nullptr;
+                std::optional<const Object&> o = oid != 0 ? index_.find(oid) : std::nullopt;
                 if (!o)
                     return std::nullopt;
                 const auto d = decode(*o);
                 if (!d)
                     return std::nullopt;
-                const View f(&d->fields);
+                const View f(d->fields);
                 const View at = f[id::kPlacementField];
                 if (!at.present())
                     return std::nullopt;
@@ -606,19 +606,19 @@ namespace rct3::save
             /// The symbol and overlay of the asset entry `oid`, both empty when it is none.
             std::pair<std::string, std::string> asset_of(ObjectId oid)
             {
-                const Object* o = oid != 0 ? index_.find(oid) : nullptr;
+                std::optional<const Object&> o = oid != 0 ? index_.find(oid) : std::nullopt;
                 if (!o)
                     return { };
                 const auto d = decode(*o);
                 if (!d)
                     return { };
-                const View f(&d->fields);
+                const View f(d->fields);
                 return { f[id::kEntrySymbol].text(), f[id::kEntryOverlay].text() };
             }
 
             void read_common(AttractionCommon& c, const DecodedObject& d, std::string_view symbol_key, std::string_view overlay_key)
             {
-                const View f(&d.fields);
+                const View f(d.fields);
                 c.id = d.id;
                 c.kind_asset = live(f[id::kKindAsset]);
                 c.symbol = f[symbol_key].text();
@@ -646,7 +646,7 @@ namespace rct3::save
                 std::vector<IntervalStats> out;
                 for (const auto& item : f[id::kIntervals].items())
                 {
-                    const View v(&item);
+                    const View v(item);
                     out.push_back({ v[id::kIntervalGuests].integer(), v[id::kIntervalIncome].integer(), v[id::kIntervalLosses].integer() });
                 }
                 return out;
@@ -657,7 +657,7 @@ namespace rct3::save
                 std::vector<ThoughtEntry> out;
                 for (const auto& item : f[id::kThoughts].items())
                 {
-                    const View v(&item);
+                    const View v(item);
                     const ObjectId guest = live(v[id::kThoughtGuest]);
                     if (guest == 0)
                         continue; // empty or stale slot
@@ -707,7 +707,7 @@ namespace rct3::save
             {
                 std::vector<ObjectId> out;
                 for (const auto& item : list.items())
-                    out.push_back(live(View(&item)));
+                    out.push_back(live(View(item)));
                 return out;
             }
 
@@ -719,11 +719,11 @@ namespace rct3::save
                 {
                     holder = fetch(h, Role::StationHolder);
                     if (holder)
-                        list = View(&holder->fields)[id::kStations];
+                        list = View(holder->fields)[id::kStations];
                 }
                 for (const auto& item : list.items())
                 {
-                    const View v(&item);
+                    const View v(item);
                     Station s;
                     s.entrance = live(v[id::kEntrance]);
                     s.exit = live(v[id::kExit]);
@@ -735,7 +735,7 @@ namespace rct3::save
                     if (auto q = fetch(v[id::kQueueLineRef].ref(), Role::QueueLine))
                     {
                         s.queue_line = q->id;
-                        s.queue_size = View(&q->fields)[id::kQueueSize].i32();
+                        s.queue_size = View(q->fields)[id::kQueueSize].i32();
                         if (const auto it = queue_tiles_.find(q->id); it != queue_tiles_.end())
                             s.queue_tiles = it->second;
                         if (s.queue_size != s.queue_tiles)
@@ -747,7 +747,7 @@ namespace rct3::save
 
             void read_ride_common(Ride& ride, const DecodedObject& d)
             {
-                const View f(&d.fields);
+                const View f(d.fields);
                 ride.mode = static_cast<OperatingMode>(f[id::kOpMode].i32());
                 ride.ticket_price = f[id::kTicket].integer();
                 ride.intervals = read_intervals(f);
@@ -800,7 +800,7 @@ namespace rct3::save
                 {
                     if (i >= b.downtime_windows.size())
                         break;
-                    const std::int64_t w = View(&item).integer();
+                    const std::int64_t w = View(item).integer();
                     b.downtime_windows[i++] = static_cast<std::uint8_t>(w < 0 ? 0 : (w > 20 ? 20 : w));
                 }
 
@@ -839,7 +839,7 @@ namespace rct3::save
                 auto d = decode(obj);
                 if (!d)
                     return;
-                const View f(&d->fields);
+                const View f(d->fields);
                 Ride ride;
                 switch (role)
                 {
@@ -865,12 +865,12 @@ namespace rct3::save
                     ride.train_selection = f[id::kTrainSelection].i32();
                     for (const auto& item : f[id::kSeats].items())
                     {
-                        const View v(&item);
+                        const View v(item);
                         ride.seats.push_back({ v[id::kSeatCar].i32(), v[id::kSeatSeat].i32(), v[id::kSeatTrain].i32() });
                     }
                     ride.block_sections = live_list(f[id::kBlockSections]);
                     for (const auto& item : f[id::kSortedTrains].items())
-                        ride.sorted_trains.push_back(View(&item).i32());
+                        ride.sorted_trains.push_back(View(item).i32());
                     ride.cable_lift_trains = live_list(f[id::kCableLift]);
                     ride.thrill_lift_trains = live_list(f[id::kThrillLift]);
                     ride.reverse_cable_lift_trains = live_list(f[id::kReverseCableLift]);
@@ -906,7 +906,7 @@ namespace rct3::save
 
             Track build_track(const DecodedObject& d)
             {
-                const View f(&d.fields);
+                const View f(d.fields);
                 Track t;
                 t.id = d.id;
                 t.ride = live(f[id::kTrackRide]);
@@ -932,7 +932,7 @@ namespace rct3::save
                         t.truncated = true;
                         break;
                     }
-                    const View sf(&s->fields);
+                    const View sf(s->fields);
                     TrackSegment seg;
                     seg.id = seg_id;
                     seg.first_piece = t.pieces.size();
@@ -1016,7 +1016,7 @@ namespace rct3::save
                 for (const auto& item : f[id::kTrains].items())
                 {
                     const std::int32_t at = position++;
-                    const ObjectId tid = View(&item).ref();
+                    const ObjectId tid = View(item).ref();
                     if (tid == 0)
                         continue;
                     if (!taken_.insert(tid).second)
@@ -1030,7 +1030,7 @@ namespace rct3::save
                         ++model_.diagnostics.unresolved_trains;
                         continue;
                     }
-                    const View tf(&d->fields);
+                    const View tf(d->fields);
                     Train t;
                     t.id = d->id;
                     t.ride = tf[id::kTrainRide].ref();
@@ -1063,7 +1063,7 @@ namespace rct3::save
                     for (const auto& citem : car_list)
                     {
                         const std::int32_t cat = cpos++;
-                        const ObjectId cid = View(&citem).ref();
+                        const ObjectId cid = View(citem).ref();
                         if (cid == 0)
                             continue;
                         if (!taken_.insert(cid).second)
@@ -1077,7 +1077,7 @@ namespace rct3::save
                             ++model_.diagnostics.unresolved_cars;
                             continue;
                         }
-                        const View cf(&c->fields);
+                        const View cf(c->fields);
                         Car car;
                         car.id = c->id;
                         car.index = cf[id::kWhichCar].i32();
@@ -1128,14 +1128,14 @@ namespace rct3::save
                 auto d = decode(obj);
                 if (!d)
                     return;
-                const View f(&d->fields);
+                const View f(d->fields);
                 Stall s;
                 read_common(s.base, *d, id::kStallSymbol, id::kStallOverlay);
                 s.intervals = read_intervals(f);
                 s.thoughts = read_thoughts(f);
                 for (const auto& item : f[id::kShopItems].items())
                 {
-                    const ObjectId iid = View(&item).ref();
+                    const ObjectId iid = View(item).ref();
                     if (iid == 0)
                         continue;
                     if (!taken_.insert(iid).second)
@@ -1149,13 +1149,13 @@ namespace rct3::save
                         ++model_.diagnostics.unresolved_items;
                         continue;
                     }
-                    const View v(&it->fields);
+                    const View v(it->fields);
                     StallItem si;
                     si.id = it->id;
                     si.item_asset = live(v[id::kItemAsset]);
-                    if (const Object* kind = si.item_asset != 0 ? index_.find(si.item_asset) : nullptr)
+                    if (std::optional<const Object&> kind = si.item_asset != 0 ? index_.find(si.item_asset) : std::nullopt)
                         if (auto k = decode(*kind))
-                            si.kind_symbol = View(&k->fields)[id::kItemKindSymbol].text();
+                            si.kind_symbol = View(k->fields)[id::kItemKindSymbol].text();
                     si.price = v[id::kPrice].integer();
                     si.total_sold = v[id::kSold].integer();
                     si.name = v[id::kName].text();
@@ -1168,7 +1168,7 @@ namespace rct3::save
                 }
                 for (const auto& item : f[id::kShopExtras].items())
                 {
-                    const ObjectId eid = View(&item).ref();
+                    const ObjectId eid = View(item).ref();
                     if (eid == 0)
                         continue;
                     if (!taken_.insert(eid).second)
@@ -1182,7 +1182,7 @@ namespace rct3::save
                         ++model_.diagnostics.unresolved_items;
                         continue;
                     }
-                    const View v(&ex->fields);
+                    const View v(ex->fields);
                     s.extras.push_back({ ex->id, live(v[id::kItemAsset]), v[id::kExtraSetting].i32() });
                 }
                 model_.stalls.push_back(std::move(s));

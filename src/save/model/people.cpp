@@ -321,13 +321,13 @@ namespace rct3::save
         constexpr std::uint32_t kFillBits = 0xCDCDCDCDu;
         constexpr std::size_t kMaxVisited = 4096; // upper bound on list lengths kept in the model
 
-        const Value* sub(const Value* v, std::string_view n) noexcept
+        std::optional<const Value&> sub(std::optional<const Value&> v, std::string_view n) noexcept
         {
-            return v ? v->field(n) : nullptr;
+            return v ? v->field(n) : std::nullopt;
         }
 
         /// The 32 bits of a numeric slot, whichever way it was declared.
-        std::optional<std::uint32_t> bits32(const Value* v) noexcept
+        std::optional<std::uint32_t> bits32(std::optional<const Value&> v) noexcept
         {
             if (!v)
                 return std::nullopt;
@@ -344,7 +344,7 @@ namespace rct3::save
             }
         }
 
-        std::optional<float> opt_f32(const Value* v) noexcept
+        std::optional<float> opt_f32(std::optional<const Value&> v) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
@@ -354,24 +354,24 @@ namespace rct3::save
                 return std::nullopt;
             return f;
         }
-        float f32(const Value* v, float def = 0) noexcept
+        float f32(std::optional<const Value&> v, float def = 0) noexcept
         {
             return opt_f32(v).value_or(def);
         }
 
-        std::optional<std::int32_t> opt_i32(const Value* v) noexcept
+        std::optional<std::int32_t> opt_i32(std::optional<const Value&> v) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
                 return std::nullopt;
             return static_cast<std::int32_t>(*b);
         }
-        std::int32_t i32(const Value* v, std::int32_t def = 0) noexcept
+        std::int32_t i32(std::optional<const Value&> v, std::int32_t def = 0) noexcept
         {
             return opt_i32(v).value_or(def);
         }
 
-        std::uint8_t u8(const Value* v, std::uint8_t def = 0) noexcept
+        std::uint8_t u8(std::optional<const Value&> v, std::uint8_t def = 0) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
@@ -379,7 +379,7 @@ namespace rct3::save
             return static_cast<std::uint8_t>(*b);
         }
 
-        bool flag(const Value* v, bool def = false) noexcept
+        bool flag(std::optional<const Value&> v, bool def = false) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
@@ -387,14 +387,14 @@ namespace rct3::save
             return *b != 0;
         }
 
-        std::string str(const Value* v)
+        std::string str(std::optional<const Value&> v)
         {
             if (v && v->kind() == ValueKind::String)
                 return std::string(v->text());
             return { };
         }
 
-        PeopleRef ref(const Value* v, const ObjectIndex& index) noexcept
+        PeopleRef ref(std::optional<const Value&> v, const ObjectIndex& index) noexcept
         {
             if (!v)
                 return { };
@@ -403,7 +403,7 @@ namespace rct3::save
                 id = v->as_reference();
             else if (v->kind() == ValueKind::Integer && v->as_integer() > 0)
                 id = static_cast<std::uint64_t>(v->as_integer());
-            if (id == 0 || index.find(id) == nullptr)
+            if (id == 0 || !index.find(id))
                 return { };
             return { id };
         }
@@ -415,7 +415,7 @@ namespace rct3::save
             return f;
         }
 
-        PeopleVec3 vec3(const Value* v) noexcept
+        PeopleVec3 vec3(std::optional<const Value&> v) noexcept
         {
             if (!v)
                 return { };
@@ -426,7 +426,7 @@ namespace rct3::save
         }
 
         /// Translation row of a world matrix.
-        PeopleVec3 matrix_position(const Value* v) noexcept
+        PeopleVec3 matrix_position(std::optional<const Value&> v) noexcept
         {
             if (!v)
                 return { };
@@ -436,7 +436,7 @@ namespace rct3::save
             return { vec_component(f[12]), vec_component(f[13]), vec_component(f[14]) };
         }
 
-        std::vector<PeopleRef> ref_list(const Value* v, const ObjectIndex& index, std::size_t cap)
+        std::vector<PeopleRef> ref_list(std::optional<const Value&> v, const ObjectIndex& index, std::size_t cap)
         {
             std::vector<PeopleRef> out;
             if (!v || v->kind() != ValueKind::List)
@@ -444,11 +444,11 @@ namespace rct3::save
             const auto items = v->items();
             out.reserve(std::min(items.size(), cap));
             for (std::size_t i = 0; i < items.size() && i < cap; ++i)
-                out.push_back(ref(&items[i], index));
+                out.push_back(ref(items[i], index));
             return out;
         }
 
-        std::array<Thought, kThoughtSlots> thoughts(const Value* v, const ObjectIndex& index)
+        std::array<Thought, kThoughtSlots> thoughts(std::optional<const Value&> v, const ObjectIndex& index)
         {
             std::array<Thought, kThoughtSlots> out;
             if (!v || v->kind() != ValueKind::List)
@@ -456,7 +456,7 @@ namespace rct3::save
             const auto items = v->items();
             for (std::size_t i = 0; i < items.size() && i < kThoughtSlots; ++i)
             {
-                const Value* t = &items[i];
+                std::optional<const Value&> t = items[i];
                 out[i].about = ref(sub(t, at::thought_about), index);
                 out[i].other = ref(sub(t, at::thought_person), index);
                 out[i].id = i32(sub(t, at::thought_id));
@@ -466,7 +466,7 @@ namespace rct3::save
             return out;
         }
 
-        Mood mood(const Value* v) noexcept
+        Mood mood(std::optional<const Value&> v) noexcept
         {
             Mood m;
             m.energy = f32(sub(v, at::energy_f), 0.5f);
@@ -485,7 +485,7 @@ namespace rct3::save
             p.sub_type = u8(get(at::sub_type));
             p.name = str(get(at::name));
             p.position = matrix_position(get(at::world_matrix));
-            if (const Value* world = get(at::world_matrix))
+            if (std::optional<const Value&> world = get(at::world_matrix))
             {
                 if (const auto f = world->floats(); f.size() == p.world.size())
                     std::ranges::copy(f, p.world.begin());
@@ -557,9 +557,11 @@ namespace rct3::save
 
     // ---- public small helpers ----
 
-    const Object* resolve(const PeopleRef& r, const ObjectIndex& index) noexcept
+    std::optional<const Object&> resolve(const PeopleRef& r, const ObjectIndex& index) noexcept
     {
-        return r.id == 0 ? nullptr : index.find(r.id);
+        if (r.id == 0)
+            return std::nullopt;
+        return index.find(r.id);
     }
 
     const char* to_string(PersonType v) noexcept
@@ -718,7 +720,7 @@ namespace rct3::save
         const auto get = [&](std::string_view n) { return o.find(n); };
         Guest g;
         g.person = build_person(o, index, PersonType::Adult);
-        const auto* cash = get(at::cash);
+        const auto cash = get(at::cash);
         g.cash.arrival = i32(sub(cash, at::atm_cash));
         g.cash.current = i32(sub(cash, at::current_cash));
         g.cash.withdrawn = i32(sub(cash, at::withdrawn));
@@ -728,7 +730,7 @@ namespace rct3::save
         g.cash.spent_rides = i32(sub(cash, at::spent_rides));
         g.cash.spent_souvenirs = i32(sub(cash, at::spent_souvenirs));
         g.cash.total_spent = i32(sub(cash, at::total_spent));
-        const auto* need = get(at::consumption);
+        const auto need = get(at::consumption);
         g.needs.food = f32(sub(need, at::food_f), 1);
         g.needs.drink = f32(sub(need, at::drink_f), 1);
         g.needs.toilet = f32(sub(need, at::toilet_f), 0);
@@ -983,11 +985,11 @@ namespace rct3::save
         g.set_piece_path = ref(get(at::g_sp_path), index);
         g.set_piece_actor0 = ref(get(at::g_sp_actor0), index);
         g.set_piece_actor1 = ref(get(at::g_sp_actor1), index);
-        if (const auto* pos = get(at::g_sp_pos); pos && pos->kind() == ValueKind::List)
+        if (const auto pos = get(at::g_sp_pos); pos && pos->kind() == ValueKind::List)
         {
             const auto items = pos->items();
             for (std::size_t i = 0; i < items.size() && i < kMaxGroupMembers; ++i)
-                g.set_piece_positions.push_back(vec3(&items[i]));
+                g.set_piece_positions.push_back(vec3(items[i]));
         }
         g.set_piece_take_photo = flag(get(at::g_sp_photo));
         g.hold_hands_route = ref(get(at::g_hold_hands), index);

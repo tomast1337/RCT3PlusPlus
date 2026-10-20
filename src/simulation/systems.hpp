@@ -22,6 +22,7 @@
 #include "simulation/sim_world.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <span>
 
 namespace rct3::simulation
@@ -104,6 +105,6 @@ namespace rct3::simulation
     void start_walking(SimWorld& world, entt::entity guest, NodeId at);
 
     /// Advances `world` by one tick, sharing work out over `workers` when given.
-    void step(SimWorld& world, Workers* workers = nullptr);
+    void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);
 
 } // namespace rct3::simulation

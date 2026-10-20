@@ -35,8 +35,8 @@ TEST_CASE("the game's look draws in code only the panels moved to code")
     for (const game_skins::CodedSkin& coded : game_skins::coded_skins())
     {
         CAPTURE(coded.skin);
-        const SkinRef* skin = skins.find(coded.skin);
-        CHECK((skin != nullptr && skin->coded != nullptr) == (coded.look == PanelLook::Coded));
+        auto skin = skins.find(coded.skin);
+        CHECK((skin && skin->coded) == (coded.look == PanelLook::Coded));
     }
 }
 

@@ -12,7 +12,7 @@ namespace rct3::ui
 
     std::u16string_view tooltip_text(const Widget* w)
     {
-        for (; w != nullptr; w = w->parent())
+        for (; w; w = w->parent())
         {
             if (!w->tooltip.empty())
                 return w->tooltip;
@@ -53,8 +53,8 @@ namespace rct3::ui
 
     Rect Tooltip::box(const TooltipStyle& style, const FontSet& fonts, const Rect& view) const
     {
-        const Font* font = fonts.get(style.font);
-        if (font == nullptr)
+        const auto font = fonts.get(style.font);
+        if (!font)
             return { };
         float width = 0;
         const auto lines = break_lines(*font, text_, style.max_width);
@@ -71,9 +71,9 @@ namespace rct3::ui
     {
         if (!shown_)
             return;
-        const Font* font = context.fonts.get(style.font);
+        const auto font = context.fonts.get(style.font);
         const Rect r = box(style, context.fonts, view);
-        if (font == nullptr || r.empty())
+        if (!font || r.empty())
             return;
         draw_skin(context.list, context.skins.find(style.skin), r);
         const Rect inner { r.x0 + style.padding.x0, r.y0 + style.padding.y0, r.x1 - style.padding.x1, r.y1 - style.padding.y1 };

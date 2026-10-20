@@ -19,6 +19,7 @@
 //  - Curve: 0 straight, 1 loose, 2 medium, 3 tight; negative to the left.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "park/object_placement.hpp"
 #include "save/model/world.hpp"
 
@@ -128,7 +129,7 @@ namespace rct3::park
     [[nodiscard]] std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay);
 
     /// The piece of `catalogue` a track piece's symbol names, with or without its tag; nothing when not there.
-    [[nodiscard]] const PieceShape* shape_named(const PieceCatalogue& catalogue, std::string_view symbol);
+    [[nodiscard]] std::optional<const PieceShape&> shape_named(const PieceCatalogue& catalogue, std::string_view symbol);
 
     /// The bank the catalogue's pieces count from: that of its stations, in degrees (0 or 180).
     [[nodiscard]] float station_bank(std::span<const PieceRecord> records, std::span<const PieceLine> lines);

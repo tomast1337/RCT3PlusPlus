@@ -84,7 +84,7 @@ TEST_CASE("the file keeps only what differs from the usual keys")
 TEST_CASE("the file reports what it cannot read and keeps the rest")
 {
     std::vector<rct3::config::FileProblem> problems;
-    const KeyMap map = KeyMap::parse(R"({ "cancel": ["F4", "Space", 3], "nothing": ["F5"], "copy": "F6" })", &problems);
+    const KeyMap map = KeyMap::parse(R"({ "cancel": ["F4", "Space", 3], "nothing": ["F5"], "copy": "F6" })", problems);
     CHECK(map.keys(Command::Cancel) == std::vector { KeyCombo { Key::F4 } });
     CHECK(map.keys(Command::Copy) == KeyMap { }.keys(Command::Copy));
     CHECK(problems.size() == 4);

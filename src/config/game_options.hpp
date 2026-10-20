@@ -161,9 +161,9 @@ namespace rct3::config
         /// Every option at its default.
         GameOptions();
 
-        [[nodiscard]] static GameOptions parse(std::string_view text, std::vector<FileProblem>* problems = nullptr);
+        [[nodiscard]] static GameOptions parse(std::string_view text, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
         /// Reads the file at `path`. A file that is not there gives the defaults.
-        [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::vector<FileProblem>* problems = nullptr);
+        [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
 
         [[nodiscard]] float get(GameOption option) const;
         [[nodiscard]] bool flag(GameOption option) const

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front_end.hpp"
 
+#include "core/maybe.hpp"
+
 #include <utility>
 
 namespace rct3::ui
@@ -35,7 +37,7 @@ namespace rct3::ui
             open_options();
     }
 
-    OptionsDialog* FrontEnd::options_window() const
+    std::optional<OptionsDialog&> FrontEnd::options_window() const
     {
         return options_.window();
     }
@@ -45,14 +47,14 @@ namespace rct3::ui
         options_.open();
     }
 
-    FileDialog* FrontEnd::file_dialog() const
+    std::optional<FileDialog&> FrontEnd::file_dialog() const
     {
-        return static_cast<FileDialog*>(desktop_.root().find(kFilesName));
+        return desktop_.root().find_as<FileDialog>(kFilesName);
     }
 
     void FrontEnd::open_files(FrontAction action, config::UserFolder folder)
     {
-        if (FileDialog* open = file_dialog())
+        if (auto open = file_dialog())
         {
             if (folder == file_folder_)
             {
@@ -67,14 +69,14 @@ namespace rct3::ui
         desktop_.root().add<FileDialog>(std::string(kFilesName), style_.files, strings_, FileDialogMode::Load, setup_.twelve_hour);
     }
 
-    CareerDialog* FrontEnd::career_dialog() const
+    std::optional<CareerDialog&> FrontEnd::career_dialog() const
     {
-        return static_cast<CareerDialog*>(desktop_.root().find(kCareersName));
+        return desktop_.root().find_as<CareerDialog>(kCareersName);
     }
 
     void FrontEnd::open_careers(int pack)
     {
-        if (CareerDialog* open = career_dialog())
+        if (auto open = career_dialog())
         {
             if (pack == career_pack_)
             {
@@ -90,9 +92,9 @@ namespace rct3::ui
 
     CareerBoard& FrontEnd::open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked)
     {
-        if (CareerDialog* dialog = career_dialog())
+        if (auto dialog = career_dialog())
             desktop_.root().remove(*dialog);
-        if (CareerBoard* old = career_board())
+        if (auto old = career_board())
             desktop_.root().remove(*old);
         screen_->visible = false;
         ++career_boards_opened_;
@@ -102,19 +104,19 @@ namespace rct3::ui
         return map;
     }
 
-    CareerBoard* FrontEnd::career_board() const
+    std::optional<CareerBoard&> FrontEnd::career_board() const
     {
-        return static_cast<CareerBoard*>(desktop_.root().find(kCareerBoardName));
+        return desktop_.root().find_as<CareerBoard>(kCareerBoardName);
     }
 
-    TutorialPicker* FrontEnd::tutorial_picker() const
+    std::optional<TutorialPicker&> FrontEnd::tutorial_picker() const
     {
-        return static_cast<TutorialPicker*>(desktop_.root().find(kTutorialsName));
+        return desktop_.root().find_as<TutorialPicker>(kTutorialsName);
     }
 
     void FrontEnd::open_tutorials(int pack)
     {
-        if (TutorialPicker* open = tutorial_picker())
+        if (auto open = tutorial_picker())
         {
             if (pack == tutorial_pack_)
                 return;
@@ -166,14 +168,14 @@ namespace rct3::ui
                     break;
             }
         }
-        if (TutorialPicker* menu = tutorial_picker())
+        if (auto menu = tutorial_picker())
         {
             if (screen_->current() != FrontMenu::Tutorials || !screen_->visible)
                 desktop_.root().remove(*menu);
             else if (auto help = menu->help())
                 screen_->show_help(std::move((*help)[0]), std::move((*help)[1]));
         }
-        if (CareerBoard* map = career_board())
+        if (auto map = career_board())
         {
             if (map->take_quit())
                 ask_quit();

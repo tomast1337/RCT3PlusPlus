@@ -626,6 +626,8 @@ namespace rct3::scene
                     }
                     load_models(install, sized, false, scene.models, scene.pictures);
                     park::BuiltSupports columns = park::track_supports(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id());
+                    for (const save::PlacedObject& piece : columns.pieces)
+                        scene.columns.insert(piece.id);
                     built.insert(built.end(), std::make_move_iterator(columns.pieces.begin()), std::make_move_iterator(columns.pieces.end()));
                     scene.fitted = std::move(columns.fitted);
                 }

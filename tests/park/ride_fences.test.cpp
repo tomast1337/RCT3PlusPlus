@@ -73,6 +73,7 @@ TEST_CASE("a ride without a fence has none, and a stand-in fence replaces its ow
     const auto pieces = ride_fences(r, &item, 0);
     REQUIRE(pieces.size() == 8);
     CHECK(pieces[0].symbol == "Tape");
+    CHECK(pieces[0].fixture);
     CHECK(pieces[0].overlay == "Fences/Tape");
 
     save::Ride facility = flat_ride(spot(10, 20, 0, 0));

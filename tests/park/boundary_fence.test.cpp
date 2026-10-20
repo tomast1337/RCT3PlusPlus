@@ -43,6 +43,7 @@ TEST_CASE("the park fence runs round the land the park owns outright, the map's 
     for (const save::PlacedObject& o : fence.pieces)
     {
         CHECK(o.symbol == "Chain");
+        CHECK(o.fixture);
         CHECK(o.overlay == "Fences/Chain");
         CHECK((o.col == 1 || o.col == 2));
         CHECK(o.row == 1);

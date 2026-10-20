@@ -39,6 +39,7 @@ namespace rct3::park
                     save::PlacedObject& o = out.pieces.emplace_back();
                     o.id = ++last_id;
                     o.owner_ref = o.id;
+                    o.fixture = true;
                     o.symbol = symbol;
                     o.overlay = overlay;
                     o.col = col;

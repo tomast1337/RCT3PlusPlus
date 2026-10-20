@@ -51,6 +51,7 @@ namespace rct3::park
                 save::PlacedObject& o = pieces_.emplace_back();
                 o.id = ++last_id_;
                 o.owner_ref = o.id;
+                o.fixture = true;
                 o.symbol = *look_.symbol;
                 o.overlay = *look_.overlay;
                 o.col = tile[0];

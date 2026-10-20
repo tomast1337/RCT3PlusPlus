@@ -92,7 +92,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             __builtin_trap();
         if (decoded->fields.items().size() != file->classes[o.class_index].attributes.size())
             __builtin_trap();
-        if (index.find(o.id) == nullptr)
+        if (!index.find(o.id))
             __builtin_trap();
     }
     // BEGIN park: the park loader accepts everything that decodes and yields a self-consistent model.

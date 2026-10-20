@@ -78,8 +78,9 @@ namespace rct3::park
                     const float high = std::max({ t[0].y, t[1].y, t[2].y });
                     // Each level strictly between the lowest and highest corners. A corner on a level counts as
                     // under it, so a level crosses exactly two edges, and ground lying flat on one draws no line.
-                    for (float level = std::floor(low / step + 1) * step; level < high; level += step)
+                    for (auto k = static_cast<int>(std::floor(low / step + 1)); static_cast<float>(k) * step < high; ++k)
                     {
+                        const float level = static_cast<float>(k) * step;
                         std::array<glm::vec3, 2> ends { };
                         std::size_t found = 0;
                         for (std::size_t e = 0; e < 3; ++e)

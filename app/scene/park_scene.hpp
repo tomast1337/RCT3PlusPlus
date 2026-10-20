@@ -293,11 +293,12 @@ namespace rct3::scene
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
-        /// A flat ride its bones move: drawn apart from the other objects, a piece per bone.
+        /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the
+        /// other objects, a piece per bone.
         struct BonedRide
         {
-            entt::entity ride = entt::null;
-            std::size_t object = 0; ///< Its place in `objects`
+            entt::entity ride = entt::null; ///< Null for scenery, which loops its first motion
+            std::size_t object = 0;         ///< Its place in `objects`
             glm::mat4 placed { 1.0f };
             park::MovingMeshes mesh;
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
@@ -456,6 +457,10 @@ namespace rct3::scene
     /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
     void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);
+
+    /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
+    /// as animatronics are.
+    void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k);
 
     void destroy_park_scene(render::Device& device, ParkScene& scene);
 

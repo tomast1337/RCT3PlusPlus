@@ -4,7 +4,8 @@
 // park allows. The install is read once, away from the frame, when the park loads; a list asked for before
 // that is done waits for it.
 //
-// Picking a ride placed whole in a list starts placing it (ride_placing.hpp); other picks build nothing yet.
+// Picking a ride placed whole or scenery in a list starts placing it (ride_placing.hpp); other picks build
+// nothing yet.
 #pragma once
 
 #include "config/game_install.hpp"

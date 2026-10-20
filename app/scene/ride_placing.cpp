@@ -46,6 +46,8 @@ namespace rct3::scene
         // change a ride's fence.
         constexpr std::string_view kRideFence = "Van_Scaffold2";
         constexpr std::string_view kRideFenceOverlay = "Style\\Vanilla\\style";
+        /// How far under an object's top the pointer may meet its box and still count as on the top.
+        constexpr float kTopSlack = 0.05f;
 
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::PlacedObject> ghost_object(const RidePlacing& p)
@@ -55,6 +57,16 @@ namespace rct3::scene
             save::PlacedObject o;
             o.overlay = p.item->overlay;
             o.base_height = p.site->height;
+            if (p.step == RidePlacing::Step::Scenery)
+            {
+                o.symbol = p.item->symbol;
+                o.col = p.site->col;
+                o.row = p.site->row;
+                o.rotation = p.site->turns;
+                o.quadrant = p.quadrant;
+                o.height_offset = p.site->height - p.ground;
+                return o;
+            }
             o.force_absolute_height = true;
             if (p.step == RidePlacing::Step::Ride)
             {
@@ -86,14 +98,16 @@ namespace rct3::scene
             return last;
         }
 
-        /// Adds `o` to the park with a new id, in the colours its item gives, as part of the ride being placed.
+        /// Adds `o` to the park with a new id, in the colours its item gives, as part of the ride being placed
+        /// unless it is scenery.
         std::uint64_t add_object(ParkScene& scene, save::PlacedObject o)
         {
             o.id = last_id(scene) + 1;
             o.owner_ref = o.id;
             if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
                 o.colours = model->second.default_colours;
-            scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
+            if (scene.placing.step != RidePlacing::Step::Scenery)
+                scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
             scene.objects.push_back(o);
             objects_changed(scene);
             return o.id;
@@ -161,11 +175,12 @@ namespace rct3::scene
 
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item)
     {
-        if (item.kind != park::BuildKind::FlatRide || item.scenery.empty() || item.width == 0 || item.length == 0)
+        const bool scenery = item.kind == park::BuildKind::Scenery && !item.symbol.empty();
+        if (!scenery && (item.kind != park::BuildKind::FlatRide || item.scenery.empty() || item.width == 0 || item.length == 0))
             return false;
         RidePlacing& p = scene.placing;
         p.item = item;
-        p.step = RidePlacing::Step::Ride;
+        p.step = scenery ? RidePlacing::Step::Scenery : RidePlacing::Step::Ride;
         p.site.reset();
         p.door.reset();
         p.entrance.reset();
@@ -190,7 +205,7 @@ namespace rct3::scene
         join_rides(device, scene);
         if (!p.item)
             return;
-        if (p.step == RidePlacing::Step::Ride && !typing(scene))
+        if ((p.step == RidePlacing::Step::Ride || p.step == RidePlacing::Step::Scenery) && !typing(scene))
         {
             for (const ui::KeyPress& k : keys.presses)
                 if (k.key == ui::Key::Letter && k.character == U'z')
@@ -201,6 +216,69 @@ namespace rct3::scene
         {
             p.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
             p.solids_of = scene.objects.size();
+        }
+        const auto show_ghost = [&] {
+            p.ghost_mesh = { };
+            const auto o = ghost_object(p);
+            if (!o || o->symbol.empty() || !load_object_model(scene, p.models, assets, *o))
+                return;
+            const std::array<save::PlacedObject, 1> one { *o };
+            p.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
+            const glm::vec4 tint = p.problem == park::SiteProblem::None && p.affordable ? kGhostTint : kRefusedTint;
+            for (park::GroundVertex& v : p.ghost_mesh.vertices)
+                v.colour *= tint;
+            ghost_textures(device, scene, p.ghost_mesh);
+        };
+        if (p.step == RidePlacing::Step::Scenery)
+        {
+            // Scenery goes where the pointer meets the ground or, nearer, an object: then on top of it.
+            std::optional<glm::vec2> spot;
+            std::optional<float> top;
+            if (!over && size.x > 0 && size.y > 0)
+            {
+                const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                if (scene.pick_boxes_of != scene.objects.size())
+                {
+                    scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
+                    scene.pick_boxes_of = scene.objects.size();
+                }
+                auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return scene.show_scenery && !scene.objects[i].hidden; });
+                if (object)
+                {
+                    // Only a top pointed at takes the item; past a side, as of a tree's crown, it goes on the ground.
+                    const auto box = std::ranges::find(scene.pick_boxes, object->index, &park::PickBox::index);
+                    if ((ray.origin + ray.direction * object->distance).y >= box->park_high.y - kTopSlack)
+                        top = box->park_high.y;
+                    else
+                        object.reset();
+                }
+                if (const auto distance = object ? std::optional(object->distance) : park::ground_hit(ray, scene.grid))
+                {
+                    const glm::vec3 hit = ray.origin + ray.direction * *distance;
+                    spot = glm::vec2 { (hit.x - scene.grid.origin_x) / scene.grid.tile_size_x, (hit.z - scene.grid.origin_z) / scene.grid.tile_size_z };
+                }
+            }
+            const auto col = spot ? static_cast<std::int32_t>(std::floor(spot->x)) : -1;
+            const auto row = spot ? static_cast<std::int32_t>(std::floor(spot->y)) : -1;
+            if (!scene.grid.contains(col, row))
+            {
+                p.site.reset();
+                p.ghost_mesh = { };
+                return;
+            }
+            const std::array squares { std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->width)), std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->length)) };
+            p.site = park::ride_site(col, row, squares, p.turns, scene.grid);
+            p.ground = p.site->height;
+            // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
+            if (top)
+                p.site->height = std::max(p.site->height, static_cast<std::int32_t>(std::ceil(*top - 0.005f)));
+            p.quadrant = (spot->x - static_cast<float>(col) >= 0.5f ? 1 : 0) + (spot->y - static_cast<float>(row) >= 0.5f ? 2 : 0);
+            // shortcut: only the land is checked, so scenery may stand inside other scenery or rides; check what
+            // stands there once objects can be moved or sold.
+            p.problem = park::on_owned_land(*ghost_object(p), squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
+            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+            show_ghost();
+            return;
         }
         const auto tile = over ? std::nullopt : ground_tile(scene, at, size);
         if (!tile)
@@ -225,16 +303,7 @@ namespace rct3::scene
             p.problem = park::door_problem(*p.site, *p.door, p.step == RidePlacing::Step::Exit ? p.entrance : std::nullopt, scene.grid, paths, p.solids);
             p.affordable = true;
         }
-        p.ghost_mesh = { };
-        const auto o = ghost_object(p);
-        if (!o || o->symbol.empty() || !load_object_model(scene, p.models, assets, *o))
-            return;
-        const std::array<save::PlacedObject, 1> one { *o };
-        p.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
-        const glm::vec4 tint = p.problem == park::SiteProblem::None && p.affordable ? kGhostTint : kRefusedTint;
-        for (park::GroundVertex& v : p.ghost_mesh.vertices)
-            v.colour *= tint;
-        ghost_textures(device, scene, p.ghost_mesh);
+        show_ghost();
     }
 
     bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
@@ -246,6 +315,16 @@ namespace rct3::scene
         if (!o || p.problem != park::SiteProblem::None || !p.affordable || !scene.models.contains(park::model_key(*o)))
             return true;
         wait_for_build(scene);
+        if (p.step == RidePlacing::Step::Scenery)
+        {
+            // The tool stays out for the next one, as in the game.
+            add_object(scene, *o);
+            if (scene.park.cash)
+                *scene.park.cash -= p.item->price;
+            logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, o->col, o->row, p.site->height);
+            p.ghost_mesh = { };
+            return true;
+        }
         if (p.step == RidePlacing::Step::Ride)
         {
             park::level_ground(scene.grid, *p.site);

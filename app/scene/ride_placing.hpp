@@ -8,6 +8,10 @@
 // take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
+//
+// Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
+// on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
+// the thing pointed at, which is how roofs go onto walls.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -37,6 +41,7 @@ namespace rct3::scene
             Ride,
             Entrance,
             Exit,
+            Scenery,
         };
         std::optional<park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
@@ -44,6 +49,8 @@ namespace rct3::scene
         std::optional<park::RideSite> site; ///< Pointed at, then where the ride was placed
         std::optional<park::DoorSpot> door; ///< The entrance or exit pointed at
         std::optional<park::DoorSpot> entrance;
+        std::int32_t quadrant = 0; ///< Of the tile, for scenery that takes a quarter of one
+        std::int32_t ground = 0;   ///< Height of the ground under the scenery's site
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
         std::size_t ride = 0; ///< Of the scene's rides, once placed
@@ -60,7 +67,7 @@ namespace rct3::scene
     [[nodiscard]] std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
-    /// whole are left alone; false for those.
+    /// whole and scenery are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);
 
     /// Puts the tool away.

@@ -4,8 +4,8 @@
 // over the ground, the turn keys turn it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
 // round its rim. A right click puts the tool away; a ride left without an entrance or exit stays built but
-// takes no riders. Once the exit stands, the ride is fenced round its rim and beside its doors, and the doors
-// take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
+// takes no riders. The ride is fenced round its rim as it is placed, and the fence opens for each door as it
+// goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
 //
@@ -68,7 +68,8 @@ namespace rct3::scene
         std::optional<Lift> lift;
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
-        std::size_t ride = 0; ///< Of the scene's rides, once placed
+        std::size_t ride = 0;             ///< Of the scene's rides, once placed
+        std::vector<std::uint64_t> fence; ///< Of that ride, its fence pieces, built again as each door goes in
         park::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for

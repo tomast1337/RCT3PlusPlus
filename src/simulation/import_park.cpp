@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/import_park.hpp"
 
+#include "ovl/animated_ride.hpp"
+#include "ovl/tracked_ride.hpp"
 #include "park/ground_paths.hpp"
 #include "park/queue_fences.hpp"
 #include "simulation/components.hpp"
@@ -9,6 +11,7 @@
 #include "simulation/ratings.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +20,7 @@
 #include <functional>
 #include <initializer_list>
 #include <limits>
+#include <map>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -247,6 +251,36 @@ namespace rct3::simulation
                     if ((out[i] = flat_ride_timing(model->animation_seconds, model->seats, ride.loop_count)))
                         break;
             }
+        }
+        return out;
+    }
+
+    std::vector<std::optional<std::uint32_t>> ride_guests(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find)
+    {
+        // Each overlay's rides by symbol (tag included), read once.
+        std::unordered_map<std::string, std::map<std::string, std::uint32_t, strings::LessIgnoringCase>> loaded;
+        std::vector<std::optional<std::uint32_t>> out(rides.rides.size());
+        for (std::size_t i = 0; i < rides.rides.size(); ++i)
+        {
+            const save::Ride& ride = rides.rides[i];
+            auto [at, added] = loaded.try_emplace(ride.base.overlay_path);
+            const auto file = added ? find(ride.base.overlay_path + ".common.ovl") : std::nullopt;
+            if (auto overlay = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error::MissingFile))
+            {
+                for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+                {
+                    if (part == nullptr)
+                        continue;
+                    for (const auto& item : ovl::read_tracked_rides(*overlay, *part))
+                        if (item.ride && item.ride->guests)
+                            at->second[std::string(item.name) + ":trr"] = *item.ride->guests;
+                    for (const auto& item : ovl::read_animated_rides(*overlay, *part))
+                        if (item.ride && item.ride->guests)
+                            at->second[std::string(item.name) + ":anr"] = *item.ride->guests;
+                }
+            }
+            if (const auto found = at->second.find(ride.base.symbol); found != at->second.end())
+                out[i] = found->second;
         }
         return out;
     }
@@ -513,10 +547,9 @@ namespace rct3::simulation
         // every two hours, never.
         constexpr std::array<float, 7> kIntervals { 600, 1200, 1800, 2700, 3600, 7200, -1 };
         const std::int32_t interval = ride.breakdown.inspection_interval;
-        using enum save::RepairStatus;
-        const save::RepairStatus status = ride.base.repair_status;
-        // Broken by the repair status alone: saves keep a breakdown kind on most open, running rides too.
-        const bool broken = status == MechanicCalled || status == MechanicOnTheWay || status == BeingFixed;
+        // Broken by its flag alone: saves keep a breakdown kind on most open, running rides too, and a repair
+        // status on some fixed ones.
+        const bool broken = (ride.base.flags & save::AttractionCommon::kBrokenDown) != 0;
         return {
             .reliability = std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f),
             .broken = broken,
@@ -528,7 +561,7 @@ namespace rct3::simulation
         };
     }
 
-    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters)
+    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters, std::span<const std::optional<std::uint32_t>> guests)
     {
         std::vector<entt::entity> added(rides.rides.size(), entt::null);
         for (std::size_t i = 0; i < rides.rides.size(); ++i)
@@ -541,11 +574,22 @@ namespace rct3::simulation
             else if (ride.kind == save::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time > 0)))
                 // Each train carries its share of the ride's seats.
                 timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .seconds = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
+            // Rides left out still make room in the park while open and working.
+            const auto elsewhere = [&] {
+                if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
+                    world.registry.ctx().emplace<RoomElsewhere>().guests += *guests[i];
+            };
             if (!timing || ride.stations.empty() || !ride.stations.front().entrance_spot)
+            {
+                elsewhere();
                 continue;
+            }
             auto links = ride_links(world.paths, ride.stations.front());
             if (!links)
+            {
+                elsewhere();
                 continue;
+            }
             const NodeId entrance = links->entrance;
             const NodeId exit = links->exit;
             std::vector<NodeId> line = std::move(links->line);
@@ -570,6 +614,8 @@ namespace rct3::simulation
             if (ride.assessment.valid)
                 cycle.cover = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
             cycle.splash = splashes(ride.base.symbol);
+            if (i < guests.size() && guests[i])
+                cycle.room = *guests[i];
             r.emplace<CycleRide>(e, std::move(cycle));
             if (coaster)
                 r.emplace<Trains>(e, trains_of(*coaster, ride));

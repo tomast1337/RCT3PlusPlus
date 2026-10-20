@@ -119,7 +119,12 @@ namespace rct3::save
         std::string name;         ///< User name, a text key, or a numbered placeholder
         AttractionState state = AttractionState::Closed;
         std::uint32_t flags = 0; ///< Bit set; all bits preserved. 0x40 never opened, 0x200 low-reliability warning
-        float build_time = 0;    ///< Game clock seconds when built
+        /// Set while the attraction is broken down. The repair status can stay at a mechanic called after the
+        /// repair, so this bit is what tells. Found by saving one park with three rides as each broke down in
+        /// turn: all three kept the same repair status, while this bit was set on exactly the broken ones, which
+        /// were also the ones taped off and the ones missing from the park's ideal guest count.
+        static constexpr std::uint32_t kBrokenDown = 1u << 2;
+        float build_time = 0; ///< Game clock seconds when built
         std::int64_t total_guests = 0;
         std::int64_t total_profit = 0; ///< Hundredths
         std::int64_t running_cost = 0; ///< Assessed running cost per interval, hundredths

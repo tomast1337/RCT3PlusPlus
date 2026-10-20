@@ -17,9 +17,12 @@
 #include "simulation/sim_world.hpp"
 
 #include <cstddef>
+#include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace rct3::simulation
@@ -112,14 +115,20 @@ namespace rct3::simulation
     /// `ride`'s trains on `coaster`'s track, each where the park kept it.
     [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::Ride& ride);
 
+    /// The guests each ride of `rides` makes room for in the park, by its place in `rides.rides`, as its kind's
+    /// item in the overlay it names says. `find` finds an overlay's file in the install from its path relative
+    /// to it; nothing where the file or the item is missing.
+    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_guests(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+
     /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
     /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in
     /// `rides.rides`. A coaster with its track in `coasters` at its place runs its train round it; one without
     /// is timed by its last test lap. Either carries all its seats. Excitement, intensity and nausea are the
     /// saved ratings; for a ride the park has not rated, those of its last test or of a test run on its track
-    /// (simulation/ratings.hpp). Tracked rides leave the station as their operating settings say. Call after
-    /// import_paths.
-    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { });
+    /// (simulation/ratings.hpp). Tracked rides leave the station as their operating settings say. Each makes
+    /// room in the park for `guests` at its place, when there; those left out add theirs to RoomElsewhere while
+    /// open and working. Call after import_paths.
+    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 
     /// Sets every guest walking from the path they stand on, or from the nearest path for one saved off the paths;
     /// returns how many. Call after import_paths.

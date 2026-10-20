@@ -60,6 +60,22 @@ namespace rct3::ovl
                         ride.splines[i] = record->ref(static_cast<std::size_t>(v.splines) + i * 4, "spl");
                     }
                 }
+                if (version != 1)
+                    ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x2C);
+                else
+                {
+                    // Version 1 items hold the block 0x30 or 0x38 bytes in: the one whose words at 0x0C and 0x10
+                    // read 1 and -1.
+                    for (const std::uint32_t at : { 0x30u, 0x38u })
+                    {
+                        const auto block = ItemRecord::open(space, refs, symbol.data + at, 0x20);
+                        if (block && block->u32(0x0C) == 1 && block->u32(0x10) == 0xFFFFFFFFu)
+                        {
+                            ride.guests = detail::read_ride_guests(space, refs, symbol.data + at);
+                            break;
+                        }
+                    }
+                }
                 item.ride = ride;
             }
             items.push_back(item);

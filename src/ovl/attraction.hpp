@@ -7,6 +7,7 @@
 #include "ovl/item_record.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace rct3::ovl
@@ -50,6 +51,20 @@ namespace rct3::ovl
             int value_c = -1;
             int addon = -1; ///< Read from version 4 files on
         };
+
+        /// Guests a ride makes room for in the park, from the small block of a ride item that holds it: its
+        /// first word, unless that is -1 for "the default", which then follows 0x1C bytes in. Nothing when the
+        /// block does not fit. Checked by summing it over the open rides of saved parks against the ideal guest
+        /// count they keep: exact for parks of only rides, and where one ride kind is in two overlays of
+        /// different versions, the one the park names is the one that fits.
+        [[nodiscard]] inline std::optional<std::uint32_t> read_ride_guests(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address)
+        {
+            const auto block = ItemRecord::open(space, refs, address, 0x20);
+            if (!block)
+                return std::nullopt;
+            const std::uint32_t first = block->u32(0);
+            return first != 0xFFFFFFFFu ? first : block->u32(0x1C);
+        }
 
         [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, std::uint32_t version)
         {

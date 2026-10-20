@@ -93,6 +93,27 @@ namespace rct3::simulation
         constexpr double kStormArrivals = 0.25;
         constexpr double kColdArrivals = 0.6;
         constexpr double kSunnyArrivals = 1.3; ///< On a sunny day that is not too cold
+        // What brings guests in. Our own model: room fitted to saved parks, the rest our own values.
+        // Pools: a series of parks saved a step apart (an empty pool, then filled, deeper, wider, with a
+        // jacuzzi, extras, a slide, a lazy river, a second pool) shows the ideal guest count growing by three
+        // for each square holding water, whatever its depth, and by nothing for jacuzzis or extras.
+        constexpr std::uint32_t kGuestsPerPoolSquare = 3;
+        constexpr std::uint32_t kGuestsPerSeat = 3; ///< For a ride whose data does not say how many it makes room for
+        // Rides and pools alone reproduce the saved parks' ideal guest counts, exactly in small parks, a little
+        // under in big ones, where some rides are not simulated yet; we give some room over on purpose: better
+        // too many guests than too few.
+        constexpr double kRoomToSpare = 1.1;
+        constexpr float kFillSeconds = 400;      ///< A park drawing guests at the plain rate fills its room in this long: ten game hours
+        constexpr float kPlainRating = 0.6f;     ///< Rating at which guests come at the plain rate; also when unrated
+        constexpr float kUnknownRating = 0.25f;  ///< Rating under which a park draws only the few curious
+        constexpr float kCurious = 0.1f;         ///< Those few, as rating
+        constexpr float kFamousRating = 0.9f;    ///< Rating past which a better park draws no more
+        constexpr double kCrowded = 0.3;         ///< Of the guests still coming once the park is full
+        constexpr double kOverpriced = 0.3;      ///< Of them, once the fee is over fair; again past twice fair
+        constexpr std::int64_t kRideWorth = 400; ///< Hundredths, to a guest, of a ride at full excitement
+        constexpr float kIntensityWorth = 0.3f;  ///< Of that for each of intensity
+        constexpr float kTooIntense = 0.9f;      ///< Intensity past which a ride is worth half to most
+        constexpr double kFairFeeShare = 1.5;    ///< Of what the rides are worth over their prices
         // Day and night. Our own values.
         constexpr float kDusk = 20.0f / 24;
         constexpr float kDawn = 6.0f / 24;
@@ -474,6 +495,52 @@ namespace rct3::simulation
         return rate;
     }
 
+    std::uint32_t ideal_guests(const SimWorld& world)
+    {
+        const entt::registry& r = world.registry;
+        std::uint32_t room = 0;
+        for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
+        {
+            const auto* upkeep = r.try_get<Upkeep>(e);
+            if (at.open && (upkeep == nullptr || !upkeep->broken))
+                room += ride.room > 0 ? ride.room : ride.capacity * kGuestsPerSeat;
+        }
+        const auto* draw = r.ctx().find<Draw>();
+        room += draw != nullptr ? draw->pool_squares * kGuestsPerPoolSquare : 0;
+        if (const auto* elsewhere = r.ctx().find<RoomElsewhere>())
+            room += elsewhere->guests;
+        return static_cast<std::uint32_t>(std::lround(room * kRoomToSpare));
+    }
+
+    std::int64_t fair_entrance_fee(const SimWorld& world)
+    {
+        const entt::registry& r = world.registry;
+        std::int64_t over = 0;
+        for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
+        {
+            if (!at.open)
+                continue;
+            float worth = kRideWorth * (ride.excitement + kIntensityWorth * ride.intensity);
+            if (ride.intensity > kTooIntense)
+                worth /= 2;
+            over += std::max<std::int64_t>(0, std::lround(worth) - at.price);
+        }
+        return std::llround(static_cast<double>(over) * kFairFeeShare);
+    }
+
+    double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee)
+    {
+        const auto pull = [](float rating) { return kCurious + std::clamp(rating, kUnknownRating, kFamousRating) - kUnknownRating; };
+        double rate = pull(draw.rating.value_or(kPlainRating)) / pull(kPlainRating);
+        if (guests >= ideal)
+            rate *= kCrowded;
+        if (draw.entrance_fee > fair_fee)
+            rate *= kOverpriced;
+        if (draw.entrance_fee > 2 * fair_fee)
+            rate *= kOverpriced;
+        return rate;
+    }
+
     bool is_night(float time)
     {
         return time >= kDusk || time < kDawn;
@@ -528,12 +595,22 @@ namespace rct3::simulation
             auto& vandalism = r.ctx().emplace<Vandalism>();
             // Guests come in at the gate: families by day, mostly teens after dark.
             const bool night = is_night(time_of_day(r));
+            double arrivals = arrivals_per_second(weather);
+            if (const auto* draw = r.ctx().find<Draw>(); draw != nullptr && !r.view<const ParkGate>().empty())
+            {
+                const auto guests = static_cast<std::uint32_t>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
+                const std::uint32_t ideal = ideal_guests(world);
+                // A bigger park draws more till it is full: enough to fill its room in a day's opening, never fewer
+                // than a small one's. Once full only the few of a small park still come.
+                const double fill = guests < ideal ? std::max(1.0, ideal / (kFillSeconds * kArrivalsPerSecond)) : 1.0;
+                arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world));
+            }
             for (const entt::entity gate : sorted(r.view<const ParkGate>()))
             {
                 if (!r.all_of<Dice>(gate))
                     r.emplace<Dice>(gate, dice_for(world, gate));
                 auto& dice = r.get<Dice>(gate).state;
-                if (!random::chance(dice, arrivals_per_second(weather) * dt))
+                if (!random::chance(dice, arrivals * dt))
                     continue;
                 const bool family = random::chance(dice, night ? kFamilyArrivals : 1 - kFamilyArrivals);
                 const AgeGroup age = !family ? AgeGroup::Teen : random::chance(dice, 0.5) ? AgeGroup::Adult : AgeGroup::Child;

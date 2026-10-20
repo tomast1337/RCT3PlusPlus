@@ -127,7 +127,7 @@ namespace rct3::park
                 if (!item.texture)
                     continue;
                 const auto part_of = std::ranges::find(kParts, item.name, &SkyPart::picture);
-                const bool wanted = part_of != kParts.end() || std::ranges::find(panels, item.name) != panels.end();
+                const bool wanted = part_of != kParts.end() || std::ranges::contains(panels, item.name);
                 if (!wanted)
                     continue;
                 if (auto image = pixels.first_frame(*item.texture))

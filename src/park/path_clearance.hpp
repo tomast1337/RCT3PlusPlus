@@ -63,6 +63,6 @@ namespace rct3::park
     [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
     /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it.
-    [[nodiscard]] bool blocked(const SolidTiles& solids, PathSpot spot, float low, float high);
+    [[nodiscard]] bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high);
 
 } // namespace rct3::park

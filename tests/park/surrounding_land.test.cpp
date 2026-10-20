@@ -104,7 +104,7 @@ TEST_CASE("the land at the edge is lit as the park's ground there")
     const TerrainMesh m = surrounding_land(g);
     REQUIRE_FALSE(m.vertices.empty());
     const glm::vec3 lit = glm::normalize(m.vertices[0].normal);
-    const glm::vec3 there = glm::normalize(ground_normal(g, 0, 0, 0));
+    const glm::vec3 there = glm::normalize(ground_normal(g, { 0, 0 }, 0));
     CHECK(lit.x == doctest::Approx(there.x));
     CHECK(lit.y == doctest::Approx(there.y));
     CHECK(lit.z == doctest::Approx(there.z));

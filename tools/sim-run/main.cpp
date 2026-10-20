@@ -61,7 +61,7 @@ namespace
     std::string breakdown_kinds(const entt::registry& r)
     {
         std::map<int, std::size_t> kinds;
-        for (const auto [e, upkeep] : r.view<const rct3::simulation::Upkeep>().each())
+        for (const auto [_, upkeep] : r.view<const rct3::simulation::Upkeep>().each())
             if (upkeep.broken)
                 ++kinds[std::to_underlying(upkeep.kind)];
         std::string out;
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
     }
 
     simulation::SimWorld world;
-    world.seed = seed;
+    world.seed = rct3::random::Seed { seed };
     simulation::import_paths(world, *world_model);
     const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);
@@ -159,10 +159,10 @@ int main(int argc, char** argv)
         {
             const std::string_view top = std::string_view(o.overlay).substr(0, o.overlay.find_first_of("/\\"));
             if (const auto found = top.empty() || top.size() == o.overlay.size() ? std::nullopt : install->find(top))
-                if (std::ranges::find(folders, found->filename().string()) == folders.end())
+                if (!std::ranges::contains(folders, found->filename().string()))
                     folders.push_back(found->filename().string());
         }
-        const std::vector<std::string_view> views(folders.begin(), folders.end());
+        const auto views = folders | std::ranges::to<std::vector<std::string_view>>();
         park::AssetIndex assets = park::AssetIndex::scan(install->root(), views);
         std::set<std::string, std::less<>> tried_files;
         for (auto missing = assets.missing_references(); !missing.empty(); missing = assets.missing_references())
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
     {
         // How far the paths' heights are from where the save stands its guests, as a check on both.
         std::vector<float> gaps;
-        for (const auto [e, pose] : world.registry.view<const simulation::Pose>().each())
+        for (const auto [_, pose] : world.registry.view<const simulation::Pose>().each())
             if (const auto at = world.paths.nearest(pose.position))
                 gaps.push_back(std::abs(world.paths.centre(*at).y - pose.position.y));
         std::ranges::sort(gaps);
@@ -432,7 +432,7 @@ int main(int argc, char** argv)
         if (const auto now = static_cast<int>(day.time * simulation::kHoursPerDay); now != hour)
         {
             std::array<std::size_t, 3> in { };
-            for (const auto [e, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
+            for (const auto [_, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                 ++in[static_cast<std::size_t>(visitor.age)];
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
             std::printf("%02d:00%s in the park: %zu children, %zu teens, %zu adults; came %u/%u/%u, went %u/%u/%u\n", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
@@ -486,7 +486,7 @@ int main(int argc, char** argv)
         std::size_t suits = 0; // Guests whose taste takes in a ride's intensity
         const auto* ride = r.try_get<simulation::CycleRide>(e);
         if (ride)
-            for (const auto [g, taste] : r.view<const simulation::Taste>(entt::exclude<simulation::Left>).each())
+            for (const auto [_, taste] : r.view<const simulation::Taste>(entt::exclude<simulation::Left>).each())
                 suits += taste.least <= ride->intensity && ride->intensity <= taste.most;
         std::printf("  %-28s %-6s customers %5u  income %8.2f  suits %zu", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100, suits);
         if (ride)
@@ -495,11 +495,11 @@ int main(int argc, char** argv)
     }
     {
         std::map<simulation::NodeId, std::size_t> lying;
-        for (const auto [e, piece] : r.view<const simulation::Litter>().each())
+        for (const auto [_, piece] : r.view<const simulation::Litter>().each())
             ++lying[piece.node];
         float held = 0;
         float room = 0;
-        for (const auto [e, bin] : r.view<const simulation::Bin>().each())
+        for (const auto [_, bin] : r.view<const simulation::Bin>().each())
         {
             held += bin.contents;
             room += bin.capacity;
@@ -510,7 +510,7 @@ int main(int argc, char** argv)
         std::uint32_t breakdowns = 0;
         std::size_t down = 0;
         float reliability = 0;
-        for (const auto [e, upkeep] : r.view<const simulation::Upkeep>().each())
+        for (const auto [_, upkeep] : r.view<const simulation::Upkeep>().each())
         {
             breakdowns += upkeep.breakdowns;
             down += upkeep.broken;
@@ -521,7 +521,7 @@ int main(int argc, char** argv)
         const auto* payroll = r.ctx().find<simulation::Payroll>();
         std::map<simulation::ThoughtKind, std::size_t> thought;
         std::size_t thinkers = 0;
-        for (const auto [e, thoughts] : r.view<const simulation::Thoughts>().each())
+        for (const auto [_, thoughts] : r.view<const simulation::Thoughts>().each())
         {
             thinkers += !thoughts.recent.empty();
             for (const simulation::Thought& t : thoughts.recent)
@@ -529,7 +529,7 @@ int main(int argc, char** argv)
         }
         std::size_t wet = 0;
         std::size_t hot = 0;
-        for (const auto [e, mood] : r.view<const simulation::Mood>().each())
+        for (const auto [_, mood] : r.view<const simulation::Mood>().each())
         {
             wet += mood.wet >= 0.5f;
             hot += mood.heat >= 0.5f;
@@ -545,7 +545,7 @@ int main(int argc, char** argv)
             }
         std::size_t queued[2] { };
         std::size_t rides[2] { };
-        for (const auto [e, ride] : r.view<const simulation::CycleRide>().each())
+        for (const auto [_, ride] : r.view<const simulation::CycleRide>().each())
         {
             queued[ride.cover >= 0.5f] += ride.queue.size();
             ++rides[ride.cover >= 0.5f];
@@ -591,7 +591,7 @@ int main(int argc, char** argv)
             float total = 0;
             float worst = 0;
             std::size_t counted = 0;
-            for (const auto [e, upkeep] : r.view<const simulation::Upkeep>().each())
+            for (const auto [_, upkeep] : r.view<const simulation::Upkeep>().each())
             {
                 total += upkeep.downtime_share();
                 worst = std::max(worst, upkeep.downtime_share());
@@ -605,7 +605,7 @@ int main(int argc, char** argv)
             std::size_t on = 0;
             std::size_t off = 0;
             const auto areas = r.view<const simulation::Staff, const simulation::Patrol>();
-            for (const auto [l, litter] : r.view<const simulation::Litter>().each())
+            for (const auto [_, litter] : r.view<const simulation::Litter>().each())
             {
                 const simulation::PathTileSpot at = world.paths.nodes()[litter.node].tile;
                 const bool covered = std::ranges::any_of(areas, [&](entt::entity s) { return areas.get<const simulation::Staff>(s).role == simulation::StaffRole::Handyman && areas.get<const simulation::Patrol>(s).covers(at); });
@@ -620,7 +620,7 @@ int main(int argc, char** argv)
         {
             float happy = 0, lazy = 0, load = 0;
             std::size_t count = 0, resting = 0;
-            for (const auto [e, staff] : world.registry.view<const simulation::Staff>().each())
+            for (const auto [_, staff] : world.registry.view<const simulation::Staff>().each())
             {
                 happy += staff.happiness;
                 lazy += staff.laziness;

@@ -48,7 +48,7 @@ namespace rct3::park
     };
 
     /// The grid's corner points as they are, held where `free` refuses a tile touching them or at a cliff.
-    [[nodiscard]] CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(int col, int row)>& free);
+    [[nodiscard]] CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(save::Tile)>& free);
 
     /// Sets corner point (`col`, `row`) to `height` in each tile that has it.
     void set_corner_point(save::TerrainGrid& grid, int col, int row, float height);

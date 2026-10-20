@@ -156,12 +156,12 @@ namespace rct3::render::vulkan
             // Garbage first: freeing a texture's descriptor set needs the pool still alive.
             for (Frame& f : frames_)
                 release(f.garbage);
-            for (auto& [id, b] : buffers_) // Includes the transient blocks
+            for (auto& [_, b] : buffers_) // Includes the transient blocks
                 destroy(b);
             destroy(reading_);
-            for (auto& [id, t] : textures_)
+            for (auto& [_, t] : textures_)
                 destroy(t);
-            for (auto& [id, p] : pipelines_)
+            for (auto& [_, p] : pipelines_)
             {
                 vkDestroyPipeline(device_, p.pipeline, nullptr);
                 vkDestroyPipeline(device_, p.wire, nullptr);

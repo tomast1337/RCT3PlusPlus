@@ -28,8 +28,9 @@ namespace rct3::park
         return slope == 2 || slope == 5;
     }
 
-    glm::vec2 edge_lean(const save::TerrainGrid& grid, int col, int row, TileSide side)
+    glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, TileSide side)
     {
+        const auto [col, row] = tile;
         if (!grid.contains(col, row))
             return { };
         const auto& h = grid.at(col, row).corners; // (x, z) corners: 0 at both low ends, 3 at both high
@@ -94,7 +95,7 @@ namespace rct3::park
                 glm::vec2 lean = slope_lean;
                 if (on_ground)
                 {
-                    lean = edge_lean(grid, p.col, p.row, side);
+                    lean = edge_lean(grid, { p.col, p.row }, side);
                 }
                 else
                 {

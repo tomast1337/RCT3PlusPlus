@@ -33,7 +33,7 @@ namespace rct3::ui
             }
             assets.textures.merge(*textures);
             const SkinLibrary library = skin_library(set->skins, assets.textures);
-            for (const auto& [skin, unused] : set->skins)
+            for (const auto& [skin, _] : set->skins)
             {
                 auto ref = library.find(skin);
                 if (!ref || assets.skins.find(skin))

@@ -166,7 +166,7 @@ namespace rct3::profiling
             if (c.period_timer < 1.0)
                 return;
             c.period_timer = 0;
-            for (auto& [path, data] : c.scopes)
+            for (auto& [_, data] : c.scopes)
             {
                 data.previous_max = data.current_max;
                 data.current_max = 0;
@@ -178,7 +178,7 @@ namespace rct3::profiling
     {
         for_each_context([](detail::Context& c) {
             std::lock_guard lock(c.gate);
-            for (auto& [path, data] : c.scopes)
+            for (auto& [_, data] : c.scopes)
             {
                 data.history[data.head] = data.last;
                 data.head = (data.head + 1) % kHistoryLength;

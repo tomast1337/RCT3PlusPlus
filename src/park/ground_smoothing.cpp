@@ -46,7 +46,7 @@ namespace rct3::park
         return count > 0 ? sum / static_cast<float>(count) : 0;
     }
 
-    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(int col, int row)>& free)
+    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::Tile)>& free)
     {
         strength = std::clamp(strength, 0.0f, 1.0f);
         const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)), 0);
@@ -60,7 +60,7 @@ namespace rct3::park
             for (int r = r0; r < r1; ++r)
                 for (int c = c0; c < c1; ++c)
                 {
-                    if (!grid.contains(c, r) || !free(c, r) || !within(glm::vec2 { c + 0.5f, r + 0.5f }, middle, reach))
+                    if (!grid.contains(c, r) || !free({ c, r }) || !within(glm::vec2 { c + 0.5f, r + 0.5f }, middle, reach))
                         continue;
                     auto& corners = grid.at(c, r).corners;
                     const float level = std::round((corners[0] + corners[1] + corners[2] + corners[3]) / 4);
@@ -98,7 +98,7 @@ namespace rct3::park
                             const int tr = r - 1 + dr;
                             if (!grid.contains(tc, tr))
                                 continue;
-                            all_free = all_free && free(tc, tr);
+                            all_free = all_free && free({ tc, tr });
                             const float h = grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
                             sum += h;
                             low = std::min(low, h);

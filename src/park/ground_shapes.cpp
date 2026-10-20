@@ -65,7 +65,7 @@ namespace rct3::park
         return 0;
     }
 
-    CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(int col, int row)>& free)
+    CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(save::Tile)>& free)
     {
         CornerHeights out;
         out.columns = grid.width + 1;
@@ -91,7 +91,7 @@ namespace rct3::park
                         else if (std::abs(h - out.heights[at]) > kSame)
                             out.held[at] = true;
                         first = false;
-                        if (!free(tc, tr))
+                        if (!free({ tc, tr }))
                             out.held[at] = true;
                     }
             }

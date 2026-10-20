@@ -14,10 +14,10 @@
 namespace rct3::park
 {
 
-    std::vector<PathSpot> brush_line(PathSpot from, PathSpot to)
+    std::vector<save::Tile> brush_line(save::Tile from, save::Tile to)
     {
-        std::vector<PathSpot> line { from };
-        PathSpot at = from;
+        std::vector<save::Tile> line { from };
+        save::Tile at = from;
         const int cols = std::abs(to.col - from.col);
         const int rows = std::abs(to.row - from.row);
         // Steps along whichever way is further behind the straight line, one side at a time.
@@ -35,10 +35,10 @@ namespace rct3::park
         return line;
     }
 
-    DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
     {
         DragPlan plan;
-        for (const PathSpot spot : area)
+        for (const save::Tile spot : area)
         {
             if (ground_path_at(paths, spot))
             {
@@ -113,7 +113,7 @@ namespace rct3::park
         const auto height = edge_height(path, grid, side);
         if (!height)
             return false;
-        const PathSpot spot { path.col, path.row };
+        const save::Tile spot { path.col, path.row };
         start_at(builder, spot);
         builder.heading = side;
         builder.trail.push_back({ spot, 0, static_cast<std::int32_t>(std::lround(*height)) });
@@ -146,7 +146,7 @@ namespace rct3::park
 
     void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, std::uint8_t side)
     {
-        const PathSpot spot { door.col, door.row };
+        const save::Tile spot { door.col, door.row };
         start_at(builder, spot);
         builder.heading = side;
         builder.trail.push_back({ spot, 0, door.height });

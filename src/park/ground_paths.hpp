@@ -103,9 +103,9 @@ namespace rct3::park
         int row0 = 0;
         int col1 = -1;
         int row1 = -1;
-        std::optional<std::array<int, 2>> beyond_exit; ///< The tile the exit lets out onto
-        std::vector<std::array<int, 2>> doors;         ///< The stations' entrance and exit tiles, paved alike
-        std::optional<std::int32_t> raised;            ///< Height of a ride standing over the ground, whose floor is a raised deck there
+        std::optional<save::Tile> beyond_exit; ///< The tile the exit lets out onto
+        std::vector<std::array<int, 2>> doors; ///< The stations' entrance and exit tiles, paved alike
+        std::optional<std::int32_t> raised;    ///< Height of a ride standing over the ground, whose floor is a raised deck there
     };
 
     /// The plain grey path style floors take while their exit leads nowhere. Our own pick.
@@ -120,12 +120,12 @@ namespace rct3::park
     void pave_ride_floors(GroundPathMap& map, std::span<const RideFloor> floors);
 
     /// True when there is a ground path at (col, row); false off the map.
-    [[nodiscard]] bool has_ground_path(const GroundPathMap& map, int col, int row) noexcept;
+    [[nodiscard]] bool has_ground_path(const GroundPathMap& map, save::Tile tile) noexcept;
 
     /// True when the path on tile (col, row) carries on onto the tile (dc, dr) beside it (one step along x
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
     /// ends level with this tile's ground at their shared edge.
-    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, int col, int row, int dc, int dr);
+    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.
     inline constexpr float kPathLift = 0.02f;

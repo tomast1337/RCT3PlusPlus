@@ -79,7 +79,7 @@ namespace rct3::park
 
     glm::vec3 course_direction(const TrackCourse& course, float distance)
     {
-        const auto [i, d] = stretch_at(course, distance);
+        const auto [i, _] = stretch_at(course, distance);
         const std::size_t a = std::min(i, course.points.size() - 2);
         const glm::vec3 way = course.points[a + 1] - course.points[a];
         const float l = glm::length(way);

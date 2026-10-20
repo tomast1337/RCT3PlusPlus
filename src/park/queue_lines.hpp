@@ -36,7 +36,7 @@ namespace rct3::park
 
     /// The entrance beside tile (`col`, `row`) whose height is within kEntranceReach of `height`, if any;
     /// any height when `height` is empty.
-    [[nodiscard]] std::optional<EntranceBeside> entrance_beside(const save::RideModel& rides, int col, int row, std::optional<std::int32_t> height);
+    [[nodiscard]] std::optional<EntranceBeside> entrance_beside(const save::RideModel& rides, save::Tile tile, std::optional<std::int32_t> height);
 
     /// The queue tiles linked behind `paths[tile]` (following end sides), nearest first, not counting itself.
     [[nodiscard]] std::vector<std::size_t> tiles_behind(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::size_t tile);

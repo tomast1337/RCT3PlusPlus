@@ -113,7 +113,7 @@ namespace rct3::park
     /// The normal (any length, pointing up) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
     /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
     /// across tiles and stays sharp where a cliff splits it.
-    [[nodiscard]] glm::vec3 ground_normal(const save::TerrainGrid& grid, int col, int row, int corner);
+    [[nodiscard]] glm::vec3 ground_normal(const save::TerrainGrid& grid, save::Tile tile, int corner);
 
     /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more);

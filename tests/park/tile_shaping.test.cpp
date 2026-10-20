@@ -22,7 +22,7 @@ namespace
         return g;
     }
 
-    bool anywhere(int, int)
+    bool anywhere(save::Tile)
     {
         return true;
     }
@@ -86,7 +86,7 @@ TEST_CASE("refused tiles keep their corners")
 {
     save::TerrainGrid g = flat_grid(3, 1, 2);
     const TileStroke s = begin_tile_stroke(g, 0, 0, 2, 0, TilePart::Whole);
-    shape_tiles(g, s, TileShaping::Free, 1, [](int col, int) { return col != 1; });
+    shape_tiles(g, s, TileShaping::Free, 1, [](save::Tile t) { return t.col != 1; });
     CHECK(g.at(0, 0).corners[0] == 3);
     CHECK(g.at(1, 0).corners == kLevelTwo);
     CHECK(g.at(2, 0).corners[0] == 3);

@@ -55,7 +55,7 @@ namespace rct3::random
 
     } // namespace
 
-    std::uint64_t fresh_seed()
+    Seed fresh_seed()
     {
         std::uint64_t pool = 0;
         mix_device(pool);
@@ -68,7 +68,7 @@ namespace rct3::random
         mix(pool, reinterpret_cast<std::uintptr_t>(&fresh_seed));
         // Two calls in one run still differ: the steady clock has moved on.
         mix(pool, static_cast<std::uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
-        return pool;
+        return Seed { pool };
     }
 
 } // namespace rct3::random

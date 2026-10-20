@@ -24,7 +24,7 @@ namespace rct3::park
     [[nodiscard]] std::int32_t edge_turns(TileSide side) noexcept;
 
     /// How the ground rises along `side`'s edge of tile (`col`, `row`), per park unit along x and z.
-    [[nodiscard]] glm::vec2 edge_lean(const save::TerrainGrid& grid, int col, int row, TileSide side);
+    [[nodiscard]] glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, TileSide side);
 
     /// True for the slopes of path pieces that fall from their start towards their end.
     [[nodiscard]] bool slope_falls(std::uint8_t slope) noexcept;

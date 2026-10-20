@@ -67,7 +67,7 @@ namespace rct3::simulation
         const auto caps = read_features((*root)["features"], "features");
         if (!caps)
             return std::unexpected(caps.error());
-        for (const auto& [name, value] : (*root)["features"].items())
+        for (const auto& [name, _] : (*root)["features"].items())
             model.caps[*feature_index(name)] = (*caps)[*feature_index(name)];
         if (root->contains("intensity_penalty"))
         {

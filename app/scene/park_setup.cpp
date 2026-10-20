@@ -58,6 +58,7 @@
 #include <fstream>
 #include <iterator>
 #include <map>
+#include <ranges>
 #include <set>
 #include <span>
 #include <string>
@@ -103,7 +104,7 @@ namespace rct3::scene
                 if (!found)
                     continue;
                 std::string name = found->filename().string();
-                if (std::ranges::find(folders, name) == folders.end())
+                if (!std::ranges::contains(folders, name))
                     folders.push_back(std::move(name));
             }
             return folders;
@@ -116,7 +117,7 @@ namespace rct3::scene
         {
             const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
-            const std::vector<std::string_view> views(folders.begin(), folders.end());
+            const auto views = folders | std::ranges::to<std::vector<std::string_view>>();
             park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
             // Overlays the scanned ones take assets from, and those they take from in turn.
             std::set<std::string, std::less<>> tried_files;
@@ -197,7 +198,7 @@ namespace rct3::scene
         }
 
         /// Reads the models of the park's guests and staff and uploads their pictures.
-        void load_people_models(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::uint64_t seed)
+        void load_people_models(render::Device& device, ParkScene& scene, const config::GameInstall& install, random::Seed seed)
         {
             const profiling::Scope zone("PeopleModels");
             const auto folder = install.find(kCharacterFolder);
@@ -397,7 +398,7 @@ namespace rct3::scene
         add_textures(device, scene, boned.mesh.mesh.batches);
     }
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
@@ -612,7 +613,7 @@ namespace rct3::scene
                         o.symbol = piece.symbol;
                         o.overlay = std::string(park::kSupportOverlay);
                     };
-                    for (const auto& [group, list] : *sets)
+                    for (const auto& [_, list] : *sets)
                     {
                         for (const park::SupportSet& set : list)
                         {
@@ -905,7 +906,7 @@ namespace rct3::scene
             if (p)
                 device.destroy_pipeline(p);
         }
-        for (const auto& [id, p] : scene.front_only)
+        for (const auto& [_, p] : scene.front_only)
             device.destroy_pipeline(p);
         scene.front_only.clear();
         destroy_park_map(device, scene.map);

@@ -33,7 +33,7 @@ namespace rct3::scene
         return glm::vec2 { (hit.x - scene.grid.origin_x) / scene.grid.tile_size_x, (hit.z - scene.grid.origin_z) / scene.grid.tile_size_z };
     }
 
-    std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+    std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size)
     {
         const auto spot = ground_spot(scene, at, size);
         if (!spot)
@@ -42,7 +42,7 @@ namespace rct3::scene
         const auto row = static_cast<int>(std::floor(spot->y));
         if (!scene.grid.contains(col, row))
             return std::nullopt;
-        return park::PathSpot { col, row };
+        return save::Tile { col, row };
     }
 
     namespace
@@ -417,7 +417,7 @@ namespace rct3::scene
                     p.ghost_mesh = { };
                     return;
                 }
-                p.site = park::ride_site(col, row, squares, p.turns, scene.grid);
+                p.site = park::ride_site({ col, row }, squares, p.turns, scene.grid);
                 p.ground = p.site->height;
                 // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
                 if (top)
@@ -434,7 +434,7 @@ namespace rct3::scene
                 const park::SolidTiles mine = park::solid_tiles(std::span(&o, 1), scene.models, scene.grid);
                 for (const auto& [key, spans] : mine.tiles)
                 {
-                    const park::PathSpot tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
+                    const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
                     const auto there = p.solids.tiles.find(key);
                     for (const park::SolidSpan& s : spans)
                     {
@@ -478,7 +478,7 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Ride)
         {
             const std::array squares { static_cast<std::int32_t>(p.item->width), static_cast<std::int32_t>(p.item->length) };
-            p.site = park::ride_site(tile->col, tile->row, squares, p.turns, scene.grid);
+            p.site = park::ride_site({ tile->col, tile->row }, squares, p.turns, scene.grid);
             p.ground = p.site->height;
             p.lift.reset();
             if (shift && size.x > 0 && size.y > 0)
@@ -492,7 +492,7 @@ namespace rct3::scene
         }
         else
         {
-            p.door = park::door_spot(*p.site, tile->col, tile->row);
+            p.door = park::door_spot(*p.site, { tile->col, tile->row });
             p.problem = park::door_problem(*p.site, *p.door, p.step == RidePlacing::Step::Exit ? p.entrance : std::nullopt, scene.grid, paths, p.solids);
             p.affordable = true;
         }

@@ -27,11 +27,11 @@ namespace
 
 TEST_CASE("each heading steps one tile, and turning right goes clockwise")
 {
-    const PathSpot from { 5, 5 };
-    CHECK(step(from, 0) == PathSpot { 5, 6 });
-    CHECK(step(from, 1) == PathSpot { 6, 5 });
-    CHECK(step(from, 2) == PathSpot { 5, 4 });
-    CHECK(step(from, 3) == PathSpot { 4, 5 });
+    const save::Tile from { 5, 5 };
+    CHECK(step(from, 0) == save::Tile { 5, 6 });
+    CHECK(step(from, 1) == save::Tile { 6, 5 });
+    CHECK(step(from, 2) == save::Tile { 5, 4 });
+    CHECK(step(from, 3) == save::Tile { 4, 5 });
     CHECK(step(from, 4) == step(from, 0));
 
     FootpathBuilder b;
@@ -111,7 +111,7 @@ TEST_CASE("laying walks on, over paths already there, and removing steps back")
     FootpathBuilder b;
     std::vector<save::PathTile> paths { ground_path({ 2, 1 }, "Old", 7) };
     start_at(b, { 2, 0 });
-    CHECK(next_spot(b) == PathSpot { 2, 0 });
+    CHECK(next_spot(b) == save::Tile { 2, 0 });
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 10, 0));
     CHECK(paths.size() == 2);
     CHECK(paths.back().surface_name == "Gravel");
@@ -121,7 +121,7 @@ TEST_CASE("laying walks on, over paths already there, and removing steps back")
     CHECK_FALSE(lay_path(b, paths, *next_piece(b, g), "Gravel", 11, 0));
     CHECK(paths.size() == 2);
     CHECK(b.trail.size() == 2);
-    CHECK(next_spot(b) == PathSpot { 2, 2 });
+    CHECK(next_spot(b) == save::Tile { 2, 2 });
 
     // Stepping back over the walked tile keeps the old path.
     CHECK_FALSE(remove_last(b, paths));
@@ -130,7 +130,7 @@ TEST_CASE("laying walks on, over paths already there, and removing steps back")
     CHECK(paths.size() == 1);
     CHECK(paths.front().id == 7);
     CHECK(b.trail.empty());
-    CHECK(next_spot(b) == PathSpot { 2, 0 });
+    CHECK(next_spot(b) == save::Tile { 2, 0 });
     CHECK_FALSE(remove_last(b, paths));
 }
 

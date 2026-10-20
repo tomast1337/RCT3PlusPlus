@@ -24,23 +24,23 @@ namespace rct3::random
         return z ^ (z >> 31);
     }
 
-    RandomState seeded(std::uint64_t seed)
+    RandomState seeded(Seed seed)
     {
         RandomState out;
         for (std::uint64_t& w : out.words)
-            w = split_mix(seed);
+            w = split_mix(seed.value);
         // SplitMix64 is a bijection on its counter, so four outputs in a row are never all zero; checked anyway.
         if (out.words == std::array<std::uint64_t, 4> { })
             out.words[0] = 1;
         return out;
     }
 
-    RandomState stream(std::uint64_t seed, RandomStream stream)
+    RandomState stream(Seed seed, RandomStream stream)
     {
-        std::uint64_t mixed = seed;
+        std::uint64_t mixed = seed.value;
         const std::uint64_t a = split_mix(mixed);
         std::uint64_t id = static_cast<std::uint64_t>(stream);
-        return seeded(a ^ split_mix(id));
+        return seeded(Seed { a ^ split_mix(id) });
     }
 
     std::uint64_t next(RandomState& state)
@@ -97,15 +97,15 @@ namespace rct3::random
         return unit(state) < p;
     }
 
-    std::string seed_text(std::uint64_t seed)
+    std::string seed_text(Seed seed)
     {
         std::array<char, kHexPerWord> raw { };
-        const auto end = std::to_chars(raw.data(), raw.data() + raw.size(), seed, 16).ptr;
+        const auto end = std::to_chars(raw.data(), raw.data() + raw.size(), seed.value, 16).ptr;
         const auto length = static_cast<std::size_t>(end - raw.data());
         return "0x" + std::string(kHexPerWord - length, '0') + std::string(raw.data(), length);
     }
 
-    std::expected<std::uint64_t, std::string> parse_seed(std::string_view text)
+    std::expected<Seed, std::string> parse_seed(std::string_view text)
     {
         int base = 10;
         if (text.starts_with("0x") || text.starts_with("0X"))
@@ -117,7 +117,7 @@ namespace rct3::random
         const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), seed, base);
         if (text.empty() || error != std::errc { } || end != text.data() + text.size())
             return std::unexpected("a seed is a whole number from 0 to 2^64 - 1, in decimal or 0x hex");
-        return seed;
+        return Seed { seed };
     }
 
     std::string to_text(const RandomState& state)

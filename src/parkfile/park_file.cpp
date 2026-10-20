@@ -306,7 +306,7 @@ namespace rct3::parkfile
                 if (auto ok = known(1); !ok)
                     return ok;
                 world.tick = r.number<std::uint64_t>();
-                world.seed = r.number<std::uint64_t>();
+                world.seed = random::Seed { r.number<std::uint64_t>() };
                 return { };
             }
             if (tag == "ENTS")
@@ -345,7 +345,7 @@ namespace rct3::parkfile
 
         std::size_t at = begin_chunk(w, "WRLD", 1);
         w.number(world.tick);
-        w.number(world.seed);
+        w.number(world.seed.value);
         end_chunk(w, at);
 
         std::vector<std::uint32_t> entities;

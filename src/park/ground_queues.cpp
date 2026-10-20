@@ -114,7 +114,7 @@ namespace rct3::park
             {
                 const auto cu = static_cast<std::size_t>(c);
                 const glm::vec3 at { grid.world_x(p.col + c % 2), cell.corners[cu] + kPathLift, grid.world_z(p.row + c / 2) };
-                q[cu] = { at, glm::vec4(1.0f), queue_uv(shape.cell, turned(static_cast<float>(c % 2), static_cast<float>(c / 2), shape.turns)), ground_normal(grid, p.col, p.row, c) };
+                q[cu] = { at, glm::vec4(1.0f), queue_uv(shape.cell, turned(static_cast<float>(c % 2), static_cast<float>(c / 2), shape.turns)), ground_normal(grid, { p.col, p.row }, c) };
             }
             auto& vertices = by_painting[static_cast<std::size_t>(found - out.paintings.begin())];
             for (const int k : { 0, 1, 2, 3, 2, 1 })

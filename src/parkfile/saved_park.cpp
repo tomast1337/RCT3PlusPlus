@@ -136,7 +136,7 @@ namespace rct3::parkfile
             if (g.leader)
                 party.leader = guests[i];
         }
-        for (auto& [number, party] : parties)
+        for (auto& [_, party] : parties)
         {
             if (party.members.size() < 2)
                 continue;

@@ -22,7 +22,7 @@ namespace rct3::park
             if (box.size() == 8)
                 shapes.push_back({ *layer, ground_corners(std::span<const glm::vec3, 8>(box.data(), 8)) });
             else if (grid.contains(o.col, o.row))
-                shapes.push_back({ *layer, tile_corners(grid, o.col, o.row) });
+                shapes.push_back({ *layer, tile_corners(grid, { o.col, o.row }) });
         }
         return shapes;
     }

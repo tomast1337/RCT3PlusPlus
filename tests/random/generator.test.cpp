@@ -23,19 +23,19 @@ TEST_CASE("the generators give their published sequences")
 
 TEST_CASE("a seed always gives the same numbers, and each stream its own")
 {
-    RandomState a = seeded(42);
-    RandomState b = seeded(42);
+    RandomState a = seeded(Seed { 42 });
+    RandomState b = seeded(Seed { 42 });
     for (int i = 0; i < 10; ++i)
         CHECK(next(a) == next(b));
-    CHECK(seeded(0) != RandomState { });
-    CHECK(stream(42, RandomStream::Gameplay) == stream(42, RandomStream::Gameplay));
-    CHECK(stream(42, RandomStream::Gameplay) != stream(42, RandomStream::Scenery));
-    CHECK(stream(42, RandomStream::Gameplay) != stream(43, RandomStream::Gameplay));
+    CHECK(seeded(Seed { 0 }) != RandomState { });
+    CHECK(stream(Seed { 42 }, RandomStream::Gameplay) == stream(Seed { 42 }, RandomStream::Gameplay));
+    CHECK(stream(Seed { 42 }, RandomStream::Gameplay) != stream(Seed { 42 }, RandomStream::Scenery));
+    CHECK(stream(Seed { 42 }, RandomStream::Gameplay) != stream(Seed { 43 }, RandomStream::Gameplay));
 }
 
 TEST_CASE("draws stay in their ranges")
 {
-    RandomState s = seeded(7);
+    RandomState s = seeded(Seed { 7 });
     std::array<int, 6> seen { };
     for (int i = 0; i < 6000; ++i)
     {
@@ -62,7 +62,7 @@ TEST_CASE("draws stay in their ranges")
 
 TEST_CASE("a state written as text reads back")
 {
-    RandomState s = seeded(99);
+    RandomState s = seeded(Seed { 99 });
     (void)next(s);
     const std::string text = to_text(s);
     CHECK(text.size() == 64);
@@ -81,10 +81,10 @@ TEST_CASE("a state written as text reads back")
 
 TEST_CASE("a seed is given in decimal or hex")
 {
-    CHECK(parse_seed("12345") == 12345u);
-    CHECK(parse_seed("0x1f") == 31u);
-    CHECK(parse_seed(seed_text(0xdeadbeefULL)) == 0xdeadbeefULL);
-    CHECK(seed_text(31) == "0x000000000000001f");
+    CHECK(parse_seed("12345") == Seed { 12345 });
+    CHECK(parse_seed("0x1f") == Seed { 31 });
+    CHECK(parse_seed(seed_text(Seed { 0xdeadbeefULL })) == Seed { 0xdeadbeefULL });
+    CHECK(seed_text(Seed { 31 }) == "0x000000000000001f");
     CHECK_FALSE(parse_seed(""));
     CHECK_FALSE(parse_seed("0x"));
     CHECK_FALSE(parse_seed("-1"));

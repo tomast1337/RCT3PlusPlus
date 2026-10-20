@@ -24,15 +24,15 @@ namespace
 
 TEST_CASE("a brush stroke fills the tiles between two looks at the pointer, side by side")
 {
-    CHECK(brush_line({ 3, 2 }, { 1, 2 }) == std::vector<PathSpot> { { 3, 2 }, { 2, 2 }, { 1, 2 } });
-    CHECK(brush_line({ 1, 1 }, { 1, 1 }) == std::vector<PathSpot> { { 1, 1 } });
-    const std::vector<PathSpot> diagonal = brush_line({ 0, 0 }, { 2, 2 });
+    CHECK(brush_line({ 3, 2 }, { 1, 2 }) == std::vector<save::Tile> { { 3, 2 }, { 2, 2 }, { 1, 2 } });
+    CHECK(brush_line({ 1, 1 }, { 1, 1 }) == std::vector<save::Tile> { { 1, 1 } });
+    const std::vector<save::Tile> diagonal = brush_line({ 0, 0 }, { 2, 2 });
     CHECK(diagonal.size() == 5);
     for (std::size_t i = 1; i < diagonal.size(); ++i)
         CHECK(std::abs(diagonal[i].col - diagonal[i - 1].col) + std::abs(diagonal[i].row - diagonal[i - 1].row) == 1);
-    CHECK(diagonal.back() == PathSpot { 2, 2 });
+    CHECK(diagonal.back() == save::Tile { 2, 2 });
     // A shallow line stays near the straight one.
-    for (const PathSpot spot : brush_line({ 0, 0 }, { 6, 1 }))
+    for (const save::Tile spot : brush_line({ 0, 0 }, { 6, 1 }))
         CHECK((spot.row == 0 ? spot.col <= 3 : spot.col >= 3));
 }
 
@@ -63,7 +63,7 @@ TEST_CASE("the pointer over a raised path picks it and its edge; the next piece 
     REQUIRE(start_from_edge(b, raised, g, 1));
     const auto next = next_piece(b, g);
     REQUIRE(next);
-    CHECK(next->spot == PathSpot { 2, 1 });
+    CHECK(next->spot == save::Tile { 2, 1 });
     CHECK(next->start == 3);
     CHECK_FALSE(next->ground);
 }
@@ -91,7 +91,7 @@ TEST_CASE("a stroke lays only where a path can lie on the ground")
     g.cells[1 * 6 + 4].flags = 0;                // Not the park's
     const std::vector<save::PathTile> paths { ground_path({ 3, 1 }, "Old", 1) };
     const DragPlan plan = plan_drag(brush_line({ 0, 1 }, { 5, 1 }), g, paths);
-    CHECK(plan.lay == std::vector<PathSpot> { { 0, 1 }, { 1, 1 }, { 5, 1 } });
+    CHECK(plan.lay == std::vector<save::Tile> { { 0, 1 }, { 1, 1 }, { 5, 1 } });
     CHECK(plan.kept == 1);
     CHECK(plan.refused == 2);
 }
@@ -112,7 +112,7 @@ TEST_CASE("a door is picked at its own height, and the trail goes on from its ed
     start_from_door(b, doors[0], under->side);
     const auto next = next_piece(b, g);
     REQUIRE(next);
-    CHECK(next->spot == PathSpot { 2, 1 });
+    CHECK(next->spot == save::Tile { 2, 1 });
     CHECK(next->start == 6);
     CHECK_FALSE(next->ground);
 }

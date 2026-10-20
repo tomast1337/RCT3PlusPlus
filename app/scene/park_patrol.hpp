@@ -8,9 +8,9 @@
 #pragma once
 
 #include "render/device.hpp"
+#include "simulation/entt.hpp"
 #include "ui/widget.hpp"
 
-#include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
 namespace rct3::scene

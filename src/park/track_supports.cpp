@@ -264,7 +264,7 @@ namespace rct3::park
                 covering[under[i]].push_back({ &o, &f, &s, *o.base_height + s.low, *o.base_height + s.high });
             }
         }
-        for (auto& [tile, covered] : covering)
+        for (auto& [_, covered] : covering)
             std::ranges::stable_sort(covered, std::greater { }, &Covered::high);
 
         Builder build { grid, last_id, { } };

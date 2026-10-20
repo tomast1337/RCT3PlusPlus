@@ -15,7 +15,7 @@ namespace
     {
         SimWorld world;
         world.tick = 1234;
-        world.seed = 0xC0FF;
+        world.seed = random::Seed { 0xC0FF };
         auto& r = world.registry;
         const auto a = r.create();
         r.emplace<simulation::Visitor>(a, simulation::AgeGroup::Teen, true, "Ada Example", std::uint64_t { 7 }, true);
@@ -59,7 +59,7 @@ TEST_CASE("a park read back from its file is the park that was written")
     const auto read = parkfile::read_park_file(bytes);
     REQUIRE_MESSAGE(read, read.error());
     CHECK(read->tick == 1234);
-    CHECK(read->seed == 0xC0FF);
+    CHECK(read->seed == random::Seed { 0xC0FF });
     const auto& r = read->registry;
     CHECK(r.view<entt::entity>().size() == 2);
     const auto a = static_cast<entt::entity>(0);

@@ -14,7 +14,7 @@ namespace rct3::park
     namespace
     {
 
-        using Tile = std::array<int, 2>;
+        using save::Tile;
 
         /// The fence a ride is drawn with, and its colours.
         struct FenceLook
@@ -29,7 +29,7 @@ namespace rct3::park
         Tile across(Tile tile, std::int32_t turns)
         {
             const glm::vec2 x = turned_x(turns);
-            return { tile[0] + static_cast<int>(std::lround(x.x)), tile[1] + static_cast<int>(std::lround(x.y)) };
+            return { tile.col + static_cast<int>(std::lround(x.x)), tile.row + static_cast<int>(std::lround(x.y)) };
         }
 
         Tile tile_of(const save::PlacementSpot& spot)
@@ -54,8 +54,8 @@ namespace rct3::park
                 o.fixture = true;
                 o.symbol = *look_.symbol;
                 o.overlay = *look_.overlay;
-                o.col = tile[0];
-                o.row = tile[1];
+                o.col = tile.col;
+                o.row = tile.row;
                 o.rotation = turns & 3;
                 o.colours = look_.colours;
                 o.base_height = height;

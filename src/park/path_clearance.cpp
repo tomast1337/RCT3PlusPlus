@@ -65,7 +65,7 @@ namespace rct3::park
         return out;
     }
 
-    bool blocked(const SolidTiles& solids, PathSpot spot, float low, float high)
+    bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high)
     {
         const auto found = solids.tiles.find(key_of(spot.col, spot.row));
         if (found == solids.tiles.end())

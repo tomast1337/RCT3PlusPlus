@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <tuple>
@@ -694,7 +695,7 @@ namespace rct3::save
             static std::vector<float> read_graph(View g)
             {
                 const auto fl = g[id::kGraphValues].floats();
-                std::vector<float> out(fl.begin(), fl.end());
+                auto out = fl | std::ranges::to<std::vector<float>>();
                 for (auto& x : out)
                 {
                     if (!std::isfinite(x) || std::fabs(x) > kFloatLimit)

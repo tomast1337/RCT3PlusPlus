@@ -272,7 +272,7 @@ namespace rct3::scene
             if (!scene.grid.contains(p.col, p.row))
                 continue;
             const auto height = p.elevation && !park::is_ground_queue(p) ? p.elevation->quantised_height : static_cast<std::int32_t>(std::floor(scene.grid.at(p.col, p.row).min_height()));
-            const auto [at, added] = lowest_path.emplace(std::pair { p.col, p.row }, height);
+            const auto [at, _] = lowest_path.emplace(std::pair { p.col, p.row }, height);
             at->second = std::min(at->second, height);
         }
         std::map<std::pair<int, int>, std::int32_t> column_top;
@@ -280,7 +280,7 @@ namespace rct3::scene
         {
             if (o.base_height && scene.columns.contains(o.id))
             {
-                const auto [at, added] = column_top.emplace(std::pair { o.col, o.row }, *o.base_height);
+                const auto [at, _] = column_top.emplace(std::pair { o.col, o.row }, *o.base_height);
                 at->second = std::max(at->second, *o.base_height);
             }
         }
@@ -400,7 +400,7 @@ namespace rct3::scene
                 }
                 // The door's own tile is open all round: the ride's fence beside it is its railing.
                 std::vector<save::PathTile> around { tile };
-                for (const auto [dc, dr] : { std::pair { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } })
+                for (const auto& [dc, dr] : { std::pair { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } })
                 {
                     if (!scene.grid.contains(tile.col + dc, tile.row + dr))
                         continue;
@@ -558,12 +558,12 @@ namespace rct3::scene
         }
 
         /// The tiles of `spots` and those beside them, as a mask over the grid.
-        std::vector<bool> around(const save::TerrainGrid& grid, std::span<const park::PathSpot> spots)
+        std::vector<bool> around(const save::TerrainGrid& grid, std::span<const save::Tile> spots)
         {
             std::vector<bool> keep(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), false);
-            for (const park::PathSpot spot : spots)
+            for (const save::Tile spot : spots)
             {
-                for (const park::PathSpot near : { spot, park::step(spot, 0), park::step(spot, 1), park::step(spot, 2), park::step(spot, 3) })
+                for (const save::Tile near : { spot, park::step(spot, 0), park::step(spot, 1), park::step(spot, 2), park::step(spot, 3) })
                 {
                     if (grid.contains(near.col, near.row))
                         keep[static_cast<std::size_t>(near.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(near.col)] = true;
@@ -574,7 +574,7 @@ namespace rct3::scene
 
         /// The ground's paths and queues as they would be with `with`, on the tiles of `spots` and beside them:
         /// the new tiles and the neighbours whose edges they change, as the ground will draw them.
-        park::TerrainMesh ground_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::PathTile> with, std::span<const park::PathSpot> spots, glm::vec4 tint)
+        park::TerrainMesh ground_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::PathTile> with, std::span<const save::Tile> spots, glm::vec4 tint)
         {
             park::GroundPathMap map = park::ground_path_map(with, scene.grid);
             park::pave_ride_floors(map, scene.footpaths.floors);
@@ -611,7 +611,7 @@ namespace rct3::scene
             std::vector<save::PathTile> with = f.paths;
             park::FootpathBuilder trial = f.builder;
             std::uint64_t id = unused_id(scene);
-            std::vector<park::PathSpot> ground;
+            std::vector<save::Tile> ground;
             std::vector<std::size_t> raised;
             for (const park::RouteStep& step : *f.route)
             {
@@ -680,7 +680,7 @@ namespace rct3::scene
             {
                 const bool affordable = !scene.park.cash || *scene.park.cash >= stroke_cost(f, *plan);
                 std::vector<save::PathTile> with = f.paths;
-                for (const park::PathSpot spot : plan->lay)
+                for (const save::Tile spot : plan->lay)
                     with.push_back(park::ground_path(spot, f.styles[*f.style].name, 0));
                 f.ghost = ground_ghost(device, scene, assets, with, plan->lay, affordable ? kGhostTint : kRefusedTint);
                 return;
@@ -748,7 +748,7 @@ namespace rct3::scene
 
         /// Gives the raised paths around `spot` the pieces their neighbours call for, loading new models.
         /// Gives the raised pieces on the tiles from `low` to `high` and those beside them the pieces they call for.
-        void refresh_area(ParkScene& scene, const ui::InterfaceAssets& assets, park::PathSpot low, park::PathSpot high)
+        void refresh_area(ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile low, save::Tile high)
         {
             ParkFootpaths& f = scene.footpaths;
             if (park::refresh_decks(f.paths, scene.objects, scene.grid, f.styles, low.col - 1, low.row - 1, high.col + 1, high.row + 1) == 0)
@@ -760,7 +760,7 @@ namespace rct3::scene
             }
         }
 
-        void refresh_around(ParkScene& scene, const ui::InterfaceAssets& assets, park::PathSpot spot)
+        void refresh_around(ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile spot)
         {
             refresh_area(scene, assets, spot, spot);
         }
@@ -838,7 +838,7 @@ namespace rct3::scene
         {
             ParkFootpaths& f = scene.footpaths;
             const auto plan = stroke_plan(scene);
-            const std::vector<park::PathSpot> brush = std::exchange(f.brush, { });
+            const std::vector<save::Tile> brush = std::exchange(f.brush, { });
             if (!plan || plan->lay.empty())
             {
                 // A click where no path can lie picks where the trail starts instead, as raised paths may.
@@ -855,7 +855,7 @@ namespace rct3::scene
             wait_for_build(scene);
             std::uint64_t id = unused_id(scene);
             f.stroke.clear();
-            for (const park::PathSpot spot : plan->lay)
+            for (const save::Tile spot : plan->lay)
             {
                 f.paths.push_back(park::ground_path(spot, f.styles[*f.style].name, id));
                 f.stroke.push_back(id++);
@@ -864,18 +864,18 @@ namespace rct3::scene
             if (scene.park.cash)
                 *scene.park.cash -= cost;
             // The trail goes on from the last tile, the way the stroke last went.
-            const park::PathSpot last = brush.back();
+            const save::Tile last = brush.back();
             if (brush.size() > 1)
             {
-                const park::PathSpot before = brush[brush.size() - 2];
+                const save::Tile before = brush[brush.size() - 2];
                 f.builder.heading = last.row > before.row ? 0 : last.col > before.col ? 1 : last.row < before.row ? 2 : 3;
             }
             const auto there = park::ground_path_at(f.paths, last);
             if (!there || !park::start_from_edge(f.builder, f.paths[*there], scene.grid, f.builder.heading))
                 park::start_at(f.builder, last);
-            park::PathSpot low = last;
-            park::PathSpot high = last;
-            for (const park::PathSpot spot : brush)
+            save::Tile low = last;
+            save::Tile high = last;
+            for (const save::Tile spot : brush)
             {
                 low = { std::min(low.col, spot.col), std::min(low.row, spot.row) };
                 high = { std::max(high.col, spot.col), std::max(high.row, spot.row) };
@@ -891,8 +891,8 @@ namespace rct3::scene
             ParkFootpaths& f = scene.footpaths;
             wait_for_build(scene);
             const std::vector<std::uint64_t> gone = std::exchange(f.stroke, { });
-            park::PathSpot low { scene.grid.width, scene.grid.height };
-            park::PathSpot high { -1, -1 };
+            save::Tile low { scene.grid.width, scene.grid.height };
+            save::Tile high { -1, -1 };
             std::vector<save::PathTile> taken;
             std::erase_if(f.paths, [&](const save::PathTile& p) {
                 if (!std::ranges::contains(gone, p.id))
@@ -964,7 +964,7 @@ namespace rct3::scene
                 }
                 const std::int32_t height = laid.elevation ? laid.elevation->quantised_height : piece.start;
                 std::optional<std::uint64_t> line;
-                if (const auto entrance = park::entrance_beside(scene.rides, piece.spot.col, piece.spot.row, height))
+                if (const auto entrance = park::entrance_beside(scene.rides, piece.spot, height))
                 {
                     line = park::join_entrance(scene.rides, f.paths, scene.grid, f.paths.size() - 1, *entrance, unused_id(scene));
                     logging::logger("park").info("queue joins ride {} on line {}", entrance->ride, *line);
@@ -1333,7 +1333,7 @@ namespace rct3::scene
         }
 
         /// The tile of the ground under `at` while the path panel shows its controls.
-        std::optional<park::PathSpot> controls_tile(const ParkScene& scene, ui::Point at, ui::Point size)
+        std::optional<save::Tile> controls_tile(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             const auto ray_at = controls_ray(scene, at, size);
             if (!ray_at)
@@ -1347,11 +1347,11 @@ namespace rct3::scene
             const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
             if (!scene.grid.contains(col, row))
                 return std::nullopt;
-            return park::PathSpot { col, row };
+            return save::Tile { col, row };
         }
 
         /// Begins a trail at `tile`: on its ground, or with `control` at the last piece's height.
-        void begin_trail(ParkFootpaths& f, const save::RideModel& rides, park::PathSpot tile, bool control)
+        void begin_trail(ParkFootpaths& f, const save::RideModel& rides, save::Tile tile, bool control)
         {
             park::start_at(f.builder, tile);
             if (control)
@@ -1359,7 +1359,7 @@ namespace rct3::scene
             // A queue begun beside a ride's entrance goes away from it, so it leads guests there.
             if (chosen_queue(f))
             {
-                if (const auto entrance = park::entrance_beside(rides, tile.col, tile.row, std::nullopt))
+                if (const auto entrance = park::entrance_beside(rides, { tile.col, tile.row }, std::nullopt))
                     f.builder.heading = static_cast<std::uint8_t>((entrance->side + 2) % 4);
             }
             f.notice.clear();
@@ -1474,7 +1474,7 @@ namespace rct3::scene
                 if (const auto under = park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)))
                 {
                     const save::PathTile& p = f.paths[under->path];
-                    tile = park::PathSpot { p.col, p.row };
+                    tile = save::Tile { p.col, p.row };
                     if (p.elevation && !park::is_ground_queue(p))
                         height = p.elevation->quantised_height;
                 }
@@ -1554,7 +1554,7 @@ namespace rct3::scene
                 f.dirty = true;
             }
             // Bare ground pointed at, away from the trail's next piece, which has its own arrow.
-            std::optional<park::PathSpot> tile = edge || door || over ? std::nullopt : controls_tile(scene, at, size);
+            std::optional<save::Tile> tile = edge || door || over ? std::nullopt : controls_tile(scene, at, size);
             if (tile && f.builder.start && tile == park::next_spot(f.builder))
                 tile.reset();
             if (tile != f.hover_tile)
@@ -1590,7 +1590,7 @@ namespace rct3::scene
         }
         if (!tile || *tile == f.brush.back())
             return;
-        for (const park::PathSpot spot : park::brush_line(f.brush.back(), *tile))
+        for (const save::Tile spot : park::brush_line(f.brush.back(), *tile))
         {
             if (!std::ranges::contains(f.brush, spot))
                 f.brush.push_back(spot);

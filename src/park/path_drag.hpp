@@ -32,17 +32,17 @@ namespace rct3::park
     /// What a stroke over some tiles would do.
     struct DragPlan
     {
-        std::vector<PathSpot> lay; ///< Tiles that get a new path
-        std::size_t kept = 0;      ///< Tiles that already have one
-        std::size_t refused = 0;   ///< Tiles that cannot have one
+        std::vector<save::Tile> lay; ///< Tiles that get a new path
+        std::size_t kept = 0;        ///< Tiles that already have one
+        std::size_t refused = 0;     ///< Tiles that cannot have one
     };
 
     /// The tiles on the straight line from `from` to `to`, both included, each sharing a side with the one
     /// before it.
-    [[nodiscard]] std::vector<PathSpot> brush_line(PathSpot from, PathSpot to);
+    [[nodiscard]] std::vector<save::Tile> brush_line(save::Tile from, save::Tile to);
 
     /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
-    [[nodiscard]] DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
+    [[nodiscard]] DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 
     /// The side (as a heading) of a tile nearest a point on it `across` its width along columns and rows, each
     /// from 0 to 1.

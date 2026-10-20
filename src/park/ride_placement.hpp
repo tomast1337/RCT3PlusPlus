@@ -33,7 +33,7 @@ namespace rct3::park
 
     /// The site of a ride of `squares` (along its own X and Z) turned `turns` quarter turns, centred on the
     /// tile `col`, `row`.
-    [[nodiscard]] RideSite ride_site(std::int32_t col, std::int32_t row, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
+    [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
 
     enum class SiteProblem : std::uint8_t
     {
@@ -64,7 +64,7 @@ namespace rct3::park
 
     /// The tile across the rim of `site` nearest to the tile `col`, `row`, facing the ride. Never a corner
     /// tile, which touches the footprint only diagonally.
-    [[nodiscard]] DoorSpot door_spot(const RideSite& site, std::int32_t col, std::int32_t row);
+    [[nodiscard]] DoorSpot door_spot(const RideSite& site, save::Tile tile);
 
     /// What keeps an entrance or exit from `door`, if anything. `taken`: a door already placed for the ride.
     [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);

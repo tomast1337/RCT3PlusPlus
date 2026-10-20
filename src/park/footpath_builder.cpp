@@ -21,7 +21,7 @@ namespace rct3::park
         constexpr std::uint8_t kQuarterTurns = 4;
 
         /// Where a trail picked on `spot` starts: on flat ground, else just above the tile's highest corner.
-        std::int32_t ground_start(const save::TerrainGrid& grid, PathSpot spot)
+        std::int32_t ground_start(const save::TerrainGrid& grid, save::Tile spot)
         {
             const save::TerrainCell& cell = grid.at(spot.col, spot.row);
             if (cell.max_height() - cell.min_height() <= kFlat)
@@ -87,7 +87,7 @@ namespace rct3::park
         return mesh;
     }
 
-    PathSpot step(PathSpot from, std::uint8_t heading) noexcept
+    save::Tile step(save::Tile from, std::uint8_t heading) noexcept
     {
         switch (heading % kQuarterTurns)
         {
@@ -102,7 +102,7 @@ namespace rct3::park
         }
     }
 
-    void start_at(FootpathBuilder& builder, PathSpot spot)
+    void start_at(FootpathBuilder& builder, save::Tile spot)
     {
         builder.start = spot;
         builder.start_height.reset();
@@ -110,7 +110,7 @@ namespace rct3::park
         builder.on_slope = false;
     }
 
-    std::optional<PathSpot> next_spot(const FootpathBuilder& builder)
+    std::optional<save::Tile> next_spot(const FootpathBuilder& builder)
     {
         if (!builder.trail.empty())
             return step(builder.trail.back().spot, builder.heading);
@@ -188,7 +188,7 @@ namespace rct3::park
         return static_cast<float>(piece.start + piece.end) / 2 - ground;
     }
 
-    std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, PathSpot spot)
+    std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, save::Tile spot)
     {
         const auto found = std::ranges::find_if(paths, [&](const save::PathTile& p) { return p.kind == save::PathKind::Ground && p.col == spot.col && p.row == spot.row; });
         if (found == paths.end())
@@ -196,7 +196,7 @@ namespace rct3::park
         return static_cast<std::size_t>(found - paths.begin());
     }
 
-    save::PathTile ground_path(PathSpot spot, std::string_view style, std::uint64_t id)
+    save::PathTile ground_path(save::Tile spot, std::string_view style, std::uint64_t id)
     {
         save::PathTile p;
         p.id = id;

@@ -204,7 +204,7 @@ namespace rct3::scene
     struct ParkScene
     {
         save::TerrainGrid grid;
-        std::uint64_t seed = 0;
+        random::Seed seed;
         random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         park::ParkCamera camera;
         std::vector<park::GroundBatch> batches;
@@ -426,7 +426,7 @@ namespace rct3::scene
 
     /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
     /// Its random numbers come from `seed`: the same park and seed give the same park.
-    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
+    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 

@@ -147,7 +147,7 @@ namespace rct3::ui
                 by_number.try_emplace(item.style_index, PickerTheme { item.style, strings::to_utf16(item.style_title) });
         }
         std::vector<PickerTheme> themes;
-        for (auto& [number, theme] : by_number)
+        for (auto& [_, theme] : by_number)
             themes.push_back(std::move(theme));
         return themes;
     }

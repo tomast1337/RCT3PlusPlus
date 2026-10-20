@@ -22,7 +22,7 @@ namespace
         return g;
     }
 
-    const auto anywhere = [](int, int) { return true; };
+    const auto anywhere = [](save::Tile) { return true; };
 } // namespace
 
 TEST_CASE("averaging pulls a spike down, a little each pass, and only inside the reach")
@@ -87,6 +87,6 @@ TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat 
     CHECK(eased.at(5, 5).corners[1] == doctest::Approx(eased.at(6, 5).corners[0]));
 
     save::TerrainGrid held = spiked(10);
-    smooth_ground(held, GroundSmoothing::TileEdges, { 5, 5 }, 1, 1, 0, 1, [](int, int) { return false; });
+    smooth_ground(held, GroundSmoothing::TileEdges, { 5, 5 }, 1, 1, 0, 1, [](save::Tile) { return false; });
     CHECK(held.at(5, 5).corners[0] == 6);
 }

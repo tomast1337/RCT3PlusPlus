@@ -165,7 +165,7 @@ namespace rct3::park
                 // A door faces the ride; what it lets out onto is behind it.
                 const save::PlacementSpot& exit = *ride.stations.front().exit_spot;
                 const glm::vec2 back = turned_x(exit.direction + 2);
-                floor.beyond_exit = std::array { exit.col + static_cast<int>(std::lround(back.x)), exit.row + static_cast<int>(std::lround(back.y)) };
+                floor.beyond_exit = save::Tile { exit.col + static_cast<int>(std::lround(back.x)), exit.row + static_cast<int>(std::lround(back.y)) };
             }
             floors.push_back(floor);
         }
@@ -190,8 +190,8 @@ namespace rct3::park
             if (floor.raised)
                 continue;
             std::optional<std::int16_t> style;
-            if (floor.beyond_exit && has_ground_path(map, (*floor.beyond_exit)[0], (*floor.beyond_exit)[1]))
-                style = map.tiles[static_cast<std::size_t>((*floor.beyond_exit)[1]) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>((*floor.beyond_exit)[0])];
+            if (floor.beyond_exit && has_ground_path(map, *floor.beyond_exit))
+                style = map.tiles[static_cast<std::size_t>(floor.beyond_exit->row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(floor.beyond_exit->col)];
             else
                 style = style_index(kRideFloorStyle);
             if (!style)
@@ -207,23 +207,25 @@ namespace rct3::park
             }
             for (const auto [c, r] : floor.doors)
             {
-                if (c < 0 || r < 0 || c >= map.width || r >= map.height || has_ground_path(map, c, r))
+                if (c < 0 || r < 0 || c >= map.width || r >= map.height || has_ground_path(map, { c, r }))
                     continue;
                 map.tiles[static_cast<std::size_t>(r) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(c)] = *style;
             }
         }
     }
 
-    bool has_ground_path(const GroundPathMap& map, int col, int row) noexcept
+    bool has_ground_path(const GroundPathMap& map, save::Tile tile) noexcept
     {
+        const auto [col, row] = tile;
         if (col < 0 || row < 0 || col >= map.width || row >= map.height)
             return false;
         return map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)] != kNoPath;
     }
 
-    bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, int col, int row, int dc, int dr)
+    bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr)
     {
-        if (has_ground_path(map, col + dc, row + dr))
+        const auto [col, row] = tile;
+        if (has_ground_path(map, { col + dc, row + dr }))
             return true;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
             return false;
@@ -313,7 +315,7 @@ namespace rct3::park
                 {
                     const int dc = (k & 1) != 0 ? 1 : -1;
                     const int dr = (k & 2) != 0 ? 1 : -1;
-                    looks[static_cast<std::size_t>(k)] = quarter_look(path_continues(map, grid, col, row, dc, 0), path_continues(map, grid, col, row, 0, dr), has_ground_path(map, col + dc, row + dr));
+                    looks[static_cast<std::size_t>(k)] = quarter_look(path_continues(map, grid, { col, row }, dc, 0), path_continues(map, grid, { col, row }, 0, dr), has_ground_path(map, { col + dc, row + dr }));
                 }
 
                 const save::TerrainCell& cell = grid.at(col, row);
@@ -323,7 +325,7 @@ namespace rct3::park
                 {
                     const auto cu = static_cast<std::size_t>(c);
                     corners[cu] = { grid.world_x(col + c % 2), cell.corners[cu], grid.world_z(row + c / 2) };
-                    normals[cu] = glm::normalize(ground_normal(grid, col, row, c));
+                    normals[cu] = glm::normalize(ground_normal(grid, { col, row }, c));
                 }
                 const auto s = static_cast<std::uint8_t>(style);
                 if (std::ranges::all_of(looks, [&](PathLook l) { return l == looks[0]; }))

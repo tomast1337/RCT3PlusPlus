@@ -67,7 +67,7 @@ namespace
                 j["wallet"] = { { "cash", w->cash } };
             entities.push_back(std::move(j));
         }
-        return { { "tick", world.tick }, { "seed", world.seed }, { "entities", std::move(entities) } };
+        return { { "tick", world.tick }, { "seed", world.seed.value }, { "entities", std::move(entities) } };
     }
 } // namespace
 

@@ -17,6 +17,15 @@
 namespace rct3::random
 {
 
+    /// What a run's randomness starts from. Its own type, so it is not mixed up with the other whole numbers
+    /// a park passes round.
+    struct Seed
+    {
+        std::uint64_t value = 0;
+
+        auto operator<=>(const Seed&) const = default;
+    };
+
     struct RandomState
     {
         std::array<std::uint64_t, 4> words { };
@@ -37,9 +46,9 @@ namespace rct3::random
     [[nodiscard]] std::uint64_t split_mix(std::uint64_t& state);
 
     /// A state seeded from `seed`. Any seed, zero too, gives a usable state.
-    [[nodiscard]] RandomState seeded(std::uint64_t seed);
+    [[nodiscard]] RandomState seeded(Seed seed);
     /// The state of stream `stream` of `seed`.
-    [[nodiscard]] RandomState stream(std::uint64_t seed, RandomStream stream);
+    [[nodiscard]] RandomState stream(Seed seed, RandomStream stream);
 
     /// The next 64 random bits.
     [[nodiscard]] std::uint64_t next(RandomState& state);
@@ -55,9 +64,9 @@ namespace rct3::random
     [[nodiscard]] bool chance(RandomState& state, double p);
 
     /// A seed as written for people: "0x" and 16 hex digits, which parse_seed reads back.
-    [[nodiscard]] std::string seed_text(std::uint64_t seed);
+    [[nodiscard]] std::string seed_text(Seed seed);
     /// A seed given as decimal digits or as "0x" and hex digits, from a command line or a test.
-    [[nodiscard]] std::expected<std::uint64_t, std::string> parse_seed(std::string_view text);
+    [[nodiscard]] std::expected<Seed, std::string> parse_seed(std::string_view text);
 
     /// The state as 64 lower-case hex digits, the four words in order.
     [[nodiscard]] std::string to_text(const RandomState& state);

@@ -306,7 +306,7 @@ namespace
                 ++with_underground;
         }
         std::size_t stacked = 0;
-        for (const auto& [t, n] : per_tile)
+        for (const auto& [_, n] : per_tile)
             stacked += n > 1;
         std::printf(
             "  paths        %zu tiles (ground %zu, flying %zu, queue %zu, unknown %zu), %zu distinct positions, "

@@ -244,7 +244,7 @@ namespace
         // One class per distinct class name, taking the attribute set of its first object.
         std::vector<std::string> names;
         for (const auto& o : objs)
-            if (std::find(names.begin(), names.end(), o.cls) == names.end())
+            if (!std::ranges::contains(names, o.cls))
                 names.push_back(o.cls);
         Bytes b;
         b.u32(static_cast<std::uint32_t>(names.size()));

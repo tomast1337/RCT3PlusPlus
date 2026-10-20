@@ -96,6 +96,14 @@ namespace rct3::save
         Cell20
     };
 
+    /// A tile of the park, by column and row: its own type, so a column and a row travel together and in order.
+    struct Tile
+    {
+        int col = 0;
+        int row = 0;
+        friend bool operator==(const Tile&, const Tile&) = default;
+    };
+
     struct TerrainGrid
     {
         int width = 0;  ///< Tile columns, 0 when the save has no terrain
@@ -116,6 +124,10 @@ namespace rct3::save
         {
             return col >= 0 && row >= 0 && col < width && row < height;
         }
+        [[nodiscard]] bool contains(Tile tile) const noexcept
+        {
+            return contains(tile.col, tile.row);
+        }
         /// Precondition: contains(col, row).
         [[nodiscard]] const TerrainCell& at(int col, int row) const noexcept
         {
@@ -124,6 +136,14 @@ namespace rct3::save
         [[nodiscard]] TerrainCell& at(int col, int row) noexcept
         {
             return cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(col)];
+        }
+        [[nodiscard]] const TerrainCell& at(Tile tile) const noexcept
+        {
+            return at(tile.col, tile.row);
+        }
+        [[nodiscard]] TerrainCell& at(Tile tile) noexcept
+        {
+            return at(tile.col, tile.row);
         }
         /// World X of the left edge of column `col`, and Z of the near edge of row `row`.
         [[nodiscard]] float world_x(int col) const noexcept
@@ -178,7 +198,7 @@ namespace rct3::save
 
     /// The submerged mask a triangle should have for a surface `level`: bit i set when the i-th corner of the
     /// triangle is strictly below it. Empty when the tile is outside the grid or `triangle` is not 0 or 1.
-    [[nodiscard]] std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, int col, int row, int triangle) noexcept;
+    [[nodiscard]] std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, int triangle) noexcept;
 
     // ---- Skirt trees ---------------------------------------------------------------------------------------
 

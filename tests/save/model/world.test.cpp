@@ -581,15 +581,15 @@ TEST_CASE("water: submerged masks are recomputed from corner heights")
     const auto g = decode_terrain(make_terrain_3x2().span());
     REQUIRE(g);
     // Tile (0,0) corners are 0, 1, 10, 11.
-    CHECK(*expected_water_mask(*g, 0.5f, 0, 0, 0) == 0b001); // only corner 0 below
-    CHECK(*expected_water_mask(*g, 1.0f, 0, 0, 0) == 0b001); // strictly below: corner 1 is equal
-    CHECK(*expected_water_mask(*g, 1.5f, 0, 0, 0) == 0b011);
-    CHECK(*expected_water_mask(*g, 100.0f, 0, 0, 0) == 0b111);
+    CHECK(*expected_water_mask(*g, 0.5f, { 0, 0 }, 0) == 0b001); // only corner 0 below
+    CHECK(*expected_water_mask(*g, 1.0f, { 0, 0 }, 0) == 0b001); // strictly below: corner 1 is equal
+    CHECK(*expected_water_mask(*g, 1.5f, { 0, 0 }, 0) == 0b011);
+    CHECK(*expected_water_mask(*g, 100.0f, { 0, 0 }, 0) == 0b111);
     // Triangle 1 uses corners 3, 2, 1 in that order: heights 11, 10, 1.
-    CHECK(*expected_water_mask(*g, 5.0f, 0, 0, 1) == 0b100);
-    CHECK(*expected_water_mask(*g, 10.5f, 0, 0, 1) == 0b110);
-    CHECK_FALSE(expected_water_mask(*g, 0, 3, 0, 0).has_value());
-    CHECK_FALSE(expected_water_mask(*g, 0, 0, 0, 2).has_value());
+    CHECK(*expected_water_mask(*g, 5.0f, { 0, 0 }, 1) == 0b100);
+    CHECK(*expected_water_mask(*g, 10.5f, { 0, 0 }, 1) == 0b110);
+    CHECK_FALSE(expected_water_mask(*g, 0, { 3, 0 }, 0).has_value());
+    CHECK_FALSE(expected_water_mask(*g, 0, { 0, 0 }, 2).has_value());
 }
 
 // ---- Skirt trees ---------------------------------------------------------------------------------------

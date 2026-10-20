@@ -75,7 +75,7 @@ namespace rct3::scene
             Water,
         };
         Tool tool = Tool::None;
-        std::optional<park::PathSpot> tile; ///< Being shaped, or last painted, while the button is held
+        std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
         int steps = 0;                 ///< Taken in this stroke, up positive
         std::size_t tile_tool = 0;     ///< The tile tool chosen, by its place in its tab

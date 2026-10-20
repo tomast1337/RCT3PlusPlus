@@ -15,6 +15,7 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
@@ -37,7 +38,7 @@ namespace rct3::simulation
         /// The entities of `view`, in ascending order, so serial phases go the same way every time.
         template<typename View> std::vector<entt::entity> sorted(const View& view)
         {
-            std::vector<entt::entity> out(view.begin(), view.end());
+            auto out = view | std::ranges::to<std::vector<entt::entity>>();
             std::ranges::sort(out);
             return out;
         }
@@ -350,8 +351,8 @@ namespace rct3::simulation
         /// An entity's own random numbers, from the run's seed.
         Dice dice_for(const SimWorld& world, entt::entity e)
         {
-            std::uint64_t mix = world.seed ^ (std::uint64_t { entt::to_integral(e) } << 32);
-            return { random::seeded(random::split_mix(mix)) };
+            std::uint64_t mix = world.seed.value ^ (std::uint64_t { entt::to_integral(e) } << 32);
+            return { random::seeded(random::Seed { random::split_mix(mix) }) };
         }
 
         /// A share, 0 to 1, fixed for each guest, so a queue looks the same every time it is shown.
@@ -1115,7 +1116,7 @@ namespace rct3::simulation
             });
         }
 
-        for (auto [e, pose] : r.view<Pose>().each())
+        for (auto [_, pose] : r.view<Pose>().each())
         {
             pose.was = pose.position;
             pose.was_heading = pose.heading;

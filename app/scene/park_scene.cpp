@@ -741,7 +741,7 @@ namespace rct3::scene
             shown.people.reserve(scene.shown_people.size());
             for (const ShownPerson& p : scene.shown_people)
                 shown.people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
-            for (const auto [e, patrol] : scene.sim.registry.view<const simulation::Patrol>().each())
+            for (const auto [_, patrol] : scene.sim.registry.view<const simulation::Patrol>().each())
                 shown.patrol_tiles.insert(shown.patrol_tiles.end(), patrol.tiles.begin(), patrol.tiles.end());
             return shown;
         }

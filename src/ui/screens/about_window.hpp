@@ -141,7 +141,7 @@ namespace rct3::ui
     class GameInfoBox : public Window
     {
     public:
-        GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed);
+        GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, random::Seed seed);
 
         [[nodiscard]] AboutPage page() const
         {

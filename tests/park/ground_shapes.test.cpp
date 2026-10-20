@@ -25,7 +25,7 @@ namespace
         return g.at(c, r).corners[0]; // The tile's own first corner is the point (c, r)
     }
 
-    const auto anywhere = [](int, int) { return true; };
+    const auto anywhere = [](save::Tile) { return true; };
 } // namespace
 
 TEST_CASE("each shape rises or sinks most where it should and not past its reach")
@@ -68,7 +68,7 @@ TEST_CASE("held corner points stay: land refused, and the edge of a cliff")
 {
     save::TerrainGrid g = flat(10);
     g.at(5, 5).corners = { 4, 4, 4, 4 }; // A raised tile, with cliffs all round
-    const CornerHeights before = corner_heights(g, [](int col, int) { return col < 3 || col > 4; });
+    const CornerHeights before = corner_heights(g, [](save::Tile t) { return t.col < 3 || t.col > 4; });
     shape_ground(g, before, GroundShape::Canyon, { 5, 5 }, 4, { 1, 0 }, 3);
     CHECK(g.at(5, 5).corners[0] == doctest::Approx(4)); // The cliff's top stays
     CHECK(point(g, 4, 5) == doctest::Approx(2));        // Touches a refused tile

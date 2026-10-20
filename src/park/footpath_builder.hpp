@@ -89,18 +89,10 @@ namespace rct3::park
         Remove, ///< Take the last piece away
     };
 
-    /// A tile of the park.
-    struct PathSpot
-    {
-        int col = 0;
-        int row = 0;
-        friend bool operator==(const PathSpot&, const PathSpot&) = default;
-    };
-
     /// A tile of the trail: the path this trail laid on it, or 0 when it walked over one already there.
     struct TrailStep
     {
-        PathSpot spot;
+        save::Tile spot;
         std::uint64_t laid = 0;
         std::int32_t height = 0; ///< Where the piece ends, in whole world units
         friend bool operator==(const TrailStep&, const TrailStep&) = default;
@@ -115,7 +107,7 @@ namespace rct3::park
         bool cut_into_ground = false;
         bool queue = false;                       ///< Lays queue tiles rather than paths
         bool on_slope = false;                    ///< The last piece laid slopes, so the heading cannot change
-        std::optional<PathSpot> start;            ///< Where the trail began
+        std::optional<save::Tile> start;          ///< Where the trail began
         std::optional<std::int32_t> start_height; ///< Of the trail's first piece when set; otherwise on the ground
         std::vector<TrailStep> trail;             ///< The tiles laid or walked over since, oldest first
     };
@@ -145,7 +137,7 @@ namespace rct3::park
     /// The next piece as it would be laid.
     struct NextPiece
     {
-        PathSpot spot;
+        save::Tile spot;
         std::int32_t start = 0; ///< Height it is entered at, in whole world units
         std::int32_t end = 0;   ///< Height it is left at
         bool ground = false;    ///< Lies on the ground; otherwise raised
@@ -158,13 +150,13 @@ namespace rct3::park
     [[nodiscard]] PathStep press(FootpathBuilder& builder, PathControl control);
 
     /// The tile one step from `from` in `heading`.
-    [[nodiscard]] PathSpot step(PathSpot from, std::uint8_t heading) noexcept;
+    [[nodiscard]] save::Tile step(save::Tile from, std::uint8_t heading) noexcept;
 
     /// Begins a new trail at `spot`, its first piece on the ground; what was laid stays.
-    void start_at(FootpathBuilder& builder, PathSpot spot);
+    void start_at(FootpathBuilder& builder, save::Tile spot);
 
     /// Where the next piece goes; none before a tile is picked.
-    [[nodiscard]] std::optional<PathSpot> next_spot(const FootpathBuilder& builder);
+    [[nodiscard]] std::optional<save::Tile> next_spot(const FootpathBuilder& builder);
 
     /// The next piece on `grid`; none before a tile is picked or beyond the grid.
     [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
@@ -180,10 +172,10 @@ namespace rct3::park
     [[nodiscard]] float height_above_ground(const NextPiece& piece, const save::TerrainGrid& grid);
 
     /// Of `paths`, the path on the ground at `spot`.
-    [[nodiscard]] std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, PathSpot spot);
+    [[nodiscard]] std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, save::Tile spot);
 
     /// A path on the ground of `style` at `spot`, as a park keeps it.
-    [[nodiscard]] save::PathTile ground_path(PathSpot spot, std::string_view style, std::uint64_t id);
+    [[nodiscard]] save::PathTile ground_path(save::Tile spot, std::string_view style, std::uint64_t id);
 
     /// Of `paths`, one that is already `piece` as `builder` would lay it.
     [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder);

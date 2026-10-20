@@ -53,7 +53,7 @@ TEST_CASE("the game's credits and copyright lines are copied in, and nothing els
 TEST_CASE("credits split into a role and its people, packs first, alternating sides")
 {
     const StringTable s = sample_strings();
-    random::RandomState r = random::seeded(7);
+    random::RandomState r = random::seeded(random::Seed { 7 });
     const std::vector<int> packs { 0, 1 }; // Pack 0 has no credits here, so it has no heading either
     const auto lines = credit_lines(s, packs, r);
     REQUIRE(lines.size() == 9);
@@ -85,7 +85,7 @@ TEST_CASE("the tabs pick the page and its caption; the credits roll and start ov
 {
     const StringTable s = sample_strings();
     Desktop desktop;
-    auto& about = desktop.root().add<GameInfoBox>("about", game_skins::about_window_style(), s, AddOnPacks { }, 1);
+    auto& about = desktop.root().add<GameInfoBox>("about", game_skins::about_window_style(), s, AddOnPacks { }, random::Seed { 1 });
     desktop.layout({ 0, 0, 1024, 768 });
     desktop.update({ });
     CHECK(about.page() == AboutPage::Info);

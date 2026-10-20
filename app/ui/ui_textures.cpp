@@ -39,7 +39,7 @@ namespace rct3::ui
 
     void destroy_textures(render::Device& device, UiTextures& textures)
     {
-        for (auto& [name, texture] : textures)
+        for (auto& [_, texture] : textures)
             device.destroy_texture(texture.handle);
         textures.clear();
     }

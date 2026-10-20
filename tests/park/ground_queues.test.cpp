@@ -129,6 +129,6 @@ TEST_CASE("a ground path opens towards a queue's open end, not its walls")
     below.row = 1;
     const std::vector<save::PathTile> paths { path, queue(1, 0, kMinusX, kPlusX), below, queue(1, 1, kPlusX, kMinusZ) };
     const GroundPathMap map = ground_path_map(paths, g);
-    CHECK(path_continues(map, g, 0, 0, 1, 0));       // The queue is open towards -x
-    CHECK_FALSE(path_continues(map, g, 0, 1, 1, 0)); // This one is open towards +x and -z only
+    CHECK(path_continues(map, g, { 0, 0 }, 1, 0));       // The queue is open towards -x
+    CHECK_FALSE(path_continues(map, g, { 0, 1 }, 1, 0)); // This one is open towards +x and -z only
 }

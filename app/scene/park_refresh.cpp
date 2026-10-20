@@ -241,7 +241,7 @@ namespace rct3::scene
                 const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
-                const auto* cycle = scene.simulate ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
+                const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
                 const bool riding = cycle != nullptr && cycle->timer > 0;
                 const float into = riding ? static_cast<float>(cycle->cycle_ticks - cycle->timer) * simulation::kTickSeconds + scene.sim_time : 0.0f;
                 const float length = cycle != nullptr ? static_cast<float>(cycle->cycle_ticks) * simulation::kTickSeconds : 0.0f;

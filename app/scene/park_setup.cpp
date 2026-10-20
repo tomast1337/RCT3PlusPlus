@@ -380,6 +380,21 @@ namespace rct3::scene
         }
     }
 
+    void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k)
+    {
+        const auto model = k < scene.objects.size() ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
+        // Attractions' parts move with their attractions (doors as guests pass, chains while the ride runs), so only
+        // what the scenery lists hold moves on its own.
+        if (model == scene.models.end() || !model->second.rig || scene.objects[k].hidden || !park::scenery_list(model->second.category) || scene.attractions.contains(scene.objects[k].id))
+            return;
+        ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
+        boned.object = k;
+        boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
+        std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
+        boned.first_seat = scene.seat_carriers.size();
+        add_textures(device, scene, boned.mesh.mesh.batches);
+    }
+
     std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, std::uint64_t seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
@@ -748,6 +763,8 @@ namespace rct3::scene
         scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
         scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
+        for (std::size_t k = 0; k < scene.objects.size(); ++k)
+            animate_scenery(device, scene, k);
         auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); });
         // Saves made before people were kept start them again from the original park.
         const parkfile::SavedPeople* kept = saved && saved->people ? &*saved->people : nullptr;

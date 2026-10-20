@@ -799,7 +799,8 @@ namespace rct3::scene
                             scene.courses[i] = std::move(*course);
                     }
                 }
-                scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters);
+                const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
+                scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
                 for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
                     if (const std::size_t ride = scene.car_spots[i].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
                         scene.ride_cars[scene.ride_entities[ride]].push_back(i);

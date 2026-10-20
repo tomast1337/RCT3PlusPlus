@@ -43,6 +43,8 @@ namespace rct3::ovl
         std::array<std::string_view, 4> splines;
         /// Nothing when the item is too short to hold them.
         std::optional<RideOperatingDefaults> operating;
+        /// Guests the ride makes room for in the park while it is open and working.
+        std::optional<std::uint32_t> guests;
     };
 
     struct TrackedRideItem
@@ -51,8 +53,8 @@ namespace rct3::ovl
         std::optional<TrackedRide> ride; ///< Nothing when the start of the record does not fit its block
     };
 
-    /// Tracked rides of one part of an overlay: pointer symbols tagged "trr". The start of each item and its
-    /// operating defaults are read; the rest of its ride parameters are not interpreted yet. Views in the result
+    /// Tracked rides of one part of an overlay: pointer symbols tagged "trr". The start of each item, its
+    /// operating defaults and the guests it makes room for are read; the rest of its ride parameters are not interpreted yet. Views in the result
     /// point into the overlay's bytes.
     [[nodiscard]] std::vector<TrackedRideItem> read_tracked_rides(const Overlay& overlay, const Part& part);
 

@@ -71,6 +71,7 @@ namespace rct3::ovl
                     TrackedRide ride;
                     ride.info = detail::read_attraction(*record, kFields, version);
                     ride.operating = read_operating(space, refs, symbol.data, version);
+                    ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x38);
                     item.ride = ride;
                 }
             }
@@ -86,6 +87,9 @@ namespace rct3::ovl
                 const std::uint32_t fields = record->u32(0x12C);
                 if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open_up_to(space, refs, fields + attraction_offset(version), kLaterFieldsSize, kHeaderSize))
                     ride.info = detail::read_attraction(*block, kFields, version);
+                // The guests lead the block the attraction fields are in.
+                if (fields != 0)
+                    ride.guests = detail::read_ride_guests(space, refs, fields);
                 ride.operating = read_operating(space, refs, symbol.data, version);
                 item.ride = ride;
             }

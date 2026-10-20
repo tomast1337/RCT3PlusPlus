@@ -80,6 +80,9 @@ TEST_CASE("later tracked rides point to their attraction fields")
         };
         word(0x12C, at + block);
         word(block + skip + 0x38, version - 3); // the pack: 1 or 2
+        // The guests lead the block: their own count, or -1 for the default further in.
+        word(block, version == 4 ? 0xFFFFFFFF : 48);
+        word(block + 0x1C, 64);
         const auto overlay = make_record_overlay(version, pool, "Coaster:trr", bytes, { { block + skip + 4, "CoasterName:txt" }, { block + skip + 0xC, "CoasterIcon:gsi" } });
         const auto items = read_tracked_rides(overlay, overlay.common());
         REQUIRE(items[0].ride.has_value());
@@ -88,6 +91,7 @@ TEST_CASE("later tracked rides point to their attraction fields")
         CHECK(i.name_text == "CoasterName");
         CHECK(i.icon == "CoasterIcon");
         CHECK(i.addon == version - 3);
+        CHECK(items[0].ride->guests == (version == 4 ? 64u : 48u));
     }
 }
 

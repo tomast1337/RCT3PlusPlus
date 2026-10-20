@@ -1010,6 +1010,8 @@ namespace rct3::scene
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
+                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
+                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = fee, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
@@ -1092,6 +1094,7 @@ namespace rct3::scene
                     ride.breakdown.saved_downtime_percent.reset();
                     using enum save::RepairStatus;
                     ride.base.repair_status = !upkeep->broken ? Fine : upkeep->mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
+                    ride.base.flags = upkeep->broken ? ride.base.flags | save::AttractionCommon::kBrokenDown : ride.base.flags & ~save::AttractionCommon::kBrokenDown;
                 }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {

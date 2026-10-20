@@ -140,6 +140,7 @@ int main(int argc, char** argv)
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
+    std::vector<std::optional<std::uint32_t>> guests_room;
     std::map<std::uint64_t, simulation::PathItemKind> sights; // Placed objects guests stop at
     std::set<std::uint64_t> gates;                            // Park entrances
     std::map<std::uint64_t, std::uint32_t> facility_kinds;    // Special attractions' kinds, by attraction
@@ -186,6 +187,7 @@ int main(int argc, char** argv)
                     if (const auto kind = park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))))
                         facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::ObjectModel>, std::less<>> models;
+        guests_room = simulation::ride_guests(*rides, [&](std::string_view path) { return install->find(path); });
         timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
             auto [at, added] = models.try_emplace(o.symbol);
             if (added)
@@ -241,7 +243,7 @@ int main(int argc, char** argv)
             if (timings[i])
                 std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->seconds));
     }
-    const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters);
+    const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
     const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));
     {
         // How far the paths' heights are from where the save stands its guests, as a check on both.
@@ -310,12 +312,18 @@ int main(int argc, char** argv)
     }
     world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
     // The park's own weather, unless another is asked for.
-    auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(simulation::park_state(park_model ? &*park_model : nullptr, *world_model)));
+    const simulation::ParkState state = simulation::park_state(park_model ? &*park_model : nullptr, *world_model);
+    auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(state));
+    const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
+    const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = fee, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating });
     if (weather == "rain" || weather == "storm")
         sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")
         sky = { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
     std::printf("weather: %s%s%s, %.0f degrees; %.1f guests an hour come in\n", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature), simulation::arrivals_per_second(sky) * 3600);
+    const std::uint32_t ideal = simulation::ideal_guests(world);
+    const std::int64_t fair = simulation::fair_entrance_fee(world);
+    std::printf("room for %u guests; entrance fee %lld against %lld fair; arrivals x%.2f with the park empty\n", ideal, static_cast<long long>(fee), static_cast<long long>(fair), simulation::drawn(draw, 0, ideal, fair));
     const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
     std::printf("breakdowns going on, by kind:%s\n", breakdown_kinds(world.registry).c_str());
     std::printf("litter %zu  path items %zu  rides broken down %td  staff on the paths %zu of %zu\n", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());

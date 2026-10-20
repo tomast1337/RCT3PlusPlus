@@ -22,6 +22,8 @@ namespace rct3::ovl
         /// "spl" items, version 4 and 5 files only. Empty slots are normal. Version 1 files keep their
         /// splines in a part of the item that is not read.
         std::array<std::string_view, 4> splines;
+        /// Guests the ride makes room for in the park while it is open and working.
+        std::optional<std::uint32_t> guests;
     };
 
     struct AnimatedRideItem
@@ -31,7 +33,7 @@ namespace rct3::ovl
     };
 
     /// Animated rides of one part of an overlay: pointer symbols tagged "anr". Only the start of each item
-    /// is read. The rest holds a variable amount of data (animation sets, effects, texture references) that
+    /// and the guests it makes room for are read. The rest holds a variable amount of data (animation sets, effects, texture references) that
     /// is not interpreted yet. Views in the result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimatedRideItem> read_animated_rides(const Overlay& overlay, const Part& part);
 

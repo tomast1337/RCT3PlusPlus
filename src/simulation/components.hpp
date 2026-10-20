@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -120,6 +121,22 @@ namespace rct3::simulation
         bool storm = false;
         bool sunny = false;     ///< Sun out, beating down on those not in the shade
         float temperature = 20; ///< Degrees Celsius
+    };
+
+    /// What brings guests to the park, in the registry's context, kept up from the park as it runs. Guests
+    /// come in at the plain weather rate when none is there.
+    struct Draw
+    {
+        std::int64_t entrance_fee = 0;   ///< Hundredths of the currency unit
+        std::uint32_t pool_squares = 0;  ///< Squares of pool water
+        std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
+    };
+
+    /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
+    /// slides, transport rides, rides with no timing): guests still come for them.
+    struct RoomElsewhere
+    {
+        std::uint32_t guests = 0;
     };
 
     struct Wallet
@@ -278,6 +295,7 @@ namespace rct3::simulation
     struct CycleRide
     {
         std::uint32_t capacity = 8;          ///< Guests a cycle
+        std::uint32_t room = 0;              ///< Guests the ride makes room for in the park; 0 when its data does not say
         std::uint32_t cycle_ticks = 0;       ///< How long a ride lasts
         std::uint32_t timer = 0;             ///< Ticks left of the cycle running, 0 when stopped
         float excitement = 0.5f;             ///< How much a ride cheers its riders, 0..1

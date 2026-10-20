@@ -14,6 +14,7 @@
 #include "park/object_mesh.hpp"
 #include "save/model/world.hpp"
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <unordered_map>
@@ -29,6 +30,12 @@ namespace rct3::park
     [[nodiscard]] constexpr std::uint8_t quarter_room(std::int32_t quadrant) noexcept
     {
         return static_cast<std::uint8_t>(1U << (quadrant & 3));
+    }
+    /// The two quarters on the side an item's +X faces after `turns` quarter turns (see turned_x).
+    [[nodiscard]] constexpr std::uint8_t half_room(std::int32_t turns) noexcept
+    {
+        constexpr std::array<std::uint8_t, 4> kHalves { 0b0101, 0b1100, 0b1010, 0b0011 }; // -X, +Z, +X, -Z
+        return kHalves[static_cast<std::size_t>(turns & 3)];
     }
     [[nodiscard]] constexpr std::uint8_t edge_room(std::int32_t turns) noexcept
     {

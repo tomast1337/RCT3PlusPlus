@@ -26,9 +26,13 @@ namespace rct3::scene
     /// Reads the simulation, so only on the frame's thread.
     glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown);
 
+    /// Whether something standing at `at` may be in the view `transform` gives, with room to spare so it does
+    /// not pop in at the edges while the view turns; `reach` is about its size, in clip units.
+    [[nodiscard]] bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach = 2.0f);
+
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
-    /// while it does not run.
-    void place_cars(ParkScene& scene);
+    /// while it does not run; and the scenery moving on its own near `eye` in `view`.
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view);
 
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail

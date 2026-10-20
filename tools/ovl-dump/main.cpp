@@ -1081,9 +1081,9 @@ namespace
                         ++without_masks;
                 }
                 std::printf(
-                    "  %-32s v%u%s type %u flags %08x squares %ux%u (%zu without masks) masks %zu cost %d visuals %zu "
+                    "  %-32s v%u%s type %u positioning %u flags %08x squares %ux%u (%zu without masks) masks %zu cost %d visuals %zu "
                     "sounds %zu params %zu nodes %zu\n",
-                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
+                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<unsigned>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
                 for (const auto& sq : it.squares)
                     std::printf("    square flags %03x levels %d..%d\n", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)

@@ -58,6 +58,9 @@ namespace rct3::park
             case Positioning::Edge:
                 anchor += x * kEdgeOffset;
                 break;
+            case Positioning::Half:
+                anchor += x * kQuarterOffset; // The half its +X faces
+                break;
             case Positioning::PathSide:
             case Positioning::PathSideOuter:
             case Positioning::PathSideJoin:

@@ -2,6 +2,7 @@
 #include "scene/ride_placing.hpp"
 
 #include "logging/log.hpp"
+#include "park/bone_poses.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
@@ -210,6 +211,7 @@ namespace rct3::scene
         scene.placing.item.reset();
         scene.placing.ghost_mesh = { };
         scene.placing.preview_mesh = { };
+        scene.placing.preview_bones.clear();
         scene.placing.panel_item.clear();
     }
 
@@ -252,6 +254,12 @@ namespace rct3::scene
                 const std::array<save::PlacedObject, 1> one { alone };
                 p.preview_mesh = park::object_mesh(one, scene.models, scene.grid);
                 ghost_textures(device, scene, p.preview_mesh);
+                p.preview_bones.clear();
+                if (const park::ObjectModel& model = scene.models.at(park::model_key(alone)); model.rig)
+                {
+                    std::tie(p.preview_moving, p.preview_bones) = park::boned_meshes(alone, model, scene.grid);
+                    ghost_textures(device, scene, p.preview_moving.mesh);
+                }
             };
             if (p.panel_item != p.item->symbol && load_object_model(scene, p.models, assets, alone))
             {
@@ -295,6 +303,18 @@ namespace rct3::scene
                     }
                 }
                 p.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+                // It moves as it will in the park, as scenery standing still does.
+                if (const park::ObjectModel& model = scene.models.at(park::model_key(alone)); model.rig && !p.preview_bones.empty())
+                {
+                    const auto [motion, time] = park::flat_ride_motion(model.animation_seconds, 0, 0, false, scene.clock);
+                    const std::vector<glm::mat4> moves = park::bone_moves(*model.rig, motion, time);
+                    const glm::mat4 placed = park::placed_transform(alone, &model, scene.grid, scene.fitted);
+                    std::vector<glm::mat4> places(p.preview_bones.size(), placed);
+                    for (std::size_t k = 0; k < places.size(); ++k)
+                        if (static_cast<std::size_t>(p.preview_bones[k]) < moves.size())
+                            places[k] = placed * moves[static_cast<std::size_t>(p.preview_bones[k])];
+                    park::move_meshes(p.preview_moving, places);
+                }
             }
         }
         // shortcut: worked out again only when objects come or go, as path building does.

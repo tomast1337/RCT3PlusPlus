@@ -303,6 +303,7 @@ namespace rct3::scene
             park::MovingMeshes mesh;
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
             std::size_t first_seat = 0;      ///< Its first seat's place in seat_carriers
+            float reach = 0;                 ///< Of scenery, about how far it reaches from its place
         };
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.

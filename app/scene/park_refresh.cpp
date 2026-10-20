@@ -36,16 +36,8 @@ namespace rct3::scene
         /// How far away people are drawn at each level of detail, finest first; beyond the last they are not.
         constexpr std::array kPersonDistances { 75.0f, 200.0f, 600.0f };
 
-        /// Whether a person standing at `at` may be in the view `transform` gives, with room to spare so people
-        /// do not pop in at the edges while the view turns between posings.
-        bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at)
-        {
-            constexpr float kSpare = 1.3f;
-            constexpr float kReach = 2.0f; // About a person's height, in clip units
-            const glm::vec4 clip = transform * glm::vec4(at + glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
-            const float edge = clip.w * kSpare + kReach;
-            return clip.w > -kReach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
-        }
+        /// How far away scenery moving on its own is seen to move; beyond, it keeps its pose.
+        constexpr float kPropMoveDistance = 200.0f;
 
         constexpr std::size_t kNoCar = static_cast<std::size_t>(-1);
 
@@ -234,10 +226,13 @@ namespace rct3::scene
 
         /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
         /// the seats they carry.
-        void swing_rides(ParkScene& scene)
+        void swing_rides(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
         {
             for (ParkScene::BonedRide& boned : scene.boned_rides)
             {
+                const glm::vec3 at(boned.placed[3]);
+                if (boned.ride == entt::null && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
+                    continue;
                 const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
@@ -306,6 +301,14 @@ namespace rct3::scene
 
     /// Where `shown` stands now: where the simulation has walked it while that runs, else where it was saved.
     /// Reads the simulation, so only on the frame's thread.
+    bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach)
+    {
+        constexpr float kSpare = 1.3f;
+        const glm::vec4 clip = transform * glm::vec4(at + glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+        const float edge = clip.w * kSpare + reach;
+        return clip.w > -reach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
+    }
+
     glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
     {
         if (scene.simulate && shown.guest != entt::null)
@@ -318,7 +321,7 @@ namespace rct3::scene
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run.
-    void place_cars(ParkScene& scene)
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
     {
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
         {
@@ -336,7 +339,7 @@ namespace rct3::scene
             }
             scene.car_places[i] = place;
         }
-        profiling::section("Rides", [&] { swing_rides(scene); });
+        profiling::section("Rides", [&] { swing_rides(scene, eye, view); });
         profiling::section("Mesh", [&] {
             park::move_meshes(scene.car_meshes, scene.car_places);
             scene.rider_places.resize(scene.rider_cars.size());

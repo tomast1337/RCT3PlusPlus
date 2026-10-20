@@ -1151,7 +1151,7 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene); });
+            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device))); });
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 

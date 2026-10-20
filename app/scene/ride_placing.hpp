@@ -19,6 +19,7 @@
 
 #include "park/build_catalogue.hpp"
 #include "park/camera.hpp"
+#include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_clearance.hpp"
 #include "park/ride_placement.hpp"
@@ -70,6 +71,9 @@ namespace rct3::scene
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for
         park::ObjectMesh preview_mesh;           ///< The scenery alone, for the panel's round view
+        /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
+        park::MovingMeshes preview_moving;
+        std::vector<std::int32_t> preview_bones;
         park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;

@@ -127,6 +127,17 @@ TEST_CASE("a quarter-tile item goes to its quarter")
     CHECK(p.z == doctest::Approx(3));
 }
 
+TEST_CASE("a half-tile item goes to the half it faces")
+{
+    const save::TerrainGrid g = slope();
+    const glm::vec3 west = place(object_transform(at(0, 0, 0), Positioning::Half, g), { });
+    CHECK(west.x == doctest::Approx(1));
+    CHECK(west.z == doctest::Approx(2));
+    const glm::vec3 east = place(object_transform(at(0, 0, 2), Positioning::Half, g), { });
+    CHECK(east.x == doctest::Approx(3));
+    CHECK(east.z == doctest::Approx(2));
+}
+
 TEST_CASE("an item is on the park's land when every tile it covers is owned")
 {
     save::TerrainGrid g = slope();

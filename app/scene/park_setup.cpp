@@ -392,6 +392,8 @@ namespace rct3::scene
         boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
         std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
         boned.first_seat = scene.seat_carriers.size();
+        // Half its footprint's diagonal and a tile over, for what stands taller than wide.
+        boned.reach = scene.grid.tile_size_x * (std::hypot(static_cast<float>(model->second.squares[0]), static_cast<float>(model->second.squares[1])) / 2 + 1);
         add_textures(device, scene, boned.mesh.mesh.batches);
     }
 

@@ -41,9 +41,21 @@ namespace rct3::park
             shape.x_squares = m.squares[0];
             shape.z_squares = m.squares[1];
             const auto under = footprint_tiles(o, shape);
-            // shortcut: half-tile items take the whole tile, as where they stand in it is not worked out yet.
-            const auto positioning = static_cast<Positioning>(m.positioning);
-            const std::uint8_t room = positioning == Positioning::Quarter ? quarter_room(o.quadrant) : (positioning == Positioning::Edge ? edge_room(o.rotation) : kWholeTile);
+            std::uint8_t room = kWholeTile;
+            switch (static_cast<Positioning>(m.positioning))
+            {
+                case Positioning::Quarter:
+                    room = quarter_room(o.quadrant);
+                    break;
+                case Positioning::Half:
+                    room = half_room(o.rotation);
+                    break;
+                case Positioning::Edge:
+                    room = edge_room(o.rotation);
+                    break;
+                default:
+                    break;
+            }
             for (std::size_t i = 0; i < under.size() && i < m.solid.size(); ++i)
             {
                 if (const auto& levels = m.solid[i])

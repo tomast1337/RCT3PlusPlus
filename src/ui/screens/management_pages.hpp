@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -85,6 +86,10 @@ namespace rct3::ui
 
         friend bool operator==(const ManagementRow&, const ManagementRow&) = default;
     };
+
+    /// The park's name as shown: its text when the name is a string key, else the name with each "#ME#" standing
+    /// for the scenario's name; the scenario's name when the park has none.
+    [[nodiscard]] std::u16string park_name(const save::Park& park, const StringTable& strings);
 
     [[nodiscard]] std::size_t management_row_id(ManagementRow row);
     [[nodiscard]] ManagementRow management_row(std::size_t id);

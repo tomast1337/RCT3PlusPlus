@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
+// LED signs: boards of lamps that scroll words along, as over ride queues and on park entrances.
+//
 // The sign over a ride's queue: an arch of the ride's theme standing over the queue tile where guests join the
 // line, its board showing the ride's name while it is open, else what it is doing ("Closed", "Testing"),
 // scrolling along. Parks do not keep the signs; they are put up again from the queues.

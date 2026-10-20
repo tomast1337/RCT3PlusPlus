@@ -205,3 +205,23 @@ TEST_CASE("without challenges the window says there are none")
     CHECK(page.note == u"None now.");
     CHECK(page.rows.empty());
 }
+
+TEST_CASE("a park's name fills in the scenario's for its placeholder")
+{
+    StringTable strings;
+    strings.add("SandboxScenario_Name", u"Sandbox");
+    strings.add("Valley_Name", u"Valley");
+    save::Park park;
+    park.name = "#ME#";
+    park.scenario_name = "#SANDBOX#";
+    CHECK(park_name(park, strings) == u"Sandbox");
+    park.name = "#ME# Two";
+    park.scenario_name = "Valley_Name";
+    CHECK(park_name(park, strings) == u"Valley Two");
+    park.name.clear();
+    CHECK(park_name(park, strings) == u"Valley");
+    park.name = "Valley_Name";
+    CHECK(park_name(park, strings) == u"Valley");
+    park.name = "My Park";
+    CHECK(park_name(park, strings) == u"My Park");
+}

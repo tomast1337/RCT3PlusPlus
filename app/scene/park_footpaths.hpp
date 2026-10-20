@@ -13,7 +13,13 @@
 // and the right button calls the stroke off. Taking a piece away right after a stroke takes the whole stroke
 // away. Pointing at a path shows an arrow on its edge nearest the pointer and the piece that would go on from
 // it; an arrow also shows over the trail's next piece. Pressing on either and moving up or down picks the
-// slope (ramps, then stairs), and letting go lays the piece, which the trail then goes on from.
+// slope (ramps, then stairs), and letting go lays the piece, which the trail then goes on from. A ride's
+// entrance or exit pointed at, at its own height even off the ground, offers the piece going on from it the same way.
+//
+// Holding Shift starts a trail on the tile pointed at (or picks up the trail's next piece) and raises or sinks
+// its first piece with the pointer, as for scenery; below the ground it is a tunnel piece. A press while Shift
+// is held lays it; let go, the height stays for the arrow. With Control held, a trail started on bare ground,
+// or raised with Shift, starts at the height the last piece laid here ended at.
 //
 // With the panel's route tab on and a trail started, pointing at a tile shows the cheapest route from the
 // arrow to it (park/path_route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
@@ -38,6 +44,7 @@
 #include "ui/interface_assets.hpp"
 #include "ui/screens/footpath_panel.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -91,7 +98,16 @@ namespace rct3::scene
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, std::uint8_t>> hover_edge;
-        std::optional<park::PathSpot> hover_tile;          ///< Bare ground pointed at, shown as the path a click would lay
+        std::optional<park::PathSpot> hover_tile;              ///< Bare ground pointed at, shown as the path a click would lay
+        std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door edge pointed at: column, row, height, side
+        /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.
+        struct Lift
+        {
+            glm::vec3 at { 0.0f };
+            std::int32_t height = 0;
+        };
+        std::optional<Lift> lift;
+        std::optional<std::int32_t> last_height;           ///< Where the last piece laid here ended, for Control
         bool drop = false;                                 ///< The stroke ended, so its paths are laid
         std::optional<park::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
         std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
@@ -133,7 +149,8 @@ namespace rct3::scene
 
     /// Whether a click on the park at `at` (interface units, on a view `size` across) went to the path panel:
     /// while it shows its controls, a click on the ground picks where the path starts.
-    bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size);
+    /// `control`: Control is held, so the trail starts at the last piece's height.
+    bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size, bool control);
 
     /// With the panel's camera follow on, glides the camera over `elapsed` seconds towards the next piece each
     /// time the trail goes on; the player moving the camera stops it until the next piece.
@@ -144,8 +161,9 @@ namespace rct3::scene
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Follows the pointer over the park at `at` (`over` the interface or not): strokes while the left button is
-    /// `down`, slope drags on an arrow, and the path edge pointed at; `cancel` calls a stroke or drag off.
-    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel);
+    /// `down`, slope drags on an arrow, and the path edge or door pointed at; `cancel` calls a stroke or drag off.
+    /// `shift` and `control`: those keys are held, which raise and sink the trail's first piece.
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel, bool shift, bool control);
 
     /// Draws the next piece over the ground.
     /// Whether the ground is drawn see-through, switched in the view menu or while building into a tunnel. Then

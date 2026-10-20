@@ -105,6 +105,7 @@ namespace rct3::park
     void start_at(FootpathBuilder& builder, PathSpot spot)
     {
         builder.start = spot;
+        builder.start_height.reset();
         builder.trail.clear();
         builder.on_slope = false;
     }
@@ -123,7 +124,7 @@ namespace rct3::park
             return std::nullopt;
         NextPiece piece;
         piece.spot = *spot;
-        piece.start = builder.trail.empty() ? ground_start(grid, *spot) : builder.trail.back().height;
+        piece.start = builder.trail.empty() ? builder.start_height.value_or(ground_start(grid, *spot)) : builder.trail.back().height;
         piece.end = piece.start + static_cast<std::int32_t>(slope_rise(builder.slope));
         bool level = builder.slope == PathSlope::Flat;
         const auto& corners = grid.at(spot->col, spot->row).corners;

@@ -14,7 +14,7 @@
 // path the trail only walked over stays, since this trail did not lay it.
 //
 // Each piece starts at the height the last one ended at; the first starts on the ground of its tile (above
-// its highest corner when the tile is not flat). A flat piece that meets the flat ground of its tile lies on
+// its highest corner when the tile is not flat), or at a height the player set for it, above or below the ground. A flat piece that meets the flat ground of its tile lies on
 // the ground; any other piece is raised, drawn by a deck object and held up by supports. A piece may not go
 // into the ground: every corner of its tile must be at most as high as the piece where it crosses that
 // corner's edge. With cutting on, the corners in the way are cut down to the piece instead, so a flat piece
@@ -113,10 +113,11 @@ namespace rct3::park
         std::uint8_t heading = 0;
         PathSlope slope = PathSlope::Flat;
         bool cut_into_ground = false;
-        bool queue = false;            ///< Lays queue tiles rather than paths
-        bool on_slope = false;         ///< The last piece laid slopes, so the heading cannot change
-        std::optional<PathSpot> start; ///< Where the trail began
-        std::vector<TrailStep> trail;  ///< The tiles laid or walked over since, oldest first
+        bool queue = false;                       ///< Lays queue tiles rather than paths
+        bool on_slope = false;                    ///< The last piece laid slopes, so the heading cannot change
+        std::optional<PathSpot> start;            ///< Where the trail began
+        std::optional<std::int32_t> start_height; ///< Of the trail's first piece when set; otherwise on the ground
+        std::vector<TrailStep> trail;             ///< The tiles laid or walked over since, oldest first
     };
 
     /// Why the next piece cannot be laid.
@@ -159,7 +160,7 @@ namespace rct3::park
     /// The tile one step from `from` in `heading`.
     [[nodiscard]] PathSpot step(PathSpot from, std::uint8_t heading) noexcept;
 
-    /// Begins a new trail at `spot`; what was laid stays.
+    /// Begins a new trail at `spot`, its first piece on the ground; what was laid stays.
     void start_at(FootpathBuilder& builder, PathSpot spot);
 
     /// Where the next piece goes; none before a tile is picked.

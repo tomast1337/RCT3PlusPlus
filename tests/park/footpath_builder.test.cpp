@@ -317,3 +317,27 @@ TEST_CASE("the arrow lies over the next piece and points the way it goes")
     }
     CHECK(arrow.indices.size() == 6);
 }
+TEST_CASE("a trail's first piece set off the ground is raised, and set deep under it is a tunnel")
+{
+    save::TerrainGrid g = owned_grid(4, 4);
+    FootpathBuilder b;
+    start_at(b, { 1, 1 });
+    b.start_height = 5;
+    auto piece = next_piece(b, g);
+    REQUIRE(piece);
+    CHECK(piece->start == 5);
+    CHECK_FALSE(piece->ground);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
+
+    b.start_height = -1;
+    CHECK(lay_problem(b, g, { }) == LayProblem::Underground);
+    b.start_height = -4;
+    piece = next_piece(b, g);
+    REQUIRE(piece);
+    CHECK(piece->tunnel);
+    CHECK(lay_problem(b, g, { }) == LayProblem::None);
+
+    // Starting again puts the first piece back on the ground.
+    start_at(b, { 2, 2 });
+    CHECK(next_piece(b, g)->start == 0);
+}

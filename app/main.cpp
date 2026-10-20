@@ -1003,6 +1003,7 @@ int main(int argc, char** argv)
                 p.y = held->y;
                 p.left = held->down;
                 p.shift = held->shift;
+                p.control = held->control;
                 p.inside = true;
                 return p;
             }
@@ -1116,6 +1117,7 @@ int main(int argc, char** argv)
                         input.in_window = p.inside && input.pointer.present;
                         input.middle = p.middle && input.pointer.present;
                         input.shift = p.shift;
+                        input.control = p.control;
                         if (!ImGui::GetIO().WantCaptureKeyboard && !rct3::scene::typing(*park))
                         {
                             // On the keys the player bound to the game's camera commands, unless they are being bound

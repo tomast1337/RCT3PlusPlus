@@ -716,6 +716,7 @@ namespace rct3::scene
                 return;
             f.stroke.clear();
             f.route_laid = 0;
+            f.last_height = piece.end;
             if (scene.park.cash)
                 *scene.park.cash -= cost;
             // The queue tile laid before may now open towards this one.
@@ -995,6 +996,8 @@ namespace rct3::scene
         f.builder.queue = chosen_queue(f);
         if (std::exchange(f.lay_next, false))
         {
+            // Shift held on, the next piece is picked up afresh.
+            f.lift.reset();
             f.notice.clear();
             lay(device, scene, assets);
             f.dirty = true;
@@ -1129,9 +1132,43 @@ namespace rct3::scene
                 return std::nullopt;
             return park::PathSpot { col, row };
         }
+
+        /// Begins a trail at `tile`: on its ground, or with `control` at the last piece's height.
+        void begin_trail(ParkFootpaths& f, const save::RideModel& rides, park::PathSpot tile, bool control)
+        {
+            park::start_at(f.builder, tile);
+            if (control)
+                f.builder.start_height = f.last_height;
+            // A queue begun beside a ride's entrance goes away from it, so it leads guests there.
+            if (chosen_queue(f))
+            {
+                if (const auto entrance = park::entrance_beside(rides, tile.col, tile.row, std::nullopt))
+                    f.builder.heading = static_cast<std::uint8_t>((entrance->side + 2) % 4);
+            }
+            f.notice.clear();
+            f.dirty = true;
+        }
+
+        /// The rides' entrances and exits.
+        std::vector<save::PlacementSpot> ride_doors(const save::RideModel& rides)
+        {
+            std::vector<save::PlacementSpot> doors;
+            for (const save::Ride& ride : rides.rides)
+            {
+                for (const save::Station& station : ride.stations)
+                {
+                    for (const auto& door : { station.entrance_spot, station.exit_spot })
+                    {
+                        if (door)
+                            doors.push_back(*door);
+                    }
+                }
+            }
+            return doors;
+        }
     } // namespace
 
-    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel)
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel, bool shift, bool control)
     {
         ParkFootpaths& f = scene.footpaths;
         // A press on an arrow picks the slope by moving up or down, and lays the piece when let go.
@@ -1154,6 +1191,60 @@ namespace rct3::scene
             f.slope_press.reset();
             f.dirty = true;
             return;
+        }
+        // Shift raises or sinks the trail's first piece with the pointer; a press lays it, as on the arrow.
+        if (!shift)
+            f.lift.reset();
+        else if (f.brush.empty() && !cancel)
+        {
+            const auto ray = over ? std::nullopt : controls_ray(scene, at, size);
+            if (!f.lift && ray)
+            {
+                const auto tile = controls_tile(scene, at, size);
+                const auto distance = park::ground_hit(*ray, scene.grid);
+                if (tile && distance)
+                {
+                    // The trail's next piece pointed at is picked up where it is; elsewhere a trail begins.
+                    if (const auto next = park::next_piece(f.builder, scene.grid); next && next->spot == *tile)
+                    {
+                        park::start_at(f.builder, *tile);
+                        f.builder.start_height = next->start;
+                    }
+                    else
+                        begin_trail(f, scene.rides, *tile, control);
+                    f.lift = ParkFootpaths::Lift { ray->origin + ray->direction * *distance, park::next_piece(f.builder, scene.grid)->start };
+                    f.hover.reset();
+                    f.hover_edge.reset();
+                    f.hover_door.reset();
+                    f.hover_tile.reset();
+                    f.dirty = true;
+                }
+            }
+            else if (f.lift && ray)
+            {
+                // Up and down an upright plane through where Shift went down, facing the camera.
+                const glm::vec3 across = glm::normalize(glm::vec3 { ray->direction.x, 0.0f, ray->direction.z });
+                const float along = glm::dot(ray->direction, across);
+                if (along > 1e-4f)
+                {
+                    const float y = ray->origin.y + ray->direction.y * glm::dot(f.lift->at - ray->origin, across) / along;
+                    const std::int32_t height = f.lift->height + static_cast<std::int32_t>(std::lround(y - f.lift->at.y));
+                    if (height != f.builder.start_height)
+                    {
+                        f.builder.start_height = height;
+                        f.dirty = true;
+                    }
+                }
+            }
+            if (f.lift)
+            {
+                if (down)
+                {
+                    f.slope_press = at.y;
+                    f.slope_before = f.builder.slope;
+                }
+                return;
+            }
         }
         // With routing on, a click away from the arrow lays the route to where it was.
         if (f.routing && f.builder.start && f.brush.empty())
@@ -1216,26 +1307,37 @@ namespace rct3::scene
                 return;
             }
             // The path edge pointed at, if any.
+            // Or a ride's door, before what is behind it.
             std::optional<std::pair<std::size_t, std::uint8_t>> edge;
+            std::optional<std::array<std::int32_t, 4>> door;
             if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
             {
-                if (const auto under = park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
+                const std::vector<save::PlacementSpot> doors = ride_doors(scene.rides);
+                if (const auto d = park::door_under(*ray, doors, scene.grid, ground_faded(scene)))
+                {
+                    const save::PlacementSpot& spot = doors[d->door];
+                    door = std::array { spot.col, spot.row, spot.height, static_cast<std::int32_t>(d->side) };
+                }
+                else if (const auto under = park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
                     edge = std::pair { under->path, *under->side };
             }
-            if (edge != f.hover_edge)
+            if (edge != f.hover_edge || door != f.hover_door)
             {
                 f.hover_edge = edge;
+                f.hover_door = door;
                 f.hover.reset();
-                if (edge)
+                park::FootpathBuilder b = f.builder;
+                if (edge && park::start_from_edge(b, f.paths[edge->first], scene.grid, edge->second))
+                    f.hover = std::move(b);
+                else if (door)
                 {
-                    park::FootpathBuilder b = f.builder;
-                    if (park::start_from_edge(b, f.paths[edge->first], scene.grid, edge->second))
-                        f.hover = std::move(b);
+                    park::start_from_door(b, save::PlacementSpot { 0, (*door)[0], (*door)[1], (*door)[2], 0 }, static_cast<std::uint8_t>((*door)[3]));
+                    f.hover = std::move(b);
                 }
                 f.dirty = true;
             }
             // Bare ground pointed at, away from the trail's next piece, which has its own arrow.
-            std::optional<park::PathSpot> tile = edge || over ? std::nullopt : controls_tile(scene, at, size);
+            std::optional<park::PathSpot> tile = edge || door || over ? std::nullopt : controls_tile(scene, at, size);
             if (tile && f.builder.start && tile == park::next_spot(f.builder))
                 tile.reset();
             if (tile != f.hover_tile)
@@ -1255,6 +1357,7 @@ namespace rct3::scene
                 if (f.hover)
                     f.builder = *std::exchange(f.hover, std::nullopt);
                 f.hover_edge.reset();
+                f.hover_door.reset();
                 f.slope_press = at.y;
                 f.slope_before = f.builder.slope;
                 f.dirty = true;
@@ -1278,23 +1381,14 @@ namespace rct3::scene
         f.dirty = true;
     }
 
-    bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size)
+    bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size, bool control)
     {
         if (std::exchange(scene.footpaths.took_click, false))
             return true;
         const auto tile = controls_tile(scene, at, size);
         if (!tile)
             return false;
-        const auto [col, row] = *tile;
-        park::start_at(scene.footpaths.builder, { col, row });
-        // A queue begun beside a ride's entrance goes away from it, so it leads guests there.
-        if (chosen_queue(scene.footpaths))
-        {
-            if (const auto entrance = park::entrance_beside(scene.rides, col, row, std::nullopt))
-                scene.footpaths.builder.heading = static_cast<std::uint8_t>((entrance->side + 2) % 4);
-        }
-        scene.footpaths.notice.clear();
-        scene.footpaths.dirty = true;
+        begin_trail(scene.footpaths, scene.rides, *tile, control);
         return true;
     }
 

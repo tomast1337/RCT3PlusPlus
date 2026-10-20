@@ -92,6 +92,7 @@ namespace rct3::park
         std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
         bool water_only = false;                         ///< A ride that stands only on water
         bool photo_spot = false;                         ///< A path item guests stop at to have their photo taken
+        bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
         bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
         std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own

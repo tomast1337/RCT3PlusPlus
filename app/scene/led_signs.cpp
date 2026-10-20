@@ -258,7 +258,10 @@ namespace rct3::scene
             if (sign.placed)
             {
                 const save::SignState& placed = scene.signs[*sign.placed];
-                words = placed.kind == 0 ? strings::to_utf16(placed.text) : placed.kind == 1 ? std::u16string(assets.strings->get("Sign_NoEntry")) : std::u16string { };
+                // A sign that cannot forbid entry shows its words whatever its kind says.
+                const auto model = scene.models.find(park::model_key(sign.object));
+                const bool no_entry = placed.kind == 1 && model != scene.models.end() && model->second.no_entry;
+                words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }
             else if (!sign.ride)
                 words = park.flags.has(save::ParkFlag::Open) ? ui::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));

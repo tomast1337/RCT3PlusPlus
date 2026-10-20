@@ -8,6 +8,7 @@
 #include "park/led_signs.hpp"
 #include "scene/park_scene.hpp"
 #include "strings/ascii.hpp"
+#include "strings/unicode.hpp"
 #include "ui/font_images.hpp"
 #include "ui/font_sets.hpp"
 #include "ui/screens/attraction_info.hpp"
@@ -159,17 +160,23 @@ namespace rct3::scene
             };
             // The models are read by the build beside the frame.
             wait_for_build(scene);
+            std::map<std::uint64_t, std::size_t> placed;
+            for (std::size_t s = 0; s < scene.signs.size(); ++s)
+                placed.emplace(scene.signs[s].object_ref, s);
             for (const save::PlacedObject& o : scene.objects)
             {
                 const auto found = scene.models.find(park::model_key(o));
-                if (found == scene.models.end() || found->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))
+                const auto written = placed.find(o.id);
+                if (found == scene.models.end() || (written == placed.end() && found->second.category != std::to_underlying(park::ItemCategory::ParkEntrance)))
                     continue;
                 LedSign sign;
+                if (written != placed.end())
+                    sign.placed = written->second;
                 sign.object = o;
                 park::ObjectModels model { *found };
                 if (!hang(sign, model))
                     continue;
-                // The entrance itself is drawn with the objects.
+                // The entrance or sign itself is drawn with the objects.
                 std::erase_if(sign.mesh.batches, [&](const park::ObjectBatch& batch) { return batch.texture != sign.board; });
                 q.signs.push_back(std::move(sign));
             }
@@ -241,13 +248,19 @@ namespace rct3::scene
             return;
         for (LedSign& sign : q.signs)
         {
-            if (sign.ride && *sign.ride >= scene.rides.rides.size())
+            if ((sign.ride && *sign.ride >= scene.rides.rides.size()) || (sign.placed && *sign.placed >= scene.signs.size()))
                 continue;
             const save::Park& park = scene.park_model.park;
-            // An entrance shows the park's name, or that the park is closed. A ride's sign, open, shows the ride's
-            // name; else what it is doing.
+            // An entrance shows the park's name, or that the park is closed. A placed sign shows what the player
+            // wrote, or that there is no entry; other kinds show nothing. A ride's sign, open, shows the ride's name;
+            // else what it is doing.
             std::u16string words;
-            if (!sign.ride)
+            if (sign.placed)
+            {
+                const save::SignState& placed = scene.signs[*sign.placed];
+                words = placed.kind == 0 ? strings::to_utf16(placed.text) : placed.kind == 1 ? std::u16string(assets.strings->get("Sign_NoEntry")) : std::u16string { };
+            }
+            else if (!sign.ride)
                 words = park.flags.has(save::ParkFlag::Open) ? ui::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
             else
             {

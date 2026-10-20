@@ -134,8 +134,10 @@ namespace rct3::scene
                 park::BuiltSupports columns = park::track_supports(std::span(&o, 1), scene.models, scene.footpaths.paths, scene.grid, *sets, o.id);
                 for (save::PlacedObject& piece : columns.pieces)
                 {
-                    if (load_object_model(scene, scene.placing.models, assets, piece))
-                        scene.objects.push_back(std::move(piece));
+                    if (!load_object_model(scene, scene.placing.models, assets, piece))
+                        continue;
+                    scene.columns.insert(piece.id);
+                    scene.objects.push_back(std::move(piece));
                 }
                 scene.fitted.merge(columns.fitted);
             }

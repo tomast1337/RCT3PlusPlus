@@ -84,6 +84,7 @@ namespace rct3::park
                 save::PlacedObject o;
                 o.id = ++last_id;
                 o.owner_ref = o.id;
+                o.fixture = true;
                 o.symbol = p.queue->fence_symbol;
                 o.overlay = p.queue->fence_overlay;
                 o.col = p.col;

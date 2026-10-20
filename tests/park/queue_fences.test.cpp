@@ -64,6 +64,7 @@ TEST_CASE("a ground queue is fenced on every side but its two open ones, standin
     for (const save::PlacedObject& f : fences)
     {
         CHECK(f.symbol == "Rail");
+        CHECK(f.fixture);
         CHECK(f.overlay == "Fences/Rail");
         CHECK(f.colours == std::array<std::int32_t, 3> { 3, 2, 1 });
         CHECK(f.col == 4);

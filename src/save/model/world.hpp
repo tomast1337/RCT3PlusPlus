@@ -285,6 +285,7 @@ namespace rct3::save
         std::int32_t frame_offset = 0;
         bool force_absolute_height = false;
         bool hidden = false;
+        bool fixture = false;         ///< Built by the park itself (fences round rides, queues and the park), not stored; not clicked
         std::int32_t break_flags = 0; ///< Raw bit set; individual bits not confirmed
         float break_time = 0;
         std::uint32_t behaviour_count = 0;

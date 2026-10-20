@@ -132,12 +132,23 @@ namespace rct3::park
             floor.row0 = static_cast<int>(std::lround(middle.y - static_cast<float>(span[1]) / 2));
             floor.col1 = floor.col0 + span[0] - 1;
             floor.row1 = floor.row0 + span[1] - 1;
-            // A ride raised off the ground or sunk into it stands on its own platform, not on paving.
+            // A ride raised off the ground stands on a floor at its own height, as in the game; one sunk into it or
+            // standing on uneven ground has none.
             bool level = true;
-            for (int r = floor.row0; r <= floor.row1 && level; ++r)
+            bool over = true;
+            for (int r = floor.row0; r <= floor.row1; ++r)
             {
-                for (int c = floor.col0; c <= floor.col1 && level; ++c)
-                    level = grid.contains(c, r) && std::ranges::all_of(grid.at(c, r).corners, [&](float h) { return h == static_cast<float>(spot.height); });
+                for (int c = floor.col0; c <= floor.col1; ++c)
+                {
+                    level = level && grid.contains(c, r) && std::ranges::all_of(grid.at(c, r).corners, [&](float h) { return h == static_cast<float>(spot.height); });
+                    over = over && grid.contains(c, r) && std::ranges::all_of(grid.at(c, r).corners, [&](float h) { return h < static_cast<float>(spot.height); });
+                }
+            }
+            if (over)
+            {
+                floor.raised = spot.height;
+                floors.push_back(floor);
+                continue;
             }
             if (!level)
                 continue;
@@ -176,6 +187,8 @@ namespace rct3::park
         };
         for (const RideFloor& floor : floors)
         {
+            if (floor.raised)
+                continue;
             std::optional<std::int16_t> style;
             if (floor.beyond_exit && has_ground_path(map, (*floor.beyond_exit)[0], (*floor.beyond_exit)[1]))
                 style = map.tiles[static_cast<std::size_t>((*floor.beyond_exit)[1]) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>((*floor.beyond_exit)[0])];

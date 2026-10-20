@@ -143,10 +143,17 @@ namespace rct3::scene
             return o.id;
         }
 
-        /// Gives `ride`, now that its doors stand, its fence round it and beside its doors, and paints the doors
-        /// in the fence's colours.
+        /// Gives `ride` its fence round it and beside the doors that stand, in place of the one it had, and paints
+        /// the doors in the fence's colours.
         void fence_ride(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride)
         {
+            std::vector<std::uint64_t>& fence = scene.placing.fence;
+            for (save::PlacedObject& o : scene.objects)
+            {
+                if (std::ranges::contains(fence, o.id))
+                    o.hidden = true;
+            }
+            fence.clear();
             ride.fence_symbol = kRideFence;
             ride.fence_overlay = kRideFenceOverlay;
             const park::ObjectModel* item = nullptr;
@@ -173,6 +180,7 @@ namespace rct3::scene
             for (save::PlacedObject& piece : pieces)
             {
                 piece.colours = colours;
+                fence.push_back(piece.id);
                 scene.objects.push_back(std::move(piece));
             }
             objects_changed(scene);
@@ -531,6 +539,8 @@ namespace rct3::scene
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
+            p.fence.clear();
+            fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
         }
         else
@@ -543,12 +553,14 @@ namespace rct3::scene
             if (ride.stations.empty())
                 ride.stations.emplace_back();
             const save::PlacementSpot spot { object, p.door->col, p.door->row, p.site->height, p.door->direction };
+            logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
             if (p.step == RidePlacing::Step::Entrance)
             {
                 ride.stations.front().entrance = object;
                 ride.stations.front().entrance_spot = spot;
                 p.entrance = p.door;
                 p.step = RidePlacing::Step::Exit;
+                fence_ride(scene, assets, ride);
             }
             else
             {

@@ -97,5 +97,8 @@ TEST_CASE("items in different quarters or along different edges of a tile take d
     CHECK(blocked(solids, { 2, 1 }, 0, 0)); // A path still needs the whole tile
 
     CHECK((edge_room(0) & edge_room(1)) == 0);
+    CHECK((half_room(0) & half_room(2)) == 0); // Turned apart, two halves share a tile
+    CHECK((half_room(1) & half_room(3)) == 0);
+    CHECK(half_room(0) == (quarter_room(0) | quarter_room(2))); // Quarters on the -X side
     CHECK((edge_room(2) & kWholeTile) == 0);
 }

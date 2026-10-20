@@ -2,9 +2,9 @@
 #include "park/queue_lines.hpp"
 
 #include "park/footpath_builder.hpp"
+#include "park/led_signs.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
-#include "park/queue_signs.hpp"
 
 #include <doctest/doctest.h>
 

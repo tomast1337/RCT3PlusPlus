@@ -564,7 +564,7 @@ namespace rct3::scene
         if (saved)
         {
             scene.rides = std::move(saved->rides);
-            scene.queue_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
+            scene.led_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
         }
         else if (auto rides = save::load_rides(*file, index))
             scene.rides = std::move(*rides);
@@ -866,7 +866,7 @@ namespace rct3::scene
     {
         finish_builds(scene);
         destroy_park_water(device, scene.water);
-        destroy_queue_signs(device, scene.queue_signs);
+        destroy_led_signs(device, scene.led_signs);
         destroy_park_glow(device, scene.glow);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);

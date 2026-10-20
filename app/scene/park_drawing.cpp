@@ -180,7 +180,7 @@ namespace rct3::scene
                         draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (scene.show_scenery && parts.scenery)
-                profiling::section("QueueSigns", [&] { draw_queue_signs(device, scene, transform, light); });
+                profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             profiling::section("Rides", [&] {
@@ -421,7 +421,7 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
-        profiling::section("QueueSigns", [&] { roll_queue_signs(device, scene); });
+        profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         if (!scene.photos.empty() && !scene.photo_reading)

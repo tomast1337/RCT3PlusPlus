@@ -203,7 +203,7 @@ namespace rct3::scene
             {
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
-                f.queue_signs = !scene.queue_signs.hidden.contains(f.ride->base.id);
+                f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
             }
             // A running ride's seats, queue and riders an hour.
             if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
@@ -508,10 +508,10 @@ namespace rct3::scene
             else if (change.id == ui::control_id(QueueSigns))
             {
                 if (change.value != 0)
-                    scene.queue_signs.hidden.erase(ride->base.id);
+                    scene.led_signs.hidden.erase(ride->base.id);
                 else
-                    scene.queue_signs.hidden.insert(ride->base.id);
-                scene.queue_signs.stale = true;
+                    scene.led_signs.hidden.insert(ride->base.id);
+                scene.led_signs.stale = true;
             }
             // The running ride leaves as its settings now say.
             if (ride != nullptr && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
@@ -758,7 +758,7 @@ namespace rct3::scene
         // The ground is built before the models that give the rides' floors their size are read.
         if (scene.footpaths.floors_stale)
             rebuild_ground(device, scene, assets);
-        update_queue_signs(device, scene, assets);
+        update_led_signs(device, scene, assets);
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = *scene.desktop;
@@ -1303,7 +1303,7 @@ namespace rct3::scene
                 looks.emplace(p.guest, static_cast<std::int32_t>(p.saved));
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
-        saved.no_queue_signs.assign(scene.queue_signs.hidden.begin(), scene.queue_signs.hidden.end());
+        saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         return parkfile::write_saved_park(saved);
     }
 

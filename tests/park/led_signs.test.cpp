@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/queue_signs.hpp"
+#include "park/led_signs.hpp"
 
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"

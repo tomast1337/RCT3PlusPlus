@@ -559,6 +559,7 @@ namespace rct3::park
         {
             const bool species = e.kind == save::AssetKind::AnimalSpecies;
             species_known_ = species_known_ || species;
+            listed_.insert(key(e.overlay_stem, e.symbol));
             if (species ? e.unlocked : e.available && e.invented && !e.hidden)
                 offered_.insert(key(e.overlay_stem, e.symbol));
         }
@@ -575,7 +576,11 @@ namespace rct3::park
             case BuildKind::AnimalToy:
                 return true; // parks list these without saying whether they may be built
             default:
-                return !known_ || offered_.contains(key(item.overlay, item.symbol));
+            {
+                // Parks saved before an expansion do not list its items, and offer them all.
+                const std::string k = key(item.overlay, item.symbol);
+                return !listed_.contains(k) || offered_.contains(k);
+            }
         }
     }
 

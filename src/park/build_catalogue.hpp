@@ -169,6 +169,7 @@ namespace rct3::park
         bool known_ = false;
         bool species_known_ = false;
         std::set<std::string> offered_; // "overlay|symbol", in lower case
+        std::set<std::string> listed_;  // The same, offered or not
     };
 
 } // namespace rct3::park

@@ -2,6 +2,7 @@
 #include "ui/screens/build_rows.hpp"
 
 #include <doctest/doctest.h>
+#include <string_view>
 #include <vector>
 
 using namespace rct3::ui;
@@ -69,12 +70,12 @@ TEST_CASE("rows are the items of one list the park offers, in name order, sets u
     items[0].addon = 2;
 
     rct3::save::RequiredContent content;
-    for (const char* symbol : { "Zed", "Apple", "Tree", "Wall1", "Wall2" })
+    for (const char* symbol : { "Zed", "Apple", "Tree", "Wall1", "Wall2", "Peach" })
     {
         rct3::save::AssetRequirement r;
         r.overlay_stem = "Style/Made/style";
         r.symbol = symbol;
-        r.available = r.invented = true;
+        r.available = r.invented = std::string_view(symbol) != "Peach";
         content.entries.push_back(r);
     }
     const auto rows = picker_rows(BuildList::Props, items, BuildOffer(content), strings, kCoins);

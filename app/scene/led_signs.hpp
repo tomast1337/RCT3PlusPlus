@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The park's LED signs (park/led_signs.hpp): scrolling lamp boards over the rides' queues and on park
-// entrances.
+// The park's LED signs (park/led_signs.hpp): scrolling lamp boards over the rides' queues, on park
+// entrances and on signs placed as scenery.
+//
+// Signs placed as scenery show what the player wrote on them, or that there is no entry.
 //
 // Each line of a ride shown with signs gets its theme's queue sign over its head tile; a ride of no theme, or one
 // whose theme has none, takes the plain theme's. Park entrances get their own board written, with the park's
@@ -37,7 +39,8 @@ namespace rct3::scene
 
     struct LedSign
     {
-        std::optional<std::size_t> ride; ///< Of the scene's rides; none for a park entrance
+        std::optional<std::size_t> ride;   ///< Of the scene's rides, for a queue sign
+        std::optional<std::size_t> placed; ///< Of the scene's signs, for a sign placed as scenery
         save::PlacedObject object;
         park::ObjectMesh mesh;                      ///< Its board's batch painted with `board`
         std::string board;                          ///< Key of the board's picture in LedSigns::textures

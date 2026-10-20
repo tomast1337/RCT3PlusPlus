@@ -56,3 +56,19 @@ TEST_CASE("in the dark a family heads for the gate and goes home, together")
     CHECK(r.all_of<Left>(child));
     CHECK_FALSE(r.all_of<Errand>(child));
 }
+
+TEST_CASE("guests done with the park go home by day: the broke with no cash machine, the miserable; content ones stay")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    auto& r = park.world().registry;
+    r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
+    const auto content = park.guest({ 5, 0 });
+    const auto broke = park.guest({ 5, 0 });
+    r.get<Wallet>(broke).cash = 0;
+    const auto miserable = park.guest({ 5, 0 });
+    r.get<Mood>(miserable).happiness = 0.05f;
+    CHECK(park.run_until([&] { return r.all_of<Left>(broke); }, 120));
+    CHECK(park.run_until([&] { return r.all_of<Left>(miserable); }, 1200));
+    CHECK_FALSE(r.all_of<Left>(content));
+}

@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstdint>
 #include <map>
+#include <ranges>
 #include <span>
 #include <utility>
 
@@ -509,6 +510,8 @@ namespace rct3::park
         for (std::size_t i = 0; i < model.default_colours.size(); ++i)
             model.default_colours[i] = static_cast<std::int32_t>(item->default_colours[i]);
         model.photo_spot = std::ranges::contains(item->parameters, std::string_view { "VistaPoint" }, &ovl::SceneryItemParameter::name);
+        // A setting's words, such as " EnableNoEntry QueueSign".
+        model.no_entry = std::ranges::any_of(item->parameters, [](const ovl::SceneryItemParameter& p) { return std::ranges::any_of(std::views::split(p.value, ' '), [](const auto word) { return strings::equals_ignoring_case(std::string_view(word), "EnableNoEntry"); }); });
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
         // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.
         model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0 && item->type <= std::to_underlying(ItemCategory::Flowers);

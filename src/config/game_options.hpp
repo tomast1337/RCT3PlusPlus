@@ -59,6 +59,7 @@ namespace rct3::config
         CameraFocusOnMiddle,
         FreeLookSpeed,
         IsometricRotation, ///< How far the pointer moves before the isometric view turns
+        PathCameraFollow,  ///< Ours: the camera follows the path being laid; the path panel's tab, not in the dialog
 
         // Graphics
         GraphicsQuality, ///< 0 to 4 from fastest to finest, 5 custom

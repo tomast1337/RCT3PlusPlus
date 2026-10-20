@@ -59,7 +59,8 @@
             "Occupied": "Another path is in the way",
             "Blocked": "Something is in the way",
             "RouteHelp": "Route: point at a tile and the path finds its own way there from the arrow",
-            "NoRoute": "No way there"
+            "NoRoute": "No way there",
+            "RemoveHelp": "Remove: click a path to take it away, or drag over paths; refunds what laying them costs"
         },
         "Command": {
             "Cancel": "Close, cancel, go back",

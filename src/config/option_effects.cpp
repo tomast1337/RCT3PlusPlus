@@ -21,6 +21,7 @@ namespace rct3::config
             O::CycleMenuMusic,
             O::ShuffleBackgroundMusic,
             O::MenuTrack,
+            O::PathCameraFollow,
             O::AutoScrollAtEdge, // The park's camera
             O::GraphicsQuality,  // Only which rows the window shows, for now
             O::ShowDetailLevels, // Likewise

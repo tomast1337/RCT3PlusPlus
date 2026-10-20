@@ -3,7 +3,9 @@
 
 #include "park/path_decks.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
+#include <ranges>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -134,6 +136,37 @@ TEST_CASE("laying walks on, over paths already there, and removing steps back")
     CHECK_FALSE(remove_last(b, paths));
 }
 
+TEST_CASE("removing paths backs the trail up from its end, newest first, and lets go of it from further back")
+{
+    const save::TerrainGrid g = owned_grid(1, 6);
+    const auto ids = [](const std::vector<save::PathTile>& taken) { return taken | std::views::transform(&save::PathTile::id) | std::ranges::to<std::vector>(); };
+    const auto lay_trail = [&](FootpathBuilder& b, std::vector<save::PathTile>& paths) {
+        paths = { ground_path({ 0, 5 }, "Old", 99) };
+        b = { };
+        start_at(b, { 0, 0 });
+        for (std::uint64_t id = 1; id <= 4; ++id)
+            REQUIRE(lay_path(b, paths, *next_piece(b, g), "Gravel", id, 0));
+    };
+    FootpathBuilder b;
+    std::vector<save::PathTile> paths;
+
+    // A drag from the trail's third piece to its end: the end goes first, and the arrow backs up over both.
+    lay_trail(b, paths);
+    const std::vector<std::uint64_t> back { 3, 4 };
+    CHECK(ids(remove_paths(b, paths, back)) == std::vector<std::uint64_t> { 4, 3 });
+    CHECK(b.start.has_value());
+    CHECK(b.trail.size() == 2);
+    CHECK(next_spot(b) == save::Tile { 0, 2 });
+
+    // The trail's second piece and a path the trail never laid: the trail is let go, both are taken.
+    lay_trail(b, paths);
+    const std::vector<std::uint64_t> middle { 2, 99, 50 };
+    CHECK(ids(remove_paths(b, paths, middle)) == std::vector<std::uint64_t> { 2, 99 });
+    CHECK_FALSE(b.start.has_value());
+    CHECK(b.trail.empty());
+    CHECK(ids(paths) == std::vector<std::uint64_t> { 1, 3, 4 });
+}
+
 TEST_CASE("slopes climb off the ground and later pieces start where the last ended")
 {
     const save::TerrainGrid g = owned_grid(6, 6);
@@ -234,6 +267,28 @@ TEST_CASE("a raised piece costs more for each started unit of height")
     CHECK(piece_cost(1200, true, 0.25f) == 1200 + kRaisedPieceCost);
     CHECK(piece_cost(1200, true, 1.0f) == 1200 + kRaisedPieceCost);
     CHECK(piece_cost(1200, true, 2.5f) == 1200 + 3 * kRaisedPieceCost);
+}
+
+TEST_CASE("taking a piece away pays back what laying it cost")
+{
+    const save::TerrainGrid g = owned_grid(8, 8);
+    FootpathBuilder b;
+    start_at(b, { 1, 0 });
+    std::vector<save::PathTile> paths;
+    std::uint64_t id = 1;
+    std::vector<std::int64_t> paid;
+    for (const PathSlope slope : { PathSlope::Flat, PathSlope::Up, PathSlope::SteepUp, PathSlope::Flat, PathSlope::Down })
+    {
+        b.slope = slope;
+        const NextPiece piece = *next_piece(b, g);
+        paid.push_back(piece_price(piece, g, 1200));
+        REQUIRE(lay_path(b, paths, piece, "Gravel", id, piece.ground ? 0 : id + 1));
+        id += 2;
+    }
+    REQUIRE(paths.size() == paid.size());
+    CHECK(paid.back() > 1200); // Raised by then
+    for (std::size_t i = 0; i < paths.size(); ++i)
+        CHECK(laid_price(paths[i], g, 1200) == paid[i]);
 }
 
 TEST_CASE("another path within headroom takes the tile; one far enough above or below does not")
@@ -340,4 +395,41 @@ TEST_CASE("a trail's first piece set off the ground is raised, and set deep unde
     // Starting again puts the first piece back on the ground.
     start_at(b, { 2, 2 });
     CHECK(next_piece(b, g)->start == 0);
+}
+
+TEST_CASE("only the controls that lead to a piece that fits can be used")
+{
+    const auto usable = [](const std::array<bool, kPathControlCount>& u, PathControl c) { return u.at(static_cast<std::size_t>(c)); };
+    const save::TerrainGrid g = owned_grid(4, 4);
+    FootpathBuilder b;
+    start_at(b, { 0, 3 });
+    std::vector<save::PathTile> paths;
+    REQUIRE(lay_path(b, paths, *next_piece(b, g), "Gravel", 1, 0));
+    // Heading 0 leaves the park from row 3; turning left leaves it from column 0; turning right stays in.
+    auto u = fitting_controls(b, g, paths);
+    CHECK_FALSE(usable(u, PathControl::Straight));
+    CHECK_FALSE(usable(u, PathControl::Flat));
+    CHECK_FALSE(usable(u, PathControl::Up));
+    CHECK_FALSE(usable(u, PathControl::TurnLeft));
+    CHECK(usable(u, PathControl::TurnRight));
+    CHECK(usable(u, PathControl::CutIntoGround));
+    CHECK_FALSE(usable(u, PathControl::Remove));
+    // Facing into the park, up fits and down goes into the ground unless cutting.
+    b.heading = 1;
+    u = fitting_controls(b, g, paths);
+    CHECK(usable(u, PathControl::Straight));
+    CHECK(usable(u, PathControl::Up));
+    CHECK_FALSE(usable(u, PathControl::Down));
+    b.cut_into_ground = true;
+    CHECK(usable(fitting_controls(b, g, paths), PathControl::Down));
+
+    // A one-tile park: nothing fits whichever way, so only the cut switch is left.
+    const save::TerrainGrid one = owned_grid(1, 1);
+    FootpathBuilder lone;
+    start_at(lone, { 0, 0 });
+    std::vector<save::PathTile> lone_paths;
+    REQUIRE(lay_path(lone, lone_paths, *next_piece(lone, one), "Gravel", 1, 0));
+    u = fitting_controls(lone, one, lone_paths);
+    CHECK(std::ranges::count(u, true) == 1);
+    CHECK(usable(u, PathControl::CutIntoGround));
 }

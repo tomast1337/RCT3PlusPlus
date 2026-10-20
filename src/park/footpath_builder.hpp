@@ -44,6 +44,7 @@
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -189,8 +190,18 @@ namespace rct3::park
     /// path removed.
     std::optional<save::PathTile> remove_last(FootpathBuilder& builder, std::vector<save::PathTile>& paths);
 
+    /// Takes the paths `ids` away from `paths`, returning them in the order taken. Those at the trail's end go
+    /// first, newest first, stepping the trail back over them, so the arrow backs up; a piece further back on
+    /// the trail lets go of it, since the trail no longer leads on from its last piece.
+    std::vector<save::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::PathTile>& paths, std::span<const std::uint64_t> ids);
+
     /// Whether the turn controls can be used now.
     [[nodiscard]] bool can_turn(const FootpathBuilder& builder) noexcept;
+
+    /// Which controls lead to a piece that can be laid from where the trail stands: a turn when some slope fits
+    /// that way, a slope when it fits the way the trail heads, Straight when the piece as chosen fits. The cut
+    /// switch can always be used, since cutting can make a piece fit; Remove is left to the caller.
+    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 
     /// The slope control that picks `slope`, and the slope a control picks (Flat for those that pick none).
     [[nodiscard]] PathControl slope_control(PathSlope slope) noexcept;
@@ -227,5 +238,8 @@ namespace rct3::park
 
     /// The price of `piece` on `grid` of a style that costs `ground_cost` on the ground.
     [[nodiscard]] std::int64_t piece_price(const NextPiece& piece, const save::TerrainGrid& grid, std::int32_t ground_cost);
+
+    /// What laying `path` cost, worked out again from where it lies, for paying it back when it is taken away.
+    [[nodiscard]] std::int64_t laid_price(const save::PathTile& path, const save::TerrainGrid& grid, std::int32_t ground_cost);
 
 } // namespace rct3::park

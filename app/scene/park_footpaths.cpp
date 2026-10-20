@@ -600,6 +600,40 @@ namespace rct3::scene
             return found != f.styles.end() ? &*found : nullptr;
         }
 
+        /// What taking `path` away pays back: what laying it cost.
+        std::int64_t refund_of(const ParkScene& scene, const save::PathTile& path)
+        {
+            const park::PathStyle* style = style_named(scene.footpaths, path);
+            return style != nullptr ? park::laid_price(path, scene.grid, style->piece_cost) : 0;
+        }
+
+        /// The paths the remove tab would take away, red over themselves: those a press went over and the one
+        /// pointed at.
+        void remove_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            ParkFootpaths& f = scene.footpaths;
+            std::vector<save::PathTile> ground;
+            std::vector<save::Tile> spots;
+            std::vector<save::PlacedObject> decks;
+            for (const save::PathTile& p : f.paths)
+            {
+                if (!std::ranges::contains(f.remove_marked, p.id) && p.id != f.remove_hover)
+                    continue;
+                if (!p.elevation || park::is_ground_queue(p))
+                {
+                    ground.push_back(p);
+                    spots.push_back({ p.col, p.row });
+                }
+                else if (const auto deck = std::ranges::find(scene.objects, p.elevation->scenery_ref, &save::PlacedObject::id); deck != scene.objects.end())
+                    decks.push_back(*deck);
+            }
+            f.ghost = ground_ghost(device, scene, assets, ground, spots, kRefusedTint);
+            f.raised_ghost = park::object_mesh(decks, scene.models, scene.grid);
+            for (park::GroundVertex& v : f.raised_ghost.vertices)
+                v.colour *= kRefusedTint;
+            ghost_textures(device, scene, f.raised_ghost);
+        }
+
         /// The route shown as it would be laid: its ground pieces over the ground, its raised ones as their decks
         /// and supports.
         void route_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
@@ -675,6 +709,11 @@ namespace rct3::scene
                     v.colour = allowed ? glm::vec4(1.0f) : kRefusedTint;
                     v.position.y += kArrowLift;
                 }
+            }
+            if (f.removing)
+            {
+                remove_ghost(device, scene, assets);
+                return;
             }
             if (const auto& plan = f.plan)
             {
@@ -904,6 +943,11 @@ namespace rct3::scene
             });
             if (high.col < 0)
                 return;
+            for (const save::PathTile& p : taken)
+            {
+                if (scene.park.cash)
+                    *scene.park.cash += refund_of(scene, p);
+            }
             sim_paths(scene, { }, taken);
             refresh_area(scene, assets, low, high);
             objects_changed(scene);
@@ -1013,6 +1057,8 @@ namespace rct3::scene
         void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& removed)
         {
             ParkFootpaths& f = scene.footpaths;
+            if (scene.park.cash)
+                *scene.park.cash += refund_of(scene, removed);
             wait_for_build(scene);
             std::vector<std::uint64_t> gone = std::move(f.supports[removed.id]);
             f.supports.erase(removed.id);
@@ -1049,26 +1095,18 @@ namespace rct3::scene
                 take_away(device, scene, assets, *removed);
         }
 
-        /// Sells path `id`: takes it away and pays back its style's price on the ground.
-        void sell(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::uint64_t id)
+        /// Takes paths `ids` away, the trail backing up over its own (park::remove_paths).
+        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
         {
             ParkFootpaths& f = scene.footpaths;
-            const auto at = std::ranges::find(f.paths, id, &save::PathTile::id);
-            if (at == f.paths.end())
-                return;
-            // shortcut: pays back the ground price even for raised and tunnel pieces; pay what laying it cost
-            // once paths keep their price.
-            const park::PathStyle* style = style_named(f, *at);
-            const save::PathTile sold = std::move(*at);
-            f.paths.erase(at);
-            // Indices into the paths and the trail's last piece may point at what is gone.
+            // Indices into the paths may point at what is gone, and the last stroke or route may be part of it.
             f.hover.reset();
             f.hover_edge.reset();
-            if (!f.builder.trail.empty() && f.builder.trail.back().laid == id)
-                f.builder.trail.pop_back();
-            if (scene.park.cash && style != nullptr)
-                *scene.park.cash += style->piece_cost;
-            take_away(device, scene, assets, sold);
+            f.stroke.clear();
+            f.route_laid = 0;
+            // shortcut: builds the ground again for each path taken; once per drag if long drags are slow.
+            for (const save::PathTile& gone : park::remove_paths(f.builder, f.paths, ids))
+                take_away(device, scene, assets, gone);
         }
 
         std::u16string problem_text(const ui::InterfaceAssets& assets, park::LayProblem problem)
@@ -1169,6 +1207,7 @@ namespace rct3::scene
         auto [paths, queues] = panel_styles(f, assets, options);
         panel->show(std::move(paths), std::move(queues));
         panel->set_chosen(pick_of(f));
+        panel->set_following(options.flag(config::GameOption::PathCameraFollow));
         f.dirty = true;
     }
 
@@ -1241,10 +1280,30 @@ namespace rct3::scene
             f.route_goal_height.reset();
             f.dirty = true;
         }
+        if (panel->following() != options.flag(config::GameOption::PathCameraFollow))
+            f.follow_changed = panel->following();
+        if (panel->removing() != f.removing)
+        {
+            f.removing = panel->removing();
+            f.remove_hover.reset();
+            f.remove_marked.clear();
+            f.hover.reset();
+            f.hover_edge.reset();
+            f.hover_door.reset();
+            f.hover_tile.reset();
+            f.dirty = true;
+        }
         if (const auto id = std::exchange(f.sell, std::nullopt))
         {
             f.notice.clear();
-            sell(device, scene, assets, *id);
+            take_paths(device, scene, assets, std::span(&*id, 1));
+            f.dirty = true;
+        }
+        if (std::exchange(f.remove_now, false))
+        {
+            f.notice.clear();
+            take_paths(device, scene, assets, std::exchange(f.remove_marked, { }));
+            f.remove_hover.reset();
             f.dirty = true;
         }
         if (const auto control = panel->take_control(); control && *control < park::kPathControlCount)
@@ -1280,12 +1339,18 @@ namespace rct3::scene
         }
         else if (!panel->following())
             f.camera_goal.reset();
+        // Once a trail is started only the controls that lead to a piece that fits; before, any slope may be
+        // picked for the first piece.
         std::array<bool, ui::kFootpathControls> usable { };
-        usable.fill(true);
-        const bool turn = park::can_turn(f.builder);
-        usable.at(static_cast<std::size_t>(park::PathControl::TurnLeft)) = turn;
-        usable.at(static_cast<std::size_t>(park::PathControl::TurnRight)) = turn;
-        usable.at(static_cast<std::size_t>(park::PathControl::Straight)) = problem == park::LayProblem::None;
+        if (f.builder.start)
+            usable = park::fitting_controls(f.builder, scene.grid, f.paths, f.solids);
+        else
+        {
+            usable.fill(true);
+            usable.at(static_cast<std::size_t>(park::PathControl::TurnLeft)) = park::can_turn(f.builder);
+            usable.at(static_cast<std::size_t>(park::PathControl::TurnRight)) = park::can_turn(f.builder);
+            usable.at(static_cast<std::size_t>(park::PathControl::Straight)) = problem == park::LayProblem::None;
+        }
         usable.at(static_cast<std::size_t>(park::PathControl::Remove)) = !f.builder.trail.empty() || !f.stroke.empty() || f.route_laid > 0;
         panel->set_controls(usable, static_cast<std::size_t>(park::slope_control(f.builder.slope)), f.builder.cut_into_ground);
 
@@ -1409,6 +1474,32 @@ namespace rct3::scene
             f.dirty = true;
             return;
         }
+        // With the remove tab on, a press takes away the path pointed at and every path passed over until let go.
+        if (f.removing)
+        {
+            if (cancel)
+            {
+                if (!std::exchange(f.remove_marked, { }).empty())
+                    f.dirty = true;
+                return;
+            }
+            const auto ray = over ? std::nullopt : controls_ray(scene, at, size);
+            const auto under = ray ? park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
+            const auto id = under ? std::optional(f.paths[under->path].id) : std::nullopt;
+            if (id != f.remove_hover)
+            {
+                f.remove_hover = id;
+                f.dirty = true;
+            }
+            if (down && id && !std::ranges::contains(f.remove_marked, *id))
+            {
+                f.remove_marked.push_back(*id);
+                f.dirty = true;
+            }
+            else if (!down && !f.remove_marked.empty())
+                f.remove_now = true;
+            return;
+        }
         // Shift raises or sinks the trail's first piece with the pointer; a press lays it, as on the arrow.
         if (!shift)
             f.lift.reset();
@@ -1527,7 +1618,9 @@ namespace rct3::scene
             // Or a ride's door, before what is behind it.
             std::optional<std::pair<std::size_t, std::uint8_t>> edge;
             std::optional<std::array<std::int32_t, 4>> door;
-            if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
+            // While a trail goes on its arrow holds still: nothing else pointed at shows.
+            const bool held = f.builder.start.has_value();
+            if (const auto ray = over || held ? std::nullopt : controls_ray(scene, at, size))
             {
                 const std::vector<save::PlacementSpot> doors = ride_doors(scene.rides);
                 if (const auto d = park::door_under(*ray, doors, scene.grid, ground_faded(scene)))
@@ -1554,9 +1647,7 @@ namespace rct3::scene
                 f.dirty = true;
             }
             // Bare ground pointed at, away from the trail's next piece, which has its own arrow.
-            std::optional<save::Tile> tile = edge || door || over ? std::nullopt : controls_tile(scene, at, size);
-            if (tile && f.builder.start && tile == park::next_spot(f.builder))
-                tile.reset();
+            const std::optional<save::Tile> tile = edge || door || over || held ? std::nullopt : controls_tile(scene, at, size);
             if (tile != f.hover_tile)
             {
                 f.hover_tile = tile;
@@ -1600,7 +1691,7 @@ namespace rct3::scene
 
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size, bool control)
     {
-        if (std::exchange(scene.footpaths.took_click, false))
+        if (std::exchange(scene.footpaths.took_click, false) || scene.footpaths.removing)
             return true;
         const auto tile = controls_tile(scene, at, size);
         if (!tile)
@@ -1629,22 +1720,28 @@ namespace rct3::scene
         if (!f.brush.empty() || f.slope_press)
             return false;
         // A trail going on lets go of its arrow first, as in the game; the next right click sells.
-        if (f.builder.start)
-        {
-            f.builder.start.reset();
-            f.builder.start_height.reset();
-            f.builder.trail.clear();
-            f.builder.on_slope = false;
-            f.lift.reset();
-            f.route_goal.reset();
-            f.dirty = true;
+        if (drop_footpath_trail(scene))
             return true;
-        }
         const auto ray = controls_ray(scene, at, size);
         const auto under = ray ? park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
         if (!under)
             return false;
         f.sell = f.paths[under->path].id;
+        return true;
+    }
+
+    bool drop_footpath_trail(ParkScene& scene)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (!f.builder.start)
+            return false;
+        f.builder.start.reset();
+        f.builder.start_height.reset();
+        f.builder.trail.clear();
+        f.builder.on_slope = false;
+        f.lift.reset();
+        f.route_goal.reset();
+        f.dirty = true;
         return true;
     }
 

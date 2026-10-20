@@ -772,7 +772,8 @@ namespace rct3::scene
         desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
         // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
-        // answers it. An open build list takes it first, to empty its search and then to close.
+        // answers it. An open build list takes it first, to empty its search and then to close; a path trail
+        // going on is let go before anything closes.
         const bool asking = desktop.root().find(kQuestionName).has_value();
         ui::KeyboardState keys = keyboard;
         if (!asking && !build_list_open(desktop.root()))
@@ -781,7 +782,7 @@ namespace rct3::scene
             auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
             if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
-            else if (!escape.empty() && !close_top_management_window(desktop))
+            else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings);
             keys.presses.erase(escape.begin(), escape.end());
         }

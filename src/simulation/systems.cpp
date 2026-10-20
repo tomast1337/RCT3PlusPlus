@@ -1233,7 +1233,7 @@ namespace rct3::simulation
                             const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
                             const bool sweltering = sun && feel.heat >= kTuning.needs.want;
                             if (!goal && (rained_on ? !paths.nodes()[at].covered : sweltering && !paths.nodes()[at].shaded))
-                                if (const auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->second.empty())
+                                if (auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->second.empty())
                                     stride.route = std::move(refuge->second);
                             if (goal)
                             {

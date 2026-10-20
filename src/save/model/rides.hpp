@@ -342,6 +342,7 @@ namespace rct3::save
     /// and how long it had been in the state. Other numbers are valid values of the type too.
     enum class TrainState : std::int32_t
     {
+        None = 0,      ///< The save holds no state for it
         Waiting = 1,   ///< Standing still at its station, for minutes at a time (112 trains, 24 saves)
         Running = 13,  ///< Moving round its track away from the stations (294 trains, 25 saves)
         Arriving = 22, ///< Slowing to a stop on a station platform (140 trains, 18 saves)
@@ -351,6 +352,7 @@ namespace rct3::save
     /// What a car is doing, as the number it is stored as; named as TrainState is, from the trains they are in.
     enum class CarState : std::int32_t
     {
+        None = 0,     ///< The save holds no state for it
         Running = 1,  ///< In a running train, out on the track (935 cars)
         Arriving = 2, ///< In a train arriving at a station (104 cars)
         Waiting = 13, ///< Still on a station platform, in a waiting train (459 cars)

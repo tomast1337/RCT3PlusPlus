@@ -357,6 +357,7 @@ namespace rct3::parkfile::detail
         else
         {
             const auto& [... members] = value;
+            // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): the analyzer loses track of structured binding packs
             (put(w, members), ...);
         }
     }
@@ -420,6 +421,7 @@ namespace rct3::parkfile::detail
         else
         {
             auto& [... members] = value;
+            // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): the analyzer loses track of structured binding packs
             (get(r, members), ...);
         }
     }

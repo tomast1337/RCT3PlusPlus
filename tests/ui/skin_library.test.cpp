@@ -69,10 +69,10 @@ TEST_CASE("state lookups fall back to the nearest member of the family")
 TEST_CASE("drawing a missing skin draws nothing")
 {
     DrawList list;
-    draw_skin(list, nullptr, { 0, 0, 10, 10 });
+    draw_skin(list, std::nullopt, { 0, 0, 10, 10 });
     CHECK(list.vertices().empty());
     const SkinRef s = skin(4);
-    draw_skin(list, &s, { 0, 0, 10, 10 });
+    draw_skin(list, s, { 0, 0, 10, 10 });
     REQUIRE(list.batches().size() == 1);
     CHECK(list.batches()[0].texture == 4);
 }

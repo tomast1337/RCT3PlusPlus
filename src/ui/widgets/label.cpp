@@ -15,9 +15,9 @@ namespace rct3::ui
 
     void Label::update(const UpdateContext& context)
     {
-        const Font* f = context.fonts != nullptr ? context.fonts->get(font) : nullptr;
+        const auto f = context.fonts ? context.fonts->get(font) : std::nullopt;
         text_size_ = { };
-        if (f == nullptr)
+        if (!f)
             return;
         const auto lines = break_lines(*f, text, style.wrap ? rect().width() : 0);
         for (const TextLine& line : lines)
@@ -37,7 +37,7 @@ namespace rct3::ui
 
     void Label::draw(DrawContext& context) const
     {
-        if (const Font* f = context.fonts.get(font))
+        if (const auto f = context.fonts.get(font))
             draw_text(context.list, *f, text, rect(), style);
     }
 

@@ -348,7 +348,7 @@ namespace
         const float y = p.y - static_cast<float>(view.y);
         const rct3::ui::Widget* before = in.picked;
         if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<float>(view.size.width) && y < static_cast<float>(view.size.height))
-            in.picked = rct3::ui::widget_at(desktop.root(), { x / in.scale, y / in.scale });
+            in.picked = rct3::as_pointer(rct3::ui::widget_at(desktop.root(), { x / in.scale, y / in.scale }));
         if (!rct3::ui::in_tree(desktop.root(), in.picked)) // Gone since: a window closed, or another screen
             in.picked = nullptr;
         in.newly_picked = in.picked != before;
@@ -517,7 +517,7 @@ int main(int argc, char** argv)
         if (!path)
             return;
         std::vector<config::FileProblem> problems;
-        if (auto loaded = T::load(*path, &problems))
+        if (auto loaded = T::load(*path, problems))
             into = std::move(*loaded);
         else
             log.warning("{}", loaded.error());

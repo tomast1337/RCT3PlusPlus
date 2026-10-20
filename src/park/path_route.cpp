@@ -63,7 +63,7 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, const SolidTiles* solids)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
             return std::nullopt;

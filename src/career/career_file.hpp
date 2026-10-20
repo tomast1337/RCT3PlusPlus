@@ -67,7 +67,7 @@ namespace rct3::career
 
     /// The careers of game `pack` in `folder`, in the order of their file names. Files that do not read are
     /// reported and left out.
-    [[nodiscard]] std::vector<CareerEntry> list_careers(const std::filesystem::path& folder, int pack, std::vector<config::FileProblem>* problems);
+    [[nodiscard]] std::vector<CareerEntry> list_careers(const std::filesystem::path& folder, int pack, std::optional<std::vector<config::FileProblem>&> problems);
 
     /// The first file name "career_NNNN" in `folder` that neither a career nor its folder of games uses.
     [[nodiscard]] std::filesystem::path free_career_path(const std::filesystem::path& folder);

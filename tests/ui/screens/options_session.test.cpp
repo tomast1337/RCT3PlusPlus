@@ -32,15 +32,15 @@ namespace
 TEST_CASE("the window opens once and its closing is told once")
 {
     Fixture f;
-    CHECK(f.session.window() == nullptr);
+    CHECK(!f.session.window());
     f.session.open();
     f.session.open();
     f.step();
-    REQUIRE(f.session.window() != nullptr);
+    REQUIRE(f.session.window());
     CHECK(f.desktop.root().children().size() == 1);
     CHECK_FALSE(f.session.take_closed());
     f.session.close();
-    CHECK(f.session.window() == nullptr);
+    CHECK(!f.session.window());
     CHECK(f.session.take_closed());
     CHECK_FALSE(f.session.take_closed());
 }
@@ -50,10 +50,10 @@ TEST_CASE("keys picked show in the next window")
     Fixture f;
     f.session.open();
     f.step();
-    OptionsDialog* dialog = f.session.window();
-    REQUIRE(dialog != nullptr);
+    auto dialog = f.session.window();
+    REQUIRE(dialog);
     dialog->show_page(OptionsPage::Keys);
-    auto* usual = dynamic_cast<Button*>(dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys"));
+    auto usual = dynamic_cast<Button*>(rct3::as_pointer(dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
     REQUIRE(usual != nullptr);
     f.session.choices().keys.bind(Command::Copy, { Key::F3 }); // As if set before
     usual->click();

@@ -99,7 +99,7 @@ namespace rct3::ui
         if (buttons_.empty())
             Window::update(context);
 
-        if (const Font* f = context.fonts != nullptr ? context.fonts->get(style_.font) : nullptr)
+        if (const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt)
         {
             const auto lines = break_lines(*f, text_->text, style_.text_width);
             fit(static_cast<float>(lines.size()) * f->line_height());

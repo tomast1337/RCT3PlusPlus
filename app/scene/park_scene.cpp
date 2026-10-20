@@ -90,7 +90,7 @@ namespace rct3::scene
 
         void ask_leave(ParkScene& scene, const ui::StringTable& strings)
         {
-            if (scene.desktop->root().find(kQuestionName) != nullptr)
+            if (scene.desktop->root().find(kQuestionName))
                 return;
             const ui::QuestionBoxStyle style = skins::question_box_style();
             scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
@@ -460,9 +460,9 @@ namespace rct3::scene
             save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
             save::Stall* stall = ref.kind == park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
             const auto wait_on = [&](std::int32_t& wait, ui::AttractionControl seconds) {
-                ui::Widget* const field = panel.control(ui::control_id(seconds));
-                wait = change.value != 0 ? (field != nullptr ? static_cast<const ui::Spinner*>(field)->value() : 0) : -1;
-                if (field != nullptr)
+                const auto field = panel.control(ui::control_id(seconds));
+                wait = change.value != 0 ? (field ? static_cast<const ui::Spinner&>(*field).value() : 0) : -1;
+                if (field)
                     field->enabled = change.value != 0;
             };
             if (change.id == ui::control_id(Colours))
@@ -742,7 +742,7 @@ namespace rct3::scene
 
     bool typing(const ParkScene& scene)
     {
-        return scene.desktop && dynamic_cast<const ui::EditBox*>(scene.desktop->keyboard_focus()) != nullptr;
+        return scene.desktop && dynamic_cast<const ui::EditBox*>(as_pointer(scene.desktop->keyboard_focus())) != nullptr;
     }
 
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size)
@@ -766,13 +766,13 @@ namespace rct3::scene
 
         // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
         // answers it. An open build list takes it first, to empty its search and then to close.
-        const bool asking = desktop.root().find(kQuestionName) != nullptr;
+        const bool asking = desktop.root().find(kQuestionName).has_value();
         ui::KeyboardState keys = keyboard;
         if (!asking && !build_list_open(desktop.root()))
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
-            auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName));
-            if (!escape.empty() && tools != nullptr && tools->open_menu())
+            auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
+            if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
             else if (!escape.empty() && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings);
@@ -785,10 +785,10 @@ namespace rct3::scene
         const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
-        auto* info = static_cast<ui::InfoPanel*>(desktop.root().find(kInfoName));
+        auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName);
         // What a click would open, for the pointer's look; not looked at every frame, as picking walks the park.
         scene.since_hover_pick += elapsed;
-        if (over || !pointer.present || info == nullptr || scene.turning || scene.dragging)
+        if (over || !pointer.present || !info || scene.turning || scene.dragging)
             scene.hover_pickable = false;
         else if (scene.since_hover_pick >= kHoverPickInterval)
         {
@@ -798,7 +798,7 @@ namespace rct3::scene
             scene.hover_pickable = picked.person || picked.attraction || picked.prop;
             scene.since_hover_pick = 0;
         }
-        if (info != nullptr)
+        if (info)
         {
             const profiling::Scope zone("InfoPanel");
             // Pressing the park puts open colours away without picking.
@@ -978,8 +978,8 @@ namespace rct3::scene
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
-        auto* bar = static_cast<ui::ParkBar*>(desktop.root().find(kBarName));
-        if (bar != nullptr)
+        auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
+        if (bar)
         {
             if (const auto asked = bar->take_speed())
                 scene.park.speed = *asked;
@@ -1150,7 +1150,7 @@ namespace rct3::scene
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 
         const profiling::Scope zone("Bar");
-        if (bar != nullptr)
+        if (bar)
         {
             ui::ParkBarUnits units;
             units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
@@ -1159,12 +1159,12 @@ namespace rct3::scene
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             bar->show(ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units));
         }
-        if (auto* messages = static_cast<ui::MessageDrawer*>(desktop.root().find(kMessagesName)))
+        if (auto messages = desktop.root().find_as<ui::MessageDrawer>(kMessagesName))
         {
             messages->show(ui::drawer_messages(scene.park.messages, *assets.strings));
             scene.message_alert = scene.message_alert || messages->take_alert();
         }
-        if (auto* tools = static_cast<ui::ToolRow*>(desktop.root().find(kToolsName)))
+        if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName))
         {
             const std::optional<ui::ParkTool> pressed = tools->take_pressed();
             if (pressed == ui::ParkTool::Leave)
@@ -1222,7 +1222,7 @@ namespace rct3::scene
             }
         }
         update_view_lines(device, scene);
-        if (auto* heights = static_cast<ui::WorldLabels*>(desktop.root().find(kHeightsName)))
+        if (auto heights = desktop.root().find_as<ui::WorldLabels>(kHeightsName))
         {
             const ui::Rect view = desktop.root().rect();
             heights->labels = height_labels(scene, { view.width(), view.height() });
@@ -1232,13 +1232,13 @@ namespace rct3::scene
             scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
             scene.camera = park::on_ground(scene.camera, scene.grid);
         }
-        if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info != nullptr)
+        if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info)
             open_row(scene, *info, *row, assets, options);
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         follow_footpaths(scene, elapsed);
-        if (auto* guide = static_cast<ui::TutorialGuide*>(desktop.root().find(kGuideName)); guide != nullptr && guide->take_quit())
+        if (auto guide = desktop.root().find_as<ui::TutorialGuide>(kGuideName); guide && guide->take_quit())
             ask_leave(scene, *assets.strings);
-        if (auto* question = static_cast<ui::QuestionBox*>(desktop.root().find(kQuestionName)))
+        if (auto question = desktop.root().find_as<ui::QuestionBox>(kQuestionName))
         {
             if (const auto answer = question->take_answer())
                 scene.leave = scene.leave || *answer == 0;
@@ -1269,7 +1269,7 @@ namespace rct3::scene
         pointer.zooming = scene.zooming;
         pointer.over_pickable = scene.hover_pickable;
         // While the path panel shows its controls, a click on the ground starts a path there.
-        if (const auto* paths = static_cast<const ui::FootpathPanel*>(scene.desktop->root().find(kFootpathPanelName)); paths != nullptr && paths->showing() && paths->page() == ui::FootpathPage::Controls)
+        if (auto paths = scene.desktop->root().find_as<const ui::FootpathPanel>(kFootpathPanelName); paths && paths->showing() && paths->page() == ui::FootpathPage::Controls)
             pointer.tool = ui::PointerTool::Path;
         return ui::park_cursor(pointer);
     }

@@ -87,7 +87,7 @@ namespace rct3::ui
         const Rect& s = start_rect_;
         const float dx = p.x - grab_.x;
         const float dy = p.y - grab_.y;
-        const Rect bounds = parent() != nullptr ? parent()->rect() : s;
+        const Rect bounds = parent() ? parent()->rect() : s;
         const float min_w = std::min(min_size.x, s.width());
         const float min_h = std::min(min_size.y, s.height());
 
@@ -110,7 +110,7 @@ namespace rct3::ui
     void Window::set_height(float height)
     {
         // Both vertical edges hang from the same fraction of the desktop, as a window's do.
-        placement.offsets.y1 = placement.offsets.y0 + height + (placement.anchors.y0 - placement.anchors.y1) * (parent() != nullptr ? parent()->rect().height() : 0);
+        placement.offsets.y1 = placement.offsets.y0 + height + (placement.anchors.y0 - placement.anchors.y1) * (parent() ? parent()->rect().height() : 0);
     }
 
     void Window::on_press(Point p)
@@ -172,8 +172,8 @@ namespace rct3::ui
         const Rect& r = rect();
         const Rect& in = style_.background_inset;
         const Rect back { r.x0 + in.x0, r.y0 + in.y0, r.x1 - in.x1, r.y1 - in.y1 };
-        const SkinRef* background = context.skins.find(style_.background);
-        if (style_.tile_background && background != nullptr)
+        const auto background = context.skins.find(style_.background);
+        if (style_.tile_background && background)
         {
             const auto [w, h] = background->size();
             const bool pushed = w > 0 && h > 0;
@@ -205,7 +205,7 @@ namespace rct3::ui
         if (!style_.content_background.empty())
             draw_skin(context.list, context.skins.find(style_.content_background), content_->rect());
         draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
-        if (const SkinRef* skin = icon.empty() ? nullptr : context.skins.find(icon))
+        if (const auto skin = icon.empty() ? std::nullopt : context.skins.find(icon))
         {
             const auto [w, h] = skin->size();
             const Rect& b = style_.icon_box;
@@ -232,8 +232,8 @@ namespace rct3::ui
             }
         }
 
-        const Font* font = context.fonts.get(style_.title_font);
-        if (font == nullptr || title.empty())
+        const auto font = context.fonts.get(style_.title_font);
+        if (!font || title.empty())
             return;
         const Rect& t = style_.title_box;
         const Rect box { r.x0 + t.x0, r.y0 + t.y0, r.x1 - t.x1, r.y0 + t.y1 };

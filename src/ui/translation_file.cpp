@@ -39,7 +39,7 @@ namespace rct3::ui
     std::expected<StringTable, std::string> parse_translation(std::string_view text)
     {
         std::vector<config::FileProblem> problems;
-        const auto json = config::parse_json_object(text, &problems);
+        const auto json = config::parse_json_object(text, problems);
         if (!json)
             return std::unexpected(problems.empty() ? std::string("not JSON") : problems.front().message);
         StringTable table;
@@ -50,8 +50,8 @@ namespace rct3::ui
 
     std::string translation_path(std::string_view language)
     {
-        const LanguageInfo* info = find_language(language);
-        return "lang/" + std::string(info != nullptr ? info->tag : language) + ".json";
+        const auto info = find_language(language);
+        return "lang/" + std::string(info ? info->tag : language) + ".json";
     }
 
     StringTable own_strings(std::string_view language)

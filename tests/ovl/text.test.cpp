@@ -81,7 +81,7 @@ TEST_CASE("a text in the common file is readable from the unique file's symbols"
 
     auto overlay = Overlay::from_bytes(common, unique);
     REQUIRE(overlay.has_value());
-    REQUIRE(overlay->unique() != nullptr);
+    REQUIRE(overlay->unique());
     const auto items = read_texts(*overlay, *overlay->unique());
     REQUIRE(items.size() == 1);
     CHECK(items[0].name == "T");

@@ -16,6 +16,7 @@
 // ends. Up and down move the horizontal bar when there is no vertical one.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 
 #include <optional>
@@ -35,13 +36,13 @@ namespace rct3::ui
             return *content_;
         }
         /// Nothing when the area does not scroll that way.
-        [[nodiscard]] ScrollBar* vertical()
+        [[nodiscard]] std::optional<ScrollBar&> vertical()
         {
-            return vertical_;
+            return maybe(vertical_);
         }
-        [[nodiscard]] ScrollBar* horizontal()
+        [[nodiscard]] std::optional<ScrollBar&> horizontal()
         {
-            return horizontal_;
+            return maybe(horizontal_);
         }
 
         /// So a press on empty parts of the view stays in the interface and focuses the area.

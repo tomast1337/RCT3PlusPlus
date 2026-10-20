@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/language.hpp"
 
+#include "core/maybe.hpp"
+
 #include <algorithm>
 #include <system_error>
 
@@ -29,10 +31,10 @@ namespace rct3::ui
 
     } // namespace
 
-    const LanguageInfo* find_language(std::string_view name)
+    std::optional<const LanguageInfo&> find_language(std::string_view name)
     {
         const auto it = std::ranges::find_if(kLanguages, [&](const LanguageInfo& l) { return same_ignoring_case(l.name, name); });
-        return it != kLanguages.end() ? &*it : nullptr;
+        return it != kLanguages.end() ? maybe(&*it) : std::nullopt;
     }
 
     std::vector<std::string> languages_in(std::span<const std::string> file_names)

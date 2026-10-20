@@ -10,6 +10,7 @@
 // on the desktop before input and drawing use them.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/cursor.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
@@ -115,7 +116,14 @@ namespace rct3::ui
         void lower(const Widget& child);
 
         /// Follows a path of names separated by '/' down from this widget, e.g. "options/ok".
-        [[nodiscard]] Widget* find(std::string_view path) const;
+        [[nodiscard]] std::optional<Widget&> find(std::string_view path) const;
+        /// `find`, as the kind of widget the caller knows lives there.
+        template<typename T> [[nodiscard]] std::optional<T&> find_as(std::string_view path) const
+        {
+            if (auto w = find(path))
+                return static_cast<T&>(*w);
+            return std::nullopt;
+        }
 
         /// Asks the desktop to detach this widget after the current update.
         void close()

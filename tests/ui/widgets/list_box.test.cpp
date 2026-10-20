@@ -65,7 +65,7 @@ TEST_CASE("pressing a row selects it")
     CHECK(f.list.selected() == 2u);
     CHECK(f.list.take_change());
     CHECK_FALSE(f.list.take_change());
-    CHECK(f.desktop.keyboard_focus() == &f.list);
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.list);
     CHECK_FALSE(f.list.take_activate());
 
     SUBCASE("a second press soon after activates it")

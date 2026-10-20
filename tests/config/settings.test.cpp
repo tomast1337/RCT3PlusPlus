@@ -62,7 +62,7 @@ TEST_CASE("unset settings give their defaults")
 TEST_CASE("bad values are reported and skipped, the rest still apply")
 {
     std::vector<FileProblem> problems;
-    const auto settings = Settings::parse(R"({ "game_path": 3, "future_option": 3, "skip_intro": true, "interface_scale": 1.5 })", &problems);
+    const auto settings = Settings::parse(R"({ "game_path": 3, "future_option": 3, "skip_intro": true, "interface_scale": 1.5 })", problems);
     CHECK(settings.flag(Setting::SkipIntro));
     CHECK_FALSE(settings.is_set(Setting::GamePath));
     CHECK_FALSE(settings.is_set(Setting::InterfaceScale));
@@ -72,10 +72,10 @@ TEST_CASE("bad values are reported and skipped, the rest still apply")
     SUBCASE("a file that is not a JSON object is reported as a whole")
     {
         problems.clear();
-        CHECK_FALSE(Settings::parse("skip_intro = yes\n", &problems).is_set(Setting::SkipIntro));
+        CHECK_FALSE(Settings::parse("skip_intro = yes\n", problems).is_set(Setting::SkipIntro));
         CHECK(problems.size() == 1);
         problems.clear();
-        (void)Settings::parse("[1, 2]", &problems);
+        (void)Settings::parse("[1, 2]", problems);
         CHECK(problems.size() == 1);
     }
 }
@@ -95,7 +95,7 @@ TEST_CASE("the written file reads back the same, keeping unknown settings")
     CHECK(text.find(R"("future_option": {)") != std::string::npos);
 
     std::vector<FileProblem> problems;
-    const auto again = Settings::parse(text, &problems);
+    const auto again = Settings::parse(text, problems);
     for (const SettingInfo& info : settings_table())
     {
         CHECK(again.is_set(info.setting) == settings.is_set(info.setting));

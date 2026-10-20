@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front_screen.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/game_frames.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/text_layout.hpp"
@@ -118,8 +119,8 @@ namespace rct3::ui
         // A skin at its own size, scaled with the design frame, from a design corner.
         void draw_at_size(DrawContext& context, const fs::Frame& frame, std::string_view name, Point corner)
         {
-            const SkinRef* skin = context.skins.find(name);
-            if (skin == nullptr)
+            const auto skin = context.skins.find(name);
+            if (!skin)
                 return;
             const auto [w, h] = skin->size();
             draw_skin(context.list, skin, frame.stretched({ corner.x, corner.y, corner.x + w, corner.y + h }));
@@ -154,9 +155,9 @@ namespace rct3::ui
         const Color tint = s == SkinState::Disabled ? faded(kWhite, kDisabledAlpha) : kWhite;
         // The round picture at one scale, fitted to the button's width, so it stays round when the
         // picture is not quite square.
-        const SkinRef* picture = context.skins.find(skin);
+        const auto picture = context.skins.find(skin);
         Rect r = rect();
-        if (picture != nullptr)
+        if (picture)
         {
             const auto [w, h] = picture->size();
             if (w > 0 && h > 0)
@@ -168,8 +169,8 @@ namespace rct3::ui
 
     void FrontButton::draw_icon(DrawContext& context, Color tint) const
     {
-        const SkinRef* picture = icon.empty() ? nullptr : context.skins.find(icon);
-        if (picture == nullptr)
+        const auto picture = icon.empty() ? std::nullopt : context.skins.find(icon);
+        if (!picture)
             return;
         const Rect r = face();
         if (!icon_own_size)
@@ -187,7 +188,7 @@ namespace rct3::ui
     void draw_front_bands(DrawContext& context, const fs::Frame& frame)
     {
         // Drawn in code, the backdrop is one piece that reaches every edge of the screen, round on any.
-        if (const SkinRef* top = context.skins.find(kBandTopSkin); top != nullptr && top->coded != nullptr)
+        if (const auto top = context.skins.find(kBandTopSkin); top && top->coded)
         {
             draw_frame(context.list, game_frames::front_backdrop(frame.design_screen()), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
             return;
@@ -201,14 +202,14 @@ namespace rct3::ui
     {
         // Always drawn in code: our layout does not place the game's arc pictures.
         draw_frame(context.list, game_frames::front_arc(), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
-        draw_at_size(context, frame, context.skins.find(logo) != nullptr ? logo : kLogoSkin, fs::kLogo);
+        draw_at_size(context, frame, context.skins.find(logo) ? logo : kLogoSkin, fs::kLogo);
     }
 
     void draw_front_help(DrawContext& context, const fs::Frame& frame, std::u16string_view title, std::u16string_view text)
     {
-        if (const Font* f = context.fonts.get(FontRole::ScaledLarge))
+        if (const auto f = context.fonts.get(FontRole::ScaledLarge))
             draw_text(context.list, *f, title, frame.strip(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
-        if (const Font* f = context.fonts.get(FontRole::ScaledSmall))
+        if (const auto f = context.fonts.get(FontRole::ScaledSmall))
             draw_text(context.list, *f, text, frame.strip(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
     }
 
@@ -287,10 +288,10 @@ namespace rct3::ui
         return r;
     }
 
-    FrontButton* FrontScreen::button(FrontMenu menu, std::size_t index_in_menu) const
+    std::optional<FrontButton&> FrontScreen::button(FrontMenu menu, std::size_t index_in_menu) const
     {
         const auto& list = buttons_.at(index(menu));
-        return index_in_menu < list.size() ? list[index_in_menu].button : nullptr;
+        return index_in_menu < list.size() ? maybe(list[index_in_menu].button) : std::nullopt;
     }
 
     std::u16string_view FrontScreen::label(std::size_t i) const
@@ -435,7 +436,7 @@ namespace rct3::ui
         // The boxes beside the buttons that have arrived: a light band from a white ring behind the button,
         // under its name and on under the arc, then the name. The arc comes after and covers the band's end.
         const auto& current = buttons_[index(current_)];
-        const Font* label_font = context.fonts.get(FontRole::ScaledLarge);
+        const auto label_font = context.fonts.get(FontRole::ScaledLarge);
         for (std::size_t i = 0; i < current.size() && i < labels_.size(); ++i)
         {
             if (label_alpha_[i] <= 0)
@@ -445,7 +446,7 @@ namespace rct3::ui
             context.list.fill(box.band, faded(kBandColour, alpha));
             draw_skin(context.list, context.skins.find(kBandEndSkin), box.end, faded(kWhite, alpha));
             draw_skin(context.list, context.skins.find(kPatchSkin), box.patch, faded(kWhite, alpha));
-            if (label_font != nullptr)
+            if (label_font)
                 draw_text(context.list, *label_font, labels_[i], box.text, { faded(kLabelColour, alpha), Align::Centre, Align::Centre, true });
         }
         draw_front_arc(context, frame, logo_);
@@ -453,7 +454,7 @@ namespace rct3::ui
         {
             for (const std::string_view name : kChildrenSkins)
             {
-                if (const SkinRef* skin = context.skins.find(name))
+                if (const auto skin = context.skins.find(name))
                 {
                     draw_skin(context.list, skin, frame.stretched(fs::kChildren));
                     break;

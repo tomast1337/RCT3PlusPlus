@@ -3,6 +3,7 @@
 // Looking into a widget tree, for the developer panels and for checks: what a widget is and where it sits.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/widget.hpp"
 
 #include <string>
@@ -15,7 +16,7 @@ namespace rct3::ui
     /// The top-most visible widget at `p` that shows there: one taking the pointer over `p`, or one without
     /// children, such as a label. Frames that only hold others and let the pointer through are passed over,
     /// and so is `root`: none when nothing else is there.
-    [[nodiscard]] const Widget* widget_at(const Widget& root, Point p);
+    [[nodiscard]] std::optional<const Widget&> widget_at(const Widget& root, Point p);
 
     /// The widget's class without its namespaces, e.g. "Button".
     [[nodiscard]] std::string type_name(const Widget& w);

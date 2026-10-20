@@ -12,6 +12,7 @@
 #pragma once
 
 #include "config/game_options.hpp"
+#include "core/maybe.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/options_dialog.hpp"
 
@@ -33,7 +34,7 @@ namespace rct3::ui
         /// Closes the window if it is open; its closing is reported as if the user closed it.
         void close();
         /// The window, while it is open.
-        [[nodiscard]] OptionsDialog* window() const;
+        [[nodiscard]] std::optional<OptionsDialog&> window() const;
 
         void update();
 

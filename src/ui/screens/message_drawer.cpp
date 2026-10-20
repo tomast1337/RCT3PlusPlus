@@ -201,12 +201,12 @@ namespace rct3::ui
         since_press_ += context.elapsed;
 
         // Each message's row is as tall as its text wrapped to the row's width.
-        const Font* font = context.fonts != nullptr ? context.fonts->get(FontRole::Small) : nullptr;
+        const auto font = context.fonts ? context.fonts->get(FontRole::Small) : std::nullopt;
         row_heights_.clear();
         for (const auto& m : messages_)
         {
             float height = kEmptyRow;
-            if (font != nullptr)
+            if (font)
             {
                 if (const auto lines = break_lines(*font, m.text, kTextRight - kTextLeft).size(); lines > 0)
                     height = static_cast<float>(lines) * font->line_height() + kRowPadding;
@@ -264,7 +264,7 @@ namespace rct3::ui
         const float lip = r.y1 - kLipHeight;
         draw_skin(context.list, context.skins.find(style.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
         draw_skin(context.list, context.skins.find(style.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
-        const SkinRef* back = context.skins.find(style.back);
+        const auto back = context.skins.find(style.back);
         for (float y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
             draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
     }
@@ -282,14 +282,14 @@ namespace rct3::ui
         draw_drawer_frame(context, style_, r);
 
         // The newest message at the bottom, older ones above it.
-        const Font* font = context.fonts.get(FontRole::Small);
+        const auto font = context.fonts.get(FontRole::Small);
         float bottom = r.y1 - kFirstRow;
         for (std::size_t i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
         {
             const float top = bottom - row_heights_[i];
             const bool even = (i - skipped_) % 2 == 0;
             context.list.fill({ r.x0 + kStripeLeft, top, r.x0 + kStripeRight, bottom }, even ? style_.stripe : style_.stripe_alt);
-            if (font != nullptr)
+            if (font)
                 draw_text(context.list, *font, messages_[i].text, { r.x0 + kTextLeft, top + kRowPadding / 2, r.x0 + kTextRight, bottom }, { style_.text_colour, Align::Start, Align::Start, true });
             bottom = top;
         }

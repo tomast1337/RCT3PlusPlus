@@ -228,31 +228,31 @@ TEST_CASE("find_glyph with a code table")
 
     SUBCASE("finds a code")
     {
-        const FontGlyph* g = find_glyph(font, 0x4E2D);
-        REQUIRE(g != nullptr);
-        CHECK(g == &font.glyphs[2]);
+        auto g = find_glyph(font, 0x4E2D);
+        REQUIRE(g);
+        CHECK(&*g == &font.glyphs[2]);
     }
 
     SUBCASE("the first of duplicate codes wins")
     {
-        CHECK(find_glyph(font, 66) == &font.glyphs[1]);
+        CHECK(rct3::as_pointer(find_glyph(font, 66)) == &font.glyphs[1]);
     }
 
     SUBCASE("a missing code gives no glyph and there is no fallback")
     {
-        CHECK(find_glyph(font, 67) == nullptr);
-        CHECK(find_glyph(font, 0xD83D) == nullptr); // a surrogate half is just another unit
+        CHECK(!find_glyph(font, 67));
+        CHECK(!find_glyph(font, 0xD83D)); // a surrogate half is just another unit
     }
 
     SUBCASE("a row with code 0 ends the search")
     {
-        CHECK(find_glyph(font, 70) == nullptr);
-        CHECK(find_glyph(font, 0) == nullptr);
+        CHECK(!find_glyph(font, 70));
+        CHECK(!find_glyph(font, 0));
     }
 
     SUBCASE("codes above the 16-bit range never match")
     {
-        CHECK(find_glyph(font, 0x10041) == nullptr);
+        CHECK(!find_glyph(font, 0x10041));
     }
 }
 
@@ -262,19 +262,19 @@ TEST_CASE("find_glyph with a code range")
 
     SUBCASE("indexes from the first code")
     {
-        CHECK(find_glyph(font, 31) == &font.glyphs[0]);
-        CHECK(find_glyph(font, 33) == &font.glyphs[2]);
+        CHECK(rct3::as_pointer(find_glyph(font, 31)) == &font.glyphs[0]);
+        CHECK(rct3::as_pointer(find_glyph(font, 33)) == &font.glyphs[2]);
     }
 
     SUBCASE("outside the range there is no glyph")
     {
-        CHECK(find_glyph(font, 30) == nullptr);
-        CHECK(find_glyph(font, 34) == nullptr);
+        CHECK(!find_glyph(font, 30));
+        CHECK(!find_glyph(font, 34));
     }
 
     SUBCASE("a range starting at 0 includes code 0")
     {
         const Font zero = synthetic_font(false, 0, { 0, 1 });
-        CHECK(find_glyph(zero, 0) == &zero.glyphs[0]);
+        CHECK(rct3::as_pointer(find_glyph(zero, 0)) == &zero.glyphs[0]);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_pieces.hpp"
 
+#include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/ovl.hpp"
 #include "ovl/scenery_item.hpp"
@@ -154,9 +155,9 @@ namespace rct3::park
         std::map<std::string, ovl::Spline, strings::LessIgnoringCase> splines;
         std::map<std::string, ovl::SceneryItem, strings::LessIgnoringCase> items;
         std::vector<ovl::TrackSectionItem> sections;
-        for (const ovl::Part* part : { &loaded->common(), loaded->unique() })
+        for (const auto part : { maybe(&loaded->common()), loaded->unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (ovl::SplineItem& s : ovl::read_splines(*loaded, *part))
             {
@@ -367,11 +368,11 @@ namespace rct3::park
         return fit;
     }
 
-    const PieceShape* shape_named(const PieceCatalogue& catalogue, std::string_view symbol)
+    std::optional<const PieceShape&> shape_named(const PieceCatalogue& catalogue, std::string_view symbol)
     {
         const std::string_view name = symbol.substr(0, symbol.find(':'));
         const auto found = std::ranges::find_if(catalogue.pieces, [&](const PieceShape& p) { return strings::equals_ignoring_case(p.record.name, name); });
-        return found != catalogue.pieces.end() ? &*found : nullptr;
+        return found != catalogue.pieces.end() ? maybe(&*found) : std::nullopt;
     }
 
 } // namespace rct3::park

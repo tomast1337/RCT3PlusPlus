@@ -103,11 +103,11 @@ namespace rct3::ui
         show(current_); // Also puts back a click on the current tab, which toggled it off
 
         // Each tab as wide as its label, once there are fonts to measure it with.
-        const Font* f = context.fonts != nullptr ? context.fonts->get(style_.font) : nullptr;
+        const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt;
         float x = 0;
         for (TabButton* t : tabs_)
         {
-            const float text = f != nullptr ? std::ceil(text_width(*f, t->text)) : 0;
+            const float text = f ? std::ceil(text_width(*f, t->text)) : 0;
             const float w = std::max(style_.min_tab_width, text + style_.text_room + style_.text_inset.x0 + style_.text_inset.x1);
             t->placement = top_left(x, 0, w, style_.bar_height);
             x += w + style_.gap;

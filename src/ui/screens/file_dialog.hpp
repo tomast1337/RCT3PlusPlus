@@ -23,6 +23,7 @@
 // window still shows the folder and the name, its save button greyed.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "save/summary.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/string_table.hpp"
@@ -153,9 +154,9 @@ namespace rct3::ui
             return *delete_;
         }
         /// Only when saving.
-        [[nodiscard]] EditBox* name_box() const
+        [[nodiscard]] std::optional<EditBox&> name_box() const
         {
-            return name_box_;
+            return maybe(name_box_);
         }
         [[nodiscard]] EditBox& row_name_box(std::size_t index) const;
         [[nodiscard]] const std::array<std::u16string, 3>& row_lines(std::size_t index) const;
@@ -168,9 +169,9 @@ namespace rct3::ui
             return *hover_;
         }
         /// The question or message showing, if any.
-        [[nodiscard]] QuestionBox* question() const
+        [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return question_;
+            return maybe(question_);
         }
         /// Clicks row `index`, as the pointer does.
         void click_row(std::size_t index);

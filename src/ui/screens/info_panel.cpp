@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info_panel.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/shape.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
@@ -351,10 +352,10 @@ namespace rct3::ui
         set_body_size(y > 0 ? info_panel::kPageWidth : 0, y);
     }
 
-    Widget* InfoPanel::control(int id) const
+    std::optional<Widget&> InfoPanel::control(int id) const
     {
         const auto found = std::ranges::find_if(controls_, [&](const auto& c) { return c.first.id == id; });
-        return found == controls_.end() ? nullptr : found->second;
+        return found == controls_.end() ? std::nullopt : maybe(found->second);
     }
 
     void InfoPanel::read_controls()
@@ -615,7 +616,7 @@ namespace rct3::ui
 
     void InfoPanel::draw_skins(DrawContext& context) const
     {
-        const auto skin = [&](const std::string& name) { return name.empty() ? nullptr : context.skins.find(name); };
+        const auto skin = [&](const std::string& name) { return name.empty() ? std::nullopt : context.skins.find(name); };
         if (body_width_ > 0)
             draw_skin(context.list, skin(style_.strip), strip());
         const Rect d = disc();

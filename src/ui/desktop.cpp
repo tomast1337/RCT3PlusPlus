@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/desktop.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/inspect.hpp"
 #include "ui/keyboard_focus.hpp"
 
@@ -76,7 +77,7 @@ namespace rct3::ui
         // The direct child of `root` that holds `w`.
         Widget* top_level(const Widget& root, Widget* w)
         {
-            while (w != nullptr && w->parent() != &root)
+            while (w && w->parent() != &root)
                 w = w->parent();
             return w;
         }
@@ -167,30 +168,30 @@ namespace rct3::ui
         }
     }
 
-    Widget* Desktop::hit(Point p) const
+    std::optional<Widget&> Desktop::hit(Point p) const
     {
         if (!root_->visible || (root_->clip_children && !contains(root_->rect(), p)))
-            return nullptr;
+            return std::nullopt;
         const auto& tops = root_->children();
         const std::size_t from = top_modal().value_or(0);
         for (std::size_t i = tops.size(); i-- > from;)
         {
             if (Widget* w = hit_tree(*tops[i], p))
-                return w;
+                return *w;
         }
-        return nullptr;
+        return std::nullopt;
     }
 
-    Widget* Desktop::deepest(Point p) const
+    std::optional<Widget&> Desktop::deepest(Point p) const
     {
         const auto& tops = root_->children();
         const std::size_t from = top_modal().value_or(0);
         for (std::size_t i = tops.size(); i-- > from;)
         {
             if (Widget* w = deepest_tree(*tops[i], p))
-                return w;
+                return *w;
         }
-        return root_.get();
+        return *root_;
     }
 
     bool Desktop::update(const PointerState& pointer, const UpdateContext& context)
@@ -206,7 +207,7 @@ namespace rct3::ui
             focus_ = nullptr;
         drop_shut_out_focus();
 
-        Widget* under = pointer.present ? hit(pointer.position) : nullptr;
+        Widget* under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
         const bool down = pointer.present && pointer.down;
         // Any press, even on the 3D view, takes the focus from where it was, and closes the popups it
         // misses.
@@ -214,7 +215,7 @@ namespace rct3::ui
         {
             focus_ = nullptr;
             focus_shown_ = false;
-            Widget* pressed_top = pointer.present ? top_level(*root_, deepest(pointer.position)) : nullptr;
+            Widget* pressed_top = pointer.present ? top_level(*root_, as_pointer(deepest(pointer.position))) : nullptr;
             bool closed = false;
             for (const auto& top : root_->children())
             {
@@ -227,12 +228,12 @@ namespace rct3::ui
             if (closed)
                 sounds_.push_back(InterfaceSound::Release);
         }
-        if (down && !was_down_ && under != nullptr && under->enabled)
+        if (down && !was_down_ && under && under->enabled)
         {
             held_ = under;
-            if (Widget* window = top_level(*root_, under); window != nullptr && !window->stays_behind)
+            if (Widget* window = top_level(*root_, under); window && !window->stays_behind)
                 root_->raise(*window);
-            for (Widget* w = deepest(pointer.position); w != nullptr && focus_ == nullptr; w = w->parent())
+            for (Widget* w = as_pointer(deepest(pointer.position)); w && !focus_; w = w->parent())
             {
                 if (w->takes_focus() && usable(*w))
                     focus_ = w;
@@ -258,7 +259,7 @@ namespace rct3::ui
         // The wheel goes to the deepest widget under the pointer that wants it, then up through its parents.
         if (pointer.present && (pointer.wheel.x != 0 || pointer.wheel.y != 0) && held_ == nullptr)
         {
-            for (Widget* w = deepest(pointer.position); w != nullptr; w = w->parent())
+            for (Widget* w = as_pointer(deepest(pointer.position)); w; w = w->parent())
             {
                 if (w->enabled && w->on_wheel(pointer.wheel))
                     break;
@@ -281,7 +282,7 @@ namespace rct3::ui
             Widget* top = root_->children().empty() ? nullptr : root_->children().back().get();
             Widget* start = focus_ != nullptr ? focus_ : top;
             bool used = false;
-            for (Widget* w = start; w != nullptr && !used; w = w->parent())
+            for (Widget* w = start; w && !used; w = w->parent())
             {
                 used = w->enabled && w->on_key(key);
                 if (used)
@@ -296,9 +297,9 @@ namespace rct3::ui
                 Widget* scope = focus_ != nullptr ? top_level(*root_, focus_) : top;
                 if (scope != nullptr)
                 {
-                    if (Widget* next = next_focus(*scope, focus_, key.shift))
+                    if (auto next = next_focus(*scope, maybe(focus_), key.shift))
                     {
-                        focus_ = next;
+                        focus_ = &*next;
                         focus_shown_ = true;
                     }
                 }
@@ -310,14 +311,14 @@ namespace rct3::ui
 
         // Input may have moved or raised things: lay out and look again so the flags match what is drawn.
         layout(view_);
-        under = pointer.present ? hit(pointer.position) : nullptr;
+        under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
         const auto& tops = root_->children();
         for (std::size_t i = 0; i < tops.size(); ++i)
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
-        if (under != nullptr && (held_ == nullptr || held_ == under))
+        if (under && (!held_ || held_ == under))
             under->on_hover(pointer.position);
         // Only compared, never followed: it may be gone.
-        if (held_ == nullptr && under != last_under_ && under != nullptr && under->enabled && under->clicks_on_hover())
+        if (!held_ && under != last_under_ && under && under->enabled && under->clicks_on_hover())
             sounds_.push_back(InterfaceSound::Press);
         if (held_ == nullptr)
             last_under_ = under;
@@ -331,10 +332,10 @@ namespace rct3::ui
         follow_popups();
         drop_shut_out_focus();
         layout(view_);
-        under = pointer.present ? hit(pointer.position) : nullptr;
+        under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
         cursor_ = pointer_cursor(pointer, under);
-        return under != nullptr || held_ != nullptr || (pointer.present && top_modal());
+        return under || held_ || (pointer.present && top_modal());
     }
 
     std::optional<CursorKind> Desktop::pointer_cursor(const PointerState& pointer, const Widget* under) const

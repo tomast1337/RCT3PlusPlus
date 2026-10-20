@@ -143,9 +143,9 @@ namespace rct3::ui
 
     void Menu::update(const UpdateContext& context)
     {
-        const Font* f = context.fonts != nullptr ? context.fonts->get(style.font) : nullptr;
+        const auto f = context.fonts ? context.fonts->get(style.font) : std::nullopt;
         float width = min_width_;
-        if (f != nullptr)
+        if (f)
         {
             float text = 0;
             float shortcut = 0;
@@ -166,7 +166,7 @@ namespace rct3::ui
     {
         if (!style.background.empty())
             draw_skin(context.list, context.skins.find(style.background), rect());
-        const Font* f = context.fonts.get(style.font);
+        const auto f = context.fonts.get(style.font);
         for (std::size_t i = 0; i < items.size(); ++i)
         {
             const MenuItem& item = items[i];
@@ -179,7 +179,7 @@ namespace rct3::ui
             }
             if (highlighted_ == i)
             {
-                if (const SkinRef* s = style.highlight_skin.empty() ? nullptr : context.skins.find(style.highlight_skin))
+                if (const auto s = style.highlight_skin.empty() ? std::nullopt : context.skins.find(style.highlight_skin))
                     draw_skin(context.list, s, row);
                 else
                     context.list.fill(row, style.highlight_colour);
@@ -190,12 +190,12 @@ namespace rct3::ui
                 const float x = row.x0 + std::round((style.tick_room - size) / 2);
                 const float y = row.y0 + std::round((row.height() - size) / 2);
                 const Rect box { x, y, x + size, y + size };
-                if (const SkinRef* tick = style.tick.empty() ? nullptr : context.skins.find(style.tick))
+                if (const auto tick = style.tick.empty() ? std::nullopt : context.skins.find(style.tick))
                     draw_skin(context.list, tick, box);
                 else
                     context.list.fill(box, style.text_colour);
             }
-            if (f == nullptr)
+            if (!f)
                 continue;
             const Color colour = item.enabled && enabled ? style.text_colour : style.disabled_text_colour;
             draw_text(context.list, *f, item.text, { row.x0 + style.tick_room, row.y0, row.x1, row.y1 }, { colour, Align::Start, Align::Centre, false });

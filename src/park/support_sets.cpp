@@ -85,9 +85,9 @@ namespace rct3::park
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         SupportSets sets;
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (const ovl::SceneryItemEntry& entry : ovl::read_scenery_items(*overlay, *part))
             {

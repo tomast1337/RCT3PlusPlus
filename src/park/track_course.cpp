@@ -37,8 +37,8 @@ namespace rct3::park
             if (found == by_id.end())
                 return std::nullopt;
             const save::PlacedObject& object = *found->second;
-            const PieceShape* shape = shape_of(piece, object);
-            if (shape == nullptr || shape->line.path.size() < 2)
+            const auto shape = shape_of(piece, object);
+            if (!shape || shape->line.path.size() < 2)
                 return std::nullopt;
             const auto model = models.find(model_key(object));
             const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);

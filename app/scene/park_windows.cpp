@@ -33,7 +33,7 @@ namespace rct3::scene
         void open_about(ParkScene& park, const FrontEndScene& front)
         {
             ui::Widget& root = park.desktop->root();
-            if (ui::Widget* shown = root.find(kAboutName))
+            if (auto shown = root.find(kAboutName))
             {
                 root.raise(*shown);
                 return;
@@ -59,15 +59,15 @@ namespace rct3::scene
             park.options->open();
         }
 
-        ui::FileDialog* file_dialog(const ParkScene& park)
+        std::optional<ui::FileDialog&> file_dialog(const ParkScene& park)
         {
-            return static_cast<ui::FileDialog*>(park.desktop->root().find(kFilesName));
+            return park.desktop->root().find_as<ui::FileDialog>(kFilesName);
         }
 
         void open_files(ParkScene& park, const FrontEndScene& front, ui::FileDialogMode mode)
         {
             ui::Widget& root = park.desktop->root();
-            if (ui::FileDialog* shown = file_dialog(park))
+            if (auto shown = file_dialog(park))
             {
                 if (shown->mode() == mode && !shown->closing())
                 {

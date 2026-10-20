@@ -170,7 +170,7 @@ namespace rct3::park
 
     /// Why the next piece cannot be laid on `grid` among `paths` and, when given, what else fills the tiles
     /// (path_clearance.hpp).
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids = nullptr);
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
     void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading);

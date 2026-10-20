@@ -305,7 +305,7 @@ namespace rct3::career
         return data;
     }
 
-    std::vector<CareerEntry> list_careers(const fs::path& folder, int pack, std::vector<config::FileProblem>* problems)
+    std::vector<CareerEntry> list_careers(const fs::path& folder, int pack, std::optional<std::vector<config::FileProblem>&> problems)
     {
         std::vector<fs::path> paths;
         std::error_code error;
@@ -322,7 +322,7 @@ namespace rct3::career
             auto data = bytes ? read_career(*bytes) : std::unexpected(CareerFileError::Truncated);
             if (!data)
             {
-                if (problems != nullptr)
+                if (problems)
                     problems->push_back({ path.filename().string() + ": " + (bytes ? to_string(data.error()) : "cannot read") });
                 continue;
             }

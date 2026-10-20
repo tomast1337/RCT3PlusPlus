@@ -111,8 +111,8 @@ namespace rct3::ui
         for (std::size_t i = 0; i < kFontRoleCount; ++i)
         {
             const auto role = scaled_role(static_cast<FontRole>(i));
-            const Font* font = role ? scaled.get(static_cast<FontRole>(i)) : nullptr;
-            if (font != nullptr)
+            auto font = role ? scaled.get(static_cast<FontRole>(i)) : std::nullopt;
+            if (font)
                 mixed.set(*role, *font);
         }
         return fonts.mixed.emplace(width, std::move(mixed)).first->second;

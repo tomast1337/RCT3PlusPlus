@@ -35,7 +35,7 @@ namespace rct3::park
         return line;
     }
 
-    DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles* solids)
+    DragPlan plan_drag(std::span<const PathSpot> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
     {
         DragPlan plan;
         for (const PathSpot spot : area)

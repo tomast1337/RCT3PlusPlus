@@ -34,8 +34,8 @@ namespace
 
         void answer(bool yes)
         {
-            QuestionBox* q = dialog->question();
-            REQUIRE(q != nullptr);
+            auto q = dialog->question();
+            REQUIRE(q);
             (yes ? q->buttons().front() : q->buttons().back())->click();
             tick();
             tick();
@@ -139,7 +139,7 @@ TEST_CASE("delete asks, then takes the row out and leaves nothing picked")
     f.dialog->select(1);
     f.dialog->delete_button().click();
     f.tick();
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"Really?");
     f.answer(false);
     CHECK(f.dialog->size() == 2);
@@ -153,7 +153,7 @@ TEST_CASE("delete asks, then takes the row out and leaves nothing picked")
     CHECK_FALSE(f.dialog->selected());
     f.dialog->delete_button().click(); // Nothing picked: nothing asked
     f.tick();
-    CHECK(f.dialog->question() == nullptr);
+    CHECK(!f.dialog->question());
 }
 
 TEST_CASE("the hovered button's name shows beside the buttons")

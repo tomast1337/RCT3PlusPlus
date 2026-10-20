@@ -52,7 +52,7 @@ TEST_CASE("glyph boxes sit on the baseline")
 {
     // 8 x 10 texels, one texel right of the pen, bottom 2 below the baseline.
     const Font f = Font::from(font_with({ glyph('g', 0.6f, { 0.1f, 0.5f, 0.18f, 0.6f }, { 1, -2 }, 1) }), kPages);
-    const Glyph* g = f.find(u'g');
+    auto g = f.find(u'g');
     REQUIRE(g);
     CHECK(g->advance == doctest::Approx(6));
     CHECK(g->page == 6);

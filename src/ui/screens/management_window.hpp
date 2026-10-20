@@ -11,6 +11,7 @@
 // heading the player pressed last on that tab, and keeps the scroll and the selection across new pages.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/column_table.hpp"
@@ -126,9 +127,9 @@ namespace rct3::ui
         {
             return page_age_;
         }
-        [[nodiscard]] ColumnTable* table() const
+        [[nodiscard]] std::optional<ColumnTable&> table() const
         {
-            return table_;
+            return maybe(table_);
         }
 
         void update(const UpdateContext& context) override;

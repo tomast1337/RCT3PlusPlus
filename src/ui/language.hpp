@@ -11,6 +11,8 @@
 // the first installed.
 #pragma once
 
+#include "core/maybe.hpp"
+
 #include <array>
 #include <filesystem>
 #include <span>
@@ -52,7 +54,7 @@ namespace rct3::ui
     inline constexpr std::string_view kDefaultLanguage = "English";
 
     /// The language called `name`, ignoring case, or nullptr.
-    [[nodiscard]] const LanguageInfo* find_language(std::string_view name);
+    [[nodiscard]] std::optional<const LanguageInfo&> find_language(std::string_view name);
 
     /// The languages among `file_names` (names in the gui folder, e.g. "German.common.ovl"), each once, in
     /// the order of kLanguages and with their canonical names.

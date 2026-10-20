@@ -34,8 +34,8 @@ TEST_CASE("find follows a path of names")
     Widget& ok = options.add<Widget>("ok");
     root.add<Widget>("other").add<Widget>("ok");
 
-    CHECK(root.find("options") == &options);
-    CHECK(root.find("options/ok") == &ok);
+    CHECK(rct3::as_pointer(root.find("options")) == &options);
+    CHECK(rct3::as_pointer(root.find("options/ok")) == &ok);
     CHECK_FALSE(root.find("options/cancel"));
     CHECK_FALSE(root.find("ok"));
 }

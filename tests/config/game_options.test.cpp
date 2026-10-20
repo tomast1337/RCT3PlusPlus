@@ -61,14 +61,14 @@ TEST_CASE("the park's music is kept by file name, empty for none")
     CHECK(GameOptions::parse(options.text()) == options);
 
     std::vector<FileProblem> problems;
-    CHECK_FALSE(GameOptions::parse(R"({ "background_music": 3 })", &problems).background_music());
+    CHECK_FALSE(GameOptions::parse(R"({ "background_music": 3 })", problems).background_music());
     CHECK(problems.size() == 1);
 }
 
 TEST_CASE("bad values are reported and skipped")
 {
     std::vector<FileProblem> problems;
-    const auto options = GameOptions::parse(R"({ "clouds": 0, "fog": 1, "shadows": "lots" })", &problems);
+    const auto options = GameOptions::parse(R"({ "clouds": 0, "fog": 1, "shadows": "lots" })", problems);
     CHECK_FALSE(options.flag(GameOption::Clouds));
     CHECK(options.choice(GameOption::Shadows) == 2);
     REQUIRE(problems.size() == 2);
@@ -76,7 +76,7 @@ TEST_CASE("bad values are reported and skipped")
     CHECK(problems[1].message.find("shadows") != std::string::npos);
 
     problems.clear();
-    CHECK(GameOptions::parse("clouds = 0", &problems) == GameOptions { });
+    CHECK(GameOptions::parse("clouds = 0", problems) == GameOptions { });
     CHECK(problems.size() == 1);
 }
 

@@ -76,7 +76,7 @@ TEST_CASE("a coded frame's layer can be cut to a part of the frame")
     const Rect b = bounds(list);
     CHECK(b.x1 == doctest::Approx(50));
     CHECK(b.x0 == doctest::Approx(0));
-    CHECK(list.clip() == nullptr);
+    CHECK(!list.clip());
 }
 
 TEST_CASE("a tint multiplies a coded frame's colours as it would a picture's")

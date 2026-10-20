@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/keyboard_focus.hpp"
 
+#include "core/maybe.hpp"
+
 #include <algorithm>
 #include <vector>
 
@@ -24,7 +26,7 @@ namespace rct3::ui
 
     bool usable(const Widget& w)
     {
-        for (const Widget* p = &w; p != nullptr; p = p->parent())
+        for (const Widget* p = &w; p; p = p->parent())
         {
             if (!p->visible || !p->enabled)
                 return false;
@@ -32,24 +34,24 @@ namespace rct3::ui
         return true;
     }
 
-    Widget* next_focus(const Widget& scope, const Widget* current, bool backwards)
+    std::optional<Widget&> next_focus(const Widget& scope, std::optional<const Widget&> current, bool backwards)
     {
         std::vector<Widget*> order;
         collect(scope, order);
         if (order.empty())
-            return nullptr;
-        const auto it = std::ranges::find(order, current);
+            return std::nullopt;
+        const auto it = std::ranges::find(order, as_pointer(current));
         if (it == order.end())
-            return backwards ? order.back() : order.front();
+            return backwards ? *order.back() : *order.front();
         const auto at = static_cast<std::size_t>(it - order.begin());
         const std::size_t n = order.size();
-        return order[backwards ? (at + n - 1) % n : (at + 1) % n];
+        return *order[backwards ? (at + n - 1) % n : (at + 1) % n];
     }
 
     void draw_focus_mark(DrawList& list, const Widget& w, const FocusMarkStyle& style)
     {
         std::vector<const Widget*> clipping;
-        for (const Widget* p = w.parent(); p != nullptr; p = p->parent())
+        for (const Widget* p = w.parent(); p; p = p->parent())
         {
             if (p->clip_children)
                 clipping.push_back(p);

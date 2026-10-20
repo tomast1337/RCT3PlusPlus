@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person_models.hpp"
 
+#include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/person_parts.hpp"
 #include "ovl/skeleton.hpp"
@@ -124,9 +125,9 @@ namespace rct3::park
             if (!cache)
             {
                 cache.emplace();
-                for (const ovl::Part* part : { &file.overlay.common(), file.overlay.unique() })
+                for (const auto part : { maybe(&file.overlay.common()), file.overlay.unique() })
                 {
-                    if (part == nullptr)
+                    if (!part)
                         continue;
                     for (auto& item : read(file.overlay, *part))
                     {
@@ -168,13 +169,13 @@ namespace rct3::park
         files_->open.clear();
     }
 
-    const PartSet* PersonLibrary::part_set(std::string_view symbol)
+    std::optional<const PartSet&> PersonLibrary::part_set(std::string_view symbol)
     {
         const std::string key = lower(symbol);
         auto it = sets_.find(key);
         if (it == sets_.end())
             it = sets_.emplace(key, read_set(symbol)).first;
-        return it->second ? &*it->second : nullptr;
+        return it->second ? maybe(&*it->second) : std::nullopt;
     }
 
     std::optional<PartSet> PersonLibrary::read_set(std::string_view symbol)

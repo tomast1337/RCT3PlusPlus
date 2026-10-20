@@ -26,6 +26,7 @@
 // while it is shown. The rest is drawn under a shade.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/interface_sound.hpp"
 #include "ui/keyboard.hpp"
 #include "ui/keyboard_focus.hpp"
@@ -74,9 +75,9 @@ namespace rct3::ui
         bool update(const PointerState& pointer, const KeyboardState& keyboard, const UpdateContext& context = { });
 
         /// The widget keys go to first; nothing when keys start at the top-most window.
-        [[nodiscard]] Widget* keyboard_focus() const
+        [[nodiscard]] std::optional<Widget&> keyboard_focus() const
         {
-            return focus_;
+            return maybe(focus_);
         }
         /// Gives `w` the keyboard focus, or takes it away with nullptr. `show` draws the mark around it.
         void set_keyboard_focus(Widget* w, bool show = false)
@@ -122,10 +123,10 @@ namespace rct3::ui
         }
 
         /// The widget under `p` that takes the pointer, if any. Below a modal widget, nothing does.
-        [[nodiscard]] Widget* hit(Point p) const;
+        [[nodiscard]] std::optional<Widget&> hit(Point p) const;
         /// The deepest visible widget under `p`, whether it takes the pointer or not; the root when nothing
         /// else is there.
-        [[nodiscard]] Widget* deepest(Point p) const;
+        [[nodiscard]] std::optional<Widget&> deepest(Point p) const;
 
     private:
         void follow_popups();

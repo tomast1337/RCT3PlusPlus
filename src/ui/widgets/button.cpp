@@ -79,13 +79,13 @@ namespace rct3::ui
         // A toggle on a face with one picture for every state would look held down, so dimmed, while on: it
         // shows lit while on and dimmed while off instead.
         SkinState look = s;
-        if (toggle && s != SkinState::Pressed && s != SkinState::Disabled && context.skins.find(skin, SkinState::Down) == context.skins.find(skin, SkinState::Up))
+        if (toggle && s != SkinState::Pressed && s != SkinState::Disabled && as_pointer(context.skins.find(skin, SkinState::Down)) == as_pointer(context.skins.find(skin, SkinState::Up)))
             look = on ? (hovered() ? SkinState::UpOver : SkinState::Up) : SkinState::Down;
         draw_skin_state(context.list, context.skins, skin, look, r);
 
         // The face looks pushed in while held: what is on it moves by one unit.
         const float nudge = s == SkinState::Pressed ? 1.0f : 0.0f;
-        if (const SkinRef* glyph = icon.empty() ? nullptr : context.skins.find(icon))
+        if (const auto glyph = icon.empty() ? std::nullopt : context.skins.find(icon))
         {
             // The icon grows with the face.
             const float grow = (rect().width() > 0 ? r.width() / rect().width() : 1.0f) * icon_scale;
@@ -96,8 +96,8 @@ namespace rct3::ui
             draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? hex("#ffffff80") : kWhite);
         }
 
-        const Font* f = text.empty() ? nullptr : context.fonts.get(font);
-        if (f == nullptr)
+        const auto f = text.empty() ? std::nullopt : context.fonts.get(font);
+        if (!f)
             return;
         if (context.list.push_clip(r))
         {

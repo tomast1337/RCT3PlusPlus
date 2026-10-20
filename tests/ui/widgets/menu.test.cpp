@@ -63,7 +63,7 @@ TEST_CASE("a menu is as tall as its rows and takes the keyboard focus")
     Fixture f;
     CHECK(f.menu.rect() == Rect { 10, 10, 110, 96 });
     CHECK(f.menu.row_rect(3) == Rect { 10, 56, 110, 76 });
-    CHECK(f.desktop.keyboard_focus() == &f.menu);
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.menu);
 }
 
 TEST_CASE("the pointer highlights a row and releasing on it chooses")

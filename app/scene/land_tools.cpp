@@ -354,9 +354,9 @@ namespace rct3::scene
             }
         }
 
-        ui::LandPanel* panel_of(const ParkScene& scene)
+        std::optional<ui::LandPanel&> panel_of(const ParkScene& scene)
         {
-            return static_cast<ui::LandPanel*>(scene.desktop->root().find(kPanelName));
+            return scene.desktop->root().find_as<ui::LandPanel>(kPanelName);
         }
 
         /// The panel with the tabs of the tool out: shaping's, or painting's with the surfaces read.
@@ -364,9 +364,9 @@ namespace rct3::scene
         {
             const LandTools& l = scene.land;
             const ui::StringTable& strings = *assets.strings;
-            ui::LandPanel* panel = panel_of(scene);
-            if (panel == nullptr)
-                panel = &scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(), strings);
+            auto panel = panel_of(scene);
+            if (!panel)
+                panel = scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(), strings);
             std::vector<ui::LandTab> tabs;
             ui::LandPick chosen;
             if (l.tool == LandTools::Tool::Paint)
@@ -416,7 +416,7 @@ namespace rct3::scene
     void stop_land_tools(ParkScene& scene)
     {
         LandTools& l = scene.land;
-        if (ui::LandPanel* panel = panel_of(scene))
+        if (auto panel = panel_of(scene))
             panel->hide();
         l.tool = LandTools::Tool::None;
         l.tile.reset();
@@ -434,7 +434,7 @@ namespace rct3::scene
     void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
     {
         LandTools& l = scene.land;
-        if (ui::LandPanel* panel = panel_of(scene); panel != nullptr && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint))
+        if (auto panel = panel_of(scene); panel && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint))
         {
             if (panel->take_closed())
             {

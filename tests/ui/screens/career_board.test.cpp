@@ -56,8 +56,8 @@ namespace
         }
         void answer(bool yes)
         {
-            QuestionBox* q = map->question();
-            REQUIRE(q != nullptr);
+            auto q = map->question();
+            REQUIRE(q);
             (yes ? q->buttons().front() : q->buttons().back())->click();
             tick();
             tick();
@@ -105,7 +105,7 @@ TEST_CASE("new asks first")
     Fixture f;
     f.map->new_button().click();
     f.tick();
-    REQUIRE(f.map->question() != nullptr);
+    REQUIRE(f.map->question());
     CHECK(f.map->question()->text().text == u"Begin now?");
     CHECK(f.map->question()->title == u"Begin");
     f.answer(false);

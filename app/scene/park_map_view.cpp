@@ -117,9 +117,9 @@ namespace rct3::scene
                 if (overlay == nullptr)
                     return std::nullopt;
                 const std::string_view name = bare(a.symbol);
-                for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
                 {
-                    if (part == nullptr)
+                    if (!part)
                         continue;
                     if (stall)
                     {
@@ -272,7 +272,7 @@ namespace rct3::scene
 
     void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings)
     {
-        if (ui::Widget* open = desktop.root().find(kMapName))
+        if (auto open = desktop.root().find(kMapName))
         {
             open->close();
             return;
@@ -291,8 +291,8 @@ namespace rct3::scene
 
     std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed)
     {
-        auto* panel = static_cast<ui::MapPanel*>(desktop.root().find(kMapName));
-        if (panel == nullptr || panel->closing() || grid.empty())
+        auto panel = desktop.root().find_as<ui::MapPanel>(kMapName);
+        if (!panel || panel->closing() || grid.empty())
             return std::nullopt;
 
         if (panel->take_change())

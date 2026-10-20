@@ -121,7 +121,7 @@ int main(int argc, char** argv)
         }
 
         std::vector<rct3::ovl::SoundItem> items = rct3::ovl::read_sounds(*overlay, overlay->common());
-        if (const auto* unique = overlay->unique())
+        if (const auto unique = overlay->unique())
         {
             auto more = rct3::ovl::read_sounds(*overlay, *unique);
             items.insert(items.end(), more.begin(), more.end());

@@ -422,7 +422,7 @@ namespace rct3::scene
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         profiling::section("QueueSigns", [&] { roll_queue_signs(device, scene); });
-        if (auto* info = static_cast<ui::InfoPanel*>(scene.desktop->root().find(kInfoName)); info != nullptr && (scene.shown || scene.shown_person || scene.shown_prop))
+        if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info); });
         if (!scene.photos.empty() && !scene.photo_reading)
             profiling::section("Photo", [&] { draw_photo(device, scene); });

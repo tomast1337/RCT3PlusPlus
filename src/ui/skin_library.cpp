@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/skin_library.hpp"
 
+#include "core/maybe.hpp"
+
 #include <span>
 #include <utility>
 
@@ -52,13 +54,13 @@ namespace rct3::ui
         it->second.coded = std::make_shared<const CodedFrame>(std::move(frame));
     }
 
-    const SkinRef* SkinLibrary::find(std::string_view name) const
+    std::optional<const SkinRef&> SkinLibrary::find(std::string_view name) const
     {
         const auto it = skins_.find(name);
-        return it == skins_.end() ? nullptr : &it->second;
+        return it == skins_.end() ? std::nullopt : maybe(&it->second);
     }
 
-    const SkinRef* SkinLibrary::find(std::string_view base, SkinState state) const
+    std::optional<const SkinRef&> SkinLibrary::find(std::string_view base, SkinState state) const
     {
         // The states to try, nearest first. A pressed toggle that is off looks like one held down.
         using enum SkinState;
@@ -95,15 +97,15 @@ namespace rct3::ui
         {
             name.resize(base.size());
             name += state_suffix(s);
-            if (const SkinRef* skin = find(name))
+            if (auto skin = find(name))
                 return skin;
         }
         return find(base);
     }
 
-    void draw_skin(DrawList& list, const SkinRef* skin, const Rect& rect, Color tint)
+    void draw_skin(DrawList& list, std::optional<const SkinRef&> skin, const Rect& rect, Color tint)
     {
-        if (skin == nullptr)
+        if (!skin)
             return;
         if (skin->coded)
             draw_frame(list, *skin->coded, rect, tint);
@@ -113,9 +115,9 @@ namespace rct3::ui
 
     void draw_skin_state(DrawList& list, const SkinLibrary& skins, std::string_view family, SkinState state, const Rect& rect)
     {
-        const SkinRef* face = skins.find(family, state);
+        const auto face = skins.find(family, state);
         Color tint = kWhite;
-        const bool fell_back = face == skins.find(family, SkinState::Up);
+        const bool fell_back = as_pointer(face) == as_pointer(skins.find(family, SkinState::Up)); // The same skin, not an equal one
         if (fell_back && (state == SkinState::Pressed || state == SkinState::Down || state == SkinState::DownOver))
             tint = kPressedTint;
         else if (fell_back && state == SkinState::Disabled)

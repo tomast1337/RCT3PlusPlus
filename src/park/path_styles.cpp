@@ -47,9 +47,9 @@ namespace rct3::park
     {
         std::vector<PathStyle> paths;
         std::vector<PathStyle> queues;
-        for (const ovl::Part* part : { &overlay.common(), overlay.unique() })
+        for (const auto part : { maybe(&overlay.common()), overlay.unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (const ovl::PathTypeEntry& e : ovl::read_path_types(overlay, *part))
             {

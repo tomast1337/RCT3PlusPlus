@@ -21,9 +21,9 @@ namespace rct3::scene
             return std::string(ui::management_layout(topic).title);
         }
 
-        ui::ManagementWindow* find_window(const ui::Desktop& desktop, ui::ManagementTopic topic)
+        std::optional<ui::ManagementWindow&> find_window(const ui::Desktop& desktop, ui::ManagementTopic topic)
         {
-            return dynamic_cast<ui::ManagementWindow*>(desktop.root().find(window_name(topic)));
+            return maybe(dynamic_cast<ui::ManagementWindow*>(as_pointer(desktop.root().find(window_name(topic)))));
         }
 
         void show(ui::ManagementWindow& window, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units)
@@ -34,7 +34,7 @@ namespace rct3::scene
 
     void toggle_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units)
     {
-        if (ui::ManagementWindow* open = find_window(desktop, topic))
+        if (auto open = find_window(desktop, topic))
         {
             open->close();
             return;
@@ -50,7 +50,7 @@ namespace rct3::scene
     {
         for (std::size_t t = 0; t < ui::kManagementTopicCount; ++t)
         {
-            if (find_window(desktop, static_cast<ui::ManagementTopic>(t)) != nullptr)
+            if (find_window(desktop, static_cast<ui::ManagementTopic>(t)))
                 return true;
         }
         return false;
@@ -76,8 +76,8 @@ namespace rct3::scene
         for (std::size_t t = 0; t < ui::kManagementTopicCount; ++t)
         {
             const auto topic = static_cast<ui::ManagementTopic>(t);
-            ui::ManagementWindow* window = find_window(desktop, topic);
-            if (window == nullptr || window->closing())
+            auto window = find_window(desktop, topic);
+            if (!window || window->closing())
                 continue;
             const bool picked = window->take_tab().has_value();
             if (picked || window->page_age() >= kRefresh)

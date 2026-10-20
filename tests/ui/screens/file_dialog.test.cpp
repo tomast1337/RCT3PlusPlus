@@ -45,8 +45,8 @@ namespace
         /// Answers the question showing with its first (yes) or last (no) answer.
         void answer(bool yes)
         {
-            QuestionBox* q = dialog->question();
-            REQUIRE(q != nullptr);
+            auto q = dialog->question();
+            REQUIRE(q);
             (yes ? q->buttons().front() : q->buttons().back())->click();
             tick();
             tick();
@@ -70,10 +70,10 @@ TEST_CASE("the window is titled by what it does, and only saving has a name box"
 {
     Fixture load;
     CHECK(load.dialog->title == u"Open a park");
-    CHECK(load.dialog->name_box() == nullptr);
+    CHECK(!load.dialog->name_box());
     Fixture save(FileDialogMode::Save);
     CHECK(save.dialog->title == u"Keep a park");
-    CHECK(save.dialog->name_box() != nullptr);
+    CHECK(save.dialog->name_box());
 }
 
 TEST_CASE("rows fill in as the files are read, the line under the list counting them")
@@ -142,7 +142,7 @@ TEST_CASE("deleting asks first")
     f.dialog->select(1);
     f.dialog->delete_button().click();
     f.tick();
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"Remove Second?");
     f.answer(false);
     CHECK_FALSE(f.dialog->take_delete());
@@ -161,7 +161,7 @@ TEST_CASE("renaming in a row asks first, and a failed rename puts the name back"
     box.text = u"Renamed";
     box.on_key({ Key::Enter });
     f.tick();
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"First becomes Renamed?");
     f.answer(false);
     CHECK(box.text == u"First");
@@ -177,7 +177,7 @@ TEST_CASE("renaming in a row asks first, and a failed rename puts the name back"
     CHECK(rename->second == u"Renamed.dat");
     f.dialog->rename_failed();
     CHECK(box.text == u"First");
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"Could not rename");
 }
 
@@ -189,7 +189,7 @@ TEST_CASE("saving checks the name, adds the extension and asks before replacing"
 
     f.dialog->open_button().click();
     f.tick();
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"Name it");
     f.answer(true);
     CHECK_FALSE(f.dialog->take_open());
@@ -199,7 +199,7 @@ TEST_CASE("saving checks the name, adds the extension and asks before replacing"
     name.text = u"old";
     f.dialog->open_button().click();
     f.tick();
-    REQUIRE(f.dialog->question() != nullptr);
+    REQUIRE(f.dialog->question());
     CHECK(f.dialog->question()->text().text == u"Replace Old?");
     f.answer(false);
     CHECK_FALSE(f.dialog->take_open());
@@ -235,13 +235,13 @@ TEST_CASE("kept files open but are not deleted, renamed or saved over")
     CHECK_FALSE(f.dialog->delete_button().enabled);
     f.dialog->delete_button().click();
     f.tick();
-    CHECK(f.dialog->question() == nullptr);
+    CHECK(!f.dialog->question());
     CHECK_FALSE(f.dialog->take_delete());
 
     // A save of the same name goes beside the kept file, so nothing asks to replace it.
     f.dialog->open_button().click();
     f.tick();
-    CHECK(f.dialog->question() == nullptr);
+    CHECK(!f.dialog->question());
     CHECK(f.dialog->take_open() == u"Theirs.park");
 }
 
@@ -256,7 +256,7 @@ TEST_CASE("with saving switched off the save button is greyed and nothing is sav
     CHECK_FALSE(f.dialog->open_button().enabled);
     f.dialog->open_button().click();
     f.tick();
-    CHECK(f.dialog->question() == nullptr);
+    CHECK(!f.dialog->question());
     CHECK_FALSE(f.dialog->take_open());
 
     Fixture load;

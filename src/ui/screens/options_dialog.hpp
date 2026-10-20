@@ -26,6 +26,7 @@
 #pragma once
 
 #include "config/game_options.hpp"
+#include "core/maybe.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/option_rows.hpp"
 #include "ui/string_table.hpp"
@@ -161,22 +162,22 @@ namespace rct3::ui
         {
             return *custom_;
         }
-        [[nodiscard]] Dropdown* language_list() const
+        [[nodiscard]] std::optional<Dropdown&> language_list() const
         {
-            return language_;
+            return maybe(language_);
         }
         [[nodiscard]] KeyBox& key_box(Command command) const
         {
             return *key_boxes_.at(static_cast<std::size_t>(command));
         }
         /// Nothing for a game command whose keys cannot be changed.
-        [[nodiscard]] KeyBox* play_key_box(PlayCommand command) const
+        [[nodiscard]] std::optional<KeyBox&> play_key_box(PlayCommand command) const
         {
-            return play_boxes_.at(static_cast<std::size_t>(command));
+            return maybe(play_boxes_.at(static_cast<std::size_t>(command)));
         }
-        [[nodiscard]] Dropdown* background_music_list() const
+        [[nodiscard]] std::optional<Dropdown&> background_music_list() const
         {
-            return music_;
+            return maybe(music_);
         }
         /// The lines saying what each mouse button does in the chosen camera mode.
         [[nodiscard]] const Label& camera_help(std::size_t line) const

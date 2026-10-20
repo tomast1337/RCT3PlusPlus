@@ -13,6 +13,7 @@
 // so the library indexes every folder it is given.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ovl/frame_mesh.hpp"
 #include "ovl/simple_anim.hpp"
 #include "ovl/simple_skin.hpp"
@@ -114,7 +115,7 @@ namespace rct3::park
 
         /// The set named `symbol` (without its tag, in any case), read the first time it is asked for.
         /// Nothing when no file holds it or it cannot be read.
-        [[nodiscard]] const PartSet* part_set(std::string_view symbol);
+        [[nodiscard]] std::optional<const PartSet&> part_set(std::string_view symbol);
 
         [[nodiscard]] const PieceModel& piece(std::size_t index) const
         {

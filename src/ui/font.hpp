@@ -9,6 +9,7 @@
 // this font's. Size the fallback to match before merging it (see fallback_font.hpp).
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ovl/font.hpp"
 #include "ui/draw_list.hpp"
 
@@ -62,7 +63,7 @@ namespace rct3::ui
 
         /// The glyph for a UTF-16 code unit, with the lookup rules of ovl::find_glyph. Nothing for a unit the
         /// font does not have; such units draw nothing and do not advance.
-        [[nodiscard]] const Glyph* find(char16_t code) const;
+        [[nodiscard]] std::optional<const Glyph&> find(char16_t code) const;
 
         [[nodiscard]] float cell() const
         {

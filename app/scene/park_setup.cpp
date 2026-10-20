@@ -212,7 +212,7 @@ namespace rct3::scene
                 groups.emplace(g.id, g.symbol);
             const auto set = [&](const save::PeopleRef& ref) -> const park::PartSet* {
                 const auto it = groups.find(ref.id);
-                return it != groups.end() ? library.part_set(it->second) : nullptr;
+                return it != groups.end() ? as_pointer(library.part_set(it->second)) : nullptr;
             };
             // Colours left for the game to pick are picked here, the same each time for the same park and seed.
             random::RandomState colours = random::stream(seed, random::RandomStream::Effects);
@@ -776,7 +776,7 @@ namespace rct3::scene
                 });
                 // The courses of the rides whose trains go round, for the simulation to run them on.
                 std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
-                const park::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> const park::PieceShape* {
+                const park::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
                     auto [at, added] = catalogues.try_emplace(object.overlay);
                     if (added)
                     {
@@ -786,7 +786,7 @@ namespace rct3::scene
                                 at->second = std::move(*loaded);
                         }
                     }
-                    return at->second ? park::shape_named(*at->second, piece.symbol) : nullptr;
+                    return at->second ? park::shape_named(*at->second, piece.symbol) : std::nullopt;
                 };
                 std::vector<std::optional<simulation::Coaster>> coasters(scene.rides.rides.size());
                 scene.courses.assign(scene.rides.rides.size(), std::nullopt);

@@ -55,9 +55,9 @@ namespace rct3::scene
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
         constexpr std::string_view kQueueRailingOverlay = "Style\\Vanilla\\style";
 
-        ui::FootpathPanel* panel_of(const ParkScene& scene)
+        std::optional<ui::FootpathPanel&> panel_of(const ParkScene& scene)
         {
-            return static_cast<ui::FootpathPanel*>(scene.desktop->root().find(kFootpathPanelName));
+            return scene.desktop->root().find_as<ui::FootpathPanel>(kFootpathPanelName);
         }
 
         bool chosen_queue(const ParkFootpaths& f)
@@ -280,10 +280,10 @@ namespace rct3::scene
             if (!f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
                 return std::nullopt;
             if (!f.brush.empty())
-                return park::plan_drag(f.brush, scene.grid, f.paths, &f.solids);
+                return park::plan_drag(f.brush, scene.grid, f.paths, f.solids);
             if (!f.hover_tile)
                 return std::nullopt;
-            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths, &f.solids);
+            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths, f.solids);
             return plan.lay.empty() ? std::nullopt : std::optional(std::move(plan));
         }
 
@@ -300,7 +300,7 @@ namespace rct3::scene
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
                 return { };
             const auto cost = static_cast<std::int32_t>(next_cost(f.styles[*f.style]));
-            if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, &f.solids))
+            if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, f.solids))
                 return { std::move(route), false };
             auto through = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height);
             const bool blocked = through.has_value();
@@ -445,7 +445,7 @@ namespace rct3::scene
             // Pointing at a path's edge shows what would go on from there instead of the trail's next piece.
             const park::FootpathBuilder& b = f.hover ? *f.hover : f.builder;
             if (f.hover)
-                allowed = park::lay_problem(b, scene.grid, f.paths, &f.solids) == park::LayProblem::None;
+                allowed = park::lay_problem(b, scene.grid, f.paths, f.solids) == park::LayProblem::None;
             f.ghost = { };
             f.raised_ghost = { };
             f.arrow = { };
@@ -697,7 +697,7 @@ namespace rct3::scene
         void lay(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool refresh = true)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (park::lay_problem(f.builder, scene.grid, f.paths, &f.solids) != park::LayProblem::None)
+            if (park::lay_problem(f.builder, scene.grid, f.paths, f.solids) != park::LayProblem::None)
                 return;
             const park::PathStyle& style = f.styles[*f.style];
             const park::NextPiece piece = *park::next_piece(f.builder, scene.grid);
@@ -913,8 +913,8 @@ namespace rct3::scene
 
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options)
     {
-        ui::FootpathPanel* panel = panel_of(scene);
-        if (panel == nullptr)
+        auto panel = panel_of(scene);
+        if (!panel)
             return;
         if (panel->showing())
         {
@@ -956,7 +956,7 @@ namespace rct3::scene
 
     void close_footpath_panel(ParkScene& scene)
     {
-        if (ui::FootpathPanel* panel = panel_of(scene); panel != nullptr && panel->showing())
+        if (auto panel = panel_of(scene); panel && panel->showing())
             panel->hide();
         scene.footpaths.ghost = { };
         scene.footpaths.raised_ghost = { };
@@ -978,11 +978,11 @@ namespace rct3::scene
 
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options)
     {
-        ui::FootpathPanel* panel = panel_of(scene);
+        auto panel = panel_of(scene);
         ParkFootpaths& f = scene.footpaths;
-        if (panel == nullptr || !panel->showing())
+        if (!panel || !panel->showing())
         {
-            if (panel != nullptr && panel->take_closed())
+            if (panel && panel->take_closed())
                 close_footpath_panel(scene);
             return;
         }
@@ -1052,7 +1052,7 @@ namespace rct3::scene
             f.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
             f.solids_of = scene.objects.size();
         }
-        const park::LayProblem problem = park::lay_problem(f.builder, scene.grid, f.paths, &f.solids);
+        const park::LayProblem problem = park::lay_problem(f.builder, scene.grid, f.paths, f.solids);
         if (const auto next = park::next_piece(f.builder, scene.grid); panel->following() && next && next->spot != f.followed)
         {
             f.followed = next->spot;
@@ -1105,8 +1105,8 @@ namespace rct3::scene
         /// The view's ray through `at` while the path panel shows its controls.
         std::optional<park::Ray> controls_ray(const ParkScene& scene, ui::Point at, ui::Point size)
         {
-            const ui::FootpathPanel* panel = panel_of(scene);
-            if (panel == nullptr || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
+            auto panel = panel_of(scene);
+            if (!panel || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             return park::view_ray(scene.camera, size.x / size.y, ndc);

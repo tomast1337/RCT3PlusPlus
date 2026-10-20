@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/font.hpp"
 
+#include "core/maybe.hpp"
 #include "ovl/reference_names.hpp"
 
 #include <cstring>
@@ -105,25 +106,25 @@ namespace rct3::ovl
 
     } // namespace
 
-    const FontGlyph* find_glyph(const Font& font, std::uint32_t code) noexcept
+    std::optional<const FontGlyph&> find_glyph(const Font& font, std::uint32_t code) noexcept
     {
         if (font.has_code_table)
         {
             if (code == 0 || code > 0xFFFF)
-                return nullptr;
+                return std::nullopt;
             for (const FontGlyph& glyph : font.glyphs)
             {
                 if (glyph.code == 0)
-                    return nullptr;
+                    return std::nullopt;
                 if (glyph.code == code)
-                    return &glyph;
+                    return glyph;
             }
-            return nullptr;
+            return std::nullopt;
         }
         if (code < font.first_char)
-            return nullptr;
+            return std::nullopt;
         const std::uint64_t index = std::uint64_t { code } - font.first_char;
-        return index < font.glyphs.size() ? &font.glyphs[static_cast<std::size_t>(index)] : nullptr;
+        return index < font.glyphs.size() ? maybe(&font.glyphs[static_cast<std::size_t>(index)]) : std::nullopt;
     }
 
     std::vector<FontItem> read_fonts(const Overlay& overlay, const Part& part)

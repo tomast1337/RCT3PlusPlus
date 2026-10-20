@@ -20,11 +20,11 @@ namespace rct3::config
 
     /// The object `text` holds; empty text is an empty object. Nothing, with a problem reported, when it is
     /// not JSON or not an object.
-    [[nodiscard]] std::optional<Json> parse_json_object(std::string_view text, std::vector<FileProblem>* problems);
+    [[nodiscard]] std::optional<Json> parse_json_object(std::string_view text, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
 
     /// Indented, ending in a line break.
     [[nodiscard]] std::string json_text(const Json& json);
 
-    void report(std::vector<FileProblem>* problems, std::string message);
+    void report(std::optional<std::vector<FileProblem>&> problems, std::string message);
 
 } // namespace rct3::config

@@ -911,7 +911,7 @@ int main(int argc, char** argv)
     if (object_id)
     {
         const rct3::save::ObjectIndex index(*file);
-        if (const auto* o = index.find(std::strtoull(object_id, nullptr, 10)))
+        if (const auto o = index.find(std::strtoull(object_id, nullptr, 10)))
             print_object(*o);
         else
             std::printf("no object with id %s\n", object_id);

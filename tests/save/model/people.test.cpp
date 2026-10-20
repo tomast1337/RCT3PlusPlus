@@ -273,8 +273,8 @@ namespace
     /// Decodes the object with this id and runs `builder` on it.
     template<class F> auto build(const World& w, std::uint64_t id, F builder)
     {
-        const auto* o = w.index->find(id);
-        REQUIRE(o != nullptr);
+        const auto o = w.index->find(id);
+        REQUIRE(o);
         const auto d = decode_object(w.file, *o);
         REQUIRE(d);
         return builder(*d, *w.index);
@@ -410,8 +410,8 @@ TEST_CASE("dangling references are none, live ones kept")
     REQUIRE(guest);
     CHECK(guest->group.is_none());
     CHECK(guest->person.state_target.id == 2);
-    CHECK(resolve(guest->person.state_target, *w->index) != nullptr);
-    CHECK(resolve(guest->group, *w->index) == nullptr);
+    CHECK(resolve(guest->person.state_target, *w->index));
+    CHECK(!resolve(guest->group, *w->index));
     CHECK(guest->person.route_controller.is_none());
     CHECK(guest->person.look_at.target.is_none());
     CHECK(guest->favourite_ride.id == 2);

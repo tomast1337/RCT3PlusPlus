@@ -7,6 +7,7 @@
 // grow with the screen, for the full-screen menus.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/font.hpp"
 
 #include <array>
@@ -39,10 +40,10 @@ namespace rct3::ui
             fonts_[static_cast<std::size_t>(role)] = std::move(font);
         }
         /// Nothing when the role has no font; text in it is then not drawn.
-        [[nodiscard]] const Font* get(FontRole role) const
+        [[nodiscard]] std::optional<const Font&> get(FontRole role) const
         {
             const auto& f = fonts_[static_cast<std::size_t>(role)];
-            return f ? &*f : nullptr;
+            return f ? std::optional<const Font&>(*f) : std::nullopt;
         }
 
     private:

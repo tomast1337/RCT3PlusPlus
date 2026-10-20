@@ -201,7 +201,7 @@ namespace rct3::ui
         const std::string& back = has_keyboard_focus() && !style.focused.empty() ? style.focused : style.background;
         if (!back.empty())
             draw_skin(context.list, context.skins.find(back), rect());
-        const Font* f = context.fonts.get(style.font);
+        const auto f = context.fonts.get(style.font);
         const Rect box = rows_box();
         if (context.list.push_clip(box) && style.row_height > 0)
         {
@@ -214,12 +214,12 @@ namespace rct3::ui
                 const Rect row { box.x0, y, box.x1, y + style.row_height };
                 if (selected_ == i)
                 {
-                    if (const SkinRef* s = style.selection_skin.empty() ? nullptr : context.skins.find(style.selection_skin))
+                    if (const auto s = style.selection_skin.empty() ? std::nullopt : context.skins.find(style.selection_skin))
                         draw_skin(context.list, s, row);
                     else
                         context.list.fill(row, style.selection_colour);
                 }
-                if (f != nullptr)
+                if (f)
                 {
                     const Rect text { row.x0 + style.text_indent, row.y0, row.x1, row.y1 };
                     draw_text(context.list, *f, items[i], text, { enabled ? style.text_colour : style.disabled_text_colour, Align::Start, Align::Centre, false });

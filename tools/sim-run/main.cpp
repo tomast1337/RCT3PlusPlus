@@ -206,14 +206,14 @@ int main(int argc, char** argv)
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
             const save::Ride& ride = rides->rides[index];
-            const auto course = park::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> const park::PieceShape* {
+            const auto course = park::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
                 auto [at, added] = catalogues.try_emplace(object.overlay);
                 if (added)
                     if (const auto file = install->find(object.overlay + ".common.ovl"))
                         if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
                             at->second = std::move(*loaded);
                 if (!at->second)
-                    return nullptr;
+                    return std::nullopt;
                 return park::shape_named(*at->second, piece.symbol);
             });
             if (!course)
@@ -437,7 +437,7 @@ int main(int argc, char** argv)
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
             std::printf("%02d:00%s in the park: %zu children, %zu teens, %zu adults; came %u/%u/%u, went %u/%u/%u\n", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
         }
-        profiling::section("Step", [&] { simulation::step(world, workers.get()); });
+        profiling::section("Step", [&] { simulation::step(world, maybe(workers.get())); });
         profiling::capture_frame();
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {

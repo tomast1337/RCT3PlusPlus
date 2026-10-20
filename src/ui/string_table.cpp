@@ -26,9 +26,9 @@ namespace rct3::ui
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         StringTable table;
-        for (const ovl::Part* part : { &overlay->common(), overlay->unique() })
+        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
-            if (part == nullptr)
+            if (!part)
                 continue;
             for (ovl::TextItem& item : ovl::read_texts(*overlay, *part))
             {

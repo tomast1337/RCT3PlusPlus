@@ -19,7 +19,7 @@ Suggested messages:
 
 - C++26, built with `nob` (`nob.cpp`, no external build system), GPL-3.0-or-later. Put `// SPDX-License-Identifier: GPL-3.0-or-later` at the top of
   every source file.
-- Write to a C++23 baseline and use C++26 features only where GCC 15+ and Clang 20+ both support them.
+- Write to a C++23 baseline and use C++26 features only where GCC 16+ and Clang 20+ (on libstdc++ 16+) both support them. Nullable references are `std::optional<T&>`, not `T*`; raw pointers stay only at third-party edges (EnTT, C libraries).
 - Bootstrap once with `g++ -std=c++26 -o nob nob.cpp`, then `./nob test` builds and runs the tests.
   New `.cpp` files under `src/`, `tools/<name>/main.cpp` and `tests/` are picked up automatically.
 - Tests use [doctest](third_party/doctest/). Put them in `tests/<mirror of the src path>/<topic>.test.cpp`,

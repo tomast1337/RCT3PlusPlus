@@ -67,9 +67,9 @@ namespace rct3::park
             if (!cache)
             {
                 cache.emplace();
-                for (const ovl::Part* part : { &overlay.common(), overlay.unique() })
+                for (const auto part : { maybe(&overlay.common()), overlay.unique() })
                 {
-                    if (part == nullptr)
+                    if (!part)
                         continue;
                     for (auto& [name, value] : read(overlay, *part))
                     {

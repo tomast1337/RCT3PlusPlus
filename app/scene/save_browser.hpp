@@ -39,7 +39,7 @@ namespace rct3::scene
     /// Follows `dialog` (none when no window is open): lists `folder`, ours and the game's, whenever `opened`
     /// changes, reads the next file and carries out the window's requests, saving with `write`. Returns the file
     /// picked to load.
-    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, ui::FileDialog* dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write = nullptr);
+    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write = nullptr);
 
     void destroy_save_browser(render::Device& device, SaveBrowser& browser);
 

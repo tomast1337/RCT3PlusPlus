@@ -142,13 +142,13 @@ namespace rct3::ui
         const float half = style.thumb_width / 2;
         const float y = std::round(r.y0 + (r.height() - style.rail_thickness) / 2);
         const Rect rail { r.x0 + half, y, r.x1 - half, y + style.rail_thickness };
-        if (const SkinRef* skin = style.rail.empty() ? nullptr : context.skins.find(style.rail))
+        if (const auto skin = style.rail.empty() ? std::nullopt : context.skins.find(style.rail))
             draw_skin(context.list, skin, rail, enabled ? kWhite : kDisabledTint);
         else
             context.list.fill(rail, style.rail_colour);
 
         const SkinState state = !enabled ? SkinState::Disabled : pressed() ? SkinState::Pressed : hovered() ? SkinState::UpOver : SkinState::Up;
-        if (!style.thumb.empty() && context.skins.find(style.thumb, state) != nullptr)
+        if (!style.thumb.empty() && context.skins.find(style.thumb, state))
             draw_skin_state(context.list, context.skins, style.thumb, state, thumb());
         else
             context.list.fill(thumb(), style.thumb_colour);

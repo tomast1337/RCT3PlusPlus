@@ -1,7 +1,7 @@
 # Minimal CI: compile and run the unit tests (synthetic data only, no game files needed).
 #
-# The project needs a C++26 capable GCC (15 or newer). ubuntu-latest ships an older default
-# compiler, so the jobs run inside the official gcc:15 Docker image instead of installing a
+# The project needs a C++26 capable GCC (16 or newer, for std::optional<T&>). ubuntu-latest ships an older default
+# compiler, so the jobs run inside the official gcc:16 Docker image instead of installing a
 # toolchain on the host. The nob build script is bootstrapped from source in each job.
 #
 # A checkout has no objects, so every run compiles everything. ccache, kept between runs with
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: gcc:15
+      image: gcc:16
     strategy:
       fail-fast: false
       matrix:
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: gcc:15
+      image: gcc:16
     steps:
       - uses: actions/checkout@v4
         with:

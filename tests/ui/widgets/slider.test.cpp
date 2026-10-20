@@ -48,7 +48,7 @@ TEST_CASE("pressing the rail puts the thumb there and drags it")
     f.desktop.update({ { 60, 10 }, true, true });
     CHECK(f.slider.value() == doctest::Approx(50));
     CHECK(f.slider.take_change());
-    CHECK(f.desktop.keyboard_focus() == &f.slider);
+    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.slider);
     f.desktop.update({ { 85, 10 }, true, true });
     CHECK(f.slider.value() == doctest::Approx(75));
     f.desktop.update({ { 250, 10 }, true, true });

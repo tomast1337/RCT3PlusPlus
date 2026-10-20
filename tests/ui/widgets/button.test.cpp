@@ -151,7 +151,7 @@ TEST_CASE("text is centred in the button, grey when disabled and cut to the butt
         DrawList list;
         DrawContext context { list, skins, fonts };
         desktop.draw(context);
-        CHECK(list.clip() == nullptr);
+        CHECK(!list.clip());
         return list;
     };
     DrawList list = draw();
@@ -205,7 +205,7 @@ TEST_CASE("a swelling button grows its face while the pointer is over it")
     f.desktop.update(at(5, 5), half);
     CHECK(f.button.face() == Rect { -4, -4, 24, 24 });
     // Only the face grows: the pointer just outside still misses it.
-    CHECK(f.desktop.hit({ 21, 5 }) == nullptr);
+    CHECK(!f.desktop.hit({ 21, 5 }));
 
     f.desktop.update(at(90, 90), half);
     CHECK(f.button.face() == Rect { -2, -2, 22, 22 });

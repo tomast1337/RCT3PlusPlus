@@ -84,9 +84,9 @@ TEST_CASE("the drawer hides behind the bar, reached through the notch in its mid
     CHECK(d.x0 > b.x0);
     CHECK(d.x1 < b.x1);
     const float notch = b.x0 + park_bar::kLeftWidth + 19;
-    CHECK(f.desktop.hit({ notch, b.y1 - 4 }) == f.drawer);
-    CHECK(f.desktop.hit({ notch - 40, b.y1 - 4 }) == f.bar);
-    CHECK(f.desktop.hit({ notch, b.y0 + 1 }) == f.bar);
+    CHECK(rct3::as_pointer(f.desktop.hit({ notch, b.y1 - 4 })) == f.drawer);
+    CHECK(rct3::as_pointer(f.desktop.hit({ notch - 40, b.y1 - 4 })) == f.bar);
+    CHECK(rct3::as_pointer(f.desktop.hit({ notch, b.y0 + 1 })) == f.bar);
 }
 
 TEST_CASE("messages the drawer starts with are not new; later ones slide it down, then back up")

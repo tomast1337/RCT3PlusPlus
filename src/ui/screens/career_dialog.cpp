@@ -324,7 +324,7 @@ namespace rct3::ui
             load();
         if (cancel_->take_click())
             close();
-        if (delete_->take_click() && selected_ && parent() != nullptr)
+        if (delete_->take_click() && selected_ && parent())
         {
             deleting_ = selected_;
             const std::vector<QuestionAnswer> answers { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };

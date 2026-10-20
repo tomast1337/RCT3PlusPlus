@@ -3,6 +3,7 @@
 // A common/unique OVL pair loaded from disk and parsed as one unit.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstddef>
@@ -46,9 +47,9 @@ namespace rct3::ovl
         {
             return common_;
         }
-        [[nodiscard]] const Part* unique() const noexcept
+        [[nodiscard]] std::optional<const Part&> unique() const noexcept
         {
-            return unique_ ? &*unique_ : nullptr;
+            return unique_ ? std::optional<const Part&>(*unique_) : std::nullopt;
         }
 
         /// Address space covering both parts. The result refers to this object, so it must not outlive it or

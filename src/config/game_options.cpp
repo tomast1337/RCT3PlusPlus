@@ -148,7 +148,7 @@ namespace rct3::config
             values_[index(info.option)] = info.default_value;
     }
 
-    GameOptions GameOptions::parse(std::string_view text, std::vector<FileProblem>* problems)
+    GameOptions GameOptions::parse(std::string_view text, std::optional<std::vector<FileProblem>&> problems)
     {
         GameOptions options;
         const auto json = parse_json_object(text, problems);
@@ -176,7 +176,7 @@ namespace rct3::config
         return options;
     }
 
-    std::expected<GameOptions, std::string> GameOptions::load(const fs::path& path, std::vector<FileProblem>* problems)
+    std::expected<GameOptions, std::string> GameOptions::load(const fs::path& path, std::optional<std::vector<FileProblem>&> problems)
     {
         auto text = read_text_file(path);
         if (!text)

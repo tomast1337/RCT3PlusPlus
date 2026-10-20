@@ -81,8 +81,8 @@ namespace rct3::scene
             const save::TrackPiece& last = ride.track->pieces.back();
             const auto objects = object_indices(scene);
             const auto object = objects.find(last.scenery);
-            const park::PieceShape* shape = park::shape_named(*c, last.symbol);
-            if (object == objects.end() || shape == nullptr)
+            auto shape = park::shape_named(*c, last.symbol);
+            if (object == objects.end() || !shape)
                 return std::nullopt;
             return park::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
         }
@@ -391,7 +391,7 @@ namespace rct3::scene
         scene.building.ride.reset();
         scene.building.ghost.reset();
         scene.building.ghost_mesh = { };
-        if (ui::Widget* panel = scene.desktop->root().find(kPanelName))
+        if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
     }
 
@@ -431,7 +431,7 @@ namespace rct3::scene
         b.choice = { };
         b.tip = track_tip(scene, b);
         refresh(scene, b, assets);
-        if (scene.desktop->root().find(kPanelName) == nullptr)
+        if (!scene.desktop->root().find(kPanelName))
         {
             auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
             panel.placement = ui::bottom_left(0, kPanelBottom, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
@@ -442,8 +442,8 @@ namespace rct3::scene
     void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency)
     {
         TrackBuilding& b = scene.building;
-        auto* panel = static_cast<ui::ConstructionPanel*>(scene.desktop->root().find(kPanelName));
-        if (panel == nullptr || !b.ride)
+        auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
+        if (!panel || !b.ride)
             return;
         if (panel->take_closed())
         {

@@ -236,6 +236,6 @@ TEST_CASE("quit and Escape ask to leave, and the window stays")
     f.update();
     CHECK(f.window->take_quit());
     CHECK_FALSE(f.window->take_quit());
-    CHECK(f.desktop.root().find("tutorial") != nullptr);
+    CHECK(f.desktop.root().find("tutorial"));
     CHECK(f.window->cancel_button == &f.window->quit_button());
 }

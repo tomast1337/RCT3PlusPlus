@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widget.hpp"
 
+#include "core/maybe.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui
@@ -42,7 +44,7 @@ namespace rct3::ui
             std::rotate(children_.begin(), it, it + 1);
     }
 
-    Widget* Widget::find(std::string_view path) const
+    std::optional<Widget&> Widget::find(std::string_view path) const
     {
         const std::size_t slash = path.find('/');
         const std::string_view head = path.substr(0, slash);
@@ -51,11 +53,11 @@ namespace rct3::ui
             if (c->name_ != head)
                 continue;
             if (slash == std::string_view::npos)
-                return c.get();
-            if (Widget* found = c->find(path.substr(slash + 1)))
+                return *c;
+            if (auto found = c->find(path.substr(slash + 1)))
                 return found;
         }
-        return nullptr;
+        return std::nullopt;
     }
 
 } // namespace rct3::ui

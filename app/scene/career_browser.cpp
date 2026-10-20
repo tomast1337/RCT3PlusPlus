@@ -129,7 +129,7 @@ namespace rct3::scene
             free_pictures(device, browser);
             browser.ids = ui::career_scenario_ids(strings, pack);
             std::vector<config::FileProblem> problems;
-            browser.careers = browser.folder.empty() ? std::vector<career::CareerEntry> { } : career::list_careers(browser.folder, pack, &problems);
+            browser.careers = browser.folder.empty() ? std::vector<career::CareerEntry> { } : career::list_careers(browser.folder, pack, problems);
             for (const auto& problem : problems)
                 logging::logger("ui").warning("careers: {}", problem.message);
             std::vector<ui::CareerRow> rows;
@@ -283,17 +283,17 @@ namespace rct3::scene
 
     void update_career_browser(render::Device& device, CareerBrowser& browser, ui::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install)
     {
-        ui::CareerBoard* map = front.career_board();
-        if (map != nullptr && browser.playing && browser.map_opened == front.career_boards_opened())
+        auto map = front.career_board();
+        if (map && browser.playing && browser.map_opened == front.career_boards_opened())
             carry_out_map(browser, *map, strings, install);
-        else if (map == nullptr)
+        else if (!map)
         {
             browser.playing.reset();
             browser.slideshow.reset();
         }
 
-        ui::CareerDialog* dialog = front.career_dialog();
-        if (dialog == nullptr)
+        auto dialog = front.career_dialog();
+        if (!dialog)
         {
             free_pictures(device, browser);
             browser.careers.clear();

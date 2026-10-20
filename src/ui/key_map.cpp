@@ -238,7 +238,7 @@ namespace rct3::ui
         return out;
     }
 
-    KeyMap KeyMap::parse(std::string_view text, std::vector<config::FileProblem>* problems)
+    KeyMap KeyMap::parse(std::string_view text, std::optional<std::vector<config::FileProblem>&> problems)
     {
         KeyMap map;
         const auto json = config::parse_json_object(text, problems);
@@ -306,7 +306,7 @@ namespace rct3::ui
         return config::json_text(json);
     }
 
-    std::expected<KeyMap, std::string> KeyMap::load(const std::filesystem::path& path, std::vector<config::FileProblem>* problems)
+    std::expected<KeyMap, std::string> KeyMap::load(const std::filesystem::path& path, std::optional<std::vector<config::FileProblem>&> problems)
     {
         auto text = config::read_text_file(path);
         if (!text)

@@ -387,7 +387,7 @@ namespace rct3::ui
 
     void FileDialog::ask(Asking asking, std::u16string message, bool only_ok)
     {
-        if (question_ != nullptr || parent() == nullptr)
+        if (question_ || !parent())
             return;
         std::vector<QuestionAnswer> answers;
         if (only_ok)

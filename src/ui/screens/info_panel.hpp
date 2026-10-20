@@ -10,6 +10,7 @@
 // set_body_size(). Showing other tabs replaces the old ones, so only one thing is ever told about.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/panel_look.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/colour_palette.hpp"
@@ -273,7 +274,7 @@ namespace rct3::ui
             return std::exchange(change_now_, std::nullopt);
         }
         /// The widget of the page's control `id`, if the page has it.
-        [[nodiscard]] Widget* control(int id) const;
+        [[nodiscard]] std::optional<Widget&> control(int id) const;
         /// The colour the player picked for a paint tab since the last call.
         [[nodiscard]] std::optional<InfoPaint> take_paint()
         {
@@ -284,9 +285,9 @@ namespace rct3::ui
         {
             return painting_;
         }
-        [[nodiscard]] ColourPalette* palette() const
+        [[nodiscard]] std::optional<ColourPalette&> palette() const
         {
-            return palette_;
+            return maybe(palette_);
         }
         /// Puts the colours away, as when the player presses elsewhere.
         void close_palette();

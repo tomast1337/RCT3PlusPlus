@@ -35,8 +35,8 @@ namespace rct3::ui
             const SkinLibrary library = skin_library(set->skins, assets.textures);
             for (const auto& [skin, unused] : set->skins)
             {
-                const SkinRef* ref = library.find(skin);
-                if (ref == nullptr || assets.skins.find(skin) != nullptr)
+                auto ref = library.find(skin);
+                if (!ref || assets.skins.find(skin))
                     continue;
                 assets.skins.add(skin, *ref);
                 ++added;

@@ -167,8 +167,8 @@ namespace rct3::ui
             show(step_ + 1);
         if (quit_->take_click())
             quit_out_ = true;
-        const Font* f = context.fonts != nullptr ? context.fonts->get(style_.font) : nullptr;
-        if (f == nullptr)
+        const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt;
+        if (!f)
         {
             fit(0, false);
             return;

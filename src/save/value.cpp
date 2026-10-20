@@ -89,16 +89,16 @@ namespace rct3::save
         return extra_ ? std::span<const std::string_view>(extra_->names) : std::span<const std::string_view>();
     }
 
-    const Value* Value::field(std::string_view name) const noexcept
+    std::optional<const Value&> Value::field(std::string_view name) const noexcept
     {
         if (kind_ != ValueKind::Struct || !extra_)
-            return nullptr;
+            return std::nullopt;
         for (std::size_t i = 0; i < extra_->names.size(); ++i)
         {
             if (extra_->names[i] == name)
-                return &extra_->items[i];
+                return extra_->items[i];
         }
-        return nullptr;
+        return std::nullopt;
     }
 
     Value Value::make_bool(bool v)
@@ -657,10 +657,12 @@ namespace rct3::save
         }
     }
 
-    const Object* ObjectIndex::find(std::uint64_t id) const noexcept
+    std::optional<const Object&> ObjectIndex::find(std::uint64_t id) const noexcept
     {
         const auto it = by_id_.find(id);
-        return it == by_id_.end() ? nullptr : &file_->objects[it->second];
+        if (it == by_id_.end())
+            return std::nullopt;
+        return file_->objects[it->second];
     }
 
 } // namespace rct3::save

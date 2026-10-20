@@ -18,6 +18,7 @@
 
 #include "config/game_options.hpp"
 #include "config/user_data.hpp"
+#include "core/maybe.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
@@ -68,14 +69,14 @@ namespace rct3::ui
         {
             return *screen_;
         }
-        [[nodiscard]] OptionsDialog* options_window() const;
+        [[nodiscard]] std::optional<OptionsDialog&> options_window() const;
         /// The options window and what it offers, e.g. for a park to open its own with the same choices.
         [[nodiscard]] OptionsSession& options()
         {
             return options_;
         }
         /// The window loading a game, while it is open.
-        [[nodiscard]] FileDialog* file_dialog() const;
+        [[nodiscard]] std::optional<FileDialog&> file_dialog() const;
         /// The folder the window loading a game shows.
         [[nodiscard]] config::UserFolder file_folder() const
         {
@@ -87,7 +88,7 @@ namespace rct3::ui
             return file_action_;
         }
         /// The window picking a career, while it is open.
-        [[nodiscard]] CareerDialog* career_dialog() const;
+        [[nodiscard]] std::optional<CareerDialog&> career_dialog() const;
         /// The game whose careers it shows: 0 the original, then each expansion.
         [[nodiscard]] int career_pack() const
         {
@@ -102,14 +103,14 @@ namespace rct3::ui
         /// window picking a career.
         CareerBoard& open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked);
         /// The career map, while it is shown.
-        [[nodiscard]] CareerBoard* career_board() const;
+        [[nodiscard]] std::optional<CareerBoard&> career_board() const;
         /// Counts the career maps opened, so the owner tells a new one from the last.
         [[nodiscard]] std::size_t career_boards_opened() const
         {
             return career_boards_opened_;
         }
         /// The tutorials shown over the screen, while they are.
-        [[nodiscard]] TutorialPicker* tutorial_picker() const;
+        [[nodiscard]] std::optional<TutorialPicker&> tutorial_picker() const;
         /// The game whose tutorials they are: 0 the original, then each expansion.
         [[nodiscard]] int tutorial_pack() const
         {
@@ -125,9 +126,9 @@ namespace rct3::ui
         {
             return file_dialogs_opened_;
         }
-        [[nodiscard]] QuestionBox* question() const
+        [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return question_;
+            return maybe(question_);
         }
 
         /// True once the user has confirmed quitting.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/draw_list.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/shape.hpp"
 
 #include <algorithm>
@@ -244,9 +245,9 @@ namespace rct3::ui
             clips_.pop_back();
     }
 
-    const Rect* DrawList::clip() const
+    std::optional<const Rect&> DrawList::clip() const
     {
-        return clips_.empty() ? nullptr : &clips_.back();
+        return clips_.empty() ? std::nullopt : maybe(&clips_.back());
     }
 
 } // namespace rct3::ui

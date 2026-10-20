@@ -76,7 +76,7 @@ namespace rct3::config
         return index(setting) < kSettings.size() ? kSettings[index(setting)].name : std::string_view { };
     }
 
-    Settings Settings::parse(std::string_view text, std::vector<FileProblem>* problems)
+    Settings Settings::parse(std::string_view text, std::optional<std::vector<FileProblem>&> problems)
     {
         Settings settings;
         const auto json = parse_json_object(text, problems);
@@ -106,7 +106,7 @@ namespace rct3::config
         return settings;
     }
 
-    std::expected<Settings, std::string> Settings::load(const fs::path& path, std::vector<FileProblem>* problems)
+    std::expected<Settings, std::string> Settings::load(const fs::path& path, std::optional<std::vector<FileProblem>&> problems)
     {
         auto text = read_text_file(path);
         if (!text)

@@ -20,19 +20,19 @@ namespace rct3::save
             constexpr std::string_view kWindowWidth = "WindowWidth";
         } // namespace names
 
-        std::string text_of(const Value* v)
+        std::string text_of(std::optional<const Value&> v)
         {
-            return v != nullptr && v->kind() == ValueKind::String ? std::string(v->text()) : std::string { };
+            return v && v->kind() == ValueKind::String ? std::string(v->text()) : std::string { };
         }
 
-        std::int32_t int_of(const Value* v)
+        std::int32_t int_of(std::optional<const Value&> v)
         {
-            return v != nullptr && v->kind() == ValueKind::Integer ? static_cast<std::int32_t>(v->as_integer()) : 0;
+            return v && v->kind() == ValueKind::Integer ? static_cast<std::int32_t>(v->as_integer()) : 0;
         }
 
-        std::span<const Value> list_of(const Value* v)
+        std::span<const Value> list_of(std::optional<const Value&> v)
         {
-            return v != nullptr && v->kind() == ValueKind::List ? v->items() : std::span<const Value> { };
+            return v && v->kind() == ValueKind::List ? v->items() : std::span<const Value> { };
         }
 
         TutorialStep step_from(const Value& v)

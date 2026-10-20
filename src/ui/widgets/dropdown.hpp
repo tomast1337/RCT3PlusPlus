@@ -11,6 +11,7 @@
 // The owner asks with take_change() whether the user changed the selection.
 #pragma once
 
+#include "core/maybe.hpp"
 #include "ui/widgets/menu.hpp"
 
 #include <cstddef>
@@ -60,9 +61,9 @@ namespace rct3::ui
         [[nodiscard]] bool take_change();
 
         /// The open menu, if any; it lives on the desktop's root.
-        [[nodiscard]] Menu* menu() const
+        [[nodiscard]] std::optional<Menu&> menu() const
         {
-            return menu_;
+            return maybe(menu_);
         }
 
         [[nodiscard]] bool takes_pointer() const override

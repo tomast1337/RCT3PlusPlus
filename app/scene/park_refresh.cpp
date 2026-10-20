@@ -1,0 +1,513 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "scene/park_refresh.hpp"
+
+#include "logging/log.hpp"
+#include "park/object_models.hpp"
+#include "park/person_motions.hpp"
+#include "park/ride_cars.hpp"
+#include "profiling/profiler.hpp"
+#include "save/model/rides.hpp"
+#include "save/model/world.hpp"
+#include "scene/park_patrol.hpp"
+#include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
+#include "scene/park_view.hpp"
+#include "simulation/components.hpp"
+#include "simulation/systems.hpp"
+#include "ui/scale.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <future>
+#include <map>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+
+namespace rct3::scene
+{
+
+    namespace
+    {
+
+        /// How far away people are drawn at each level of detail, finest first; beyond the last they are not.
+        constexpr std::array kPersonDistances { 75.0f, 200.0f, 600.0f };
+
+        /// Whether a person standing at `at` may be in the view `transform` gives, with room to spare so people
+        /// do not pop in at the edges while the view turns between posings.
+        bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at)
+        {
+            constexpr float kSpare = 1.3f;
+            constexpr float kReach = 2.0f; // About a person's height, in clip units
+            const glm::vec4 clip = transform * glm::vec4(at + glm::vec3(0.0f, 1.0f, 0.0f), 1.0f);
+            const float edge = clip.w * kSpare + kReach;
+            return clip.w > -kReach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
+        }
+
+        constexpr std::size_t kNoCar = static_cast<std::size_t>(-1);
+
+        /// Where rider carrier `k` (see ParkScene::rider_cars) stands now.
+        glm::mat4 carrier_place(const ParkScene& scene, std::size_t k)
+        {
+            if (k == kNoCar)
+                return glm::mat4(1.0f);
+            if (k < scene.car_places.size())
+                return scene.car_places[k];
+            k -= scene.cars.size();
+            return k < scene.seat_carriers.size() ? scene.seat_carriers[k] : glm::mat4(1.0f);
+        }
+
+        /// Where simulated guest `guest` sits while riding: the car, by its place in `cars`, and the seat in
+        /// the car's own space that their place among the riders comes to, counting the train's seats front
+        /// to back. On a ride without cars the car is kNoCar and the seat is in the park, on the ride as it is
+        /// drawn. Nothing when not riding, or when the ride has no seat for them.
+        /// shortcut: flat rides are drawn standing still, so their riders sit still too, upgrade when the
+        /// rides' motions are played.
+        std::optional<std::pair<std::size_t, glm::mat4>> seat_of(const ParkScene& scene, entt::entity guest)
+        {
+            const auto& r = scene.sim.registry;
+            const auto* walking = r.try_get<simulation::Errand>(guest); // None once gone home
+            if (walking == nullptr || walking->kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(walking->target))
+                return std::nullopt;
+            const simulation::Errand& errand = *walking;
+            // On a ride with trains, the train the guest boarded and their place among its riders.
+            const auto* fleet = r.try_get<simulation::Trains>(errand.target);
+            std::size_t train = 0;
+            const std::vector<entt::entity>* riders = &r.get<simulation::CycleRide>(errand.target).riders;
+            if (fleet != nullptr)
+                for (std::size_t t = 0; t < fleet->riders.size(); ++t)
+                    if (std::ranges::contains(fleet->riders[t], guest))
+                    {
+                        train = t;
+                        riders = &fleet->riders[t];
+                    }
+            auto seat = static_cast<std::size_t>(std::ranges::find(*riders, guest) - riders->begin());
+            if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
+            {
+                const save::PlacedObject& o = scene.objects[object->second];
+                const auto model = scene.models.find(park::model_key(o));
+                if (model == scene.models.end() || seat >= model->second.seat_places.size())
+                    return std::nullopt;
+                // On a ride its bones move, the seat's bone carries the seat.
+                if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end())
+                    return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
+                return std::pair { kNoCar, park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
+            }
+            const auto cars = scene.ride_cars.find(errand.target);
+            if (cars == scene.ride_cars.end())
+                return std::nullopt;
+            for (const std::size_t car : cars->second)
+            {
+                if (fleet != nullptr && scene.car_spots[car].train != train)
+                    continue;
+                const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
+                if (seat < seats)
+                    return std::pair { car, model->second.seat_places[seat] };
+                seat -= seats;
+            }
+            return std::nullopt;
+        }
+
+        /// Where simulated guest `guest` sits in the park while riding, as seat_of finds it.
+        std::optional<glm::mat4> seat_place(const ParkScene& scene, entt::entity guest)
+        {
+            if (const auto seat = seat_of(scene, guest))
+                return seat->first == kNoCar ? seat->second : carrier_place(scene, seat->first) * seat->second;
+            return std::nullopt;
+        }
+
+        /// How guests walk holding an umbrella up, as the game's motions name it.
+        const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
+        /// How riders sit in a car, as the game's motions name it.
+        const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
+        /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
+        const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
+        constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
+
+        /// What guests who have queued for ages do now and then: look at their watch, tap a foot.
+        const std::array<std::int32_t, 2> kImpatientMotions { park::motion_number("lookwatch").value_or(park::motion::kIdle), park::motion_number("tapfoot").value_or(park::motion::kIdle) };
+        constexpr std::size_t kImpatientEvery = 3; ///< Of their turns, one is impatient; the others idle
+
+        /// The motion of a simulated guest standing still: something from kChatMotions while their party
+        /// stands together, now and then something impatient after queueing for ages, else idling.
+        std::int32_t chat_motion(const ParkScene& scene, const ShownPerson& shown)
+        {
+            const auto& r = scene.sim.registry;
+            // Each by turns, offset by who they are so they do not all move at once.
+            const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
+            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued >= simulation::kLongQueue)
+                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::motion::kIdle;
+            const auto* member = r.try_get<simulation::Member>(shown.guest);
+            if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
+                return park::motion::kIdle;
+            return kChatMotions[turn % kChatMotions.size()];
+        }
+
+        /// Places the people near enough to see that stand still, or those that move and may be in `view`, as
+        /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
+        /// where the simulation has them. The still ones read only what is set when the park loads besides the
+        /// arguments, so they may be placed beside the frame; the moving ones only on it.
+        std::vector<park::PlacedPerson> place_people(const ParkScene& scene, const park::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
+        {
+            std::vector<park::PlacedPerson> placed;
+            for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
+            {
+                const ShownPerson& shown = scene.shown_people[i];
+                const bool simulated = simulate && shown.guest != entt::null;
+                if (levels[i] == park::kNotDrawn || (simulated || !shown.walking) != moving)
+                    continue;
+                park::PlacedPerson pose = shown.pose;
+                pose.level = static_cast<std::size_t>(levels[i]);
+                pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
+                if (simulated)
+                {
+                    const auto& r = scene.sim.registry;
+                    const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
+                    const auto& stride = r.get<simulation::Stride>(shown.guest);
+                    const auto kind = r.get<simulation::Errand>(shown.guest).kind;
+                    pose.time = shown.saved_time + clock * shown.speed;
+                    if (kind == simulation::ErrandKind::Riding)
+                        continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
+                    const bool walking = stride.from != stride.to;
+                    // People are modelled facing +z, which the heading turns towards the way they go.
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+                    // An umbrella held up in the rain.
+                    // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
+                    // with one then.
+                    const auto* weather = r.ctx().find<simulation::Weather>();
+                    if (weather != nullptr && weather->rain && r.all_of<simulation::Umbrella>(shown.guest))
+                    {
+                        const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
+                        const auto& umbrella = scene.umbrellas[visitor != nullptr && visitor->age == simulation::AgeGroup::Child ? 1 : 0];
+                        pose.held = umbrella ? &*umbrella : nullptr;
+                        // shortcut: standing guests hold it up in the walk's first pose, legs mid-step; upgrade if a
+                        // standing motion with an umbrella turns up.
+                        pose.motion = kUmbrellaMotion;
+                        if (!walking)
+                            pose.time = 0;
+                    }
+                }
+                if (moving && !maybe_in_view(view, glm::vec3(pose.world[3])))
+                    continue;
+                placed.push_back(pose);
+            }
+            return placed;
+        }
+
+        /// Starts posing the riders seated in the ride cars away from the frame, each car's in the car's own
+        /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
+        std::future<RidersBuild> pose_riders(const ParkScene& scene)
+        {
+            std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
+            for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
+            {
+                const ShownPerson& shown = scene.shown_people[i];
+                if (shown.guest == entt::null || scene.people_levels[i] == park::kNotDrawn)
+                    continue;
+                const auto seat = seat_of(scene, shown.guest);
+                if (!seat)
+                    continue;
+                park::PlacedPerson pose = shown.pose;
+                pose.level = static_cast<std::size_t>(scene.people_levels[i]);
+                pose.time = shown.saved_time + scene.clock * shown.speed;
+                pose.world = seat->second;
+                pose.motion = kRideMotion;
+                by_car[seat->first].push_back(pose);
+            }
+            return std::async(std::launch::async, [&library = *scene.person_models, by_car = std::move(by_car)] {
+                std::vector<park::ObjectMesh> alone;
+                RidersBuild built;
+                for (const auto& [car, riders] : by_car)
+                {
+                    alone.push_back(park::person_mesh(library, riders));
+                    built.cars.push_back(car);
+                }
+                built.riders = park::gathered_meshes(alone);
+                return built;
+            });
+        }
+
+        /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
+        /// the seats they carry.
+        void swing_rides(ParkScene& scene)
+        {
+            for (ParkScene::BonedRide& boned : scene.boned_rides)
+            {
+                const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
+                if (model == scene.models.end() || !model->second.rig)
+                    continue;
+                const auto* cycle = scene.simulate ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
+                const bool riding = cycle != nullptr && cycle->timer > 0;
+                const float into = riding ? static_cast<float>(cycle->cycle_ticks - cycle->timer) * simulation::kTickSeconds + scene.sim_time : 0.0f;
+                const float length = cycle != nullptr ? static_cast<float>(cycle->cycle_ticks) * simulation::kTickSeconds : 0.0f;
+                const auto [motion, time] = park::flat_ride_motion(model->second.animation_seconds, length, into, riding, scene.clock);
+                const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
+                std::vector<glm::mat4> places(boned.bones.size());
+                for (std::size_t p = 0; p < places.size(); ++p)
+                    places[p] = boned.placed * moves[static_cast<std::size_t>(boned.bones[p])];
+                park::move_meshes(boned.mesh, places);
+                const auto& seat_bones = model->second.seat_bones;
+                for (std::size_t seat = 0; seat < seat_bones.size(); ++seat)
+                    if (seat_bones[seat] >= 0 && static_cast<std::size_t>(seat_bones[seat]) < moves.size())
+                        scene.seat_carriers[boned.first_seat + seat] = boned.placed * moves[static_cast<std::size_t>(seat_bones[seat])];
+            }
+        }
+
+        /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.
+        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const park::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
+        {
+            std::vector<std::pair<glm::vec4, glm::vec2>> out;
+            out.reserve(owners.size());
+            for (const std::uint32_t o : owners)
+                out.push_back({ glm::vec4(scene.anchors[o], plan.bands[o].x), glm::vec2(plan.bands[o].y, side) });
+            return out;
+        }
+
+        /// Puts `shapes` in `shown`'s buffers, dropping what they held.
+        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const park::LevelPlan& plan, float side = 0)
+        {
+            for (const render::BufferHandle b : { shown.vertices, shown.indices })
+            {
+                if (b)
+                    device.destroy_buffer(b);
+            }
+            shown = { .batches = shapes.mesh.batches, .billboards = std::move(shapes.billboards) };
+            if (side != 0)
+                shown.bands = crossing_bands(scene, plan, shown.billboards.mesh.owners, side);
+            profiling::section("Textures", [&] {
+                add_textures(device, scene, shapes.mesh.batches);
+                add_textures(device, scene, shown.billboards.mesh.batches);
+            });
+            if (shapes.mesh.indices.empty())
+                return;
+            const profiling::Scope zone("Upload");
+            auto vertices = side != 0 ? upload(device, render::BufferUsage::Vertex, crossing_vertices(shapes.mesh.vertices, crossing_bands(scene, plan, shapes.mesh.owners, side)), "crossing object vertices") : upload(device, render::BufferUsage::Vertex, shapes.mesh.vertices, "object vertices");
+            auto indices = upload(device, render::BufferUsage::Index, shapes.mesh.indices, "object indices");
+            if (!vertices || !indices)
+            {
+                logging::logger("park").warning("object buffers: {}", !vertices ? vertices.error() : indices.error());
+                if (vertices)
+                    device.destroy_buffer(*vertices);
+                if (indices)
+                    device.destroy_buffer(*indices);
+                shown.batches.clear();
+                return;
+            }
+            shown.vertices = *vertices;
+            shown.indices = *indices;
+        }
+
+    } // namespace
+
+    /// Where `shown` stands now: where the simulation has walked it while that runs, else where it was saved.
+    /// Reads the simulation, so only on the frame's thread.
+    glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
+    {
+        if (scene.simulate && shown.guest != entt::null)
+            if (const auto seat = seat_place(scene, shown.guest))
+                return glm::vec3((*seat)[3]);
+        if (scene.simulate && shown.guest != entt::null)
+            return simulation::between_steps(scene.sim.registry.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds).position;
+        return glm::vec3(shown.pose.world[3]);
+    }
+
+    /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
+    /// while it does not run.
+    void place_cars(ParkScene& scene)
+    {
+        for (std::size_t i = 0; i < scene.cars.size(); ++i)
+        {
+            const std::uint64_t id = scene.cars[i].id;
+            const park::CarSpot spot = scene.car_spots[i];
+            glm::mat4 place = scene.saved_cars.at(id);
+            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
+            if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
+            {
+                const simulation::Coaster& train = fleet->trains[spot.train];
+                // Between ticks, on as far as the train's speed takes it, from where the park kept it.
+                const float at = train.at + (train.running ? train.speed * scene.sim_time : 0.0f);
+                place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, at - scene.rides.rides[spot.ride].trains[spot.train].distance);
+            }
+            scene.car_places[i] = place;
+        }
+        profiling::section("Rides", [&] { swing_rides(scene); });
+        profiling::section("Mesh", [&] {
+            park::move_meshes(scene.car_meshes, scene.car_places);
+            scene.rider_places.resize(scene.rider_cars.size());
+            for (std::size_t k = 0; k < scene.rider_cars.size(); ++k)
+                scene.rider_places[k] = carrier_place(scene, scene.rider_cars[k]);
+            park::move_meshes(scene.riders, scene.rider_places);
+        });
+    }
+
+    /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
+    /// the last are done, the riders a few times a second, the still ones when a person's level of detail
+    /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
+    void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
+    {
+        if (!scene.person_models)
+            return;
+        scene.since_people_levels += elapsed;
+        if (ready(scene.people_build))
+        {
+            PeopleBuild built = scene.people_build.get();
+            if (built.simulate == scene.simulate)
+            {
+                scene.people_levels = std::move(built.levels);
+                scene.still_people = std::move(built.mesh);
+            }
+            else
+                scene.people_levels.clear(); // Built before the switch changed; build again
+        }
+        if (scene.since_people_levels >= kObjectRebuildInterval && !scene.people_build.valid())
+        {
+            scene.since_people_levels = 0;
+            park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
+            for (std::size_t i = 0; i < levels.size(); ++i)
+            {
+                // shortcut: guests who come in at the gate are simulated but not shown; add them to the shown
+                // people once new guests can be dressed and posed.
+                if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
+                    continue; // Gone home
+                const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
+                const auto level = std::ranges::find_if(kPersonDistances, [&](float d) { return distance <= d; });
+                if (level != kPersonDistances.end())
+                    levels[i] = static_cast<std::int8_t>(level - kPersonDistances.begin());
+            }
+            if (levels != scene.people_levels)
+            {
+                scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {
+                    profiling::register_thread("PeopleWorker");
+                    PeopleBuild built;
+                    built.mesh = profiling::section("Still", [&] { return park::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate)); });
+                    built.levels = levels;
+                    built.simulate = simulate;
+                    profiling::unregister_thread();
+                    return built;
+                });
+            }
+        }
+        // The people in motion are posed away from the frame, again as soon as the last posing is done.
+        if (ready(scene.moving_build))
+            scene.moving_people = scene.moving_build.get();
+        if (!scene.moving_build.valid())
+        {
+            const profiling::Scope zone("Moving");
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, placed = place_people(scene, scene.people_levels, scene.clock, true, view, scene.simulate)] { return park::person_mesh(library, placed); });
+        }
+        if (ready(scene.riders_build))
+        {
+            RidersBuild built = scene.riders_build.get();
+            scene.riders = std::move(built.riders);
+            scene.rider_cars = std::move(built.cars);
+        }
+        scene.since_riders += elapsed;
+        if (scene.simulate && scene.since_riders >= kRidersRebuildInterval && !scene.riders_build.valid())
+        {
+            scene.since_riders = 0;
+            scene.riders_build = profiling::section("Riders", [&] { return pose_riders(scene); });
+        }
+    }
+
+    /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
+    /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
+    /// may run beside the frame.
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, bool supports)
+    {
+        ObjectBuild built;
+        built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band); });
+        const auto leave_out = [&](std::size_t i) {
+            built.plan.steady[i] = park::kNotDrawn;
+            built.plan.finer[i] = park::kNotDrawn;
+            built.plan.coarser[i] = park::kNotDrawn;
+        };
+        for (const ParkScene::BonedRide& boned : scene.boned_rides)
+            leave_out(boned.object); // Drawn apart, moving
+        for (std::size_t i = 0; !supports && i < scene.objects.size() && i < built.plan.steady.size(); ++i)
+        {
+            if (scene.objects[i].overlay == park::kSupportOverlay)
+                leave_out(i);
+        }
+        if (built.plan == shown)
+            return std::nullopt;
+        for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
+        {
+            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted); });
+            shapes->billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
+        }
+        return built;
+    }
+
+    /// `vertices` with the bands of `bands`, for the crossing shaders.
+    std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
+    {
+        std::vector<CrossingVertex> out;
+        out.reserve(vertices.size());
+        for (std::size_t i = 0; i < vertices.size() && i < bands.size(); ++i)
+            out.push_back({ vertices[i], bands[i].first, bands[i].second });
+        return out;
+    }
+
+    /// Puts `built` in the object buffers.
+    void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+    {
+        scene.levels = std::move(built.plan);
+        show_shapes(device, scene, scene.steady_objects, std::move(built.steady), scene.levels);
+        const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.frag)
+        show_shapes(device, scene, scene.finer_objects, std::move(built.finer), scene.levels, -side);
+        show_shapes(device, scene, scene.coarser_objects, std::move(built.coarser), scene.levels, side);
+        scene.billboards_eye.reset();
+    }
+
+    /// Takes on the objects' meshes once built, and looks at their levels again every
+    /// kObjectRebuildInterval, building the meshes again beside the frame when one differs.
+    void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, float elapsed)
+    {
+        if (ready(scene.object_build))
+        {
+            if (auto built = scene.object_build.get())
+                show_objects(device, scene, std::move(*built));
+        }
+        scene.since_rebuild += elapsed;
+        if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
+            return;
+        scene.since_rebuild = 0;
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, supports = scene.show_supports] {
+            profiling::register_thread("ObjectWorker");
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, supports); });
+            profiling::unregister_thread();
+            return built;
+        });
+    }
+
+    /// Waits for the meshes being built beside the frame, dropping them.
+    void finish_builds(ParkScene& scene)
+    {
+        if (scene.object_build.valid())
+            scene.object_build.wait();
+        if (scene.people_build.valid())
+            scene.people_build.wait();
+        if (scene.moving_build.valid())
+            scene.moving_build.wait();
+        if (scene.riders_build.valid())
+            scene.riders_build.wait();
+    }
+
+    float scale_for(const render::Device& device, const ParkScene& scene)
+    {
+        return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale);
+    }
+
+    float aspect(const render::Device& device)
+    {
+        const render::Extent e = device.extent();
+        return e.height > 0 ? static_cast<float>(e.width) / static_cast<float>(e.height) : 1.0f;
+    }
+
+} // namespace rct3::scene

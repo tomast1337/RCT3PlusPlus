@@ -6,12 +6,12 @@
 namespace rct3::park
 {
 
-    std::vector<PathSpot> brush_tiles(PathSpot middle, int size, bool round, int columns, int rows)
+    std::vector<save::Tile> brush_tiles(save::Tile middle, int size, bool round, int columns, int rows)
     {
         size = std::clamp(size, 1, kLargestBrush);
         const int first = -(size - 1) / 2;
         const float reach = static_cast<float>(size) / 2;
-        std::vector<PathSpot> tiles;
+        std::vector<save::Tile> tiles;
         for (int dr = first; dr < first + size; ++dr)
             for (int dc = first; dc < first + size; ++dc)
             {
@@ -21,7 +21,7 @@ namespace rct3::park
                 const float y = static_cast<float>(dr) - half;
                 if (round && x * x + y * y > reach * reach)
                     continue;
-                const PathSpot t { middle.col + dc, middle.row + dr };
+                const save::Tile t { middle.col + dc, middle.row + dr };
                 if (t.col >= 0 && t.row >= 0 && t.col < columns && t.row < rows)
                     tiles.push_back(t);
             }

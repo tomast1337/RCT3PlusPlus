@@ -34,8 +34,9 @@ namespace rct3::park
         }
     } // namespace
 
-    RideSite ride_site(std::int32_t col, std::int32_t row, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid)
+    RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid)
     {
+        const auto [col, row] = tile;
         RideSite site;
         site.turns = turns & 3;
         site.span = site.turns % 2 == 0 ? squares : std::array { squares[1], squares[0] };
@@ -98,8 +99,9 @@ namespace rct3::park
         return cell.max_height() <= static_cast<float>(bottom) + kSlack ? bottom - 1 : bottom;
     }
 
-    DoorSpot door_spot(const RideSite& site, std::int32_t col, std::int32_t row)
+    DoorSpot door_spot(const RideSite& site, save::Tile tile)
     {
+        const auto [col, row] = tile;
         const std::int32_t last_col = site.col + site.span[0] - 1;
         const std::int32_t last_row = site.row + site.span[1] - 1;
         const std::int32_t c = std::clamp(col, site.col, last_col);

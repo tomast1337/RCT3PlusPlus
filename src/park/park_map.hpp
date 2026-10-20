@@ -125,7 +125,7 @@ namespace rct3::park
     /// the ground, in order round it.
     [[nodiscard]] std::array<glm::vec2, 4> ground_corners(std::span<const glm::vec3, 8> box);
     /// The shape of tile (col, row).
-    [[nodiscard]] std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, std::int32_t col, std::int32_t row);
+    [[nodiscard]] std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, save::Tile tile);
 
     /// A picture: rows from the top, four bytes a pixel (red, green, blue, straight alpha).
     struct MapPicture

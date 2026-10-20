@@ -62,7 +62,7 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
     start_at(b, { 2, 1 });
     CHECK(lay_problem(b, g, { }, solids) == LayProblem::Blocked);
     CHECK(lay_problem(b, g, { }) == LayProblem::None);
-    CHECK(plan_drag(std::vector<PathSpot> { { 1, 1 }, { 2, 1 }, { 3, 1 } }, g, { }, solids).refused == 1);
+    CHECK(plan_drag(std::vector<save::Tile> { { 1, 1 }, { 2, 1 }, { 3, 1 } }, g, { }, solids).refused == 1);
 
     const auto [bench, bench_models] = one_item(ItemCategory::Bench);
     CHECK(solid_tiles(bench, bench_models, g).tiles.empty());
@@ -78,8 +78,8 @@ TEST_CASE("a route goes round a stall in its way")
     b.heading = 1;
     const auto route = find_route(b, { 4, 1 }, g, { }, 1000, std::nullopt, solids);
     REQUIRE(route);
-    CHECK(route->back().piece.spot == PathSpot { 4, 1 });
-    CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == PathSpot { 2, 1 } && s.piece.end < 4; }));
+    CHECK(route->back().piece.spot == save::Tile { 4, 1 });
+    CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == save::Tile { 2, 1 } && s.piece.end < 4; }));
 }
 
 TEST_CASE("items in different quarters or along different edges of a tile take different room of it")

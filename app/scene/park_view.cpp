@@ -150,7 +150,7 @@ namespace rct3::scene
         std::ranges::sort(found, std::greater { }, &std::pair<float, ui::WorldLabel>::first);
         std::vector<ui::WorldLabel> labels;
         labels.reserve(found.size());
-        for (auto& [depth, label] : found)
+        for (auto& [_, label] : found)
             labels.push_back(std::move(label));
         return labels;
     }

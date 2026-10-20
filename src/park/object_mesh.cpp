@@ -253,7 +253,7 @@ namespace rct3::park
             run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
             run.stands.push_back({ anchors[index], board->width / 2, board->height });
         }
-        for (const auto& [key, run] : runs)
+        for (const auto& [_, run] : runs)
             boards.stands.insert(boards.stands.end(), run.stands.begin(), run.stands.end());
         bake(runs, boards.mesh);
         return boards;

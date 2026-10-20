@@ -40,6 +40,6 @@ namespace rct3::park
 
     /// One pass of `tool` over the ground within `reach` tiles of `middle`, on tiles `free` lets change. `seed`
     /// picks Random's ups and downs. Returns the sum of how far the corners moved.
-    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(int col, int row)>& free);
+    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::Tile)>& free);
 
 } // namespace rct3::park

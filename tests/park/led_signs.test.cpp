@@ -29,7 +29,7 @@ namespace
 
     /// `count` ground queue tiles of line `line` laid from `from` heading `heading`: the line flows back
     /// towards the first, as a queue does until it reaches an entrance.
-    std::vector<save::PathTile> lay_line(const save::TerrainGrid& g, PathSpot from, std::uint8_t heading, int count, std::uint64_t line)
+    std::vector<save::PathTile> lay_line(const save::TerrainGrid& g, save::Tile from, std::uint8_t heading, int count, std::uint64_t line)
     {
         FootpathBuilder b;
         b.queue = true;

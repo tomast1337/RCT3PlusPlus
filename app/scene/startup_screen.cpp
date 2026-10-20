@@ -153,7 +153,7 @@ namespace rct3::scene
 
     void stop_startup_sound(StartupScreen& screen, audio::AudioEngine& audio)
     {
-        for (auto& [logo, m] : screen.movies)
+        for (auto& [_, m] : screen.movies)
         {
             if (m.sound)
                 m.sound->stop(audio);
@@ -202,7 +202,7 @@ namespace rct3::scene
 
     void destroy_startup_screen(render::Device& device, StartupScreen& screen)
     {
-        for (auto& [logo, m] : screen.movies)
+        for (auto& [_, m] : screen.movies)
             device.destroy_texture(m.picture.handle);
         ui::destroy_textures(device, screen.logos);
         ui::destroy_ui_renderer(device, screen.renderer);

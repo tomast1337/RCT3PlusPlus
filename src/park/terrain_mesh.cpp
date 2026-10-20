@@ -153,8 +153,9 @@ namespace rct3::park
 
     } // namespace
 
-    glm::vec3 ground_normal(const save::TerrainGrid& g, int col, int row, int c)
+    glm::vec3 ground_normal(const save::TerrainGrid& g, save::Tile tile, int c)
     {
+        const auto [col, row] = tile;
         const int x = col + c % 2;
         const int z = row + c / 2;
         const float height = g.at(col, row).corners.at(static_cast<std::size_t>(c));
@@ -207,7 +208,7 @@ namespace rct3::park
                 low = std::min(low, cell.min_height());
                 high = std::max(high, cell.max_height());
                 const std::array<glm::vec3, 4> c { corner(grid, col, row, 0), corner(grid, col, row, 1), corner(grid, col, row, 2), corner(grid, col, row, 3) };
-                const std::array<glm::vec3, 4> n { ground_normal(grid, col, row, 0), ground_normal(grid, col, row, 1), ground_normal(grid, col, row, 2), ground_normal(grid, col, row, 3) };
+                const std::array<glm::vec3, 4> n { ground_normal(grid, { col, row }, 0), ground_normal(grid, { col, row }, 1), ground_normal(grid, { col, row }, 2), ground_normal(grid, { col, row }, 3) };
                 ground_layers(b, grid, col, row, c, n);
                 if (grid.contains(col + 1, row))
                     open_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false, open_between(col, row, col + 1, row));

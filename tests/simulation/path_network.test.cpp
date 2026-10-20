@@ -154,7 +154,7 @@ TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid
     CHECK(corners(p) == 0); // The square is broken
     CHECK(p.nodes()[gone].removed);
     CHECK_FALSE(p.find({ 1, 0, 0 }));
-    CHECK(std::ranges::all_of(p.nodes(), [&](const PathNode& n) { return std::ranges::find(n.next, gone) == n.next.end(); }));
+    CHECK(std::ranges::all_of(p.nodes(), [&](const PathNode& n) { return !std::ranges::contains(n.next, gone); }));
     // (2, 0) is cut off now; (0, 0) still reaches (1, 1) round the other way.
     CHECK_FALSE(p.route(*p.find({ 0, 0, 0 }), *p.find({ 2, 0, 0 })));
     CHECK(p.route(*p.find({ 0, 0, 0 }), *p.find({ 1, 1, 0 }))->size() == 2);

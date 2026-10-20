@@ -84,7 +84,7 @@ namespace rct3::park
 
     /// Sets the stroke's tiles for a drag of `amount` height units (up positive) from where it began, on the
     /// tiles `free` allows. Returns the sum of how far every corner moved from where the stroke found it.
-    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(int col, int row)>& free);
+    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::Tile)>& free);
 
     /// Adds strips on the ground that show what a stroke would move: the tiles' edges, the one edge, or a cross
     /// on the one corner.

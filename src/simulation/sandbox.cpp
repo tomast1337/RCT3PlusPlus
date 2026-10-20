@@ -10,7 +10,7 @@
 namespace rct3::simulation
 {
 
-    Sandbox::Sandbox(std::uint64_t seed, unsigned threads)
+    Sandbox::Sandbox(random::Seed seed, unsigned threads)
         : workers_(threads > 0 ? std::make_unique<Workers>(threads) : nullptr)
     {
         world_.seed = seed;

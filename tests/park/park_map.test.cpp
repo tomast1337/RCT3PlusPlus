@@ -136,7 +136,7 @@ TEST_CASE("paths, attractions and water show only with their layers")
     const save::TerrainGrid g = flat(6, 6);
     MapFeatures f;
     f.paths = { { 1, 1, false } };
-    f.shapes = { { MapLayer::Food, tile_corners(g, 4, 4) }, { MapLayer::Rides, tile_corners(g, 4, 1) } };
+    f.shapes = { { MapLayer::Food, tile_corners(g, { 4, 4 }) }, { MapLayer::Rides, tile_corners(g, { 4, 1 }) } };
     f.water.assign(36, std::nullopt);
     f.water[2 * 6 + 2] = 1.0f; // A metre deep over flat ground
     const std::int32_t scale = 8;

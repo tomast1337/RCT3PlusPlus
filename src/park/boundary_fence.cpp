@@ -45,7 +45,7 @@ namespace rct3::park
                     o.col = col;
                     o.row = row;
                     o.rotation = edge_turns(side);
-                    if (const glm::vec2 lean = edge_lean(grid, col, row, side); lean != glm::vec2(0.0f))
+                    if (const glm::vec2 lean = edge_lean(grid, { col, row }, side); lean != glm::vec2(0.0f))
                         out.leans.emplace(o.id, lean);
                 }
             }

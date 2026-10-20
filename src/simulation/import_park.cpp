@@ -22,6 +22,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -139,7 +140,7 @@ namespace rct3::simulation
             {
                 NodeId next = kNoNode;
                 for (const NodeId n : paths.nodes()[at].next)
-                    if (n != kNoNode && paths.nodes()[n].queue && paths.nodes()[n].line == id && std::ranges::find(line, n) == line.end())
+                    if (n != kNoNode && paths.nodes()[n].queue && paths.nodes()[n].line == id && !std::ranges::contains(line, n))
                     {
                         next = n;
                         break;
@@ -418,7 +419,7 @@ namespace rct3::simulation
 
     std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride)
     {
-        if (!course.closed || std::ranges::find(course.kinds, park::CourseKind::Station) == course.kinds.end())
+        if (!course.closed || !std::ranges::contains(course.kinds, park::CourseKind::Station))
             return std::nullopt;
         Coaster c;
         c.distance = course.distance;
@@ -764,7 +765,7 @@ namespace rct3::simulation
     {
         auto& r = world.registry;
         const auto view = r.view<const Pose, const Visitor>();
-        std::vector<entt::entity> guests(view.begin(), view.end());
+        auto guests = view | std::ranges::to<std::vector<entt::entity>>();
         std::ranges::sort(guests);
         // Each queue tile of a ride's line, by node: the ride and how far the tile is from the front.
         std::unordered_map<NodeId, std::pair<entt::entity, std::size_t>> lines;
@@ -800,7 +801,7 @@ namespace rct3::simulation
         }
         // Those nearer the front were there first.
         std::ranges::stable_sort(waiting, { }, &std::pair<std::size_t, entt::entity>::first);
-        for (const auto& [k, e] : waiting)
+        for (const auto& [_, e] : waiting)
             r.get<CycleRide>(r.get<Errand>(e).target).queue.push_back(e);
         return started;
     }

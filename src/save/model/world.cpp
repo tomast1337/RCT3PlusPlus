@@ -422,8 +422,9 @@ namespace rct3::save
         return layer;
     }
 
-    std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, int col, int row, int triangle) noexcept
+    std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, int triangle) noexcept
     {
+        const auto [col, row] = tile;
         if (!grid.contains(col, row) || (triangle != 0 && triangle != 1))
             return std::nullopt;
         const auto& c = grid.at(col, row).corners;
@@ -1085,7 +1086,7 @@ namespace rct3::save
                     issues.add(WorldIssueKind::WaterTileOutOfRange);
                     continue;
                 }
-                const auto mask = expected_water_mask(g, body.level, t.col, t.row, t.triangle);
+                const auto mask = expected_water_mask(g, body.level, { t.col, t.row }, t.triangle);
                 if (mask && *mask != t.mask)
                     issues.add(WorldIssueKind::WaterMaskMismatch);
             }

@@ -71,13 +71,13 @@ namespace rct3::simulation
             for (const save::PeopleRef ref : group.members)
             {
                 const auto found = by_id.find(ref.id);
-                if (ref && found != by_id.end() && r.all_of<Errand>(found->second) && !r.all_of<Member>(found->second) && std::ranges::find(party.members, found->second) == party.members.end())
+                if (ref && found != by_id.end() && r.all_of<Errand>(found->second) && !r.all_of<Member>(found->second) && !std::ranges::contains(party.members, found->second))
                     party.members.push_back(found->second);
             }
             if (party.members.size() < 2)
                 continue;
             const auto leader = by_id.find(group.leader.id);
-            party.leader = leader != by_id.end() && std::ranges::find(party.members, leader->second) != party.members.end() ? leader->second : party.members.front();
+            party.leader = leader != by_id.end() && std::ranges::contains(party.members, leader->second) ? leader->second : party.members.front();
             const entt::entity e = r.create();
             for (const entt::entity m : party.members)
             {

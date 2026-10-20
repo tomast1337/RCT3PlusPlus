@@ -17,8 +17,9 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<save::WaterBody> fill_water(const save::TerrainGrid& grid, int col, int row, float level, const std::function<bool(int col, int row)>& allowed)
+    std::optional<save::WaterBody> fill_water(const save::TerrainGrid& grid, save::Tile tile, float level, const std::function<bool(save::Tile)>& allowed)
     {
+        const auto [col, row] = tile;
         save::WaterBody body;
         body.level = level;
         if (!grid.contains(col, row) || grid.at(col, row).min_height() >= level)
@@ -42,11 +43,11 @@ namespace rct3::park
         {
             const auto [c, r] = open.back();
             open.pop_back();
-            if (!allowed(c, r))
+            if (!allowed({ c, r }))
                 return std::nullopt;
             for (int t = 0; t < 2; ++t)
             {
-                if (const auto mask = save::expected_water_mask(grid, level, c, r, t); mask && *mask != 0)
+                if (const auto mask = save::expected_water_mask(grid, level, { c, r }, t); mask && *mask != 0)
                     body.tris.push_back({ static_cast<std::uint8_t>(c), static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(t), *mask });
             }
             const save::TerrainCell& cell = grid.at(c, r);
@@ -66,8 +67,9 @@ namespace rct3::park
         return body;
     }
 
-    bool holds(const save::WaterBody& body, int col, int row)
+    bool holds(const save::WaterBody& body, save::Tile tile)
     {
+        const auto [col, row] = tile;
         return std::ranges::any_of(body.tris, [&](const save::WaterTri& t) { return t.col == col && t.row == row; });
     }
 

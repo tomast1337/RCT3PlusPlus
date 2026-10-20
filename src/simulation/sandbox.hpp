@@ -51,7 +51,7 @@ namespace rct3::simulation
     class Sandbox
     {
     public:
-        explicit Sandbox(std::uint64_t seed = 1, unsigned threads = 0);
+        explicit Sandbox(random::Seed seed = random::Seed { 1 }, unsigned threads = 0);
 
         /// A straight path of tiles from `from` to `to` (same column or same row), both ends included.
         Sandbox& path(glm::ivec2 from, glm::ivec2 to, int level = 0);

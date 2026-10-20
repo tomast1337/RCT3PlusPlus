@@ -465,8 +465,9 @@ namespace rct3::park
         return { xz(0), xz(1), xz(5), xz(4) };
     }
 
-    std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, std::int32_t col, std::int32_t row)
+    std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, save::Tile tile)
     {
+        const auto [col, row] = tile;
         const float x0 = grid.world_x(col);
         const float x1 = grid.world_x(col + 1);
         const float z0 = grid.world_z(row);

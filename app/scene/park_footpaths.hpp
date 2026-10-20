@@ -97,11 +97,11 @@ namespace rct3::scene
         bool lay_next = false;                                ///< Letting go on the arrow lays the next piece
         bool under_ground = false;                            ///< The ghost goes into a tunnel, so the ground is drawn faded
         bool took_click = false;                              ///< That press was not a click picking a start
-        std::vector<park::PathSpot> brush;                    ///< While a stroke goes on: the tiles it passed over, in order
+        std::vector<save::Tile> brush;                        ///< While a stroke goes on: the tiles it passed over, in order
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, std::uint8_t>> hover_edge;
-        std::optional<park::PathSpot> hover_tile;              ///< Bare ground pointed at, shown as the path a click would lay
+        std::optional<save::Tile> hover_tile;                  ///< Bare ground pointed at, shown as the path a click would lay
         std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door edge pointed at: column, row, height, side
         /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.
         struct Lift
@@ -115,7 +115,7 @@ namespace rct3::scene
         std::optional<park::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
         std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
         bool routing = false;                              ///< The panel's route tab was on last frame
-        std::optional<park::PathSpot> route_goal;          ///< With routing on: the tile pointed at
+        std::optional<save::Tile> route_goal;              ///< With routing on: the tile pointed at
         std::optional<std::int32_t> route_goal_height;     ///< And the height of the raised path pointed at there
         std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes
         bool route_blocked = false;                        ///< Only through what is in the way, so it is shown refused
@@ -125,7 +125,7 @@ namespace rct3::scene
         bool lay_route = false;                            ///< And came up, so the route is laid
         std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid
         std::optional<std::uint64_t> sell;                 ///< A right click picked this path to sell
-        std::optional<park::PathSpot> followed;            ///< With camera follow on: the next piece's tile the camera went to
+        std::optional<save::Tile> followed;                ///< With camera follow on: the next piece's tile the camera went to
         std::optional<glm::vec3> camera_goal;              ///< Where the camera glides to, until it is there or moved
         bool dirty = false;                                ///< The next piece changed, so the ghost is built again
         std::u16string notice;                             ///< Why the last piece was not laid, until the next control

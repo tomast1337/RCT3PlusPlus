@@ -67,7 +67,7 @@ namespace
 
     bool has(const std::vector<LaidPiece>& fit, std::size_t index, bool reversed)
     {
-        return std::ranges::find(fit, LaidPiece { index, reversed }) != fit.end();
+        return std::ranges::contains(fit, LaidPiece { index, reversed });
     }
 } // namespace
 

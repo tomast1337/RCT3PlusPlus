@@ -7,11 +7,11 @@
 // that is missing or fails adds nothing; the rest still count.
 #pragma once
 
-#include <cstdint>
+#include "random/generator.hpp"
 
 namespace rct3::random
 {
 
-    [[nodiscard]] std::uint64_t fresh_seed();
+    [[nodiscard]] Seed fresh_seed();
 
 } // namespace rct3::random

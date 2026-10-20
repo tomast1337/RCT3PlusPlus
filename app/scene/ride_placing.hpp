@@ -89,7 +89,7 @@ namespace rct3::scene
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
     [[nodiscard]] std::optional<glm::vec2> ground_spot(const ParkScene& scene, ui::Point at, ui::Point size);
     /// The tile of the ground under `at`, in a view of `size`.
-    [[nodiscard]] std::optional<park::PathSpot> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
+    [[nodiscard]] std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole and scenery are left alone; false for those.

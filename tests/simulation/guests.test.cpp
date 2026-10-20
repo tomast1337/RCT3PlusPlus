@@ -226,7 +226,7 @@ TEST_CASE("bored guests find the flat ride by themselves")
 TEST_CASE("a park steps the same however many workers share the work")
 {
     const auto build = [](unsigned threads) {
-        auto park = std::make_unique<Sandbox>(42, threads);
+        auto park = std::make_unique<Sandbox>(rct3::random::Seed { 42 }, threads);
         for (int r = 0; r <= 20; r += 4)
             park->path({ 0, r }, { 30, r });
         for (int c = 0; c <= 30; c += 10)

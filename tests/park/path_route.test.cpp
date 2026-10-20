@@ -34,7 +34,7 @@ namespace
             cell(g, col, row).corners = { height, height, height, height };
     }
 
-    FootpathBuilder started_at(PathSpot spot, bool cut = false)
+    FootpathBuilder started_at(save::Tile spot, bool cut = false)
     {
         FootpathBuilder b;
         start_at(b, spot);
@@ -46,8 +46,8 @@ namespace
     {
         for (std::size_t i = 1; i < route.size(); ++i)
         {
-            const PathSpot a = route[i - 1].piece.spot;
-            const PathSpot b = route[i].piece.spot;
+            const save::Tile a = route[i - 1].piece.spot;
+            const save::Tile b = route[i].piece.spot;
             if (std::abs(a.col - b.col) + std::abs(a.row - b.row) != 1 || route[i - 1].piece.end != route[i].piece.start)
                 return false;
         }
@@ -77,8 +77,8 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
     const auto route = find_route(started_at({ 1, 1 }), { 6, 4 }, g, { }, 1000);
     REQUIRE(route);
     CHECK(route->size() == 9); // The start tile and eight more
-    CHECK(route->front().piece.spot == PathSpot { 1, 1 });
-    CHECK(route->back().piece.spot == PathSpot { 6, 4 });
+    CHECK(route->front().piece.spot == save::Tile { 1, 1 });
+    CHECK(route->back().piece.spot == save::Tile { 6, 4 });
     CHECK(joined(*route));
     CHECK(std::ranges::all_of(*route, [](const RouteStep& s) { return s.piece.ground; }));
     std::size_t turns = 0;
@@ -96,7 +96,7 @@ TEST_CASE("a route goes round land the park does not own")
     const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, 1000);
     REQUIRE(route);
     CHECK(joined(*route));
-    CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.piece.spot == PathSpot { 4, 5 }; }));
+    CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.piece.spot == save::Tile { 4, 5 }; }));
 }
 
 TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting is on")
@@ -146,7 +146,7 @@ TEST_CASE("a route to a raised path ends on it, not on the ground under it")
     const auto route = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000, 4);
     REQUIRE(route);
     CHECK(joined(*route));
-    CHECK(route->back().piece.spot == PathSpot { 7, 1 });
+    CHECK(route->back().piece.spot == save::Tile { 7, 1 });
     CHECK(route->back().piece.end == 4);
     CHECK_FALSE(route->back().piece.ground);
     CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.slope != PathSlope::Flat; }));
@@ -166,7 +166,7 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
     const auto route = find_route(b, { 5, 1 }, g, paths, 1000);
     REQUIRE(route);
     CHECK(route->size() == 5);
-    CHECK(route->front().piece.spot == PathSpot { 1, 1 });
+    CHECK(route->front().piece.spot == save::Tile { 1, 1 });
     CHECK(route_price(*route, b, g, paths, 1000) == 4000); // The path at column 3 is walked over
     CHECK(find_route(b, { 0, 1 }, g, paths, 1000)->empty());
     CHECK_FALSE(find_route(FootpathBuilder { }, { 5, 1 }, g, paths, 1000));

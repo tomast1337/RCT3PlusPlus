@@ -324,7 +324,7 @@ namespace rct3::park
                 }
             }
             std::vector<ModelPart> out;
-            for (auto& [bone, entry] : by_bone)
+            for (auto& [_, entry] : by_bone)
                 out.push_back(std::move(entry.first));
             return out;
         }

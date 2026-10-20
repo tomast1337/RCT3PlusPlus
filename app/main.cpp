@@ -78,6 +78,7 @@
 #include <functional>
 #include <optional>
 #include <random>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -135,7 +136,7 @@ namespace
         const std::vector<rct3::profiling::ScopeStats> scopes = rct3::profiling::stats();
         if (const auto it = std::ranges::find(scopes, graphed, &rct3::profiling::ScopeStats::name); it != scopes.end() && !it->history.empty())
         {
-            const std::vector<float> history(it->history.begin(), it->history.end());
+            const auto history = it->history | std::ranges::to<std::vector<float>>();
             const std::string label = std::format("{}: {:.2f} ms, peak {:.2f}", graphed, it->last, it->period_max);
             ImGui::PlotLines("##graph", history.data(), static_cast<int>(history.size()), 0, label.c_str(), 0.0f, static_cast<float>(it->period_max * 1.2), { ImGui::GetContentRegionAvail().x, 80 });
         }
@@ -542,7 +543,7 @@ int main(int argc, char** argv)
     std::optional<std::filesystem::path> park_file;
     std::optional<std::filesystem::path> script_file;
     std::optional<std::filesystem::path> script_report;
-    std::optional<std::uint64_t> seed;
+    std::optional<rct3::random::Seed> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
     for (int i = 1; i < argc; ++i)

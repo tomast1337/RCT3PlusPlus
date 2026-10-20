@@ -123,7 +123,7 @@ namespace
             u32(file, static_cast<std::uint32_t>(data->size()));
             offset += (data->size() + 3) & ~std::size_t { 3 };
         }
-        for (const auto& [tag, data] : tables)
+        for (const auto& [_, data] : tables)
         {
             file.insert(file.end(), data->begin(), data->end());
             file.resize((file.size() + 3) & ~std::size_t { 3 }, 0);

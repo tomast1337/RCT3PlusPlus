@@ -81,13 +81,13 @@ TEST_CASE("the map keeps ground paths and the ends of raised ones, and their sty
 
     const GroundPathMap map = ground_path_map(paths, g);
     REQUIRE(map.styles == std::vector<std::string> { "Gravel", "Brick" });
-    CHECK(has_ground_path(map, 0, 0));
-    CHECK(has_ground_path(map, 1, 0));
-    CHECK(has_ground_path(map, 2, 2));
-    CHECK_FALSE(has_ground_path(map, 1, 1));
-    CHECK_FALSE(has_ground_path(map, 3, 0));
-    CHECK_FALSE(has_ground_path(map, -1, 0));
-    CHECK_FALSE(has_ground_path(map, 4, 0));
+    CHECK(has_ground_path(map, { 0, 0 }));
+    CHECK(has_ground_path(map, { 1, 0 }));
+    CHECK(has_ground_path(map, { 2, 2 }));
+    CHECK_FALSE(has_ground_path(map, { 1, 1 }));
+    CHECK_FALSE(has_ground_path(map, { 3, 0 }));
+    CHECK_FALSE(has_ground_path(map, { -1, 0 }));
+    CHECK_FALSE(has_ground_path(map, { 4, 0 }));
     CHECK(map.tiles[1] == 1);
     REQUIRE(map.raised.contains(1 * 4 + 1));
 }
@@ -150,10 +150,10 @@ TEST_CASE("a ground path runs on into the foot of a raised path that meets the g
     bridge.elevation->quantised_height = 9; // Flat, high above
     const std::vector<save::PathTile> paths { ground(0, 0), slope, ground(2, 0), bridge };
     const GroundPathMap map = ground_path_map(paths, g);
-    CHECK(path_continues(map, g, 0, 0, 1, 0));
-    CHECK(path_continues(map, g, 2, 0, -1, 0));
-    CHECK_FALSE(path_continues(map, g, 2, 0, 1, 0));
-    CHECK_FALSE(path_continues(map, g, 0, 0, -1, 0));
+    CHECK(path_continues(map, g, { 0, 0 }, 1, 0));
+    CHECK(path_continues(map, g, { 2, 0 }, -1, 0));
+    CHECK_FALSE(path_continues(map, g, { 2, 0 }, 1, 0));
+    CHECK_FALSE(path_continues(map, g, { 0, 0 }, -1, 0));
     CHECK(path_rise(1) == 2);
     CHECK(path_rise(5) == 1);
     CHECK(path_rise(0) == 0);
@@ -218,7 +218,7 @@ TEST_CASE("a raised ride's floor stands at its height and is not paved; a sunk o
     CHECK(floors[0].raised == 3);
     GroundPathMap map = ground_path_map({ }, g);
     pave_ride_floors(map, floors);
-    CHECK_FALSE(has_ground_path(map, 2, 2));
+    CHECK_FALSE(has_ground_path(map, { 2, 2 }));
     const std::array sunk { flat_ride(2, 2, 0, -3) };
     CHECK(ride_floors(sunk, two_by_three, g).empty());
     const std::array level { flat_ride(2, 2, 0) };
@@ -228,13 +228,13 @@ TEST_CASE("a raised ride's floor stands at its height and is not paved; a sunk o
 TEST_CASE("a floor is paved like the path its exit lets out onto, else plain")
 {
     const save::TerrainGrid g = flat_grid(10, 10);
-    RideFloor floor { 2, 2, 3, 4, std::array { 1, 3 } };
+    RideFloor floor { 2, 2, 3, 4, save::Tile { 1, 3 } };
     GroundPathMap map = ground_path_map({ }, g);
     pave_ride_floors(map, std::span(&floor, 1));
     REQUIRE(map.styles.size() == 1);
     CHECK(map.styles[0] == kRideFloorStyle);
-    CHECK(has_ground_path(map, 3, 4));
-    CHECK_FALSE(has_ground_path(map, 4, 4));
+    CHECK(has_ground_path(map, { 3, 4 }));
+    CHECK_FALSE(has_ground_path(map, { 4, 4 }));
 
     const std::array paths { ground(1, 3, "Marble") };
     map = ground_path_map(paths, g);
@@ -246,6 +246,6 @@ TEST_CASE("a floor is paved like the path its exit lets out onto, else plain")
     floor.doors = { { 5, 5 }, { 1, 3 }, { 10, 2 } };
     map = ground_path_map(paths, g);
     pave_ride_floors(map, std::span(&floor, 1));
-    CHECK(has_ground_path(map, 5, 5));
+    CHECK(has_ground_path(map, { 5, 5 }));
     CHECK(map.tiles[static_cast<std::size_t>(3 * map.width + 1)] == 0);
 }

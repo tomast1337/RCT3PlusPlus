@@ -254,7 +254,7 @@ namespace
         bool on_key(const KeyPress& key) override
         {
             seen.push_back(key.key);
-            return std::ranges::find(uses, key.key) != uses.end();
+            return std::ranges::contains(uses, key.key);
         }
     };
 

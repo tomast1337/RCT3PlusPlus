@@ -6,6 +6,7 @@
 // Includes EnTT, which is large: include this only where the registry is needed.
 #pragma once
 
+#include "random/generator.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
 #include "simulation/ratings.hpp"
@@ -20,7 +21,7 @@ namespace rct3::simulation
         entt::registry registry;
         PathNetwork paths;
         std::uint64_t tick = 0;                       ///< Simulation steps run so far
-        std::uint64_t seed = 0;                       ///< Randomness of the whole run derives from it
+        random::Seed seed;                            ///< Randomness of the whole run derives from it
         RatingModel ratings = builtin_rating_model(); ///< How rides untested in the park get rated
     };
 

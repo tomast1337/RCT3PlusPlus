@@ -61,7 +61,7 @@ TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherw
     }
     REQUIRE(simulation::import_stalls(world, rides) == 4);
     std::vector<simulation::Serve> served;
-    for (const auto [e, shop] : world.registry.view<const simulation::Shop>().each())
+    for (const auto [_, shop] : world.registry.view<const simulation::Shop>().each())
         served.push_back(shop.serve);
     std::ranges::sort(served);
     CHECK(served == std::vector { simulation::Serve::Any, simulation::Serve::Cold, simulation::Serve::Cold, simulation::Serve::Hot });
@@ -209,7 +209,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     REQUIRE(bins.size() == 1);
     CHECK(world.registry.get<simulation::Bin>(bins.front()).capacity == doctest::Approx(40));
     CHECK(world.registry.get<simulation::Bin>(bins.front()).contents == 3);
-    for (const auto [e, item] : world.registry.view<simulation::PathItem>().each())
+    for (const auto [_, item] : world.registry.view<simulation::PathItem>().each())
         CHECK(item.node == tile);
 
     people.staff.resize(3);

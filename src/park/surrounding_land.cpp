@@ -104,7 +104,7 @@ namespace rct3::park
                 for (const save::WaterTri& t : body.tris)
                     if (g.contains(t.col, t.row) && (t.col == 0 || t.row == 0 || t.col == g.width - 1 || t.row == g.height - 1))
                     {
-                        auto [it, added] = on_edge.try_emplace({ t.col, t.row }, body.level);
+                        auto [it, _] = on_edge.try_emplace({ t.col, t.row }, body.level);
                         it->second = std::max(it->second, body.level);
                     }
             std::vector<float> out(edge.size(), std::numeric_limits<float>::quiet_NaN());
@@ -316,14 +316,14 @@ namespace rct3::park
         for (std::size_t i = 0; i < n; ++i)
         {
             const EdgeCorner c = edge_corner(grid, edge[i]);
-            normals[i] = ground_normal(grid, c.col, c.row, c.corner);
+            normals[i] = ground_normal(grid, { c.col, c.row }, c.corner);
         }
 
         // One layer per surface, lowest first. A layer's coefficient in the final colour is its alpha times
         // the cover the layers above leave it: with alpha = f w / (1 - f A), A the share of the layers above,
         // that comes to f w, and what is behind keeps 1 - f.
         std::vector<float> above(points.size(), 0.0f);
-        for (const auto& [surface, share] : shares)
+        for (const auto& [_, share] : shares)
         {
             for (std::size_t p = 0; p < points.size(); ++p)
                 above[p] += share[p];

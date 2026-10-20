@@ -137,7 +137,7 @@ namespace rct3::scene
         PathHeights heights;
         for (const simulation::PathNode& n : scene.sim.paths.nodes())
         {
-            auto [at, added] = heights.try_emplace({ n.tile.col, n.tile.row }, n.height);
+            auto [at, _] = heights.try_emplace({ n.tile.col, n.tile.row }, n.height);
             at->second = std::max(at->second, n.height);
         }
         park::TerrainMesh mesh;

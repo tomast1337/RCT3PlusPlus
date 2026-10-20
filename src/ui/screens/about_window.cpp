@@ -81,7 +81,7 @@ namespace rct3::ui
 
     std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const int> packs, random::RandomState& random)
     {
-        std::vector<int> newest_first(packs.begin(), packs.end());
+        auto newest_first = packs | std::ranges::to<std::vector<int>>();
         std::ranges::sort(newest_first, std::greater { });
         std::vector<CreditLine> out;
         int gaps = 0;
@@ -161,7 +161,7 @@ namespace rct3::ui
         context.list.pop_clip();
     }
 
-    GameInfoBox::GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, std::uint64_t seed)
+    GameInfoBox::GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, random::Seed seed)
         : Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
     {

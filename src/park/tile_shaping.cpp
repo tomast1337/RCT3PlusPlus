@@ -118,7 +118,7 @@ namespace rct3::park
         return s;
     }
 
-    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(int col, int row)>& free)
+    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::Tile)>& free)
     {
         const auto picked = part_corners(stroke.part);
         const bool up = amount >= 0;
@@ -131,7 +131,7 @@ namespace rct3::park
             {
                 const auto& before = stroke.before[static_cast<std::size_t>((r - stroke.row0) * columns + (c - stroke.col0))];
                 std::array<float, 4> corners = before;
-                if (free(c, r))
+                if (free({ c, r }))
                 {
                     for (std::size_t k = 0; k < 4; ++k)
                     {

@@ -16,9 +16,9 @@ namespace rct3::park
 
     /// The water body filled from tile `col`, `row` to `level`. Its triangles are empty when the tile has no
     /// corner below the level. Nothing when the flood reaches a tile `allowed` refuses.
-    [[nodiscard]] std::optional<save::WaterBody> fill_water(const save::TerrainGrid& grid, int col, int row, float level, const std::function<bool(int col, int row)>& allowed);
+    [[nodiscard]] std::optional<save::WaterBody> fill_water(const save::TerrainGrid& grid, save::Tile tile, float level, const std::function<bool(save::Tile)>& allowed);
 
     /// Whether `body` holds water on tile `col`, `row`.
-    [[nodiscard]] bool holds(const save::WaterBody& body, int col, int row);
+    [[nodiscard]] bool holds(const save::WaterBody& body, save::Tile tile);
 
 } // namespace rct3::park

@@ -216,7 +216,7 @@ namespace rct3::ui
     std::string front_logo(std::string_view language)
     {
         std::string logo(kLogoSkin);
-        if (std::ranges::find(kOwnLogoLanguages, language) != kOwnLogoLanguages.end())
+        if (std::ranges::contains(kOwnLogoLanguages, language))
             logo += "_" + std::string(language);
         return logo;
     }

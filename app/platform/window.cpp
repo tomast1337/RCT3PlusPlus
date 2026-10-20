@@ -180,7 +180,7 @@ namespace rct3::platform
         for (int i = 0; i < count; ++i)
         {
             const Size s { modes[i].width, modes[i].height };
-            if (std::ranges::find(sizes, s) == sizes.end())
+            if (!std::ranges::contains(sizes, s))
                 sizes.push_back(s);
         }
         std::ranges::sort(sizes, [](Size a, Size b) { return std::pair { a.width, a.height } < std::pair { b.width, b.height }; });

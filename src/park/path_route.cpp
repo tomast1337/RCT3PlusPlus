@@ -14,7 +14,7 @@ namespace rct3::park
     {
         struct Node
         {
-            PathSpot spot;           ///< Where the last piece is
+            save::Tile spot;         ///< Where the last piece is
             std::int32_t height = 0; ///< Where it ends
             std::uint8_t heading = 0;
             bool on_slope = false;
@@ -65,7 +65,7 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, PathSpot goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::Tile goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
             return std::nullopt;
@@ -90,7 +90,7 @@ namespace rct3::park
         for (const save::PathTile& p : paths)
             by_tile[static_cast<std::uint32_t>(p.row) << 16 | p.col].push_back(p);
         const std::vector<save::PathTile> none;
-        const auto paths_at = [&](PathSpot spot) -> std::span<const save::PathTile> {
+        const auto paths_at = [&](save::Tile spot) -> std::span<const save::PathTile> {
             const auto found = by_tile.find(static_cast<std::uint32_t>(spot.row) << 16 | static_cast<std::uint16_t>(spot.col));
             return found == by_tile.end() ? std::span<const save::PathTile>(none) : std::span<const save::PathTile>(found->second);
         };
@@ -108,7 +108,7 @@ namespace rct3::park
             return false;
         };
         const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
-        const auto estimate = [&](PathSpot at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
+        const auto estimate = [&](save::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
         using Open = std::pair<std::int64_t, std::size_t>;
         std::priority_queue<Open, std::vector<Open>, std::greater<>> open;
         std::unordered_map<std::uint64_t, std::int64_t> best;

@@ -334,7 +334,7 @@ int main(int argc, char** argv)
     }
     for (const std::string_view name : wanted)
     {
-        if (std::ranges::find(cases, name, &PanelCase::name) == cases.end())
+        if (!std::ranges::contains(cases, name, &PanelCase::name))
         {
             std::fprintf(stderr, "no panel named %.*s; --list shows them\n", static_cast<int>(name.size()), name.data());
             return 2;
@@ -364,7 +364,7 @@ int main(int argc, char** argv)
     bool flagged = false;
     for (const PanelCase& panel : cases)
     {
-        if (!wanted.empty() && std::ranges::find(wanted, panel.name) == wanted.end())
+        if (!wanted.empty() && !std::ranges::contains(wanted, panel.name))
             continue;
         const ovl::RgbaImage texture = render(panel, PanelLook::Texture, *assets, scale);
         const ovl::RgbaImage coded = render(panel, PanelLook::Coded, *assets, scale);

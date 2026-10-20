@@ -38,7 +38,7 @@ namespace rct3::park
             const auto led_into = [&](std::size_t tile) {
                 return std::ranges::any_of(tiles, [&](std::size_t from) {
                     const save::PathTile& p = paths[from];
-                    return from != tile && step({ p.col, p.row }, stored_direction(p.queue->end_direction)) == PathSpot { paths[tile].col, paths[tile].row };
+                    return from != tile && step({ p.col, p.row }, stored_direction(p.queue->end_direction)) == save::Tile { paths[tile].col, paths[tile].row };
                 });
             };
             const auto head = std::ranges::find_if(tiles, [&](std::size_t tile) { return !led_into(tile); });

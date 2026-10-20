@@ -7,6 +7,7 @@
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
 #include "park/ride_fences.hpp"
+#include "park/track_supports.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -113,8 +114,8 @@ namespace rct3::scene
         }
 
         /// Adds `o` to the park with a new id, in the colours its item gives, as part of the ride being placed
-        /// unless it is scenery.
-        std::uint64_t add_object(ParkScene& scene, save::PlacedObject o)
+        /// unless it is scenery, with the supports its item asks for under it when raised.
+        std::uint64_t add_object(ParkScene& scene, const ui::InterfaceAssets& assets, save::PlacedObject o)
         {
             o.id = last_id(scene) + 1;
             o.owner_ref = o.id;
@@ -126,6 +127,18 @@ namespace rct3::scene
                 scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
             scene.objects.push_back(o);
+            if (const park::SupportSets* sets = support_sets(scene, assets))
+            {
+                // shortcut: columns run through items under it to the ground, and stay when it goes; look at
+                // the whole tile, and keep them with the item, once that shows.
+                park::BuiltSupports columns = park::track_supports(std::span(&o, 1), scene.models, scene.footpaths.paths, scene.grid, *sets, o.id);
+                for (save::PlacedObject& piece : columns.pieces)
+                {
+                    if (load_object_model(scene, scene.placing.models, assets, piece))
+                        scene.objects.push_back(std::move(piece));
+                }
+                scene.fitted.merge(columns.fitted);
+            }
             objects_changed(scene);
             return o.id;
         }
@@ -338,6 +351,17 @@ namespace rct3::scene
                 v.colour *= tint;
             ghost_textures(device, scene, p.ghost_mesh);
         };
+        // While Shift is held the height follows the pointer up and down an upright plane through where Shift
+        // went down, square to the view.
+        const auto follow_lift = [&](const park::Ray& ray) {
+            const glm::vec3 across = glm::normalize(glm::vec3 { ray.direction.x, 0.0f, ray.direction.z });
+            const float along = glm::dot(ray.direction, across);
+            if (along > 1e-4f)
+            {
+                const float y = ray.origin.y + ray.direction.y * glm::dot(p.lift->at - ray.origin, across) / along;
+                p.site->height = std::max(p.ground, p.lift->height + static_cast<std::int32_t>(std::lround(y - p.lift->at.y)));
+            }
+        };
         if (p.step == RidePlacing::Step::Scenery)
         {
             // Scenery goes where the pointer meets the ground or, nearer, an object: then on top of it.
@@ -368,18 +392,8 @@ namespace rct3::scene
             const std::array squares { std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->width)), std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->length)) };
             if (shift && p.site && p.lift)
             {
-                // The height follows the pointer up and down an upright plane through where Shift went down,
-                // square to the view.
                 if (ray)
-                {
-                    const glm::vec3 across = glm::normalize(glm::vec3 { ray->direction.x, 0.0f, ray->direction.z });
-                    const float along = glm::dot(ray->direction, across);
-                    if (along > 1e-4f)
-                    {
-                        const float y = ray->origin.y + ray->direction.y * glm::dot(p.lift->at - ray->origin, across) / along;
-                        p.site->height = std::max(p.ground, p.lift->height + static_cast<std::int32_t>(std::lround(y - p.lift->at.y)));
-                    }
-                }
+                    follow_lift(*ray);
             }
             else
             {
@@ -431,6 +445,16 @@ namespace rct3::scene
             show_ghost();
             return;
         }
+        if (p.step == RidePlacing::Step::Ride && shift && p.site && p.lift)
+        {
+            // Raised, it stays on its tiles.
+            if (!over && size.x > 0 && size.y > 0)
+                follow_lift(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y }));
+            p.problem = park::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
+            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+            show_ghost();
+            return;
+        }
         const auto tile = over ? std::nullopt : ground_tile(scene, at, size);
         if (!tile)
         {
@@ -445,6 +469,14 @@ namespace rct3::scene
         {
             const std::array squares { static_cast<std::int32_t>(p.item->width), static_cast<std::int32_t>(p.item->length) };
             p.site = park::ride_site(tile->col, tile->row, squares, p.turns, scene.grid);
+            p.ground = p.site->height;
+            p.lift.reset();
+            if (shift && size.x > 0 && size.y > 0)
+            {
+                const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                if (const auto distance = park::ground_hit(ray, scene.grid))
+                    p.lift = RidePlacing::Lift { ray.origin + ray.direction * *distance, p.site->height };
+            }
             p.problem = park::site_problem(*p.site, scene.grid, paths, p.solids);
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
         }
@@ -469,7 +501,7 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Scenery)
         {
             // The tool stays out for the next one, as in the game.
-            add_object(scene, *o);
+            add_object(scene, assets, *o);
             animate_scenery(device, scene, scene.objects.size() - 1);
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
@@ -479,11 +511,13 @@ namespace rct3::scene
         }
         if (p.step == RidePlacing::Step::Ride)
         {
-            park::level_ground(scene.grid, *p.site);
+            // Raised with Shift, it stands over the ground as it is.
+            if (p.site->height <= p.ground)
+                park::level_ground(scene.grid, *p.site);
             p.ride = scene.rides.rides.size();
             save::Ride& ride = scene.rides.rides.emplace_back();
             ride.kind = save::RideKind::Flat;
-            const std::uint64_t object = add_object(scene, *o);
+            const std::uint64_t object = add_object(scene, assets, *o);
             ride.base.id = last_id(scene) + 1;
             ride.base.symbol = p.item->symbol + ":anr";
             ride.base.overlay_path = p.item->overlay;
@@ -502,8 +536,9 @@ namespace rct3::scene
         else
         {
             // The door stands on ground levelled to the ride's height, as the ride does.
-            park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
-            const std::uint64_t object = add_object(scene, *o);
+            if (p.site->height <= p.ground)
+                park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
+            const std::uint64_t object = add_object(scene, assets, *o);
             save::Ride& ride = scene.rides.rides.at(p.ride);
             if (ride.stations.empty())
                 ride.stations.emplace_back();

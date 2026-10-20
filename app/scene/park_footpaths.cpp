@@ -30,6 +30,22 @@
 namespace rct3::scene
 {
 
+    const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (!f.support_sets && assets.install)
+        {
+            if (const auto found = assets.install->find(std::string(park::kSupportOverlay) + ".common.ovl"))
+            {
+                if (auto sets = park::load_support_sets(*found))
+                    f.support_sets = std::move(*sets);
+                else
+                    logging::logger("park").warning("supports: {}", sets.error());
+            }
+        }
+        return f.support_sets ? &*f.support_sets : nullptr;
+    }
+
     namespace
     {
 
@@ -356,23 +372,6 @@ namespace rct3::scene
                 v.position.y += kGhostLift;
             }
             return ghost;
-        }
-
-        /// The supports' pieces, read when first needed.
-        const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
-        {
-            ParkFootpaths& f = scene.footpaths;
-            if (!f.support_sets && assets.install)
-            {
-                if (const auto found = assets.install->find(std::string(park::kSupportOverlay) + ".common.ovl"))
-                {
-                    if (auto sets = park::load_support_sets(*found))
-                        f.support_sets = std::move(*sets);
-                    else
-                        logging::logger("park").warning("supports: {}", sets.error());
-                }
-            }
-            return f.support_sets ? &*f.support_sets : nullptr;
         }
 
         /// The style `path` was laid in.

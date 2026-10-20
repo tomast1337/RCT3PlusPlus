@@ -125,6 +125,9 @@ namespace rct3::scene
     /// marks the ground for building again.
     void refresh_ride_floors(ParkScene& scene);
 
+    /// The supports' pieces, read when first needed; none when the install has none.
+    const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
+
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);
 

@@ -15,7 +15,8 @@
 // rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round
 // panel in the bottom-left corner shows the item alone, slowly turning, with a tab that turns it and, for
 // items that take colours, one that paints them; the colours start as the item's own each time it is picked.
-// A ride placed whole gets the same panel, without the colours.
+// A ride placed whole gets the same panel, without the colours, and rises with Shift the same way; raised, it
+// and its doors leave the ground under them as it is.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -57,7 +58,7 @@ namespace rct3::scene
         std::optional<park::DoorSpot> door; ///< The entrance or exit pointed at
         std::optional<park::DoorSpot> entrance;
         std::int32_t quadrant = 0; ///< Of the tile, for scenery that takes a quarter of one
-        std::int32_t ground = 0;   ///< Height of the ground under the scenery's site
+        std::int32_t ground = 0;   ///< Height of the ground under the site, of scenery or a ride
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {

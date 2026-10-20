@@ -97,7 +97,7 @@ TEST_CASE("a park offers what it made available and invented")
     CHECK(offer.offers(item("fizz")));
     CHECK_FALSE(offer.offers(item("Later")));
     CHECK_FALSE(offer.offers(item("Gone")));
-    CHECK_FALSE(offer.offers(item("Unlisted")));
+    CHECK(offer.offers(item("Unlisted"))); // Added later, as the expansions' items are to older parks
 
     const BuildOffer open;
     CHECK_FALSE(open.known());

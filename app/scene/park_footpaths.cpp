@@ -25,6 +25,8 @@
 #include <array>
 #include <cmath>
 #include <iterator>
+#include <map>
+#include <set>
 #include <span>
 
 namespace rct3::scene
@@ -248,6 +250,58 @@ namespace rct3::scene
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         ParkFootpaths& f = scene.footpaths;
+        // Supports of raised pieces stand on the ground, so not where a path lies on it (park/path_supports.hpp).
+        std::set<std::pair<int, int>> on_ground;
+        for (const save::PathTile& p : f.paths)
+        {
+            if (!p.elevation || park::is_ground_queue(p))
+                on_ground.emplace(p.col, p.row);
+        }
+        std::map<std::uint64_t, bool> hidden;
+        for (const auto& [id, supports] : f.supports)
+        {
+            const auto path = std::ranges::find(f.paths, id, &save::PathTile::id);
+            for (const std::uint64_t support : supports)
+                hidden[support] = path != f.paths.end() && on_ground.contains({ path->col, path->row });
+        }
+        // A path under a ride or track takes its columns there away, as in the game: a path below the column's
+        // top on the same tile.
+        std::map<std::pair<int, int>, std::int32_t> lowest_path;
+        for (const save::PathTile& p : f.paths)
+        {
+            if (!scene.grid.contains(p.col, p.row))
+                continue;
+            const auto height = p.elevation && !park::is_ground_queue(p) ? p.elevation->quantised_height : static_cast<std::int32_t>(std::floor(scene.grid.at(p.col, p.row).min_height()));
+            const auto [at, added] = lowest_path.emplace(std::pair { p.col, p.row }, height);
+            at->second = std::min(at->second, height);
+        }
+        std::map<std::pair<int, int>, std::int32_t> column_top;
+        for (const save::PlacedObject& o : scene.objects)
+        {
+            if (o.base_height && scene.columns.contains(o.id))
+            {
+                const auto [at, added] = column_top.emplace(std::pair { o.col, o.row }, *o.base_height);
+                at->second = std::max(at->second, *o.base_height);
+            }
+        }
+        for (const save::PlacedObject& o : scene.objects)
+        {
+            if (!scene.columns.contains(o.id))
+                continue;
+            const auto path = lowest_path.find({ o.col, o.row });
+            hidden[o.id] = path != lowest_path.end() && path->second <= column_top[{ o.col, o.row }];
+        }
+        bool moved = false;
+        for (save::PlacedObject& o : scene.objects)
+        {
+            if (const auto h = hidden.find(o.id); h != hidden.end() && o.hidden != h->second)
+            {
+                o.hidden = h->second;
+                moved = true;
+            }
+        }
+        if (moved)
+            objects_changed(scene);
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
         park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
@@ -1411,6 +1465,18 @@ namespace rct3::scene
         ParkFootpaths& f = scene.footpaths;
         if (!f.brush.empty() || f.slope_press)
             return false;
+        // A trail going on lets go of its arrow first, as in the game; the next right click sells.
+        if (f.builder.start)
+        {
+            f.builder.start.reset();
+            f.builder.start_height.reset();
+            f.builder.trail.clear();
+            f.builder.on_slope = false;
+            f.lift.reset();
+            f.route_goal.reset();
+            f.dirty = true;
+            return true;
+        }
         const auto ray = controls_ray(scene, at, size);
         const auto under = ray ? park::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
         if (!under)

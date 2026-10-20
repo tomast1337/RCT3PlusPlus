@@ -20,6 +20,7 @@
 // its first piece with the pointer, as for scenery; below the ground it is a tunnel piece. A press while Shift
 // is held lays it; let go, the height stays for the arrow. With Control held, a trail started on bare ground,
 // or raised with Shift, starts at the height the last piece laid here ended at.
+// A right click lets go of the trail, so the arrow stops showing; with no trail, it sells the path pointed at.
 //
 // With the panel's route tab on and a trail started, pointing at a tile shows the cheapest route from the
 // arrow to it (park/path_route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
@@ -156,8 +157,8 @@ namespace rct3::scene
     /// time the trail goes on; the player moving the camera stops it until the next piece.
     void follow_footpaths(ParkScene& scene, float elapsed);
 
-    /// A right click while the path panel shows its controls sells the path under the pointer, as in the game.
-    /// Whether it picked one.
+    /// A right click while the path panel shows its controls lets go of the trail's arrow, or with no trail
+    /// going on sells the path under the pointer, as in the game. Whether it did either.
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Follows the pointer over the park at `at` (`over` the interface or not): strokes while the left button is

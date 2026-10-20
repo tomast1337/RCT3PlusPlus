@@ -661,7 +661,7 @@ namespace rct3::scene
         /// Whether the object is a prop the panel can tell about: one of the park's own.
         bool clickable_prop(const ParkScene& scene, const save::PlacedObject& o)
         {
-            if (scene.attractions.contains(o.id))
+            if (scene.attractions.contains(o.id) || o.fixture)
                 return false;
             const auto model = scene.models.find(park::model_key(o));
             return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
@@ -713,7 +713,7 @@ namespace rct3::scene
             }
             const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
                 const save::PlacedObject& o = scene.objects[i];
-                return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || clickable_prop(scene, o));
+                return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o));
             });
             std::vector<glm::mat4> placements;
             if (scene.show_people)
@@ -725,7 +725,8 @@ namespace rct3::scene
             const auto person = park::pick_person(ray, placements, scene.grid);
             if (person && (!object || person->distance < object->distance))
                 return { .attraction = std::nullopt, .person = person->index, .prop = std::nullopt };
-            if (!object)
+            // A fence the park built takes the click and does nothing with it, as in the game.
+            if (!object || scene.objects[object->index].fixture)
                 return { };
             const auto owner = scene.attractions.find(scene.objects[object->index].id);
             if (owner != scene.attractions.end())

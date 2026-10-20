@@ -8,7 +8,7 @@
 //                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
 //                                                 typescript) first. Report: build/scripts/report/index.html
 //   ./nob fuzz [TARGET] [--seconds N]
-//   ./nob tidy                                    builds, then runs clang-tidy over src, tools and fuzz
+//   ./nob tidy                                    writes the compile database, then runs clang-tidy over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //
@@ -43,7 +43,8 @@ namespace
         std::string cxx;
         std::vector<std::string> compile_flags;
         std::vector<std::string> link_flags;
-        std::size_t jobs = 1; // Compilers run at once
+        std::size_t jobs = 1;       // Compilers run at once
+        bool database_only = false; // Write compile_commands.json without compiling or linking, for clang-tidy
 
         [[nodiscard]] fs::path out_dir() const
         {
@@ -196,6 +197,8 @@ namespace
 
             const Cmd cmd = compile_cmd(cfg, source, object);
             database.push_back({ source, cmd.args });
+            if (cfg.database_only)
+                continue;
 
             const std::vector<fs::path> deps = depfile_inputs(object);
             if (!deps.empty() && !needs_rebuild(object, deps))
@@ -214,6 +217,8 @@ namespace
     // source file (which leaves every remaining object older than the binary) still triggers a relink.
     bool link(const Config& cfg, const fs::path& output, const std::vector<fs::path>& objects)
     {
+        if (cfg.database_only)
+            return true;
         fs::path list_file = output;
         list_file += ".objects";
 
@@ -867,7 +872,8 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    const Config cfg = make_config(release, sanitize, false, job_count(jobs));
+    Config cfg = make_config(release, sanitize, false, job_count(jobs));
+    cfg.database_only = command == "tidy"; // clang-tidy reads the sources itself; it needs only their flags
 
     if (command == "app" || command == "run" || command == "script")
     {

@@ -134,8 +134,8 @@ namespace rct3::park
     struct SolidTiles;
 
     /// Clearance kept between a piece and another path on its tile, in world units: room for guests to walk
-    /// under a raised path. Our own value.
-    inline constexpr std::int32_t kPathHeadroom = 2;
+    /// under a raised path. A bridge over a path then climbs two ramp tiles each side, as in the original game.
+    inline constexpr std::int32_t kPathHeadroom = 3;
 
     /// Ground over a piece's top, in world units, that makes it a tunnel piece. Our own value, fitted to the
     /// parks' underground paths, all of which have about this much or more over them.

@@ -157,8 +157,7 @@ namespace rct3::scene
                 o.col = spot.col;
                 o.row = spot.row;
                 o.base_height = static_cast<std::int32_t>(std::lround(spot.height));
-                // The board spans the queue: its model faces along x.
-                o.rotation = (spot.heading + 3) % 4;
+                o.rotation = spot.turns;
                 if (!load_object_model(scene, q.models, assets, o))
                     continue;
                 // A copy: the same item placed as scenery keeps its own board.
@@ -166,7 +165,7 @@ namespace rct3::scene
                 const float aspect = prepare_board(model.begin()->second);
                 if (aspect <= 0)
                     continue;
-                sign.width = static_cast<std::uint32_t>(std::lround(aspect * park::kSignTextHeight));
+                sign.width = std::max<std::uint32_t>(static_cast<std::uint32_t>(std::lround(aspect * park::kSignTextHeight / park::kSignLamp)), 1) * park::kSignLamp;
                 sign.board = std::format("queue sign {}", q.signs.size());
                 sign.mesh = park::object_mesh(std::span(&o, 1), model, scene.grid);
                 for (park::ObjectBatch& batch : sign.mesh.batches)
@@ -247,7 +246,7 @@ namespace rct3::scene
             sign.shift = shift;
             if (std::exchange(in_pass, false))
                 device.end_pass();
-            const ovl::RgbaImage window = park::sign_window(sign.loop, shift, sign.width);
+            const ovl::RgbaImage window = park::sign_window(sign.loop, shift, sign.width, sign.colour);
             device.update_texture(texture->second.handle, std::as_bytes(std::span(window.pixels)));
         }
         if (!in_pass)

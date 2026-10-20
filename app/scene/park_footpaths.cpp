@@ -739,18 +739,25 @@ namespace rct3::scene
             {
                 save::PathTile& laid = f.paths.back();
                 laid.surface_colours = std::array<std::int32_t, 3> { };
-                laid.queue->fence_symbol = kQueueRailing;
-                laid.queue->fence_overlay = kQueueRailingOverlay;
+                // A line's railing is its ride's fence; a queue of no ride yet has the plain one.
+                if (laid.queue->fence_symbol.empty())
+                {
+                    laid.queue->fence_symbol = kQueueRailing;
+                    laid.queue->fence_overlay = kQueueRailingOverlay;
+                }
                 const std::int32_t height = laid.elevation ? laid.elevation->quantised_height : piece.start;
+                std::optional<std::uint64_t> line;
                 if (const auto entrance = park::entrance_beside(scene.rides, piece.spot.col, piece.spot.row, height))
                 {
-                    const std::uint64_t line = park::join_entrance(scene.rides, f.paths, scene.grid, f.paths.size() - 1, *entrance, unused_id(scene));
-                    logging::logger("park").info("queue joins ride {} on line {}", entrance->ride, line);
-                    for (const save::PathTile& p : f.paths)
-                    {
-                        if (p.queue && p.queue->queue_line_ref == line && !std::ranges::contains(railed, p.id))
-                            railed.push_back(p.id);
-                    }
+                    line = park::join_entrance(scene.rides, f.paths, scene.grid, f.paths.size() - 1, *entrance, unused_id(scene));
+                    logging::logger("park").info("queue joins ride {} on line {}", entrance->ride, *line);
+                }
+                else
+                    line = park::join_line(scene.rides, f.paths, scene.grid, f.paths.size() - 1);
+                for (const save::PathTile& p : f.paths)
+                {
+                    if (line && p.queue && p.queue->queue_line_ref == *line && !std::ranges::contains(railed, p.id))
+                        railed.push_back(p.id);
                 }
             }
             // A queue's open end bends to a path beside it: the queue just laid, or those beside the path just laid.

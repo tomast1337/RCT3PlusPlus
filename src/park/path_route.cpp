@@ -93,8 +93,18 @@ namespace rct3::park
             return found == by_tile.end() ? std::span<const save::PathTile>(none) : std::span<const save::PathTile>(found->second);
         };
 
-        // shortcut: a route may cross its own tiles at heights the search kept apart, which the builder then
-        // refuses part way; check the tiles taken along a route once routes get long or winding.
+        // A piece keeps the same room from the route's own earlier pieces on its tile as from other paths.
+        const auto crosses_route = [&](std::size_t at, const NextPiece& piece) {
+            const auto low = std::min(piece.start, piece.end);
+            const auto high = std::max(piece.start, piece.end);
+            for (std::size_t i = at; i != 0; i = nodes[i].parent)
+            {
+                const NextPiece& laid = nodes[i].step.piece;
+                if (laid.spot == piece.spot && std::min(laid.start, laid.end) < high + kPathHeadroom && low < std::max(laid.start, laid.end) + kPathHeadroom)
+                    return true;
+            }
+            return false;
+        };
         const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
         const auto estimate = [&](PathSpot at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
         using Open = std::pair<std::int64_t, std::size_t>;
@@ -132,7 +142,7 @@ namespace rct3::park
                     if (!piece)
                         continue;
                     const auto here = paths_at(piece->spot);
-                    if (lay_problem(b, grid, here, solids) != LayProblem::None)
+                    if (lay_problem(b, grid, here, solids) != LayProblem::None || crosses_route(at, *piece))
                         continue;
                     // The goal is reached only on its ground or onto a path already there, the one asked for if any.
                     if (piece->spot == goal)

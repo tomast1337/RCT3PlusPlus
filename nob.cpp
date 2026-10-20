@@ -25,6 +25,7 @@
 #include <array>
 #include <fstream>
 #include <future>
+#include <ranges>
 #include <thread>
 
 using namespace nob;
@@ -68,6 +69,19 @@ namespace
         return std::max<std::size_t>(1, std::thread::hardware_concurrency());
     }
 
+    // Whether `program` is on PATH.
+    bool on_path(std::string_view program)
+    {
+        const char* path = std::getenv("PATH");
+        for (const auto dir : std::views::split(std::string_view(path ? path : ""), ':'))
+        {
+            std::error_code error;
+            if (fs::exists(fs::path(std::string_view(dir)) / program, error))
+                return true;
+        }
+        return false;
+    }
+
     Config make_config(bool release, bool sanitize, bool fuzz, std::size_t jobs)
     {
         const char* cxx = std::getenv("CXX");
@@ -105,6 +119,9 @@ namespace
             // -Og keeps it debuggable at a fraction of -O0's cost; the park was too slow to play at -O0.
             c.compile_flags.insert(c.compile_flags.end(), { "-Og", "-g" });
         }
+        // LLVM's linker, when there is one, links several times faster than the default.
+        if (on_path("ld.lld"))
+            c.link_flags.push_back("-fuse-ld=lld");
         return c;
     }
 
@@ -128,12 +145,32 @@ namespace
         Cmd cmd;
         cmd << cfg.cxx;
         cmd.append(cfg.compile_flags);
-        cmd << "-c" << source.string() << "-o" << object.string();
+        fs::path depfile = object;
+        depfile.replace_extension(".d");
+        cmd << "-MMD" << "-MF" << depfile.string() << "-c" << source.string() << "-o" << object.string();
         return cmd;
     }
 
-    // Compiles sources in parallel. Objects are rebuilt when the source or any header is newer.
-    bool compile(const Config& cfg, const std::vector<fs::path>& sources, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
+    // The files the compiler said `object` was made from, in the depfile it wrote next to it; none when it has
+    // not written one yet.
+    std::vector<fs::path> depfile_inputs(const fs::path& object)
+    {
+        fs::path depfile = object;
+        depfile.replace_extension(".d");
+        std::ifstream in(depfile);
+        std::vector<fs::path> inputs;
+        std::string word;
+        // "object.o: source.cpp header.hpp \" and so on; our paths have no spaces.
+        while (in >> word)
+        {
+            if (word != "\\" && !word.ends_with(':'))
+                inputs.emplace_back(word);
+        }
+        return inputs;
+    }
+
+    // Compiles sources in parallel. Objects are rebuilt when the source or a header it includes is newer.
+    bool compile(const Config& cfg, const std::vector<fs::path>& sources, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         Procs procs(cfg.jobs);
         bool ok = true;
@@ -145,9 +182,8 @@ namespace
             const Cmd cmd = compile_cmd(cfg, source, object);
             database.push_back({ source, cmd.args });
 
-            std::vector<fs::path> deps = headers;
-            deps.push_back(source);
-            if (!needs_rebuild(object, deps))
+            const std::vector<fs::path> deps = depfile_inputs(object);
+            if (!deps.empty() && !needs_rebuild(object, deps))
                 continue;
 
             procs.make_room();
@@ -219,17 +255,6 @@ namespace
             out << "]}" << (i + 1 < database.size() ? "," : "") << "\n";
         }
         out << "]\n";
-    }
-
-    std::vector<fs::path> all_headers()
-    {
-        std::vector<fs::path> headers;
-        for (const auto& [dir, ext] : { std::pair { "src", ".hpp" }, std::pair { "tests", ".hpp" }, std::pair { "third_party", ".h" } })
-        {
-            const auto found = find_files(dir, ext);
-            headers.insert(headers.end(), found.begin(), found.end());
-        }
-        return headers;
     }
 
     // The audio module (src/audio/, and the movies in src/video/) is its own target: it pulls in vendored
@@ -341,7 +366,7 @@ namespace
         return c;
     }
 
-    bool compile_audio(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
+    bool compile_audio(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
         for (auto& p : find_files("src", ".cpp"))
@@ -349,12 +374,12 @@ namespace
             if (is_audio_source(p))
                 sources.push_back(std::move(p));
         }
-        if (!compile(cfg, sources, headers, objects, database))
+        if (!compile(cfg, sources, objects, database))
             return false;
 
         Config vendored = cfg;
         vendored.compile_flags.push_back("-w");
-        if (!compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, headers, objects, database))
+        if (!compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, objects, database))
             return false;
         // The FFmpeg cut and our parts of it: the sources its sources.txt lists (the others are included by
         // them), with the defines FFmpeg's own build compiles them with.
@@ -370,18 +395,18 @@ namespace
             log(Level::Error, "third_party/ffmpeg/sources.txt is missing or empty");
             return false;
         }
-        return compile(c_config(cfg, { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" }), ffmpeg, headers, objects, database);
+        return compile(c_config(cfg, { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" }), ffmpeg, objects, database);
     }
 
     // Vendored code every target links: the stb_truetype and stb_image implementation units and the QuickJS-NG
     // script engine, built without our warnings.
-    bool compile_vendored_core(const Config& cfg, const std::vector<fs::path>& headers, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
+    bool compile_vendored_core(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         Config vendored = cfg;
         vendored.compile_flags.push_back("-w");
-        if (!compile(vendored, { "third_party/stb/stb_truetype_impl.cpp", "third_party/stb/stb_image_impl.cpp" }, headers, objects, database))
+        if (!compile(vendored, { "third_party/stb/stb_truetype_impl.cpp", "third_party/stb/stb_image_impl.cpp" }, objects, database))
             return false;
-        return compile(c_config(cfg, { "-D_GNU_SOURCE" }), find_files("third_party/quickjs", ".c"), headers, objects, database);
+        return compile(c_config(cfg, { "-D_GNU_SOURCE" }), find_files("third_party/quickjs", ".c"), objects, database);
     }
 
     Config with_audio_link(Config cfg)
@@ -405,17 +430,16 @@ namespace
         if (!mkdir_p(cfg.obj_dir()))
             return false;
 
-        const auto headers = all_headers();
         std::vector<CompileEntry> database;
 
         std::vector<fs::path> lib_objects;
-        if (!compile(cfg, core_sources(cfg), headers, lib_objects, database))
+        if (!compile(cfg, core_sources(cfg), lib_objects, database))
             return false;
-        if (!compile_vendored_core(cfg, headers, lib_objects, database))
+        if (!compile_vendored_core(cfg, lib_objects, database))
             return false;
 
         std::vector<fs::path> audio_objects;
-        if (!compile_audio(cfg, headers, audio_objects, database))
+        if (!compile_audio(cfg, audio_objects, database))
             return false;
 
         for (const auto& main_cpp : tools ? find_files("tools", ".cpp") : std::vector<fs::path> { })
@@ -424,7 +448,7 @@ namespace
             std::vector<fs::path> objects = lib_objects;
             if (audio)
                 objects.insert(objects.end(), audio_objects.begin(), audio_objects.end());
-            if (!compile(cfg, { main_cpp }, headers, objects, database))
+            if (!compile(cfg, { main_cpp }, objects, database))
                 return false;
             if (!link(audio ? with_audio_link(cfg) : cfg, cfg.out_dir() / main_cpp.parent_path().filename(), objects))
                 return false;
@@ -434,7 +458,7 @@ namespace
         // with the audio module.
         std::vector<fs::path> test_objects = lib_objects;
         test_objects.insert(test_objects.end(), audio_objects.begin(), audio_objects.end());
-        if (!compile(cfg, find_files("tests", ".cpp"), headers, test_objects, database))
+        if (!compile(cfg, find_files("tests", ".cpp"), test_objects, database))
             return false;
         if (!link(with_audio_link(cfg), cfg.test_binary(), test_objects))
             return false;
@@ -472,7 +496,6 @@ namespace
             }
         }
 
-        const auto headers = all_headers();
         std::vector<CompileEntry> ignored;
 
         // Dear ImGui is vendored as-is; its warnings are not ours.
@@ -480,23 +503,18 @@ namespace
         third_party.compile_flags.insert(third_party.compile_flags.end(), { "-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan" });
         std::vector<fs::path> imgui_sources = find_files("third_party/imgui", ".cpp");
         std::vector<fs::path> objects;
-        if (!compile(third_party, imgui_sources, headers, objects, ignored))
+        if (!compile(third_party, imgui_sources, objects, ignored))
             return false;
 
         const Config app = app_config(cfg);
         std::vector<fs::path> lib_sources = core_sources(cfg);
-        std::vector<fs::path> app_headers = headers;
-        for (const auto& h : find_files("app", ".hpp"))
-            app_headers.push_back(h);
-        for (const auto& inc : find_files(gen_dir, ".inc"))
-            app_headers.push_back(inc);
-        if (!compile(app, lib_sources, app_headers, objects, ignored))
+        if (!compile(app, lib_sources, objects, ignored))
             return false;
-        if (!compile_vendored_core(cfg, headers, objects, ignored))
+        if (!compile_vendored_core(cfg, objects, ignored))
             return false;
-        if (!compile_audio(cfg, headers, objects, ignored))
+        if (!compile_audio(cfg, objects, ignored))
             return false;
-        if (!compile(app, find_files("app", ".cpp"), app_headers, objects, ignored))
+        if (!compile(app, find_files("app", ".cpp"), objects, ignored))
             return false;
 
         binary = cfg.out_dir() / "rct3pp";
@@ -511,25 +529,24 @@ namespace
         if (!mkdir_p(cfg.obj_dir()))
             return false;
 
-        const auto headers = all_headers();
         std::vector<CompileEntry> database;
 
         std::vector<fs::path> lib_objects;
-        if (!compile(cfg, core_sources(cfg), headers, lib_objects, database))
+        if (!compile(cfg, core_sources(cfg), lib_objects, database))
             return false;
-        if (!compile_vendored_core(cfg, headers, lib_objects, database))
+        if (!compile_vendored_core(cfg, lib_objects, database))
             return false;
 
         std::vector<fs::path> audio_objects;
         for (const auto& source : find_files("fuzz", ".cpp"))
         {
             const bool audio = uses_audio(source);
-            if (audio && audio_objects.empty() && !compile_audio(cfg, headers, audio_objects, database))
+            if (audio && audio_objects.empty() && !compile_audio(cfg, audio_objects, database))
                 return false;
             std::vector<fs::path> objects = lib_objects;
             if (audio)
                 objects.insert(objects.end(), audio_objects.begin(), audio_objects.end());
-            if (!compile(cfg, { source }, headers, objects, database))
+            if (!compile(cfg, { source }, objects, database))
                 return false;
             const fs::path binary = cfg.out_dir() / source.stem();
             if (!link(audio ? with_audio_link(cfg) : cfg, binary, objects))

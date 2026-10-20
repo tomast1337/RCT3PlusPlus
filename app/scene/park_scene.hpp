@@ -79,6 +79,7 @@ namespace rct3::scene
         ui::PointerState pointer;
         bool right = false;
         bool middle = false;
+        bool shift = false; ///< Either Shift key held down
         bool left_key = false;
         bool right_key = false;
         bool up_key = false;

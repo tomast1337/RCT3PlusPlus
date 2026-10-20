@@ -812,7 +812,7 @@ namespace rct3::scene
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right);
-            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, keys);
+            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, keys);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)

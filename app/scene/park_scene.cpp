@@ -6,6 +6,7 @@
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
+#include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
@@ -21,6 +22,7 @@
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/track_building.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/staff_care.hpp"
@@ -69,6 +71,8 @@ namespace rct3::scene
         constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kQuestionName = "leave_tutorial";
         constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
+        constexpr std::string_view kTapeFence = "KeepClearFence"; ///< Closes a broken ride off until it is fixed
+        constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
 
@@ -1099,6 +1103,43 @@ namespace rct3::scene
                     else
                         scene.broken_rides.erase(told);
                     simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject_name = attraction.name });
+                    // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
+                    // the fence's do, so each panel only changes its model.
+                    const auto at = std::ranges::find(scene.ride_entities, e);
+                    if (at == scene.ride_entities.end() || static_cast<std::size_t>(at - scene.ride_entities.begin()) >= scene.rides.rides.size())
+                        continue;
+                    save::Ride& ride = scene.rides.rides[static_cast<std::size_t>(at - scene.ride_entities.begin())];
+                    const park::ObjectModel* item = nullptr;
+                    for (const save::PlacedObject& o : scene.objects)
+                    {
+                        if (ride.base.spot && o.id == ride.base.spot->object)
+                        {
+                            const auto found = scene.models.find(park::model_key(o));
+                            item = found != scene.models.end() ? &found->second : nullptr;
+                        }
+                    }
+                    const std::vector<save::PlacedObject> before = park::ride_fences(ride, item, 0);
+                    ride.override_fence_symbol = upkeep.broken ? kTapeFence : "";
+                    ride.override_fence_overlay = upkeep.broken ? kTapeFenceOverlay : "";
+                    // shortcut: a ride with no fence of its own stays unfenced while broken; add panels for it if
+                    // such rides turn up outside old saves.
+                    const std::vector<save::PlacedObject> after = park::ride_fences(ride, item, 0);
+                    if (before.empty() || (!after.empty() && (before.size() != after.size() || !load_object_model(scene, scene.placing.models, assets, after.front()))))
+                        continue;
+                    wait_for_build(scene);
+                    for (std::size_t i = 0; i < before.size(); ++i)
+                    {
+                        const save::PlacedObject& was = before[i];
+                        const auto panel = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && o.symbol == was.symbol && o.overlay == was.overlay && o.col == was.col && o.row == was.row && o.rotation == was.rotation && o.base_height == was.base_height; });
+                        if (panel == scene.objects.end())
+                            continue;
+                        panel->hidden = after.empty(); // Fixed, with no fence of its own
+                        if (after.empty())
+                            continue;
+                        panel->symbol = after[i].symbol;
+                        panel->overlay = after[i].overlay;
+                    }
+                    objects_changed(scene);
                 }
             }
             profiling::section("Cars", [&] { place_cars(scene); });

@@ -16,7 +16,7 @@
 // only. It needs no audio device or system audio package.
 //
 // -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
-// without it, NOB_JOBS does the same, and by default there is one per core.
+// without it, NOB_JOBS does the same, and by default there is one per core, fewer when memory is short.
 //
 // Environment: CXX overrides the compiler (default g++). Fuzzing needs Clang: CLANGXX (default clang++).
 // CLANGFORMAT and CLANGTIDY override the clang-format and clang-tidy binaries.
@@ -59,14 +59,29 @@ namespace
         }
     };
 
-    // How many compilers run at once: `-j N` on the command line, else NOB_JOBS, else one per core.
+    // Memory a compiler may take on our heaviest files, with room to spare: about 2.5 GB was measured.
+    constexpr std::size_t kJobKilobytes = 3 * 1024 * 1024;
+
+    // How many compilers run at once: `-j N` on the command line, else NOB_JOBS, else one per core, but no more
+    // than the available memory holds, so a build cannot run the machine out of memory.
     std::size_t job_count(int asked)
     {
         if (asked > 0)
             return static_cast<std::size_t>(asked);
         if (const char* env = std::getenv("NOB_JOBS"); env && std::atoi(env) > 0)
             return static_cast<std::size_t>(std::atoi(env));
-        return std::max<std::size_t>(1, std::thread::hardware_concurrency());
+        std::size_t jobs = std::max<std::size_t>(1, std::thread::hardware_concurrency());
+        // shortcut: Linux only (/proc/meminfo); elsewhere one per core, upgrade if we build on other systems.
+        std::ifstream meminfo("/proc/meminfo");
+        std::string key;
+        std::size_t kilobytes = 0;
+        while (meminfo >> key >> kilobytes)
+        {
+            if (key == "MemAvailable:")
+                return std::clamp<std::size_t>(kilobytes / kJobKilobytes, 1, jobs);
+            meminfo.ignore(64, '\n');
+        }
+        return jobs;
     }
 
     // Whether `program` is on PATH.

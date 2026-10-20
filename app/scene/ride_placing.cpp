@@ -227,11 +227,12 @@ namespace rct3::scene
         auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
         if (panel && panel->take_closed())
             stop_ride_placing(scene);
-        if (panel && panel->showing() && (!p.item || p.step != RidePlacing::Step::Scenery))
+        const bool whole = p.step == RidePlacing::Step::Ride || p.step == RidePlacing::Step::Scenery;
+        if (panel && panel->showing() && (!p.item || !whole))
             panel->hide();
         if (!p.item)
             return;
-        if ((p.step == RidePlacing::Step::Ride || p.step == RidePlacing::Step::Scenery) && !typing(scene))
+        if (whole && !typing(scene))
         {
             for (const ui::PlayCommand c : commands)
             {
@@ -241,11 +242,12 @@ namespace rct3::scene
                     p.turns = (p.turns + 3) % 4;
             }
         }
-        if (p.step == RidePlacing::Step::Scenery)
+        if (whole)
         {
-            // The item alone, at the grid's corner, for the round view.
+            // The item alone, at the grid's corner, for the round view; a ride as the scenery it is placed as.
+            const bool scenery = p.step == RidePlacing::Step::Scenery;
             save::PlacedObject alone;
-            alone.symbol = p.item->symbol;
+            alone.symbol = scenery ? p.item->symbol : p.item->scenery;
             alone.overlay = p.item->overlay;
             alone.force_absolute_height = true;
             alone.colours = p.colours;
@@ -261,10 +263,10 @@ namespace rct3::scene
                     ghost_textures(device, scene, p.preview_moving.mesh);
                 }
             };
-            if (p.panel_item != p.item->symbol && load_object_model(scene, p.models, assets, alone))
+            if (p.panel_item != alone.symbol && load_object_model(scene, p.models, assets, alone))
             {
                 // A new pick starts in the item's own colours.
-                p.panel_item = p.item->symbol;
+                p.panel_item = alone.symbol;
                 p.colours = scene.models.at(park::model_key(alone)).default_colours;
                 show_alone();
                 if (panel)
@@ -276,7 +278,8 @@ namespace rct3::scene
                     tabs[0].action = true;
                     for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours }))
                     {
-                        if (t.tab != ui::SceneryTab::Colour)
+                        // A ride takes its own colours when placed.
+                        if (t.tab != ui::SceneryTab::Colour || !scenery)
                             continue;
                         ui::InfoTab& colour = tabs.emplace_back();
                         colour.icon = t.icon;
@@ -288,7 +291,7 @@ namespace rct3::scene
                     panel->show(std::move(tabs), none);
                 }
             }
-            if (panel && panel->showing() && p.panel_item == p.item->symbol)
+            if (panel && panel->showing() && p.panel_item == alone.symbol)
             {
                 // Each press of the tab turns it a quarter, always the same way.
                 if (panel->take_action())

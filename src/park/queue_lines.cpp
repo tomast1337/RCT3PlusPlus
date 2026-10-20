@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 #include <utility>
 
 namespace rct3::park
@@ -107,35 +108,96 @@ namespace rct3::park
         return false;
     }
 
+    namespace
+    {
+        /// Makes `paths[tile]` lead out by `side`, turning round the tiles behind it when they led the other way,
+        /// and puts it and them on `line`.
+        void lead_out(std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile, std::uint8_t side, std::uint64_t line)
+        {
+            save::PathQueueInfo& here = *paths[tile].queue;
+            const std::uint8_t toward = stored_direction(side);
+            std::vector<std::size_t> joined;
+            if (here.end_direction != toward)
+            {
+                // The queue so far flowed away from this tile: turn it round to lead here.
+                const std::vector<std::size_t> behind = tiles_behind(paths, grid, tile);
+                for (const std::size_t i : behind)
+                    std::swap(paths[i].queue->start_direction, paths[i].queue->end_direction);
+                here.start_direction = here.end_direction;
+                here.end_direction = toward;
+                joined = behind;
+            }
+            // The tiles behind, now leading here, plus any that already did.
+            for (const std::size_t i : tiles_behind(paths, grid, tile))
+            {
+                if (!std::ranges::contains(joined, i))
+                    joined.push_back(i);
+            }
+            joined.push_back(tile);
+            for (const std::size_t i : joined)
+                paths[i].queue->queue_line_ref = line;
+        }
+
+        /// Counts `line`'s tiles into the stations it leads to, and rails them with their ride's fence and colours.
+        void take_ride(save::RideModel& rides, std::vector<save::PathTile>& paths, std::uint64_t line)
+        {
+            const auto on_line = [&](const save::PathTile& p) { return p.queue && p.queue->queue_line_ref == line; };
+            for (save::Ride& ride : rides.rides)
+            {
+                for (save::Station& station : ride.stations)
+                {
+                    if (station.queue_line != line)
+                        continue;
+                    station.queue_tiles = static_cast<std::int32_t>(std::ranges::count_if(paths, on_line));
+                    if (ride.fence_symbol.empty())
+                        continue;
+                    for (save::PathTile& p : paths | std::views::filter(on_line))
+                    {
+                        p.queue->fence_symbol = ride.fence_symbol;
+                        p.queue->fence_overlay = ride.fence_overlay;
+                        p.queue->fence_colours = { ride.fence_colours[0], ride.fence_colours[1], ride.fence_colours[2] };
+                    }
+                }
+            }
+        }
+    } // namespace
+
     std::uint64_t join_entrance(save::RideModel& rides, std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line)
     {
         save::Station& station = rides.rides.at(entrance.ride).stations.at(entrance.station);
         if (station.queue_line == 0)
             station.queue_line = new_line;
-        save::PathQueueInfo& here = *paths[tile].queue;
-        const std::uint8_t toward = stored_direction(entrance.side);
-        std::vector<std::size_t> line;
-        if (here.end_direction != toward)
+        const std::uint64_t line = station.queue_line;
+        lead_out(paths, grid, tile, entrance.side, line);
+        take_ride(rides, paths, line);
+        return line;
+    }
+
+    std::optional<std::uint64_t> join_line(save::RideModel& rides, std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile)
+    {
+        const save::PathTile& here = paths[tile];
+        if (!here.queue)
+            return std::nullopt;
+        for (std::uint8_t side = 0; side < kSides; ++side)
         {
-            // The queue so far flowed away from this tile: turn it round to lead here.
-            const std::vector<std::size_t> behind = tiles_behind(paths, grid, tile);
-            for (const std::size_t i : behind)
-                std::swap(paths[i].queue->start_direction, paths[i].queue->end_direction);
-            here.start_direction = here.end_direction;
-            here.end_direction = toward;
-            line = behind;
+            save::PathTile turned = here;
+            turned.queue->end_direction = stored_direction(side);
+            const auto edge = edge_height(turned, grid, side);
+            const PathSpot next = step({ here.col, here.row }, side);
+            const auto head = std::ranges::find_if(paths, [&](const save::PathTile& p) {
+                if (!p.queue || p.queue->queue_line_ref == 0 || p.queue->queue_line_ref == here.queue->queue_line_ref || p.col != next.col || p.row != next.row || stored_direction(p.queue->start_direction) != opposite(side))
+                    return false;
+                const auto other = edge_height(p, grid, opposite(side));
+                return edge && other && std::abs(*edge - *other) <= kPathMeets;
+            });
+            if (head == paths.end())
+                continue;
+            const std::uint64_t line = head->queue->queue_line_ref;
+            lead_out(paths, grid, tile, side, line);
+            take_ride(rides, paths, line);
+            return line;
         }
-        // The tiles behind, now leading here, plus any that already did.
-        for (const std::size_t i : tiles_behind(paths, grid, tile))
-        {
-            if (!std::ranges::contains(line, i))
-                line.push_back(i);
-        }
-        line.push_back(tile);
-        for (const std::size_t i : line)
-            paths[i].queue->queue_line_ref = station.queue_line;
-        station.queue_tiles = static_cast<std::int32_t>(std::ranges::count_if(paths, [&](const save::PathTile& p) { return p.queue && p.queue->queue_line_ref == station.queue_line; }));
-        return station.queue_line;
+        return std::nullopt;
     }
 
 } // namespace rct3::park

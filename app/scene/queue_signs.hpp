@@ -5,11 +5,12 @@
 // plain theme's. They are put up again whenever paths, rides or the choice of signs change, never saved with
 // the park's objects.
 //
-// A board shows its own picture, written in the game's large interface font and moved on as the text scrolls;
-// it is drawn unlit, as the game's data asks for the board.
+// A board shows its own picture: lamps lit by the words, written in the game's large interface font, moved on as
+// the text scrolls. It is drawn unlit, as the game's data asks for the board.
 #pragma once
 
 #include "park/object_mesh.hpp"
+#include "park/queue_signs.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -35,9 +36,10 @@ namespace rct3::scene
     {
         std::size_t ride = 0; ///< Of the scene's rides
         save::PlacedObject object;
-        park::ObjectMesh mesh; ///< Its board's batch painted with `board`
-        std::string board;     ///< Key of the board's picture in QueueSigns::textures
-        std::uint32_t width = 0;
+        park::ObjectMesh mesh;                      ///< Its board's batch painted with `board`
+        std::string board;                          ///< Key of the board's picture in QueueSigns::textures
+        std::uint32_t width = 0;                    ///< Of the board's picture, whole lamps
+        park::LampColour colour = park::kSignWhite; ///< Of its lamps
         std::u16string shown;
         ovl::RgbaImage loop;
         std::uint32_t shift = UINT32_MAX; ///< Of the loop the board shows; UINT32_MAX before it shows any

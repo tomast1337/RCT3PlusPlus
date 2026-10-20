@@ -3,7 +3,9 @@
 
 #include "park/ground_paths.hpp"
 #include "park/object_placement.hpp"
+#include "park/path_decks.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace rct3::park
@@ -56,27 +58,28 @@ namespace rct3::park
             const float rise = on_ground ? 0.0f : path_rise(p.elevation->slope);
             const auto in = side_of(p.queue->start_direction);
             const auto out_side = side_of(p.queue->end_direction);
-            if (rise > 0 && (!in || !out_side))
+            // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
+            // line runs over it.
+            const std::uint8_t heading = stored_direction(p.direction);
+            const auto facing = side_of(p.direction);
+            const auto ahead = edge_height(p, grid, heading);
+            const auto behind = edge_height(p, grid, static_cast<std::uint8_t>((heading + 2) % 4));
+            if (rise > 0 && (!facing || !ahead || !behind))
                 continue;
 
-            // A slope's lean: up or down along the way from the start side to the end side.
             glm::vec2 slope_lean { };
             float low = static_cast<float>(p.elevation->quantised_height);
             if (rise > 0)
             {
-                const auto [dc, dr] = side_step(*out_side);
-                const float sign = slope_falls(p.elevation->slope) ? -1.0f : 1.0f;
-                slope_lean = { sign * rise * static_cast<float>(dc) / grid.tile_size_x, sign * rise * static_cast<float>(dr) / grid.tile_size_z };
-                if (slope_falls(p.elevation->slope))
-                    low -= rise;
+                const auto [dc, dr] = side_step(*facing);
+                const float up = *ahead - *behind;
+                slope_lean = { up * static_cast<float>(dc) / grid.tile_size_x, up * static_cast<float>(dr) / grid.tile_size_z };
+                low = std::min(*ahead, *behind);
             }
 
             for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
             {
-                if (side == in || side == out_side)
-                    continue;
-                // On a slope, the start and end sides are opposite; the other two run along it.
-                if (rise > 0 && (static_cast<int>(side) - static_cast<int>(*in)) % 2 == 0)
+                if (rise > 0 ? (static_cast<int>(side) - static_cast<int>(*facing)) % 2 == 0 : side == in || side == out_side)
                     continue;
                 save::PlacedObject o;
                 o.id = ++last_id;

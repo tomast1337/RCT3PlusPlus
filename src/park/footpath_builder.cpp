@@ -238,12 +238,15 @@ namespace rct3::park
             p.queue = save::PathQueueInfo { };
             p.queue->start_direction = stored_direction(builder.heading);
             p.queue->end_direction = stored_direction(static_cast<std::uint8_t>((builder.heading + 2) % kQuarterTurns));
-            // The tile laid before now leads on to this one, on the same line.
+            // The tile laid before now leads on to this one, on the same line and with the same railing.
             const auto last = std::ranges::find(paths, before, &save::PathTile::id);
             if (before != 0 && last != paths.end() && last->queue)
             {
                 last->queue->start_direction = stored_direction(builder.heading);
                 p.queue->queue_line_ref = last->queue->queue_line_ref;
+                p.queue->fence_symbol = last->queue->fence_symbol;
+                p.queue->fence_overlay = last->queue->fence_overlay;
+                p.queue->fence_colours = last->queue->fence_colours;
             }
         }
         if (!piece.ground || builder.queue)

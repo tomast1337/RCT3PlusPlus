@@ -53,6 +53,22 @@ namespace
         }
         return true;
     }
+
+    /// No two pieces of `route` on one tile come within kPathHeadroom of each other.
+    bool keeps_room(const std::vector<RouteStep>& route)
+    {
+        for (std::size_t i = 0; i < route.size(); ++i)
+        {
+            for (std::size_t j = i + 1; j < route.size(); ++j)
+            {
+                const NextPiece& a = route[i].piece;
+                const NextPiece& b = route[j].piece;
+                if (a.spot == b.spot && std::min(a.start, a.end) < std::max(b.start, b.end) + kPathHeadroom && std::min(b.start, b.end) < std::max(a.start, a.end) + kPathHeadroom)
+                    return false;
+            }
+        }
+        return true;
+    }
 } // namespace
 
 TEST_CASE("a route over flat ground lies on the ground, short and with one turn")
@@ -155,4 +171,38 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
     CHECK(find_route(b, { 0, 1 }, g, paths, 1000)->empty());
     CHECK_FALSE(find_route(FootpathBuilder { }, { 5, 1 }, g, paths, 1000));
     CHECK_FALSE(find_route(b, { 9, 1 }, g, paths, 1000)); // Off the map
+}
+
+TEST_CASE("a route climbing round to a path over its own start keeps room over its own pieces")
+{
+    const save::TerrainGrid g = owned_grid(5, 3);
+    for (const std::int32_t height : { 1, 2, 3, 4 })
+    {
+        save::PathTile raised = ground_path({ 2, 1 }, "Old", 9);
+        raised.kind = save::PathKind::Flying;
+        raised.elevation = save::PathElevation { };
+        raised.elevation->quantised_height = height;
+        const std::vector<save::PathTile> paths { raised };
+        const auto route = find_route(started_at({ 1, 1 }), { 2, 1 }, g, paths, 1000, height);
+        if (!route)
+            continue;
+        CHECK(joined(*route));
+        CHECK(keeps_room(*route));
+    }
+}
+
+TEST_CASE("a queue route bridging a path leaves room to walk under it")
+{
+    const save::TerrainGrid g = owned_grid(11, 3);
+    std::vector<save::PathTile> paths;
+    for (int row = 0; row < 3; ++row)
+        paths.push_back(ground_path({ 5, row }, "Old", static_cast<std::uint64_t>(row + 1)));
+    FootpathBuilder queue = started_at({ 1, 1 });
+    queue.queue = true;
+    const auto route = find_route(queue, { 9, 1 }, g, paths, 1000);
+    REQUIRE(route);
+    CHECK(joined(*route));
+    const auto over = std::ranges::find_if(*route, [](const RouteStep& s) { return s.piece.spot.col == 5; });
+    REQUIRE(over != route->end());
+    CHECK(std::min(over->piece.start, over->piece.end) >= 3); // Higher than one steep ramp climbs
 }

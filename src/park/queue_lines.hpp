@@ -3,7 +3,8 @@
 // Joining queues to rides. A queue tile laid beside a ride's entrance joins the line of that entrance's
 // station: its end side turns to face the entrance and every tile of the queue behind it takes the station's
 // line, which is made when the station has none yet. A queue laid towards the entrance flows the other way
-// until it gets there, so the tiles behind are turned round to lead to it.
+// until it gets there, so the tiles behind are turned round to lead to it. A queue laid on from the open end of a
+// line joins that line the same way. A line's railings are its ride's fence, in the ride's fence colours.
 //
 // Two queue tiles are linked when one's end side meets the other's start side at the same height. A queue's
 // open start side turns to a path beside it, so the line bends to meet the path as it is laid.
@@ -46,7 +47,12 @@ namespace rct3::park
     bool turn_to_path(std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile);
 
     /// Joins queue tile `paths[tile]` to `entrance`, giving the station a line with id `new_line` when it has
-    /// none. Returns the line's id.
+    /// none, and rails the line with the ride's fence. Returns the line's id.
     std::uint64_t join_entrance(save::RideModel& rides, std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line);
+
+    /// Joins queue tile `paths[tile]` to the line whose open start side faces it from a tile beside, as it joins an
+    /// entrance: it leads into that line's head, and the tiles behind it follow. Returns the line's id, nothing
+    /// when no line's head is beside it.
+    std::optional<std::uint64_t> join_line(save::RideModel& rides, std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile);
 
 } // namespace rct3::park

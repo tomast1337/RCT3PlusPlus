@@ -31,6 +31,7 @@ namespace
         p.elevation = save::PathElevation { };
         p.elevation->slope = slope;
         p.elevation->quantised_height = 6;
+        p.direction = end; // Laid from its start towards its end
         p.queue = save::PathQueueInfo { };
         p.queue->start_direction = start;
         p.queue->end_direction = end;
@@ -102,7 +103,8 @@ TEST_CASE("a ground queue's railing leans with its edge of the ground")
 
 TEST_CASE("a sloping queue is fenced along its slope, halfway up and leaning with it")
 {
-    // Falling steeply from its start towards -x to its end towards +x: its stored height is the start's.
+    // Falling steeply from its start towards -x to its end towards +x, the way it faces: its stored height is
+    // the start's.
     const QueueFences falling = queue_fences(std::vector<save::PathTile> { queue(0, 1, 2) }, flat_grid(), 0);
     REQUIRE(falling.pieces.size() == 2);
     for (const save::PlacedObject& f : falling.pieces)
@@ -123,4 +125,12 @@ TEST_CASE("a sloping queue is fenced along its slope, halfway up and leaning wit
     CHECK(f.height_adjust == doctest::Approx(0.5f));
     CHECK(climbing.leans.at(f.id).x == doctest::Approx(0.0f));
     CHECK(climbing.leans.at(f.id).y == doctest::Approx(0.25f));
+
+    // A line running the other way over the same piece leaves its railings as they were.
+    save::PathTile reversed = queue(3, 2, 4);
+    reversed.direction = 3;
+    const QueueFences turned = queue_fences(std::vector<save::PathTile> { reversed }, flat_grid(), 0);
+    REQUIRE(turned.pieces.size() == 2);
+    CHECK(turned.pieces[0].base_height == 6);
+    CHECK(turned.leans.at(turned.pieces[0].id).y == doctest::Approx(0.25f));
 }

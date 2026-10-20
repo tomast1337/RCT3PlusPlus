@@ -3,6 +3,7 @@
 
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
+#include "park/queue_fences.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
@@ -53,7 +54,7 @@ TEST_CASE("a line's sign stands on the tile no other leads into, facing the way 
     CHECK(spots[0].line == 7);
     CHECK(spots[0].col == last.col);
     CHECK(spots[0].row == last.row);
-    CHECK(spots[0].heading == 0);
+    CHECK(spots[0].turns == edge_turns(TileSide::Front)); // Its start side, +row
 
     // Tiles of no line, and a line of tiles all leading into each other, get none.
     paths.back().queue->queue_line_ref = 0;
@@ -80,31 +81,40 @@ TEST_CASE("a theme's queue sign is the sign whose setting says so")
     CHECK(queue_sign_item(std::span(items).first(2)).empty());
 }
 
-TEST_CASE("the board's text loops and scrolls round")
+TEST_CASE("the board's text loops and scrolls round in lamps")
 {
     ovl::RgbaImage page;
     page.width = page.height = 4;
     page.pixels.assign(4 * 4 * 4, 255);
     const std::vector<ovl::RgbaImage> pages { page };
-    const std::array glyphs { ui::CodedGlyph { u'A', { { 0, -4, 2, 0 }, { 0, 1, 0.5f, 0 }, 0, 3 } } };
+    const std::array glyphs { ui::CodedGlyph { u'A', { { 0, -4, 4, 0 }, { 0, 1, 1, 0 }, 0, 5 } } };
     const ui::Font font = ui::Font::from_glyphs(glyphs, 8, 0);
     const ovl::RgbaImage loop = sign_text_loop(font, pages, u"AA?", 8);
-    // Two glyphs of 3 and a missing one, then the gap.
-    CHECK(loop.width == 6 + kSignGap * 8);
+    // Two glyphs of 5 and a missing one, then the gap, out to whole lamps.
+    REQUIRE(kSignLamp == 3); // The places below count on it
+    CHECK(loop.width == 27);
     CHECK(loop.height == 8);
-    const auto grey = [&](const ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y) { return image.pixels[(y * image.width + x) * 4]; };
+    const auto at = [&](const ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y, std::size_t k = 0) { return image.pixels[(y * image.width + x) * 4 + k]; };
     // The glyph stands on the baseline, the line's middle on the board's.
-    CHECK(grey(loop, 0, 5) == kSignInk);
-    CHECK(grey(loop, 2, 5) == kSignDark);
-    CHECK(grey(loop, 5, 5) == kSignDark);
-    CHECK(grey(loop, 0, 1) == kSignDark);
+    CHECK(at(loop, 0, 5) == 255);
+    CHECK(at(loop, 4, 5) == 0);
+    CHECK(at(loop, 0, 1) == 0);
 
-    const ovl::RgbaImage window = sign_window(loop, loop.width - 1, 2);
-    CHECK(window.width == 2);
-    CHECK(grey(window, 0, 5) == kSignDark);
-    CHECK(grey(window, 1, 5) == kSignInk);
+    // Lamps are 3 by 3, lit where the letters cover their middles (1, 4, 7, ...).
+    const LampColour red { 255, 0, 0 };
+    const ovl::RgbaImage board = sign_window(loop, 0, 9, red);
+    CHECK(board.width == 9);
+    CHECK(at(board, 1, 4) == 255); // A lit lamp's middle
+    CHECK(at(board, 1, 4, 1) == kSignDark);
+    CHECK(at(board, 4, 4) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Between the glyphs: unlit
+    CHECK(at(board, 1, 1) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Above them
+    CHECK(at(board, 0, 3) == static_cast<std::uint8_t>(255 * kSignGlow));    // Round a lit dot
+    const ovl::RgbaImage moved = sign_window(loop, loop.width - kSignLamp, 9, red);
+    CHECK(at(moved, 4, 4) == 255); // The first lamp's letters, one lamp on
+    CHECK(at(moved, 1, 4) < 255);
 
-    CHECK(sign_shift(0, 10) == 0);
-    CHECK(sign_shift(1, 1000) == static_cast<std::uint32_t>(kSignScroll));
-    CHECK(sign_shift(1, 10) < 10);
+    CHECK(sign_shift(0, 100) == 0);
+    CHECK(sign_shift(1, 1000) == static_cast<std::uint32_t>(kSignScroll) / kSignLamp * kSignLamp);
+    CHECK(sign_shift(1, 1000) % kSignLamp == 0);
+    CHECK(sign_shift(1, 12) < 12);
 }

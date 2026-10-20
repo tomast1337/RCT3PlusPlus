@@ -4,6 +4,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
 #include "park/path_decks.hpp"
+#include "park/queue_fences.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -44,8 +45,10 @@ namespace rct3::park
             if (head == tiles.end())
                 continue;
             const save::PathTile& p = paths[*head];
-            const std::uint8_t heading = stored_direction(p.queue->start_direction);
-            spots.push_back({ line, p.col, p.row, edge_height(p, grid, heading).value_or(0), heading });
+            const auto side = side_of(p.queue->start_direction);
+            if (!side)
+                continue;
+            spots.push_back({ line, p.col, p.row, edge_height(p, grid, stored_direction(p.queue->start_direction)).value_or(0), edge_turns(*side) });
         }
         return spots;
     }
@@ -79,8 +82,9 @@ namespace rct3::park
         }
         ovl::RgbaImage loop;
         loop.width = static_cast<std::uint32_t>(std::ceil(width)) + kSignGap * height;
+        loop.width += (kSignLamp - loop.width % kSignLamp) % kSignLamp;
         loop.height = height;
-        loop.pixels.assign(static_cast<std::size_t>(loop.width) * height * kChannels, kSignDark);
+        loop.pixels.assign(static_cast<std::size_t>(loop.width) * height * kChannels, 0);
         for (std::size_t i = kChannels - 1; i < loop.pixels.size(); i += kChannels)
             loop.pixels[i] = 255;
         // The line's middle on the board's middle.
@@ -114,7 +118,7 @@ namespace rct3::park
                         const std::uint8_t cover = page.pixels[(static_cast<std::size_t>(from_y) * page.width + static_cast<std::size_t>(from_x)) * kChannels + 3];
                         const std::size_t at = (static_cast<std::size_t>(ty) * loop.width + static_cast<std::size_t>(tx)) * kChannels;
                         for (std::size_t k = 0; k < 3; ++k)
-                            loop.pixels[at + k] = static_cast<std::uint8_t>(std::max<int>(loop.pixels[at + k], kSignDark + (kSignInk - kSignDark) * cover / 255));
+                            loop.pixels[at + k] = std::max(loop.pixels[at + k], cover);
                     }
                 }
             }
@@ -123,7 +127,7 @@ namespace rct3::park
         return loop;
     }
 
-    ovl::RgbaImage sign_window(const ovl::RgbaImage& loop, std::uint32_t shift, std::uint32_t width)
+    ovl::RgbaImage sign_window(const ovl::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour)
     {
         ovl::RgbaImage out;
         out.width = width;
@@ -131,12 +135,23 @@ namespace rct3::park
         out.pixels.resize(static_cast<std::size_t>(width) * loop.height * kChannels);
         if (loop.width == 0)
             return out;
+        const float middle = static_cast<float>(kSignLamp) / 2;
+        const float radius = static_cast<float>(kSignLamp) * 0.42f;
         for (std::uint32_t y = 0; y < loop.height; ++y)
         {
+            const std::uint32_t lamp_y = std::min(y / kSignLamp * kSignLamp + kSignLamp / 2, loop.height - 1);
             for (std::uint32_t x = 0; x < width; ++x)
             {
-                const std::size_t from = (static_cast<std::size_t>(y) * loop.width + (x + shift) % loop.width) * kChannels;
-                std::ranges::copy_n(loop.pixels.begin() + static_cast<std::ptrdiff_t>(from), kChannels, out.pixels.begin() + static_cast<std::ptrdiff_t>((static_cast<std::size_t>(y) * width + x) * kChannels));
+                const std::uint32_t lamp_x = (x / kSignLamp * kSignLamp + kSignLamp / 2 + shift) % loop.width;
+                const bool lit = loop.pixels[(static_cast<std::size_t>(lamp_y) * loop.width + lamp_x) * kChannels] >= kSignLit;
+                const float dx = static_cast<float>(x % kSignLamp) + 0.5f - middle;
+                const float dy = static_cast<float>(y % kSignLamp) + 0.5f - middle;
+                const bool dot = dx * dx + dy * dy <= radius * radius;
+                const float share = dot ? (lit ? 1.0f : kSignLampOff) : (lit ? kSignGlow : 0.0f);
+                std::uint8_t* pixel = &out.pixels[(static_cast<std::size_t>(y) * width + x) * kChannels];
+                for (std::size_t k = 0; k < 3; ++k)
+                    pixel[k] = static_cast<std::uint8_t>(std::max(static_cast<float>(kSignDark), static_cast<float>(colour[k]) * share));
+                pixel[3] = 255;
             }
         }
         return out;
@@ -146,7 +161,8 @@ namespace rct3::park
     {
         if (length == 0)
             return 0;
-        return static_cast<std::uint32_t>(std::fmod(std::max(seconds, 0.0f) * kSignScroll, static_cast<float>(length)));
+        const auto moved = static_cast<std::uint32_t>(std::fmod(std::max(seconds, 0.0f) * kSignScroll, static_cast<float>(length)));
+        return moved / kSignLamp * kSignLamp;
     }
 
 } // namespace rct3::park

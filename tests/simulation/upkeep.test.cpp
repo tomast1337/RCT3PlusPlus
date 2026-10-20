@@ -85,7 +85,9 @@ TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
     CHECK_FALSE(upkeep.broken);
     CHECK(upkeep.inspect_every == 3600);
     CHECK(upkeep.since_inspection == 90);
-    ride.base.repair_status = rct3::save::RepairStatus::MechanicOnTheWay;
+    ride.base.repair_status = rct3::save::RepairStatus::MechanicCalled; // Kept on some fixed rides too
+    CHECK_FALSE(upkeep_of(ride).broken);
+    ride.base.flags |= rct3::save::AttractionCommon::kBrokenDown;
     ride.breakdown.inspection_interval = 6; // Never
     upkeep = upkeep_of(ride);
     CHECK(upkeep.broken);
@@ -155,9 +157,9 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     CHECK(r.get<Upkeep>(ride).kind != Breakdown::EmergencyStop); // A coaster's, not a flat ride's
     rct3::save::Ride saved;
     saved.breakdown.current = rct3::save::BreakdownKind::DoorsFailToOpen;
-    saved.base.repair_status = rct3::save::RepairStatus::BeingFixed;
+    saved.base.flags = rct3::save::AttractionCommon::kBrokenDown;
     CHECK(upkeep_of(saved).kind == Breakdown::DoorsFailToOpen);
-    saved.base.repair_status = rct3::save::RepairStatus::Fine; // A kind kept on a ride running fine
+    saved.base.flags = 0; // A kind kept on a ride running fine
     CHECK_FALSE(upkeep_of(saved).broken);
     CHECK(upkeep_of(saved).kind == Breakdown::None);
 }

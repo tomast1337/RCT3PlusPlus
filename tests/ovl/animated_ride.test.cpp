@@ -22,6 +22,8 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
     w[0x80 / 4] = 626;
     w[0x84 / 4] = static_cast<std::uint32_t>(-566);
     w[0x90 / 4] = 4960;
+    w[0x2C / 4] = 0xFFFFFFFF; // The guests: the default, which follows
+    w[0x48 / 4] = 55;
     std::vector<std::byte> bytes;
     for (auto v : w)
         append_u32(bytes, v);
@@ -41,6 +43,28 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
     CHECK(r.info.value_c == 4960);
     CHECK(r.splines[0] == "Path");
     CHECK(r.splines[3] == "Path");
+    CHECK(r.guests == 55u);
+}
+
+TEST_CASE("version 1 animated rides keep their guests in whichever of two places is marked")
+{
+    for (const std::uint32_t at : { 0x30u, 0x38u })
+    {
+        CAPTURE(at);
+        Pool pool;
+        pool.add("Carousel:anr");
+        std::vector<std::uint32_t> w(0x60 / 4, 0);
+        w[at / 4] = 30;
+        w[(at + 0x0C) / 4] = 1;
+        w[(at + 0x10) / 4] = 0xFFFFFFFF;
+        std::vector<std::byte> bytes;
+        for (auto v : w)
+            append_u32(bytes, v);
+        const auto overlay = make_record_overlay(1, pool, "Carousel:anr", bytes);
+        const auto items = read_animated_rides(overlay, overlay.common());
+        REQUIRE(items[0].ride.has_value());
+        CHECK(items[0].ride->guests == 30u);
+    }
 }
 
 TEST_CASE("a version 5 animated ride without its last spline slot is still read")

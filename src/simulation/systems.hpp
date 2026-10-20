@@ -81,6 +81,19 @@ namespace rct3::simulation
     /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
     [[nodiscard]] double arrivals_per_second(const Weather& weather);
 
+    /// Guests the park has room for, with some to spare: what its open rides that are not broken down make
+    /// room for (or a share for each seat, where a ride's data does not say), and a share for each square of
+    /// pool water, and the room of rides not simulated (RoomElsewhere).
+    [[nodiscard]] std::uint32_t ideal_guests(const SimWorld& world);
+
+    /// The entrance fee guests think fair, in hundredths: what the open rides are worth to them over what they
+    /// charge.
+    [[nodiscard]] std::int64_t fair_entrance_fee(const SimWorld& world);
+
+    /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
+    /// against `ideal`) and its entrance fee against `fair_fee`.
+    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
+
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
     [[nodiscard]] bool is_night(float time);
 

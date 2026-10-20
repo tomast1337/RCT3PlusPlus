@@ -105,17 +105,18 @@ namespace rct3::park
         int row1 = -1;
         std::optional<std::array<int, 2>> beyond_exit; ///< The tile the exit lets out onto
         std::vector<std::array<int, 2>> doors;         ///< The stations' entrance and exit tiles, paved alike
+        std::optional<std::int32_t> raised;            ///< Height of a ride standing over the ground, whose floor is a raised deck there
     };
 
     /// The plain grey path style floors take while their exit leads nowhere.
     inline constexpr std::string_view kRideFloorStyle = "Asphalt";
 
-    /// The floors of the flat rides among `rides` whose footprint lies level at their height. `squares_of`
+    /// The floors of the flat rides among `rides` whose footprint lies level at their height, or wholly under it. `squares_of`
     /// gives the squares (along its own X and Z) of the object a ride is placed as, or nothing when unknown.
     [[nodiscard]] std::vector<RideFloor> ride_floors(std::span<const save::Ride> rides, const std::function<std::optional<std::array<std::int32_t, 2>>(std::uint64_t object)>& squares_of, const save::TerrainGrid& grid);
 
     /// Lays `floors` into `map` as ground paths, so they draw and join as paths do. Tiles that already hold a
-    /// path keep it.
+    /// path keep it; raised floors are left out.
     void pave_ride_floors(GroundPathMap& map, std::span<const RideFloor> floors);
 
     /// True when there is a ground path at (col, row); false off the map.

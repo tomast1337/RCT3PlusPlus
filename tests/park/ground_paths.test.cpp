@@ -209,11 +209,18 @@ TEST_CASE("a flat ride's floor covers its footprint, turned with it")
     CHECK(floors[0].row0 == 2);
 }
 
-TEST_CASE("a ride off the ground has no floor, nor one whose model is unknown")
+TEST_CASE("a raised ride's floor stands at its height and is not paved; a sunk one or an unknown model has none")
 {
     const save::TerrainGrid g = flat_grid(10, 10);
     const std::array rides { flat_ride(2, 2, 0, 3) };
-    CHECK(ride_floors(rides, two_by_three, g).empty());
+    const std::vector<RideFloor> floors = ride_floors(rides, two_by_three, g);
+    REQUIRE(floors.size() == 1);
+    CHECK(floors[0].raised == 3);
+    GroundPathMap map = ground_path_map({ }, g);
+    pave_ride_floors(map, floors);
+    CHECK_FALSE(has_ground_path(map, 2, 2));
+    const std::array sunk { flat_ride(2, 2, 0, -3) };
+    CHECK(ride_floors(sunk, two_by_three, g).empty());
     const std::array level { flat_ride(2, 2, 0) };
     CHECK(ride_floors(level, [](std::uint64_t) { return std::optional<std::array<std::int32_t, 2>> { }; }, g).empty());
 }

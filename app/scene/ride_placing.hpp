@@ -15,6 +15,7 @@
 // rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round
 // panel in the bottom-left corner shows the item alone, slowly turning, with a tab that turns it and, for
 // items that take colours, one that paints them; the colours start as the item's own each time it is picked.
+// A ride placed whole gets the same panel, without the colours.
 #pragma once
 
 #include "park/build_catalogue.hpp"

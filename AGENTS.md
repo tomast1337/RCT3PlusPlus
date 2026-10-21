@@ -89,3 +89,7 @@ field, are fine. A new duplicate of an existing constant needs a reason in its c
 - No exceptions for expected failures such as truncated or unsupported files.
 - Match the surrounding code's naming and comment density. Comments say why, not what.
 - Warnings are on (`-Wall -Wextra -Wpedantic`). Do not leave new ones.
+- Build text with `std::format`, not by joining strings with `+`:
+  `std::format("cannot read {}: {}", path.string(), ec.message())`, not `"cannot read " + path.string() + ...`.
+  Pass values straight in, without `std::to_string` or `std::string(view)`. Appending one piece with `+=` is
+  fine. `std::u16string` text has no `std::format`, so it keeps `+`.

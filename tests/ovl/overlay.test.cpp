@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -51,7 +52,7 @@ namespace
         TempDir()
         {
             static std::atomic<int> counter { 0 };
-            path = fs::temp_directory_path() / ("rct3pp_overlay_test_" + std::to_string(counter++) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)));
+            path = fs::temp_directory_path() / std::format("rct3pp_overlay_test_{}_{}", counter++, reinterpret_cast<std::uintptr_t>(this));
             fs::create_directories(path);
         }
         ~TempDir()

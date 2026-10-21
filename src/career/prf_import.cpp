@@ -5,6 +5,7 @@
 #include "save/value.hpp"
 
 #include <cstdio>
+#include <format>
 #include <limits>
 #include <string_view>
 
@@ -115,7 +116,7 @@ namespace rct3::career
             {
                 p.status = status_of(prf.scenarios[i].status);
                 if (!prf.scenarios[i].last_save.empty())
-                    p.last_save = prf_scenario_folder(i) + "/" + prf.scenarios[i].last_save;
+                    p.last_save = std::format("{}/{}", prf_scenario_folder(i), prf.scenarios[i].last_save);
             }
             career.scenarios.push_back(std::move(p));
         }

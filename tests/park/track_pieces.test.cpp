@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <format>
 #include <vector>
 
 using namespace rct3;
@@ -38,7 +39,7 @@ namespace
     {
         PieceRecord r;
         r.name = name;
-        r.item = name + "Item";
+        r.item = std::format("{}Item", name);
         r.flags = flags;
         return r;
     }

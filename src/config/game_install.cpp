@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <format>
 #include <system_error>
 
 namespace rct3::config
@@ -43,13 +44,13 @@ namespace rct3::config
         switch (problem.error)
         {
             case InstallError::NotConfigured:
-                return std::string(env_name(EnvVar::GamePath)) + " and " + std::string(setting_name(Setting::GamePath)) + " in the settings file are not set; point one of them at the folder the original game is installed in";
+                return std::format("{} and {} in the settings file are not set; point one of them at the folder the original game is installed in", env_name(EnvVar::GamePath), setting_name(Setting::GamePath));
             case InstallError::NotFound:
-                return "game folder " + problem.path.string() + " does not exist (from " + variable + ")";
+                return std::format("game folder {} does not exist (from {})", problem.path.string(), variable);
             case InstallError::NotADirectory:
-                return "game folder " + problem.path.string() + " is not a folder (from " + variable + ")";
+                return std::format("game folder {} is not a folder (from {})", problem.path.string(), variable);
             case InstallError::MissingContent:
-                return "game folder " + problem.path.string() + " has no " + problem.detail + " folder; is " + variable + " the install folder?";
+                return std::format("game folder {} has no {} folder; is {} the install folder?", problem.path.string(), problem.detail, variable);
         }
         return "unknown game folder problem";
     }
@@ -99,7 +100,7 @@ namespace rct3::config
             return std::unexpected(InstallProblem { InstallError::NotConfigured, { }, { }, { } });
         auto install = open_game_install(*root);
         if (!install)
-            install.error().source = std::string(setting_name(Setting::GamePath)) + " in the settings file";
+            install.error().source = std::format("{} in the settings file", setting_name(Setting::GamePath));
         return install;
     }
 

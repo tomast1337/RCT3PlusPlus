@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstring>
+#include <format>
 #include <set>
 #include <system_error>
 
@@ -1098,12 +1099,12 @@ namespace rct3::save
         const auto add = [&](std::string s) { out.push_back(std::move(s)); };
         const auto check_series = [&](const char* label, const Series& s) {
             if (s.capacity > 0 && s.samples.size() > s.capacity)
-                add(std::string(label) + ": more samples than capacity");
+                add(std::format("{}: more samples than capacity", label));
             for (const float v : s.samples)
             {
                 if (!std::isfinite(v))
                 {
-                    add(std::string(label) + ": non-finite sample");
+                    add(std::format("{}: non-finite sample", label));
                     break;
                 }
             }

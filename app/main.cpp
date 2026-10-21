@@ -100,7 +100,7 @@ namespace
         print_usage(stdout);
         std::printf("\nthe user's data (%s):\n", data ? data->root().string().c_str() : "no folder known");
         for (const auto& folder : rct3::config::user_folders_table())
-            std::printf("  %-20s %.*s\n", (std::string(folder.name) + "/").c_str(), static_cast<int>(folder.description.size()), folder.description.data());
+            std::printf("  %-20s %.*s\n", std::format("{}/", folder.name).c_str(), static_cast<int>(folder.description.size()), folder.description.data());
         std::printf("\nsettings (%s):\n", data ? data->file(rct3::config::UserFile::Settings).string().c_str() : "not kept");
         for (const auto& setting : rct3::config::settings_table())
             std::printf("  %-20.*s %.*s\n", static_cast<int>(setting.name.size()), setting.name.data(), static_cast<int>(setting.description.size()), setting.description.data());
@@ -439,7 +439,7 @@ namespace
         const rct3::ui::Rect& r = in.outlined->rect();
         draw.AddRectFilled(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 40));
         draw.AddRect(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 255), 0.0f, 2.0f);
-        const std::string label = rct3::ui::type_name(*in.outlined) + " " + std::string(in.outlined->name());
+        const std::string label = std::format("{} {}", rct3::ui::type_name(*in.outlined), in.outlined->name());
         const ImVec2 at = corner(r.x0, r.y0);
         const ImVec2 size = ImGui::CalcTextSize(label.c_str());
         const ImVec2 chip { at.x, at.y >= size.y + 4 ? at.y - size.y - 4 : at.y };

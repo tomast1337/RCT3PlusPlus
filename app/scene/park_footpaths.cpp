@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <format>
 #include <iterator>
 #include <map>
 #include <set>
@@ -39,7 +40,7 @@ namespace rct3::scene
         ParkFootpaths& f = scene.footpaths;
         if (!f.support_sets && assets.install)
         {
-            if (const auto found = assets.install->find(std::string(park::kSupportOverlay) + ".common.ovl"))
+            if (const auto found = assets.install->find(std::format("{}.common.ovl", park::kSupportOverlay)))
             {
                 if (auto sets = park::load_support_sets(*found))
                     f.support_sets = std::move(*sets);

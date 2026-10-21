@@ -4,6 +4,7 @@
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <format>
 #include <system_error>
 
 namespace rct3::park
@@ -106,7 +107,7 @@ namespace rct3::park
                     {
                         if (s.name.empty())
                             s.name = style.filename().string();
-                        s.overlay = folder.filename().string() + "/" + style.filename().string() + "/" + file;
+                        s.overlay = std::format("{}/{}/{}", folder.filename().string(), style.filename().string(), file);
                     }
                     styles.insert(styles.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
                 }

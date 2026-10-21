@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::ui
 {
@@ -68,7 +69,7 @@ namespace rct3::ui
         if (menu_ != nullptr)
             menu_->close();
         const Rect title = title_rect(index);
-        menu_ = &root.add<Menu>(std::string(name()) + ".menu" + std::to_string(index), style.menu, menus[index].items);
+        menu_ = &root.add<Menu>(std::format("{}.menu{}", name(), index), style.menu, menus[index].items);
         menu_->place_at({ title.x0 - root.rect().x0, title.y1 - root.rect().y0 });
         open_ = index;
         marked_ = index;

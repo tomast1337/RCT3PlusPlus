@@ -7,6 +7,7 @@
 #include "ui/font_sets.hpp"
 #include "ui/ui_renderer.hpp"
 
+#include <format>
 #include <vector>
 
 namespace rct3::ui
@@ -41,7 +42,7 @@ namespace rct3::ui
             auto baked = bake_truetype(*fonts.fallback, em, kFallbackRanges, { .hard_edges = true });
             if (!baked)
                 return std::unexpected(baked.error());
-            auto refs = upload_pages(device, fonts, prefix + "#fallback", std::move(baked->pages));
+            auto refs = upload_pages(device, fonts, std::format("{}#fallback", prefix), std::move(baked->pages));
             if (!refs)
                 return std::unexpected(refs.error());
             return font.with_fallback(font_from_baked(*baked, *refs));
@@ -54,10 +55,10 @@ namespace rct3::ui
         const std::string relative = font_overlay(fonts.language, width);
         const auto path = install.find(relative);
         if (!path)
-            return std::unexpected(relative + " not found");
+            return std::unexpected(std::format("{} not found", relative));
         auto loaded = load_font_images(*path);
         if (!loaded)
-            return std::unexpected(relative + ": " + loaded.error());
+            return std::unexpected(std::format("{}: {}", relative, loaded.error()));
 
         const auto log = logging::logger("ui");
         FontSet set;
@@ -66,8 +67,8 @@ namespace rct3::ui
             const auto role = set_font_role(f.name);
             if (!role)
                 continue;
-            const std::string prefix = std::to_string(width) + "/" + f.name;
-            auto refs = upload_pages(device, fonts, prefix + "#", std::move(f.pages));
+            const std::string prefix = std::format("{}/{}", width, f.name);
+            auto refs = upload_pages(device, fonts, std::format("{}#", prefix), std::move(f.pages));
             if (!refs)
                 return std::unexpected(refs.error());
             Font font = Font::from(f.font, *refs, f.face);

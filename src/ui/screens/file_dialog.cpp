@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::ui
 {
@@ -129,7 +130,7 @@ namespace rct3::ui
             box->placement = top_left(style.name_box_rect.x0, style.name_box_rect.y0, style.name_box_rect.width(), style.name_box_rect.height());
             for (std::size_t i = 0; i < lines.size(); ++i)
             {
-                Label& l = add<Label>("line" + std::to_string(i), std::u16string { }, style.font);
+                Label& l = add<Label>(std::format("line{}", i), std::u16string { }, style.font);
                 l.style.colour = style.line_colour;
                 l.style.vertical = Align::Centre;
                 l.placement = top_left(style.lines_x, style.lines_top + static_cast<float>(i) * (style.line_height - 4), style.lines_width, style.line_height - 4);
@@ -268,7 +269,7 @@ namespace rct3::ui
         renaming_.reset();
         for (std::size_t i = 0; i < files_.size(); ++i)
         {
-            Row& row = list_->content().add<Row>("row" + std::to_string(i), style_, shown_file_name(files_[i]));
+            Row& row = list_->content().add<Row>(std::format("row{}", i), style_, shown_file_name(files_[i]));
             row.placement = top_left(0, static_cast<float>(i) * style_.row_height, style_.row_width, style_.row_height);
             row.tooltip = text(kListTip);
             row.box->tooltip = text(kNameTip);

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <format>
 #include <map>
 #include <string_view>
 #include <utility>
@@ -291,7 +292,7 @@ namespace rct3::ui
     {
         if (item.placement >= 1 && item.placement <= kPlacements.size())
             return std::u16string(strings.get(kPlacements[item.placement - 1]));
-        return strings::to_utf16(std::to_string(item.width) + " x " + std::to_string(item.length));
+        return strings::to_utf16(std::format("{} x {}", item.width, item.length));
     }
 
     std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency)

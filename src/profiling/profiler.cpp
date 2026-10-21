@@ -6,6 +6,7 @@
 #include <atomic>
 #include <charconv>
 #include <cmath>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -215,7 +216,7 @@ namespace rct3::profiling
             for (const auto& [path, data] : c.scopes)
             {
                 ScopeStats s;
-                s.name = "[" + c.name + "] " + path;
+                s.name = std::format("[{}] {}", c.name, path);
                 s.samples = data.count;
                 s.last = data.last;
                 s.average = data.average;

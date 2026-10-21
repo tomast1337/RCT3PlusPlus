@@ -26,7 +26,7 @@ namespace rct3::scene
         float number(const Json& arguments, std::size_t i)
         {
             if (i >= arguments.size() || !arguments[i].is_number())
-                throw std::invalid_argument("argument " + std::to_string(i + 1) + " must be a number");
+                throw std::invalid_argument(std::format("argument {} must be a number", i + 1));
             return arguments[i].get<float>();
         }
 
@@ -138,7 +138,7 @@ namespace rct3::scene
                 // Only a plain file name: the script names the picture, not where it goes.
                 std::ranges::replace_if(name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_'; }, '_');
                 screenshot_ = *report_ / std::format("{:02}_{}.png", ++shots_, name);
-                write("screenshot " + screenshot_->filename().string(), false);
+                write(std::format("screenshot {}", screenshot_->filename().string()), false);
             }
             return Json(nullptr);
         });

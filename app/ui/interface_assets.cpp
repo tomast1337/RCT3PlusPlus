@@ -9,6 +9,7 @@
 #include "ui/translation_file.hpp"
 #include "ui/truetype_font.hpp"
 
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -19,7 +20,7 @@ namespace rct3::ui
         const auto log = logging::logger("ui");
         const auto main_ovl = install.find(game_skins::kMainOverlay);
         if (!main_ovl)
-            return std::unexpected(std::string(game_skins::kMainOverlay) + " not found");
+            return std::unexpected(std::format("{} not found", game_skins::kMainOverlay));
         auto set = load_skin_set(*main_ovl, game_skins::kWholeTextures);
         if (!set)
             return std::unexpected(set.error());

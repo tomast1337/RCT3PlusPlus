@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::park
 {
@@ -16,8 +17,8 @@ namespace rct3::park
 
     std::array<std::string, 2> mountain_pictures(std::string_view theme)
     {
-        const std::string base = "Background" + std::string(theme);
-        return { base + "1", base + "2" };
+        const std::string base = std::format("Background{}", theme);
+        return { std::format("{}1", base), std::format("{}2", base) };
     }
 
     MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme)

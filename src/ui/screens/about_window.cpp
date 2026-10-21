@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <ranges>
 #include <utility>
 
@@ -26,7 +27,7 @@ namespace rct3::ui
         /// The credits under one key prefix, numbered from 0 until one is missing.
         void add_credits(std::vector<CreditLine>& out, const StringTable& strings, std::u16string heading, const std::string& prefix, random::RandomState& random, int& gaps, int& row)
         {
-            if (!strings.contains(prefix + "0"))
+            if (!strings.contains(std::format("{}0", prefix)))
                 return;
             ++gaps;
             out.push_back({ std::move(heading), CreditLine::Kind::Heading, Align::Centre, 0, gaps, row++ });
@@ -63,7 +64,7 @@ namespace rct3::ui
         copy_numbered(to, game, std::string(kCopyright), 1);
         copy_numbered(to, game, std::string(kBaseCredits), 0);
         for (std::size_t pack = 0; pack < kPackNames.size(); ++pack)
-            copy_numbered(to, game, std::string(kPackCredits) + std::to_string(pack) + "_", 0);
+            copy_numbered(to, game, std::format("{}{}_", kPackCredits, pack), 0);
     }
 
     std::vector<std::u16string> about_info_lines(const StringTable& strings)
@@ -90,7 +91,7 @@ namespace rct3::ui
         {
             if (pack < 0 || static_cast<std::size_t>(pack) >= kPackNames.size())
                 continue;
-            const std::string prefix = std::string(kPackCredits) + std::to_string(pack) + "_";
+            const std::string prefix = std::format("{}{}_", kPackCredits, pack);
             add_credits(out, strings, std::u16string(strings.get(kPackNames.at(static_cast<std::size_t>(pack)))), prefix, random, gaps, row);
         }
         add_credits(out, strings, std::u16string(strings.get(kBaseName)), std::string(kBaseCredits), random, gaps, row);
@@ -195,7 +196,7 @@ namespace rct3::ui
         const std::vector<std::u16string> lines = about_info_lines(strings);
         for (std::size_t i = 0; i < lines.size(); ++i)
         {
-            auto& label = info.add<Label>("line" + std::to_string(i), lines[i], i == 0 ? style.title_font : style.font);
+            auto& label = info.add<Label>(std::format("line{}", i), lines[i], i == 0 ? style.title_font : style.font);
             label.style.colour = style.text_colour;
             label.style.wrap = true;
             info_.push_back(&label);

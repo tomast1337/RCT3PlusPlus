@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 #include <unistd.h>
@@ -14,7 +15,7 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
 {
-    static const std::filesystem::path path = std::filesystem::temp_directory_path() / ("rct3pp_fuzz_wma_" + std::to_string(getpid()));
+    static const std::filesystem::path path = std::filesystem::temp_directory_path() / std::format("rct3pp_fuzz_wma_{}", getpid());
     {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         out.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));

@@ -68,7 +68,7 @@ namespace rct3::render::vulkan
         void check_imgui(VkResult result)
         {
             if (result != VK_SUCCESS)
-                throw std::runtime_error("ImGui Vulkan backend error " + std::to_string(result));
+                throw std::runtime_error(std::format("ImGui Vulkan backend error {}", static_cast<int>(result)));
         }
 
         VKAPI_ATTR VkBool32 VKAPI_CALL on_debug_message(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* data, void*)

@@ -4,6 +4,7 @@
 #include "ui/skin_library.hpp"
 
 #include <algorithm>
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -67,16 +68,16 @@ namespace rct3::ui
         const auto picture = [&](std::string widget) { return &add<Button>(std::move(widget), std::string { }); };
         for (std::size_t i = 0; i < cp::kCurves; ++i)
         {
-            curves_.at(i) = picture(style.curves.at(i).empty() ? "curve" + std::to_string(i) : style.curves.at(i));
+            curves_.at(i) = picture(style.curves.at(i).empty() ? std::format("curve{}", i) : style.curves.at(i));
             curves_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<float>(i), cp::kCurveTop, cp::kCurveSize.x, cp::kCurveSize.y);
         }
         for (std::size_t i = 0; i < cp::kSlopes; ++i)
         {
-            slopes_.at(i) = picture(style.slopes.at(i).empty() ? "slope" + std::to_string(i) : style.slopes.at(i));
+            slopes_.at(i) = picture(style.slopes.at(i).empty() ? std::format("slope{}", i) : style.slopes.at(i));
             slopes_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<float>(i), cp::kSlopeTop, cp::kSlopeSize.x, cp::kSlopeSize.y);
         }
         for (std::size_t i = 0; i < cp::kBanks; ++i)
-            banks_.at(i) = picture(style.banks.at(i).empty() ? "bank" + std::to_string(i) : style.banks.at(i));
+            banks_.at(i) = picture(style.banks.at(i).empty() ? std::format("bank{}", i) : style.banks.at(i));
         chain_ = picture("chain");
         chain_->tooltip = std::move(chain_help);
         demolish_ = picture("demolish");
@@ -99,7 +100,7 @@ namespace rct3::ui
         const float column = cp::kNamedWidth / static_cast<float>(cp::kNamedColumns);
         for (std::size_t i = 0; i < kNamedSlots; ++i)
         {
-            Button& b = add<Button>("named" + std::to_string(i), style.named_button);
+            Button& b = add<Button>(std::format("named{}", i), style.named_button);
             b.toggle = true;
             b.font = style.font;
             b.text_inset = style.named_inset;

@@ -6,6 +6,7 @@
 #include "ui/widgets/panel.hpp"
 
 #include <cstdio>
+#include <format>
 
 namespace rct3::ui
 {
@@ -49,7 +50,7 @@ namespace rct3::ui
             const float c = style.cell;
             for (std::size_t i = 0; i < counts.size(); ++i)
             {
-                Label& l = add<Label>("count" + std::to_string(i), std::u16string { }, style.font);
+                Label& l = add<Label>(std::format("count{}", i), std::u16string { }, style.font);
                 l.style.colour = style.text_colour;
                 l.style.vertical = Align::Centre;
                 l.placement = top_left(c, c * static_cast<float>(i), c, c);
@@ -171,7 +172,7 @@ namespace rct3::ui
 
     CareerDialog::Row& CareerDialog::make_row(std::size_t index, CareerRow career)
     {
-        Row& row = list_->content().add<Row>("row" + std::to_string(made_++), style_);
+        Row& row = list_->content().add<Row>(std::format("row{}", made_++), style_);
         row.position = index;
         row.set(std::move(career));
         return row;

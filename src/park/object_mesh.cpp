@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -81,7 +82,7 @@ namespace rct3::park
 
     std::string model_key(const save::PlacedObject& object)
     {
-        return object.overlay + "|" + object.symbol;
+        return std::format("{}|{}", object.overlay, object.symbol);
     }
 
     glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted)

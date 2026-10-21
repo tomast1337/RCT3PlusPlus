@@ -6,6 +6,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <format>
 #include <quickjs/quickjs.h>
 #include <vector>
 
@@ -55,7 +56,7 @@ namespace rct3::scripting
             {
                 const JSValue stack = JS_GetPropertyStr(ctx, exception, "stack");
                 if (!JS_IsUndefined(stack))
-                    out += "\n" + to_text(ctx, stack);
+                    out += std::format("\n{}", to_text(ctx, stack));
                 JS_FreeValue(ctx, stack);
             }
             JS_FreeValue(ctx, exception);

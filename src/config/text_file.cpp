@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/text_file.hpp"
 
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <system_error>
@@ -18,7 +19,7 @@ namespace rct3::config
         std::ifstream in(path, std::ios::binary);
         // Opening a folder succeeds on some systems, so check what it is too.
         if (!in || !fs::is_regular_file(path, ec))
-            return std::unexpected("cannot read " + path.string());
+            return std::unexpected(std::format("cannot read {}", path.string()));
         std::ostringstream text;
         text << in.rdbuf();
         return text.str();
@@ -30,17 +31,17 @@ namespace rct3::config
         if (path.has_parent_path())
             fs::create_directories(path.parent_path(), ec);
         if (ec)
-            return std::unexpected("cannot create " + path.parent_path().string() + ": " + ec.message());
+            return std::unexpected(std::format("cannot create {}: {}", path.parent_path().string(), ec.message()));
         fs::path temporary = path;
         temporary += ".new";
         {
             std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
             if (!out || !out.write(text.data(), static_cast<std::streamsize>(text.size())))
-                return std::unexpected("cannot write " + temporary.string());
+                return std::unexpected(std::format("cannot write {}", temporary.string()));
         }
         fs::rename(temporary, path, ec);
         if (ec)
-            return std::unexpected("cannot replace " + path.string() + ": " + ec.message());
+            return std::unexpected(std::format("cannot replace {}: {}", path.string(), ec.message()));
         return { };
     }
 

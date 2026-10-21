@@ -2,6 +2,7 @@
 #include "park/ride_cars.hpp"
 
 #include <cmath>
+#include <format>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace rct3::park
@@ -28,7 +29,7 @@ namespace rct3::park
                     o.id = ++last_id;
                     o.owner_ref = o.id;
                     o.overlay = train.overlay_path;
-                    o.symbol = name + "#" + std::to_string(car.design_slot);
+                    o.symbol = std::format("{}#{}", name, car.design_slot);
                     o.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
                     out.designs.push_back({ name, static_cast<std::size_t>(car.design_slot) });
                     out.spots.push_back({ r, t, car.front_wheel_distance, car.rear_wheel_distance });

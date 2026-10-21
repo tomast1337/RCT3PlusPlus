@@ -17,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <format>
 #include <functional>
 #include <initializer_list>
 #include <limits>
@@ -265,7 +266,7 @@ namespace rct3::simulation
         {
             const save::Ride& ride = rides.rides[i];
             auto [at, added] = loaded.try_emplace(ride.base.overlay_path);
-            const auto file = added ? find(ride.base.overlay_path + ".common.ovl") : std::nullopt;
+            const auto file = added ? find(std::format("{}.common.ovl", ride.base.overlay_path)) : std::nullopt;
             if (auto overlay = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error::MissingFile))
             {
                 for (const auto part : { maybe(&overlay->common()), overlay->unique() })
@@ -274,10 +275,10 @@ namespace rct3::simulation
                         continue;
                     for (const auto& item : ovl::read_tracked_rides(*overlay, *part))
                         if (item.ride && item.ride->guests)
-                            at->second[std::string(item.name) + ":trr"] = *item.ride->guests;
+                            at->second[std::format("{}:trr", item.name)] = *item.ride->guests;
                     for (const auto& item : ovl::read_animated_rides(*overlay, *part))
                         if (item.ride && item.ride->guests)
-                            at->second[std::string(item.name) + ":anr"] = *item.ride->guests;
+                            at->second[std::format("{}:anr", item.name)] = *item.ride->guests;
                 }
             }
             if (const auto found = at->second.find(ride.base.symbol); found != at->second.end())

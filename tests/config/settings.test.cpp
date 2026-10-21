@@ -3,6 +3,7 @@
 
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -116,7 +117,7 @@ TEST_CASE("settings are saved to and loaded from a file")
     Settings settings;
     settings.set(Setting::SkipIntro, "yes");
     REQUIRE(settings.save(file).has_value());
-    CHECK_FALSE(fs::exists(file.string() + ".new"));
+    CHECK_FALSE(fs::exists(std::format("{}.new", file.string())));
     const auto loaded = Settings::load(file);
     REQUIRE(loaded.has_value());
     CHECK(loaded->flag(Setting::SkipIntro));

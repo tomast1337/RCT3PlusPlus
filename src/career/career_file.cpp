@@ -5,6 +5,7 @@
 #include <bit>
 #include <cstdio>
 #include <cstring>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <optional>
@@ -323,7 +324,7 @@ namespace rct3::career
             if (!data)
             {
                 if (problems)
-                    problems->push_back({ path.filename().string() + ": " + (bytes ? to_string(data.error()) : "cannot read") });
+                    problems->push_back({ std::format("{}: {}", path.filename().string(), bytes ? to_string(data.error()) : "cannot read") });
                 continue;
             }
             if (data->career.pack == pack)
@@ -356,10 +357,10 @@ namespace rct3::career
         const fs::path games = fs::path(path).replace_extension();
         fs::remove_all(games, error);
         if (error)
-            return std::unexpected("cannot delete " + games.string() + ": " + error.message());
+            return std::unexpected(std::format("cannot delete {}: {}", games.string(), error.message()));
         fs::remove(path, error);
         if (error)
-            return std::unexpected("cannot delete " + path.string() + ": " + error.message());
+            return std::unexpected(std::format("cannot delete {}: {}", path.string(), error.message()));
         return { };
     }
 

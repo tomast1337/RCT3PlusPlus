@@ -35,21 +35,21 @@ namespace rct3::park
         switch (paint)
         {
             case GroundPaint::Cliff:
-                return "cliff " + std::to_string(index);
+                return std::format("cliff {}", index);
             case GroundPaint::PathA:
-                return "path A " + std::to_string(index);
+                return std::format("path A {}", index);
             case GroundPaint::PathB:
-                return "path B " + std::to_string(index);
+                return std::format("path B {}", index);
             case GroundPaint::Queue:
-                return "queue " + std::to_string(index);
+                return std::format("queue {}", index);
             case GroundPaint::TunnelWall:
-                return "tunnel wall " + std::to_string(index);
+                return std::format("tunnel wall {}", index);
             case GroundPaint::TunnelCeiling:
-                return "tunnel ceiling " + std::to_string(index);
+                return std::format("tunnel ceiling {}", index);
             case GroundPaint::Surface:
                 break;
         }
-        return "surface " + std::to_string(index);
+        return std::format("surface {}", index);
     }
 
     std::string path_texture_file(std::string_view style)

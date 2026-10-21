@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -212,7 +213,7 @@ namespace
         fs::path path;
         TempDir()
         {
-            path = fs::temp_directory_path() / ("rct3_park_test_" + std::to_string(::getpid()));
+            path = fs::temp_directory_path() / std::format("rct3_park_test_{}", ::getpid());
             fs::remove_all(path);
             fs::create_directories(path);
         }

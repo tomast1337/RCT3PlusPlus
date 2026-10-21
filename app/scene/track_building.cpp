@@ -14,6 +14,7 @@
 #include "ui/screens/tool_row.hpp"
 
 #include <algorithm>
+#include <format>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -257,7 +258,7 @@ namespace rct3::scene
                 {
                     if (!tried.insert(reference).second)
                         continue;
-                    if (const auto found_file = assets.install->find(reference + ".common.ovl"))
+                    if (const auto found_file = assets.install->find(std::format("{}.common.ovl", reference)))
                         more = m.index->add_file(*found_file) || more;
                 }
                 if (!more)
@@ -269,7 +270,7 @@ namespace rct3::scene
         {
             // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
             m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
-            if (const auto file = assets.install->find(slashes(object.overlay) + ".common.ovl"))
+            if (const auto file = assets.install->find(std::format("{}.common.ovl", slashes(object.overlay))))
                 (void)add_with_references(*file);
             m.loader = std::make_unique<park::ModelLoader>(*m.index);
         }
@@ -282,7 +283,7 @@ namespace rct3::scene
             // piece, which the describing overlay does not refer to: beside it, or in a folder beside it.
             const std::string overlay = slashes(object.overlay);
             const std::string folder = overlay.substr(0, overlay.rfind('/') + 1);
-            const std::string file_name = object.symbol + ".common.ovl";
+            const std::string file_name = std::format("{}.common.ovl", object.symbol);
             std::optional<std::filesystem::path> file = assets.install->find(folder + file_name);
             if (const auto dir = assets.install->find(folder.empty() ? "." : folder); !file && dir)
             {
@@ -290,7 +291,7 @@ namespace rct3::scene
                 for (const auto& entry : std::filesystem::directory_iterator(*dir, error))
                 {
                     if (entry.is_directory(error))
-                        file = assets.install->find(folder + entry.path().filename().string() + "/" + file_name);
+                        file = assets.install->find(std::format("{}{}/{}", folder, entry.path().filename().string(), file_name));
                     if (file)
                         break;
                 }
@@ -353,7 +354,7 @@ namespace rct3::scene
         /// a copy of their own with it filled.
         std::string ghost_texture(const park::ObjectBatch& batch)
         {
-            return batch.blend == park::PartBlend::Opaque ? "ghost:" + batch.texture : batch.texture;
+            return batch.blend == park::PartBlend::Opaque ? std::format("ghost:{}", batch.texture) : batch.texture;
         }
     } // namespace
 
@@ -415,7 +416,7 @@ namespace rct3::scene
         TrackBuilding& b = scene.building;
         if (!b.catalogues.contains(overlay))
         {
-            const auto file = assets.install->find(slashes(overlay) + ".common.ovl");
+            const auto file = assets.install->find(std::format("{}.common.ovl", slashes(overlay)));
             if (!file)
                 return false;
             auto loaded = park::load_piece_catalogue(*file, overlay);

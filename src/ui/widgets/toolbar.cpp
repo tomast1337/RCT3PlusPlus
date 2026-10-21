@@ -2,6 +2,7 @@
 #include "ui/widgets/toolbar.hpp"
 
 #include <cmath>
+#include <format>
 
 namespace rct3::ui
 {
@@ -41,7 +42,7 @@ namespace rct3::ui
 
     void Toolbar::add_separator()
     {
-        add<Separator>("separator" + std::to_string(separators_++));
+        add<Separator>(std::format("separator{}", separators_++));
         arrange();
     }
 

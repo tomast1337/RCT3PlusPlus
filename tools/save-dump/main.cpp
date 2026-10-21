@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -700,7 +701,7 @@ int main(int argc, char** argv)
             std::ranges::sort(sorted, std::greater { });
             std::string out;
             for (std::size_t i = 0; i < sorted.size() && i < n; ++i)
-                out += " " + sorted[i].second + " x" + std::to_string(sorted[i].first);
+                out += std::format(" {} x{}", sorted[i].second, sorted[i].first);
             return out;
         };
         for (const auto& [key, s] : seen)

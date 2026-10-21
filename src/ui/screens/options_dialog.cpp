@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -370,7 +371,7 @@ namespace rct3::ui
         top.tick(O::Fullscreen, str(strings, "GameOptionsDialog_Fullscreen"));
         std::vector<std::u16string> sizes;
         for (const ScreenSize& s : choices_.screen_sizes)
-            sizes.push_back(ascii(std::to_string(s.width) + " x " + std::to_string(s.height)));
+            sizes.push_back(ascii(std::format("{} x {}", s.width, s.height)));
         resolution_ = &top.list(str(strings, "GameOptionsDialog_ScreenResolution"), std::move(sizes), { }, "GameOptionsDialog_ScreenResolution");
         resolution_->select(choices_.screen_size);
         resolution_->enabled = !choices_.screen_sizes.empty();
@@ -449,7 +450,7 @@ namespace rct3::ui
         } };
         for (const auto& [option, key] : kReflections)
         {
-            rows.tick(option, str(strings, key), str(strings, std::string(key) + "Help"));
+            rows.tick(option, str(strings, key), str(strings, std::format("{}Help", key)));
             rows.indent();
             rows.shown_when({ O::ReflectiveWater, 1 });
         }

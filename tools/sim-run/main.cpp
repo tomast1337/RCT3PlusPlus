@@ -170,7 +170,7 @@ int main(int argc, char** argv)
             bool added = false;
             for (const std::string& reference : missing)
                 if (tried_files.insert(reference).second)
-                    if (const auto file = install->find(reference + ".common.ovl"))
+                    if (const auto file = install->find(std::format("{}.common.ovl", reference)))
                         added = assets.add_file(*file) || added;
             if (!added)
                 break;
@@ -183,7 +183,7 @@ int main(int argc, char** argv)
                 gates.insert(o.id);
         for (const save::Ride& ride : rides->rides)
             if (ride.kind == save::RideKind::Special)
-                if (const auto file = install->find(ride.base.overlay_path + ".common.ovl"))
+                if (const auto file = install->find(std::format("{}.common.ovl", ride.base.overlay_path)))
                     if (const auto kind = park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))))
                         facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::ObjectModel>, std::less<>> models;
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
             const auto course = park::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
                 auto [at, added] = catalogues.try_emplace(object.overlay);
                 if (added)
-                    if (const auto file = install->find(object.overlay + ".common.ovl"))
+                    if (const auto file = install->find(std::format("{}.common.ovl", object.overlay)))
                         if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
                             at->second = std::move(*loaded);
                 if (!at->second)

@@ -35,6 +35,8 @@ declare namespace ui {
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */
     function toggle(path: string, on: boolean): Promise<void>;
+    /** The names of the shown widgets in the one at `path`, in order; undefined when it is not shown. */
+    function children(path: string): string[] | undefined;
 }
 
 declare namespace park {
@@ -94,4 +96,66 @@ declare namespace map {
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     function water(): Lake[];
+}
+
+interface FlatRideItem {
+    overlay: string;
+    symbol: string;
+    /** String key of its name. */
+    name: string;
+    /** Tiles along its own X and Z. */
+    width: number;
+    length: number;
+    /** Hundredths of the currency. */
+    price: number;
+    /** Whether it has an entrance and an exit to place. */
+    doors: boolean;
+}
+
+declare namespace build {
+    /** The install's rides placed whole; undefined while the lists are still being read. */
+    function flatRides(): FlatRideItem[] | undefined;
+    /** Starts placing a ride, as picking it in its build list does; false when there is no such ride. */
+    function pick(overlay: string, symbol: string): boolean;
+    /** Puts the placing tool away, as a right click does. */
+    function stop(): void;
+    /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked"; affordable: boolean } | undefined;
+}
+
+/** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */
+interface Spot {
+    col: number;
+    row: number;
+    direction: number;
+}
+
+interface RideInfo {
+    name: string;
+    /** With its tag, as "Twist:anr". */
+    symbol: string;
+    overlay: string;
+    flat: boolean;
+    site: Spot | null;
+    entrance: Spot | null;
+    exit: Spot | null;
+    /** Whether the simulation runs it. The rest are there only when it does. */
+    joined: boolean;
+    customers?: number;
+    /** Hundredths of the currency. */
+    price?: number;
+    open?: boolean;
+    /** Whether its entrance was found on the paths. */
+    onPaths?: boolean;
+    capacity?: number;
+    cycleSeconds?: number;
+    queue?: number;
+    queueLine?: number;
+    riders?: number;
+    /** Excitement, intensity and nausea, 0..1. */
+    ratings?: [number, number, number];
+}
+
+declare namespace rides {
+    function list(): RideInfo[];
 }

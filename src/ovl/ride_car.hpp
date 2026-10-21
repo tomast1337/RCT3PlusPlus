@@ -7,6 +7,8 @@
 #include "ovl/item_record.hpp"
 #include "ovl/overlay.hpp"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -26,6 +28,10 @@ namespace rct3::ovl
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;
+        /// "svd" items of the wheels: front right, front left, rear right, rear left; empty where it has none.
+        std::array<std::string_view, 4> wheels;
+        /// "svd" items of the front and rear axles, which may carry the wheels; empty where it has none.
+        std::array<std::string_view, 2> axles;
         /// Every reference in the record, in file order. Besides the visual it holds further "svd" items for
         /// parts of the car, such as seats and wheels.
         std::vector<ItemReference> references;

@@ -461,6 +461,7 @@ namespace rct3::simulation
         Mechanic, ///< Mends what is broken
         Guard,    ///< Keeps vandals off the paths near them
         Other,    ///< Walks the paths, nothing more yet
+        Vendor,   ///< Sells at a stall or a ride's entrance, standing at their post off the paths
     };
 
     struct Staff

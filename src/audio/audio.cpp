@@ -27,6 +27,16 @@ namespace rct3::audio
             return std::isfinite(v) && v >= lo && v <= hi;
         }
 
+        // Under water: little above a low hum gets through, and that a little quieter.
+        constexpr double kMuffledCutoff = 500; // Hz
+        constexpr float kMuffledVolume = 0.7f;
+        constexpr ma_uint32 kMuffleOrder = 2;
+        // Open, the filter passes all but the very top of the band.
+        double clear_cutoff(std::uint32_t sample_rate) noexcept
+        {
+            return 0.45 * sample_rate;
+        }
+
     } // namespace
 
     std::size_t SoundBuffer::frame_count() const noexcept
@@ -342,6 +352,9 @@ namespace rct3::audio
         bool engine_ready = false;
         ma_context context { };
         ma_engine engine { };
+        ma_lpf_node muffle { }; // Placed voices play through it
+        bool muffle_ready = false;
+        bool muffled = false;
         std::unique_ptr<Voice[]> voices; // never moves: miniaudio keeps pointers into a started voice
         std::size_t voice_count = 0;
 
@@ -349,6 +362,8 @@ namespace rct3::audio
         {
             for (std::size_t i = 0; i < voice_count; ++i)
                 release(voices[i]);
+            if (muffle_ready)
+                ma_lpf_node_uninit(&muffle, nullptr);
             if (engine_ready)
                 ma_engine_uninit(&engine);
             if (context_ready)
@@ -426,6 +441,8 @@ namespace rct3::audio
             ma_sound_set_pitch(&v.sound, params.pitch);
             if (params.at)
             {
+                if (muffle_ready)
+                    ma_node_attach_output_bus(&v.sound, 0, &muffle, 0);
                 ma_sound_set_position(&v.sound, params.at->x, params.at->y, params.at->z);
                 ma_sound_set_attenuation_model(&v.sound, ma_attenuation_model_linear);
                 ma_sound_set_min_distance(&v.sound, params.near);
@@ -533,6 +550,9 @@ namespace rct3::audio
         }
 
         ma_engine_set_volume(&impl->engine, impl->master);
+        // Open until muffled; without it placed voices go straight to the output.
+        const ma_lpf_node_config muffle = ma_lpf_node_config_init(config.channels, config.sample_rate, clear_cutoff(config.sample_rate), kMuffleOrder);
+        impl->muffle_ready = ma_lpf_node_init(ma_engine_get_node_graph(&impl->engine), &muffle, nullptr, &impl->muffle) == MA_SUCCESS && ma_node_attach_output_bus(&impl->muffle, 0, ma_engine_get_endpoint(&impl->engine), 0) == MA_SUCCESS;
         return AudioEngine(std::move(impl));
     }
 
@@ -709,6 +729,17 @@ namespace rct3::audio
         ma_engine_listener_set_position(&impl_->engine, 0, at.x, at.y, at.z);
         ma_engine_listener_set_direction(&impl_->engine, 0, forward.x, forward.y, forward.z);
         ma_engine_listener_set_world_up(&impl_->engine, 0, up.x, up.y, up.z);
+    }
+
+    void AudioEngine::set_muffled(bool muffled)
+    {
+        Impl& m = *impl_;
+        if (!m.muffle_ready || m.muffled == muffled)
+            return;
+        m.muffled = muffled;
+        const ma_lpf_config filter = ma_lpf_config_init(ma_format_f32, m.config.channels, m.config.sample_rate, muffled ? kMuffledCutoff : clear_cutoff(m.config.sample_rate), kMuffleOrder);
+        ma_lpf_node_reinit(&filter, &m.muffle);
+        ma_node_set_output_bus_volume(&m.muffle, 0, muffled ? kMuffledVolume : 1.0f);
     }
 
     bool AudioEngine::is_playing(VoiceHandle voice) const

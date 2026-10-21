@@ -314,6 +314,35 @@ TEST_CASE("a placed sound is heard from the listener: on its side, and fading to
     CHECK_FALSE(is_valid(PlayParams { .at = glm::vec3 { 0.0f }, .near = 5.0f, .far = 5.0f }));
 }
 
+TEST_CASE("muffled, placed sounds lose their highs as through water, and unplaced ones stay clear")
+{
+    AudioEngine e = make_engine();
+    e.set_listener({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f, 0.0f });
+    // A shrill tone, 8 frames a wave: far above the muffled band, well under the clear one.
+    std::vector<std::int16_t> shrill(2048);
+    for (std::size_t i = 0; i < shrill.size(); ++i)
+        shrill[i] = i % 8 < 4 ? 16384 : -16384;
+    const SoundBuffer tone = make_pcm16(shrill, 1, kRate);
+    // How loud the left channel is over frames 400..511, once filters and smoothing settle.
+    const auto loudness = [&](const PlayParams& params) {
+        REQUIRE(e.play(tone, params).has_value());
+        const auto out = render_frames(e, 512);
+        e.stop_all();
+        float sum = 0;
+        for (std::size_t f = 400; f < 512; ++f)
+            sum += std::fabs(out[2 * f]);
+        return sum / 112;
+    };
+    const PlayParams placed { .at = glm::vec3 { 0.0f, 0.0f, -1.0f }, .near = 2.0f, .far = 10.0f };
+    const float clear = loudness(placed);
+    CHECK(clear > 0.1f);
+    e.set_muffled(true);
+    CHECK(loudness(placed) < clear / 10);
+    CHECK(loudness({ }) > 0.1f);
+    e.set_muffled(false);
+    CHECK(loudness(placed) == doctest::Approx(clear).epsilon(0.1));
+}
+
 TEST_CASE("concurrent voices are summed and master volume scales the sum")
 {
     AudioEngine e = make_engine();

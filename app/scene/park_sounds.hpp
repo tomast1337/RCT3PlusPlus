@@ -3,7 +3,7 @@
 // The park's people heard from the camera, by the rules of audio/park_voices.hpp: the chatter of the crowd
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, and screams from
 // the riders of a train going fast or dropping. The sounds come from the game's overlays by name; whatever it
-// does not have stays quiet. All follow the game volume and hush while the park is paused.
+// does not have stays quiet. All follow the game volume and hush while the park is paused, and are heard muffled while the eye is under water.
 #pragma once
 
 #include "audio/audio.hpp"

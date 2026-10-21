@@ -408,7 +408,6 @@ namespace rct3::scene
                 boned.reach = scene.grid.tile_size_x;
                 boned.gate = { *shut, *opening, *open, *shutting };
                 boned.exit = is_exit;
-                boned.since = -std::numeric_limits<float>::infinity();
                 add_textures(device, scene, boned.mesh.mesh.batches);
             }
         }

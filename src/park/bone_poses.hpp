@@ -57,4 +57,14 @@ namespace rct3::park
     /// when not riding.
     [[nodiscard]] std::pair<std::size_t, float> flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle);
 
+    /// A ride entrance's or exit's gate motions: shut, opening, open and shutting.
+    inline constexpr std::size_t kGateShut = 0;
+    inline constexpr std::size_t kGateOpening = 1;
+    inline constexpr std::size_t kGateOpen = 2;
+    inline constexpr std::size_t kGateShutting = 3;
+
+    /// The gate motion to play once `playing` has played through, as the gate should be `open` or not. A gate
+    /// changes only between motions, so it never jumps; shut and open play again while it stays so.
+    [[nodiscard]] std::size_t next_gate_motion(std::size_t playing, bool open);
+
 } // namespace rct3::park

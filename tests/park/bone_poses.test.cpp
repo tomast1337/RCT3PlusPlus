@@ -55,3 +55,16 @@ TEST_CASE("a flat ride starts, runs round and stops within its ride, and stands 
     CHECK(flat_ride_motion(seconds, 10, 9.5f, true, 0) == std::pair<std::size_t, float> { kRideStopping, 0.5f });
     CHECK(flat_ride_motion(seconds, 10, 0, false, 7) == std::pair<std::size_t, float> { kRideStanding, 2.0f });
 }
+
+TEST_CASE("a gate finishes the motion it is in before it opens or shuts")
+{
+    CHECK(next_gate_motion(kGateShut, true) == kGateOpening);
+    CHECK(next_gate_motion(kGateOpening, true) == kGateOpen);
+    CHECK(next_gate_motion(kGateOpen, true) == kGateOpen);
+    CHECK(next_gate_motion(kGateShutting, true) == kGateOpening);
+    // Told to shut while opening, it opens all the way first and shuts from there.
+    CHECK(next_gate_motion(kGateOpening, false) == kGateShutting);
+    CHECK(next_gate_motion(kGateOpen, false) == kGateShutting);
+    CHECK(next_gate_motion(kGateShutting, false) == kGateShut);
+    CHECK(next_gate_motion(kGateShut, false) == kGateShut);
+}

@@ -276,7 +276,7 @@ namespace rct3::scene
             });
         }
 
-        constexpr float kGateReach = 2.5f; ///< From a ride's entrance or exit to a rider it opens for
+        constexpr float kGateHold = 3; ///< How long a ride's gate stays open after its last rider walks through
 
         /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
         /// the seats they carry.
@@ -294,22 +294,19 @@ namespace rct3::scene
                 std::pair<std::size_t, float> playing;
                 if (boned.gate)
                 {
-                    // Open while one of the ride's riders on foot, on or off as the gate is, is near it.
-                    const auto& r = scene.sim.registry;
-                    bool open = false;
+                    // Kept open while the ride's riders walk through, on or off as the gate is, and a while after so
+                    // it does not flap between them; it changes motion only once the playing one ends.
                     if (scene.simulate)
-                        for (const auto [g, walk, pose, errand] : r.view<const simulation::RideWalk, const simulation::Pose, const simulation::Errand>().each())
-                            open = open || (errand.target == boned.ride && walk.off == boned.exit && glm::distance(pose.position, at) < kGateReach);
-                    if (open != boned.open)
+                        for (const auto [g, walk, errand] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Errand>().each())
+                            if (errand.target == boned.ride && walk.off == boned.exit)
+                                boned.open_until = scene.clock + kGateHold;
+                    const std::size_t now = (*boned.gate)[boned.step];
+                    if (scene.clock - boned.since >= (now < seconds.size() ? seconds[now] : 0.0f))
                     {
-                        boned.open = open;
+                        boned.step = park::next_gate_motion(boned.step, scene.clock < boned.open_until);
                         boned.since = scene.clock;
                     }
-                    const auto [shut, opening, wide, shutting] = *boned.gate;
-                    const std::size_t moving = open ? opening : shutting;
-                    const float length = moving < seconds.size() ? seconds[moving] : 0.0f;
-                    const std::size_t held = open ? wide : shut;
-                    playing = scene.clock - boned.since < length ? std::pair { moving, scene.clock - boned.since } : std::pair { held, held < seconds.size() && seconds[held] > 0 ? std::fmod(scene.clock, seconds[held]) : 0.0f };
+                    playing = { (*boned.gate)[boned.step], scene.clock - boned.since };
                 }
                 else
                 {

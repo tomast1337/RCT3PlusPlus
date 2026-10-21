@@ -94,4 +94,11 @@ namespace rct3::park
         return { kRideStopping, std::min(into - start - running, stop) };
     }
 
+    std::size_t next_gate_motion(std::size_t playing, bool open)
+    {
+        if (open)
+            return playing == kGateShut || playing == kGateShutting ? kGateOpening : kGateOpen;
+        return playing == kGateOpen || playing == kGateOpening ? kGateShutting : kGateShut;
+    }
+
 } // namespace rct3::park

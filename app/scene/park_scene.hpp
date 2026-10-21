@@ -19,6 +19,7 @@
 #include "config/game_options.hpp"
 #include "ovl/texture_image.hpp"
 #include "park/attraction_objects.hpp"
+#include "park/bone_poses.hpp"
 #include "park/camera.hpp"
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
@@ -326,12 +327,13 @@ namespace rct3::scene
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
             std::size_t first_seat = 0;      ///< Its first seat's place in seat_carriers
             float reach = 0;                 ///< Of scenery, about how far it reaches from its place
-            /// Of a ride's entrance or exit, its motions shut, opening, open and shutting: it opens while the ride's
-            /// riders walk through, on or off as `exit` says.
+            /// Of a ride's entrance or exit, its motions shut, opening, open and shutting (park::kGateShut...): it
+            /// opens while the ride's riders walk through, on or off as `exit` says.
             std::optional<std::array<std::size_t, 4>> gate;
             bool exit = false;
-            bool open = false;
-            float since = 0; ///< scene.clock when it last opened or shut
+            std::size_t step = park::kGateShut; ///< Which of the gate's motions plays
+            float since = 0;                    ///< scene.clock when that motion began
+            float open_until = 0;               ///< scene.clock till which the gate is to stay open
         };
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.

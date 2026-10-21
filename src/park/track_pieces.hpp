@@ -48,6 +48,11 @@ namespace rct3::park
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
+    /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.
+    inline constexpr std::uint32_t kPieceStarts = 0x1;
+    inline constexpr std::uint32_t kPieceStartsBackward = 0x2000;
+    /// A piece pattern never lays the piece backwards.
+    inline constexpr std::uint32_t kPieceKeepsWay = 0x4;
 
     /// One end of a piece as a car passes it.
     struct PieceEnd
@@ -85,6 +90,17 @@ namespace rct3::park
         std::vector<glm::vec3> ups { };
     };
 
+    /// How one end of a piece meets the end of another, beyond their shape: by name, by the tags each offers
+    /// the other, needs from it and forbids in it, and by width.
+    struct PieceJoin
+    {
+        std::string name;
+        std::vector<std::string> offers;
+        std::vector<std::string> needs;
+        std::vector<std::string> forbids;
+        std::uint32_t width = 0;
+    };
+
     /// What a section stores about a piece besides its splines.
     struct PieceRecord
     {
@@ -95,7 +111,10 @@ namespace rct3::park
         std::uint32_t flags = 0;
         std::array<std::int32_t, 2> squares { 1, 1 };
         Positioning positioning = Positioning::Tile;
-        std::int32_t cost = 0; ///< As the scenery item stores it
+        std::int32_t cost = 0;          ///< As the scenery item stores it
+        std::array<PieceJoin, 2> joins; ///< Of its start and its end, laid as drawn
+        std::uint32_t side = 0;         ///< Of side by side tracks; ends meet only ends of the same side
+        std::string group;              ///< For the ride's piece patterns
     };
 
     struct PieceShape
@@ -163,6 +182,15 @@ namespace rct3::park
     /// turn by quarter turns.
     [[nodiscard]] bool fits_after(const PieceEnd& tip, const PieceEnd& entry);
 
+    /// Whether the end `before` of one piece and the end `next` of the piece after it may meet: the same name
+    /// (ignoring case) and width, and on each side, when it needs tags, one of them offered by the other, and
+    /// none of those it forbids.
+    [[nodiscard]] bool ends_meet(const PieceJoin& before, const PieceJoin& next);
+
+    /// How `shape` laid as `reversed` joins at its start and its end.
+    [[nodiscard]] const PieceJoin& laid_start_join(const PieceShape& shape, bool reversed);
+    [[nodiscard]] const PieceJoin& laid_end_join(const PieceShape& shape, bool reversed);
+
     /// The open end of a track in the park.
     struct TrackTip
     {
@@ -183,9 +211,15 @@ namespace rct3::park
 
     /// The open end a placed piece leaves when laid as `reversed`.
     [[nodiscard]] TrackTip tip_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid);
+    /// Where a placed piece laid as `reversed` starts, as the open end a piece before it would leave.
+    [[nodiscard]] TrackTip start_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid);
 
     /// The pieces that can follow `tip`, each with the way it is laid: a piece that fits both ways (a level
-    /// curve, which turns the other way when laid backwards) comes twice.
-    [[nodiscard]] std::vector<LaidPiece> pieces_after(std::span<const PieceShape> pieces, const PieceEnd& tip);
+    /// curve, which turns the other way when laid backwards) comes twice. With `last`, the piece of `pieces`
+    /// the tip is the end of, its end must meet theirs too.
+    [[nodiscard]] std::vector<LaidPiece> pieces_after(std::span<const PieceShape> pieces, const PieceEnd& tip, std::optional<LaidPiece> last = std::nullopt);
+
+    /// The pieces a track may start with, each with the way it is laid.
+    [[nodiscard]] std::vector<LaidPiece> starting_pieces(std::span<const PieceShape> pieces);
 
 } // namespace rct3::park

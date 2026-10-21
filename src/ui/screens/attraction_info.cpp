@@ -652,10 +652,11 @@ namespace rct3::ui
         if (f.common == nullptr)
             return page;
         page.title = attraction_name(*f.common, strings);
+        const std::u16string note = f.refusal.empty() ? status(*f.common, strings) : text(strings, f.refusal);
         switch (tab)
         {
             case AttractionTab::View:
-                page.note = status(*f.common, strings);
+                page.note = note;
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
                     paints(page, f, strings);
@@ -666,7 +667,7 @@ namespace rct3::ui
                 }
                 break;
             case AttractionTab::State:
-                page.note = status(*f.common, strings);
+                page.note = note;
                 break;
             case AttractionTab::Finances:
                 finances(page, f, strings, units);

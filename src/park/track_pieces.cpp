@@ -196,6 +196,13 @@ namespace rct3::park
             r.squares = { static_cast<std::int32_t>(item->second.x_squares), static_cast<std::int32_t>(item->second.z_squares) };
             r.positioning = static_cast<Positioning>(item->second.positioning);
             r.cost = item->second.cost;
+            const auto join = [&](std::string_view name, const ovl::JoinTags& tags, std::uint32_t width) {
+                const auto copied = [](const std::vector<std::string_view>& names) { return std::vector<std::string>(names.begin(), names.end()); };
+                return PieceJoin { std::string(name), copied(tags.offers), copied(tags.needs), copied(tags.forbids), width };
+            };
+            r.joins = { join(section.start_join, section.tags[0], section.widths[0]), join(section.end_join, section.tags[1], section.widths[1]) };
+            r.side = section.side;
+            r.group = section.group;
             lines.push_back(*line);
         }
         return PieceCatalogue { std::move(overlay), shape_pieces(records, lines) };
@@ -310,6 +317,23 @@ namespace rct3::park
         return tip.slope == entry.slope && tip.bank == entry.bank && diagonal(tip) == diagonal(entry);
     }
 
+    bool ends_meet(const PieceJoin& before, const PieceJoin& next)
+    {
+        const auto any_in = [](const std::vector<std::string>& names, const std::vector<std::string>& in) { return std::ranges::any_of(names, [&](const std::string& n) { return std::ranges::any_of(in, [&](const std::string& i) { return strings::equals_ignoring_case(n, i); }); }); };
+        const auto allows = [&](const PieceJoin& a, const PieceJoin& b) { return (a.needs.empty() || any_in(a.needs, b.offers)) && !any_in(a.forbids, b.offers); };
+        return strings::equals_ignoring_case(before.name, next.name) && before.width == next.width && allows(before, next) && allows(next, before);
+    }
+
+    const PieceJoin& laid_start_join(const PieceShape& shape, bool reversed)
+    {
+        return shape.record.joins[reversed ? 1 : 0];
+    }
+
+    const PieceJoin& laid_end_join(const PieceShape& shape, bool reversed)
+    {
+        return shape.record.joins[reversed ? 0 : 1];
+    }
+
     TrackTip tip_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
     {
         const glm::mat4 m = object_transform(object, shape.record.positioning, grid, shape.record.squares);
@@ -317,6 +341,13 @@ namespace rct3::park
         tip.position = glm::vec3(m * glm::vec4(reversed ? shape.line.start : shape.line.end, 1));
         tip.end = laid_exit(shape, reversed);
         tip.end.heading = wrap_heading(tip.end.heading + 2 * object.rotation);
+        return tip;
+    }
+
+    TrackTip start_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
+    {
+        TrackTip tip = tip_of(object, shape, !reversed, grid);
+        tip.end = { -tip.end.slope, wrap_bank(-tip.end.bank), wrap_heading(tip.end.heading + kHeadings / 2) };
         return tip;
     }
 
@@ -354,18 +385,36 @@ namespace rct3::park
         return placed;
     }
 
-    std::vector<LaidPiece> pieces_after(std::span<const PieceShape> pieces, const PieceEnd& tip)
+    std::vector<LaidPiece> pieces_after(std::span<const PieceShape> pieces, const PieceEnd& tip, std::optional<LaidPiece> last)
     {
+        const std::optional<const PieceShape&> before = last && last->index < pieces.size() ? maybe(&pieces[last->index]) : std::nullopt;
         std::vector<LaidPiece> fit;
         for (std::size_t i = 0; i < pieces.size(); ++i)
         {
             for (const bool reversed : { false, true })
             {
-                if (fits_after(tip, laid_entry(pieces[i], reversed)))
-                    fit.push_back({ i, reversed });
+                if (!fits_after(tip, laid_entry(pieces[i], reversed)))
+                    continue;
+                if (before && (before->record.side != pieces[i].record.side || !ends_meet(laid_end_join(*before, last->reversed), laid_start_join(pieces[i], reversed))))
+                    continue;
+                fit.push_back({ i, reversed });
             }
         }
         return fit;
+    }
+
+    std::vector<LaidPiece> starting_pieces(std::span<const PieceShape> pieces)
+    {
+        std::vector<LaidPiece> out;
+        for (std::size_t i = 0; i < pieces.size(); ++i)
+        {
+            const std::uint32_t f = pieces[i].record.flags;
+            if ((f & kPieceStarts) != 0)
+                out.push_back({ i, false });
+            if ((f & kPieceStarts) != 0 && (f & kPieceStartsBackward) != 0)
+                out.push_back({ i, true });
+        }
+        return out;
     }
 
     std::optional<const PieceShape&> shape_named(const PieceCatalogue& catalogue, std::string_view symbol)

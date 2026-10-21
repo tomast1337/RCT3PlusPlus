@@ -141,3 +141,59 @@ TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in
         CHECK(d.launch_max == 25);
     }
 }
+
+TEST_CASE("later tracked rides give their track rules and piece patterns")
+{
+    Pool pool;
+    const auto group = pool.add("station");
+    pool.add("Ride:trr");
+    pool.add("End:tks");
+    const std::uint32_t at = pool.base();
+    // The record, the doors block, the attraction fields, one pattern of two entries.
+    const std::uint32_t doors = 0x184, fields = doors + 0x44, list = fields + 0x34, entries = list + 8;
+    std::vector<std::byte> bytes(entries + 32, std::byte { 0 });
+    auto word = [&](std::size_t offset, std::uint32_t value) {
+        std::vector<std::byte> w;
+        put(w, { value });
+        std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));
+    };
+    word(0x12C, at + doors);
+    word(doors, 0xFFFFFFFF);
+    word(doors + 0x28, 2);
+    word(doors + 0x2C, 1);
+    word(fields, 768 + 3);
+    word(fields + 0x30, 0x200);
+    word(0x148, 1);
+    word(0x14C, at + list);
+    word(0x17C, 3);
+    word(0x180, 1);
+    word(list, 2);
+    word(list + 4, at + entries);
+    word(entries, 0x1000); // a piece of the group, the last of its track ...
+    word(entries + 4, group);
+    word(entries + 8, 0x401);  // ... becomes End, laid backwards
+    word(entries + 16, 0x100); // a piece of no group comes before it, and stays
+    word(entries + 24, 2);
+    const auto overlay = make_record_overlay(5, pool, "Ride:trr", bytes, { { entries + 12, "End:tks" } });
+    const auto items = read_tracked_rides(overlay, overlay.common());
+    REQUIRE(items[0].ride.has_value());
+    const auto& r = items[0].ride->rules;
+    CHECK(r.flags == 0x200);
+    CHECK(r.min_pieces == 3u);
+    CHECK(r.circuit_only);
+    CHECK(r.entrances == 2);
+    CHECK(r.exits == 1);
+    REQUIRE(r.patterns.size() == 1);
+    REQUIRE(r.patterns[0].size() == 2);
+    const auto& e = r.patterns[0][0];
+    CHECK(e.when.kind == 0);
+    CHECK(e.when.name == "station");
+    CHECK(e.when.last);
+    CHECK_FALSE(e.when.first);
+    CHECK(e.becomes.kind == 1);
+    CHECK(e.becomes.name == "End");
+    CHECK(e.becomes.backward);
+    CHECK(r.patterns[0][1].when.negate);
+    CHECK(r.patterns[0][1].when.name.empty());
+    CHECK(r.patterns[0][1].becomes.kind == 2);
+}

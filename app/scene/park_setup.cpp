@@ -20,6 +20,7 @@
 #include "park/relief_maps.hpp"
 #include "park/ride_cars.hpp"
 #include "park/ride_fences.hpp"
+#include "park/ride_walks.hpp"
 #include "park/sky_models.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
@@ -357,6 +358,35 @@ namespace rct3::scene
             return simulation::start_day(time, simulation::day_window(simulation::day_mode(mode), hours), simulation::day_transition(options.choice(config::GameOption::DayNight)));
         }
 
+        constexpr float kTicketSpot = 1; ///< Along an entrance without a spot of its own, towards the ride
+
+        /// Gives simulated ride `entity` its riders' ways on and off, as `ways_of` lays them from where `ride`'s
+        /// first station has its entrance and exit, with the ticket spot the entrance's model has (its first
+        /// seat). Nothing for a ride without both.
+        template<typename WaysOf> void walk_ride(ParkScene& scene, entt::entity entity, const save::Ride& ride, WaysOf&& ways_of)
+        {
+            if (ride.stations.empty() || !ride.stations.front().entrance_spot || !ride.stations.front().exit_spot)
+                return;
+            const auto place = [&](save::ObjectId id) -> std::optional<std::pair<glm::mat4, const park::ObjectModel*>> {
+                const auto o = std::ranges::find(scene.objects, id, &save::PlacedObject::id);
+                if (o == scene.objects.end())
+                    return std::nullopt;
+                const auto model = scene.models.find(park::model_key(*o));
+                const park::ObjectModel* found = model != scene.models.end() ? &model->second : nullptr;
+                return std::pair { park::placed_transform(*o, found, scene.grid, scene.fitted), found };
+            };
+            const auto entrance = place(ride.stations.front().entrance_spot->object);
+            const auto exit = place(ride.stations.front().exit_spot->object);
+            if (!entrance || !exit)
+                return;
+            park::RideWays ways = ways_of(entrance->first, exit->first);
+            ways.ticket = glm::vec3(entrance->first * glm::vec4(kTicketSpot, 0, 0, 1));
+            ways.ticket_heading = std::atan2(entrance->first[0].x, entrance->first[0].z);
+            if (entrance->second != nullptr && !entrance->second->seat_places.empty())
+                park::set_ticket_spot(ways, entrance->first, entrance->second->seat_places.front());
+            scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
+        }
+
     } // namespace
 
     /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
@@ -404,12 +434,19 @@ namespace rct3::scene
             if (model != scene.models.end() && !model->second.seat_places.empty())
             {
                 scene.ride_seats[entity] = k;
+                const glm::mat4 placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
+                walk_ride(scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
+                    std::vector<glm::vec3> seats;
+                    for (const glm::mat4& seat : model->second.seat_places)
+                        seats.emplace_back((placed * seat)[3]);
+                    return park::flat_ride_ways(park::placed_walkways(model->second.walkways, placed), seats, entrance, exit);
+                });
                 if (model->second.rig)
                 {
                     ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
                     boned.ride = entity;
                     boned.object = k;
-                    boned.placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
+                    boned.placed = placed;
                     std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
                     boned.first_seat = scene.seat_carriers.size();
                     scene.seat_carriers.resize(scene.seat_carriers.size() + model->second.seat_bones.size(), boned.placed);
@@ -880,6 +917,39 @@ namespace rct3::scene
                         scene.ride_cars[scene.ride_entities[ride]].push_back(i);
                 for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     seat_flat_ride(device, scene, i);
+                // Riders of tracked rides board the first train as it waits at the station, seats front to back.
+                // shortcut: rides built in the running park keep boarding straight in, upgrade with the station's
+                // platform there.
+                for (const auto& [entity, cars] : scene.ride_cars)
+                {
+                    const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
+                    const std::size_t i = scene.car_spots[cars.front()].ride;
+                    const save::Ride& ride = scene.rides.rides[i];
+                    if (fleet == nullptr || fleet->trains.empty() || !scene.courses[i] || ride.trains.empty())
+                        continue;
+                    const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
+                    const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
+                    walk_ride(scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
+                        std::vector<glm::vec3> seats;
+                        // A car without its model (from a file the game lacks) seats its share of the train at its middle.
+                        const auto first_train = std::ranges::count(cars, std::size_t { 0 }, [&](std::size_t car) { return scene.car_spots[car].train; });
+                        const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
+                        for (const std::size_t car : cars)
+                        {
+                            const park::CarSpot& spot = scene.car_spots[car];
+                            if (spot.train != 0)
+                                continue;
+                            const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                            const glm::mat4 place = park::moved_along(*scene.courses[i], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
+                            if (model == scene.models.end())
+                                seats.insert(seats.end(), share, glm::vec3(place[3]));
+                            else
+                                for (const glm::mat4& seat : model->second.seat_places)
+                                    seats.emplace_back((place * seat)[3]);
+                        }
+                        return park::track_ride_ways(platform.value_or(park::Platform { }), seats, entrance, exit);
+                    });
+                }
                 simulation::start_guests(scene.sim);
                 if (kept != nullptr)
                     parkfile::place_parties(scene.sim, *kept, placed);
@@ -916,8 +986,8 @@ namespace rct3::scene
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
                         p.guest = guests[p.saved];
-                    // A vendor stands in their booth as saved, moving as the save has them.
-                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]))
+                    // A vendor stands in their booth as saved, serving the riders handing over their tickets.
+                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && (scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]) || scene.sim.registry.get<simulation::Staff>(staff[p.saved]).role == simulation::StaffRole::Vendor))
                         p.guest = staff[p.saved];
                 }
             });

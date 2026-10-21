@@ -365,6 +365,8 @@ namespace
                     continue;
                 }
                 std::printf("  %-32s nodes %zu length %g%s\n", name.c_str(), item.spline->nodes.size(), item.spline->length, item.spline->closed ? " closed" : "");
+                for (const auto& node : item.spline->nodes)
+                    std::printf("    node %g %g %g in %g %g %g out %g %g %g\n", node.position[0], node.position[1], node.position[2], node.tangent_in[0], node.tangent_in[1], node.tangent_in[2], node.tangent_out[0], node.tangent_out[1], node.tangent_out[2]);
             }
         }
         if (opt.san)

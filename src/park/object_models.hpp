@@ -15,6 +15,7 @@
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
+#include "park/ride_walks.hpp"
 #include "park/support_footprint.hpp"
 
 #include <array>
@@ -117,6 +118,8 @@ namespace rct3::park
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
+        /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
+        Walkways walkways;
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).

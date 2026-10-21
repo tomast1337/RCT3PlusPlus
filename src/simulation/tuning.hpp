@@ -59,6 +59,7 @@ namespace rct3::simulation::tuning
         float give_up_after = 480;            ///< Seconds of queueing after which an unhappy guest may give up
         float give_up_mood = 0.3f;            ///< Happiness below which they may
         float give_up_per_second = 1.0f / 30; ///< Chance a second of giving up then
+        float ticket_seconds = 2.5f;          ///< A guest stands handing over their ticket at a ride's entrance
     };
 
     /// Cash machines, benches and sights.

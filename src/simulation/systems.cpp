@@ -328,7 +328,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish, RideWalk>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -372,6 +372,27 @@ namespace rct3::simulation
             stride.progress = 1;
             stride.route.clear();
             place(paths, stride, pose);
+        }
+
+        /// Where riders come off `ride` on to the paths.
+        NodeId exit_of(const entt::registry& r, entt::entity ride)
+        {
+            const NodeId exit = r.get<CycleRide>(ride).exit;
+            return exit != kNoNode ? exit : r.get<Attraction>(ride).entrance;
+        }
+
+        /// A rider off `ride` and on the paths at its exit: on to what they do next, showing how the ride left
+        /// them, and sick there if it turned their stomach.
+        void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
+        {
+            r.get<Errand>(guest) = after_ride(r, guest, ride);
+            const NodeId out = exit_of(r, ride);
+            stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
+            auto& dice = r.get<Dice>(guest).state;
+            if (gesture && random::chance(dice, kTuning.gestures.chance))
+                r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.seconds);
+            if (r.get<Mood>(guest).nausea >= kTuning.sickness.sick && random::chance(dice, kTuning.sickness.sick_after_ride))
+                be_sick(r, guest, out);
         }
     } // namespace
 
@@ -1617,6 +1638,46 @@ namespace rct3::simulation
             }
         }
 
+        phase.emplace("Ride walks");
+        // Riders on their feet walk on to their seats, stopping at the ticket spot first, or off to the paths.
+        for (const entt::entity g : sorted(r.view<RideWalk>()))
+        {
+            auto& walk = r.get<RideWalk>(g);
+            auto& pose = r.get<Pose>(g);
+            const entt::entity ride = r.get<Errand>(g).target;
+            if (!walk.off && walk.next == 1 && walk.pause > 0)
+            {
+                walk.pause -= dt;
+                if (const auto* walks = r.valid(ride) ? r.try_get<RideWalks>(ride) : nullptr)
+                    pose.heading = walks->ticket_heading;
+                continue;
+            }
+            float stride = r.get<Stride>(g).speed * dt;
+            while (stride > 0 && walk.next < walk.points.size())
+            {
+                const glm::vec3 to = walk.points[walk.next] - pose.position;
+                const float left = glm::length(to);
+                if (glm::length(glm::vec2(to.x, to.z)) > 0)
+                    pose.heading = std::atan2(to.x, to.z);
+                if (left > stride)
+                {
+                    pose.position += to * (stride / left);
+                    break;
+                }
+                pose.position = walk.points[walk.next++];
+                stride -= left;
+                if (!walk.off && walk.next == 1)
+                    break; // At the ticket spot
+            }
+            if (walk.next < walk.points.size())
+                continue;
+            const std::optional<GestureKind> gesture = walk.gesture;
+            const bool off = walk.off;
+            r.remove<RideWalk>(g);
+            if (off && r.valid(ride) && r.all_of<CycleRide>(ride))
+                let_out(r, paths, g, ride, gesture);
+        }
+
         phase.emplace("Rides");
         // 4. Rides, in entity order: queues shuffle forward, riders get off, the next ones board.
         for (const entt::entity e : sorted(r.view<CycleRide>()))
@@ -1698,9 +1759,11 @@ namespace rct3::simulation
                     }
                 }
             }
+            const auto* walks = r.try_get<RideWalks>(e);
             const auto unload = [&](std::vector<entt::entity>& riders) {
-                for (const entt::entity guest : riders)
+                for (std::size_t seat = 0; seat < riders.size(); ++seat)
                 {
+                    const entt::entity guest = riders[seat];
                     if (!r.valid(guest))
                         continue;
                     auto& mood = r.get<Mood>(guest);
@@ -1712,7 +1775,6 @@ namespace rct3::simulation
                         mood.wet = std::max(mood.wet, kTuning.weather.splash);
                         mood.heat = 0;
                     }
-                    r.get<Errand>(guest) = after_ride(r, guest, e);
                     auto& dice = r.get<Dice>(guest).state;
                     std::optional<GestureKind> gesture;
                     if (felt >= kTuning.thoughts.enjoyed)
@@ -1734,12 +1796,16 @@ namespace rct3::simulation
                         think(r, guest, ThoughtKind::TooTame, e, now);
                         gesture = GestureKind::Grumble;
                     }
-                    const NodeId out = ride.exit != kNoNode ? ride.exit : attraction.entrance;
-                    stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
-                    if (gesture && random::chance(dice, kTuning.gestures.chance))
-                        r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.seconds);
-                    if (mood.nausea >= kTuning.sickness.sick && random::chance(dice, kTuning.sickness.sick_after_ride))
-                        be_sick(r, guest, out);
+                    // Off the seat and out on foot where the ride has a way out; still riding till on the paths.
+                    if (walks != nullptr && seat < walks->off.size() && !walks->off[seat].empty())
+                    {
+                        RideWalk walk { .points = walks->off[seat], .off = true, .gesture = gesture };
+                        walk.points.push_back(paths.centre(exit_of(r, e)));
+                        r.get<Pose>(guest).position = walk.points.front();
+                        r.emplace_or_replace<RideWalk>(guest, std::move(walk));
+                    }
+                    else
+                        let_out(r, paths, guest, e, gesture);
                 }
                 riders.clear();
             };
@@ -1801,7 +1867,18 @@ namespace rct3::simulation
             const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along < 0.5f);
             const bool ready = fleet != nullptr ? loading.has_value() : ride.phase == RidePhase::Loading;
             auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*loading] : &ride.riders;
-            if (riders != nullptr && at_front && riders->size() < ride.capacity)
+            // On a ride with ways on, riders walk to their seats one by one past the ticket spot, the next
+            // stepping up once the one ahead has handed over their ticket.
+            const bool walk_on = walks != nullptr && !walks->on.empty();
+            const auto on_their_way = [&](entt::entity g) {
+                const auto* walk = r.valid(g) ? r.try_get<RideWalk>(g) : nullptr;
+                return walk != nullptr && !walk->off;
+            };
+            const auto at_ticket = [&](entt::entity g) {
+                const auto* walk = r.valid(g) ? r.try_get<RideWalk>(g) : nullptr;
+                return on_their_way(g) && (walk->next == 0 || walk->pause > 0);
+            };
+            if (riders != nullptr && at_front && riders->size() < ride.capacity && !(walk_on && std::ranges::any_of(*riders, at_ticket)))
             {
                 std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), ride.queue.size());
                 // A party in line rides on one load: cut through by the seats left, it waits for the next when it
@@ -1830,6 +1907,8 @@ namespace rct3::simulation
                             ++count.split;
                     }
                 }
+                if (walk_on)
+                    boarding = std::min<std::size_t>(boarding, 1);
                 for (std::size_t i = 0; i < boarding; ++i)
                 {
                     const entt::entity guest = ride.queue[i];
@@ -1847,6 +1926,12 @@ namespace rct3::simulation
                     attraction.income += attraction.price;
                     ++attraction.customers;
                     r.get<Errand>(guest).kind = ErrandKind::Riding;
+                    if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
+                    {
+                        RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket_seconds };
+                        walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
+                        r.emplace_or_replace<RideWalk>(guest, std::move(walk));
+                    }
                     riders->push_back(guest);
                 }
                 ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
@@ -1854,7 +1939,8 @@ namespace rct3::simulation
             if (riders != nullptr && !upkeep.broken)
             {
                 const auto* departure = r.try_get<Departure>(e);
-                if (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
+                // It waits for those still walking to their seats.
+                if (std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading)))
                 {
                     depart(riders->size());
                     if (fleet != nullptr)
@@ -1898,7 +1984,7 @@ namespace rct3::simulation
             }
             // A train left standing at the start goes, empty if need be, once another is held up behind it (within
             // a centimetre: positions far round a long track lose that much to rounding).
-            if (fleet != nullptr && loading && !fleet->trains[*loading].running && !upkeep.broken)
+            if (fleet != nullptr && loading && !fleet->trains[*loading].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*loading], on_their_way))
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                     if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)

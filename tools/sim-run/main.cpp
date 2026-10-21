@@ -241,7 +241,7 @@ int main(int argc, char** argv)
         }
         for (std::size_t i = 0; i < timings.size(); ++i)
             if (timings[i])
-                std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->seconds));
+                std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->start + static_cast<float>(timings[i]->loops) * timings[i]->run + timings[i]->stop));
     }
     const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
     const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));

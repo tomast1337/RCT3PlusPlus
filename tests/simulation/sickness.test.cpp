@@ -59,7 +59,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
         r.get<Errand>(riders.back()) = { ErrandKind::Riding, ride, 0 };
         r.get<CycleRide>(ride).riders.push_back(riders.back());
     }
-    r.get<CycleRide>(ride).timer = 1;
+    r.get<CycleRide>(ride).phase = RidePhase::Stopping; // Done the moment it steps
     park.run(1);
     CHECK(vomit(park) > 0);
     CHECK(std::ranges::all_of(r.view<Litter>(), [&](entt::entity e) { return r.get<Litter>(e).node == *park.world().paths.find({ 3, 0, 0 }); }));

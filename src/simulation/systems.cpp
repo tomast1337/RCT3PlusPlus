@@ -1128,13 +1128,65 @@ namespace rct3::simulation
 
     bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
     {
-        if (departure.max_wait >= 0 && waited >= static_cast<float>(departure.max_wait))
-            return true;
         if (departure.min_wait >= 0 && waited < static_cast<float>(departure.min_wait))
             return false;
-        // Quarters of the seats it waits for; any load is one rider.
+        if (departure.max_wait >= 0 && waited >= static_cast<float>(departure.max_wait))
+            return true;
+        // Quarters of the seats it waits for, the odd seat left over; any load is one rider.
         const auto quarters = 4 - static_cast<std::size_t>(departure.wait_for);
-        return riders >= std::max<std::size_t>((capacity * quarters + 3) / 4, 1);
+        return riders >= std::max<std::size_t>(capacity * quarters / 4, 1);
+    }
+
+    float cycle_seconds(const CycleRide& ride)
+    {
+        return ride.start_seconds + static_cast<float>(ride.loops) * ride.run_seconds + ride.stop_seconds;
+    }
+
+    std::optional<float> seconds_into_cycle(const CycleRide& ride)
+    {
+        switch (ride.phase)
+        {
+            case RidePhase::Loading:
+                return std::nullopt;
+            case RidePhase::Starting:
+                return ride.phase_seconds;
+            case RidePhase::Running:
+                return ride.start_seconds + static_cast<float>(ride.loop) * ride.run_seconds + ride.phase_seconds;
+            case RidePhase::Stopping:
+                return ride.start_seconds + static_cast<float>(ride.loops) * ride.run_seconds + std::min(ride.phase_seconds, ride.stop_seconds);
+        }
+        return std::nullopt;
+    }
+
+    bool advance_cycle(CycleRide& ride, float dt, bool held)
+    {
+        if (ride.phase == RidePhase::Loading)
+            return false;
+        ride.phase_seconds += dt;
+        // Time left over from one phase goes on into the next, so a cycle lasts as long as its parts add up to.
+        if (ride.phase == RidePhase::Starting && ride.phase_seconds >= ride.start_seconds)
+        {
+            ride.phase_seconds -= ride.start_seconds;
+            ride.phase = RidePhase::Running;
+            ride.loop = 0;
+        }
+        if (ride.phase == RidePhase::Running)
+        {
+            const auto passed = ride.run_seconds > 0 ? static_cast<std::uint32_t>(ride.phase_seconds / ride.run_seconds) : ride.loops;
+            const std::uint32_t done = std::min(passed, ride.loops - std::min(ride.loop, ride.loops));
+            ride.loop += done;
+            ride.phase_seconds -= static_cast<float>(done) * ride.run_seconds;
+            if (ride.loop >= ride.loops)
+                ride.phase = RidePhase::Stopping;
+        }
+        if (ride.phase == RidePhase::Stopping && ride.phase_seconds >= ride.stop_seconds && !held)
+        {
+            ride.phase = RidePhase::Loading;
+            ride.phase_seconds = 0;
+            ride.loop = 0;
+            return true;
+        }
+        return false;
     }
 
     float room_ahead(std::span<const Coaster> trains, std::size_t t)
@@ -1740,14 +1792,14 @@ namespace rct3::simulation
             {
                 // Done, but with its restraints or doors stuck shut, its riders cannot get off till it is fixed.
                 const bool held = upkeep.broken && (upkeep.kind == Breakdown::RestraintsFailToOpen || upkeep.kind == Breakdown::DoorsFailToOpen);
-                if (ride.timer > 0 && !(held && ride.timer == 1) && --ride.timer == 0)
+                if (advance_cycle(ride, dt, held))
                     unload(ride.riders);
             }
             // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
             // its departure settings say.
             // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
             const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along < 0.5f);
-            const bool ready = fleet != nullptr ? loading.has_value() : ride.timer == 0;
+            const bool ready = fleet != nullptr ? loading.has_value() : ride.phase == RidePhase::Loading;
             auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*loading] : &ride.riders;
             if (riders != nullptr && at_front && riders->size() < ride.capacity)
             {
@@ -1808,7 +1860,12 @@ namespace rct3::simulation
                     if (fleet != nullptr)
                         fleet->trains[*loading].running = true;
                     else
-                        ride.timer = std::max<std::uint32_t>(ride.cycle_ticks, 1);
+                    {
+                        // shortcut: every flat ride loads all at once and runs its loops; wheels that turn a step per
+                        // pair seated, shows and rides in sections are left out, upgrade with the ride menu's setups.
+                        ride.phase = RidePhase::Starting;
+                        ride.phase_seconds = 0;
+                    }
                 }
                 else
                     ride.loading += dt;

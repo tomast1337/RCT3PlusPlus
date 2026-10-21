@@ -15,7 +15,11 @@ TEST_CASE("a flat ride's timing is its starting, running and stopping animations
     const auto timing = simulation::flat_ride_timing(seconds, 16, 3);
     REQUIRE(timing);
     CHECK(timing->seats == 16);
-    CHECK(timing->seconds == doctest::Approx(75));
+    CHECK(timing->start == 10);
+    CHECK(timing->run == 20);
+    CHECK(timing->stop == 5);
+    CHECK(timing->loops == 3);
+    CHECK(simulation::flat_ride_timing(seconds, 16, 0)->loops == 1);                         // Runs at least once
     CHECK(simulation::flat_ride_timing(seconds, 0, 1) == std::nullopt);                      // Nowhere to sit
     CHECK(simulation::flat_ride_timing(std::span(seconds).first(3), 16, 1) == std::nullopt); // Not a ride's animations
 }
@@ -89,7 +93,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     station.entrance_spot = save::PlacementSpot { .col = 6, .row = 0 };
     station.exit_spot = save::PlacementSpot { .col = 4, .row = 1 };
     station.queue_line = 7;
-    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 12, .seconds = 40 } };
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 12, .run = 40 } };
 
     const auto added = simulation::import_rides(world, rides, timings);
     REQUIRE(added.size() == 1);
@@ -131,7 +135,7 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
     ride.kind = save::RideKind::Flat;
     ride.base.id = 42;
     ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0 };
-    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 2, .seconds = 40 } };
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 2, .run = 40 } };
     const auto added = simulation::import_rides(world, rides, timings);
     REQUIRE(world.registry.valid(added[0]));
 
@@ -152,7 +156,7 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
     auto& r = world.registry;
     const auto& cycle = r.get<simulation::CycleRide>(added[0]);
     CHECK(cycle.riders == std::vector { guests[0], guests[1] });
-    CHECK(cycle.timer > 0);
+    CHECK(cycle.phase == simulation::RidePhase::Running);
     CHECK(r.get<simulation::Errand>(guests[0]).kind == simulation::ErrandKind::Riding);
     // No room for the third: they walk off from the ride; the one on the path walks on.
     CHECK(r.all_of<simulation::Stride>(guests[2]));
@@ -253,7 +257,7 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     ride.kind = save::RideKind::Flat;
     ride.base.id = 42;
     ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 5, .row = 1 };
-    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .seconds = 30 } };
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .run = 30 } };
     const auto at = [&](int c) { return *world.paths.find({ c, 0, 0 }); };
     // Imported while a stub path reaches the entrance, then the stub goes and a path is laid to it later.
     save::PathTile stub;

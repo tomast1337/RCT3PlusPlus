@@ -309,7 +309,7 @@ namespace rct3::scene
                     if (const auto* c = registry.try_get<simulation::CycleRide>(e))
                     {
                         one["capacity"] = c->capacity;
-                        one["cycleSeconds"] = static_cast<float>(c->cycle_ticks) * simulation::kTickSeconds;
+                        one["cycleSeconds"] = simulation::cycle_seconds(*c);
                         one["queue"] = c->queue.size();
                         one["queueLine"] = c->line.size();
                         one["riders"] = c->riders.size();

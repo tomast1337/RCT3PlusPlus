@@ -230,10 +230,10 @@ namespace rct3::simulation
         // Flat rides list their animations as standing, starting, running and stopping.
         if (animation_seconds.size() < 4 || seats == 0)
             return std::nullopt;
-        const float seconds = animation_seconds[1] + static_cast<float>(std::max(loops, 1)) * animation_seconds[2] + animation_seconds[3];
-        if (seconds <= 0)
+        const RideTiming timing { .seats = seats, .start = animation_seconds[1], .run = animation_seconds[2], .stop = animation_seconds[3], .loops = static_cast<std::uint32_t>(std::max(loops, 1)) };
+        if (timing.start + static_cast<float>(timing.loops) * timing.run + timing.stop <= 0)
             return std::nullopt;
-        return RideTiming { .seats = seats, .seconds = seconds };
+        return timing;
     }
 
     std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of)
@@ -581,7 +581,7 @@ namespace rct3::simulation
                 timing = flat_timings[i];
             else if (ride.kind == save::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time > 0)))
                 // Each train carries its share of the ride's seats.
-                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .seconds = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
+                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .run = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
             // Rides left out still make room in the park while open and working.
             const auto elsewhere = [&] {
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
@@ -612,7 +612,7 @@ namespace rct3::simulation
                 rated = rate(world.ratings, ride.base.symbol, *ride.stats.last_lap);
             else if (const auto test = coaster ? test_lap(*coaster) : std::nullopt)
                 rated = rate(world.ratings, ride.base.symbol, *test);
-            CycleRide cycle { .capacity = timing->seats, .cycle_ticks = ticks(timing->seconds), .line = std::move(line), .exit = exit };
+            CycleRide cycle { .capacity = timing->seats, .start_seconds = timing->start, .run_seconds = timing->run, .stop_seconds = timing->stop, .loops = timing->loops, .line = std::move(line), .exit = exit };
             if (rated)
             {
                 cycle.excitement = rating(rated->excitement);
@@ -756,8 +756,9 @@ namespace rct3::simulation
             else if (cycle.riders.size() < cycle.capacity)
             {
                 riders = &cycle.riders;
-                if (cycle.timer == 0)
-                    cycle.timer = std::max<std::uint32_t>(cycle.cycle_ticks, 1);
+                // Saved riding, so it is under way; from the start of its run, as the save does not say how far.
+                if (cycle.phase == RidePhase::Loading)
+                    cycle.phase = RidePhase::Running;
             }
             if (riders == nullptr)
                 continue;

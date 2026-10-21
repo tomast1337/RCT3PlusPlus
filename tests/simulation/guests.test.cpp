@@ -555,13 +555,38 @@ TEST_CASE("a party stops now and then to stand in a ring facing in, then walks o
 TEST_CASE("a train leaves when its wait is over and its load is in, or after its longest wait whatever its load")
 {
     const Departure half { .wait_for = LoadWait::Half, .min_wait = 10, .max_wait = 60 };
-    CHECK_FALSE(departs(half, 8, 8, 5));                        // Full, but not yet waited its least
-    CHECK(departs(half, 4, 8, 10));                             // Half full, waited enough
-    CHECK_FALSE(departs(half, 3, 8, 30));                       // Not half full
-    CHECK(departs(half, 0, 8, 60));                             // Its longest wait: leaves empty
-    CHECK(departs({ .wait_for = LoadWait::Quarter }, 1, 3, 0)); // A quarter of 3 seats rounds up to 1
-    CHECK_FALSE(departs({ }, 0, 8, 1000));                      // Any load waits for someone, with no longest wait
+    CHECK_FALSE(departs(half, 8, 8, 5));                                // Full, but not yet waited its least
+    CHECK(departs(half, 4, 8, 10));                                     // Half full, waited enough
+    CHECK_FALSE(departs(half, 3, 8, 30));                               // Not half full
+    CHECK(departs(half, 0, 8, 60));                                     // Its longest wait: leaves empty
+    CHECK(departs(half, 3, 7, 10));                                     // Half of 7 seats is 3, the odd seat left over
+    CHECK(departs({ .wait_for = LoadWait::Quarter }, 1, 3, 0));         // A quarter of 3 seats is none, so one rider
+    CHECK_FALSE(departs({ .min_wait = 20, .max_wait = 10 }, 0, 8, 15)); // Its least wait comes first
+    CHECK_FALSE(departs({ }, 0, 8, 1000));                              // Any load waits for someone, with no longest wait
     CHECK(departs({ }, 1, 8, 0));
+}
+
+TEST_CASE("a flat ride starts, runs its loops and stops, and its riders get off only once it has stopped")
+{
+    CycleRide ride { .start_seconds = 2, .run_seconds = 3, .stop_seconds = 1, .loops = 2 };
+    CHECK(cycle_seconds(ride) == 9);
+    CHECK_FALSE(advance_cycle(ride, 5, false)); // Loading stands still
+    CHECK(seconds_into_cycle(ride) == std::nullopt);
+    ride.phase = RidePhase::Starting;
+    CHECK_FALSE(advance_cycle(ride, 1, false));
+    CHECK(ride.phase == RidePhase::Starting);
+    CHECK_FALSE(advance_cycle(ride, 2.5f, false)); // Half a second into its first loop
+    CHECK(ride.phase == RidePhase::Running);
+    CHECK(seconds_into_cycle(ride) == doctest::Approx(3.5));
+    CHECK_FALSE(advance_cycle(ride, 3, false)); // Into its second loop
+    CHECK(ride.loop == 1);
+    CHECK_FALSE(advance_cycle(ride, 1.5f, false)); // Done running, stopping
+    CHECK(ride.phase == RidePhase::Stopping);
+    CHECK_FALSE(advance_cycle(ride, 5, true)); // Stuck shut: stays stopped
+    CHECK(seconds_into_cycle(ride) == doctest::Approx(9));
+    CHECK(advance_cycle(ride, 0.1f, false));
+    CHECK(ride.phase == RidePhase::Loading);
+    CHECK(ride.loop == 0);
 }
 
 TEST_CASE("a ride waiting for a full load sends a full train when the queue is long, a part-full one after its longest wait when short")

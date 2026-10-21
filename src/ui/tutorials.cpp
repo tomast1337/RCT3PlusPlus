@@ -3,6 +3,8 @@
 
 #include "strings/unicode.hpp"
 
+#include <format>
+
 namespace rct3::ui
 {
 
@@ -29,7 +31,7 @@ namespace rct3::ui
 
     std::vector<TutorialInfo> tutorials(const StringTable& strings, int pack, std::span<const bool> expansions)
     {
-        const std::string start = pack <= 0 ? std::string(kStart) : std::string(kExpansionStart) + std::to_string(pack - 1) + "_";
+        const std::string start = pack <= 0 ? std::string(kStart) : std::format("{}{}_", kExpansionStart, pack - 1);
         std::vector<TutorialInfo> out;
         for (int n = 1; n <= kMostTutorials; ++n)
         {

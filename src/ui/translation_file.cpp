@@ -6,6 +6,8 @@
 #include "strings/unicode.hpp"
 #include "ui/language.hpp"
 
+#include <format>
+
 namespace rct3::ui
 {
 
@@ -15,12 +17,12 @@ namespace rct3::ui
         std::expected<void, std::string> add_group(StringTable& table, const config::Json& group, const std::string& prefix, int depth)
         {
             if (depth > kMaxTranslationDepth)
-                return std::unexpected(prefix + ": groups nested too deep");
+                return std::unexpected(std::format("{}: groups nested too deep", prefix));
             for (const auto& [name, value] : group.items())
             {
                 if (name.empty())
-                    return std::unexpected((prefix.empty() ? std::string("top") : prefix) + ": empty name");
-                const std::string key = prefix.empty() ? name : prefix + "_" + name;
+                    return std::unexpected(std::format("{}: empty name", prefix.empty() ? std::string("top") : prefix));
+                const std::string key = prefix.empty() ? name : std::format("{}_{}", prefix, name);
                 if (value.is_string())
                     table.add(key, strings::to_utf16(value.get_ref<const std::string&>()));
                 else if (value.is_object())
@@ -29,7 +31,7 @@ namespace rct3::ui
                         return added;
                 }
                 else
-                    return std::unexpected(key + ": expected a string or a group");
+                    return std::unexpected(std::format("{}: expected a string or a group", key));
             }
             return { };
         }
@@ -51,7 +53,7 @@ namespace rct3::ui
     std::string translation_path(std::string_view language)
     {
         const auto info = find_language(language);
-        return "lang/" + std::string(info ? info->tag : language) + ".json";
+        return std::format("lang/{}.json", info ? info->tag : language);
     }
 
     StringTable own_strings(std::string_view language)

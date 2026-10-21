@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <format>
 #include <glm/gtc/matrix_transform.hpp>
 #include <map>
 #include <ranges>
@@ -369,7 +370,7 @@ namespace rct3::park
         const auto found = files_->holding(tagged(name, kTextureTag), near);
         if (!found)
             return { };
-        std::string key = found->first + ":" + std::string(name);
+        std::string key = std::format("{}:{}", found->first, name);
         if (tried_pictures_.contains(key))
             return pictures_.contains(key) ? key : std::string();
         tried_pictures_.emplace(key, true);
@@ -681,7 +682,7 @@ namespace rct3::park
             add_levels(pieces, *piece, file->first);
             if (model.levels.empty())
                 for (const ModelLevel& level : pieces.levels)
-                    model.levels.push_back({ .distance = level.distance });
+                    model.levels.push_back({ .distance = level.distance, .parts = { }, .billboard = std::nullopt });
             const glm::mat3 turn { place };
             for (std::size_t i = 0; i < model.levels.size() && !pieces.levels.empty(); ++i)
                 for (ModelPart one : pieces.levels[std::min(i, pieces.levels.size() - 1)].parts)

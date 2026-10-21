@@ -2,6 +2,7 @@
 #include "park/path_decks.hpp"
 
 #include <doctest/doctest.h>
+#include <format>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -41,7 +42,7 @@ namespace
         PathStyle s;
         s.name = "Gravel";
         for (std::size_t i = 0; i < kDeckPieceCount; ++i)
-            s.pieces.push_back("Gravel_" + std::to_string(i));
+            s.pieces.push_back(std::format("Gravel_{}", i));
         return s;
     }
 } // namespace

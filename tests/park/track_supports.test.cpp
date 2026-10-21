@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <format>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -57,7 +58,7 @@ namespace
 
         Park()
         {
-            const auto piece = [&](std::string_view symbol, glm::vec3 low, glm::vec3 high) { models.emplace(std::string(kSupportOverlay) + "|" + std::string(symbol), box(low, high)); };
+            const auto piece = [&](std::string_view symbol, glm::vec3 low, glm::vec3 high) { models.emplace(std::format("{}|{}", kSupportOverlay, symbol), box(low, high)); };
             piece("Head", { -0.5f, 0, -0.5f }, { 0.5f, 1, 0.5f });
             piece("Lid", { -0.3f, 0, -0.3f }, { 0.3f, 0.5f, 0.3f });
             piece("ShortBeam", { -0.5f, -0.1f, -0.2f }, { 0.5f, 0.1f, 0.2f });
@@ -69,7 +70,7 @@ namespace
             ObjectModel m;
             m.support_group = std::string(kGroup);
             m.supports = std::move(footprint);
-            models.emplace("Track|" + symbol, std::move(m));
+            models.emplace(std::format("Track|{}", symbol), std::move(m));
             save::PlacedObject& o = objects.emplace_back();
             o.id = objects.size();
             o.symbol = std::move(symbol);

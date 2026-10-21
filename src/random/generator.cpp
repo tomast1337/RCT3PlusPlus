@@ -5,6 +5,7 @@
 #include <bit>
 #include <charconv>
 #include <cmath>
+#include <format>
 #include <limits>
 
 namespace rct3::random
@@ -102,7 +103,7 @@ namespace rct3::random
         std::array<char, kHexPerWord> raw { };
         const auto end = std::to_chars(raw.data(), raw.data() + raw.size(), seed.value, 16).ptr;
         const auto length = static_cast<std::size_t>(end - raw.data());
-        return "0x" + std::string(kHexPerWord - length, '0') + std::string(raw.data(), length);
+        return std::format("0x{}{}", std::string(kHexPerWord - length, '0'), std::string_view(raw.data(), length));
     }
 
     std::expected<Seed, std::string> parse_seed(std::string_view text)
@@ -141,7 +142,7 @@ namespace rct3::random
     {
         RandomState out;
         if (text.size() != kHexPerWord * out.words.size())
-            return std::unexpected("a random state is " + std::to_string(kHexPerWord * out.words.size()) + " hex digits");
+            return std::unexpected(std::format("a random state is {} hex digits", kHexPerWord * out.words.size()));
         for (std::size_t i = 0; i < out.words.size(); ++i)
         {
             const char* first = text.data() + i * kHexPerWord;

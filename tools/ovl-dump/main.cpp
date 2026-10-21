@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -1122,7 +1123,7 @@ namespace
                 if (c == '/' || c == '\\' || c == '\0')
                     c = '_';
             }
-            const std::string path = std::string(g_tex_export_dir) + "/" + g_tex_export_stem + "_" + title + "_" + safe + ".tga";
+            const std::string path = std::format("{}/{}_{}_{}.tga", g_tex_export_dir, g_tex_export_stem, title, safe);
             if (std::FILE* f = std::fopen(path.c_str(), "wb"))
             {
                 std::fwrite(tga.data(), 1, tga.size(), f);
@@ -1131,7 +1132,7 @@ namespace
         };
         auto save_levels = [&](const std::vector<ovl::RgbaImage>& levels, const std::string& name) {
             for (std::size_t m = 0; m < levels.size(); ++m)
-                save(levels[m], name + "_m" + std::to_string(m));
+                save(levels[m], std::format("{}_m{}", name, m));
         };
 
         for (const auto& item : ovl::read_flexi_textures(overlay, part))
@@ -1147,7 +1148,7 @@ namespace
                     ++frames_bad;
                     continue;
                 }
-                save(*image, "ftx_" + std::string(item.name) + "_f" + std::to_string(i));
+                save(*image, std::format("ftx_{}_f{}", item.name, i));
             }
         }
         for (const auto& item : ovl::read_bitmap_tables(overlay, part))
@@ -1166,7 +1167,7 @@ namespace
                 }
                 if (b.format < 32)
                     ++by_format[b.format];
-                save_levels(levels, "btbl" + std::to_string(item.row) + "_b" + std::to_string(i));
+                save_levels(levels, std::format("btbl{}_b{}", item.row, i));
             }
         }
         for (const auto& item : ovl::read_flics(overlay, part))
@@ -1182,7 +1183,7 @@ namespace
             }
             if (item.flic->image && item.flic->image->format < 32)
                 ++by_format[item.flic->image->format];
-            save_levels(levels, "flic" + std::to_string(item.address));
+            save_levels(levels, std::format("flic{}", item.address));
         }
         std::printf("tex export     %s: frames %zu (%zu failed) bitmaps %zu (%zu failed) flics %zu (%zu failed) images %zu\n", title, frames, frames_bad, bitmaps, bitmaps_bad, flics, flics_bad, images);
         for (std::size_t f = 0; f < 32; ++f)
@@ -1207,7 +1208,7 @@ namespace
             if (!ok)
                 c = '_';
         }
-        return out + "." + tag;
+        return std::format("{}.{}", out, tag);
     }
 
     bool write_text_file(const std::filesystem::path& path, const std::string& text)
@@ -1219,9 +1220,9 @@ namespace
 
     bool export_mesh(const std::filesystem::path& dir, std::string_view prefix, std::string_view name, const char* kind, const rct3::ovl::Mesh& mesh)
     {
-        const std::string stem = export_file_name(prefix, std::string(kind) + "_" + std::string(name), "obj");
+        const std::string stem = export_file_name(prefix, std::format("{}_{}", kind, name), "obj");
         const std::string base = stem.substr(0, stem.size() - 4);
-        return write_text_file(dir / (base + ".obj"), rct3::ovl::write_obj(mesh, base + ".mtl")) && write_text_file(dir / (base + ".mtl"), rct3::ovl::write_mtl(mesh));
+        return write_text_file(dir / std::format("{}.obj", base), rct3::ovl::write_obj(mesh, std::format("{}.mtl", base))) && write_text_file(dir / std::format("{}.mtl", base), rct3::ovl::write_mtl(mesh));
     }
 
     bool export_part_meshes(const std::filesystem::path& dir, std::string_view prefix, const rct3::ovl::Overlay& overlay, const Part& part, std::size_t& written, std::size_t& failed)
@@ -1393,9 +1394,9 @@ int main(int argc, char** argv)
             }
         }
         std::size_t written = 0, failed = 0;
-        bool ok = export_part_meshes(obj_dir, stem + "_c", *overlay, overlay->common(), written, failed);
+        bool ok = export_part_meshes(obj_dir, std::format("{}_c", stem), *overlay, overlay->common(), written, failed);
         if (const auto unique = overlay->unique())
-            ok = export_part_meshes(obj_dir, stem + "_u", *overlay, *unique, written, failed) && ok;
+            ok = export_part_meshes(obj_dir, std::format("{}_u", stem), *overlay, *unique, written, failed) && ok;
         std::printf("exported meshes %zu (%zu failed)\n", written, failed);
         if (!ok || failed != 0)
             return 1;

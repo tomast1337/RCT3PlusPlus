@@ -4,6 +4,7 @@
 #include "ui/glyph_atlas.hpp"
 
 #include <cmath>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <stb/stb_truetype.h>
@@ -54,7 +55,7 @@ namespace rct3::ui
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
-            return std::unexpected("cannot open " + path.string());
+            return std::unexpected(std::format("cannot open {}", path.string()));
         std::vector<std::uint8_t> data { std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
         return read_truetype(std::move(data));
     }

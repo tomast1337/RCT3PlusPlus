@@ -6,6 +6,7 @@
 #include "strings/ascii.hpp"
 
 #include <charconv>
+#include <format>
 
 namespace rct3::config
 {
@@ -89,7 +90,7 @@ namespace rct3::config
             {
                 // Perhaps from a newer version: kept for writing back.
                 settings.unknown_.emplace_back(name, value.dump());
-                report(problems, "unknown setting " + name);
+                report(problems, std::format("unknown setting {}", name));
                 continue;
             }
             if (value.is_null())
@@ -101,7 +102,7 @@ namespace rct3::config
             else if (info->kind == SettingKind::Scale && value.is_number_integer())
                 settings.set(info->setting, std::to_string(value.get<long long>()));
             else
-                report(problems, name + ": " + (info->kind == SettingKind::Flag ? "expected true or false" : info->kind == SettingKind::Scale ? "expected \"auto\" or a whole number" : "expected text"));
+                report(problems, std::format("{}: {}", name, info->kind == SettingKind::Flag ? "expected true or false" : info->kind == SettingKind::Scale ? "expected \"auto\" or a whole number" : "expected text"));
         }
         return settings;
     }
@@ -191,7 +192,7 @@ namespace rct3::config
         int scale = 0;
         const auto [end, ec] = std::from_chars(value.data(), value.data() + value.size(), scale);
         if (ec != std::errc { } || end != value.data() + value.size() || scale < 1 || scale > kMaxScale)
-            return std::unexpected("interface scale must be auto or a whole number from 1 to " + std::to_string(kMaxScale) + ", not \"" + std::string(value) + "\"");
+            return std::unexpected(std::format("interface scale must be auto or a whole number from 1 to {}, not \"{}\"", kMaxScale, value));
         return std::optional<float>(static_cast<float>(scale));
     }
 

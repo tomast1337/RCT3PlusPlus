@@ -7,6 +7,7 @@
 #include <array>
 #include <cctype>
 #include <cstdio>
+#include <format>
 
 namespace rct3::ui
 {
@@ -25,7 +26,7 @@ namespace rct3::ui
             if (pack <= 0)
                 return { };
             const std::u16string_view name = strings.get(std::string(kPackFolder) + std::to_string(pack - 1));
-            return name.empty() ? std::string { } : strings::to_utf8(name) + "/";
+            return name.empty() ? std::string { } : std::format("{}/", strings::to_utf8(name));
         }
 
         std::string lower(std::string_view s)
@@ -41,7 +42,7 @@ namespace rct3::ui
         std::vector<std::string> ids;
         if (pack < 0)
             return ids;
-        const std::string prefix = pack == 0 ? std::string { } : "AOP" + std::to_string(pack - 1) + "_";
+        const std::string prefix = pack == 0 ? std::string { } : std::format("AOP{}_", pack - 1);
         for (int i = 1; i <= kMostScenarios; ++i)
         {
             std::array<char, 32> key { };
@@ -60,19 +61,19 @@ namespace rct3::ui
         const std::string number = std::to_string(index + 1);
         CareerScenarioInfo info;
         info.id = i;
-        info.title = strings.get("Scenario" + i + "_Title");
-        info.description = strings.get("Scenario" + i + "_Text");
-        info.icon = "ScenarioIcon_" + i;
-        info.picture = pack == 0 ? "CareerMap_LargeImage" + number : "CareerMap_LargeImage_" + i;
-        info.picture_front = pack == 0 ? "CareerMap_LargeImageForeground" + number : "CareerMap_LargeImageFG_" + i;
-        info.slideshow = std::string(kSlideshow) + "/" + pack_folder(strings, pack) + "Scenario" + number;
-        info.file_part = strings::to_utf8(strings.get(i + "_Filename"));
+        info.title = strings.get(std::format("Scenario{}_Title", i));
+        info.description = strings.get(std::format("Scenario{}_Text", i));
+        info.icon = std::format("ScenarioIcon_{}", i);
+        info.picture = pack == 0 ? std::format("CareerMap_LargeImage{}", number) : std::format("CareerMap_LargeImage_{}", i);
+        info.picture_front = pack == 0 ? std::format("CareerMap_LargeImageForeground{}", number) : std::format("CareerMap_LargeImageFG_{}", i);
+        info.slideshow = std::format("{}/{}Scenario{}", kSlideshow, pack_folder(strings, pack), number);
+        info.file_part = strings::to_utf8(strings.get(std::format("{}_Filename", i)));
         return info;
     }
 
     std::string career_park_folder(const StringTable& strings, int pack)
     {
-        std::string folder = std::string(kParks) + "/" + pack_folder(strings, pack);
+        std::string folder = std::format("{}/{}", kParks, pack_folder(strings, pack));
         if (folder.ends_with('/'))
             folder.pop_back();
         return folder;

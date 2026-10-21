@@ -4,6 +4,7 @@
 #include "config/json_text.hpp"
 
 #include <algorithm>
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -252,12 +253,12 @@ namespace rct3::ui
             const auto play = std::ranges::find(kPlayCommands, name, &PlayCommandInfo::name);
             if (info == kCommands.end() && play == kPlayCommands.end())
             {
-                config::report(problems, "unknown command " + name);
+                config::report(problems, std::format("unknown command {}", name));
                 continue;
             }
             if (!value.is_array())
             {
-                config::report(problems, name + ": expected a list of keys");
+                config::report(problems, std::format("{}: expected a list of keys", name));
                 continue;
             }
             if (play != kPlayCommands.end())
@@ -266,7 +267,7 @@ namespace rct3::ui
                 if (combo || value.empty())
                     map.bind_play(play->command, combo);
                 else
-                    config::report(problems, name + ": not one key that can be bound: " + value.dump());
+                    config::report(problems, std::format("{}: not one key that can be bound: {}", name, value.dump()));
                 continue;
             }
             std::vector<KeyCombo> combos;
@@ -276,7 +277,7 @@ namespace rct3::ui
                 if (combo)
                     combos.push_back(*combo);
                 else
-                    config::report(problems, name + ": not keys that can be bound: " + item.dump());
+                    config::report(problems, std::format("{}: not keys that can be bound: {}", name, item.dump()));
             }
             map.set_keys(info->command, std::move(combos));
         }

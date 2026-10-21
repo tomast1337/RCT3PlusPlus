@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <numbers>
 
 namespace rct3::scene
@@ -538,7 +539,7 @@ namespace rct3::scene
             ride.kind = save::RideKind::Flat;
             const std::uint64_t object = add_object(scene, assets, *o);
             ride.base.id = last_id(scene) + 1;
-            ride.base.symbol = p.item->symbol + ":anr";
+            ride.base.symbol = std::format("{}:anr", p.item->symbol);
             ride.base.overlay_path = p.item->overlay;
             ride.base.name = p.item->name_text;
             // shortcut: opens at once, as rides cannot be opened from their window yet; build them closed, as

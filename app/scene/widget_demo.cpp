@@ -18,6 +18,7 @@
 #include "ui/widgets/window.hpp"
 
 #include <algorithm>
+#include <format>
 #include <map>
 #include <string>
 #include <vector>
@@ -188,7 +189,7 @@ namespace rct3::scene
             void update(const ui::UpdateContext& context) override
             {
                 ui::Window::update(context);
-                volume_label_->text = strings::to_utf16(std::to_string(static_cast<int>(volume_->value())) + "%");
+                volume_label_->text = strings::to_utf16(std::format("{}%", static_cast<int>(volume_->value())));
                 if (guests_->take_change())
                     guests_label_->text = guests_->value() == 1 ? u"guest" : u"guests";
                 if (name_->take_change())
@@ -205,7 +206,7 @@ namespace rct3::scene
                 if (open && parent() != nullptr)
                 {
                     const auto n = static_cast<float>(parent()->children().size());
-                    parent()->add<DemoWindow>("window" + std::to_string(parent()->children().size()), n * kCascade, strings_);
+                    parent()->add<DemoWindow>(std::format("window{}", parent()->children().size()), n * kCascade, strings_);
                 }
             }
 
@@ -232,7 +233,7 @@ namespace rct3::scene
         {
             ui::Widget& root = demo.desktop.root();
             const auto n = std::ranges::count_if(root.children(), [](const auto& c) { return is_demo_window(*c); });
-            root.add<DemoWindow>("window" + std::to_string(root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings);
+            root.add<DemoWindow>(std::format("window{}", root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings);
         }
 
         std::vector<ui::MenuItem> scale_items(std::optional<float> chosen)
@@ -240,7 +241,7 @@ namespace rct3::scene
             std::vector<ui::MenuItem> items;
             items.push_back({ .text = u"Automatic", .checked = !chosen });
             for (int s = 1; s <= kScaleChoices; ++s)
-                items.push_back({ .text = strings::to_utf16(std::to_string(s) + "x"), .checked = chosen == static_cast<float>(s) });
+                items.push_back({ .text = strings::to_utf16(std::format("{}x", s)), .checked = chosen == static_cast<float>(s) });
             return items;
         }
 
@@ -258,7 +259,7 @@ namespace rct3::scene
 
             demo.toolbar = &root.add<ui::Toolbar>("toolbar", skins::toolbar_style(), ui::Orientation::Vertical);
             for (std::size_t i = 0; i < kToolIcons.size(); ++i)
-                demo.toolbar->add_button("tool" + std::to_string(i), std::string(kToolIcons[i]), std::u16string(kToolTips[i]));
+                demo.toolbar->add_button(std::format("tool{}", i), std::string(kToolIcons[i]), std::u16string(kToolTips[i]));
             demo.toolbar->placement = ui::top_left(0, kMenuBarHeight + 4, 38, demo.toolbar->length());
         }
 

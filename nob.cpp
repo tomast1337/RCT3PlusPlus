@@ -23,6 +23,7 @@
 #include "nob.hpp"
 
 #include <array>
+#include <format>
 #include <fstream>
 #include <future>
 #include <ranges>
@@ -153,7 +154,7 @@ namespace
     {
         std::string name = fs::path(source).replace_extension().generic_string();
         std::ranges::replace(name, '/', '_');
-        return cfg.obj_dir() / (name + ".o");
+        return cfg.obj_dir() / std::format("{}.o", name);
     }
 
     Cmd compile_cmd(const Config& cfg, const fs::path& source, const fs::path& object)
@@ -224,7 +225,7 @@ namespace
 
         std::string list;
         for (const auto& o : objects)
-            list += o.string() + "\n";
+            list += std::format("{}\n", o.string());
 
         std::string previous;
         if (std::ifstream in(list_file); in)
@@ -315,14 +316,14 @@ namespace
         for (std::size_t i = 0; i < files.size(); ++i)
         {
             // A zero after the bytes keeps empty files legal; it is not counted in the size.
-            text += "        constexpr unsigned char kFile" + std::to_string(i) + "[] = {\n#embed \"" + json_escape(fs::absolute(files[i]).generic_string()) + "\" suffix(, )\n            0 };\n";
+            text += std::format("        constexpr unsigned char kFile{}[] = {{\n#embed \"{}\" suffix(, )\n            0 }};\n", i, json_escape(fs::absolute(files[i]).generic_string()));
         }
-        text += "    } // namespace\n\n    std::span<const EmbeddedFile> embedded_files()\n    {\n        // Built on first use: the byte views are not constant expressions.\n        static const std::array<EmbeddedFile, " + std::to_string(files.size()) + "> kFiles { {\n";
+        text += std::format("    }} // namespace\n\n    std::span<const EmbeddedFile> embedded_files()\n    {{\n        // Built on first use: the byte views are not constant expressions.\n        static const std::array<EmbeddedFile, {}> kFiles {{ {{\n", files.size());
         for (std::size_t i = 0; i < files.size(); ++i)
         {
             const std::string name = fs::relative(files[i], kAssetsDir).generic_string();
-            const std::string data = "kFile" + std::to_string(i);
-            text += "            { \"" + json_escape(name) + "\", { reinterpret_cast<const std::byte*>(" + data + "), sizeof(" + data + ") - 1 } },\n";
+            const std::string data = std::format("kFile{}", i);
+            text += std::format("            {{ \"{}\", {{ reinterpret_cast<const std::byte*>({}), sizeof({}) - 1 }} }},\n", json_escape(name), data, data);
         }
         text += "        } };\n        return kFiles;\n    }\n} // namespace rct3::assets\n";
 
@@ -370,7 +371,7 @@ namespace
         else if (cfg.cxx.ends_with("clang++"))
             c.cxx = cfg.cxx.substr(0, cfg.cxx.size() - 2);
         else if (cfg.cxx.ends_with("g++"))
-            c.cxx = cfg.cxx.substr(0, cfg.cxx.size() - 3) + "gcc";
+            c.cxx = std::format("{}gcc", cfg.cxx.substr(0, cfg.cxx.size() - 3));
         else
             c.cxx = "cc";
         c.compile_flags.clear();
@@ -439,7 +440,7 @@ namespace
     Config app_config(const Config& cfg)
     {
         Config app = cfg;
-        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-Iapp", "-I" + (cfg.out_dir() / "gen").string() });
+        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
         return app;
     }
 
@@ -506,7 +507,7 @@ namespace
         {
             for (const auto& source : find_files("app/shaders", ext))
             {
-                const fs::path output = gen_dir / (source.filename().string() + ".inc");
+                const fs::path output = gen_dir / std::format("{}.inc", source.filename().string());
                 if (!needs_rebuild(output, std::array<fs::path, 1> { source }))
                     continue;
                 Cmd cmd;
@@ -738,7 +739,7 @@ figcaption { color: var(--muted); font-size: 13px; }
                 log(Level::Info, "{} is already there", target.string());
                 continue;
             }
-            const fs::path partial = target.string() + ".part";
+            const fs::path partial = std::format("{}.part", target.string());
             Cmd get;
             get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
             if (!run(get))

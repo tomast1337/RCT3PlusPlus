@@ -7,6 +7,7 @@
 #include <array>
 #include <climits>
 #include <cstring>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <stb/stb_image.h>
@@ -40,7 +41,7 @@ namespace rct3::image
         if (stbi_info_from_memory(bytes, length, &width, &height, &channels) == 0)
             return std::unexpected(std::string("not a picture: ") + stbi_failure_reason());
         if (width <= 0 || height <= 0 || static_cast<std::uint32_t>(width) > ovl::kMaxImageSide || static_cast<std::uint32_t>(height) > ovl::kMaxImageSide)
-            return std::unexpected("picture of " + std::to_string(width) + "x" + std::to_string(height) + " is too large");
+            return std::unexpected(std::format("picture of {}x{} is too large", width, height));
         const std::unique_ptr<stbi_uc, FreeImage> pixels(stbi_load_from_memory(bytes, length, &width, &height, &channels, 4));
         if (!pixels)
             return std::unexpected(std::string("cannot decode the picture: ") + stbi_failure_reason());
@@ -56,7 +57,7 @@ namespace rct3::image
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
-            return std::unexpected("cannot read " + path.string());
+            return std::unexpected(std::format("cannot read {}", path.string()));
         std::vector<std::byte> data;
         std::array<char, 1 << 16> buffer { };
         while (in.read(buffer.data(), buffer.size()) || in.gcount() > 0)
@@ -66,7 +67,7 @@ namespace rct3::image
         }
         auto image = decode_picture(data);
         if (!image)
-            return std::unexpected(path.string() + ": " + image.error());
+            return std::unexpected(std::format("{}: {}", path.string(), image.error()));
         return image;
     }
 

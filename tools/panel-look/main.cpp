@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -257,7 +258,7 @@ namespace
     {
         const auto path = install.find(ui::game_skins::kMainOverlay);
         if (!path)
-            return std::unexpected(std::string(ui::game_skins::kMainOverlay) + " not found");
+            return std::unexpected(std::format("{} not found", ui::game_skins::kMainOverlay));
         auto set = ui::load_skin_set(*path, ui::game_skins::kWholeTextures);
         if (!set)
             return std::unexpected(set.error());
@@ -373,7 +374,7 @@ int main(int argc, char** argv)
         const std::string stem = std::string(panel.name);
         for (const auto& [suffix, picture] : { std::pair { "texture", &texture }, { "coded", &coded }, { "diff", &diff } })
         {
-            const auto path = out / (stem + "." + suffix + ".png");
+            const auto path = out / std::format("{}.{}.png", stem, suffix);
             if (auto saved = image::save_png(path, *picture); !saved)
                 std::fprintf(stderr, "%s\n", saved.error().c_str());
         }

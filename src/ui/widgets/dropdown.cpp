@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::ui
 {
@@ -65,7 +66,7 @@ namespace rct3::ui
         rows.reserve(items.size());
         for (std::size_t i = 0; i < items.size(); ++i)
             rows.push_back({ .text = items[i], .checked = selected_ == i });
-        menu_ = &root.add<Menu>(std::string(name()) + ".menu", style.menu, std::move(rows));
+        menu_ = &root.add<Menu>(std::format("{}.menu", name()), style.menu, std::move(rows));
         menu_->place_at({ rect().x0 - root.rect().x0, rect().y1 - root.rect().y0 }, rect().width());
         menu_->highlight(selected_);
         dragged_into_menu_ = false;

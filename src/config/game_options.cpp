@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 
 namespace rct3::config
 {
@@ -163,16 +164,16 @@ namespace rct3::config
                 if (value.is_string())
                     options.background_music_ = value.get<std::string>();
                 else
-                    report(problems, name + ": not a file name");
+                    report(problems, std::format("{}: not a file name", name));
             }
             else if (info == nullptr)
-                report(problems, "unknown option " + name);
+                report(problems, std::format("unknown option {}", name));
             else if (value.is_boolean())
                 options.set(info->option, value.get<bool>() ? 1.0f : 0.0f);
             else if (value.is_number() && std::isfinite(value.get<double>()))
                 options.set(info->option, value.get<float>());
             else
-                report(problems, name + ": not a number");
+                report(problems, std::format("{}: not a number", name));
         }
         return options;
     }

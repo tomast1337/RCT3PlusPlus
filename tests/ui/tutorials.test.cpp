@@ -3,6 +3,7 @@
 
 #include <array>
 #include <doctest/doctest.h>
+#include <format>
 
 using namespace rct3::ui;
 
@@ -14,7 +15,7 @@ namespace
         for (int n = 1; n <= 8; ++n)
         {
             const std::string number = std::to_string(n);
-            strings.add("TutorialList_Name" + number, u"Lesson");
+            strings.add(std::format("TutorialList_Name{}", number), u"Lesson");
         }
         return strings;
     }

@@ -2,6 +2,7 @@
 #include "ui/screens/build_rows.hpp"
 
 #include <doctest/doctest.h>
+#include <format>
 #include <string_view>
 #include <vector>
 
@@ -19,7 +20,7 @@ namespace
         i.symbol = std::move(symbol);
         i.overlay = "Style/Made/Style";
         i.name_text = std::move(name);
-        i.icon = i.symbol + "Icon";
+        i.icon = std::format("{}Icon", i.symbol);
         i.price = price;
         i.width = 1;
         i.length = 2;
@@ -154,7 +155,7 @@ TEST_CASE("animals sit under their species, which names the fence and shelter it
     std::vector<BuildItem> items;
     for (const auto& [symbol, strength] : { std::pair { "Rope", 1.0f }, std::pair { "Steel", 3.0f } })
     {
-        BuildItem f = scenery(symbol, BuildList::Enclosures, std::string(symbol) + "Name");
+        BuildItem f = scenery(symbol, BuildList::Enclosures, std::format("{}Name", symbol));
         f.kind = BuildKind::EnclosureFence;
         f.strength = strength;
         items.push_back(f);

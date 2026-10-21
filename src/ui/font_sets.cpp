@@ -4,6 +4,7 @@
 #include "ui/language.hpp"
 
 #include <algorithm>
+#include <format>
 
 namespace rct3::ui
 {
@@ -12,7 +13,7 @@ namespace rct3::ui
     {
         const auto info = find_language(language);
         const std::string_view stem = info && info->cjk ? info->name : std::string_view("Resolution");
-        return "gui/" + std::to_string(width) + "/" + std::string(stem) + ".common.ovl";
+        return std::format("gui/{}/{}.common.ovl", width, stem);
     }
 
     std::optional<FontRole> set_font_role(std::string_view name)

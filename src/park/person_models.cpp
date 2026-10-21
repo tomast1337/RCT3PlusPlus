@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <format>
 
 namespace rct3::park
 {
@@ -31,7 +32,7 @@ namespace rct3::park
 
         std::string tagged(std::string_view name, std::string_view tag)
         {
-            return std::string(name) + ":" + std::string(tag);
+            return std::format("{}:{}", name, tag);
         }
 
         /// Items of one type of an open file, by lower-case name.
@@ -234,7 +235,7 @@ namespace rct3::park
         if (!piece_file)
             return std::nullopt;
         // Pieces of different sets can share a name, so they are told apart by their file.
-        const std::string key = *piece_file + "|" + lower(name);
+        const std::string key = std::format("{}|{}", *piece_file, lower(name));
         if (const auto it = loaded_pieces_.find(key); it != loaded_pieces_.end())
             return it->second;
         std::optional<std::size_t> result;
@@ -273,7 +274,7 @@ namespace rct3::park
         if (!found_file)
             return std::nullopt;
         const std::string& rig_file = *found_file;
-        const std::string key = rig_file + "|" + lower(name);
+        const std::string key = std::format("{}|{}", rig_file, lower(name));
         if (const auto it = loaded_heads_.find(key); it != loaded_heads_.end())
             return it->second;
         std::optional<std::size_t> result;
@@ -311,7 +312,7 @@ namespace rct3::park
         const auto path = f.parts.find(tagged(name, "tex"), near);
         if (!path)
             return { };
-        std::string key = *path + "|" + lower(name);
+        std::string key = std::format("{}|{}", *path, lower(name));
         if (pictures_.contains(key))
             return key;
         Files::Open* file = f.file(*path);

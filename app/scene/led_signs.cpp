@@ -56,7 +56,7 @@ namespace rct3::scene
             auto [found, added] = q.sign_of.try_emplace(overlay);
             if (!added || !assets.install)
                 return found->second;
-            const auto file = assets.install->find(overlay + ".common.ovl");
+            const auto file = assets.install->find(std::format("{}.common.ovl", overlay));
             const auto read = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error { });
             if (!read)
                 return found->second;
@@ -219,7 +219,7 @@ namespace rct3::scene
             {
                 const std::string relative = ui::font_overlay(assets.fonts.language, ui::kFontSetWidths.back());
                 const auto path = assets.install->find(relative);
-                auto loaded = path ? ui::load_font_images(*path) : std::unexpected(relative + " not found");
+                auto loaded = path ? ui::load_font_images(*path) : std::unexpected(std::format("{} not found", relative));
                 if (!loaded)
                     logging::logger("park").warning("LED signs: {}", loaded.error());
                 for (ui::FontImages& f : loaded ? *loaded : std::vector<ui::FontImages> { })

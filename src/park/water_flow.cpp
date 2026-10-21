@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <format>
 
 namespace rct3::park
 {
@@ -109,7 +110,7 @@ namespace rct3::park
                 }
             }
         }
-        return std::unexpected(std::string(kFlowTexture) + " is not in " + file.string());
+        return std::unexpected(std::format("{} is not in {}", kFlowTexture, file.string()));
     }
 
 } // namespace rct3::park

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <format>
 #include <limits>
 
 namespace rct3::ui
@@ -27,7 +28,7 @@ namespace rct3::ui
                     text.insert(0, places + 1 - text.size(), '0');
                 text.insert(text.size() - places, 1, '.');
             }
-            return strings::to_utf16(v < 0 ? "-" + text : text);
+            return strings::to_utf16(v < 0 ? std::format("-{}", text) : text);
         }
 
         /// `text` with its point taken out and `decimals` places after it, so it reads as a whole number;

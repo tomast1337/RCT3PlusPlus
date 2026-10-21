@@ -4,6 +4,7 @@
 #include "core/maybe.hpp"
 
 #include <algorithm>
+#include <format>
 #include <system_error>
 
 namespace rct3::ui
@@ -98,7 +99,7 @@ namespace rct3::ui
 
     std::string text_overlay(std::string_view language)
     {
-        return "gui/" + std::string(language) + std::string(kTextSuffix);
+        return std::format("gui/{}{}", language, kTextSuffix);
     }
 
 } // namespace rct3::ui

@@ -2,6 +2,7 @@
 #include "config/user_data.hpp"
 
 #include <array>
+#include <format>
 #include <system_error>
 #include <utility>
 
@@ -108,7 +109,7 @@ namespace rct3::config
         std::error_code ec;
         fs::create_directories(path, ec);
         if (ec)
-            return std::unexpected("cannot create " + path.string() + ": " + ec.message());
+            return std::unexpected(std::format("cannot create {}: {}", path.string(), ec.message()));
         return path;
     }
 

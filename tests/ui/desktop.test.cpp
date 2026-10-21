@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <format>
 #include <initializer_list>
 #include <vector>
 
@@ -25,11 +26,11 @@ namespace
         }
         void on_press(Point p) override
         {
-            events.push_back("press " + std::to_string(static_cast<int>(p.x)));
+            events.push_back(std::format("press {}", static_cast<int>(p.x)));
         }
         void on_drag(Point p) override
         {
-            events.push_back("drag " + std::to_string(static_cast<int>(p.x)));
+            events.push_back(std::format("drag {}", static_cast<int>(p.x)));
         }
         void on_release(Point, bool inside) override
         {

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <format>
 #include <span>
 #include <string_view>
 
@@ -72,10 +73,10 @@ namespace rct3::scene
         {
             const auto banner = install.find(ui::loading_screen::kLogoFile);
             if (!banner)
-                return std::unexpected(std::string(ui::loading_screen::kLogoFile) + " not found");
+                return std::unexpected(std::format("{} not found", ui::loading_screen::kLogoFile));
             auto images = ui::load_image_set(*banner);
             if (!images)
-                return std::unexpected("banner: " + images.error());
+                return std::unexpected(std::format("banner: {}", images.error()));
             auto logos = ui::upload_textures(device, *images);
             if (!logos)
                 return std::unexpected(logos.error());

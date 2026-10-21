@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <map>
 #include <optional>
@@ -91,7 +92,7 @@ namespace rct3::park
         /// The lowest and highest corner of the finest shape of `symbol` among the support pieces.
         std::optional<std::pair<glm::vec3, glm::vec3>> extent(const ObjectModels& models, std::string_view symbol)
         {
-            const auto model = models.find(std::string(kSupportOverlay) + "|" + std::string(symbol));
+            const auto model = models.find(std::format("{}|{}", kSupportOverlay, symbol));
             if (model == models.end() || model->second.levels.empty())
                 return std::nullopt;
             glm::vec3 low { std::numeric_limits<float>::max() };

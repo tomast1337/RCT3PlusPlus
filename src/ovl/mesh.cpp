@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <format>
 #include <set>
 
 namespace rct3::ovl
@@ -159,9 +160,9 @@ namespace rct3::ovl
         for (std::size_t k = 0; k < mesh.parts.size(); ++k)
         {
             const auto& part = mesh.parts[k];
-            out += "g part" + std::to_string(k) + "\n";
-            out += "# transparency " + std::to_string(part.transparency) + " flags " + std::to_string(part.flags) + " sides " + std::to_string(part.sides) + "\n";
-            out += "usemtl " + material_name(part) + "\n";
+            out += std::format("g part{}\n", k);
+            out += std::format("# transparency {} flags {} sides {}\n", part.transparency, part.flags, part.sides);
+            out += std::format("usemtl {}\n", material_name(part));
             for (std::uint32_t i = 0; i + 2 < part.index_count; i += 3)
             {
                 out += 'f';
@@ -194,10 +195,10 @@ namespace rct3::ovl
             const std::string name = material_name(part);
             if (!done.insert(name).second)
                 continue;
-            out += "newmtl " + name + "\n";
+            out += std::format("newmtl {}\n", name);
             out += "Ka 1 1 1\nKd 1 1 1\nKs 0 0 0\n";
             if (!part.texture.empty())
-                out += "map_Kd " + name + ".png\n";
+                out += std::format("map_Kd {}.png\n", name);
             out += '\n';
         }
         return out;

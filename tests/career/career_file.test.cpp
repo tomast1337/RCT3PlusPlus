@@ -4,6 +4,7 @@
 #include <cstring>
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <format>
 #include <unistd.h>
 
 using namespace rct3;
@@ -15,7 +16,7 @@ namespace
     // A scratch folder removed on scope exit.
     struct TempFolder
     {
-        fs::path path = fs::temp_directory_path() / ("rct3pp_career_test_" + std::to_string(::getpid()));
+        fs::path path = fs::temp_directory_path() / std::format("rct3pp_career_test_{}", ::getpid());
         TempFolder()
         {
             fs::create_directories(path);

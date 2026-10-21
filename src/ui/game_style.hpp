@@ -41,6 +41,7 @@
 
 #include <algorithm>
 #include <array>
+#include <format>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -623,8 +624,8 @@ namespace rct3::ui::game_skins
         const std::array<std::string_view, 8> bases { "AttractionEditor_IconCurveL3", "AttractionEditor_IconCurve0", "AttractionEditor_IconCurveR3", "AttractionEditor_IconSlopeD2", "AttractionEditor_IconSlopeD1", "AttractionEditor_IconSlope0", "AttractionEditor_IconSlopeU1", "AttractionEditor_IconSlopeU2" };
         for (std::size_t i = 0; i < bases.size(); ++i)
         {
-            s.usable_icons.at(i) = std::string(bases[i]) + "On";
-            s.unusable_icons.at(i) = std::string(bases[i]) + "Dis";
+            s.usable_icons.at(i) = std::format("{}On", bases[i]);
+            s.unusable_icons.at(i) = std::format("{}Dis", bases[i]);
         }
         s.usable_icons.at(8) = "PathEditor_IconDeleteOn";
         s.unusable_icons.at(8) = s.usable_icons.at(8);

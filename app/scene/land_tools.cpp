@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <format>
 #include <string>
 
 namespace rct3::scene
@@ -37,9 +38,9 @@ namespace rct3::scene
         /// A tab's tools by their pictures, `usable` the first of them that work so far.
         ui::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
         {
-            ui::LandTab t { std::string(icon), std::u16string(strings.get(std::string(icon) + "Help")), slot, { } };
+            ui::LandTab t { std::string(icon), std::u16string(strings.get(std::format("{}Help", icon))), slot, { } };
             for (const std::string_view tool : tools)
-                t.tools.push_back({ std::string(tool), std::u16string(strings.get(std::string(tool) + "Help")), t.tools.size() < usable });
+                t.tools.push_back({ std::string(tool), std::u16string(strings.get(std::format("{}Help", tool))), t.tools.size() < usable });
             return t;
         }
 

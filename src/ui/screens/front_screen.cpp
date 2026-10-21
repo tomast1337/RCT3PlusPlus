@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -217,7 +218,7 @@ namespace rct3::ui
     {
         std::string logo(kLogoSkin);
         if (std::ranges::contains(kOwnLogoLanguages, language))
-            logo += "_" + std::string(language);
+            logo += std::format("_{}", language);
         return logo;
     }
 
@@ -259,8 +260,8 @@ namespace rct3::ui
             if (!expansions[p])
                 continue;
             const std::string n = std::to_string(p);
-            auto& badge = add<FrontBadge>("badge" + n, std::string(kBadgeSkin) + n);
-            badge.tooltip = std::u16string(strings.get(kExpansionInstalled)) + u" " + std::u16string(strings.get(std::string(kExpansionName) + n));
+            auto& badge = add<FrontBadge>(std::format("badge{}", n), std::string(kBadgeSkin) + n);
+            badge.tooltip = std::u16string(strings.get(kExpansionInstalled)) + u" " + std::u16string(strings.get(std::format("{}{}", kExpansionName, n)));
             badges_.push_back({ &badge, std::string(kBadgeSkin) + n });
         }
     }

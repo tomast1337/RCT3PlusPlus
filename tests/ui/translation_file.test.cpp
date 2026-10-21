@@ -2,6 +2,7 @@
 #include "ui/translation_file.hpp"
 
 #include <doctest/doctest.h>
+#include <format>
 
 using namespace rct3::ui;
 
@@ -35,7 +36,7 @@ TEST_CASE("anything but strings and groups fails, saying where")
     std::string deep;
     for (int i = 0; i <= kMaxTranslationDepth + 1; ++i)
         deep += "{\"g\":";
-    deep += "\"x\"" + std::string(static_cast<std::size_t>(kMaxTranslationDepth + 2), '}');
+    deep += std::format("\"x\"{}", std::string(static_cast<std::size_t>(kMaxTranslationDepth + 2), '}'));
     CHECK_FALSE(parse_translation(deep));
 }
 

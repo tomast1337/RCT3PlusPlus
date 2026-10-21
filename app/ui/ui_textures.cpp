@@ -3,6 +3,7 @@
 
 #include "ui/ui_renderer.hpp"
 
+#include <format>
 #include <span>
 
 namespace rct3::ui
@@ -18,7 +19,7 @@ namespace rct3::ui
             if (!texture)
             {
                 destroy_textures(device, textures);
-                return std::unexpected(name + ": " + texture.error());
+                return std::unexpected(std::format("{}: {}", name, texture.error()));
             }
             textures.emplace(name, UiTexture { *texture, static_cast<float>(image.width), static_cast<float>(image.height) });
         }

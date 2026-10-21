@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <doctest/doctest.h>
+#include <format>
 #include <limits>
 
 using namespace rct3::random;
@@ -75,8 +76,8 @@ TEST_CASE("a state written as text reads back")
            "ffffffffffffffff");
     CHECK_FALSE(parse_state("12"));
     CHECK_FALSE(parse_state(std::string(64, '0')));
-    CHECK_FALSE(parse_state(std::string(63, '0') + "g"));
-    CHECK_FALSE(parse_state("+" + std::string(63, '1')));
+    CHECK_FALSE(parse_state(std::format("{}g", std::string(63, '0'))));
+    CHECK_FALSE(parse_state(std::format("+{}", std::string(63, '1'))));
 }
 
 TEST_CASE("a seed is given in decimal or hex")

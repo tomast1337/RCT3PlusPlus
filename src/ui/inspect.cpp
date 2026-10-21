@@ -4,6 +4,7 @@
 #include "core/maybe.hpp"
 
 #include <cstdlib>
+#include <format>
 #include <memory>
 #include <typeinfo>
 
@@ -68,7 +69,7 @@ namespace rct3::ui
     {
         std::string path;
         for (const Widget* at = &w; at->parent(); at = at->parent())
-            path = path.empty() ? std::string(at->name()) : std::string(at->name()) + "/" + path;
+            path = path.empty() ? std::string(at->name()) : std::format("{}/{}", at->name(), path);
         return path;
     }
 

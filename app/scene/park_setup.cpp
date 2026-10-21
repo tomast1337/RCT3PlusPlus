@@ -57,6 +57,7 @@
 #include <cctype>
 #include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <map>
@@ -130,7 +131,7 @@ namespace rct3::scene
                 {
                     if (!tried_files.insert(reference).second)
                         continue;
-                    if (const auto file = install.find(reference + ".common.ovl"))
+                    if (const auto file = install.find(std::format("{}.common.ovl", reference)))
                         added = index.add_file(*file) || added;
                 }
                 if (!added)
@@ -155,7 +156,7 @@ namespace rct3::scene
         {
             std::ifstream in(path, std::ios::binary);
             if (!in)
-                return std::unexpected("cannot open " + path.string());
+                return std::unexpected(std::format("cannot open {}", path.string()));
             const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             const auto bytes = std::as_bytes(std::span(raw));
             return std::vector<std::byte>(bytes.begin(), bytes.end());
@@ -639,7 +640,7 @@ namespace rct3::scene
                 }
                 return last;
             };
-            if (const auto found = install.find(std::string(park::kSupportOverlay) + ".common.ovl"))
+            if (const auto found = install.find(std::format("{}.common.ovl", park::kSupportOverlay)))
             {
                 if (const auto sets = park::load_support_sets(*found))
                 {
@@ -845,7 +846,7 @@ namespace rct3::scene
                     auto [at, added] = catalogues.try_emplace(object.overlay);
                     if (added)
                     {
-                        if (const auto file = install.find(object.overlay + ".common.ovl"))
+                        if (const auto file = install.find(std::format("{}.common.ovl", object.overlay)))
                         {
                             if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
                                 at->second = std::move(*loaded);
@@ -883,7 +884,7 @@ namespace rct3::scene
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
                 simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
                 simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
-                    const auto file = install.find(ride.base.overlay_path + ".common.ovl");
+                    const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
                     return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
                 });
                 simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {

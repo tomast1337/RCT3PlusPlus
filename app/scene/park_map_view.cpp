@@ -16,6 +16,7 @@
 
 #include <array>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <map>
 #include <memory>
@@ -102,7 +103,7 @@ namespace rct3::scene
 
             std::optional<std::uint32_t> of(const save::AttractionCommon& a, bool stall)
             {
-                const std::string key = a.overlay_path + "|" + a.symbol;
+                const std::string key = std::format("{}|{}", a.overlay_path, a.symbol);
                 if (const auto known = types_.find(key); known != types_.end())
                     return known->second;
                 const std::optional<std::uint32_t> type = read(a, stall);
@@ -146,7 +147,7 @@ namespace rct3::scene
                 if (const auto known = overlays_.find(path); known != overlays_.end())
                     return known->second.get();
                 std::unique_ptr<ovl::Overlay> overlay;
-                if (const auto file = install_.find(path + ".common.ovl"))
+                if (const auto file = install_.find(std::format("{}.common.ovl", path)))
                 {
                     if (auto loaded = ovl::Overlay::load(*file))
                         overlay = std::make_unique<ovl::Overlay>(std::move(*loaded));

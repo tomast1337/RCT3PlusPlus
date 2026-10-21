@@ -129,7 +129,7 @@ namespace rct3::image
         std::ofstream file(path, std::ios::binary);
         file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         if (!file)
-            return std::unexpected("cannot write " + path.string());
+            return std::unexpected(std::format("cannot write {}", path.string()));
         return { };
     }
 
@@ -157,7 +157,7 @@ namespace rct3::image
                 highest = std::max(highest, n);
         }
         if (ec)
-            return std::unexpected("cannot read " + folder.string() + ": " + ec.message());
+            return std::unexpected(std::format("cannot read {}: {}", folder.string(), ec.message()));
         // A file made since the folder was read is passed over rather than replaced.
         constexpr int kTries = 16;
         for (std::uint32_t n = highest + 1; n <= highest + kTries; ++n)
@@ -168,10 +168,10 @@ namespace rct3::image
                 continue;
             file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
             if (!file)
-                return std::unexpected("cannot write " + path.string());
+                return std::unexpected(std::format("cannot write {}", path.string()));
             return path;
         }
-        return std::unexpected("cannot make a new file in " + folder.string());
+        return std::unexpected(std::format("cannot make a new file in {}", folder.string()));
     }
 
 } // namespace rct3::image

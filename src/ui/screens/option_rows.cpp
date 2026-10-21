@@ -2,6 +2,7 @@
 #include "ui/screens/option_rows.hpp"
 
 #include <cmath>
+#include <format>
 #include <utility>
 
 namespace rct3::ui
@@ -38,7 +39,7 @@ namespace rct3::ui
 
     Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget)
     {
-        auto& label = page_.add<Label>(widget.empty() ? control_name({ }, "name") : std::string(widget) + "_label", std::move(name), style_.font);
+        auto& label = page_.add<Label>(widget.empty() ? control_name({ }, "name") : std::format("{}_label", widget), std::move(name), style_.font);
         label.style.colour = style_.text_colour;
         label.style.vertical = Align::Centre;
         label.tooltip = std::move(tip);

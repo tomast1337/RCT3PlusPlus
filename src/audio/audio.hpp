@@ -105,6 +105,7 @@ namespace rct3::audio
         std::optional<glm::vec3> at = std::nullopt;
         float near = 1.0f;
         float far = 1000.0f;
+        bool loop = false; ///< Plays again from the start at its end, until stopped; buffers only
     };
 
     inline constexpr float kMaxPitch = 16.0f;

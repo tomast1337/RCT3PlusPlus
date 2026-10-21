@@ -49,6 +49,9 @@ namespace rct3::simulation
         }
     };
 
+    /// Whether either end of `coaster`'s train is on a lift chain.
+    [[nodiscard]] bool on_chain(const Coaster& coaster);
+
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start, where it
     /// stops.

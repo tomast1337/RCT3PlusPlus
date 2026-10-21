@@ -6,11 +6,17 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "scene/park_scene.hpp"
+#include "simulation/components.hpp"
+#include "simulation/systems.hpp"
 #include "ui/widgets/button.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <chrono>
 #include <format>
+#include <future>
+#include <span>
 #include <sstream>
 
 namespace rct3::scene
@@ -47,6 +53,27 @@ namespace rct3::scene
             if (park == nullptr)
                 throw std::runtime_error("no park is open");
             return park->grid;
+        }
+
+        ParkScene& park_of(ParkScene* park)
+        {
+            if (park == nullptr)
+                throw std::runtime_error("no park is open");
+            return *park;
+        }
+
+        /// The install's flat rides, once read; none until then.
+        std::optional<std::span<const park::BuildItem>> build_items(const ParkScene& park)
+        {
+            const auto& items = park.build.items;
+            if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return std::nullopt;
+            return std::span(items.get());
+        }
+
+        Json spot_json(const std::optional<save::PlacementSpot>& spot)
+        {
+            return spot ? Json { { "col", spot->col }, { "row", spot->row }, { "direction", spot->direction } } : Json(nullptr);
         }
     } // namespace
 
@@ -122,10 +149,24 @@ namespace rct3::scene
                 found["on"] = b->on;
             return found;
         });
+        engine_.define("ui.children", [this](const Json& a) -> Json {
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("ui.children takes a widget path");
+            if (park_ == nullptr)
+                return nullptr;
+            auto w = park_->desktop->root().find(a[0].get<std::string>());
+            if (!w || !w->visible)
+                return nullptr;
+            Json names = Json::array();
+            for (const auto& child : w->children())
+                if (child->visible)
+                    names.push_back(child->name());
+            return names;
+        });
         engine_.define("log", [this](const Json& a) {
             std::string line;
             for (const Json& v : a)
-                line += (line.empty() ? "" : " ") + (v.is_string() ? v.get<std::string>() : v.dump());
+                line += std::format("{}{}", line.empty() ? "" : " ", v.is_string() ? v.get<std::string>() : v.dump());
             write(line, false);
             return Json(nullptr);
         });
@@ -212,6 +253,72 @@ namespace rct3::scene
                     paths.back()["height"] = p.elevation->quantised_height;
             }
             return paths;
+        });
+        engine_.define("build.flatRides", [this](const Json&) -> Json {
+            const auto items = build_items(park_of(park_));
+            if (!items)
+                return nullptr;
+            Json rides = Json::array();
+            for (const park::BuildItem& item : *items)
+                if (item.kind == park::BuildKind::FlatRide)
+                    rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() } });
+            return rides;
+        });
+        engine_.define("build.pick", [this](const Json& a) -> Json {
+            if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
+                throw std::invalid_argument("build.pick takes an overlay and a symbol");
+            ParkScene& park = park_of(park_);
+            const auto items = build_items(park);
+            if (!items)
+                return false;
+            const auto found = std::ranges::find_if(*items, [&](const park::BuildItem& item) { return item.overlay == a[0].get<std::string>() && item.symbol == a[1].get<std::string>(); });
+            return found != items->end() && start_ride_placing(park, *found);
+        });
+        engine_.define("build.stop", [this](const Json&) {
+            stop_ride_placing(park_of(park_));
+            return Json(nullptr);
+        });
+        engine_.define("build.placing", [this](const Json&) -> Json {
+            const RidePlacing& p = park_of(park_).placing;
+            if (!p.item)
+                return nullptr;
+            constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
+            constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "path", "blocked" };
+            return { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
+        });
+        engine_.define("rides.list", [this](const Json&) {
+            const ParkScene& park = park_of(park_);
+            Json rides = Json::array();
+            for (std::size_t i = 0; i < park.rides.rides.size(); ++i)
+            {
+                const save::Ride& ride = park.rides.rides[i];
+                const save::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
+                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false } };
+                const entt::entity e = i < park.ride_entities.size() ? park.ride_entities[i] : entt::null;
+                const auto& registry = park.sim.registry;
+                if (e != entt::null && registry.valid(e))
+                {
+                    one["joined"] = true;
+                    if (const auto* a = registry.try_get<simulation::Attraction>(e))
+                    {
+                        one["customers"] = a->customers;
+                        one["price"] = a->price;
+                        one["open"] = a->open;
+                        one["onPaths"] = a->entrance != simulation::kNoNode;
+                    }
+                    if (const auto* c = registry.try_get<simulation::CycleRide>(e))
+                    {
+                        one["capacity"] = c->capacity;
+                        one["cycleSeconds"] = static_cast<float>(c->cycle_ticks) * simulation::kTickSeconds;
+                        one["queue"] = c->queue.size();
+                        one["queueLine"] = c->line.size();
+                        one["riders"] = c->riders.size();
+                        one["ratings"] = { c->excitement, c->intensity, c->nausea };
+                    }
+                }
+                rides.push_back(std::move(one));
+            }
+            return rides;
         });
         engine_.define("map.water", [this](const Json&) {
             grid_of(park_);

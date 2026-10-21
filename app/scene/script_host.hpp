@@ -15,6 +15,8 @@
 //                       when it is not shown
 //   ui.click(path)      moves there, presses and lets go, a frame each
 //   ui.toggle(path, on) clicks the switch at `path` when it is not already `on`
+//   ui.children(path)   the names of the shown widgets in the one at `path`, in order, or undefined when it is
+//                       not shown
 //   screenshot(name)    saved to the screenshots folder, or as NN_name.png in the report folder when there is
 //                       one; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
@@ -29,6 +31,18 @@
 //   map.screen(col, row) the middle of a tile on the view, or undefined when it is not in sight
 //   map.paths()         [{ col, row, raised, queue, height }] for each path tile; height only when raised
 //   map.water()         [{ level, triangles }] for each lake
+//   build.flatRides()   the install's rides placed whole, { overlay, symbol, name, width, length, price, doors },
+//                       or undefined while the lists are still being read
+//   build.pick(overlay, symbol)  starts placing that ride, as picking it in its build list does; false when
+//                       there is no such ride. Scripts reach rides this way because the lists name their rows
+//                       by nothing a script can know
+//   build.stop()        puts the placing tool away, as a right click does
+//   build.placing()     { step, problem, affordable } while something is being placed: step "ride", "entrance",
+//                       "exit" or "scenery"; problem "none", "not owned", "path" or "blocked"
+//   rides.list()        each ride: { name, symbol, overlay, flat, site, entrance, exit, joined }, places as
+//                       { col, row, direction }; joined when the simulation runs it, then also customers,
+//                       price, open, onPaths (its entrance found on the paths), capacity, cycleSeconds,
+//                       queue, queueLine (its tiles), riders and ratings ([excitement, intensity, nausea], 0..1)
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.

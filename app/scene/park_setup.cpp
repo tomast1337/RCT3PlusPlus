@@ -61,6 +61,7 @@
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <ranges>
 #include <set>
@@ -363,28 +364,53 @@ namespace rct3::scene
         /// Gives simulated ride `entity` its riders' ways on and off, as `ways_of` lays them from where `ride`'s
         /// first station has its entrance and exit, with the ticket spot the entrance's model has (its first
         /// seat). Nothing for a ride without both.
-        template<typename WaysOf> void walk_ride(ParkScene& scene, entt::entity entity, const save::Ride& ride, WaysOf&& ways_of)
+        template<typename WaysOf> void walk_ride(render::Device& device, ParkScene& scene, entt::entity entity, const save::Ride& ride, WaysOf&& ways_of)
         {
             if (ride.stations.empty() || !ride.stations.front().entrance_spot || !ride.stations.front().exit_spot)
                 return;
-            const auto place = [&](save::ObjectId id) -> std::optional<std::pair<glm::mat4, const park::ObjectModel*>> {
-                const auto o = std::ranges::find(scene.objects, id, &save::PlacedObject::id);
-                if (o == scene.objects.end())
-                    return std::nullopt;
-                const auto model = scene.models.find(park::model_key(*o));
-                const park::ObjectModel* found = model != scene.models.end() ? &model->second : nullptr;
-                return std::pair { park::placed_transform(*o, found, scene.grid, scene.fitted), found };
-            };
-            const auto entrance = place(ride.stations.front().entrance_spot->object);
-            const auto exit = place(ride.stations.front().exit_spot->object);
-            if (!entrance || !exit)
+            const auto entrance = std::ranges::find(scene.objects, ride.stations.front().entrance_spot->object, &save::PlacedObject::id);
+            const auto exit = std::ranges::find(scene.objects, ride.stations.front().exit_spot->object, &save::PlacedObject::id);
+            if (entrance == scene.objects.end() || exit == scene.objects.end())
                 return;
-            park::RideWays ways = ways_of(entrance->first, exit->first);
-            ways.ticket = glm::vec3(entrance->first * glm::vec4(kTicketSpot, 0, 0, 1));
-            ways.ticket_heading = std::atan2(entrance->first[0].x, entrance->first[0].z);
-            if (entrance->second != nullptr && !entrance->second->seat_places.empty())
-                park::set_ticket_spot(ways, entrance->first, entrance->second->seat_places.front());
+            const auto model_of = [&](const save::PlacedObject& o) -> const park::ObjectModel* {
+                const auto model = scene.models.find(park::model_key(o));
+                return model != scene.models.end() ? &model->second : nullptr;
+            };
+            const glm::mat4 in = park::placed_transform(*entrance, model_of(*entrance), scene.grid, scene.fitted);
+            const glm::mat4 out = park::placed_transform(*exit, model_of(*exit), scene.grid, scene.fitted);
+            park::RideWays ways = ways_of(in, out);
+            ways.ticket = glm::vec3(in * glm::vec4(kTicketSpot, 0, 0, 1));
+            ways.ticket_heading = std::atan2(in[0].x, in[0].z);
+            if (model_of(*entrance) != nullptr && !model_of(*entrance)->seat_places.empty())
+                park::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
             scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
+            // The entrance's and exit's gates, by the motions the buildings name ...Close, ...Open, and those ending
+            // Idle that hold them there.
+            for (const auto& [door, is_exit] : { std::pair { entrance, false }, std::pair { exit, true } })
+            {
+                const park::ObjectModel* model = model_of(*door);
+                const auto k = static_cast<std::size_t>(door - scene.objects.begin());
+                if (model == nullptr || !model->rig || std::ranges::contains(scene.boned_rides, k, &ParkScene::BonedRide::object))
+                    continue;
+                const auto motion = [&](std::string_view end) -> std::optional<std::size_t> {
+                    const auto found = std::ranges::find_if(model->animation_names, [&](const std::string& name) { return name.ends_with(end); });
+                    return found != model->animation_names.end() ? std::optional(static_cast<std::size_t>(found - model->animation_names.begin())) : std::nullopt;
+                };
+                const auto shut = motion("CloseIdle"), opening = motion("Open"), open = motion("OpenIdle"), shutting = motion("Close");
+                if (!shut || !opening || !open || !shutting)
+                    continue;
+                ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
+                boned.ride = entity;
+                boned.object = k;
+                boned.placed = is_exit ? out : in;
+                std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], *model, scene.grid);
+                boned.first_seat = scene.seat_carriers.size();
+                boned.reach = scene.grid.tile_size_x;
+                boned.gate = { *shut, *opening, *open, *shutting };
+                boned.exit = is_exit;
+                boned.since = -std::numeric_limits<float>::infinity();
+                add_textures(device, scene, boned.mesh.mesh.batches);
+            }
         }
 
     } // namespace
@@ -435,7 +461,7 @@ namespace rct3::scene
             {
                 scene.ride_seats[entity] = k;
                 const glm::mat4 placed = park::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
-                walk_ride(scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
+                walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
                     std::vector<glm::vec3> seats;
                     for (const glm::mat4& seat : model->second.seat_places)
                         seats.emplace_back((placed * seat)[3]);
@@ -929,7 +955,7 @@ namespace rct3::scene
                         continue;
                     const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
                     const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
-                    walk_ride(scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
+                    walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
                         std::vector<glm::vec3> seats;
                         // A car without its model (from a file the game lacks) seats its share of the train at its middle.
                         const auto first_train = std::ranges::count(cars, std::size_t { 0 }, [&](std::size_t car) { return scene.car_spots[car].train; });

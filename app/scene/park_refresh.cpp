@@ -276,6 +276,8 @@ namespace rct3::scene
             });
         }
 
+        constexpr float kGateReach = 2.5f; ///< From a ride's entrance or exit to a rider it opens for
+
         /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
         /// the seats they carry.
         void swing_rides(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
@@ -283,15 +285,40 @@ namespace rct3::scene
             for (ParkScene::BonedRide& boned : scene.boned_rides)
             {
                 const glm::vec3 at(boned.placed[3]);
-                if (boned.ride == entt::null && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
+                if ((boned.ride == entt::null || boned.gate) && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
                     continue;
                 const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
-                const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
-                const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
-                const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
-                const auto [motion, time] = park::flat_ride_motion(model->second.animation_seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.clock);
+                const auto& seconds = model->second.animation_seconds;
+                std::pair<std::size_t, float> playing;
+                if (boned.gate)
+                {
+                    // Open while one of the ride's riders on foot, on or off as the gate is, is near it.
+                    const auto& r = scene.sim.registry;
+                    bool open = false;
+                    if (scene.simulate)
+                        for (const auto [g, walk, pose, errand] : r.view<const simulation::RideWalk, const simulation::Pose, const simulation::Errand>().each())
+                            open = open || (errand.target == boned.ride && walk.off == boned.exit && glm::distance(pose.position, at) < kGateReach);
+                    if (open != boned.open)
+                    {
+                        boned.open = open;
+                        boned.since = scene.clock;
+                    }
+                    const auto [shut, opening, wide, shutting] = *boned.gate;
+                    const std::size_t moving = open ? opening : shutting;
+                    const float length = moving < seconds.size() ? seconds[moving] : 0.0f;
+                    const std::size_t held = open ? wide : shut;
+                    playing = scene.clock - boned.since < length ? std::pair { moving, scene.clock - boned.since } : std::pair { held, held < seconds.size() && seconds[held] > 0 ? std::fmod(scene.clock, seconds[held]) : 0.0f };
+                }
+                else
+                {
+                    const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
+                    const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
+                    const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
+                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.clock);
+                }
+                const auto [motion, time] = playing;
                 const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
                 std::vector<glm::mat4> places(boned.bones.size());
                 for (std::size_t p = 0; p < places.size(); ++p)

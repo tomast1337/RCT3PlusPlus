@@ -274,6 +274,8 @@ namespace
                 {
                     const std::string_view target = lod.mesh_type == 0 ? lod.static_shape : lod.mesh_type == 3 ? lod.bone_shape : lod.texture;
                     std::printf("    type %u %-24s distance %g animations %zu\n", lod.mesh_type, std::string(target).c_str(), lod.distance, lod.animations.size());
+                    for (const std::string_view anim : lod.animations)
+                        std::printf("      animation %.*s\n", static_cast<int>(anim.size()), anim.data());
                 }
             }
         }

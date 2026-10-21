@@ -228,8 +228,15 @@ for (const slot of slots) {
 }
 await screenshot("rides");
 
-// Run the park.
+// Rides are built closed: each is tested a while, then opened, as a player would.
+for (const [i] of rides.list().entries())
+    rides.setState(i, "testing");
 await ui.click("bar/Top_SuperFastForward");
+await frames(120);
+for (const [i] of rides.list().entries())
+    rides.setState(i, "open");
+
+// Run the park.
 for (let i = 0; i < runFrames; i += 60) {
     await frames(60);
     if (i % 600 === 0)

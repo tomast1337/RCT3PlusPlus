@@ -158,4 +158,6 @@ interface RideInfo {
 
 declare namespace rides {
     function list(): RideInfo[];
+    /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. */
+    function setState(i: number, state: "closed" | "testing" | "open"): void;
 }

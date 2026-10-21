@@ -289,6 +289,7 @@ namespace rct3::simulation
         NodeId entrance = kNoNode; ///< The path node guests go to for it
         std::int64_t price = 0;    ///< Hundredths of the currency unit
         bool open = true;
+        bool testing = false;    ///< A ride run empty to try it out, guests kept off
         std::int64_t income = 0; ///< Hundredths, taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save

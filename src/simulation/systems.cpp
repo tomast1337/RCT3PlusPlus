@@ -1854,7 +1854,7 @@ namespace rct3::simulation
             if (riders != nullptr && !upkeep.broken)
             {
                 const auto* departure = r.try_get<Departure>(e);
-                if (departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
+                if (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading))
                 {
                     depart(riders->size());
                     if (fleet != nullptr)

@@ -136,6 +136,7 @@ namespace rct3::ui
         Inspection, ///< The interval's place in the list
         WaitFor,    ///< The load the trains wait for, its place in the list
         QueueSigns, ///< Whether signs stand over a ride's queues
+        Circuits,   ///< Times a flat ride runs round each go
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 
@@ -151,6 +152,8 @@ namespace rct3::ui
     /// Most waiting time the operating mode page offers, and the step it goes in (seconds).
     inline constexpr int kMostWait = 250;
     inline constexpr int kWaitStep = 5;
+    /// Most times round a flat ride can be set to run each go.
+    inline constexpr int kMostCircuits = 10;
     /// Most admission price, for rides and for other attractions and items, and its step (hundredths).
     inline constexpr int kMostRidePrice = 2000;
     inline constexpr int kMostPrice = 1000;

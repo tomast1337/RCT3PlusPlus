@@ -511,6 +511,14 @@ namespace rct3::scene
                 ride->options.max_wait = change.value;
             else if (change.id == ui::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
+            else if (change.id == ui::control_id(Circuits))
+            {
+                // A go under way runs as many times round as the new count, or stops if it is past it.
+                ride->loop_count = change.value;
+                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                    if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
+                        cycle->loops = static_cast<std::uint32_t>(std::max(change.value, 1));
+            }
             else if (change.id == ui::control_id(QueueSigns))
             {
                 if (change.value != 0)
@@ -747,6 +755,17 @@ namespace rct3::scene
         }
     } // namespace
 
+    void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state)
+    {
+        attraction.state = state;
+        for (auto [_, a] : scene.sim.registry.view<simulation::Attraction>().each())
+            if (a.saved == attraction.id)
+            {
+                a.open = state == save::AttractionState::Open;
+                a.testing = state == save::AttractionState::Testing;
+            }
+    }
+
     bool typing(const ParkScene& scene)
     {
         return scene.desktop && dynamic_cast<const ui::EditBox*>(as_pointer(scene.desktop->keyboard_focus())) != nullptr;
@@ -940,7 +959,7 @@ namespace rct3::scene
                 const std::vector<ui::StateChoice> states = ui::state_choices(kind);
                 if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
-                    common->state = states[choice->second].state;
+                    set_attraction_state(scene, *common, states[choice->second].state);
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
             }

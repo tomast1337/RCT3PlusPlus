@@ -127,7 +127,8 @@ namespace rct3::audio
 
     bool is_valid(const PlayParams& p) noexcept
     {
-        return finite_in(p.volume, 0.0f, kMaxVolume) && finite_in(p.pan, -1.0f, 1.0f) && finite_in(p.pitch, 0.0f, kMaxPitch) && p.pitch > 0.0f;
+        const bool placed = !p.at || (std::isfinite(p.at->x) && std::isfinite(p.at->y) && std::isfinite(p.at->z) && std::isfinite(p.far) && p.near >= 0.0f && p.far > p.near);
+        return finite_in(p.volume, 0.0f, kMaxVolume) && finite_in(p.pan, -1.0f, 1.0f) && finite_in(p.pitch, 0.0f, kMaxPitch) && p.pitch > 0.0f && placed;
     }
 
     const char* to_string(EngineError e) noexcept
@@ -409,11 +410,11 @@ namespace rct3::audio
             return nullptr;
         }
 
-        // Sounds are not spatialised: the engine would otherwise apply listener attenuation on top of pan.
-        // The source reports its own sample rate, so the engine resamples it to the mixing rate.
+        // Only placed sounds are spatialised: the engine would otherwise fade the rest by their distance from the
+        // listener on top of pan. The source reports its own sample rate, so the engine resamples it to the mixing rate.
         std::expected<VoiceHandle, PlayError> start_voice(Voice& v, ma_data_source* source, const PlayParams& params)
         {
-            if (ma_sound_init_from_data_source(&engine, source, MA_SOUND_FLAG_NO_SPATIALIZATION, nullptr, &v.sound) != MA_SUCCESS)
+            if (ma_sound_init_from_data_source(&engine, source, params.at ? 0 : MA_SOUND_FLAG_NO_SPATIALIZATION, nullptr, &v.sound) != MA_SUCCESS)
             {
                 release_source(v);
                 return std::unexpected(PlayError::Failed);
@@ -423,6 +424,13 @@ namespace rct3::audio
             ma_sound_set_volume(&v.sound, params.volume);
             ma_sound_set_pan(&v.sound, params.pan);
             ma_sound_set_pitch(&v.sound, params.pitch);
+            if (params.at)
+            {
+                ma_sound_set_position(&v.sound, params.at->x, params.at->y, params.at->z);
+                ma_sound_set_attenuation_model(&v.sound, ma_attenuation_model_linear);
+                ma_sound_set_min_distance(&v.sound, params.near);
+                ma_sound_set_max_distance(&v.sound, params.far);
+            }
             if (ma_sound_start(&v.sound) != MA_SUCCESS)
             {
                 release(v);
@@ -683,6 +691,24 @@ namespace rct3::audio
             return false;
         ma_sound_set_pitch(&v->sound, pitch);
         return true;
+    }
+
+    bool AudioEngine::set_voice_place(VoiceHandle voice, glm::vec3 at, glm::vec3 velocity)
+    {
+        Voice* v = impl_->find(voice);
+        const auto finite = [](glm::vec3 p) { return std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z); };
+        if (v == nullptr || !finite(at) || !finite(velocity) || ma_sound_is_spatialization_enabled(&v->sound) == MA_FALSE)
+            return false;
+        ma_sound_set_position(&v->sound, at.x, at.y, at.z);
+        ma_sound_set_velocity(&v->sound, velocity.x, velocity.y, velocity.z);
+        return true;
+    }
+
+    void AudioEngine::set_listener(glm::vec3 at, glm::vec3 forward, glm::vec3 up)
+    {
+        ma_engine_listener_set_position(&impl_->engine, 0, at.x, at.y, at.z);
+        ma_engine_listener_set_direction(&impl_->engine, 0, forward.x, forward.y, forward.z);
+        ma_engine_listener_set_world_up(&impl_->engine, 0, up.x, up.y, up.z);
     }
 
     bool AudioEngine::is_playing(VoiceHandle voice) const

@@ -5,19 +5,15 @@
 
 using namespace rct3::audio;
 
-TEST_CASE("a park sound fades with distance and pans toward its side of the view")
+TEST_CASE("a park sound is placed where it happens, full loud near and silent far")
 {
-    const glm::vec3 eye { 0.0f };
-    const glm::vec3 right { 1.0f, 0.0f, 0.0f };
-    CHECK(heard(eye, right, { 0.0f, 0.0f, 5.0f }, 0.8f).volume == doctest::Approx(0.8f));
-    CHECK(heard(eye, right, { 0.0f, 0.0f, 5.0f }, 0.8f).pan == doctest::Approx(0.0f));
-    const float halfway = (kNearVoice + kFarVoice) / 2;
-    CHECK(heard(eye, right, { 0.0f, 0.0f, halfway }, 1.0f).volume == doctest::Approx(0.5f));
-    CHECK(heard(eye, right, { 0.0f, 0.0f, kFarVoice + 1 }, 1.0f).volume == 0);
-    CHECK(heard(eye, right, { 10.0f, 0.0f, 0.0f }, 1.0f).pan > 0);
-    CHECK(heard(eye, right, { -10.0f, 0.0f, 0.0f }, 1.0f).pan < 0);
-    CHECK(heard(eye, right, { -10.0f, 0.0f, 0.0f }, 1.0f).pan > -1);
-    CHECK(is_valid(heard(eye, right, eye, 1.0f)));
+    const PlayParams p = heard({ 1.0f, 2.0f, 3.0f }, 0.8f);
+    REQUIRE(p.at.has_value());
+    CHECK(p.at->y == 2.0f);
+    CHECK(p.volume == doctest::Approx(0.8f));
+    CHECK(p.near == kNearVoice);
+    CHECK(p.far == kFarVoice);
+    CHECK(is_valid(p));
 }
 
 TEST_CASE("the crowd's chatter grows with the people about, silent for one")

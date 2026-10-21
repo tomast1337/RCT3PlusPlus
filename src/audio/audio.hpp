@@ -36,7 +36,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <glm/vec3.hpp>
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -98,6 +100,11 @@ namespace rct3::audio
         float volume = 1.0f; ///< Linear gain, 0 or more (1 leaves the sound unchanged)
         float pan = 0.0f;    ///< -1 left, 0 centre, +1 right
         float pitch = 1.0f;  ///< Playback speed factor, more than 0 and at most kMaxPitch
+        /// Where the sound is in the world. The listener then pans it and fades it, evenly from full loud at `near`
+        /// to silence at `far`, and a moving voice (set_voice_place) rises and falls in pitch as it passes.
+        std::optional<glm::vec3> at = std::nullopt;
+        float near = 1.0f;
+        float far = 1000.0f;
     };
 
     inline constexpr float kMaxPitch = 16.0f;
@@ -201,6 +208,11 @@ namespace rct3::audio
         bool set_voice_volume(VoiceHandle voice, float volume);
         bool set_voice_pan(VoiceHandle voice, float pan);
         bool set_voice_pitch(VoiceHandle voice, float pitch);
+        /// Moves a voice started `at` a place, going at `velocity` (world units a second).
+        bool set_voice_place(VoiceHandle voice, glm::vec3 at, glm::vec3 velocity = { });
+
+        /// Where placed voices are heard from: `forward` is where the listener looks, `up` its head's up.
+        void set_listener(glm::vec3 at, glm::vec3 forward, glm::vec3 up);
 
         /// True while the voice has frames left to play.
         [[nodiscard]] bool is_playing(VoiceHandle voice) const;

@@ -11,7 +11,8 @@
 // quiet. Only while nothing is picked does the cycle above choose. In a park the picked music carries on
 // and the cycle's track stops.
 //
-// The menu music plays at half the music volume.
+// The menu music plays at half the music volume. It fades out while a park loads; in the park, the picked music
+// is heard only with the camera well up, fading in as it rises and out as it comes down.
 #pragma once
 
 #include <array>
@@ -38,6 +39,13 @@ namespace rct3::audio
     inline constexpr int kMenuTrackTries = 10;
 
     inline constexpr float kMenuMusicLevel = 0.5f; ///< Of the music volume
+
+    inline constexpr float kParkMusicQuiet = 80;  ///< World units of the eye above the point looked at, and below: silent
+    inline constexpr float kParkMusicFull = 240;  ///< And above: at full
+    inline constexpr float kMusicFadeSeconds = 2; ///< To fade out, or in, all the way
+
+    /// How much of the park's music is heard, 0..1, with the eye `height` above the point looked at.
+    [[nodiscard]] float park_music_level(float height);
 
     struct MenuMusicPick
     {

@@ -97,3 +97,12 @@ TEST_CASE("in a park the picked music carries on and the menus' cycle stops")
     CHECK(park_music_wish({ MenuMusicSource::Shuffle, 0 }).source == MenuMusicSource::Shuffle);
     CHECK(park_music_wish({ MenuMusicSource::Silent, 0 }).source == MenuMusicSource::Silent);
 }
+
+TEST_CASE("in a park the music is heard only with the camera well up, more the higher it is")
+{
+    CHECK(park_music_level(0) == 0);
+    CHECK(park_music_level(kParkMusicQuiet) == 0);
+    CHECK(park_music_level((kParkMusicQuiet + kParkMusicFull) / 2) == doctest::Approx(0.5f));
+    CHECK(park_music_level(kParkMusicFull) == 1);
+    CHECK(park_music_level(kParkMusicFull * 2) == 1);
+}

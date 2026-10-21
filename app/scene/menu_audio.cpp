@@ -10,6 +10,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -62,6 +63,7 @@ namespace rct3::scene
                 menu.music->stop(engine);
             menu.music.reset();
             menu.music_volume = -1;
+            menu.music_level = -1;
             std::optional<std::size_t> file;
             switch (wish.source)
             {
@@ -170,7 +172,7 @@ namespace rct3::scene
         return menu;
     }
 
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park)
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park, float level)
     {
         follow_choice(engine, menu, options, in_park);
         if (menu.music)
@@ -180,6 +182,12 @@ namespace rct3::scene
             {
                 menu.music->set_volume(engine, volume);
                 menu.music_volume = volume;
+            }
+            // Music just started comes in at once; after that a change fades, by how far it goes.
+            if (std::abs(level - menu.music_level) > 0.01f)
+            {
+                menu.music->fade(engine, level, menu.music_level < 0 ? 0.0f : audio::kMusicFadeSeconds * std::abs(level - menu.music_level));
+                menu.music_level = level;
             }
             if (auto fed = menu.music->update(engine); !fed)
                 logging::logger("audio").warning("menu music: {}", fed.error());

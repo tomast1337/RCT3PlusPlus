@@ -343,6 +343,21 @@ TEST_CASE("muffled, placed sounds lose their highs as through water, and unplace
     CHECK(loudness(placed) == doctest::Approx(clear).epsilon(0.1));
 }
 
+TEST_CASE("a voice fades evenly to a level over the time asked, and at once for no time")
+{
+    AudioEngine e = make_engine();
+    const auto h = e.play(constant_mono(16384, 4096));
+    REQUIRE(h.has_value());
+    CHECK(e.fade_voice(*h, 0.0f, 0.0f));
+    CHECK(render_frames(e, 16)[kF] == doctest::Approx(0.0f));
+    // Up to full over 1000 frames: about halfway at frame 500 of the fade.
+    CHECK(e.fade_voice(*h, 1.0f, 1000.0f / kRate));
+    const auto out = render_frames(e, 1200);
+    CHECK(out[2 * 500] == doctest::Approx(0.25f).epsilon(0.05));
+    CHECK(out[2 * 1100] == doctest::Approx(0.5f));
+    CHECK_FALSE(e.fade_voice(*h, 2.0f, 1.0f));
+}
+
 TEST_CASE("concurrent voices are summed and master volume scales the sum")
 {
     AudioEngine e = make_engine();

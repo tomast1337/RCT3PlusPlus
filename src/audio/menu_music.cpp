@@ -70,6 +70,11 @@ namespace rct3::audio
         return menu;
     }
 
+    float park_music_level(float height)
+    {
+        return std::clamp((height - kParkMusicQuiet) / (kParkMusicFull - kParkMusicQuiet), 0.0f, 1.0f);
+    }
+
     bool is_halloween(std::chrono::system_clock::time_point when)
     {
         const std::chrono::year_month_day day { std::chrono::floor<std::chrono::days>(when) };

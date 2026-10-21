@@ -713,6 +713,15 @@ namespace rct3::audio
         return true;
     }
 
+    bool AudioEngine::fade_voice(VoiceHandle voice, float level, float seconds)
+    {
+        Voice* v = impl_->find(voice);
+        if (v == nullptr || !finite_in(level, 0.0f, 1.0f) || !finite_in(seconds, 0.0f, 3600.0f))
+            return false;
+        ma_sound_set_fade_in_milliseconds(&v->sound, -1, level, static_cast<ma_uint64>(seconds * 1000));
+        return true;
+    }
+
     bool AudioEngine::set_voice_place(VoiceHandle voice, glm::vec3 at, glm::vec3 velocity)
     {
         Voice* v = impl_->find(voice);

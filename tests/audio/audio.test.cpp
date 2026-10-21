@@ -405,6 +405,17 @@ TEST_CASE("the voice cap is hard and finished voices make room")
     CHECK(e.set_voice_volume(*c, 0.5f));
 }
 
+TEST_CASE("a looping voice plays again from its start until stopped")
+{
+    AudioEngine e = make_engine();
+    const auto v = e.play(constant_mono(16384, 100), { .loop = true });
+    REQUIRE(v.has_value());
+    const auto out = render_frames(e, 512);
+    CHECK(e.is_playing(*v));
+    CHECK(out[2 * 400] == doctest::Approx(0.5f)); // Well past the sound's own 100 frames
+    CHECK(e.stop(*v));
+}
+
 TEST_CASE("stop silences a voice and invalidates its handle")
 {
     AudioEngine e = make_engine();

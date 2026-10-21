@@ -439,6 +439,7 @@ namespace rct3::audio
             ma_sound_set_volume(&v.sound, params.volume);
             ma_sound_set_pan(&v.sound, params.pan);
             ma_sound_set_pitch(&v.sound, params.pitch);
+            ma_sound_set_looping(&v.sound, params.loop ? MA_TRUE : MA_FALSE);
             if (params.at)
             {
                 if (muffle_ready)

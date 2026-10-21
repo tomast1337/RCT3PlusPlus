@@ -39,6 +39,13 @@ namespace rct3::simulation
         }
     } // namespace
 
+    bool on_chain(const Coaster& c)
+    {
+        if (c.distance.size() < 2 || c.length() <= 0)
+            return false;
+        return c.kinds[point_at(c, c.at)] == Stretch::Chain || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Chain;
+    }
+
     bool drive(Coaster& c, float seconds, float room)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
@@ -48,7 +55,7 @@ namespace rct3::simulation
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
             const Stretch under = c.kinds[point_at(c, c.at)];
-            const bool chained = under == Stretch::Chain || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Chain;
+            const bool chained = on_chain(c);
             if (c.fixed_speed)
                 c.speed = *c.fixed_speed;
             else

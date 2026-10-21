@@ -7,9 +7,11 @@
 #include "park/camera.hpp"
 #include "scene/menu_audio.hpp"
 #include "scene/park_scene.hpp"
+#include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 
 #include <algorithm>
+#include <format>
 #include <glm/geometric.hpp>
 #include <span>
 #include <string_view>
@@ -24,6 +26,20 @@ namespace rct3::scene
         constexpr float kChatterLevel = 0.5f; ///< Of the game volume, with a full crowd
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
+        constexpr float kRideLevel = 0.7f;
+        constexpr float kChainFade = 0.5f; ///< Seconds the chain's loop takes to come in and to die away
+
+        void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
+        {
+            for (const auto& [_, train] : sounds.train_sounds)
+            {
+                for (const audio::VoiceHandle voice : train.running)
+                    engine.stop(voice);
+                engine.stop(train.chain);
+                engine.stop(train.plume);
+            }
+            sounds.train_sounds.clear();
+        }
 
         std::vector<audio::SoundBuffer> load_named(const config::GameInstall& install, std::string_view file, std::span<const std::string_view> names)
         {
@@ -77,6 +93,22 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < kScreams.size(); ++i)
                     s.screams[i] = sounds_named(items, kScreams[i]);
             }
+        for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
+        {
+            const auto path = install.find(std::format("tracks/TrackSounds/{}.common.ovl", audio::file_of(static_cast<audio::TrackSoundSet>(set))));
+            if (!path)
+                continue;
+            const auto overlay = ovl::Overlay::load(*path);
+            if (!overlay)
+                continue;
+            const auto items = ovl::read_sounds(*overlay, overlay->common());
+            for (std::size_t sound = 0; sound < audio::kTrackSounds; ++sound)
+            {
+                const std::string_view name = audio::name_of(static_cast<audio::TrackSound>(sound));
+                if (auto found = sounds_named(items, std::span(&name, 1)); !found.empty())
+                    s.track_sounds[set][sound] = std::move(found.front());
+            }
+        }
         return s;
     }
 
@@ -112,7 +144,10 @@ namespace rct3::scene
             }
         }
         if (quiet)
+        {
+            silence_trains(engine, sounds);
             return;
+        }
 
         // Guests showing how they feel, heard as they start.
         std::set<entt::entity> heard;
@@ -141,6 +176,14 @@ namespace rct3::scene
                 sounds.car_were.emplace_back(place[3]);
         }
         std::set<std::pair<entt::entity, std::size_t>> trains;
+        struct HeardTrain
+        {
+            std::pair<entt::entity, std::size_t> key;
+            std::size_t ride = 0; ///< In scene.rides
+            glm::vec3 at { }, velocity { };
+            const simulation::Coaster* train = nullptr;
+        };
+        std::vector<HeardTrain> heard_trains;
         for (std::size_t i = 0; i < scene.car_places.size() && i < scene.car_spots.size(); ++i)
         {
             const glm::vec3 at { scene.car_places[i][3] };
@@ -151,6 +194,7 @@ namespace rct3::scene
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)
                 continue;
+            heard_trains.push_back({ { ride, spot.train }, spot.ride, at, velocity, &fleet->trains[spot.train] });
             const std::vector<entt::entity>& riders = fleet->riders[spot.train];
             audio::VoiceHandle& voice = sounds.train_voices[{ ride, spot.train }];
             if (engine.is_playing(voice))
@@ -167,6 +211,69 @@ namespace rct3::scene
             voice = play_any(engine, sounds.screams[(riders.size() >= 3 ? 2 : 0) + woman], sounds.random, audio::heard(at, volume * kScreamLevel));
             engine.set_voice_place(voice, at, velocity);
         }
+
+        // The trains themselves, the nearest few: running loops crossing over with speed, the chain while on a
+        // lift, and a sound as each sets off and comes in.
+        std::ranges::sort(heard_trains, { }, [&](const HeardTrain& t) { return glm::distance(t.at, eye); });
+        std::map<std::pair<entt::entity, std::size_t>, TrainSounds> kept;
+        for (std::size_t i = 0; i < heard_trains.size(); ++i)
+        {
+            const HeardTrain& t = heard_trains[i];
+            auto node = sounds.train_sounds.extract(t.key);
+            TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
+            const auto& kit = sounds.track_sounds[static_cast<std::size_t>(train.set)];
+            const float level = i < audio::kHeardTrains ? volume * kRideLevel : 0.0f;
+            const auto params = [&](float gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear, .far = audio::kRideFar }; };
+            const auto sound = [&](audio::TrackSound which) -> const std::optional<audio::SoundBuffer>& { return kit[static_cast<std::size_t>(which)]; };
+
+            using enum audio::TrackSound;
+            if (t.train->running != train.was_running && level > 0)
+                if (const auto& shot = sound(t.train->running ? Start : Stop))
+                    (void)engine.play(*shot, params(level));
+            train.was_running = t.train->running;
+
+            // A loop at `gain`, started when it is heard and stopped when it is not.
+            const auto keep = [&](audio::VoiceHandle& voice, const std::optional<audio::SoundBuffer>& loop, float gain) {
+                if (gain <= 0 || !loop)
+                {
+                    engine.stop(voice);
+                    voice = { };
+                    return;
+                }
+                if (!engine.is_playing(voice))
+                {
+                    audio::PlayParams p = params(gain);
+                    p.loop = true;
+                    const auto played = engine.play(*loop, p);
+                    voice = played ? *played : audio::VoiceHandle { };
+                }
+                engine.set_voice_volume(voice, gain);
+                engine.set_voice_place(voice, t.at, t.velocity);
+            };
+            const audio::RunningMix mix = audio::running_mix(t.train->running ? t.train->speed : 0.0f, sound(Med).has_value(), sound(Fast).has_value());
+            keep(train.running[0], sound(Slow), level * mix.slow);
+            keep(train.running[1], sound(Med), level * mix.med);
+            keep(train.running[2], sound(Fast), level * mix.fast);
+
+            // The chain comes in as the train reaches the lift and dies away once all of it is off.
+            const bool chained = t.train->running && simulation::on_chain(*t.train);
+            train.chain_off = chained ? 0.0f : train.chain_off + elapsed;
+            const bool was_playing = engine.is_playing(train.chain);
+            keep(train.chain, sound(Chain), chained || (was_playing && train.chain_off < kChainFade) ? level : 0.0f);
+            if (chained && !was_playing && engine.is_playing(train.chain))
+            {
+                engine.fade_voice(train.chain, 0, 0);
+                engine.fade_voice(train.chain, 1, kChainFade);
+            }
+            else if (!chained)
+                engine.fade_voice(train.chain, 0, std::max(kChainFade - train.chain_off, 0.0f));
+
+            // Water: a splash as the front enters water, by its speed, then the WaterPlume loop on `train.plume`
+            // for a few seconds. Nothing yet: the track model does not know which pieces are water.
+            kept.emplace(t.key, std::move(train));
+        }
+        silence_trains(engine, sounds); // Trains no longer there
+        sounds.train_sounds = std::move(kept);
     }
 
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds)
@@ -175,6 +282,7 @@ namespace rct3::scene
             engine.stop(voice);
         for (const auto& [_, voice] : sounds.train_voices)
             engine.stop(voice);
+        silence_trains(engine, sounds);
     }
 
 } // namespace rct3::scene

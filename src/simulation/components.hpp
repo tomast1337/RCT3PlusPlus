@@ -52,6 +52,7 @@ namespace rct3::simulation
         float heading = 0;      ///< Radians round the vertical, 0 along +Z
         glm::vec3 was { 0.0f }; ///< Position when the last step began, to draw the entity between steps
         float was_heading = 0;
+        float walked = 0; ///< Ground covered up to `was`, across, for the feet to keep step with
     };
 
     struct Needs
@@ -409,6 +410,23 @@ namespace rct3::simulation
     struct Linger
     {
         PathItemKind at = PathItemKind::Bench;
+        float left = 0; ///< Seconds
+    };
+
+    /// How a guest shows what they feel, standing a moment where they are.
+    enum class GestureKind : std::uint8_t
+    {
+        Cheer,   ///< Jumping for joy off a ride they loved
+        Laugh,   ///< Off a ride they loved
+        Nod,     ///< Off a ride they liked well enough
+        Grumble, ///< Shaking their head at a ride too tame for them
+        Dizzy,   ///< Reeling off a ride too wild for them
+        Retch,   ///< Being sick
+    };
+
+    struct Gesture
+    {
+        GestureKind kind = GestureKind::Nod;
         float left = 0; ///< Seconds
     };
 

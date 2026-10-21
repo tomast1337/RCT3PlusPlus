@@ -132,7 +132,7 @@ TEST_CASE("in a storm guests of any age head home, by day too")
     r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
     const auto teen = park.guest({ 5, 0 });
     r.get<Visitor>(teen).age = AgeGroup::Teen;
-    park.run_seconds(300);
+    park.run_seconds(120);             // Before a long stay starts sending guests home
     CHECK_FALSE(r.all_of<Left>(teen)); // Not in fair weather
     r.ctx().emplace<Weather>(Weather { .rain = true, .storm = true });
     CHECK(park.run_until([&] { return r.all_of<Left>(teen); }, 3600));

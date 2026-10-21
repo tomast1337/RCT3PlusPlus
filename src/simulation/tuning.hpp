@@ -27,9 +27,19 @@ namespace rct3::simulation::tuning
         float treat = 0.05f;                   ///< Happiness from buying what was wanted
     };
 
+    /// Guests showing how a ride left them as they step off.
+    struct Gestures
+    {
+        double chance = 0.6;  ///< Of a guest who thinks something of a ride showing it
+        float liked = 0.25f;  ///< Excitement of a ride its riders nod at, short of enjoying it
+        float seconds = 1.8f; ///< They stand for
+    };
+
     /// Walking the paths and in parties.
     struct Walking
     {
+        /// World units a second a child, a teen and an adult walk at. Their legs keep pace whatever the speed.
+        std::array<float, 3> speed { 0.85f, 1.25f, 1.2f };
         float lane_drift = 0.4f;     ///< Most a walker's lane moves across the path from one tile to the next
         float catch_up = 1.5f;       ///< How much faster than their walk a follower makes up ground
         double join_chance = 0.6;    ///< Of a party member going on the ride their leader picked
@@ -281,6 +291,7 @@ namespace rct3::simulation::tuning
     {
         Needs needs;
         Walking walking;
+        Gestures gestures;
         Queues queues;
         Facilities facilities;
         Sickness sickness;

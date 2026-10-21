@@ -2,6 +2,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 
 #include <doctest/doctest.h>
 
@@ -22,7 +23,7 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     // On the stand's tile, wherever on it they walked.
     const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
     CHECK(std::max(std::abs(off.x), std::abs(off.z)) <= kLaneReach + 0.01f);
-    // Nine tiles of four units at 1.3 a second, give or take the first thought.
+    // Nine tiles of four units at an adult's walk, give or take the first thought.
     CHECK(park.world().tick < ticks(40));
 }
 
@@ -106,6 +107,51 @@ TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
     CHECK(r.get<Errand>(guests[0]).kind == ErrandKind::Wandering);
     CHECK(r.get<Wallet>(guests[0]).cash == 800);
     CHECK(r.get<Attraction>(ride).income == 600);
+}
+
+TEST_CASE("guests stand a moment at a ride's exit to show how it left them, then walk on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Spinner", { 4, 0 }, 0, { .capacity = 8, .cycle_seconds = 5, .excitement = 0.9f });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+    {
+        const auto g = park.guest({ 4, 0 });
+        r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+        guests.push_back(g);
+    }
+    REQUIRE(park.run_until([&] { return r.view<Gesture>().size() > 0; }, 30));
+    // Loved it: glad gestures only, and those showing it stay put while they do.
+    std::vector<std::pair<entt::entity, glm::vec3>> standing;
+    for (const auto [g, gesture] : r.view<const Gesture>().each())
+    {
+        CHECK((gesture.kind == GestureKind::Cheer || gesture.kind == GestureKind::Laugh || gesture.kind == GestureKind::Nod));
+        standing.emplace_back(g, r.get<Pose>(g).position);
+    }
+    park.run_seconds(1);
+    for (const auto& [g, at] : standing)
+        CHECK(r.get<Pose>(g).position == at);
+    park.run_seconds(kTuning.gestures.seconds);
+    CHECK(r.view<Gesture>().size() == 0);
+}
+
+TEST_CASE("children walk slower than grown-ups, and every step is counted toward the walk")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 9, 0 });
+    const auto adult = park.guest({ 0, 0 });
+    auto& r = park.world().registry;
+    r.get<Visitor>(adult).age = AgeGroup::Adult;
+    const auto child = park.guest({ 0, 0 });
+    r.get<Visitor>(child).age = AgeGroup::Child;
+    start_walking(park.world(), child, r.get<Stride>(child).from);
+    CHECK(r.get<Stride>(child).speed < r.get<Stride>(adult).speed);
+    park.run_seconds(5);
+    const Pose& pose = r.get<Pose>(adult);
+    CHECK(pose.walked > 0);
+    CHECK(pose.walked <= 5 * r.get<Stride>(adult).speed + 0.01f);
 }
 
 TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for them to reach the front")

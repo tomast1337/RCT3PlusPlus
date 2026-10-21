@@ -56,3 +56,33 @@ TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses 
     CHECK(hand->y == doctest::Approx(1.01f));
     CHECK(hand->z == doctest::Approx(0.21f));
 }
+
+TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath the walker")
+{
+    // Two points: a foot on the ground sliding back 0.1 a key, and a knee above it swinging ahead.
+    park::PieceModel legs;
+    legs.mesh.points = 2;
+    legs.mesh.normals = 1;
+    ovl::FrameAnimation walk;
+    walk.scale = { 0.01f, 0.01f, 0.01f };
+    walk.times = { 0.25f, 0.5f, 0.75f, 1.0f };
+    for (std::uint32_t k = 0; k < 4; ++k)
+    {
+        const std::array<std::array<std::uint32_t, 3>, 2> steps { { { 10, 0, 60 - 10 * k }, { 10, 50, 60 + 10 * k } } };
+        for (const auto& [x, y, z] : steps)
+        {
+            const std::uint32_t word = x << 21 | y << 11 | z;
+            for (int b = 0; b < 4; ++b)
+                walk.keys.push_back(static_cast<std::byte>(word >> (8 * b)));
+        }
+        walk.keys.resize((k + 1) * legs.mesh.key_size(), std::byte { 127 });
+    }
+    legs.mesh.animations.push_back(walk);
+    // Three of the four steps slide the foot back 0.1 in 0.25 s; the last brings it forward again.
+    const auto pace = park::walk_pace(legs);
+    REQUIRE(pace.has_value());
+    CHECK(*pace == doctest::Approx(0.4f));
+
+    legs.mesh.animations.clear();
+    CHECK_FALSE(park::walk_pace(legs).has_value());
+}

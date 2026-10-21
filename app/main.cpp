@@ -50,6 +50,7 @@
 #include "scene/menu_audio.hpp"
 #include "scene/park_loading.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_sounds.hpp"
 #include "scene/park_windows.hpp"
 #include "scene/script_host.hpp"
 #include "scene/startup_screen.hpp"
@@ -782,6 +783,7 @@ int main(int argc, char** argv)
     // reads are the front end's once there is one; until then, those in the file.
     std::optional<rct3::audio::AudioEngine> audio;
     std::optional<rct3::scene::MenuAudio> menu_audio;
+    std::optional<rct3::scene::ParkSounds> park_sounds; ///< While a park is open
     config::GameOptions audio_options;
     // The engine starts before the menus' sound where the startup logos have sound of their own.
     const auto create_audio = [&] {
@@ -970,6 +972,8 @@ int main(int argc, char** argv)
         {
             log.info("park loading: {} took {:.2f} s; loaded in {:.2f} s", rct3::scene::park_load_name(shown), now - stage_started, now - started);
             park = std::move(*loaded);
+            if (audio)
+                park_sounds = rct3::scene::load_park_sounds(*install, std::random_device { }());
             park->simulate = simulate;
             park->scale = scale;
         }
@@ -1152,6 +1156,8 @@ int main(int argc, char** argv)
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true); });
+                        if (audio && park_sounds)
+                            prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, front->live->options.get(config::GameOption::GameVolume), static_cast<float>(delta)); });
                         // Leaving, or loading another park in its place: its loading screen shows next.
                         if (rct3::scene::take_park_leave(*park) || park_requests.park)
                         {
@@ -1159,6 +1165,9 @@ int main(int argc, char** argv)
                             rct3::scene::close_park_windows(*device, *park, *front);
                             rct3::scene::destroy_park_scene(*device, *park);
                             park.reset();
+                            if (audio && park_sounds)
+                                rct3::scene::stop_park_sounds(*audio, *park_sounds);
+                            park_sounds.reset();
                             park_to_load = std::move(park_requests.park);
                         }
                     }

@@ -4,6 +4,7 @@
 #include "park/flexi_colours.hpp"
 #include "park/person_motions.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <map>
 
@@ -218,6 +219,38 @@ namespace rct3::park
         for (const GroundVertex& v : posed)
             sum += v.position;
         return sum / static_cast<float>(posed.size());
+    }
+
+    std::optional<float> walk_pace(const PieceModel& legs)
+    {
+        // Over each step from key to key, the lowest point is a foot on the ground; its slide back (people face
+        // +z) over the step's time is the walker's speed. The middle value leaves out the steps where the feet
+        // swap.
+        const ovl::FrameMesh& mesh = legs.mesh;
+        const std::size_t walk = legs.motions[motion::kWalk];
+        if (mesh.points == 0 || walk >= mesh.animations.size())
+            return std::nullopt;
+        const ovl::FrameAnimation& motion = mesh.animations[walk];
+        const std::size_t keys = motion.times.size();
+        const std::size_t size = mesh.key_size();
+        if (keys < 2 || keys * size > motion.keys.size())
+            return std::nullopt;
+        std::vector<float> speeds;
+        for (std::size_t k = 0; k < keys; ++k)
+        {
+            std::uint16_t lowest = 0;
+            for (std::uint16_t p = 1; p < mesh.points; ++p)
+                if (point_at(motion, k * size, p).y < point_at(motion, k * size, lowest).y)
+                    lowest = p;
+            const float step = motion.times[k] - (k == 0 ? 0.0f : motion.times[k - 1]);
+            if (step > 0)
+                speeds.push_back((point_at(motion, k * size, lowest).z - point_at(motion, (k + 1) % keys * size, lowest).z) / step);
+        }
+        if (speeds.empty())
+            return std::nullopt;
+        std::ranges::nth_element(speeds, speeds.begin() + static_cast<std::ptrdiff_t>(speeds.size() / 2));
+        const float pace = speeds[speeds.size() / 2];
+        return pace > 0 ? std::optional(pace) : std::nullopt;
     }
 
     glm::vec2 colour_cell(std::uint8_t colour)

@@ -14,6 +14,7 @@
 #include "scene/park_view.hpp"
 #include "simulation/components.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 #include "ui/scale.hpp"
 
 #include <algorithm>
@@ -167,10 +168,22 @@ namespace rct3::scene
                     pose.time = shown.saved_time + clock * shown.speed;
                     if (kind == simulation::ErrandKind::Riding)
                         continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
-                    const bool walking = stride.from != stride.to;
+                    const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                    const bool walking = stride.from != stride.to || now.was != now.position;
+                    // The walk goes as far into its motion as the ground covered allows, so the feet stay put
+                    // however fast the guest goes.
+                    if (walking && shown.pace > 0)
+                        pose.time = at.walked / shown.pace;
                     // People are modelled facing +z, which the heading turns towards the way they go.
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+                    if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
+                    {
+                        // By the names the people's meshes give these motions, in GestureKind's order.
+                        constexpr std::array<std::string_view, 6> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit" };
+                        pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
+                        pose.time = simulation::kTuning.gestures.seconds - gesture->left + scene.sim_time;
+                    }
                     // An umbrella held up in the rain.
                     // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
                     // with one then.
@@ -413,6 +426,22 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
                     look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
                 shown.pose.motion = park::motion::kWalk;
+            }
+            // The pace of each shown person's walk, measured once for each legs set.
+            if (scene.person_models)
+            {
+                for (ShownPerson& shown : scene.shown_people)
+                {
+                    const park::PartSet* legs = shown.pose.look.legs;
+                    if (shown.pace > 0 || legs == nullptr)
+                        continue;
+                    auto [pace, fresh] = scene.walk_paces.try_emplace(legs, 0.0f);
+                    if (fresh)
+                        for (const std::size_t piece : legs->levels[0].fixed)
+                            if (const auto measured = park::walk_pace(scene.person_models->piece(piece)); measured && pace->second == 0)
+                                pace->second = *measured;
+                    shown.pace = pace->second;
+                }
             }
             park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
             for (std::size_t i = 0; i < levels.size(); ++i)

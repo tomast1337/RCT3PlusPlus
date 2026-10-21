@@ -47,6 +47,7 @@ namespace rct3::ovl
                 car.display_name = record->text(0x04);
                 car.kind = record->u32(0x08);
                 car.visual = record->ref(0x0C, "svd");
+                car.part = record->ref(0x14, "svd");
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
                 item.car = std::move(car);

@@ -23,6 +23,9 @@ namespace rct3::ovl
         /// Small number, 0 to 27, that stays equal for cars of one kind of ride. Meaning unconfirmed.
         std::uint32_t kind = 0;
         std::string_view visual; ///< "svd" item that draws the car
+        /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
+        /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
+        std::string_view part;
         /// Every reference in the record, in file order. Besides the visual it holds further "svd" items for
         /// parts of the car, such as seats and wheels.
         std::vector<ItemReference> references;

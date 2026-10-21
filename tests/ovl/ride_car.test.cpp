@@ -8,7 +8,7 @@
 using namespace rct3::test;
 using rct3::ovl::read_ride_cars;
 
-TEST_CASE("ride cars expose their names, kind and visuals")
+TEST_CASE("ride cars expose their names, kind, visual and moving part")
 {
     constexpr std::uint32_t sizes[] = { 0, 240, 0, 0, 292, 336 };
     for (std::uint32_t version : { 1u, 4u, 5u })
@@ -19,11 +19,11 @@ TEST_CASE("ride cars expose their names, kind and visuals")
         const auto display = pool.add("Test Car");
         pool.add("Test:ric");
         pool.add("testcar:svd");
-        pool.add("wheel:svd");
+        pool.add("tub:svd");
         std::vector<std::byte> bytes;
         put(bytes, { name, display, 11, 0 });
         bytes.resize(sizes[version], std::byte { 0 });
-        const auto overlay = make_record_overlay(version, pool, "Test:ric", bytes, { { 0x0C, "testcar:svd" }, { 0x14, "wheel:svd" } });
+        const auto overlay = make_record_overlay(version, pool, "Test:ric", bytes, { { 0x0C, "testcar:svd" }, { 0x14, "tub:svd" } });
         const auto items = read_ride_cars(overlay, overlay.common());
         REQUIRE(items.size() == 1);
         CHECK(items[0].name == "Test");
@@ -33,8 +33,9 @@ TEST_CASE("ride cars expose their names, kind and visuals")
         CHECK(car.display_name == "Test Car");
         CHECK(car.kind == 11);
         CHECK(car.visual == "testcar");
+        CHECK(car.part == "tub");
         REQUIRE(car.references.size() == 2);
-        CHECK(car.references[1].name == "wheel");
+        CHECK(car.references[1].name == "tub");
         CHECK(car.record.size() == sizes[version]);
     }
 }

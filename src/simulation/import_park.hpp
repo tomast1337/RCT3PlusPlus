@@ -51,16 +51,20 @@ namespace rct3::simulation
     /// many were added. Call after import_paths.
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides);
 
-    /// How many a ride carries at once and how long one ride lasts.
+    /// How many a ride carries at once and how long one ride lasts: starting, `loops` of running, and stopping,
+    /// in seconds. A ride timed by a whole lap runs one loop of it.
     struct RideTiming
     {
         std::uint32_t seats = 0;
-        float seconds = 0;
+        float start = 0;
+        float run = 0;
+        float stop = 0;
+        std::uint32_t loops = 1;
     };
 
     /// The timing of a flat ride from its model: its seats, and its animations' lengths in the order the model
-    /// lists them (standing, starting, running, stopping), the running one played `loops` times. Nothing when
-    /// the model has no seats or too few animations.
+    /// lists them (standing, starting, running, stopping), the running one played `loops` times (at least
+    /// once). Nothing when the model has no seats, too few animations, or a cycle that takes no time.
     [[nodiscard]] std::optional<RideTiming> flat_ride_timing(std::span<const float> animation_seconds, std::uint32_t seats, std::int32_t loops);
 
     /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it

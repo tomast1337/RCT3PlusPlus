@@ -253,10 +253,9 @@ namespace rct3::scene
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
-                const bool riding = cycle != nullptr && cycle->timer > 0;
-                const float into = riding ? static_cast<float>(cycle->cycle_ticks - cycle->timer) * simulation::kTickSeconds + scene.sim_time : 0.0f;
-                const float length = cycle != nullptr ? static_cast<float>(cycle->cycle_ticks) * simulation::kTickSeconds : 0.0f;
-                const auto [motion, time] = park::flat_ride_motion(model->second.animation_seconds, length, into, riding, scene.clock);
+                const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
+                const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
+                const auto [motion, time] = park::flat_ride_motion(model->second.animation_seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.clock);
                 const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
                 std::vector<glm::mat4> places(boned.bones.size());
                 for (std::size_t p = 0; p < places.size(); ++p)

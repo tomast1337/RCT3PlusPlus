@@ -52,8 +52,19 @@ namespace rct3::simulation
 
     struct Departure;
     /// Whether a train (or a ride's next go) with `riders` of `capacity` seats aboard leaves after `waited`
-    /// seconds of loading, as `departure` says.
+    /// seconds of loading, as `departure` says: never before its least wait; then once it has its load, or
+    /// whatever its load (even none) once its longest wait is up.
     [[nodiscard]] bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited);
+
+    struct CycleRide;
+    /// How long a whole cycle of `ride` lasts: starting, its loops of running, and stopping.
+    [[nodiscard]] float cycle_seconds(const CycleRide& ride);
+    /// How far into its cycle `ride` is; nothing while it loads.
+    [[nodiscard]] std::optional<float> seconds_into_cycle(const CycleRide& ride);
+    /// Moves a ride that has left on by `dt` seconds through starting, running and stopping. True when it has
+    /// just stopped, back to loading, and its riders get off; a `held` ride (its restraints or doors stuck shut)
+    /// stays stopped with its riders aboard till it is not.
+    bool advance_cycle(CycleRide& ride, float dt, bool held);
 
     /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old_seconds).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);

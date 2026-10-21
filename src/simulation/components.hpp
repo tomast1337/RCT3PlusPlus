@@ -319,12 +319,29 @@ namespace rct3::simulation
         Serve serve = Serve::Any;
     };
 
+    /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and
+    /// lets its riders off as it goes back to loading.
+    enum class RidePhase : std::uint8_t
+    {
+        Loading,
+        Starting,
+        Running,
+        Stopping,
+    };
+
     struct CycleRide
     {
-        std::uint32_t capacity = 8;          ///< Guests a cycle
-        std::uint32_t room = 0;              ///< Guests the ride makes room for in the park; 0 when its data does not say
-        std::uint32_t cycle_ticks = 0;       ///< How long a ride lasts
-        std::uint32_t timer = 0;             ///< Ticks left of the cycle running, 0 when stopped
+        std::uint32_t capacity = 8; ///< Guests a cycle
+        std::uint32_t room = 0;     ///< Guests the ride makes room for in the park; 0 when its data does not say
+        /// How long each part of a cycle lasts, in seconds: starting, one loop of running, and stopping. A
+        /// ride timed by a whole lap runs one loop of it.
+        float start_seconds = 0;
+        float run_seconds = 0;
+        float stop_seconds = 0;
+        std::uint32_t loops = 1;
+        RidePhase phase = RidePhase::Loading;
+        float phase_seconds = 0;             ///< Seconds into the phase; loading counts in `loading` instead
+        std::uint32_t loop = 0;              ///< Loops of running done this cycle
         float excitement = 0.5f;             ///< How much a ride cheers its riders, 0..1
         float intensity = 0.3f;              ///< How much it shakes them, 0..1
         float nausea = 0.3f;                 ///< How sick it makes them, 0..1
@@ -336,7 +353,7 @@ namespace rct3::simulation
         std::vector<NodeId> line { };
         NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
         std::vector<entt::entity> riders { }; ///< Guests on the ride now
-        float loading = 0;                    ///< Seconds the train at the start, or the stopped ride, has been loading
+        float loading = 0;                    ///< Seconds the train at the start, or the loading ride, has been loading
         float since_departure = -1;           ///< Seconds since a train or go last left; -1 before the first
         float per_hour = 0;                   ///< Riders an hour, smoothed over the last departures; 0 before two
     };

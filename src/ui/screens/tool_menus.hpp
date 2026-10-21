@@ -79,13 +79,15 @@ namespace rct3::ui
         RideHeights,
         Contours,
         Grid,
+        Money,         ///< Amounts floating up where money is spent or paid back
+        GuestPayments, ///< Amounts floating up where guests pay
     };
 
     struct ToolMenuItem
     {
         ToolItem item = ToolItem::DeleteOne;
         std::string_view icon;
-        std::string_view shown_icon; ///< Switches only: the icon while what it controls is shown
+        std::string_view shown_icon; ///< Switches only: the icon while what it controls is shown; the same icon shows it pressed in
         std::string_view help;       ///< String key, when not the icon's name and "Help"
         bool shown = false;          ///< Switches only: whether what it controls starts shown
     };

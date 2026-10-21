@@ -48,10 +48,12 @@ namespace rct3::scene
             return !scene.park.cash || *scene.park.cash >= cost;
         }
 
-        void pay(ParkScene& scene, std::int32_t cost)
+        /// Pays `cost` for work on `tile`, floating it up from there.
+        void pay(ParkScene& scene, std::int32_t cost, save::Tile tile)
         {
             if (scene.park.cash)
                 *scene.park.cash -= cost;
+            float_money(scene, tile_point(scene.grid, tile), -cost);
         }
 
         /// The raising and lowering brushes, by their place in the panel's tabs.
@@ -141,7 +143,7 @@ namespace rct3::scene
             if (!affordable(scene, cost))
                 return;
             scene.grid = std::move(trial);
-            pay(scene, cost);
+            pay(scene, cost, *l.tile);
             l.paid_for = std::max(l.paid_for, moved);
             l.amount = amount;
             rebuild_ground(device, scene, assets);
@@ -220,7 +222,7 @@ namespace rct3::scene
             if (!affordable(scene, cost))
                 return;
             scene.grid = std::move(trial);
-            pay(scene, cost);
+            pay(scene, cost, *l.tile);
             l.paid_for = std::max(l.paid_for, moved);
             l.amount = amount;
             rebuild_ground(device, scene, assets);
@@ -255,7 +257,7 @@ namespace rct3::scene
                 if (amount <= 0 || !affordable(scene, cost))
                     continue;
                 scene.grid = std::move(trial);
-                pay(scene, cost);
+                pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) });
                 moved = true;
             }
             if (moved)
@@ -278,7 +280,7 @@ namespace rct3::scene
                 if (face == surface || !park::owned_outright(cell) || !affordable(scene, kPaintCost))
                     continue;
                 face = surface;
-                pay(scene, kPaintCost);
+                pay(scene, kPaintCost, *tile); // From the brush's middle, so a dab floats up as one sum
                 painted = true;
             }
             if (painted)
@@ -303,7 +305,7 @@ namespace rct3::scene
             if (!lake->tris.empty())
                 water.bodies.push_back(*lake);
             scene.footpaths.water = std::move(water);
-            pay(scene, kWaterCost);
+            pay(scene, kWaterCost, *l.tile);
             l.steps = steps;
             return true;
         }

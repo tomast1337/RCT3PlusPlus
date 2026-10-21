@@ -5,11 +5,13 @@
 #include "park/camera.hpp"
 #include "park/view_lines.hpp"
 #include "scene/park_scene.hpp"
+#include "simulation/components.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <format>
 #include <span>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -22,6 +24,11 @@ namespace rct3::scene
         /// own value.
         constexpr float kLabelReach = 48.0f;
         constexpr float kLabelLift = 0.6f; ///< Over the path or track, so the label stands above it.
+        /// A float younger than this, in seconds, and this near, in world units, takes another amount rather than
+        /// a new float beginning. A held brush shows a sum a few times a second, while pieces
+        /// laid one after another on neighbouring tiles each show their own.
+        constexpr float kMoneyMerge = 0.3f;
+        constexpr float kMoneyReach = 1.0f;
 
         void drop(render::Device& device, ViewLines& lines)
         {
@@ -105,6 +112,58 @@ namespace rct3::scene
         drop(device, scene.grid_lines);
         drop(device, scene.contour_lines);
         drop(device, scene.land_marks);
+    }
+
+    glm::vec3 tile_point(const save::TerrainGrid& grid, save::Tile tile)
+    {
+        const float x = grid.world_x(tile.col) + grid.tile_size_x / 2;
+        const float z = grid.world_z(tile.row) + grid.tile_size_z / 2;
+        return { x, grid.height_at(x, z).value_or(0), z };
+    }
+
+    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount)
+    {
+        if (!scene.show_money || amount == 0)
+            return;
+        const auto near = std::ranges::find_if(scene.money, [&](const FloatingMoney& m) { return m.age < kMoneyMerge && (m.amount > 0) == (amount > 0) && glm::distance(m.at, at) <= kMoneyReach; });
+        if (near != scene.money.end())
+            near->amount += amount;
+        else
+            scene.money.push_back({ at, amount, 0 });
+    }
+
+    std::vector<ui::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed)
+    {
+        // Every attraction's takings are followed, shown or not, so switching them on shows only what comes after.
+        for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
+        {
+            std::int64_t& seen = scene.income_seen[e];
+            const std::int64_t paid = std::exchange(seen, attraction.income);
+            const auto& nodes = scene.sim.paths.nodes();
+            if (!scene.show_guest_payments || attraction.income <= paid || attraction.entrance >= nodes.size())
+                continue;
+            const simulation::PathNode& n = nodes[attraction.entrance];
+            float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income - paid);
+        }
+        for (FloatingMoney& m : scene.money)
+            m.age += elapsed;
+        std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::kMoneyFloatLife; });
+        if (!scene.show_money || size.x <= 0 || size.y <= 0)
+            return { };
+        const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
+        std::vector<ui::MoneyFloat> shown;
+        for (const FloatingMoney& m : scene.money)
+        {
+            // Off the screen it waits unseen, as a label would.
+            const glm::vec4 clip = view * glm::vec4(m.at.x, m.at.y + kLabelLift, m.at.z, 1.0f);
+            if (clip.w <= 0)
+                continue;
+            const glm::vec2 ndc = glm::vec2(clip) / clip.w;
+            if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
+                continue;
+            shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, std::abs(m.amount)), m.amount > 0, m.age });
+        }
+        return shown;
     }
 
     std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)

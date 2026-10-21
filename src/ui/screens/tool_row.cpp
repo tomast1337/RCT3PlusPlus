@@ -116,6 +116,9 @@ namespace rct3::ui
             return;
         const ToolMenuItem& entry = menu_entry(item.tool, item.item);
         item.button->icon = std::string(item.on ? entry.shown_icon : entry.icon);
+        // A switch with one picture shows its state as a toggle does.
+        item.button->toggle = entry.shown_icon == entry.icon;
+        item.button->on = item.on;
     }
 
     void ToolRow::close_menu()

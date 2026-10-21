@@ -17,6 +17,7 @@
 #include "park/relief_maps.hpp"
 #include "park/surrounding_land.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_view.hpp"
 #include "simulation/import_park.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/money_text.hpp"
@@ -600,11 +601,17 @@ namespace rct3::scene
             return found != f.styles.end() ? &*found : nullptr;
         }
 
-        /// What taking `path` away pays back: what laying it cost.
-        std::int64_t refund_of(const ParkScene& scene, const save::PathTile& path)
+        /// Pays back what laying `path` cost, floating it up from there.
+        void refund(ParkScene& scene, const save::PathTile& path)
         {
             const park::PathStyle* style = style_named(scene.footpaths, path);
-            return style != nullptr ? park::laid_price(path, scene.grid, style->piece_cost) : 0;
+            const std::int64_t back = style != nullptr ? park::laid_price(path, scene.grid, style->piece_cost) : 0;
+            if (scene.park.cash)
+                *scene.park.cash += back;
+            glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
+            if (path.elevation && !park::is_ground_queue(path))
+                at.y = static_cast<float>(path.elevation->quantised_height);
+            float_money(scene, at, back);
         }
 
         /// The paths the remove tab would take away, red over themselves: those a press went over and the one
@@ -902,6 +909,7 @@ namespace rct3::scene
             sim_paths(scene, std::span(f.paths).last(plan->lay.size()), { });
             if (scene.park.cash)
                 *scene.park.cash -= cost;
+            float_money(scene, tile_point(scene.grid, plan->lay.back()), -cost);
             // The trail goes on from the last tile, the way the stroke last went.
             const save::Tile last = brush.back();
             if (brush.size() > 1)
@@ -944,10 +952,7 @@ namespace rct3::scene
             if (high.col < 0)
                 return;
             for (const save::PathTile& p : taken)
-            {
-                if (scene.park.cash)
-                    *scene.park.cash += refund_of(scene, p);
-            }
+                refund(scene, p);
             sim_paths(scene, { }, taken);
             refresh_area(scene, assets, low, high);
             objects_changed(scene);
@@ -980,6 +985,8 @@ namespace rct3::scene
             f.last_height = piece.end;
             if (scene.park.cash)
                 *scene.park.cash -= cost;
+            const glm::vec3 ground = tile_point(scene.grid, piece.spot);
+            float_money(scene, { ground.x, static_cast<float>(std::max(piece.start, piece.end)), ground.z }, -cost);
             // The queue tile laid before may now open towards this one.
             std::vector<std::uint64_t> railed { f.paths.back().id };
             if (f.builder.trail.size() > 1 && f.builder.trail[f.builder.trail.size() - 2].laid != 0)
@@ -1057,8 +1064,7 @@ namespace rct3::scene
         void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& removed)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (scene.park.cash)
-                *scene.park.cash += refund_of(scene, removed);
+            refund(scene, removed);
             wait_for_build(scene);
             std::vector<std::uint64_t> gone = std::move(f.supports[removed.id]);
             f.supports.erase(removed.id);

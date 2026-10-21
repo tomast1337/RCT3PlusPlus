@@ -1209,6 +1209,10 @@ namespace rct3::scene
                     scene.show_path_heights = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::RideHeights)
                     scene.show_ride_heights = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::Money)
+                    scene.show_money = tools->switched_on(*item);
+                else if (*item == ui::ToolItem::GuestPayments)
+                    scene.show_guest_payments = tools->switched_on(*item);
                 else if (*item == ui::ToolItem::Supports)
                 {
                     scene.show_supports = tools->switched_on(*item);
@@ -1234,6 +1238,11 @@ namespace rct3::scene
         {
             const ui::Rect view = desktop.root().rect();
             heights->labels = height_labels(scene, { view.width(), view.height() });
+        }
+        if (auto money = desktop.root().find_as<ui::MoneyFloaters>(kMoneyName))
+        {
+            const ui::Rect view = desktop.root().rect();
+            money->floats = money_floats(scene, { view.width(), view.height() }, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)), elapsed);
         }
         if (const auto picked = update_park_map(device, scene.map, desktop, scene.grid, scene.camera, aspect(device), [&] { return map_people(scene); }, elapsed))
         {

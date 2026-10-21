@@ -298,10 +298,11 @@ namespace rct3::scene
         save::ParkModel park_model;          ///< As saved: finances, objectives, research; read by the management windows
         simulation::DayClock day;            ///< The park's time of day
         save::RideModel rides;
-        save::PeopleModel people; ///< Guests, staff and litter as saved; read for the weekly rating
-        simulation::SimWorld sim; ///< The paths, shops and guests the simulation runs
-        bool simulate = true;     ///< Run the simulation and show its guests; off only to see the park as saved
-        float sim_time = 0;       ///< Park seconds the simulation has still to step
+        std::vector<save::RideShow> shows; ///< What the show rides put on, by ride id
+        save::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
+        simulation::SimWorld sim;          ///< The paths, shops and guests the simulation runs
+        bool simulate = true;              ///< Run the simulation and show its guests; off only to see the park as saved
+        float sim_time = 0;                ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
         std::vector<park::CarSpot> car_spots;                  ///< By car, as the park kept them
@@ -487,6 +488,9 @@ namespace rct3::scene
 
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
+
+    /// Has the running show ride that `show` is for put it on from its next go.
+    void stage_show(ParkScene& scene, const save::RideShow& show);
 
     /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.

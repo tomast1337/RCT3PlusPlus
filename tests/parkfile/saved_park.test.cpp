@@ -64,6 +64,16 @@ TEST_CASE("a saved park reads back as written")
     const auto again = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(again);
     CHECK(again->no_queue_signs == std::vector<save::ObjectId> { 7, 9 });
+    CHECK_FALSE(again->shows); // None kept: read again from the original park
+
+    hidden.shows = { { .ride = 4, .tricks = { { .name = "PonyShowIdle", .seconds = 4 }, { .name = "PonyShowHop", .seconds = 12, .invented = true } }, .order = { 1, 1 } } };
+    const auto shown = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(shown);
+    REQUIRE(shown->shows);
+    REQUIRE(shown->shows->size() == 1);
+    CHECK(shown->shows->front().tricks.at(1).name == "PonyShowHop");
+    CHECK(shown->shows->front().tricks.at(1).invented);
+    CHECK(shown->shows->front().order == std::vector<std::uint32_t> { 1, 1 });
 }
 
 TEST_CASE("a cut or changed saved park is refused")

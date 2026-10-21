@@ -525,6 +525,29 @@ namespace rct3::save
         RideDiagnostics diagnostics;
     };
 
+    /// A trick the performers of a show ride know.
+    struct ShowTrick
+    {
+        std::string name;       ///< String key of its name, as "DolphinShowAnimTrick1"
+        float seconds = 0;      ///< How long it lasts
+        bool hidden = false;    ///< Kept out of the lists
+        bool available = false; ///< Offered in this park
+        bool invented = false;  ///< Researched
+    };
+
+    /// What a show ride puts on: the tricks its performers know, the first being what they do between
+    /// shows, and the tricks of a show in the order they come, by place in `tricks`.
+    struct RideShow
+    {
+        ObjectId ride = 0; ///< The ride's id (AttractionCommon::id)
+        std::vector<ShowTrick> tricks;
+        std::vector<std::uint32_t> order;
+    };
+
+    /// The shows of the show rides in `file`. A trick the save names but does not hold is left out of the
+    /// show; a show that knows no tricks is left out.
+    [[nodiscard]] std::expected<std::vector<RideShow>, Error> load_shows(const SaveFile& file, const ObjectIndex& index);
+
     /// Builds the model from every ride, stall and facility object in `file`. Unknown or missing attributes
     /// take defaults, stale references load as 0 and the result is bounded by the size of the input. Fails only
     /// if an object cannot be decoded, which cannot happen for objects read_save returned.

@@ -113,6 +113,8 @@ namespace rct3::ui
         std::span<const save::Guest> guests { };
         /// Of a ride, whether signs stand over its queues.
         std::optional<bool> queue_signs { };
+        /// Of a show ride, what it puts on.
+        const save::RideShow* show = nullptr;
     };
 
     struct GuestsSuited
@@ -137,8 +139,14 @@ namespace rct3::ui
         WaitFor,    ///< The load the trains wait for, its place in the list
         QueueSigns, ///< Whether signs stand over a ride's queues
         Circuits,   ///< Times a flat ride runs round each go
+        ShowTrick,  ///< The trick at the show's picked place, by place in show_offers; a new place's adds one
+        ShowDelete, ///< Takes the trick at the picked place out of the show
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
+
+    /// The tricks the player may put in `show`, by place in its tricks: not the first, which the performers do
+    /// between shows, nor hidden ones, nor ones not yet offered or researched.
+    [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::RideShow& show);
 
     /// The id of `control` on a page, and of item `item`'s price.
     [[nodiscard]] constexpr int control_id(AttractionControl control, std::size_t item = 0)

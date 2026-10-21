@@ -67,6 +67,10 @@ namespace rct3::simulation
     /// once). Nothing when the model has no seats, too few animations, or a cycle that takes no time.
     [[nodiscard]] std::optional<RideTiming> flat_ride_timing(std::span<const float> animation_seconds, std::uint32_t seats, std::int32_t loops);
 
+    /// Has `ride` put on `show`: a go is the show's tricks one after another, with no starting or stopping. A
+    /// show of no length leaves the ride as it was.
+    void stage_show(CycleRide& ride, const save::RideShow& show);
+
     /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it
     /// stands as among `objects`, found by `model_of`; nothing for other rides and those without a usable model.
     [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of);

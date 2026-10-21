@@ -236,6 +236,19 @@ namespace rct3::simulation
         return timing;
     }
 
+    void stage_show(CycleRide& ride, const save::RideShow& show)
+    {
+        float seconds = 0;
+        for (const std::uint32_t t : show.order)
+            if (t < show.tricks.size())
+                seconds += show.tricks[t].seconds;
+        if (seconds <= 0)
+            return; // Nothing to put on: the ride keeps its own timing
+        ride.start_seconds = ride.stop_seconds = 0;
+        ride.run_seconds = seconds;
+        ride.loops = 1;
+    }
+
     std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of)
     {
         std::vector<std::optional<RideTiming>> out(rides.rides.size());

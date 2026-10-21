@@ -399,6 +399,40 @@ namespace rct3::ui
             page.controls.push_back(std::move(c));
         }
 
+        /// A show ride's show, one section for each place in it and one more to add a trick at the end.
+        void show(InfoPage& page, const save::RideShow& show, std::size_t section, const StringTable& strings)
+        {
+            float seconds = 0;
+            for (const std::uint32_t t : show.order)
+                seconds += show.tricks.at(t).seconds;
+            for (std::size_t i = 0; i < show.order.size(); ++i)
+                page.sections.push_back(ascii(std::to_string(i + 1)));
+            page.sections.push_back(u"+");
+            page.section = std::min(section, show.order.size());
+            add(page, strings, "FireworkMaster_Timeline_TT", duration(seconds));
+            const bool adding = page.section == show.order.size();
+            const std::vector<std::uint32_t> offers = show_offers(show);
+            InfoControl c;
+            c.id = control_id(AttractionControl::ShowTrick);
+            c.name = "FireworkMaster_ClickToAdd_TT";
+            c.kind = InfoControlKind::Choice;
+            c.label = adding ? text(strings, "FireworkMaster_ClickToAdd_TT") : duration(show.tricks.at(show.order[page.section]).seconds);
+            for (const std::uint32_t t : offers)
+                c.items.push_back(text(strings, show.tricks[t].name));
+            const auto at = adding ? offers.end() : std::ranges::find(offers, show.order[page.section]);
+            c.value = at == offers.end() ? -1 : static_cast<int>(at - offers.begin());
+            page.controls.push_back(std::move(c));
+            if (adding)
+                return;
+            InfoControl del;
+            del.id = control_id(AttractionControl::ShowDelete);
+            del.name = "PathEditor_Delete";
+            del.kind = InfoControlKind::Button;
+            del.text = text(strings, "PathEditor_Delete");
+            del.enabled = show.order.size() > 1; // A show keeps one trick at least
+            page.controls.push_back(std::move(del));
+        }
+
         void mode(InfoPage& page, const save::Ride& ride, std::size_t section, const StringTable& strings, const InfoUnits& units)
         {
             const auto m = static_cast<std::size_t>(ride.mode);
@@ -603,6 +637,15 @@ namespace rct3::ui
         return s;
     }
 
+    std::vector<std::uint32_t> show_offers(const save::RideShow& show)
+    {
+        std::vector<std::uint32_t> offers;
+        for (std::uint32_t t = 1; t < show.tricks.size(); ++t)
+            if (!show.tricks[t].hidden && show.tricks[t].available && show.tricks[t].invented)
+                offers.push_back(t);
+        return offers;
+    }
+
     InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, std::size_t section)
     {
         InfoPage page;
@@ -640,7 +683,9 @@ namespace rct3::ui
                     vehicles(page, f, strings);
                 break;
             case AttractionTab::Mode:
-                if (f.ride)
+                if (f.show)
+                    show(page, *f.show, section, strings);
+                else if (f.ride)
                     mode(page, *f.ride, section, strings, units);
                 break;
             case AttractionTab::Graphs:

@@ -173,6 +173,18 @@ namespace rct3::save
             constexpr std::string_view kPeopleOnRide = "PeopleOnRide";
             constexpr std::string_view kLoops = "NumLoops";
             constexpr std::string_view kTotalWithdrawn = "TotalWithdrawn";
+
+            // Shows
+            constexpr std::string_view kShow = "ShowController";
+            constexpr std::string_view kShowRide = "Ride";
+            constexpr std::string_view kShowTricks = "AvailableAnimations";
+            constexpr std::string_view kShowOrder = "AnimationSequence";
+            constexpr std::string_view kTrick = "InventibleAnimation";
+            constexpr std::string_view kTrickName = "Name";
+            constexpr std::string_view kTrickSeconds = "Duration";
+            constexpr std::string_view kTrickHidden = "IsHidden";
+            constexpr std::string_view kTrickAvailable = "IsAvailable";
+            constexpr std::string_view kTrickInvented = "IsInvented";
             constexpr std::string_view kAverageWithdrawn = "AverageWithdrawn";
 
             // Stations and queues
@@ -1200,6 +1212,48 @@ namespace rct3::save
         for (const auto w : downtime_windows)
             sum += w;
         return static_cast<float>(sum) * 100.0f / 160.0f;
+    }
+
+    std::expected<std::vector<RideShow>, Error> load_shows(const SaveFile& file, const ObjectIndex& index)
+    {
+        const auto decoded = [&](const Object& o, std::string_view kind) -> std::expected<std::optional<DecodedObject>, Error> {
+            if (o.class_index >= file.classes.size() || file.classes[o.class_index].name != kind)
+                return std::nullopt;
+            return decode_object(file, o);
+        };
+        std::vector<RideShow> shows;
+        for (const Object& o : file.objects)
+        {
+            auto show = decoded(o, id::kShow);
+            if (!show)
+                return std::unexpected(show.error());
+            if (!*show)
+                continue;
+            const View f((*show)->fields);
+            RideShow out { .ride = f[id::kShowRide].ref(), .tricks = { }, .order = { } };
+            // The show's tricks are its known tricks, by id.
+            std::vector<ObjectId> known;
+            for (const Value& item : f[id::kShowTricks].items())
+            {
+                const auto trick = index.find(View(item).ref());
+                if (!trick)
+                    continue;
+                auto t = decoded(*trick, id::kTrick);
+                if (!t)
+                    return std::unexpected(t.error());
+                if (!*t)
+                    continue;
+                const View tf((*t)->fields);
+                known.push_back(View(item).ref());
+                out.tricks.push_back({ .name = tf[id::kTrickName].text(), .seconds = std::max(tf[id::kTrickSeconds].number(), 0.0f), .hidden = tf[id::kTrickHidden].boolean(), .available = tf[id::kTrickAvailable].boolean(), .invented = tf[id::kTrickInvented].boolean() });
+            }
+            for (const Value& item : f[id::kShowOrder].items())
+                if (const auto at = std::ranges::find(known, View(item).ref()); at != known.end())
+                    out.order.push_back(static_cast<std::uint32_t>(at - known.begin()));
+            if (out.ride != 0 && !out.tricks.empty())
+                shows.push_back(std::move(out));
+        }
+        return shows;
     }
 
     std::expected<RideModel, Error> load_rides(const SaveFile& file, const ObjectIndex& index)

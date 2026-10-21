@@ -204,6 +204,8 @@ namespace rct3::scene
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
                 f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
+                const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
+                f.show = show == scene.shows.end() ? nullptr : &*show;
             }
             // A running ride's seats, queue and riders an hour.
             if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
@@ -519,6 +521,22 @@ namespace rct3::scene
                     if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
                         cycle->loops = static_cast<std::uint32_t>(std::max(change.value, 1));
             }
+            else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::RideShow::ride); show != scene.shows.end() && (change.id == ui::control_id(ShowTrick) || change.id == ui::control_id(ShowDelete)))
+            {
+                // The ride puts the changed show on from its next go.
+                const std::size_t place = std::min(scene.info_section, show->order.size());
+                const std::vector<std::uint32_t> offers = ui::show_offers(*show);
+                if (change.id == ui::control_id(ShowDelete) && place < show->order.size() && show->order.size() > 1)
+                    show->order.erase(show->order.begin() + static_cast<std::ptrdiff_t>(place));
+                else if (change.id == ui::control_id(ShowTrick) && change.value >= 0 && std::cmp_less(change.value, offers.size()))
+                {
+                    if (place < show->order.size())
+                        show->order[place] = offers[static_cast<std::size_t>(change.value)];
+                    else
+                        show->order.push_back(offers[static_cast<std::size_t>(change.value)]);
+                }
+                stage_show(scene, *show);
+            }
             else if (change.id == ui::control_id(QueueSigns))
             {
                 if (change.value != 0)
@@ -764,6 +782,13 @@ namespace rct3::scene
                 a.open = state == save::AttractionState::Open;
                 a.testing = state == save::AttractionState::Testing;
             }
+    }
+
+    void stage_show(ParkScene& scene, const save::RideShow& show)
+    {
+        for (auto [_, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
+            if (a.saved == show.ride)
+                simulation::stage_show(ride, show);
     }
 
     bool typing(const ParkScene& scene)
@@ -1343,6 +1368,7 @@ namespace rct3::scene
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
+        saved.shows = scene.shows;
         return parkfile::write_saved_park(saved);
     }
 

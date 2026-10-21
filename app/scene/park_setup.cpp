@@ -54,7 +54,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstddef>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <map>
@@ -170,7 +172,6 @@ namespace rct3::scene
         /// shortcut: always the one set the game ships, though a save names its set; upgrade when a save
         /// names another.
         constexpr std::string_view kUniformFolder = "StaffUniforms";
-        constexpr std::uint8_t kColourCells = 16;
         constexpr std::string_view kCarriedFolder = "CarriedItems";
         constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
@@ -216,7 +217,8 @@ namespace rct3::scene
                 return it != groups.end() ? as_pointer(library.part_set(it->second)) : nullptr;
             };
             // Colours left for the game to pick are picked here, the same each time for the same park and seed.
-            random::RandomState colours = random::stream(seed, random::RandomStream::Effects);
+            scene.looks = random::stream(seed, random::RandomStream::Effects);
+            random::RandomState& colours = scene.looks;
             const auto add = [&](const save::Person& person, bool staff, std::size_t saved) {
                 const save::Appearance& a = person.appearance;
                 if (!a.visible)
@@ -258,6 +260,42 @@ namespace rct3::scene
             }
             for (std::size_t i = 0; i < scene.people.staff.size(); ++i)
                 add(scene.people.staff[i].person, true, i);
+            // What guests coming in at the gate wear: every head, body and legs in the guests' folders, one
+            // folder for each age and sex (such as "AF" for adult women), files such as "AF01_Head_Stub". Each
+            // becomes a part group of the park's people, so the new guests are kept with the park.
+            // New groups take ids past those the game saves (32 bits) and those already in the park.
+            save::PeopleObjectId next_id = save::PeopleObjectId { 1 } << 32;
+            for (const save::PartGroup& g : scene.people.part_groups)
+                next_id = std::max(next_id, g.id + 1);
+            std::error_code error;
+            for (const auto& age : std::filesystem::directory_iterator(*folder, error))
+            {
+                const std::string name = age.path().filename().string();
+                const auto type = name.size() == 2 ? std::string_view("CTA").find(name[0]) : std::string_view::npos;
+                const auto sex = name.size() == 2 ? std::string_view("MF").find(name[1]) : std::string_view::npos;
+                if (type == std::string_view::npos || sex == std::string_view::npos)
+                    continue;
+                for (const auto& file : std::filesystem::directory_iterator(age.path(), error))
+                {
+                    constexpr std::string_view kStub = "_Stub.common.ovl";
+                    constexpr std::array<std::string_view, 3> kSections { "_Head", "_Body", "_Legs" };
+                    const std::string file_name = file.path().filename().string();
+                    if (!file_name.starts_with(name) || !file_name.ends_with(kStub))
+                        continue;
+                    const std::string_view symbol = std::string_view(file_name).substr(0, file_name.size() - kStub.size());
+                    const auto section = std::ranges::find_if(kSections, [&](std::string_view s) { return symbol.ends_with(s); });
+                    const park::PartSet* part = section != kSections.end() ? as_pointer(library.part_set(symbol)) : nullptr;
+                    if (part == nullptr)
+                        continue;
+                    // A group the park already has keeps its id; symbols are matched in any case.
+                    const auto same = [&](const save::PartGroup& g) { return std::ranges::equal(g.symbol, symbol, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); }); };
+                    const auto known = std::ranges::find_if(scene.people.part_groups, same);
+                    const save::PeopleObjectId id = known != scene.people.part_groups.end() ? known->id : next_id++;
+                    if (known == scene.people.part_groups.end())
+                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section - kSections.begin()), .sex = static_cast<std::uint8_t>(sex), .type = static_cast<std::uint8_t>(type) });
+                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), static_cast<save::Sex>(sex), static_cast<std::uint8_t>(section - kSections.begin()) });
+                }
+            }
             library.close_files();
             if (auto uploaded = ui::upload_textures(device, library.pictures()))
                 scene.people_textures = std::move(*uploaded);
@@ -862,6 +900,7 @@ namespace rct3::scene
                 for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
                     if (upkeep.broken)
                         scene.broken_rides.push_back(e);
+                scene.known_guests.insert(guests.begin(), guests.end());
                 for (ShownPerson& p : scene.shown_people)
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))

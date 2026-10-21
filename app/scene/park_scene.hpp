@@ -202,6 +202,16 @@ namespace rct3::scene
         std::uint32_t thoughts_seen = 0; ///< Of the simulated guest's thoughts, those already in the saved person
     };
 
+    /// A head, body or legs that a guest coming in at the gate may wear.
+    struct Outfit
+    {
+        save::PeopleObjectId id = 0; ///< Of its part group in the park's people
+        const park::PartSet* set = nullptr;
+        save::PersonType type = save::PersonType::Adult;
+        save::Sex sex = save::Sex::Male;
+        std::uint8_t section = 0; ///< As a part group's
+    };
+
     /// A photo of a player's guest to draw: where from, and the start of its file name.
     struct PhotoShot
     {
@@ -322,7 +332,10 @@ namespace rct3::scene
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
         std::vector<ShownPerson> shown_people;
-        park::ObjectLevels people_levels; ///< Of each shown person, as the still people's mesh holds them
+        std::vector<Outfit> wardrobe;                  ///< What guests coming in at the gate wear
+        std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for
+        random::RandomState looks;                     ///< For the colours of people's clothes left to pick
+        park::ObjectLevels people_levels;              ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;
         park::ObjectMesh moving_people; ///< The people in motion in view, as last posed
         float since_people_levels = kObjectRebuildInterval;

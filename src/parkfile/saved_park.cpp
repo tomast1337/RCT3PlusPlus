@@ -178,12 +178,15 @@ namespace rct3::parkfile
     std::vector<std::byte> write_saved_park(const SavedPark& park)
     {
         Writer w;
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1));
+        const bool shows = park.shows && !park.shows->empty();
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
         if (!park.no_queue_signs.empty())
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
+        if (shows)
+            put_chunk(w, "SHOW", 1, *park.shows);
         return w.take();
     }
 
@@ -204,6 +207,16 @@ namespace rct3::parkfile
                 if (!park.no_queue_signs.empty() || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.no_queue_signs);
+            }
+            if (tag == "SHOW")
+            {
+                if (park.shows || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                auto read = get_chunk(tag, body, park.shows.emplace());
+                // A place naming no trick is dropped, so the show's places can be looked up unchecked.
+                for (save::RideShow& show : *park.shows)
+                    std::erase_if(show.order, [&](std::uint32_t t) { return t >= show.tricks.size(); });
+                return read;
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

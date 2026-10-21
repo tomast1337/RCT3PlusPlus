@@ -3,11 +3,21 @@
 
 #include "simulation/components.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/systems.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
+
+TEST_CASE("a show ride's go lasts as long as the tricks of its show")
+{
+    simulation::CycleRide ride { .start_seconds = 3, .run_seconds = 10, .stop_seconds = 2, .loops = 4 };
+    const save::RideShow show { .ride = 1, .tricks = { { .name = "a", .seconds = 5 }, { .name = "b", .seconds = 20 }, { .name = "c", .seconds = 7 } }, .order = { 1, 2, 1, 9 } }; // 9: no such trick
+    simulation::stage_show(ride, show);
+    CHECK(simulation::cycle_seconds(ride) == 47);
+    CHECK(ride.loops == 1);
+}
 
 TEST_CASE("a flat ride's timing is its starting, running and stopping animations, running as many times as set")
 {

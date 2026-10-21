@@ -627,6 +627,12 @@ namespace rct3::scene
             scene.rides = std::move(*rides);
         else
             log.warning("rides: {}", save::to_string(rides.error()));
+        if (saved && saved->shows)
+            scene.shows = std::move(*saved->shows);
+        else if (auto shows = save::load_shows(*file, index))
+            scene.shows = std::move(*shows);
+        else
+            log.warning("shows: {}", save::to_string(shows.error()));
         {
             // What a park does not keep but builds when it loads: supports under raised paths and track, railings
             // along queues and fences round rides.
@@ -867,6 +873,8 @@ namespace rct3::scene
                 }
                 const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
+                for (const save::RideShow& show : scene.shows)
+                    stage_show(scene, show);
                 for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
                     if (const std::size_t ride = scene.car_spots[i].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
                         scene.ride_cars[scene.ride_entities[ride]].push_back(i);

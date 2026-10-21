@@ -788,3 +788,35 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
     CHECK(r.fence_overlay == "Fences\\Picket");
     CHECK(r.override_fence_symbol.empty());
 }
+
+TEST_CASE("a show ride's show loads its known tricks and the order they are put on in")
+{
+    Schema s;
+    s.classes["ShowController"] = { ref("Ride"), ref_list("AvailableAnimations"), ref_list("AnimationSequence") };
+    s.classes["InventibleAnimation"] = { str("Name"), f32("Duration"), flag("IsHidden"), flag("IsAvailable"), flag("IsInvented") };
+    Obj show { "ShowController", 10, { } };
+    show.r("Ride", 3).refs("AvailableAnimations", { 20, 21, 22, kStale }).refs("AnimationSequence", { 22, 21, 22, kStale });
+    Obj idle { "InventibleAnimation", 20, { } };
+    idle.s("Name", u"PonyShowIdle").f("Duration", 4).b("IsAvailable", true).b("IsInvented", true);
+    Obj hop { "InventibleAnimation", 21, { } };
+    hop.s("Name", u"PonyShowHop").f("Duration", 12.5f).b("IsAvailable", true);
+    Obj spin { "InventibleAnimation", 22, { } };
+    spin.s("Name", u"PonyShowSpin").f("Duration", -3).b("IsHidden", true);
+    Obj empty { "ShowController", 11, { } };
+    empty.r("Ride", 4);
+    const auto w = build(s, { show, idle, hop, spin, empty });
+    const auto shows = load_shows(w->file, *w->index);
+    REQUIRE(shows);
+    REQUIRE(shows->size() == 1); // One that knows no tricks is left out
+    const RideShow& got = shows->front();
+    CHECK(got.ride == 3);
+    REQUIRE(got.tricks.size() == 3); // The stale one is left out
+    CHECK(got.tricks[0].name == "PonyShowIdle");
+    CHECK(got.tricks[0].invented);
+    CHECK(got.tricks[1].seconds == 12.5f);
+    CHECK(got.tricks[1].available);
+    CHECK_FALSE(got.tricks[1].invented);
+    CHECK(got.tricks[2].hidden);
+    CHECK(got.tricks[2].seconds == 0); // Never negative
+    CHECK(got.order == std::vector<std::uint32_t> { 2, 1, 2 });
+}

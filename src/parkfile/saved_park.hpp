@@ -20,6 +20,8 @@
 //   "PEOP" v1  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
 //              they are. Saves made before it lack it; their people start again from the original park.
 //   "QSGN" v1  std::vector<save::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
+//   "SHOW" v1  std::vector<save::RideShow>: the show rides' shows. Only when there are any; without it, the
+//              shows are read again from the original park.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -114,6 +116,7 @@ namespace rct3::parkfile
         park::ParkCamera camera;
         std::optional<SavedPeople> people;          ///< None in saves made before people were kept
         std::vector<save::ObjectId> no_queue_signs; ///< Rides whose queues have no signs
+        std::optional<std::vector<save::RideShow>> shows;
     };
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one

@@ -220,6 +220,32 @@ TEST_CASE("a flat ride's operating mode page sets how many times round it runs, 
     CHECK(page.controls[0].maximum == kMostCircuits);
 }
 
+TEST_CASE("a show ride's operating mode page sets its show trick by trick")
+{
+    StringTable s = table();
+    s.add("PonyHop", u"Hop");
+    s.add("PonySpin", u"Spin");
+    save::Ride ride;
+    ride.kind = save::RideKind::Flat;
+    const save::RideShow show { .ride = 1, .tricks = { { .name = "PonyIdle", .seconds = 5, .available = true, .invented = true }, { .name = "PonyHop", .seconds = 30, .available = true, .invented = true }, { .name = "PonySecret", .seconds = 9, .hidden = true, .available = true, .invented = true }, { .name = "PonySpin", .seconds = 45, .available = true, .invented = true }, { .name = "PonyNew", .seconds = 9, .available = true } }, .order = { 3, 1 } };
+    CHECK(show_offers(show) == std::vector<std::uint32_t> { 1, 3 }); // Not the idle one, a hidden one or one not researched
+    AttractionFacts f { &ride.base, &ride, nullptr };
+    f.show = &show;
+    const InfoPage second = attraction_page(AttractionTab::Mode, f, s, { }, 1);
+    CHECK(second.sections == std::vector<std::u16string> { u"1", u"2", u"+" });
+    REQUIRE(second.lines.size() == 1);
+    CHECK(second.lines[0].value == u"1:15");
+    REQUIRE(second.controls.size() == 2);
+    CHECK(second.controls[0].id == control_id(AttractionControl::ShowTrick));
+    CHECK(second.controls[0].items == std::vector<std::u16string> { u"Hop", u"Spin" });
+    CHECK(second.controls[0].value == 0);
+    CHECK(second.controls[1].id == control_id(AttractionControl::ShowDelete));
+    const InfoPage adding = attraction_page(AttractionTab::Mode, f, s, { }, 9);
+    CHECK(adding.section == 2);
+    REQUIRE(adding.controls.size() == 1); // Nothing to delete
+    CHECK(adding.controls[0].value == -1);
+}
+
 TEST_CASE("the thoughts page shows the latest thoughts about the attraction first")
 {
     StringTable s = table();

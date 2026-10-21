@@ -544,6 +544,8 @@ namespace rct3::scene
             ride.base.name = p.item->name_text;
             // Built closed, as in the game: the player tests it and opens it from its window.
             ride.base.state = save::AttractionState::Closed;
+            // shortcut: a new show ride gets no show, so it runs as a plain flat ride without a MixMaster page; give it
+            // the tricks its kind knows once those are read from the game's data.
             ride.base.placement = object;
             ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turns);

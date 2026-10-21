@@ -406,6 +406,18 @@ namespace rct3::ui
             {
                 if (m < kModeNames.size())
                     page.heading = text(strings, kModeNames[m]);
+                // A flat ride is set by how many times round it runs each go; the waits are for trains.
+                if (ride.kind == save::RideKind::Flat)
+                {
+                    InfoControl c;
+                    c.id = control_id(AttractionControl::Circuits);
+                    c.name = "RideOpModeDialog_NumCircuits";
+                    c.label = text(strings, "RideOpModeDialog_NumCircuits");
+                    c.value = std::clamp(ride.loop_count, 1, kMostCircuits);
+                    c.minimum = 1;
+                    c.maximum = kMostCircuits;
+                    page.controls.push_back(std::move(c));
+                }
                 return;
             }
             const save::OperatingOptions& o = ride.options;

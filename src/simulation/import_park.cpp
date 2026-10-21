@@ -603,7 +603,7 @@ namespace rct3::simulation
             std::vector<NodeId> line = std::move(links->line);
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open, .saved = ride.base.id });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
             // Rated as the park has it; else from its last test, or a test run of our own.
             std::optional<Ratings> rated;
             if (ride.assessment.valid)

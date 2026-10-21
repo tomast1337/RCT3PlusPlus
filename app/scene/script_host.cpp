@@ -278,6 +278,15 @@ namespace rct3::scene
             stop_ride_placing(park_of(park_));
             return Json(nullptr);
         });
+        engine_.define("rides.setState", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            constexpr std::array<std::pair<std::string_view, save::AttractionState>, 3> kStates { { { "closed", save::AttractionState::Closed }, { "testing", save::AttractionState::Testing }, { "open", save::AttractionState::Open } } };
+            const auto state = a.size() == 2 && a[1].is_string() ? std::ranges::find(kStates, a[1].get<std::string>(), &std::pair<std::string_view, save::AttractionState>::first) : kStates.end();
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size() || state == kStates.end())
+                throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
+            set_attraction_state(park, park.rides.rides[a[0].get<std::size_t>()].base, state->second);
+            return Json(nullptr);
+        });
         engine_.define("build.placing", [this](const Json&) -> Json {
             const RidePlacing& p = park_of(park_).placing;
             if (!p.item)

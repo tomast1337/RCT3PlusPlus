@@ -43,6 +43,7 @@
 //                       { col, row, direction }; joined when the simulation runs it, then also customers,
 //                       price, open, onPaths (its entrance found on the paths), capacity, cycleSeconds,
 //                       queue, queueLine (its tiles), riders and ratings ([excitement, intensity, nausea], 0..1)
+//   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.

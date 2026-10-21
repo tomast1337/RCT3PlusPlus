@@ -662,3 +662,16 @@ TEST_CASE("walkers keep an even pace and a steady way through tiles, their party
         }
     }
 }
+
+TEST_CASE("a ride being tested runs empty, and guests are let on only once it is open")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    r.get<Attraction>(ride).open = false;
+    CHECK_FALSE(park.run_until([&] { return r.get<CycleRide>(ride).phase != RidePhase::Loading; }, 30)); // Closed: stands still
+    r.get<Attraction>(ride).testing = true;
+    CHECK(park.run_until([&] { return r.get<CycleRide>(ride).phase != RidePhase::Loading; }, 5));
+    CHECK(r.get<CycleRide>(ride).riders.empty());
+}

@@ -202,6 +202,24 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     CHECK(graphs.graph[0].values.size() == 3);
 }
 
+TEST_CASE("a flat ride's operating mode page sets how many times round it runs, and has no waits")
+{
+    StringTable s = table();
+    s.add("RideOpModeDialog_NumCircuits", u"Circuits");
+    save::Ride ride;
+    ride.kind = save::RideKind::Flat;
+    ride.loop_count = 0; // Never set: runs once
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage page = attraction_page(AttractionTab::Mode, f, s, { });
+    CHECK(page.sections.empty());
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == control_id(AttractionControl::Circuits));
+    CHECK(page.controls[0].label == u"Circuits");
+    CHECK(page.controls[0].value == 1);
+    CHECK(page.controls[0].minimum == 1);
+    CHECK(page.controls[0].maximum == kMostCircuits);
+}
+
 TEST_CASE("the thoughts page shows the latest thoughts about the attraction first")
 {
     StringTable s = table();

@@ -542,9 +542,8 @@ namespace rct3::scene
             ride.base.symbol = std::format("{}:anr", p.item->symbol);
             ride.base.overlay_path = p.item->overlay;
             ride.base.name = p.item->name_text;
-            // shortcut: opens at once, as rides cannot be opened from their window yet; build them closed, as
-            // the game does, once they can.
-            ride.base.state = save::AttractionState::Open;
+            // Built closed, as in the game: the player tests it and opens it from its window.
+            ride.base.state = save::AttractionState::Closed;
             ride.base.placement = object;
             ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turns);

@@ -64,7 +64,7 @@ namespace rct3::scene
         {
             const auto& r = scene.sim.registry;
             const auto* walking = r.try_get<simulation::Errand>(guest); // None once gone home
-            if (walking == nullptr || walking->kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(walking->target))
+            if (walking == nullptr || walking->kind != simulation::ErrandKind::Riding || !r.all_of<simulation::CycleRide>(walking->target) || r.all_of<simulation::RideWalk>(guest))
                 return std::nullopt;
             const simulation::Errand& errand = *walking;
             // On a ride with trains, the train the guest boarded and their place among its riders.
@@ -116,6 +116,8 @@ namespace rct3::scene
 
         /// How guests walk holding an umbrella up, as the game's motions name it.
         const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
+        /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
+        const std::int32_t kTicketMotion = park::motion_number("handticket").value_or(park::motion::kIdle);
         /// How riders sit in a car, as the game's motions name it.
         const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
@@ -141,6 +143,26 @@ namespace rct3::scene
             return kChatMotions[turn % kChatMotions.size()];
         }
 
+        /// What vendors do: take the money from a rider handing over their ticket within kServeReach, else stand
+        /// bored, now and then stacking the shelves.
+        const std::int32_t kTakeMoneyMotion = park::motion_number("takemoney").value_or(park::motion::kIdle);
+        const std::int32_t kBoredMotion = park::motion_number("idlebored").value_or(park::motion::kIdle);
+        const std::int32_t kShelvesMotion = park::motion_number("idlestackshelfs").value_or(park::motion::kIdle);
+        constexpr float kServeReach = 3;         ///< From a vendor to the ticket spot they serve
+        constexpr float kVendorTurnSeconds = 5;  ///< How long a vendor keeps at one idle thing
+        constexpr std::size_t kShelvesEvery = 6; ///< Of a vendor's idle turns, one stacks the shelves
+
+        /// The motion of vendor `shown`, standing at `at`, and how far into it they are.
+        std::pair<std::int32_t, float> vendor_motion(const ParkScene& scene, const ShownPerson& shown, const glm::vec3& at)
+        {
+            for (const auto [g, walk, pose] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Pose>().each())
+                if (!walk.off && walk.next == 1 && walk.pause > 0 && glm::distance(pose.position, at) < kServeReach)
+                    return { kTakeMoneyMotion, simulation::kTuning.queues.ticket_seconds - walk.pause };
+            const float turn = scene.clock / kVendorTurnSeconds + static_cast<float>(entt::to_integral(shown.guest));
+            const auto whole = static_cast<std::size_t>(turn);
+            return { whole % kShelvesEvery == 0 ? kShelvesMotion : kBoredMotion, (turn - static_cast<float>(whole)) * kVendorTurnSeconds };
+        }
+
         /// Places the people near enough to see that stand still, or those that move and may be in `view`, as
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
@@ -163,13 +185,22 @@ namespace rct3::scene
                     const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
                     if (r.all_of<simulation::Left>(shown.guest))
                         continue; // Gone home since the levels were taken
+                    if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
+                    {
+                        std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
+                        if (!moving || maybe_in_view(view, glm::vec3(pose.world[3])))
+                            placed.push_back(pose);
+                        continue;
+                    }
                     const auto& stride = r.get<simulation::Stride>(shown.guest);
                     const auto kind = r.get<simulation::Errand>(shown.guest).kind;
                     pose.time = shown.saved_time + clock * shown.speed;
-                    if (kind == simulation::ErrandKind::Riding)
+                    const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
+                    if (kind == simulation::ErrandKind::Riding && ride_walk == nullptr)
                         continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
                     const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
-                    const bool walking = stride.from != stride.to || now.was != now.position;
+                    const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause > 0;
+                    const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
                     // The walk goes as far into its motion as the ground covered allows, so the feet stay put
                     // however fast the guest goes.
                     if (walking && shown.pace > 0)
@@ -177,6 +208,11 @@ namespace rct3::scene
                     // People are modelled facing +z, which the heading turns towards the way they go.
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+                    if (at_ticket)
+                    {
+                        pose.motion = kTicketMotion;
+                        pose.time = simulation::kTuning.queues.ticket_seconds - ride_walk->pause;
+                    }
                     if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
                     {
                         // By the names the people's meshes give these motions, in GestureKind's order.

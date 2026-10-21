@@ -353,6 +353,41 @@ namespace rct3::park
             return lookup(entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }), name);
         }
 
+        /// The walkways of a flat ride in `f`: the spline whose name ends in "loop", and those ending in "path"
+        /// and a number, in number order, each followed curve by curve.
+        Walkways walkways_in(OpenFile& f)
+        {
+            const auto points = [](const ovl::Spline& spline) {
+                constexpr int kSteps = 4; // Points a curve
+                std::vector<glm::vec3> out;
+                for (std::size_t s = 0; s + 1 < spline.nodes.size(); ++s)
+                    for (int k = 0; k < kSteps; ++k)
+                    {
+                        const auto p = ovl::spline_point(spline, s, static_cast<float>(k) / kSteps);
+                        out.emplace_back(p[0], p[1], p[2]);
+                    }
+                if (!spline.nodes.empty())
+                    out.emplace_back(spline.nodes.back().position[0], spline.nodes.back().position[1], spline.nodes.back().position[2]);
+                return out;
+            };
+            const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() >= end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
+            Walkways ways;
+            std::vector<std::pair<int, std::vector<glm::vec3>>> paths;
+            for (const auto& [name, spline] : entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }))
+            {
+                const std::size_t digits = name.size() - std::min(name.size(), name.find_last_not_of("0123456789") + 1);
+                const std::string_view stem = name.substr(0, name.size() - digits);
+                if (ends_with(name, "loop"))
+                    ways.loop = points(spline);
+                else if (digits > 0 && ends_with(stem, "path") && !ends_with(stem, "mechpath"))
+                    paths.emplace_back(std::stoi(std::string(name.substr(stem.size()))), points(spline));
+            }
+            std::ranges::sort(paths, { }, &std::pair<int, std::vector<glm::vec3>>::first);
+            for (auto& path : paths)
+                ways.paths.push_back(std::move(path.second));
+            return ways;
+        }
+
     } // namespace
 
     ModelLoader::ModelLoader(const AssetIndex& index)
@@ -548,6 +583,8 @@ namespace rct3::park
                 if (shape == nullptr)
                     continue;
                 model.seats = std::max(model.seats, seats_of(*shape));
+                if (model.walkways.loop.empty() && model.seats > 0)
+                    model.walkways = walkways_in(*file->second);
                 if (model.seat_places.empty())
                     model.seat_places = seat_places(*shape);
                 const bool rigged = !model.rig && !lod.animations.empty();

@@ -709,21 +709,22 @@ namespace rct3::simulation
         {
             const save::Person& p = people.staff[i].person;
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
+            using enum save::StaffKind;
+            const save::StaffKind kind = people.staff[i].kind;
+            const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : StaffRole::Other;
             auto at = world.paths.nearest(position);
             if (!at || world.paths.nodes()[*at].queue)
                 at = walkway_near(world.paths, position);
-            if (!at)
+            if (!at && role != StaffRole::Vendor)
                 continue;
-            using enum save::StaffKind;
-            const save::StaffKind kind = people.staff[i].kind;
-            const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : StaffRole::Other;
             const entt::entity e = r.create();
             const save::Staff& saved = people.staff[i];
             Staff staff { .role = role, .training = std::clamp(saved.training, 0, kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
             set_wage_level(staff, saved.wage_level);
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
-            start_walking(world, e, *at);
+            if (role != StaffRole::Vendor)                                  // A vendor stays in their booth
+                start_walking(world, e, *at);
             out[i] = e;
         }
         return out;

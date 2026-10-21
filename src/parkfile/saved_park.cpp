@@ -162,14 +162,15 @@ namespace rct3::parkfile
         {
             const SavedWorker& w = people.staff[i];
             const auto at = world.paths.nearest(w.position);
-            if (!at || world.paths.nodes()[*at].queue)
+            if (w.role != StaffRole::Vendor && (!at || world.paths.nodes()[*at].queue))
                 continue;
             const entt::entity e = r.create();
             r.emplace<Staff>(e, Staff { .role = w.role, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness });
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
                 r.emplace<Patrol>(e, *w.patrol);
-            start_walking(world, e, *at);
+            if (w.role != StaffRole::Vendor) // A vendor stays in their booth
+                start_walking(world, e, *at);
             out[i] = e;
         }
         return out;

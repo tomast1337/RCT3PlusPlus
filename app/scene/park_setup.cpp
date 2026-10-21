@@ -916,7 +916,8 @@ namespace rct3::scene
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
                         p.guest = guests[p.saved];
-                    else if (p.staff && p.saved < staff.size())
+                    // A vendor stands in their booth as saved, moving as the save has them.
+                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]))
                         p.guest = staff[p.saved];
                 }
             });

@@ -226,14 +226,20 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     for (const auto [_, item] : world.registry.view<simulation::PathItem>().each())
         CHECK(item.node == tile);
 
-    people.staff.resize(3);
+    people.staff.resize(4);
     people.staff[0].kind = save::StaffKind::Handyman;
     people.staff[0].person.position = { middle.x, 0, middle.z };
     people.staff[1].kind = save::StaffKind::SecurityGuard;
     people.staff[1].person.position = { middle.x, 0, middle.z };
     people.staff[2].person.position = { 50, 0, 50 };
+    people.staff[3].kind = save::StaffKind::Vendor;
+    people.staff[3].person.position = { 51, 0, 52 };
     const auto staff = simulation::import_staff(world, people);
-    REQUIRE(staff.size() == 3);
+    REQUIRE(staff.size() == 4);
+    // A vendor stays in their booth, off the paths.
+    CHECK(world.registry.get<simulation::Staff>(staff[3]).role == simulation::StaffRole::Vendor);
+    CHECK_FALSE(world.registry.all_of<simulation::Stride>(staff[3]));
+    CHECK(world.registry.get<simulation::Pose>(staff[3]).position == glm::vec3 { 51, 0, 52 });
     CHECK(world.registry.get<simulation::Staff>(staff[0]).role == simulation::StaffRole::Handyman);
     CHECK(world.registry.get<simulation::Staff>(staff[1]).role == simulation::StaffRole::Guard);
     CHECK(world.registry.get<simulation::Stride>(staff[0]).to == tile);

@@ -91,23 +91,6 @@ namespace rct3::scene
             menu.music = std::move(*music);
         }
 
-        std::vector<audio::SoundBuffer> sounds_named(const std::vector<ovl::SoundItem>& items, std::span<const std::string_view> names)
-        {
-            std::vector<audio::SoundBuffer> out;
-            for (const auto name : names)
-            {
-                for (const auto& item : items)
-                {
-                    if (item.name != name || !item.info)
-                        continue;
-                    if (auto buffer = audio::from_ovl_sound(*item.info))
-                        out.push_back(std::move(*buffer));
-                    break;
-                }
-            }
-            return out;
-        }
-
         void load_clicks(MenuAudio& menu, const config::GameInstall& install)
         {
             const auto log = logging::logger("audio");
@@ -141,6 +124,23 @@ namespace rct3::scene
         }
 
     } // namespace
+
+    std::vector<audio::SoundBuffer> sounds_named(const std::vector<ovl::SoundItem>& items, std::span<const std::string_view> names)
+    {
+        std::vector<audio::SoundBuffer> out;
+        for (const auto name : names)
+        {
+            for (const auto& item : items)
+            {
+                if (item.name != name || !item.info)
+                    continue;
+                if (auto buffer = audio::from_ovl_sound(*item.info))
+                    out.push_back(std::move(*buffer));
+                break;
+            }
+        }
+        return out;
+    }
 
     std::vector<std::string> music_files(const config::GameInstall& install)
     {

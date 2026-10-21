@@ -13,6 +13,7 @@
 #include "audio/music_player.hpp"
 #include "config/game_install.hpp"
 #include "config/game_options.hpp"
+#include "ovl/sound.hpp"
 #include "ui/interface_sound.hpp"
 
 #include <filesystem>
@@ -20,6 +21,7 @@
 #include <random>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::scene
@@ -38,6 +40,9 @@ namespace rct3::scene
         std::vector<audio::SoundBuffer> messages; ///< The park's new message alert
         std::minstd_rand random;
     };
+
+    /// The sounds of `items` named `names`, in that order; a name not there or not playable is left out.
+    [[nodiscard]] std::vector<audio::SoundBuffer> sounds_named(const std::vector<ovl::SoundItem>& items, std::span<const std::string_view> names);
 
     /// The names of the files in the game's music folder that it can play, sorted; nothing without the folder.
     [[nodiscard]] std::vector<std::string> music_files(const config::GameInstall& install);

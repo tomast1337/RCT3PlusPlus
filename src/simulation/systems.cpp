@@ -265,6 +265,7 @@ namespace rct3::simulation
             r.emplace<Litter>(mess, Litter { .node = at, .vomit = true });
             auto& mood = r.get<Mood>(guest);
             mood.nausea = clamp01(mood.nausea - kTuning.sickness.relief);
+            r.emplace_or_replace<Gesture>(guest, GestureKind::Retch, kTuning.gestures.seconds);
             return mess;
         }
 
@@ -327,7 +328,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Rubbish>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -377,7 +378,8 @@ namespace rct3::simulation
     Pose between_steps(const Pose& pose, float along)
     {
         const float turn = std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>());
-        return { glm::mix(pose.was, pose.position, along), pose.was_heading + turn * along, pose.was, pose.was_heading };
+        const float walked = pose.walked + along * glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
+        return { glm::mix(pose.was, pose.position, along), pose.was_heading + turn * along, pose.was, pose.was_heading, walked };
     }
 
     double arrivals_per_second(const Weather& weather)
@@ -498,7 +500,9 @@ namespace rct3::simulation
             lane = glm::clamp(glm::vec2(off.x, off.z), -kLaneReach, kLaneReach);
         }
         r.emplace_or_replace<Errand>(guest);
-        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .lane_from = lane, .lane_to = lane });
+        const auto* visitor = r.try_get<Visitor>(guest);
+        const float speed = visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)] : Stride { }.speed;
+        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .speed = speed, .lane_from = lane, .lane_to = lane });
         r.emplace_or_replace<Dice>(guest, dice_for(world, guest));
         auto& pose = r.get_or_emplace<Pose>(guest);
         place(world.paths, r.get<Stride>(guest), pose);
@@ -1213,8 +1217,12 @@ namespace rct3::simulation
             });
         }
 
+        for (auto [g, gesture] : r.view<Gesture>().each())
+            if ((gesture.left -= dt) <= 0)
+                r.remove<Gesture>(g);
         for (auto [_, pose] : r.view<Pose>().each())
         {
+            pose.walked += glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
             pose.was = pose.position;
             pose.was_heading = pose.heading;
         }
@@ -1249,8 +1257,8 @@ namespace rct3::simulation
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                         continue; // Off the paths; nothing to walk on
-                    if (r.all_of<Linger>(movers[i]))
-                        continue; // Sitting or watching
+                    if (r.any_of<Linger, Gesture>(movers[i]))
+                        continue; // Sitting, watching or showing how they feel
                     if (errand.rest > 0)
                         --errand.rest;
                     // A leader is the only one to write their party, so this is safe beside the other guests.
@@ -1392,6 +1400,8 @@ namespace rct3::simulation
                     if (errand.kind != ErrandKind::Following)
                         continue;
                     stride.fresh = false;
+                    if (r.all_of<Gesture>(followers[i]))
+                        continue; // Showing how they feel; they catch up after
                     const Party& party = r.get<Party>(member.party);
                     const Stride& lead = r.get<Stride>(party.leader);
                     if (party.huddle > 0 && lead.from == lead.to && stride.to == lead.to && stride.progress >= 1)
@@ -1651,16 +1661,32 @@ namespace rct3::simulation
                         mood.heat = 0;
                     }
                     r.get<Errand>(guest) = after_ride(r, guest, e);
+                    auto& dice = r.get<Dice>(guest).state;
+                    std::optional<GestureKind> gesture;
                     if (felt >= kTuning.thoughts.enjoyed)
+                    {
                         think(r, guest, ThoughtKind::Enjoyed, e, now);
+                        constexpr std::array kGlad { GestureKind::Cheer, GestureKind::Cheer, GestureKind::Laugh };
+                        gesture = kGlad[random::below(dice, kGlad.size())];
+                    }
+                    else if (felt >= kTuning.gestures.liked)
+                        gesture = GestureKind::Nod;
                     const Taste taste = taste_of(r, guest);
                     if (ride.intensity > std::min(mood.tolerance + kTuning.sickness.wildest, taste.most))
+                    {
                         think(r, guest, ThoughtKind::TooIntense, e, now);
+                        gesture = GestureKind::Dizzy;
+                    }
                     else if (ride.intensity < taste.least)
+                    {
                         think(r, guest, ThoughtKind::TooTame, e, now);
+                        gesture = GestureKind::Grumble;
+                    }
                     const NodeId out = ride.exit != kNoNode ? ride.exit : attraction.entrance;
                     stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
-                    if (mood.nausea >= kTuning.sickness.sick && random::chance(r.get<Dice>(guest).state, kTuning.sickness.sick_after_ride))
+                    if (gesture && random::chance(dice, kTuning.gestures.chance))
+                        r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.seconds);
+                    if (mood.nausea >= kTuning.sickness.sick && random::chance(dice, kTuning.sickness.sick_after_ride))
                         be_sick(r, guest, out);
                 }
                 riders.clear();

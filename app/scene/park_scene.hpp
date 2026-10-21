@@ -195,6 +195,7 @@ namespace rct3::scene
         park::PlacedPerson pose;
         float saved_time = 0;            ///< Into its motion, when the park was saved
         float speed = 1;                 ///< How fast its motion plays
+        float pace = 0;                  ///< Ground its legs' walk covers in a second of the motion; 0 unknown
         bool walking = false;            ///< Walkers stand still in their stride until people move
         bool staff = false;              ///< A member of staff rather than a guest
         std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
@@ -329,6 +330,7 @@ namespace rct3::scene
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.
         std::vector<glm::mat4> seat_carriers;
         std::optional<park::PersonLibrary> person_models; ///< Of the park's people
+        std::map<const park::PartSet*, float> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
         std::vector<ShownPerson> shown_people;

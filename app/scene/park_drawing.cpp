@@ -185,7 +185,7 @@ namespace rct3::scene
                 profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             profiling::section("Rides", [&] {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
-                    if (boned.ride != entt::null || maybe_in_view(transform, glm::vec3(boned.placed[3]), boned.reach))
+                    if ((boned.ride != entt::null && !boned.gate) || maybe_in_view(transform, glm::vec3(boned.placed[3]), boned.reach))
                         draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
             });
             if (parts.water)

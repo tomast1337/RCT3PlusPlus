@@ -109,6 +109,7 @@ namespace rct3::park
         /// listed; 0 for one that cannot be read. Flat rides list theirs as standing, starting, running and
         /// stopping.
         std::vector<float> animation_seconds;
+        std::vector<std::string> animation_names; ///< Of those animations, in the same order
         /// Places for riders: the most bones named "peep" and a number that any level has.
         std::uint32_t seats = 0;
         /// Where each rider sits, model space, by seat number, from the first level with seats.

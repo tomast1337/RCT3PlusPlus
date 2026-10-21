@@ -608,7 +608,10 @@ namespace rct3::park
                     if (rigged)
                         model.rig->motions.push_back(anim != nullptr ? motion_of(*shape, *anim) : BoneMotion { });
                     if (model.animation_seconds.size() < lod.animations.size())
+                    {
                         model.animation_seconds.push_back(anim != nullptr ? anim->duration : 0.0f);
+                        model.animation_names.emplace_back(name);
+                    }
                 }
                 for (const ovl::BoneMesh& mesh : shape->meshes)
                 {

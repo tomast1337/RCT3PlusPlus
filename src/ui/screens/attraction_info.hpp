@@ -115,6 +115,8 @@ namespace rct3::ui
         std::optional<bool> queue_signs { };
         /// Of a show ride, what it puts on.
         const save::RideShow* show = nullptr;
+        /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.
+        std::string_view refusal { };
     };
 
     struct GuestsSuited

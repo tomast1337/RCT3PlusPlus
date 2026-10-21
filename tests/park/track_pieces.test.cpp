@@ -187,6 +187,11 @@ TEST_CASE("the tip of a placed piece is its line's end in the park, turned with 
     CHECK(tip.end == PieceEnd { 0, 0, 0 });
     CHECK(tip_of(placed(5, 5, 1, 3), s, false, g).end.heading == 2);
     CHECK(tip_of(placed(5, 5, 0, 3), s, true, g).end.heading == 4);
+    // Its start, as the end of a piece before it.
+    const TrackTip start = start_of(placed(5, 5, 0, 3), s, false, g);
+    CHECK(start.position.x == doctest::Approx(5 * kTile));
+    CHECK(start.end == PieceEnd { 0, 0, 0 });
+    CHECK(place_after(start, s, false, g)->object.col == 5);
 }
 
 TEST_CASE("the next piece goes on the tile its start meets, turned to the tip")
@@ -226,4 +231,50 @@ TEST_CASE("a piece whose start cannot meet the tip at a whole tile and height is
     tip.position.x -= 1;
     CHECK(place_after(tip, s, false, g));
     CHECK_FALSE(place_after({ tip.position, { 1, 0, 0 } }, s, false, g));
+}
+
+TEST_CASE("ends meet by name, width and the tags each side needs and forbids")
+{
+    const auto end = [](std::string name, std::vector<std::string> offers = { }, std::vector<std::string> needs = { }, std::vector<std::string> forbids = { }, std::uint32_t width = 0) { return PieceJoin { std::move(name), std::move(offers), std::move(needs), std::move(forbids), width }; };
+    CHECK(ends_meet(end(""), end("")));
+    CHECK(ends_meet(end("Rope"), end("rope")));
+    CHECK_FALSE(ends_meet(end("Rope"), end("")));
+    CHECK_FALSE(ends_meet(end(""), end("cap")));
+    CHECK_FALSE(ends_meet(end("", { }, { }, { }, 1), end("")));
+    // Needs one of the other's offers, from either side.
+    CHECK(ends_meet(end("", { "Shelf" }), end("", { }, { "Ledge", "Shelf" })));
+    CHECK_FALSE(ends_meet(end(""), end("", { }, { "Shelf" })));
+    CHECK_FALSE(ends_meet(end("", { }, { "Shelf" }), end("", { "Ledge" })));
+    // Forbids none of them.
+    CHECK_FALSE(ends_meet(end("", { "Shelf" }), end("", { }, { }, { "shelf" })));
+    CHECK(ends_meet(end("", { "Ledge" }), end("", { }, { }, { "Shelf" })));
+}
+
+TEST_CASE("after a piece, only pieces whose start meets its end follow")
+{
+    // A climb whose top ends in a cap, a rope piece that runs from its foot, and a plain one.
+    std::vector<PieceShape> pieces { shape({ 0, 0, 0 }, { 0, 0, 0 }), shape({ 0, 0, 0 }, { 0, 0, 0 }), shape({ 0, 0, 0 }, { 0, 0, 0 }) };
+    pieces[0].record.joins[1].name = "cap";
+    pieces[1].record.joins[0].name = "cap";
+    const std::vector<LaidPiece> after_cap = pieces_after(pieces, { 0, 0, 0 }, LaidPiece { 0, false });
+    CHECK(has(after_cap, 1, false));
+    CHECK_FALSE(has(after_cap, 2, false));
+    CHECK_FALSE(has(after_cap, 0, false));
+    // Laid backwards, the cap is at the piece's start, so the plain piece follows.
+    const std::vector<LaidPiece> after_back = pieces_after(pieces, { 0, 0, 0 }, LaidPiece { 0, true });
+    CHECK(has(after_back, 2, false));
+    CHECK(has(after_back, 1, true));
+    CHECK_FALSE(has(after_back, 1, false));
+    // Pieces of side by side tracks only follow their own side's.
+    pieces[2].record.side = 1;
+    CHECK_FALSE(has(pieces_after(pieces, { 0, 0, 0 }, LaidPiece { 1, false }), 2, false));
+}
+
+TEST_CASE("a track starts only with pieces marked to, backwards only when marked so")
+{
+    std::vector<PieceShape> pieces(3);
+    pieces[0].record.flags = kPieceStarts;
+    pieces[1].record.flags = kPieceStarts | kPieceStartsBackward;
+    pieces[2].record.flags = kPieceStartsBackward;
+    CHECK(starting_pieces(pieces) == std::vector<LaidPiece> { { 0, false }, { 1, false }, { 1, true } });
 }

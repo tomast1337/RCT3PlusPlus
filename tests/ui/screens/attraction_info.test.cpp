@@ -80,6 +80,22 @@ TEST_CASE("ratings are put in words by how high they are")
     CHECK(rating_word(99, s) == u"Off the scale");
 }
 
+TEST_CASE("why a ride was not opened shows in place of its state")
+{
+    StringTable s = table();
+    s.add("RideHasNoStation", u"No station");
+    save::Ride ride;
+    ride.base.name = "Ride";
+    AttractionFacts f;
+    f.common = &ride.base;
+    f.ride = &ride;
+    f.refusal = "RideHasNoStation";
+    CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"No station");
+    CHECK(attraction_page(AttractionTab::View, f, s, { }).note == u"No station");
+    f.refusal = { };
+    CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"Closed");
+}
+
 TEST_CASE("pages are written from the attraction's state")
 {
     const StringTable s = table();

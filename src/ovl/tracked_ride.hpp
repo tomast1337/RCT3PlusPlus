@@ -30,6 +30,44 @@ namespace rct3::ovl
         std::int32_t cost = 0;                ///< Base build cost, hundredths
     };
 
+    /// Which piece a piece pattern entry takes, and where. Kinds: 0 any piece of the group `name`
+    /// (an empty name meaning pieces of no group), 1 the piece `name`, 2 any piece.
+    struct PieceTest
+    {
+        std::uint8_t kind = 2;
+        std::string_view name; ///< A group, or a "tks" item
+        bool negate = false;   ///< Takes the pieces the kind and name do not
+        bool forward = false;  ///< Only a piece laid as drawn
+        bool backward = false; ///< Only a piece laid backwards
+        bool first = false;    ///< Only the first piece of its track
+        bool last = false;     ///< Only the last piece of its track
+    };
+
+    /// One piece of a piece pattern: which piece it takes and which it becomes. A `becomes` of kind 2
+    /// leaves the piece as it is; one of kind 1 swaps it for that piece, laid as `backward` says.
+    struct PatternEntry
+    {
+        PieceTest when;
+        PieceTest becomes;
+    };
+
+    /// What building a ride's track must keep to. Version 4 and 5 files only; version 1 rides take these
+    /// defaults.
+    struct TrackRules
+    {
+        /// Bits: 0x10 and 0x4000 the ride is never tested, 0x200 its track may be in several pieces.
+        std::uint32_t flags = 0;
+        std::optional<std::uint32_t> min_pieces; ///< Fewest pieces it opens with
+        bool circuit_only = false;               ///< Opens only as a closed circuit
+        /// How many entrances and exits it needs: 0 one per station, 1 any number, 2 exactly one, 3 at
+        /// least one, 4 none.
+        std::uint32_t entrances = 3;
+        std::uint32_t exits = 3;
+        /// Runs of pieces swapped for others after every change to the track, so a station's ends or a
+        /// waterfall's parts are the right pieces: each pattern takes consecutive pieces, one per entry.
+        std::vector<std::vector<PatternEntry>> patterns;
+    };
+
     struct TrackedRide
     {
         /// The fields shared by all attractions: at the start of version 1 items, further on in later ones,
@@ -45,6 +83,7 @@ namespace rct3::ovl
         std::optional<RideOperatingDefaults> operating;
         /// Guests the ride makes room for in the park while it is open and working.
         std::optional<std::uint32_t> guests;
+        TrackRules rules;
     };
 
     struct TrackedRideItem
@@ -54,7 +93,8 @@ namespace rct3::ovl
     };
 
     /// Tracked rides of one part of an overlay: pointer symbols tagged "trr". The start of each item, its
-    /// operating defaults and the guests it makes room for are read; the rest of its ride parameters are not interpreted yet. Views in the result
+    /// operating defaults, the guests it makes room for and its track rules are read; the rest of its ride
+    /// parameters are not interpreted yet. Views in the result
     /// point into the overlay's bytes.
     [[nodiscard]] std::vector<TrackedRideItem> read_tracked_rides(const Overlay& overlay, const Part& part);
 

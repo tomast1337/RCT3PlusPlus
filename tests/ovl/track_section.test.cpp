@@ -100,3 +100,53 @@ TEST_CASE("references of the wrong type are not used")
     CHECK(items[0].section->scenery_item.empty());
     CHECK(items[0].section->references.size() == 1);
 }
+
+TEST_CASE("later track sections give their join names, widths, group, tags and side")
+{
+    for (const std::uint32_t version : { 4u, 5u })
+    {
+        CAPTURE(version);
+        Pool pool;
+        const auto bottom = pool.add("bottom");
+        const auto top = pool.add("top");
+        const auto group = pool.add("station");
+        const auto offer = pool.add("Shelf");
+        const auto forbid = pool.add("Ledge");
+        pool.add("Base:tks");
+        const std::uint32_t base = pool.base();
+        std::vector<std::uint32_t> w(kSize[version] / 4 + 3, 0);
+        const auto list = static_cast<std::uint32_t>(base + kSize[version]); // three string pointers past the record
+        w[kSize[version] / 4] = offer;
+        w[kSize[version] / 4 + 1] = forbid;
+        w[kSize[version] / 4 + 2] = offer;
+        w[0x50 / 4] = bottom;
+        w[0x6C / 4] = top;
+        w[0xE4 / 4] = version == 4 ? 2 : 3;
+        w[0x104 / 4] = group;
+        w[0x114 / 4] = 1;
+        w[0x13C / 4] = 1; // the start offers Shelf
+        w[0x140 / 4] = list;
+        w[0x154 / 4] = 1; // the end needs Ledge
+        w[0x158 / 4] = list + 4;
+        w[0x164 / 4] = 1; // the end forbids Shelf
+        w[0x168 / 4] = list + 8;
+        if (version == 5)
+            w[0x16C / 4] = 2;
+        std::vector<std::byte> bytes;
+        for (auto v : w)
+            append_u32(bytes, v);
+        const auto overlay = make_record_overlay(version, pool, "Base:tks", bytes);
+        const auto items = read_track_sections(overlay, overlay.common());
+        REQUIRE(items[0].section.has_value());
+        const auto& s = *items[0].section;
+        CHECK(s.start_join == "bottom");
+        CHECK(s.end_join == "top");
+        CHECK(s.widths == std::array<std::uint32_t, 2> { 1, 0 });
+        CHECK(s.group == "station");
+        CHECK(s.tags[0].offers == std::vector<std::string_view> { "Shelf" });
+        CHECK(s.tags[0].needs.empty());
+        CHECK(s.tags[1].needs == std::vector<std::string_view> { "Ledge" });
+        CHECK(s.tags[1].forbids == std::vector<std::string_view> { "Shelf" });
+        CHECK(s.side == (version == 5 ? 2u : 0u));
+    }
+}

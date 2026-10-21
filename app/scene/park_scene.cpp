@@ -8,6 +8,7 @@
 #include "park/object_placement.hpp"
 #include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
+#include "park/track_rules.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -190,7 +191,7 @@ namespace rct3::scene
 
         ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
         {
-            ui::AttractionFacts f { .guests = scene.people.guests };
+            ui::AttractionFacts f { .guests = scene.people.guests, .refusal = scene.refusal };
             if (ref.kind == park::AttractionRef::Kind::Stall)
             {
                 if (ref.index < scene.rides.stalls.size())
@@ -395,6 +396,8 @@ namespace rct3::scene
             }
             scene.shown_person.reset();
             scene.shown_prop.reset();
+            if (scene.shown != ref)
+                scene.refusal.clear();
             scene.shown = ref;
             panel.show(std::move(tabs), picked);
             show_info_page(scene, panel, assets, options);
@@ -984,7 +987,17 @@ namespace rct3::scene
                 const std::vector<ui::StateChoice> states = ui::state_choices(kind);
                 if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
-                    set_attraction_state(scene, *common, states[choice->second].state);
+                    const save::AttractionState state = states[choice->second].state;
+                    std::optional<std::string> refused;
+                    if (f.ride != nullptr && assets.install)
+                    {
+                        const auto file = assets.install->find(std::format("{}.common.ovl", f.ride->base.overlay_path));
+                        const park::TrackRules rules = file ? park::load_track_rules(*file, f.ride->base.symbol) : park::TrackRules { };
+                        refused = park::open_refusal(*f.ride, rules, state, scene.building.ride == scene.shown->index);
+                    }
+                    scene.refusal = refused.value_or("");
+                    if (!refused)
+                        set_attraction_state(scene, *common, state);
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
             }
@@ -998,7 +1011,14 @@ namespace rct3::scene
         // The Construction tab has no page: it opens the panel that builds the ride's track.
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
         {
-            if (const auto overlay = ride_track_overlay(scene, asked->index))
+            // An open ride's track stays as it is; testing or closed, it may be changed.
+            if (asked->index < scene.rides.rides.size() && scene.rides.rides[asked->index].base.state == save::AttractionState::Open)
+            {
+                scene.refusal = "CannotEditTrackedRideWhileOpen";
+                if (info && scene.shown)
+                    open_info(scene, *info, *scene.shown, assets, options);
+            }
+            else if (const auto overlay = ride_track_overlay(scene, asked->index))
             {
                 if (open_track_building(scene, asked->index, *overlay, assets))
                 {

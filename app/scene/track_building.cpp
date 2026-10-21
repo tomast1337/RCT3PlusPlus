@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track_building.hpp"
 
+#include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
 #include "park/relief_maps.hpp"
@@ -88,6 +89,20 @@ namespace rct3::scene
             return park::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
         }
 
+        /// The catalogue's piece the ride's track ends with, laid as it is.
+        std::optional<park::LaidPiece> last_piece(const ParkScene& scene, const TrackBuilding& b)
+        {
+            const park::PieceCatalogue* c = catalogue(b);
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            if (c == nullptr || !ride.track || ride.track->pieces.empty())
+                return std::nullopt;
+            const save::TrackPiece& last = ride.track->pieces.back();
+            const auto shape = park::shape_named(*c, last.symbol);
+            if (!shape)
+                return std::nullopt;
+            return park::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), last.reversed };
+        }
+
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
@@ -98,7 +113,7 @@ namespace rct3::scene
             b.ghost_mesh = { };
             if (c == nullptr || !b.tip)
                 return;
-            b.candidates = park::pieces_after(c->pieces, b.tip->end);
+            b.candidates = park::pieces_after(c->pieces, b.tip->end, last_piece(scene, b));
             b.choice = park::settle_choice(c->pieces, b.candidates, b.choice);
             b.picked = park::chosen_piece(c->pieces, b.candidates, b.choice);
             if (!b.picked)
@@ -171,6 +186,60 @@ namespace rct3::scene
             return v;
         }
 
+        /// Swaps the pieces the ride's patterns match for the pieces they become, each laid where the one it
+        /// replaces started.
+        void apply_ride_patterns(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
+        {
+            const park::PieceCatalogue* c = catalogue(b);
+            save::Ride& ride = scene.rides.rides.at(*b.ride);
+            if (c == nullptr || !ride.track || b.rules.patterns.empty())
+                return;
+            std::vector<park::LaidPiece> laid;
+            for (const save::TrackPiece& p : ride.track->pieces)
+            {
+                const auto shape = park::shape_named(*c, p.symbol);
+                if (!shape)
+                    return;
+                laid.push_back({ static_cast<std::size_t>(&*shape - c->pieces.data()), p.reversed });
+            }
+            const std::vector<park::LaidPiece> swapped = park::apply_patterns(c->pieces, laid, b.rules.patterns, ride.track->circuit);
+            if (swapped == laid)
+                return;
+            wait_for_build(scene);
+            const auto objects = object_indices(scene);
+            const auto object_of = [&](const save::TrackPiece& p) {
+                const auto found = objects.find(p.scenery);
+                return found != objects.end() ? maybe(&scene.objects[found->second]) : std::nullopt;
+            };
+            for (std::size_t i = 0; i < laid.size(); ++i)
+            {
+                save::TrackPiece& piece = ride.track->pieces[i];
+                const auto object = object_of(piece);
+                if (swapped[i] == laid[i] || !object)
+                    continue;
+                // Where the piece starts: past the piece before it, or where it starts itself.
+                const auto before = i > 0 ? object_of(ride.track->pieces[i - 1]) : std::nullopt;
+                const park::TrackTip start = before ? park::tip_of(*before, c->pieces[swapped[i - 1].index], swapped[i - 1].reversed, scene.grid) : park::start_of(*object, c->pieces[laid[i].index], laid[i].reversed, scene.grid);
+                const park::PieceShape& shape = c->pieces[swapped[i].index];
+                const auto placed = park::place_after(start, shape, swapped[i].reversed, scene.grid);
+                if (!placed)
+                    continue;
+                object->symbol = placed->object.symbol;
+                object->col = placed->object.col;
+                object->row = placed->object.row;
+                object->rotation = placed->object.rotation;
+                object->base_height = placed->object.base_height;
+                (void)load_object_model(scene, b.models, assets, *object);
+                piece.symbol = shape.record.name + std::string(kSectionTag);
+                piece.tile_x = object->col;
+                piece.tile_z = object->row;
+                piece.height = object->base_height.value_or(0);
+                piece.direction = static_cast<std::uint8_t>(object->rotation);
+                piece.reversed = swapped[i].reversed;
+            }
+            objects_changed(scene);
+        }
+
         /// Adds the ghost to the park and to the ride's track.
         void build(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
@@ -211,7 +280,8 @@ namespace rct3::scene
             scene.attractions[object.id] = { park::AttractionRef::Kind::Ride, *b.ride };
             scene.objects.push_back(std::move(object));
             objects_changed(scene);
-            b.tip = b.ghost->next;
+            apply_ride_patterns(scene, b, assets);
+            b.tip = track_tip(scene, b);
             refresh(scene, b, assets);
         }
 
@@ -232,6 +302,7 @@ namespace rct3::scene
                 scene.objects[found->second].hidden = true;
             scene.attractions.erase(last.scenery);
             objects_changed(scene);
+            apply_ride_patterns(scene, b, assets);
             b.tip = track_tip(scene, b);
             refresh(scene, b, assets);
         }
@@ -427,6 +498,9 @@ namespace rct3::scene
             }
             b.catalogues.emplace(overlay, std::move(*loaded));
         }
+        const save::AttractionCommon& kind = scene.rides.rides[ride].base;
+        const auto rules_file = assets.install->find(std::format("{}.common.ovl", slashes(kind.overlay_path)));
+        b.rules = rules_file ? park::load_track_rules(*rules_file, kind.symbol) : park::TrackRules { };
         b.ride = ride;
         b.overlay = std::move(overlay);
         b.choice = { };

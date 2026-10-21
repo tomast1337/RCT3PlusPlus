@@ -22,6 +22,16 @@ namespace rct3::ovl
             }
         }
 
+        /// The strings of the list of `count` string pointers at `address`; empty when it does not fit.
+        std::vector<std::string_view> strings(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t count, std::uint32_t address)
+        {
+            std::vector<std::string_view> out;
+            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, address, std::size_t { count } * 4);
+            for (std::uint32_t i = 0; list && i < count; ++i)
+                out.push_back(list->text(i * 4));
+            return out;
+        }
+
     } // namespace
 
     std::vector<TrackSectionItem> read_track_sections(const Overlay& overlay, const Part& part)
@@ -59,6 +69,26 @@ namespace rct3::ovl
                     s.water_splines[i] = record->ref(0xD8 + i * 4, "spl");
                 for (std::size_t i = 0; i < s.scale.size(); ++i)
                     s.scale[i] = record->real(0xBC + i * 4);
+                if (version >= 4)
+                {
+                    s.start_join = record->text(0x50);
+                    s.end_join = record->text(0x6C);
+                    s.widths = { record->u32(0x114), record->u32(0x118) };
+                }
+                // Later records number their own layout, 2 in version 4 files and 3 in version 5: the group and
+                // tags come with 2, the side with 3.
+                const std::uint32_t layout = version >= 4 ? record->u32(0xE4) : 0;
+                if (layout >= 2)
+                {
+                    s.group = record->text(0x104);
+                    for (std::size_t end = 0; end < 2; ++end)
+                    {
+                        const auto list = [&](std::size_t at) { return strings(space, refs, record->u32(at + end * 8), record->u32(at + end * 8 + 4)); };
+                        s.tags[end] = { list(0x13C), list(0x14C), list(0x15C) };
+                    }
+                }
+                if (layout >= 3)
+                    s.side = record->u32(0x16C);
                 s.references = record->references(static_cast<std::uint32_t>(size));
                 s.record = record->bytes();
                 item.section = std::move(s);

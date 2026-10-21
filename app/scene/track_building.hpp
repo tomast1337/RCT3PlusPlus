@@ -3,8 +3,9 @@
 // Building a tracked ride's track in the park, piece by piece, with the construction panel. The panel offers
 // the pieces of the ride's track overlay that fit the open end of its track; the picked one shows there as
 // a see-through ghost, and building it adds it to the park's objects and to the ride's track in memory.
-// Demolish takes the last piece away, which opens a closed circuit. Nothing is paid and no supports are
-// built under new pieces yet.
+// Demolish takes the last piece away, which opens a closed circuit. After either, the ride's piece patterns
+// swap the pieces they match (a station run's ends for its end pieces). A ride may not be edited while it is
+// open. Nothing is paid and no supports are built under new pieces yet.
 //
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once
@@ -13,6 +14,7 @@
 #include "park/object_models.hpp"
 #include "park/track_choice.hpp"
 #include "park/track_pieces.hpp"
+#include "park/track_rules.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 
@@ -57,6 +59,7 @@ namespace rct3::scene
     {
         std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
         std::string overlay;             ///< The ride's track overlay, as its objects name it
+        park::TrackRules rules;          ///< Of the ride's kind
         std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit

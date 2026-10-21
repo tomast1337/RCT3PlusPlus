@@ -46,6 +46,57 @@ namespace rct3::ovl
             return d;
         }
 
+        /// A piece test as an entry stores it: a word whose low byte is the kind and next byte the flags (0x1
+        /// negate, 0x2 forward, 0x4 backward, 0x8 first, 0x10 last), then the group's name or the piece.
+        PieceTest piece_test(const ItemRecord& entry, std::size_t at)
+        {
+            const std::uint32_t word = entry.u32(at);
+            PieceTest t;
+            t.kind = static_cast<std::uint8_t>(word & 0xFF);
+            t.name = t.kind == 0 ? entry.text(at + 4) : t.kind == 1 ? entry.ref(at + 4, "tks") : std::string_view { };
+            const std::uint32_t f = word >> 8;
+            t.negate = (f & 0x1) != 0;
+            t.forward = (f & 0x2) != 0;
+            t.backward = (f & 0x4) != 0;
+            t.first = (f & 0x8) != 0;
+            t.last = (f & 0x10) != 0;
+            return t;
+        }
+
+        /// The rules of a later item at `address`, its attraction fields block at `fields` (0 when it has none).
+        TrackRules read_rules(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t fields, std::uint32_t version)
+        {
+            TrackRules rules;
+            if (const auto doors = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields, 0x30))
+            {
+                rules.entrances = doors->u32(0x28);
+                rules.exits = doors->u32(0x2C);
+            }
+            if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(version), 0x34))
+                rules.flags = block->u32(0x30);
+            const auto r = ItemRecord::open(space, refs, address, 0x184);
+            if (!r)
+                return rules;
+            if (const std::int32_t least = r->i32(0x17C); least >= 0)
+                rules.min_pieces = static_cast<std::uint32_t>(least);
+            rules.circuit_only = r->u32(0x180) != 0;
+            // A list of (count, pointer) pairs, each pointing at that many 16-byte entries: the piece test,
+            // then what the piece becomes.
+            const std::uint32_t count = r->u32(0x148);
+            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->u32(0x14C), std::size_t { count } * 8);
+            for (std::uint32_t i = 0; list && i < count; ++i)
+            {
+                const std::uint32_t n = list->u32(i * 8);
+                const auto entries = n == 0 ? std::nullopt : ItemRecord::open(space, refs, list->u32(i * 8 + 4), std::size_t { n } * 16);
+                if (!entries)
+                    continue;
+                auto& pattern = rules.patterns.emplace_back();
+                for (std::uint32_t k = 0; k < n; ++k)
+                    pattern.push_back({ piece_test(*entries, k * 16), piece_test(*entries, k * 16 + 8) });
+            }
+            return rules;
+        }
+
     } // namespace
 
     std::vector<TrackedRideItem> read_tracked_rides(const Overlay& overlay, const Part& part)
@@ -91,9 +142,10 @@ namespace rct3::ovl
                 if (fields != 0)
                     ride.guests = detail::read_ride_guests(space, refs, fields);
                 ride.operating = read_operating(space, refs, symbol.data, version);
-                item.ride = ride;
+                ride.rules = read_rules(space, refs, symbol.data, fields, version);
+                item.ride = std::move(ride);
             }
-            items.push_back(item);
+            items.push_back(std::move(item));
         }
         return items;
     }

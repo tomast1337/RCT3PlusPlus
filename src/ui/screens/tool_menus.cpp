@@ -68,7 +68,7 @@ namespace rct3::ui
             { Options, "File_GameOptions", { }, { }, false },
             { About, "File_AboutRCT", { }, { }, false },
         } };
-        constexpr std::array<ToolMenuItem, 9> kView { {
+        constexpr std::array<ToolMenuItem, 11> kView { {
             { AnimalTiles, "AnimalWalkingGridOff", "AnimalWalkingGridOn", "ToggleEnclosureWalkInfo_TT", false },
             { SeeThroughGround, "Land_TerrainVisibleOff", "Land_TerrainVisible", "Land_TerrainVisibleHelp", true },
             { Scenery, "Land_SceneryVisibleOff", "Land_SceneryVisible", "Land_SceneryVisibleHelp", true },
@@ -78,6 +78,8 @@ namespace rct3::ui
             { RideHeights, "Land_RideHeights", "Land_RideHeightsOn", "Land_RideHeightsHelp", false },
             { Contours, "Land_Contours", "Land_ContoursOn", "Land_ContoursHelp", false },
             { Grid, "Land_Grid", "Land_GridOn", "Land_GridHelp", false },
+            { Money, "Man_Finances", "Man_Finances", "Rct3pp_View_MoneyHelp", true },
+            { GuestPayments, "Guest_Cash", "Guest_Cash", "Rct3pp_View_GuestPaymentsHelp", false },
         } };
     } // namespace
 

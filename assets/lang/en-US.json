@@ -62,6 +62,10 @@
             "NoRoute": "No way there",
             "RemoveHelp": "Remove: click a path to take it away, or drag over paths; refunds what laying them costs"
         },
+        "View": {
+            "MoneyHelp": "Show money spent and paid back floating up where it happens",
+            "GuestPaymentsHelp": "Show what guests pay at rides and stalls floating up from their entrances"
+        },
         "Command": {
             "Cancel": "Close, cancel, go back",
             "DefaultButton": "Default button",

@@ -155,6 +155,14 @@ namespace rct3::scene
         bool stale = true; ///< The ground changed since they were made
     };
 
+    /// An amount of money floating up from a point of the park (scene/park_view.hpp).
+    struct FloatingMoney
+    {
+        glm::vec3 at { 0.0f };
+        std::int64_t amount = 0; ///< Hundredths; above 0 for money in
+        float age = 0;           ///< Seconds
+    };
+
     /// Objects' shapes in buffers for drawing, and their billboards, turned whenever the eye moves. For crossing
     /// objects, the buffers hold CrossingVertex, and `bands` each billboard corner's band and side.
     struct ShownObjects
@@ -341,38 +349,42 @@ namespace rct3::scene
         std::vector<entt::entity> broken_rides;               ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
-        std::optional<std::size_t> shown_person;           ///< Of shown_people, the one the info panel tells about instead
-        std::vector<ui::PersonTab> person_tabs;            ///< Their tabs in the panel's order
-        ui::PersonTab person_tab = ui::PersonTab::General; ///< The tab last opened on a person
-        bool painting_patrol = false;                      ///< Strokes on the ground paint the shown staff member's patrol area
-        int patrol_brush = 0;                              ///< Of ui::kPatrolBrushes
-        std::optional<bool> patrol_stroke;                 ///< While a stroke goes on: whether it adds tiles, or takes them away
-        std::vector<save::BinState> bins;                  ///< Of the litter bins among the objects
-        std::vector<save::SignState> signs;                ///< Of the signs among the objects
-        std::optional<std::size_t> shown_prop;             ///< Of objects, the prop the info panel tells about instead
-        std::vector<ui::SceneryTab> prop_tabs;             ///< Its tabs in the panel's order
-        std::optional<ui::SceneryTab> prop_tab;            ///< Its open tab; none while only its name shows
-        bool show_people = true;                           ///< Switched in the view menu
-        bool show_scenery = true;                          ///< Objects and rides, switched in the view menu
-        bool see_through_ground = false;                   ///< Likewise the ground drawn faded
-        bool show_grid = false;                            ///< Likewise the tile grid over the ground
-        bool show_contours = false;                        ///< Likewise contours over the ground
-        bool show_supports = true;                         ///< Likewise the supports under paths and track
-        bool show_path_heights = false;                    ///< Likewise a label of its height over each path
-        bool show_ride_heights = false;                    ///< Likewise over each piece of track
-        ViewLines grid_lines;                              ///< The tile grid over the ground, while the view menu shows it
-        ViewLines contour_lines;                           ///< Likewise the contours
-        ViewLines land_marks;                              ///< What the land tool out would work on
-        park::ParkCamera view_camera;                      ///< Of the info panel's round view, turning slowly round the attraction
-        render::TextureHandle view_target;                 ///< The round view is drawn into
-        std::uint32_t view_pixels = 0;                     ///< Across the view's target
-        std::vector<PhotoShot> photos;                     ///< Taken in the park, waiting to be drawn, one a frame
-        render::TextureHandle photo_target;                ///< A photo is drawn into
-        std::optional<std::string> photo_reading;          ///< The file name start of the photo read from the target this frame, for the app to save
-        std::optional<ui::Point> press;                    ///< Where the left button went down over the park, until it is let go
-        std::optional<ui::Point> right_press;              ///< Likewise the right button
-        render::SceneLight light;                          ///< What the day clock shows, for this frame
-        int shadows = 0;                                   ///< The Shadows option: none, static (drawn now and then), dynamic
+        std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead
+        std::vector<ui::PersonTab> person_tabs;                     ///< Their tabs in the panel's order
+        ui::PersonTab person_tab = ui::PersonTab::General;          ///< The tab last opened on a person
+        bool painting_patrol = false;                               ///< Strokes on the ground paint the shown staff member's patrol area
+        int patrol_brush = 0;                                       ///< Of ui::kPatrolBrushes
+        std::optional<bool> patrol_stroke;                          ///< While a stroke goes on: whether it adds tiles, or takes them away
+        std::vector<save::BinState> bins;                           ///< Of the litter bins among the objects
+        std::vector<save::SignState> signs;                         ///< Of the signs among the objects
+        std::optional<std::size_t> shown_prop;                      ///< Of objects, the prop the info panel tells about instead
+        std::vector<ui::SceneryTab> prop_tabs;                      ///< Its tabs in the panel's order
+        std::optional<ui::SceneryTab> prop_tab;                     ///< Its open tab; none while only its name shows
+        bool show_people = true;                                    ///< Switched in the view menu
+        bool show_scenery = true;                                   ///< Objects and rides, switched in the view menu
+        bool see_through_ground = false;                            ///< Likewise the ground drawn faded
+        bool show_grid = false;                                     ///< Likewise the tile grid over the ground
+        bool show_contours = false;                                 ///< Likewise contours over the ground
+        bool show_supports = true;                                  ///< Likewise the supports under paths and track
+        bool show_path_heights = false;                             ///< Likewise a label of its height over each path
+        bool show_ride_heights = false;                             ///< Likewise over each piece of track
+        bool show_money = true;                                     ///< Likewise amounts floating up where money is spent or paid back
+        bool show_guest_payments = false;                           ///< Likewise where guests pay for rides and stalls
+        std::vector<FloatingMoney> money;                           ///< The amounts floating up now
+        std::unordered_map<entt::entity, std::int64_t> income_seen; ///< Of each attraction's takings, what has floated up
+        ViewLines grid_lines;                                       ///< The tile grid over the ground, while the view menu shows it
+        ViewLines contour_lines;                                    ///< Likewise the contours
+        ViewLines land_marks;                                       ///< What the land tool out would work on
+        park::ParkCamera view_camera;                               ///< Of the info panel's round view, turning slowly round the attraction
+        render::TextureHandle view_target;                          ///< The round view is drawn into
+        std::uint32_t view_pixels = 0;                              ///< Across the view's target
+        std::vector<PhotoShot> photos;                              ///< Taken in the park, waiting to be drawn, one a frame
+        render::TextureHandle photo_target;                         ///< A photo is drawn into
+        std::optional<std::string> photo_reading;                   ///< The file name start of the photo read from the target this frame, for the app to save
+        std::optional<ui::Point> press;                             ///< Where the left button went down over the park, until it is let go
+        std::optional<ui::Point> right_press;                       ///< Likewise the right button
+        render::SceneLight light;                                   ///< What the day clock shows, for this frame
+        int shadows = 0;                                            ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
         /// goes on towards its next step (park::sun_step_share).
         std::array<ShadowDrawing, 2> shadow_drawings;

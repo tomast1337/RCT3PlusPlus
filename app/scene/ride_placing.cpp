@@ -11,6 +11,7 @@
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
+#include "scene/park_view.hpp"
 #include "simulation/import_park.hpp"
 #include "ui/screens/scenery_info.hpp"
 
@@ -210,6 +211,13 @@ namespace rct3::scene
                 logging::logger("park").info("{} joins the paths", scene.rides.rides[i].base.name);
                 return true;
             });
+        }
+
+        /// The middle of `site` at its height, where what it cost floats up from.
+        glm::vec3 site_point(const ParkScene& scene, const park::RideSite& site)
+        {
+            const save::TerrainGrid& g = scene.grid;
+            return { g.world_x(site.col) + static_cast<float>(site.span[0]) * g.tile_size_x / 2, static_cast<float>(site.height), g.world_z(site.row) + static_cast<float>(site.span[1]) * g.tile_size_z / 2 };
         }
     } // namespace
 
@@ -515,6 +523,7 @@ namespace rct3::scene
             animate_scenery(device, scene, scene.objects.size() - 1);
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
+            float_money(scene, site_point(scene, *p.site), -p.item->price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, o->col, o->row, p.site->height);
             p.ghost_mesh = { };
             return true;
@@ -540,6 +549,7 @@ namespace rct3::scene
             ride.base.facing = static_cast<std::uint8_t>(p.site->turns);
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
+            float_money(scene, site_point(scene, *p.site), -p.item->price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             p.fence.clear();
             fence_ride(scene, assets, ride);

@@ -747,6 +747,7 @@ namespace rct3::scene
         }
         // Under everything else, as part of the park.
         scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
+        scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
         scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings).stays_behind = true;

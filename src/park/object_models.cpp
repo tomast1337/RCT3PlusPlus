@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <glm/gtc/matrix_transform.hpp>
 #include <map>
 #include <ranges>
 #include <span>
@@ -669,6 +670,40 @@ namespace rct3::park
             return std::nullopt;
         ObjectModel model;
         add_levels(model, *visual, visual_file->first);
+        // The part that spins or swings on the car, at rest: its pivot bone on the car's, each shape's origin
+        // standing in for a pivot it lacks.
+        const auto part_file = car->part.empty() ? std::nullopt : files_->holding(tagged(car->part, kVisualTag), car_file->first);
+        if (const ovl::SceneryVisual* part = part_file ? visual_in(*part_file->second, car->part) : nullptr)
+        {
+            const auto pivot = [&](const ovl::SceneryVisual& v, std::string_view path) {
+                const bool boned = !v.lods.empty() && v.lods.front().mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape);
+                const auto file = boned ? files_->holding(tagged(v.lods.front().bone_shape, kBoneTag), path) : std::nullopt;
+                if (const ovl::BoneShape* shape = file ? bone_in(*file->second, v.lods.front().bone_shape) : nullptr)
+                    for (const ovl::Bone& bone : shape->bones)
+                        if (strings::equals_ignoring_case(bone.name, "pivot"))
+                            return glm::vec3 { bone.world[12], bone.world[13], bone.world[14] };
+                return glm::vec3 { 0.0f };
+            };
+            ObjectModel moving;
+            add_levels(moving, *part, part_file->first);
+            const glm::vec3 shift = pivot(*visual, visual_file->first) - pivot(*part, part_file->first);
+            if (model.levels.empty())
+                for (const ModelLevel& level : moving.levels)
+                    model.levels.push_back({ .distance = level.distance });
+            for (std::size_t i = 0; i < model.levels.size() && !moving.levels.empty(); ++i)
+                for (ModelPart one : moving.levels[std::min(i, moving.levels.size() - 1)].parts)
+                {
+                    for (ModelVertex& vertex : one.vertices)
+                        vertex.position += shift;
+                    one.bone = -1; // Cars are drawn unrigged
+                    model.levels[i].parts.push_back(std::move(one));
+                }
+            // Riders sit in the moving part where it has the seats.
+            if (model.seat_places.empty())
+                for (const glm::mat4& seat : moving.seat_places)
+                    model.seat_places.push_back(glm::translate(glm::mat4(1.0f), shift) * seat);
+            model.seats = std::max(model.seats, moving.seats);
+        }
         if (model.levels.empty())
             return std::nullopt;
         return model;

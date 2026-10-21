@@ -323,6 +323,8 @@ namespace
                 for (const auto& m : sh.meshes)
                     untextured += m.texture.empty();
                 std::printf("  %-32s meshes %zu vertices %u indices %u bones %zu untextured %zu\n", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
+                for (const auto& b : sh.bones)
+                    std::printf("    bone %-24s parent %d at %g %g %g\n", std::string(b.name).c_str(), b.parent, b.world[12], b.world[13], b.world[14]);
             }
         }
         if (opt.flt)
@@ -491,6 +493,8 @@ namespace
                     continue;
                 }
                 std::printf("  %-32s kind %u visual %s refs %zu\n", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size());
+                for (const auto& ref : item.car->references)
+                    std::printf("    ref +%u %s:%s\n", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
             }
         }
         if (opt.rit)

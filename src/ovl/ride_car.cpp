@@ -48,6 +48,9 @@ namespace rct3::ovl
                 car.kind = record->u32(0x08);
                 car.visual = record->ref(0x0C, "svd");
                 car.part = record->ref(0x14, "svd");
+                for (std::size_t i = 0; i < car.wheels.size(); ++i)
+                    car.wheels[i] = record->ref(0xA4 + 8 * i, "svd");
+                car.axles = { record->ref(0xC4, "svd"), record->ref(0xC8, "svd") };
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
                 item.car = std::move(car);

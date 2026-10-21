@@ -670,39 +670,78 @@ namespace rct3::park
             return std::nullopt;
         ObjectModel model;
         add_levels(model, *visual, visual_file->first);
-        // The part that spins or swings on the car, at rest: its pivot bone on the car's, each shape's origin
-        // standing in for a pivot it lacks.
-        const auto part_file = car->part.empty() ? std::nullopt : files_->holding(tagged(car->part, kVisualTag), car_file->first);
-        if (const ovl::SceneryVisual* part = part_file ? visual_in(*part_file->second, car->part) : nullptr)
-        {
-            const auto pivot = [&](const ovl::SceneryVisual& v, std::string_view path) {
-                const bool boned = !v.lods.empty() && v.lods.front().mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape);
-                const auto file = boned ? files_->holding(tagged(v.lods.front().bone_shape, kBoneTag), path) : std::nullopt;
-                if (const ovl::BoneShape* shape = file ? bone_in(*file->second, v.lods.front().bone_shape) : nullptr)
-                    for (const ovl::Bone& bone : shape->bones)
-                        if (strings::equals_ignoring_case(bone.name, "pivot"))
-                            return glm::vec3 { bone.world[12], bone.world[13], bone.world[14] };
-                return glm::vec3 { 0.0f };
-            };
-            ObjectModel moving;
-            add_levels(moving, *part, part_file->first);
-            const glm::vec3 shift = pivot(*visual, visual_file->first) - pivot(*part, part_file->first);
+        // The car's other pieces, each drawn at a place on it: `name`'s levels added to the car's, finest to
+        // finest, as many as the car has.
+        const auto add = [&](std::string_view name, const glm::mat4& place) -> std::optional<ObjectModel> {
+            const auto file = name.empty() ? std::nullopt : files_->holding(tagged(name, kVisualTag), car_file->first);
+            const ovl::SceneryVisual* piece = file ? visual_in(*file->second, name) : nullptr;
+            if (piece == nullptr)
+                return std::nullopt;
+            ObjectModel pieces;
+            add_levels(pieces, *piece, file->first);
             if (model.levels.empty())
-                for (const ModelLevel& level : moving.levels)
+                for (const ModelLevel& level : pieces.levels)
                     model.levels.push_back({ .distance = level.distance });
-            for (std::size_t i = 0; i < model.levels.size() && !moving.levels.empty(); ++i)
-                for (ModelPart one : moving.levels[std::min(i, moving.levels.size() - 1)].parts)
+            const glm::mat3 turn { place };
+            for (std::size_t i = 0; i < model.levels.size() && !pieces.levels.empty(); ++i)
+                for (ModelPart one : pieces.levels[std::min(i, pieces.levels.size() - 1)].parts)
                 {
                     for (ModelVertex& vertex : one.vertices)
-                        vertex.position += shift;
+                    {
+                        vertex.position = glm::vec3(place * glm::vec4(vertex.position, 1.0f));
+                        vertex.normal = glm::normalize(turn * vertex.normal);
+                    }
                     one.bone = -1; // Cars are drawn unrigged
                     model.levels[i].parts.push_back(std::move(one));
                 }
-            // Riders sit in the moving part where it has the seats.
+            return pieces;
+        };
+        // Where a piece's finest shape has the bone `bone`, in its own space.
+        const auto bone_of = [&](std::string_view name, std::string_view bone) -> std::optional<glm::mat4> {
+            const auto file = name.empty() ? std::nullopt : files_->holding(tagged(name, kVisualTag), car_file->first);
+            const ovl::SceneryVisual* piece = file ? visual_in(*file->second, name) : nullptr;
+            if (piece == nullptr || piece->lods.empty() || piece->lods.front().mesh_type != static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+                return std::nullopt;
+            const auto shape_file = files_->holding(tagged(piece->lods.front().bone_shape, kBoneTag), file->first);
+            if (const ovl::BoneShape* shape = shape_file ? bone_in(*shape_file->second, piece->lods.front().bone_shape) : nullptr)
+                for (const ovl::Bone& b : shape->bones)
+                    if (strings::equals_ignoring_case(b.name, bone))
+                        return column_matrix(b.world);
+            return std::nullopt;
+        };
+        const glm::mat4 rest { 1.0f };
+
+        // The part that spins or swings on the car, at rest: its pivot bone on the car's, each piece's origin
+        // standing in for a pivot it lacks. Riders sit in it where it has the seats.
+        const glm::vec3 pivot { bone_of(car->visual, "pivot").value_or(rest)[3] };
+        const glm::vec3 part_pivot { bone_of(car->part, "pivot").value_or(rest)[3] };
+        const glm::mat4 part_place = glm::translate(rest, pivot - part_pivot);
+        if (const auto part = add(car->part, part_place))
+        {
             if (model.seat_places.empty())
-                for (const glm::mat4& seat : moving.seat_places)
-                    model.seat_places.push_back(glm::translate(glm::mat4(1.0f), shift) * seat);
-            model.seats = std::max(model.seats, moving.seats);
+                for (const glm::mat4& seat : part->seat_places)
+                    model.seat_places.push_back(part_place * seat);
+            model.seats = std::max(model.seats, part->seats);
+        }
+
+        // Axles on the car's axle bones, and wheels on its wheel bones or else on their axle's ends. A piece
+        // with no place to go is left off.
+        constexpr std::array<std::string_view, 2> kAxleBones { "axelf", "axelr" };
+        constexpr std::array<std::string_view, 4> kWheelBones { "wheelfr", "wheelfl", "wheelrr", "wheelrl" };
+        constexpr std::array<std::string_view, 2> kAxleEnds { "wheelr", "wheell" };
+        std::array<std::optional<glm::mat4>, 2> axles;
+        for (std::size_t i = 0; i < axles.size(); ++i)
+            if (!car->axles[i].empty())
+                if ((axles[i] = bone_of(car->visual, kAxleBones[i])))
+                    add(car->axles[i], *axles[i]);
+        for (std::size_t i = 0; i < car->wheels.size(); ++i)
+        {
+            std::optional<glm::mat4> place = car->wheels[i].empty() ? std::nullopt : bone_of(car->visual, kWheelBones[i]);
+            if (!place && axles[i / 2])
+                if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
+                    place = *axles[i / 2] * *end;
+            if (place)
+                add(car->wheels[i], *place);
         }
         if (model.levels.empty())
             return std::nullopt;

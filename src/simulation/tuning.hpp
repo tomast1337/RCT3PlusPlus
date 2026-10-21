@@ -113,7 +113,6 @@ namespace rct3::simulation::tuning
     struct Arrivals
     {
         double per_second = 1.0 / 30; ///< Guests coming in at the gate
-        double family_share = 0.15;   ///< Of those at night that are not teens; teens the same by day
         double rain = 0.5;
         double storm = 0.25;
         double cold = 0.6;
@@ -141,6 +140,32 @@ namespace rct3::simulation::tuning
         float mood = 0.7f;
         float teen_tolerance = 0.75f;
         std::int64_t cash = 5000; ///< Hundredths
+    };
+
+    /// The intensity of rides a kind of party likes, 0..1 as rides are rated: the middle of each guest's
+    /// least and most; each guest's lie up to Parties::taste_spread either side.
+    struct TasteBand
+    {
+        float least = 0;
+        float most = 1;
+    };
+
+    /// The parties that come in at the gate.
+    struct Parties
+    {
+        /// How often each PartyKind comes against the others, where the park sets no mix of its own.
+        std::array<float, 8> weights { 2, 2, 3, 3, 2, 2, 4, 1 };
+        float single_parent = 0.2f;     ///< Of families, those with one parent
+        std::int64_t most_children = 4; ///< In a family or on a day trip; at least one
+        std::int64_t most_friends = 5;  ///< In a gang or a party; at least two
+        double night_others = 0.15;     ///< Of parties other than teens', those still coming after dark
+        /// How far the park's rides tilt the mix: a park of only the wildest rides draws teens' parties
+        /// (1 + pull) times as often and families and day trips that much less; of only the gentlest, the reverse.
+        double pull = 1.0;
+        TasteBand thrill { 0.2f, 0.85f }; ///< Teens on their own and in gangs
+        TasteBand middle { 0.1f, 0.7f };  ///< Couples, adults on their own and in parties
+        TasteBand gentle { 0.0f, 0.45f }; ///< Families and day trips
+        float taste_spread = 0.1f;
     };
 
     /// Guests going home. Tuned so busy saved parks keep their guest counts.
@@ -262,6 +287,7 @@ namespace rct3::simulation::tuning
         Weather weather;
         Night night;
         Arrivals arrivals;
+        Parties parties;
         Leaving leaving;
         Thoughts thoughts;
         Litter litter;

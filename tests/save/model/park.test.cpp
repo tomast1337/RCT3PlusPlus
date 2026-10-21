@@ -667,3 +667,21 @@ TEST_CASE("park: content check against an install")
     REQUIRE(rep.missing_stems.size() == 1);
     CHECK(rep.missing_stems[0] == "Pack/Three");
 }
+
+TEST_CASE("park: a scenario's group mix is read in kind order; a mix object without weights means none")
+{
+    const auto l = load(
+        {
+            { "Park", 1, { fstr("Name", "Mixed") } },
+            { "GuestDemographics", 2, { ffloat("Pop_LoneTeenager", 2), ffloat("Pop_Family", 7), ffloat("Pop_DayTrip", 0.5f), ffloat("Prob_SingleParentFamily", 0.3f) } },
+        });
+    REQUIRE(l->model.group_mix.has_value());
+    CHECK(l->model.group_mix->weights[0] == 2.0f);
+    CHECK(l->model.group_mix->weights[1] == 0.0f); // Absent kinds never come
+    CHECK(l->model.group_mix->weights[6] == 7.0f);
+    CHECK(l->model.group_mix->weights[7] == 0.5f);
+    CHECK(l->model.group_mix->single_parent == doctest::Approx(0.3f));
+
+    const auto empty = load({ { "Park", 1, { fstr("Name", "Played") } }, { "GuestDemographics", 2, { fint("Unrelated", 1) } } });
+    CHECK_FALSE(empty->model.group_mix.has_value());
+}

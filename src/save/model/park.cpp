@@ -27,6 +27,7 @@ namespace rct3::save
             constexpr std::string_view kMoneyClass = "Money";
             constexpr std::string_view kClockClass = "GameTime";
             constexpr std::string_view kAwardsClass = "Awards";
+            constexpr std::string_view kGroupMixClass = "GuestDemographics";
             constexpr std::string_view kObjectiveClass = "Objective";
             constexpr std::string_view kChallengeClass = "Challenge";
             constexpr std::string_view kResearchCategoryClass = "ResearchCategoryInstance";
@@ -43,6 +44,10 @@ namespace rct3::save
                 std::pair { std::string_view { "RideIncomeCondition" }, ConditionKind::RideIncome }, std::pair { std::string_view { "ShopProfitCondition" }, ConditionKind::ShopProfit },   std::pair { std::string_view { "RepayLoanCondition" }, ConditionKind::RepayLoan },
                 std::pair { std::string_view { "CoasterCondition" }, ConditionKind::Coaster },       std::pair { std::string_view { "ItemsBoughtCondition" }, ConditionKind::ItemsBought }, std::pair { std::string_view { "VIPCondition" }, ConditionKind::Vip },
             };
+
+            // Group mix attributes, in GroupMix::weights order
+            constexpr std::array<std::string_view, 8> kGroupWeights { "Pop_LoneTeenager", "Pop_LoneAdult", "Pop_TeenageCouple", "Pop_AdultCouple", "Pop_TeenageGang", "Pop_AdultParty", "Pop_Family", "Pop_DayTrip" };
+            constexpr std::string_view kSingleParent = "Prob_SingleParentFamily";
 
             // Park attributes
             constexpr std::string_view kName = "Name";
@@ -464,6 +469,17 @@ namespace rct3::save
             c.day_night_rendered_phase = unset_if_negative(o.find(kDayNightRendered));
         }
 
+        [[nodiscard]] std::optional<GroupMix> group_mix_of(const DecodedObject& o)
+        {
+            using namespace names;
+            if (!o.find(kGroupWeights[0]))
+                return std::nullopt;
+            GroupMix mix { .single_parent = float_of(o.find(kSingleParent), 0.0f) };
+            for (std::size_t k = 0; k < mix.weights.size(); ++k)
+                mix.weights[k] = std::max(float_of(o.find(kGroupWeights[k]), 0.0f), 0.0f);
+            return mix;
+        }
+
         void load_awards_object(const DecodedObject& o, Awards& a)
         {
             using namespace names;
@@ -640,6 +656,7 @@ namespace rct3::save
             Console,
             DatabaseEntry,
             Particle,
+            GroupMix,
         };
 
         [[nodiscard]] Role role_of(const Class& c)
@@ -654,6 +671,8 @@ namespace rct3::save
                 return Role::Clock;
             if (n == kAwardsClass)
                 return Role::Awards;
+            if (n == kGroupMixClass)
+                return Role::GroupMix;
             if (n == kObjectiveClass)
                 return Role::Objective;
             if (n == kChallengeClass)
@@ -996,6 +1015,8 @@ namespace rct3::save
                 continue;
             if (role == Role::Awards && m.has_awards)
                 continue;
+            if (role == Role::GroupMix && m.group_mix)
+                continue;
             if (role == Role::Console)
             {
                 if (!console)
@@ -1033,6 +1054,9 @@ namespace rct3::save
                 case Role::Awards:
                     load_awards_object(*decoded, m.awards);
                     m.has_awards = true;
+                    break;
+                case Role::GroupMix:
+                    m.group_mix = group_mix_of(*decoded);
                     break;
                 case Role::Objective:
                     load_objective_object(*decoded, m.objectives);

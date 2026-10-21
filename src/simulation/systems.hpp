@@ -21,6 +21,7 @@
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -89,6 +90,11 @@ namespace rct3::simulation
     /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
     /// against `ideal`) and its entrance fee against `fair_fee`.
     [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
+
+    /// How often each PartyKind comes in at the gate against the others: the park's mix (PartyMix, else the
+    /// tuning's), tilted toward teens by wild rides and toward families by gentle ones, and after dark mostly
+    /// teens.
+    [[nodiscard]] std::array<double, kPartyKinds> party_weights(const SimWorld& world, bool night);
 
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
     [[nodiscard]] bool is_night(float time);

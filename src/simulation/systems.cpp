@@ -14,11 +14,13 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace rct3::simulation
@@ -434,6 +436,40 @@ namespace rct3::simulation
         return rate;
     }
 
+    std::array<double, kPartyKinds> party_weights(const SimWorld& world, bool night)
+    {
+        const entt::registry& r = world.registry;
+        const auto* mix = r.ctx().find<PartyMix>();
+        std::array<double, kPartyKinds> weights { };
+        for (std::size_t k = 0; k < kPartyKinds; ++k)
+            weights[k] = mix != nullptr ? mix->weights[k] : kTuning.parties.weights[k];
+        // How wild the open rides are, from -1 (all the gentlest) to 1 (all the wildest); none tilt nothing.
+        float wild = 0;
+        std::size_t rides = 0;
+        for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
+        {
+            if (!at.open)
+                continue;
+            wild += ride.intensity * 2 - 1;
+            ++rides;
+        }
+        const double tilt = std::pow(1 + kTuning.parties.pull, rides > 0 ? wild / static_cast<float>(rides) : 0.0f);
+        // shortcut: no campaign aims at a kind of party, as advertising campaigns are not simulated yet (the
+        // finances work, #98); when they are, one aimed at families or at teens multiplies those weights here.
+        for (std::size_t k = 0; k < kPartyKinds; ++k)
+        {
+            const auto kind = static_cast<PartyKind>(k);
+            const bool teens = kind == PartyKind::LoneTeen || kind == PartyKind::TeenCouple || kind == PartyKind::TeenGang;
+            if (teens)
+                weights[k] *= tilt;
+            else if (kind == PartyKind::Family || kind == PartyKind::DayTrip)
+                weights[k] /= tilt;
+            if (night && !teens)
+                weights[k] *= kTuning.parties.night_others;
+        }
+        return weights;
+    }
+
     bool is_night(float time)
     {
         return time >= kTuning.night.dusk || time < kTuning.night.dawn;
@@ -505,17 +541,78 @@ namespace rct3::simulation
                 auto& dice = r.get<Dice>(gate).state;
                 if (!random::chance(dice, arrivals * dt))
                     continue;
-                const bool family = random::chance(dice, night ? kTuning.arrivals.family_share : 1 - kTuning.arrivals.family_share);
-                const AgeGroup age = !family ? AgeGroup::Teen : random::chance(dice, 0.5) ? AgeGroup::Adult : AgeGroup::Child;
+                // A whole party comes in at once, of a kind picked by the mix.
+                const auto weights = party_weights(world, night);
+                double roll = random::unit(dice) * std::reduce(weights.begin(), weights.end());
+                std::size_t pick = 0;
+                while (pick + 1 < kPartyKinds && roll >= weights[pick])
+                    roll -= weights[pick++];
+                const auto kind = static_cast<PartyKind>(pick);
+                const auto* mix = r.ctx().find<PartyMix>();
+                // Who comes, the leader first: an adult wherever there are children.
+                std::vector<std::pair<AgeGroup, bool>> who; // Age, and whether female
+                const bool female = random::chance(dice, 0.5);
+                const auto children = [&] {
+                    for (auto n = random::between(dice, std::int64_t { 1 }, kTuning.parties.most_children); n > 0; --n)
+                        who.emplace_back(AgeGroup::Child, random::chance(dice, 0.5));
+                };
+                switch (kind)
+                {
+                    case PartyKind::LoneTeen:
+                    case PartyKind::LoneAdult:
+                        who.emplace_back(kind == PartyKind::LoneTeen ? AgeGroup::Teen : AgeGroup::Adult, female);
+                        break;
+                    case PartyKind::TeenCouple:
+                    case PartyKind::AdultCouple:
+                    {
+                        const AgeGroup age = kind == PartyKind::TeenCouple ? AgeGroup::Teen : AgeGroup::Adult;
+                        who = { { age, female }, { age, !female } };
+                        break;
+                    }
+                    case PartyKind::TeenGang:
+                    case PartyKind::AdultParty:
+                        for (auto n = random::between(dice, std::int64_t { 2 }, kTuning.parties.most_friends); n > 0; --n)
+                            who.emplace_back(kind == PartyKind::TeenGang ? AgeGroup::Teen : AgeGroup::Adult, random::chance(dice, 0.5));
+                        break;
+                    case PartyKind::Family:
+                        who.emplace_back(AgeGroup::Adult, female);
+                        if (!random::chance(dice, mix != nullptr ? mix->single_parent : kTuning.parties.single_parent))
+                            who.emplace_back(AgeGroup::Adult, !female);
+                        children();
+                        break;
+                    case PartyKind::DayTrip:
+                        who.emplace_back(AgeGroup::Adult, female);
+                        children();
+                        break;
+                }
+                const tuning::TasteBand band = kind == PartyKind::LoneTeen || kind == PartyKind::TeenGang ? kTuning.parties.thrill : kind == PartyKind::Family || kind == PartyKind::DayTrip ? kTuning.parties.gentle : kTuning.parties.middle;
                 const NodeId at = r.get<ParkGate>(gate).node;
-                const entt::entity guest = r.create();
-                r.emplace<Visitor>(guest, age, random::chance(dice, 0.5), std::string { }, world.tick);
-                r.emplace<Pose>(guest, paths.centre(at), 0.0f);
-                r.emplace<Needs>(guest);
-                r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = 1, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
-                r.emplace<Wallet>(guest, kTuning.arrivals.cash);
-                start_walking(world, guest, at);
-                ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
+                std::vector<entt::entity> members;
+                for (const auto [age, is_female] : who)
+                {
+                    const entt::entity guest = members.emplace_back(r.create());
+                    r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
+                    r.emplace<Pose>(guest, paths.centre(at), 0.0f);
+                    r.emplace<Needs>(guest);
+                    r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = 1, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
+                    const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread; };
+                    const float least = std::clamp(band.least + spread(), 0.0f, 1.0f);
+                    r.emplace<Taste>(guest, least, std::clamp(band.most + spread(), least, 1.0f));
+                    r.emplace<Wallet>(guest, kTuning.arrivals.cash);
+                    start_walking(world, guest, at);
+                    ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
+                }
+                if (members.size() > 1)
+                {
+                    const entt::entity party = r.create();
+                    for (const entt::entity m : members)
+                    {
+                        r.emplace<Member>(m, party);
+                        if (m != members.front())
+                            r.get<Errand>(m) = { ErrandKind::Following, entt::null, 0 };
+                    }
+                    r.emplace<Party>(party, members.front(), std::move(members));
+                }
             }
             vandalism.recent *= std::exp(-dt / kTuning.vandals.fade);
             if (vandalism.since_warning >= 0)

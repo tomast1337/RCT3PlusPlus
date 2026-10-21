@@ -494,6 +494,15 @@ namespace rct3::save
     // Aggregate and loader
     // ---------------------------------------------------------------------------------------------------------
 
+    /// How often each kind of guest group comes to the park, as relative weights in the order lone teenager,
+    /// lone adult, teenage couple, adult couple, teenage gang, adult party, family, day trip. Scenarios carry
+    /// them; parks saved after play keep the object without values.
+    struct GroupMix
+    {
+        std::array<float, 8> weights { };
+        float single_parent = 0; ///< Chance a family comes with one parent
+    };
+
     struct ParkModel
     {
         Park park;
@@ -504,6 +513,7 @@ namespace rct3::save
         ResearchState research;
         MessageLog messages;
         RequiredContent content;
+        std::optional<GroupMix> group_mix; ///< None when the file stores no weights
 
         // Which singletons the file had; the rest of the model holds defaults when false.
         bool has_park = false;

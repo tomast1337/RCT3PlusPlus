@@ -1024,6 +1024,9 @@ namespace rct3::scene
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
                 });
+                // The guests in the park now, coming in at the gate and going home, for the bar and the rating.
+                const auto inside = scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>);
+                scene.park.guests = static_cast<std::int32_t>(std::ranges::distance(inside.begin(), inside.end()));
                 // Each thing broken costs the park some rating, and bad runs of it are told to the player.
                 if (const auto* vandalism = scene.sim.registry.ctx().find<simulation::Vandalism>())
                 {

@@ -20,6 +20,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <future>
 #include <map>
 #include <span>
@@ -159,6 +160,8 @@ namespace rct3::scene
                 {
                     const auto& r = scene.sim.registry;
                     const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
+                    if (r.all_of<simulation::Left>(shown.guest))
+                        continue; // Gone home since the levels were taken
                     const auto& stride = r.get<simulation::Stride>(shown.guest);
                     const auto kind = r.get<simulation::Errand>(shown.guest).kind;
                     pose.time = shown.saved_time + clock * shown.speed;
@@ -371,11 +374,49 @@ namespace rct3::scene
         if (scene.since_people_levels >= kObjectRebuildInterval && !scene.people_build.valid())
         {
             scene.since_people_levels = 0;
+            // Guests who came in at the gate since: dressed from the wardrobe for their age and sex, and kept
+            // with the park's people like those it was saved with. Here, as no build reads the shown people.
+            auto& r = scene.sim.registry;
+            for (const auto [e, visitor, mood] : r.view<const simulation::Visitor, const simulation::Mood>(entt::exclude<simulation::Left>).each())
+            {
+                if (!scene.simulate || scene.wardrobe.empty() || !r.all_of<simulation::Stride>(e) || !scene.known_guests.insert(e).second)
+                    continue;
+                const auto type = static_cast<save::PersonType>(std::to_underlying(visitor.age)); // The same numbers
+                const save::Sex sex = visitor.female ? save::Sex::Female : save::Sex::Male;
+                std::array<const Outfit*, 3> worn { };
+                for (std::size_t section = 0; section < worn.size(); ++section)
+                {
+                    std::vector<const Outfit*> fits;
+                    for (const Outfit& o : scene.wardrobe)
+                        if (o.type == type && o.sex == sex && o.section == section)
+                            fits.push_back(&o);
+                    if (!fits.empty())
+                        worn[section] = fits[random::below(scene.looks, fits.size())];
+                }
+                if (std::ranges::contains(worn, nullptr))
+                    continue;
+                save::Guest& kept = scene.people.guests.emplace_back();
+                kept.in_park = true;
+                kept.mood_now.happiness = mood.happiness;
+                kept.person.type = type;
+                kept.person.sub_type = std::to_underlying(sex);
+                kept.person.name = visitor.name.empty() ? std::format("Guest {}", scene.people.guests.size()) : visitor.name;
+                save::Appearance& a = kept.person.appearance;
+                a.head = { worn[0]->id };
+                a.body = { worn[1]->id };
+                a.legs = { worn[2]->id };
+                ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .saved = scene.people.guests.size() - 1, .guest = e });
+                park::PersonLook& look = shown.pose.look;
+                look.head = worn[0]->set;
+                look.body = worn[1]->set;
+                look.legs = worn[2]->set;
+                for (std::size_t i = 0; i < look.colours.size(); ++i)
+                    look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
+                shown.pose.motion = park::motion::kWalk;
+            }
             park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
             for (std::size_t i = 0; i < levels.size(); ++i)
             {
-                // shortcut: guests who come in at the gate are simulated but not shown; add them to the shown
-                // people once new guests can be dressed and posed.
                 if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
                     continue; // Gone home
                 const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));

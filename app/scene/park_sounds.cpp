@@ -86,6 +86,7 @@ namespace rct3::scene
         const bool quiet = scene.park.speed.paused || !scene.simulate || volume <= 0;
         const glm::vec3 eye = park::eye(scene.camera);
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
+        engine.set_muffled(scene.water.eye_in.has_value());
 
         // The chatter: two clips overlapping, each started again with another when it ends, heard from where the
         // people about the camera's point stand, however far the eye.

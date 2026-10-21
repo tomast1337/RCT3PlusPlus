@@ -213,6 +213,8 @@ namespace rct3::audio
 
         /// Where placed voices are heard from: `forward` is where the listener looks, `up` its head's up.
         void set_listener(glm::vec3 at, glm::vec3 forward, glm::vec3 up);
+        /// Placed voices heard dull and quieter, as through water, while `muffled`; other voices stay clear.
+        void set_muffled(bool muffled);
 
         /// True while the voice has frames left to play.
         [[nodiscard]] bool is_playing(VoiceHandle voice) const;

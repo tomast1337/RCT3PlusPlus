@@ -271,6 +271,8 @@ int main(int argc, char** argv)
         return found != sights.end() ? std::optional(found->second) : std::nullopt;
     });
     const bool gate = simulation::import_gate(world, world_model->objects, [&](const save::PlacedObject& o) { return gates.contains(o.id); }) != entt::null;
+    if (park_model && park_model->group_mix)
+        simulation::import_party_mix(world, *park_model->group_mix);
     std::printf("facilities %zu  sights %zu  gate %s\n", facilities, sight_count, gate ? "yes" : "none");
     // The park's time of day, as its file left it, run through every hour.
     simulation::DayWindow hours;

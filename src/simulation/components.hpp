@@ -19,6 +19,7 @@
 #include "simulation/path_network.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -93,6 +94,31 @@ namespace rct3::simulation
     /// A guest who has gone home. Kept, without what made them move, for whoever still shows them.
     struct Left
     {
+    };
+
+    /// The kinds of party that come in at the gate. Children only ever come with an adult.
+    // shortcut: no party of the player's own made guests (custom peeps), as players cannot make guests yet;
+    // add a kind here when they can.
+    enum class PartyKind : std::uint8_t
+    {
+        LoneTeen,
+        LoneAdult,
+        TeenCouple,  ///< A boy and a girl
+        AdultCouple, ///< A man and a woman
+        TeenGang,    ///< Teens, two or more
+        AdultParty,  ///< Adults, two or more
+        Family,      ///< One or two parents with their children
+        DayTrip,     ///< One adult taking children out
+    };
+    inline constexpr std::size_t kPartyKinds = 8;
+
+    /// The park's own mix of parties, in the registry's context, as a scenario sets it: how often each
+    /// PartyKind comes against the others, and the share of families with one parent. The tuning's mix when
+    /// none is there.
+    struct PartyMix
+    {
+        std::array<float, kPartyKinds> weights { };
+        float single_parent = 0;
     };
 
     /// Guests in and out of the gate so far, in the registry's context, by AgeGroup.

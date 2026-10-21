@@ -896,6 +896,8 @@ namespace rct3::scene
                     const auto model = scene.models.find(park::model_key(o));
                     return model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
                 });
+                if (park_model && park_model->group_mix)
+                    simulation::import_party_mix(scene.sim, *park_model->group_mix);
                 const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);
                 for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
                     if (upkeep.broken)

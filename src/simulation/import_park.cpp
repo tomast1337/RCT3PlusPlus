@@ -542,6 +542,12 @@ namespace rct3::simulation
         return entt::null;
     }
 
+    void import_party_mix(SimWorld& world, const save::GroupMix& mix)
+    {
+        // The save lists the kinds in PartyKind's order.
+        world.registry.ctx().insert_or_assign(PartyMix { .weights = mix.weights, .single_parent = mix.single_parent });
+    }
+
     Upkeep upkeep_of(const save::Ride& ride)
     {
         // The intervals the maintenance page lists, in its order: every 10, 20, 30 and 45 minutes, every hour,

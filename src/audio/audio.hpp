@@ -208,6 +208,8 @@ namespace rct3::audio
         bool set_voice_volume(VoiceHandle voice, float volume);
         bool set_voice_pan(VoiceHandle voice, float pan);
         bool set_voice_pitch(VoiceHandle voice, float pitch);
+        /// Takes a voice evenly from how loud its fade is now to `level` (0..1, on top of its volume) over `seconds`.
+        bool fade_voice(VoiceHandle voice, float level, float seconds);
         /// Moves a voice started `at` a place, going at `velocity` (world units a second).
         bool set_voice_place(VoiceHandle voice, glm::vec3 at, glm::vec3 velocity = { });
 

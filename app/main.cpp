@@ -941,7 +941,7 @@ int main(int argc, char** argv)
         }
     };
     // Loads a park while its loading screen shows, as the game does: on this thread, the screen drawn again
-    // as each stage begins. The menus' music goes on meanwhile; the park quiets it once it shows.
+    // as each stage begins. The music fades out meanwhile.
     // The log says how long each stage took, and where a load that failed stopped.
     const auto load_park = [&](const std::filesystem::path& path) {
         const prof::Scope zone("LoadingScreen");
@@ -953,7 +953,7 @@ int main(int argc, char** argv)
         const auto report = [&](rct3::scene::ParkLoadStage stage) {
             window->poll_events();
             if (audio && menu_audio)
-                rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { });
+                rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { }, false, 0);
             if (stage == shown)
                 return;
             const double now = window->time();
@@ -1154,8 +1154,10 @@ int main(int argc, char** argv)
                         auto sounds = park->desktop->take_sounds();
                         if (rct3::scene::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
+                        // shortcut: heard by the camera's height alone, there being no view from a ride yet; silence it there once there is.
+                        const float music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y);
                         if (audio && menu_audio)
-                            prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true); });
+                            prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
                             prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, front->live->options.get(config::GameOption::GameVolume), static_cast<float>(delta)); });
                         // Leaving, or loading another park in its place: its loading screen shows next.

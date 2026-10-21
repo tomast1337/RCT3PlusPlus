@@ -27,6 +27,10 @@ namespace rct3::audio
         /// any more: the music stops when what was read has played, and later calls do nothing.
         [[nodiscard]] std::expected<void, std::string> update(AudioEngine& engine);
         bool set_volume(AudioEngine& engine, float volume);
+        bool fade(AudioEngine& engine, float level, float seconds)
+        {
+            return engine.fade_voice(voice_, level, seconds);
+        }
         void stop(AudioEngine& engine);
 
         [[nodiscard]] bool playing(const AudioEngine& engine) const

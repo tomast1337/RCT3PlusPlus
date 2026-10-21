@@ -31,6 +31,7 @@ namespace rct3::scene
     {
         std::optional<audio::MusicPlayer> music;
         float music_volume = -1;                  // As last set; below 0 before the first update
+        float music_level = -1;                   // The fade last asked for; below 0 for music just started
         std::filesystem::path folder;             ///< The game's music folder; empty without one
         std::vector<std::string> files;           ///< Its tracks
         std::optional<std::size_t> cycle_file;    ///< The cycle's track for this run, when there is one
@@ -50,9 +51,9 @@ namespace rct3::scene
     /// Picks the run's track, which moves the menu music's cycle on in `options`, and starts it.
     [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed);
 
-    /// Keeps the music going at the volume of `options` and plays the interface's sounds. `in_park` while a
-    /// park is open, which quiets the menus' own music.
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false);
+    /// Keeps the music going at the volume of `options`, fading to `level` of it (0..1), and plays the interface's
+    /// sounds. `in_park` while a park is open, which quiets the menus' own music.
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false, float level = 1);
 
     void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu);
 

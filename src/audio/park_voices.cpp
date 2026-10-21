@@ -2,14 +2,12 @@
 #include "audio/park_voices.hpp"
 
 #include <algorithm>
-#include <glm/geometric.hpp>
 
 namespace rct3::audio
 {
 
     namespace
     {
-        constexpr float kWidePan = 0.7f;     ///< Most a sound pans, so nothing goes wholly to one ear
         constexpr float kThrillSpeed = 14;   ///< World units a second from which a car's speed thrills
         constexpr float kWildSpeed = 30;     ///< At which it thrills the most
         constexpr float kThrillDrop = 4;     ///< World units a second of drop from which it thrills
@@ -17,13 +15,9 @@ namespace rct3::audio
         constexpr float kMostScreams = 1.5f; ///< A second, on the wildest stretch
     } // namespace
 
-    PlayParams heard(glm::vec3 eye, glm::vec3 right, glm::vec3 at, float volume)
+    PlayParams heard(glm::vec3 at, float volume)
     {
-        const glm::vec3 to = at - eye;
-        const float distance = glm::length(to);
-        const float fade = std::clamp((kFarVoice - distance) / (kFarVoice - kNearVoice), 0.0f, 1.0f);
-        const float side = distance > 0 ? glm::dot(to, right) / distance : 0.0f;
-        return { .volume = std::max(volume, 0.0f) * fade, .pan = std::clamp(side, -1.0f, 1.0f) * kWidePan };
+        return { .volume = std::max(volume, 0.0f), .at = at, .near = kNearVoice, .far = kFarVoice };
     }
 
     float chatter_level(std::size_t people)

@@ -269,6 +269,51 @@ TEST_CASE("pan is a balance: the far channel is attenuated, the near one is not"
     }
 }
 
+TEST_CASE("a placed sound is heard from the listener: on its side, and fading to silence with distance")
+{
+    AudioEngine e = make_engine();
+    e.set_listener({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f, 0.0f });
+    const auto at = [](glm::vec3 where) { return PlayParams { .at = where, .near = 2.0f, .far = 10.0f }; };
+    // The mixer smooths a placed sound's gains over its first frames, so look further in.
+    constexpr std::size_t kLate = 2 * 400;
+
+    SUBCASE("to the right")
+    {
+        REQUIRE(e.play(constant_mono(16384, 1024), at({ 1.0f, 0.0f, 0.0f })).has_value());
+        const auto out = render_frames(e, 512);
+        CHECK(out[kLate + 1] > 0.0f);
+        CHECK(out[kLate] < out[kLate + 1]);
+    }
+    SUBCASE("to the left")
+    {
+        REQUIRE(e.play(constant_mono(16384, 1024), at({ -1.0f, 0.0f, 0.0f })).has_value());
+        const auto out = render_frames(e, 512);
+        CHECK(out[kLate] > out[kLate + 1]);
+    }
+    SUBCASE("halfway out is half as loud as near, and past the far end silent")
+    {
+        const auto near = e.play(constant_mono(16384, 1024), at({ 0.0f, 0.0f, -1.0f }));
+        REQUIRE(near.has_value());
+        const float loud = render_frames(e, 512)[kLate];
+        e.stop(*near);
+        REQUIRE(e.play(constant_mono(16384, 1024), at({ 0.0f, 0.0f, -6.0f })).has_value());
+        CHECK(render_frames(e, 512)[kLate] == doctest::Approx(loud / 2).epsilon(0.05));
+        e.stop_all();
+        const auto far = e.play(constant_mono(16384, 1024), at({ 0.0f, 0.0f, -11.0f }));
+        REQUIRE(far.has_value());
+        CHECK(render_frames(e, 512)[kLate] == doctest::Approx(0.0f));
+        CHECK(e.set_voice_place(*far, { 0.0f, 0.0f, -1.0f }));
+        CHECK(render_frames(e, 512)[kLate] > 0.1f);
+    }
+    SUBCASE("an unplaced voice cannot be moved")
+    {
+        const auto h = e.play(constant_mono(16384, 1024));
+        REQUIRE(h.has_value());
+        CHECK_FALSE(e.set_voice_place(*h, { 1.0f, 0.0f, 0.0f }));
+    }
+    CHECK_FALSE(is_valid(PlayParams { .at = glm::vec3 { 0.0f }, .near = 5.0f, .far = 5.0f }));
+}
+
 TEST_CASE("concurrent voices are summed and master volume scales the sum")
 {
     AudioEngine e = make_engine();

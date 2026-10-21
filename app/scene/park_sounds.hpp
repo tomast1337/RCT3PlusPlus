@@ -12,6 +12,7 @@
 
 #include <array>
 #include <cstdint>
+#include <glm/vec3.hpp>
 #include <map>
 #include <random>
 #include <set>
@@ -34,7 +35,7 @@ namespace rct3::scene
         std::array<audio::VoiceHandle, 2> chatter_voices;                                ///< Overlapping, so the chatter never stops
         std::set<entt::entity> heard;                                                    ///< Guests whose gesture was heard
         std::map<std::pair<entt::entity, std::size_t>, audio::VoiceHandle> train_voices; ///< By ride and train
-        std::vector<float> car_heights;                                                  ///< By car, as last heard
+        std::vector<glm::vec3> car_were;                                                 ///< By car, where last heard
         std::minstd_rand random;
     };
 

@@ -174,6 +174,7 @@ TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one"
     const AttractionFacts f { &ride.base, &ride, nullptr };
     const InfoPage forces = attraction_page(AttractionTab::Tests, f, s, { }, 2);
     CHECK(forces.sections.size() == 4);
+    CHECK(forces.section_list);
     CHECK(forces.section == 2);
     CHECK(forces.sections[2] == u"Forces");
     CHECK(std::ranges::find(forces.lines, std::u16string(u"Sideways"), &InfoLine::label)->value == u"2.00 g");

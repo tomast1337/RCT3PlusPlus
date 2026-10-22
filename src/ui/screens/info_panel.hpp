@@ -226,7 +226,8 @@ namespace rct3::ui
         std::u16string title;
         std::u16string heading; ///< Under the title, such as what kind of thing it is
         std::vector<std::u16string> sections;
-        std::size_t section = 0; ///< The one shown
+        std::size_t section = 0;   ///< The one shown
+        bool section_list = false; ///< Picked from a list instead of a row of words
         std::vector<InfoLine> lines;
 
         std::u16string note;
@@ -397,6 +398,7 @@ namespace rct3::ui
         std::optional<InfoChange> change_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
+        Dropdown* section_list_ = nullptr; ///< When the page picks its sections from a list
         /// A line of the page with a value, whose value lines up with the others clear of the widest label.
         struct ValueRow
         {

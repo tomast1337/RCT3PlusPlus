@@ -178,6 +178,7 @@ namespace rct3::ui
         while (!body_->children().empty())
             (void)body_->remove(*body_->children().back());
         sections_.clear();
+        section_list_ = nullptr;
         value_rows_.clear();
         control_rows_.clear();
         measured_ = false;
@@ -194,7 +195,16 @@ namespace rct3::ui
             line("heading", page.heading, 0, info_panel::kPageWidth, FontRole::Small);
             y += info_panel::kLineHeight;
         }
-        if (page.sections.size() > 1)
+        if (page.sections.size() > 1 && page.section_list)
+        {
+            Dropdown& d = body_->add<Dropdown>("sections", style_.dropdown);
+            d.items = page.sections;
+            d.select(page.section);
+            d.placement = top_left(0, y, info_panel::kChoiceWidth, info_panel::kControlHeight);
+            section_list_ = &d;
+            y += info_panel::kControlHeight + 2;
+        }
+        else if (page.sections.size() > 1)
         {
             // Each as wide as its share of the letters, so long names keep their room.
             std::size_t letters = 0;
@@ -670,6 +680,8 @@ namespace rct3::ui
             if (sections_[i]->take_click())
                 section_now_ = i;
         }
+        if (section_list_ != nullptr && section_list_->take_change() && section_list_->selected())
+            section_now_ = *section_list_->selected();
         mark_picked();
     }
 

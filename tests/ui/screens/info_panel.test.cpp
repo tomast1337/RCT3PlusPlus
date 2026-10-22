@@ -300,6 +300,28 @@ TEST_CASE("a page's sections are buttons that ask for another section")
     CHECK(!f.panel->body().find("section0"));
 }
 
+TEST_CASE("a page may pick its sections from a list instead")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    page.sections = { u"First", u"Second" };
+    page.section = 1;
+    page.section_list = true;
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    CHECK(!f.panel->body().find("section0"));
+    auto list = f.panel->body().find_as<Dropdown>("sections");
+    REQUIRE(list);
+    CHECK(list->selected() == 1u);
+    f.desktop.set_keyboard_focus(&*list);
+    KeyboardState keys;
+    keys.presses = { { Key::Up } };
+    f.desktop.update({ }, keys);
+    f.desktop.update({ });
+    CHECK(f.panel->take_section() == 0u);
+}
+
 TEST_CASE("a page's graph is plotted with each series named under it")
 {
     Fixture f;

@@ -315,6 +315,7 @@ namespace rct3::ui
                 for (const std::string_view key : kTestSections)
                     page.sections.push_back(text(strings, key));
                 page.section = std::min(section, kTestSections.size() - 1);
+                page.section_list = true;
             }
             const auto shown = static_cast<TestSection>(page.section);
             if (shown != TestSection::Basic)

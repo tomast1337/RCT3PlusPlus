@@ -49,6 +49,9 @@ declare namespace park {
     function cash(): number | undefined;
     /** Guests in the park now. */
     function guests(): number;
+    /** Brings `parties` parties of guests in at once, each on a path tile of the park picked at random from
+     *  `seed` (1 by default), as if they had walked there from the gate. Where each landed and how many it holds. */
+    function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */

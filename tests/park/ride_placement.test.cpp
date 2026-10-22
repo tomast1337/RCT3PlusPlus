@@ -162,8 +162,10 @@ TEST_CASE("a ride that stands only on water needs water under every tile, and ot
     CHECK(water_problem(RideSite { 2, 2, 0, 2, { 1, 1 } }, true, { }) == SiteProblem::OffWater);
     CHECK(water_problem(RideSite { 0, 0, 0, 2, { 2, 2 } }, false, bodies) == SiteProblem::None);
     CHECK(water_problem(RideSite { 1, 1, 0, 2, { 2, 2 } }, false, bodies) == SiteProblem::UnderWater);
-    // Raised over the water, it stands clear of it.
+    // Raised over the water, it stands clear of it, as it does at the surface itself: saved parks keep land rides
+    // standing level with a lake over deep water.
     CHECK(water_problem(RideSite { 1, 1, 0, 6, { 2, 2 } }, false, bodies) == SiteProblem::None);
+    CHECK(water_problem(RideSite { 1, 1, 0, 5, { 2, 2 } }, false, bodies) == SiteProblem::None);
 }
 
 TEST_CASE("a new ride is named after its kind with the lowest number its kind has free")

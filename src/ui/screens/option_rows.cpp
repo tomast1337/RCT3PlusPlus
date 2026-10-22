@@ -296,7 +296,7 @@ namespace rct3::ui
         for (const Row& row : rows_)
         {
             const bool shown = !row.shown || holds(*row.shown);
-            const bool usable = !row.inert && (!row.enabled || holds(*row.enabled));
+            const bool usable = !locked && !row.inert && (!row.enabled || holds(*row.enabled));
             for (const Part& p : row.parts)
             {
                 p.widget->visible = shown;

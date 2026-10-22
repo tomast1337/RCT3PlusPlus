@@ -389,9 +389,10 @@ namespace rct3::ui
         detect.style.horizontal = Align::Centre;
         detect.placement = top_left(icon_x - style_.auto_detect_size / 2, style_.auto_detect_size, 2 * style_.auto_detect_size, style_.rows.row_height);
 
-        // The custom settings scroll below.
+        // The custom settings scroll below, usable only at the custom quality level.
         custom_ = &page.add<ScrollArea>("custom", style_.scroll);
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_, choices_.inert));
+        custom_rows_ = &rows;
         std::vector<std::u16string> samples = { str(strings, "GameOptionsDialog_AntiAliasNone") };
         for (const int level : choices_.anti_aliasing_levels)
             samples.push_back(str(strings, "GameOptionsDialog_AntiAliasLevel") + u" " + ascii(std::to_string(level)));
@@ -607,6 +608,8 @@ namespace rct3::ui
         }
         show_page(page_); // A click on the open tab would have turned it off
 
+        // The quality levels decide the settings below them, which only the custom level lets the player change.
+        custom_rows_->locked = options_.choice(O::GraphicsQuality) != config::kCustomQuality;
         for (const auto& rows : rows_)
         {
             if (rows->update())
@@ -621,7 +624,6 @@ namespace rct3::ui
         update_camera_help();
 
         const float top = graphics_top_->height() + style_.rows.section_gap;
-        custom_->visible = options_.choice(O::GraphicsQuality) == config::kCustomQuality;
         custom_->placement = top_left(0, top, style_.page_width, std::min(style_.scroll_height, style_.page_height - top));
         fit_page();
     }

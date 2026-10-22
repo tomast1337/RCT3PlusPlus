@@ -49,15 +49,25 @@ TEST_CASE("the tabs pick the page, its name showing beside them")
     CHECK(f.dialog->tab(OptionsPage::Graphics).on);
 }
 
-TEST_CASE("the custom graphics settings show only with the custom quality")
+TEST_CASE("the custom graphics settings always show, usable only with the custom quality")
 {
     Fixture f;
+    const auto usable = [&] {
+        for (const auto& c : f.dialog->custom_graphics().content().children())
+        {
+            if (auto* tick = dynamic_cast<Tickbox*>(c.get()); tick != nullptr && tick->visible)
+                return tick->enabled;
+        }
+        FAIL("no tick box");
+        return false;
+    };
     f.options.set(O::GraphicsQuality, 2);
     f.desktop.update({ });
-    CHECK_FALSE(f.dialog->custom_graphics().visible);
+    CHECK(f.dialog->custom_graphics().visible);
+    CHECK_FALSE(usable());
     f.options.set(O::GraphicsQuality, config::kCustomQuality);
     f.desktop.update({ });
-    CHECK(f.dialog->custom_graphics().visible);
+    CHECK(usable());
 }
 
 TEST_CASE("the scenic page sets the surroundings whatever the quality level")

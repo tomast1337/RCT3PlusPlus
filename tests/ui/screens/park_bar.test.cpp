@@ -21,7 +21,7 @@ namespace
         {
             strings.add("Playing_PauseHelp", u"Halt");
             strings.add("WeatherType_Cloudy_TT", u"Wolken");
-            bar = &desktop.root().add<ParkBar>("bar", game_skins::park_bar_style(), strings);
+            bar = &desktop.root().add<ParkBar>("bar", game_skins::park_bar_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
         }

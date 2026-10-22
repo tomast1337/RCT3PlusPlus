@@ -68,7 +68,7 @@ namespace
     // The round panel in a corner, with a page of lines so the strip shows. Its style picks the look.
     void draw_info_panel(ui::DrawContext& context, PanelLook look, ui::Rect view)
     {
-        ui::InfoPanelStyle style = ui::game_skins::info_panel_style();
+        ui::InfoPanelStyle style = ui::game_skins::info_panel_style({ });
         style.look = look;
         ui::Desktop desktop;
         auto& panel = desktop.root().add<ui::InfoPanel>("info", style);
@@ -210,7 +210,7 @@ namespace
     void draw_message_drawer(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // Pulled down far enough to show the back repeated three times.
-        ui::draw_drawer_frame(context, ui::game_skins::message_drawer_style(), { 8, 8, 8 + ui::message_drawer::kWidth, 155 });
+        ui::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::message_drawer::kWidth, 155 });
     }
 
     void draw_window(ui::DrawContext& context, const ui::WindowStyle& style, ui::Rect view)
@@ -225,18 +225,18 @@ namespace
 
     void draw_mini_window(ui::DrawContext& context, PanelLook, ui::Rect view)
     {
-        draw_window(context, ui::game_skins::mini_window_style(), view);
+        draw_window(context, ui::game_skins::mini_window_style({ }), view);
     }
 
     void draw_main_window(ui::DrawContext& context, PanelLook, ui::Rect view)
     {
-        draw_window(context, ui::game_skins::window_style(), view);
+        draw_window(context, ui::game_skins::window_style({ }), view);
     }
 
     // The window's body alone, without its frame, so its fine lines are not lost in the frame's score.
     void draw_window_background(ui::DrawContext& context, PanelLook, ui::Rect view)
     {
-        ui::WindowStyle style = ui::game_skins::window_style();
+        ui::WindowStyle style = ui::game_skins::window_style({ });
         style.frame.clear();
         style.frame_unfocused.clear();
         draw_window(context, style, view);
@@ -336,7 +336,7 @@ namespace
         ui::SkinLibrary skins = assets.skins;
         if (look == PanelLook::Coded)
         {
-            for (ui::game_skins::CodedSkin& coded : ui::game_skins::coded_skins())
+            for (ui::game_skins::CodedSkin& coded : ui::game_skins::coded_skins(ui::kGamePalette))
             {
                 if (coded.panel == panel.name)
                     skins.set_coded(coded.skin, std::move(coded.frame));

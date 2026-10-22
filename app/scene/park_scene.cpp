@@ -92,11 +92,11 @@ namespace rct3::scene
 
         constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
 
-        void ask_leave(ParkScene& scene, const ui::StringTable& strings)
+        void ask_leave(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette)
         {
             if (scene.desktop->root().find(kQuestionName))
                 return;
-            const ui::QuestionBoxStyle style = skins::question_box_style();
+            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
             scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         }
 
@@ -868,7 +868,7 @@ namespace rct3::scene
             if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
-                ask_leave(scene, *assets.strings);
+                ask_leave(scene, *assets.strings, assets.palette);
             keys.presses.erase(escape.begin(), escape.end());
         }
 
@@ -1302,9 +1302,9 @@ namespace rct3::scene
         {
             const std::optional<ui::ParkTool> pressed = tools->take_pressed();
             if (pressed == ui::ParkTool::Leave)
-                ask_leave(scene, *assets.strings);
+                ask_leave(scene, *assets.strings, assets.palette);
             else if (pressed == ui::ParkTool::Map)
-                toggle_park_map(scene.map, desktop, *assets.strings);
+                toggle_park_map(scene.map, desktop, *assets.strings, assets.palette);
             else if (pressed == ui::ParkTool::Paths)
             {
                 close_track_building(scene); // One tool panel at the bottom left at a time
@@ -1348,9 +1348,9 @@ namespace rct3::scene
                 else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
                     scene.window_requests.push_back(*item);
                 else if (const auto topic = ui::management_topic(*item))
-                    toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, info_units(assets, options));
+                    toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                 else
-                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
+                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
             // A ride's window names it after its kind, looked up by the kind's symbol; some kinds' files give their
             // name under another key, so once the items are read each such kind's name is kept under its symbol too.
@@ -1401,7 +1401,7 @@ namespace rct3::scene
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         follow_footpaths(scene, elapsed);
         if (auto guide = desktop.root().find_as<ui::TutorialGuide>(kGuideName); guide && guide->take_quit())
-            ask_leave(scene, *assets.strings);
+            ask_leave(scene, *assets.strings, assets.palette);
         if (auto question = desktop.root().find_as<ui::QuestionBox>(kQuestionName))
         {
             if (const auto answer = question->take_answer())

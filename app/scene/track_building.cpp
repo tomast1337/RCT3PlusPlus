@@ -1124,7 +1124,7 @@ namespace rct3::scene
         refresh(scene, b, assets);
         if (!scene.desktop->root().find(kPanelName))
         {
-            auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
+            auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(assets.palette), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
             panel.placement = ui::bottom_left(0, kPanelBottom, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
@@ -1187,7 +1187,7 @@ namespace rct3::scene
                 }
                 for (const std::string_view joint : kArmJoints)
                 {
-                    auto& spinner = strip->add<ui::Spinner>(std::string(joint), skins::spinner_style());
+                    auto& spinner = strip->add<ui::Spinner>(std::string(joint), skins::spinner_style(assets.palette));
                     spinner.minimum = -kArmTurns;
                     spinner.maximum = kArmTurns;
                     spinner.step = kArmStep;
@@ -1359,7 +1359,7 @@ namespace rct3::scene
         }
         if (!designs)
         {
-            designs = scene.desktop->root().add<ui::Dropdown>(std::string(kDesignName), ui::game_skins::dropdown_style());
+            designs = scene.desktop->root().add<ui::Dropdown>(std::string(kDesignName), ui::game_skins::dropdown_style(assets.palette));
             designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 8, kPanelBottom + ui::construction_panel::kHeight + 4, 260, 20);
             designs->items.emplace_back(assets.strings->get(kCustomTrack));
             for (const std::filesystem::path& file : b.designs)

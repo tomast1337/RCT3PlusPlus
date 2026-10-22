@@ -15,7 +15,7 @@ namespace
         StringTable strings;
         config::GameOptions options;
         Desktop desktop;
-        OptionsSession session { desktop, game_skins::options_dialog_style(), strings, options, OptionsChoices { } };
+        OptionsSession session { desktop, game_skins::options_dialog_style(kGamePalette), strings, options, OptionsChoices { } };
 
         Fixture()
         {

@@ -27,7 +27,7 @@ namespace
             list[0].name = u"Looking";
             list[1].name = u"Building";
             list[2].name = u"Selling";
-            menu = &desktop.root().add<TutorialPicker>("tutorials", game_skins::tutorial_picker_style(), strings, std::move(list));
+            menu = &desktop.root().add<TutorialPicker>("tutorials", game_skins::tutorial_picker_style(kGamePalette), strings, std::move(list));
             desktop.layout({ 0, 0, 1024, 768 });
             tick();
         }

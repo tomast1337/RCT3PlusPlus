@@ -85,7 +85,7 @@ TEST_CASE("the tabs pick the page and its caption; the credits roll and start ov
 {
     const StringTable s = sample_strings();
     Desktop desktop;
-    auto& about = desktop.root().add<GameInfoBox>("about", game_skins::about_window_style(), s, AddOnPacks { }, random::Seed { 1 });
+    auto& about = desktop.root().add<GameInfoBox>("about", game_skins::about_window_style(kGamePalette), s, AddOnPacks { }, random::Seed { 1 });
     desktop.layout({ 0, 0, 1024, 768 });
     desktop.update({ });
     CHECK(about.page() == AboutPage::Info);

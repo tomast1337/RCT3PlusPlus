@@ -966,7 +966,7 @@ int main(int argc, char** argv)
             device->end_pass();
             device->end_frame();
         };
-        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
+        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->assets.palette, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
         const double now = window->time();
         if (loaded)
         {

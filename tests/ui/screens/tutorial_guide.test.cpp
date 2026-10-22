@@ -56,7 +56,7 @@ namespace
             fonts.set(FontRole::Small, test_font());
             strings.add("TutorialText_Lessons_Step1_Text", u"Regardez.");
             strings.add("TutorialWindow_Continue", u"On");
-            window = &desktop.root().add<TutorialGuide>("tutorial", game_skins::tutorial_guide_style(), strings, std::move(script));
+            window = &desktop.root().add<TutorialGuide>("tutorial", game_skins::tutorial_guide_style(kGamePalette), strings, std::move(script));
             desktop.layout(kView);
             update();
         }
@@ -156,7 +156,7 @@ TEST_CASE("the window shows the tutorial's name, the step line and the text, wit
     CHECK_FALSE(f.window->find("close")->visible);
     CHECK(f.window->icon == game_skins::kTutorialGuide);
 
-    const TutorialGuideStyle style = game_skins::tutorial_guide_style();
+    const TutorialGuideStyle style = game_skins::tutorial_guide_style(kGamePalette);
     const Rect page = f.window->content().rect();
     const Rect quit = f.window->quit_button().rect();
     const Rect go = f.window->continue_button().rect();
@@ -172,7 +172,7 @@ TEST_CASE("the window shows the tutorial's name, the step line and the text, wit
 TEST_CASE("each step goes to its own place, and stays put within the step")
 {
     Fixture f;
-    const TutorialGuideStyle style = game_skins::tutorial_guide_style();
+    const TutorialGuideStyle style = game_skins::tutorial_guide_style(kGamePalette);
 
     // Step one goes in the middle at the floor size.
     const TutorialGuideSize first = tutorial_guide_size(style, 0, 20);
@@ -224,7 +224,7 @@ TEST_CASE("a long text makes the window taller, keeping it in its place")
         s.steps[0].text += "word word word word ";
     Fixture f(std::move(s));
     const Rect r = f.window->rect();
-    CHECK(r.height() > tutorial_guide_size(game_skins::tutorial_guide_style(), 0, 0).window.y);
+    CHECK(r.height() > tutorial_guide_size(game_skins::tutorial_guide_style(kGamePalette), 0, 0).window.y);
     CHECK(r.y0 + r.y1 == doctest::Approx(768));
 }
 

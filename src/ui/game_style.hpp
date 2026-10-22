@@ -2,11 +2,12 @@
 //
 // The skins the game's own interface is drawn with, by the names its data uses, and the measurements that
 // go with them. The measurements are ours, chosen to fit the skins and to match the game's dialogs as they
-// show on screen.
+// show on screen. Every style, and every frame drawn in code, takes its colours from a palette (palette.hpp).
 #pragma once
 
 #include "ui/font_set.hpp"
 #include "ui/game_frames.hpp"
+#include "ui/palette.hpp"
 #include "ui/panel_look.hpp"
 #include "ui/screens/about_window.hpp"
 #include "ui/screens/build_picker.hpp"
@@ -145,77 +146,77 @@ namespace rct3::ui::game_skins
     /// The front screen's design, the rectangle its backdrop's pieces are cut from.
     inline constexpr Rect kFrontDesign { 0, 0, front_screen::kDesignWidth, front_screen::kDesignHeight };
 
-    [[nodiscard]] inline std::vector<CodedSkin> coded_skins()
+    [[nodiscard]] inline std::vector<CodedSkin> coded_skins(const Palette& p)
     {
         using enum PanelLook;
         using game_frames::Arrow;
         using game_frames::Quarter;
         return {
-            { kTextButton, "lozenge", Coded, game_frames::lozenge() },
-            { "GUI2Swatch_BackgroundDisabled", "lozenge", Coded, game_frames::lozenge(false) },
-            { kMenuBackground, "menu", Coded, game_frames::lozenge() },
-            { kSelectedRow, "selected-row", Coded, game_frames::selected_row() },
-            { kMenuButtonSmall, "button-face", Coded, game_frames::button_face() },
-            { kMenuCircle, "menu-circle", Coded, game_frames::menu_circle() },
-            { kQuarterCircles[0], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::TopLeft) },
-            { kQuarterCircles[1], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::TopRight) },
-            { kQuarterCircles[2], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::BottomLeft) },
-            { kQuarterCircles[3], "tutorial-disc", Coded, game_frames::quarter_circle(Quarter::BottomRight) },
-            { kDrawerBack, "message-drawer", Coded, game_frames::drawer_back() },
-            { kDrawerLipLeft, "message-drawer", Coded, game_frames::drawer_lip_left() },
-            { kDrawerLipRight, "message-drawer", Coded, game_frames::drawer_lip_right() },
-            { kMiniFrame, "mini-window", Coded, game_frames::mini_window() },
-            { kMiniBackground, "mini-window", Coded, game_frames::mini_window_panel() },
-            { kCurvedStrip, "construction-strip", Coded, game_frames::curved_strip() },
-            { kWindowFrame, "window", Coded, game_frames::window() },
-            { kWindowFrameUnfocused, "window", Coded, game_frames::window() },
-            { kWindowBackground, "window-background", Coded, game_frames::window_background() },
-            { front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandTop) },
-            { front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kBandBottom) },
-            { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kStripRight) },
-            { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch() },
-            { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end() },
-            { kStandardBorder, "controls", Coded, game_frames::plain_box() },
-            { kListBox, "controls", Coded, game_frames::plain_box() },
-            { kListBoxFocused, "controls", Coded, game_frames::focused_box() },
-            { kButton, "controls", Coded, game_frames::round_button() },
-            { kTickbox, "controls", Coded, game_frames::tickbox() },
-            { kVerticalRail, "controls", Coded, game_frames::scroll_rail() },
-            { kHorizontalRail, "controls", Coded, game_frames::scroll_rail() },
-            { "VScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider() },
-            { "VScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider() },
-            { "VScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider() },
-            { "HScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider() },
-            { "HScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider() },
-            { "HScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider() },
-            { kScrollUp, "controls", Coded, game_frames::scroll_arrow(Arrow::Up) },
-            { kScrollDown, "controls", Coded, game_frames::scroll_arrow(Arrow::Down) },
-            { kScrollLeft, "controls", Coded, game_frames::scroll_arrow(Arrow::Left) },
-            { kScrollRight, "controls", Coded, game_frames::scroll_arrow(Arrow::Right) },
-            { kDropdownOpener, "controls", Coded, game_frames::square_arrow(Arrow::Down, true) },
-            { "ListBoxOpenerDisabled", "controls", Coded, game_frames::opener_disabled() },
-            { "SquareArrowUp", "controls", Coded, game_frames::square_arrow(Arrow::Up, true) },
-            { "SquareArrowDown", "controls", Coded, game_frames::square_arrow(Arrow::Down, true) },
-            { "SquareArrowLeft", "controls", Coded, game_frames::square_arrow(Arrow::Left, true) },
-            { "SquareArrowRight", "controls", Coded, game_frames::square_arrow(Arrow::Right, true) },
-            { "SquareArrowUpDisabled", "controls", Coded, game_frames::square_arrow(Arrow::Up, false) },
-            { "SquareArrowDownDisabled", "controls", Coded, game_frames::square_arrow(Arrow::Down, false) },
-            { kSpinnerUp, "controls", Coded, game_frames::spinner(Arrow::Up, true) },
-            { kSpinnerDown, "controls", Coded, game_frames::spinner(Arrow::Down, true) },
-            { "SpinnerUpDisabled", "controls", Coded, game_frames::spinner(Arrow::Up, false) },
-            { "SpinnerDownDisabled", "controls", Coded, game_frames::spinner(Arrow::Down, false) },
-            { "GUI2Dialog_TitleButtonUp", "title-button", Coded, game_frames::title_button() },
-            { "GUI2Dialog_TitleButtonUpOver", "title-button", Coded, game_frames::title_button() },
-            { "GUI2Dialog_TitleButtonPressed", "title-button", Coded, game_frames::title_button() },
-            { kOpenHeading, "small-parts", Coded, game_frames::heading_box(false) },
-            { kClosedHeading, "small-parts", Coded, game_frames::heading_box(true) },
-            { kSliderThumb, "small-parts", Coded, game_frames::slider_thumb() },
-            { "FlexiColourHighlightBlue", "small-parts", Coded, game_frames::colour_ring(hex("#504f8c"), 18) },
-            { "FlexiColourHighlightWhite", "small-parts", Coded, game_frames::colour_ring(kWhite, 20) },
-            { "FlexiColourSurround", "small-parts", Coded, game_frames::colour_back() },
-            { "Top_WindowFrame_Left", "park-bar", Coded, game_frames::park_bar_left() },
-            { "Top_WindowFrame_Middle", "park-bar", Coded, game_frames::park_bar_middle(park_bar::kDividerWidth, park_bar::kHeight, park_bar::kNotchRadius) },
-            { "Top_WindowFrame_Right", "park-bar", Coded, game_frames::park_bar_right() },
+            { kTextButton, "lozenge", Coded, game_frames::lozenge(p) },
+            { "GUI2Swatch_BackgroundDisabled", "lozenge", Coded, game_frames::lozenge(p, false) },
+            { kMenuBackground, "menu", Coded, game_frames::lozenge(p) },
+            { kSelectedRow, "selected-row", Coded, game_frames::selected_row(p) },
+            { kMenuButtonSmall, "button-face", Coded, game_frames::button_face(p) },
+            { kMenuCircle, "menu-circle", Coded, game_frames::menu_circle(p) },
+            { kQuarterCircles[0], "tutorial-disc", Coded, game_frames::quarter_circle(p, Quarter::TopLeft) },
+            { kQuarterCircles[1], "tutorial-disc", Coded, game_frames::quarter_circle(p, Quarter::TopRight) },
+            { kQuarterCircles[2], "tutorial-disc", Coded, game_frames::quarter_circle(p, Quarter::BottomLeft) },
+            { kQuarterCircles[3], "tutorial-disc", Coded, game_frames::quarter_circle(p, Quarter::BottomRight) },
+            { kDrawerBack, "message-drawer", Coded, game_frames::drawer_back(p) },
+            { kDrawerLipLeft, "message-drawer", Coded, game_frames::drawer_lip_left(p) },
+            { kDrawerLipRight, "message-drawer", Coded, game_frames::drawer_lip_right(p) },
+            { kMiniFrame, "mini-window", Coded, game_frames::mini_window(p) },
+            { kMiniBackground, "mini-window", Coded, game_frames::mini_window_panel(p) },
+            { kCurvedStrip, "construction-strip", Coded, game_frames::curved_strip(p) },
+            { kWindowFrame, "window", Coded, game_frames::window(p) },
+            { kWindowFrameUnfocused, "window", Coded, game_frames::window(p) },
+            { kWindowBackground, "window-background", Coded, game_frames::window_background(p) },
+            { front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kBandTop) },
+            { front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kBandBottom) },
+            { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kStripRight) },
+            { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch(p) },
+            { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end(p) },
+            { kStandardBorder, "controls", Coded, game_frames::plain_box(p) },
+            { kListBox, "controls", Coded, game_frames::plain_box(p) },
+            { kListBoxFocused, "controls", Coded, game_frames::focused_box(p) },
+            { kButton, "controls", Coded, game_frames::round_button(p) },
+            { kTickbox, "controls", Coded, game_frames::tickbox(p) },
+            { kVerticalRail, "controls", Coded, game_frames::scroll_rail(p) },
+            { kHorizontalRail, "controls", Coded, game_frames::scroll_rail(p) },
+            { "VScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider(p) },
+            { "VScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider(p) },
+            { "VScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider(p) },
+            { "HScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider(p) },
+            { "HScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider(p) },
+            { "HScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider(p) },
+            { kScrollUp, "controls", Coded, game_frames::scroll_arrow(p, Arrow::Up) },
+            { kScrollDown, "controls", Coded, game_frames::scroll_arrow(p, Arrow::Down) },
+            { kScrollLeft, "controls", Coded, game_frames::scroll_arrow(p, Arrow::Left) },
+            { kScrollRight, "controls", Coded, game_frames::scroll_arrow(p, Arrow::Right) },
+            { kDropdownOpener, "controls", Coded, game_frames::square_arrow(p, Arrow::Down, true) },
+            { "ListBoxOpenerDisabled", "controls", Coded, game_frames::opener_disabled(p) },
+            { "SquareArrowUp", "controls", Coded, game_frames::square_arrow(p, Arrow::Up, true) },
+            { "SquareArrowDown", "controls", Coded, game_frames::square_arrow(p, Arrow::Down, true) },
+            { "SquareArrowLeft", "controls", Coded, game_frames::square_arrow(p, Arrow::Left, true) },
+            { "SquareArrowRight", "controls", Coded, game_frames::square_arrow(p, Arrow::Right, true) },
+            { "SquareArrowUpDisabled", "controls", Coded, game_frames::square_arrow(p, Arrow::Up, false) },
+            { "SquareArrowDownDisabled", "controls", Coded, game_frames::square_arrow(p, Arrow::Down, false) },
+            { kSpinnerUp, "controls", Coded, game_frames::spinner(p, Arrow::Up, true) },
+            { kSpinnerDown, "controls", Coded, game_frames::spinner(p, Arrow::Down, true) },
+            { "SpinnerUpDisabled", "controls", Coded, game_frames::spinner(p, Arrow::Up, false) },
+            { "SpinnerDownDisabled", "controls", Coded, game_frames::spinner(p, Arrow::Down, false) },
+            { "GUI2Dialog_TitleButtonUp", "title-button", Coded, game_frames::title_button(p) },
+            { "GUI2Dialog_TitleButtonUpOver", "title-button", Coded, game_frames::title_button(p) },
+            { "GUI2Dialog_TitleButtonPressed", "title-button", Coded, game_frames::title_button(p) },
+            { kOpenHeading, "small-parts", Coded, game_frames::heading_box(p, false) },
+            { kClosedHeading, "small-parts", Coded, game_frames::heading_box(p, true) },
+            { kSliderThumb, "small-parts", Coded, game_frames::slider_thumb(p) },
+            { "FlexiColourHighlightBlue", "small-parts", Coded, game_frames::colour_ring(p.colour_ring, 18) },
+            { "FlexiColourHighlightWhite", "small-parts", Coded, game_frames::colour_ring(p.colour_current, 20) },
+            { "FlexiColourSurround", "small-parts", Coded, game_frames::colour_back(p) },
+            { "Top_WindowFrame_Left", "park-bar", Coded, game_frames::park_bar_left(p) },
+            { "Top_WindowFrame_Middle", "park-bar", Coded, game_frames::park_bar_middle(p, park_bar::kDividerWidth, park_bar::kHeight, park_bar::kNotchRadius) },
+            { "Top_WindowFrame_Right", "park-bar", Coded, game_frames::park_bar_right(p) },
         };
     }
 
@@ -223,22 +224,24 @@ namespace rct3::ui::game_skins
     /// scale (front_screen_layout.hpp).
     [[nodiscard]] inline bool front_screen_round()
     {
-        return std::ranges::any_of(coded_skins(), [](const CodedSkin& c) { return c.panel == "front-backdrop" && c.look == PanelLook::Coded; });
+        return std::ranges::any_of(coded_skins(Palette { }), [](const CodedSkin& c) { return c.panel == "front-backdrop" && c.look == PanelLook::Coded; });
     }
 
-    /// Has `skins` draw in code every skin whose panel the game's look has moved to code.
-    inline void use_coded_skins(SkinLibrary& skins)
+    /// Has `skins` draw in code, in the colours of `p`, every skin whose panel the game's look has moved to
+    /// code. Called again with another palette, it recolours them.
+    inline void use_coded_skins(SkinLibrary& skins, const Palette& p)
     {
-        for (CodedSkin& coded : coded_skins())
+        for (CodedSkin& coded : coded_skins(p))
         {
             if (coded.look == PanelLook::Coded)
                 skins.set_coded(coded.skin, std::move(coded.frame));
         }
     }
 
-    [[nodiscard]] inline WindowStyle window_style()
+    [[nodiscard]] inline WindowStyle window_style(const Palette& p)
     {
         WindowStyle s;
+        s.title_colour = p.text;
         s.frame = kWindowFrame;
         s.frame_unfocused = kWindowFrameUnfocused;
         s.background = kWindowBackground;
@@ -258,7 +261,7 @@ namespace rct3::ui::game_skins
 
     /// The game's scroll bars: 15 units thick with square arrows, 20 units per arrow press. The wheel step
     /// and the arrow repeat timing are ours.
-    [[nodiscard]] inline ScrollBarStyle scroll_bar_style(Orientation orientation)
+    [[nodiscard]] inline ScrollBarStyle scroll_bar_style(const Palette&, Orientation orientation)
     {
         const bool vertical = orientation == Orientation::Vertical;
         ScrollBarStyle s;
@@ -273,9 +276,12 @@ namespace rct3::ui::game_skins
 
     /// A list in the edit box frame, which turns blue with the keyboard focus, the selected row on the
     /// rounded blue patch. The row height is ours, to fit the small font.
-    [[nodiscard]] inline ListBoxStyle list_box_style()
+    [[nodiscard]] inline ListBoxStyle list_box_style(const Palette& p)
     {
         ListBoxStyle s;
+        s.selection_colour = p.selection;
+        s.text_colour = p.text;
+        s.disabled_text_colour = p.text_disabled;
         s.background = kListBox;
         s.focused = kListBoxFocused;
         s.selection_skin = kSelectedRow;
@@ -286,7 +292,7 @@ namespace rct3::ui::game_skins
 
     /// Tabs as text lozenges, the current one drawn down. The game's tab strips are rows of text buttons;
     /// the sizes are ours.
-    [[nodiscard]] inline TabsStyle tabs_style()
+    [[nodiscard]] inline TabsStyle tabs_style(const Palette&)
     {
         TabsStyle s;
         s.tab = kTextButton;
@@ -297,7 +303,7 @@ namespace rct3::ui::game_skins
     }
 
     /// The green double arrow at the size the skin has, on a line in the frames' blue (ours).
-    [[nodiscard]] inline SliderStyle slider_style()
+    [[nodiscard]] inline SliderStyle slider_style(const Palette&)
     {
         SliderStyle s;
         s.thumb = kSliderThumb;
@@ -309,9 +315,11 @@ namespace rct3::ui::game_skins
     }
 
     /// The game's level bar: light blue as far as the value, grey after, no thumb.
-    [[nodiscard]] inline SliderStyle level_bar_style()
+    [[nodiscard]] inline SliderStyle level_bar_style(const Palette& p)
     {
         SliderStyle s;
+        s.bar_colour = p.icon;
+        s.bar_back_colour = p.text_disabled;
         s.bar = true;
         s.thumb_width = 0;
         s.thumb_height = 0;
@@ -319,7 +327,7 @@ namespace rct3::ui::game_skins
     }
 
     /// The number in the edit box frame, the two arrows stacked at their size.
-    [[nodiscard]] inline SpinnerStyle spinner_style()
+    [[nodiscard]] inline SpinnerStyle spinner_style(const Palette&)
     {
         SpinnerStyle s;
         s.field = kListBox;
@@ -331,9 +339,12 @@ namespace rct3::ui::game_skins
     }
 
     /// Menus on the white rounded surround, the highlighted row on the blue patch, ticks as in tick boxes.
-    [[nodiscard]] inline MenuStyle menu_style()
+    [[nodiscard]] inline MenuStyle menu_style(const Palette& p)
     {
         MenuStyle s;
+        s.highlight_colour = p.selection;
+        s.text_colour = p.text;
+        s.disabled_text_colour = p.text_disabled;
         s.background = kMenuBackground;
         s.highlight_skin = kSelectedRow;
         s.tick = kTick;
@@ -344,30 +355,34 @@ namespace rct3::ui::game_skins
     }
 
     /// A drop-down as the game draws it closed: plain white, the opener arrow in its top-right corner.
-    [[nodiscard]] inline DropdownStyle dropdown_style()
+    [[nodiscard]] inline DropdownStyle dropdown_style(const Palette& p)
     {
         DropdownStyle s;
-        s.fill = { 255, 255, 255, 255 };
+        s.text_colour = p.text;
+        s.disabled_text_colour = p.text_disabled;
+        s.fill = p.paper;
         s.opener = kDropdownOpener;
         s.opener_width = 15;
         s.opener_in_corner = true;
         s.text_indent = 4;
-        s.menu = menu_style();
+        s.menu = menu_style(p);
         return s;
     }
 
     /// A menu bar on the window background, the open title on the blue patch.
-    [[nodiscard]] inline MenuBarStyle menu_bar_style()
+    [[nodiscard]] inline MenuBarStyle menu_bar_style(const Palette& p)
     {
         MenuBarStyle s;
+        s.highlight_colour = p.selection;
+        s.text_colour = p.text;
         s.background = kMiniBackground;
         s.highlight_skin = kSelectedRow;
-        s.menu = menu_style();
+        s.menu = menu_style(p);
         return s;
     }
 
     /// Square buttons on the window background, swelling under the pointer (our measure).
-    [[nodiscard]] inline ToolbarStyle toolbar_style()
+    [[nodiscard]] inline ToolbarStyle toolbar_style(const Palette&)
     {
         ToolbarStyle s;
         s.background = kMiniBackground;
@@ -379,9 +394,10 @@ namespace rct3::ui::game_skins
 
     /// The small window of messages and questions: a plain blue band on top with the close button, no icon
     /// and no title, the content on a white panel.
-    [[nodiscard]] inline WindowStyle mini_window_style()
+    [[nodiscard]] inline WindowStyle mini_window_style(const Palette& p)
     {
         WindowStyle s;
+        s.title_colour = p.text;
         s.frame = kMiniFrame;
         s.frame_unfocused = kMiniFrame;
         s.background = kWindowBackground;
@@ -397,10 +413,12 @@ namespace rct3::ui::game_skins
     }
 
     /// A question in the small window, its answers as round buttons with a tick or a cross.
-    [[nodiscard]] inline QuestionBoxStyle question_box_style()
+    [[nodiscard]] inline QuestionBoxStyle question_box_style(const Palette& p)
     {
         QuestionBoxStyle s;
-        s.window = mini_window_style();
+        s.text_colour = p.text;
+        s.hover_colour = p.accent;
+        s.window = mini_window_style(p);
         s.button = kButton;
         s.button_inset = kLozengeInset;
         s.confirm_icon = kConfirmIcon;
@@ -410,10 +428,14 @@ namespace rct3::ui::game_skins
 
     /// The options window as the game lays it out: rows as tall as the small font with a little between,
     /// 12 unit tick boxes, level bars, the page's name in blue left of the tabs.
-    [[nodiscard]] inline OptionsDialogStyle options_dialog_style()
+    [[nodiscard]] inline OptionsDialogStyle options_dialog_style(const Palette& p)
     {
         OptionsDialogStyle s;
-        s.window = window_style();
+        s.caption_colour = p.accent;
+        s.keys.background = p.paper;
+        s.rows.text_colour = p.text;
+        s.rows.disabled_colour = p.text_disabled;
+        s.window = window_style(p);
         s.icon = kOptionsIcon;
         s.rows.tick_box = kTickbox;
         s.rows.tick = kTick;
@@ -422,14 +444,14 @@ namespace rct3::ui::game_skins
         s.rows.row_height = 15;
         s.rows.row_gap = 2;
         s.rows.section_gap = 6;
-        s.rows.dropdown = dropdown_style();
-        s.rows.slider = level_bar_style();
+        s.rows.dropdown = dropdown_style(p);
+        s.rows.slider = level_bar_style(p);
         s.rows.slider_inset = 2;
-        s.rows.spinner = spinner_style();
+        s.rows.spinner = spinner_style(p);
         s.rows.key_box = kListBox;
         s.rows.key_box_focused = kListBoxFocused;
         s.keys.focused = kListBoxFocused; // A blue outline
-        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
         s.auto_detect_icon = kAutoDetectIcon;
@@ -437,10 +459,13 @@ namespace rct3::ui::game_skins
     }
 
     /// The about window in the game's frame: the page's name in blue left of two small picture tabs.
-    [[nodiscard]] inline AboutWindowStyle about_window_style()
+    [[nodiscard]] inline AboutWindowStyle about_window_style(const Palette& p)
     {
         AboutWindowStyle s;
-        s.window = window_style();
+        s.caption_colour = p.accent;
+        s.text_colour = p.text;
+        s.role_colour = p.accent;
+        s.window = window_style(p);
         s.icon = kAboutIcon;
         s.credits_icon = kCreditsIcon;
         return s;
@@ -449,11 +474,14 @@ namespace rct3::ui::game_skins
     /// The park's management windows in the large frame, laid out as the options window: picture tabs in the
     /// top-right corner, the open tab's name in blue on their left. Their lists sit in the edit box frame
     /// under a band of headings in the frames' blue (ours).
-    [[nodiscard]] inline ManagementWindowStyle management_window_style()
+    [[nodiscard]] inline ManagementWindowStyle management_window_style(const Palette& p)
     {
         ManagementWindowStyle s;
-        s.window = window_style();
-        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.caption_colour = p.accent;
+        s.text_colour = p.text;
+        s.heading_colour = p.accent;
+        s.window = window_style(p);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
         s.table.background = kListBox;
         s.table.selection_skin = kSelectedRow;
         s.button = kTextButton;
@@ -462,12 +490,16 @@ namespace rct3::ui::game_skins
     }
 
     /// The load and save window in the game's frame, the list and pictures in its plain border.
-    [[nodiscard]] inline FileDialogStyle file_dialog_style()
+    [[nodiscard]] inline FileDialogStyle file_dialog_style(const Palette& p)
     {
         FileDialogStyle s;
-        s.window = window_style();
-        s.question = question_box_style();
-        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.text_colour = p.text;
+        s.line_colour = p.accent;
+        s.selected_colour = p.stripe;
+        s.faded_colour = p.paper;
+        s.window = window_style(p);
+        s.question = question_box_style(p);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
         s.load_icon = kLoadIcon;
         s.save_icon = kSaveIcon;
         s.cancel_icon = kFileCancelIcon;
@@ -480,12 +512,15 @@ namespace rct3::ui::game_skins
     }
 
     /// The window that picks a career in the game's frame, its rows framed like edit boxes.
-    [[nodiscard]] inline CareerDialogStyle career_dialog_style()
+    [[nodiscard]] inline CareerDialogStyle career_dialog_style(const Palette& p)
     {
         CareerDialogStyle s;
-        s.window = window_style();
-        s.question = question_box_style();
-        s.scroll = scroll_bar_style(Orientation::Vertical);
+        s.text_colour = p.text;
+        s.hover_colour = p.accent;
+        s.row_colours = { p.stripe, p.paper };
+        s.window = window_style(p);
+        s.question = question_box_style(p);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
         s.icon = kCareerIcon;
         s.button = kButton;
         s.new_icon = kNewCareerIcon;
@@ -501,10 +536,11 @@ namespace rct3::ui::game_skins
     }
 
     /// The career map with the front screen's buttons and the game's marks.
-    [[nodiscard]] inline CareerBoardStyle career_board_style()
+    [[nodiscard]] inline CareerBoardStyle career_board_style(const Palette& p)
     {
         CareerBoardStyle s;
-        s.question = question_box_style();
+        s.text_colour = p.text;
+        s.question = question_box_style(p);
         s.scenario_button = kMenuCircle;
         s.small_button = kMenuButtonSmall;
         s.panel = kTooltip;
@@ -521,9 +557,10 @@ namespace rct3::ui::game_skins
     }
 
     /// The tutorials' menu on the front screen's buttons and white disc.
-    [[nodiscard]] inline TutorialPickerStyle tutorial_picker_style()
+    [[nodiscard]] inline TutorialPickerStyle tutorial_picker_style(const Palette& p)
     {
         TutorialPickerStyle s;
+        s.text_colour = p.text;
         s.button = kMenuCircle;
         s.start_icon = kStartTutorialIcon;
         for (std::size_t i = 0; i < kQuarterCircles.size(); ++i)
@@ -533,10 +570,11 @@ namespace rct3::ui::game_skins
 
     /// The tutorial guide in the large frame: the guide in the corner circle, the step's title on a line under
     /// the title rule, the page below that.
-    [[nodiscard]] inline TutorialGuideStyle tutorial_guide_style()
+    [[nodiscard]] inline TutorialGuideStyle tutorial_guide_style(const Palette& p)
     {
         TutorialGuideStyle s;
-        s.window = window_style();
+        s.text_colour = p.text;
+        s.window = window_style(p);
         s.window.content_inset.y0 += s.step_line.y1;
         s.portrait = kTutorialGuide;
         s.button = kTextButton;
@@ -546,9 +584,10 @@ namespace rct3::ui::game_skins
 
     /// The game's tooltip: its skin and small font after half a second of rest, with four units between
     /// the text and the inside of the lozenge.
-    [[nodiscard]] inline TooltipStyle tooltip_style()
+    [[nodiscard]] inline TooltipStyle tooltip_style(const Palette& p)
     {
         TooltipStyle s;
+        s.colour = p.text;
         s.skin = kTooltip;
         s.font = FontRole::Small;
         s.delay = 0.5f;
@@ -557,9 +596,10 @@ namespace rct3::ui::game_skins
     }
 
     /// The bar along the top of the park view.
-    [[nodiscard]] inline ParkBarStyle park_bar_style()
+    [[nodiscard]] inline ParkBarStyle park_bar_style(const Palette& p)
     {
         ParkBarStyle s;
+        s.text_colour = p.text_on_band;
         s.left_frame = "Top_WindowFrame_Left";
         s.divider = "Top_WindowFrame_Middle";
         s.right_frame = "Top_WindowFrame_Right";
@@ -574,9 +614,11 @@ namespace rct3::ui::game_skins
     }
 
     /// The park's messages, hanging from the middle of the bar.
-    [[nodiscard]] inline MessageDrawerStyle message_drawer_style()
+    [[nodiscard]] inline MessageDrawerStyle message_drawer_style(const Palette& p)
     {
         MessageDrawerStyle s;
+        s.text_colour = p.text;
+        s.stripe = p.paper;
         s.lip_left = kDrawerLipLeft;
         s.lip_right = kDrawerLipRight;
         s.back = kDrawerBack;
@@ -587,9 +629,14 @@ namespace rct3::ui::game_skins
 
     /// The round panel in the bottom-right corner that tells about an attraction. Its frame is drawn in code,
     /// which panel-look scores against these skins; the skins stay named for falling back to them.
-    [[nodiscard]] inline InfoPanelStyle info_panel_style()
+    [[nodiscard]] inline InfoPanelStyle info_panel_style(const Palette& p)
     {
         InfoPanelStyle s;
+        s.coded.body = p.strip;
+        s.coded.band = p.accent;
+        s.coded.disc = p.patch;
+        s.picked_section_colour = p.text_on_band;
+        s.text_colour = p.text_on_band;
         s.look = PanelLook::Coded;
         s.disc = "CircularViewSolid";
         s.glass = "CircularViewHollow";
@@ -617,8 +664,8 @@ namespace rct3::ui::game_skins
         s.palette.swatch_prefix = "Flexicolour_";
         s.palette.ring = "FlexiColourHighlightBlue";
         s.palette.current_ring = "FlexiColourHighlightWhite";
-        s.spinner = spinner_style();
-        s.dropdown = dropdown_style();
+        s.spinner = spinner_style(p);
+        s.dropdown = dropdown_style(p);
         s.tick_box = kTickbox;
         s.tick = kTick;
         s.button = kTextButton;
@@ -626,10 +673,12 @@ namespace rct3::ui::game_skins
     }
 
     /// The window beside the build menus, in the options window's frame, with the game's theme filters.
-    [[nodiscard]] inline BuildPickerStyle build_picker_style()
+    [[nodiscard]] inline BuildPickerStyle build_picker_style(const Palette& p)
     {
         BuildPickerStyle s;
-        s.window = window_style();
+        s.text_colour = p.text;
+        s.hint_colour = p.text_disabled;
+        s.window = window_style(p);
         s.open_heading = kOpenHeading;
         s.closed_heading = kClosedHeading;
         s.search_box = kListBox;
@@ -642,18 +691,19 @@ namespace rct3::ui::game_skins
         s.pack_filter = kPackBadge;
         s.pack_name = kPackName;
         s.style_help = kStyleFilterHelp;
-        s.scroll_bar = scroll_bar_style(Orientation::Vertical);
+        s.scroll_bar = scroll_bar_style(p, Orientation::Vertical);
         return s;
     }
 
     /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
     /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable
     /// look.
-    [[nodiscard]] inline FootpathPanelStyle footpath_panel_style()
+    [[nodiscard]] inline FootpathPanelStyle footpath_panel_style(const Palette& p)
     {
         FootpathPanelStyle s;
+        s.text_colour = p.text_on_band;
         s.look = PanelLook::Coded;
-        s.coded = info_panel_style().coded;
+        s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;
         s.close_icon = kCloseIcon;
         s.controls_icon = "RideCamGUI_Pin";
@@ -682,19 +732,21 @@ namespace rct3::ui::game_skins
 
     /// The round panel in the bottom-left corner that shapes and paints the ground, drawn in code like the path
     /// panel.
-    [[nodiscard]] inline LandPanelStyle land_panel_style()
+    [[nodiscard]] inline LandPanelStyle land_panel_style(const Palette& p)
     {
         LandPanelStyle s;
-        s.coded = info_panel_style().coded;
+        s.text_colour = p.text_on_band;
+        s.brush = p.patch;
+        s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;
         s.close_icon = kCloseIcon;
-        s.size = spinner_style();
+        s.size = spinner_style(p);
         s.bottom = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
         return s;
     }
 
     /// The large buttons along the bottom of the park view.
-    [[nodiscard]] inline ToolRowStyle tool_row_style()
+    [[nodiscard]] inline ToolRowStyle tool_row_style(const Palette&)
     {
         ToolRowStyle s;
         s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
@@ -705,9 +757,10 @@ namespace rct3::ui::game_skins
 
     /// The strip that builds track, its buttons in the game's pictures: each picture's base name, with "On",
     /// "Off" or "Dis" after it for its state.
-    [[nodiscard]] inline ConstructionPanelStyle construction_panel_style()
+    [[nodiscard]] inline ConstructionPanelStyle construction_panel_style(const Palette& p)
     {
         ConstructionPanelStyle s;
+        s.text_colour = p.text;
         s.strip = kCurvedStrip;
         s.title_button = kTitleButton;
         s.close_icon = kCloseIcon;

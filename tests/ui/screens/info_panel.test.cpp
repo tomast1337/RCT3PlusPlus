@@ -19,7 +19,7 @@ namespace
 
         Fixture()
         {
-            panel = &desktop.root().add<InfoPanel>("info", game_skins::info_panel_style());
+            panel = &desktop.root().add<InfoPanel>("info", game_skins::info_panel_style(kGamePalette));
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
         }
@@ -234,7 +234,7 @@ TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells
     REQUIRE(f.panel->painting() == 1);
     REQUIRE(f.panel->palette());
     ColourPalette& palette = *f.panel->palette();
-    CHECK(palette.count() == game_skins::info_panel_style().palette_count);
+    CHECK(palette.count() == game_skins::info_panel_style(kGamePalette).palette_count);
     CHECK(palette.rect().y1 < f.panel->tab(1).rect().y0);
     CHECK(palette.rect().x1 <= 1000);
     const std::size_t pot = palette.current() == 4 ? 0 : 1;
@@ -284,7 +284,7 @@ TEST_CASE("the frame is drawn either from the skins or as shapes in code")
 
     SUBCASE("in code, only shapes, all within the strip and the disc and their shadows")
     {
-        InfoPanelStyle style = game_skins::info_panel_style();
+        InfoPanelStyle style = game_skins::info_panel_style(kGamePalette);
         style.look = PanelLook::Coded;
         InfoPanel& coded = f.desktop.root().add<InfoPanel>("coded", style);
         coded.show(three(), 0);
@@ -309,7 +309,7 @@ TEST_CASE("the frame is drawn either from the skins or as shapes in code")
     }
     SUBCASE("from the skins, no shapes")
     {
-        InfoPanelStyle style = game_skins::info_panel_style();
+        InfoPanelStyle style = game_skins::info_panel_style(kGamePalette);
         style.look = PanelLook::Texture;
         InfoPanel& textured = f.desktop.root().add<InfoPanel>("textured", style);
         textured.show(three(), 0);
@@ -368,7 +368,7 @@ TEST_CASE("an info widget is named by its string key and part, or by its place w
 TEST_CASE("turned the other way, the panel stands in the bottom-left corner with its tabs mirrored")
 {
     Desktop desktop;
-    InfoPanelStyle style = game_skins::info_panel_style();
+    InfoPanelStyle style = game_skins::info_panel_style(kGamePalette);
     style.left = true;
     style.raise = 50;
     auto& panel = desktop.root().add<InfoPanel>("placing", style);

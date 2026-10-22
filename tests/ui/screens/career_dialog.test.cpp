@@ -22,7 +22,7 @@ namespace
             strings.add("ProfileWindow_Title", u"Pick a run");
             strings.add("ProfileWindow_New_TT", u"Start one");
             strings.add("ProfileWindow_ConfirmDeleteMessage", u"Really?");
-            dialog = &desktop.root().add<CareerDialog>("careers", game_skins::career_dialog_style(), strings);
+            dialog = &desktop.root().add<CareerDialog>("careers", game_skins::career_dialog_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1024, 768 });
             desktop.update({ });
         }

@@ -572,7 +572,7 @@ namespace rct3::scene
         add_textures(device, scene, boned.mesh.mesh.batches);
     }
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
@@ -921,8 +921,8 @@ namespace rct3::scene
         scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
         // Behind the bar, which it hangs from.
         // Under the bar, even while it is dragged.
-        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(), strings).stays_behind = true;
-        auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(), strings);
+        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
+        auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
         // Only these menu items do anything yet; the rest show faded until their tools exist.
         for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
         {
@@ -932,13 +932,13 @@ namespace rct3::scene
                     entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options
                         || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
-        scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(), strings);
-        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style());
-        ui::InfoPanelStyle placing = skins::info_panel_style();
+        scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
+        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style(palette));
+        ui::InfoPanelStyle placing = skins::info_panel_style(palette);
         placing.left = true;
-        placing.raise = skins::land_panel_style().bottom - ui::info_panel::kDiscMargin; // Over the tool row, as the land panel stands
+        placing.raise = skins::land_panel_style(palette).bottom - ui::info_panel::kDiscMargin; // Over the tool row, as the land panel stands
         scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
-        scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(), strings);
+        scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
         for (std::size_t k = 0; k < scene.objects.size(); ++k)
             animate_scenery(device, scene, k);
@@ -1066,8 +1066,8 @@ namespace rct3::scene
         if (!tutorial)
             log.warning("tutorial: {}", save::to_string(tutorial.error()));
         else if (*tutorial)
-            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(), strings, std::move(**tutorial));
-        scene.desktop->tooltip_style = skins::tooltip_style();
+            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
+        scene.desktop->tooltip_style = skins::tooltip_style(palette);
         scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
         log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
         const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != park::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != park::kNotDrawn; });

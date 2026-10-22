@@ -34,6 +34,9 @@ namespace rct3::ovl
                 train.display_name = record->text(0x04);
                 for (std::size_t i = 0; i < train.cars.size(); ++i)
                     train.cars[i] = record->ref(0x08 + i * 4, "ric");
+                train.fewest_cars = record->u32(0x20);
+                train.most_cars = record->u32(0x24);
+                train.usual_cars = record->u32(0x28);
                 train.references = record->references(static_cast<std::uint32_t>(kFixedSize));
                 train.record = record->bytes();
                 item.train = std::move(train);

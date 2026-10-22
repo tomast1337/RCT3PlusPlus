@@ -78,6 +78,13 @@ namespace rct3::park
     /// between them, and keeps the place and turn it had against the track.
     [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
 
+    /// Track left clear between trains queued one behind another, in metres.
+    inline constexpr float kTrainGap = 2;
+
+    /// How many trains of cars fitted as `fits` (by car) `course` takes: as many as fill half of it queued
+    /// kTrainGap apart, so they have room to run (our own rule); at least one.
+    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits);
+
     /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
     /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the
     /// track that far behind its front, and its on_track point midway between them, the car pointing from its

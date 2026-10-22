@@ -203,10 +203,16 @@ namespace rct3::scene
                 // A tracked ride runs its train round the course it was built with.
                 const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;
                 std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
-                // A train built with the ride stands at its station, its front where trains set off.
+                // Trains built with the ride stand at its station, the first's front where trains set off and each
+                // other queued behind the one before, from where they run up to the station in turn.
                 if (const auto fits = scene.car_fits.find(i); coaster[0] && fits != scene.car_fits.end() && !ride.trains.empty())
                 {
-                    park::stand_train(*course, ride.trains.front(), fits->second, coaster[0]->start);
+                    float front = coaster[0]->start;
+                    for (save::Train& train : ride.trains)
+                    {
+                        park::stand_train(*course, train, fits->second, std::fmod(front + course->length(), course->length()));
+                        front -= train.length + park::kTrainGap;
+                    }
                     coaster[0] = simulation::coaster_of(*course, ride);
                 }
                 save::RideModel one;
@@ -223,6 +229,7 @@ namespace rct3::scene
                 seat_flat_ride(device, scene, i);
                 if (assets.install)
                 {
+                    scene.train_limits.erase(i);
                     if (scene.car_fits.erase(i) > 0)
                         add_ride_cars(device, scene, *assets.install, i, 1);
                     board_tracked_ride(device, scene, *assets.install, i);

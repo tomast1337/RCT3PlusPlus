@@ -368,6 +368,12 @@ namespace rct3::scene
                         one["price"] = a->price;
                         one["open"] = a->open;
                         one["onPaths"] = a->entrance != simulation::kNoNode;
+                        // Where the guests walking to it are now.
+                        Json heading = Json::array();
+                        for (const auto [g, errand, pose] : registry.view<const simulation::Errand, const simulation::Pose>().each())
+                            if (errand.kind == simulation::ErrandKind::Heading && errand.target == e)
+                                heading.push_back({ { "col", (pose.position.x - park.grid.origin_x) / park.grid.tile_size_x }, { "row", (pose.position.z - park.grid.origin_z) / park.grid.tile_size_z } });
+                        one["heading"] = std::move(heading);
                     }
                     if (const auto* c = registry.try_get<simulation::CycleRide>(e))
                     {

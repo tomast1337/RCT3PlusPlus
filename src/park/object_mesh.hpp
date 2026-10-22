@@ -75,10 +75,11 @@ namespace rct3::park
     [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The lamps the objects' models carry, placed in the park, in the colour each names or each object's slot
-    /// gives, at full strength. Hidden objects are left out.
-    /// shortcut: lamps on bones stand where the bone rests, so a turning ride's lamps stay put; move them with
-    /// the bones once ride lighting at night shows it.
-    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
+    /// gives, at full strength. Each object stands at `places` by index when given (moving ride cars), else
+    /// where it was placed. Hidden objects are left out.
+    /// shortcut: lamps on bones stand where the bone rests, so a turning ride's or an arm's lamps stay put;
+    /// move them with the bones once ride lighting at night shows it.
+    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
 
     /// The level of each object seen from `eye`, with the models' distances times `scale`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);

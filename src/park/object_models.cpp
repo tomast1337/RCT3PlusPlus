@@ -765,6 +765,12 @@ namespace rct3::park
                 return std::nullopt;
             ObjectModel pieces;
             add_levels(pieces, *piece, file->first);
+            for (ModelLight light : pieces.lights)
+            {
+                light.position = glm::vec3(place * glm::vec4(light.position, 1.0f));
+                light.bone = -1;
+                model.lights.push_back(light);
+            }
             if (model.levels.empty())
                 for (const ModelLevel& level : pieces.levels)
                     model.levels.push_back({ .distance = level.distance, .parts = { }, .billboard = std::nullopt });

@@ -17,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <map>
 #include <span>
 #include <string_view>
@@ -441,11 +442,15 @@ namespace rct3::scene
             scene.light.lamps = { };
             constexpr float kLampStrength = 0.75f; // Path lamps light their pools without washing them white
             const float strength = scene.darkness * kLampStrength;
-            if (strength < 0.01f || scene.lamps.empty())
+            if (strength < 0.01f || (scene.lamps.empty() && !scene.car_lamps))
                 return;
-            if (scene.lamps_due || std::abs(strength - scene.lamp_strength) > 0.01f)
+            if (scene.lamps_due || scene.car_lamps || std::abs(strength - scene.lamp_strength) > 0.01f)
             {
                 std::vector<park::Lamp> lamps = scene.lamps;
+                if (scene.car_lamps)
+                    std::ranges::copy(park::object_lamps(scene.cars, scene.models, scene.grid, { }, scene.car_places), std::back_inserter(lamps));
+                if (lamps.empty())
+                    return;
                 for (park::Lamp& l : lamps)
                     l.colour *= strength;
                 constexpr float kCell = 8; // Two tiles, a lamp's usual reach

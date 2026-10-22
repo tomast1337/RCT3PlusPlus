@@ -107,15 +107,16 @@ namespace rct3::park
         return anchors;
     }
 
-    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places)
     {
         std::vector<Lamp> lamps;
-        for (const save::PlacedObject& object : objects)
+        for (std::size_t i = 0; i < objects.size(); ++i)
         {
+            const save::PlacedObject& object = objects[i];
             const auto model = models.find(model_key(object));
             if (object.hidden || model == models.end() || model->second.lights.empty())
                 continue;
-            const glm::mat4 placed = placed_transform(object, &model->second, grid, fitted);
+            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(object, &model->second, grid, fitted);
             for (const ModelLight& light : model->second.lights)
             {
                 glm::vec3 colour = light.colour;

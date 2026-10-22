@@ -262,6 +262,7 @@ namespace rct3::scene
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;
+        bool car_lamps = false;             ///< Some ride car carries lamps, so they are packed again each frame
         float darkness = 0;                 ///< How dark the sky is, 0 by day to 1 at night (park::sky_darkness)
         render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
         std::uint32_t lamp_rows = 0;        ///< Of that texture

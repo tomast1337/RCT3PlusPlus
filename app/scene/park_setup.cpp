@@ -501,6 +501,10 @@ namespace rct3::scene
         for (const save::PlacedObject& car : scene.cars)
             scene.car_places.push_back(scene.saved_cars.at(car.id));
         scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
+        scene.car_lamps = std::ranges::any_of(scene.cars, [&](const save::PlacedObject& car) {
+            const auto model = scene.models.find(park::model_key(car));
+            return model != scene.models.end() && !model->second.lights.empty();
+        });
         for (std::size_t i = first; i < scene.cars.size(); ++i)
             if (const auto model = scene.models.find(park::model_key(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
                 scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
@@ -858,7 +862,7 @@ namespace rct3::scene
             }
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
             add_ride_cars(device, scene, install, 0, scene.rides.rides.size());
-            log.info("{} ride cars, {} on arms, {} vertices", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size());
+            log.info("{} ride cars, {} on arms, {} vertices{}", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size(), scene.car_lamps ? ", some with lamps" : "");
             refresh_ride_floors(scene);
         }
         if (options.flag(config::GameOption::OffMapTrees))

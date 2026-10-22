@@ -165,3 +165,17 @@ TEST_CASE("a ride that stands only on water needs water under every tile, and ot
     // Raised over the water, it stands clear of it.
     CHECK(water_problem(RideSite { 1, 1, 0, 6, { 2, 2 } }, false, bodies) == SiteProblem::None);
 }
+
+TEST_CASE("a new ride is named after its kind with the lowest number its kind has free")
+{
+    std::vector<save::Ride> rides(3);
+    rides[0].base.symbol = "Teacups:anr";
+    rides[0].base.name = "%ME% 1";
+    rides[1].base.symbol = "Teacups:anr";
+    rides[1].base.name = "%ME% 3";
+    rides[2].base.symbol = "Carousel:anr";
+    rides[2].base.name = "%ME% 2";
+    CHECK(numbered_name(rides, "Teacups:anr") == "%ME% 2");
+    CHECK(numbered_name(rides, "Carousel:anr") == "%ME% 1");
+    CHECK(numbered_name(rides, "Swings:anr") == "%ME% 1");
+}

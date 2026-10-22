@@ -37,6 +37,10 @@ namespace rct3::park
 
     /// The site of a ride of `squares` (along its own X and Z) turned `turns` quarter turns, centred on the
     /// tile `col`, `row`.
+    /// The name a new ride of `symbol` takes: its kind's name and the lowest number no other ride of its kind
+    /// has, in the form the park keeps such names ("%ME% 2").
+    [[nodiscard]] std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol);
+
     [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
 
     enum class SiteProblem : std::uint8_t

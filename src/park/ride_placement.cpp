@@ -3,11 +3,14 @@
 
 #include "park/boundary_fence.hpp"
 #include "park/water_fill.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <format>
 #include <numeric>
+#include <vector>
 
 namespace rct3::park
 {
@@ -35,6 +38,19 @@ namespace rct3::park
             return SiteProblem::None;
         }
     } // namespace
+
+    std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol)
+    {
+        constexpr std::string_view kNumbered = "%ME% ";
+        std::vector<int> taken;
+        for (const save::Ride& r : rides)
+            if (strings::equals_ignoring_case(r.base.symbol, symbol) && r.base.name.starts_with(kNumbered))
+                taken.push_back(std::atoi(r.base.name.c_str() + kNumbered.size()));
+        int number = 1;
+        while (std::ranges::contains(taken, number))
+            ++number;
+        return std::format("{}{}", kNumbered, number);
+    }
 
     RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid)
     {

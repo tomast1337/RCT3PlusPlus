@@ -62,6 +62,17 @@ namespace
             for (int i = 0; i < 15; ++i)
                 u32(0);
         }
+        /// The short form some effect files carry: its own magic, a 1, then twelve words.
+        void short_header(std::uint32_t version)
+        {
+            u32(0);
+            u32(0);
+            u32(0xF11EDA1Au);
+            u32(1);
+            u32(version);
+            for (int i = 0; i < 11; ++i)
+                u32(0);
+        }
         void checksum()
         {
             const auto sum = compute_checksum(bytes);
@@ -182,6 +193,26 @@ TEST_CASE("headered file has header section and verified checksum")
     CHECK(file->sections[0].size == kHeaderSize);
     CHECK(file->sections[3].kind == SectionKind::Checksum);
     CHECK(file->objects.size() == 3);
+}
+
+TEST_CASE("the short header is read like the full one")
+{
+    Builder b;
+    b.short_header(2);
+    class_table(b);
+    objects(b);
+    b.checksum();
+    const auto file = read_save(b.bytes);
+    REQUIRE(file);
+    CHECK(file->header.version() == 2);
+    CHECK(file->sections[0].size == 0x40);
+    CHECK(file->stored_checksum == file->computed_checksum);
+    CHECK(file->objects.size() == 3);
+
+    // Its mark must be 1.
+    auto marked = b.bytes;
+    marked[12] = std::byte { 2 };
+    CHECK(read_save(marked).error() == Error::BadHeader);
 }
 
 TEST_CASE("checksum mismatch is an error unless verification is off")

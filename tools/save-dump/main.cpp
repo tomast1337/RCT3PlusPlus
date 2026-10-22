@@ -5,6 +5,7 @@
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
 //   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
 //   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
+//   save-dump --effect PATH...   (particle effects: emitters, particles and the pictures they use)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -13,6 +14,7 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include "particles/effect.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -403,6 +405,31 @@ namespace
 
 int main(int argc, char** argv)
 {
+    // `save-dump --effect FILE...`: each particle effect read as the game shows it, or why it could not be.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--effect") == 0; }))
+    {
+        int bad = 0;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            std::vector<char> chars((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto effect = rct3::particles::read_effect(std::as_bytes(std::span(chars)));
+            if (!effect)
+            {
+                std::printf("%s: %s\n", argv[i], rct3::particles::to_string(effect.error()));
+                ++bad;
+                continue;
+            }
+            std::string skins;
+            for (const auto& p : effect->particles)
+                skins += std::format(" {}", p.skin.empty() ? "-" : p.skin);
+            std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), skins.c_str());
+        }
+        return bad == 0 ? 0 : 1;
+    }
+
     // BEGIN park: `save-dump --park [--root INSTALL_DIR] FILE...` prints the decoded park summary and checks.
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--park") == 0; }))
     {

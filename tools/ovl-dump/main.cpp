@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include <cstddef>
@@ -37,6 +37,7 @@
 #include "ovl/mesh.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/overlay.hpp"
+#include "ovl/particle_skin.hpp"
 #include "ovl/ride_car.hpp"
 #include "ovl/ride_train.hpp"
 #include "ovl/scenery_visual.hpp"
@@ -81,6 +82,7 @@ namespace
         bool tex = false;
         bool gsi = false;
         bool btbl = false;
+        bool psi = false;
         bool flt = false;
 
         bool tks = false;
@@ -654,6 +656,20 @@ namespace
                 }
                 const auto& s = *item.skin;
                 std::printf("  %-40s kind %u values %zu texture %s\n", name.c_str(), s.kind, s.coordinates.size(), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+            }
+        }
+        if (opt.psi)
+        {
+            for (const auto& item : rct3::ovl::read_particle_skins(overlay, part))
+            {
+                const std::string name(item.name);
+                if (!item.skin)
+                {
+                    std::printf("  %s <unreadable>\n", name.c_str());
+                    continue;
+                }
+                const auto& s = *item.skin;
+                std::printf("  %-24s frames %-3zu %s %s loop %.2f texture %s\n", name.c_str(), s.frames.size(), s.blended ? "blended " : "additive", s.animated ? "animated" : "single  ", static_cast<double>(s.loop_time), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
             }
         }
         if (opt.tex)
@@ -1318,6 +1334,8 @@ int main(int argc, char** argv)
             opt.gsi = true;
         else if (std::strcmp(argv[i], "--btbl") == 0)
             opt.btbl = true;
+        else if (std::strcmp(argv[i], "--psi") == 0)
+            opt.psi = true;
         else if (std::strcmp(argv[i], "--flt") == 0)
             opt.flt = true;
         else if (std::strcmp(argv[i], "--tex-export") == 0 && i + 1 < argc)
@@ -1350,7 +1368,7 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH\n", argv[0]);
+        std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH\n", argv[0]);
         std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
         return 2;
     }

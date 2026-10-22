@@ -10,9 +10,13 @@ namespace rct3::save
     namespace
     {
 
-        // Prefix of a headered file: two zero words, then the magic.
+        // Prefix of a headered file: two zero words, then the magic, then the size of the header's body.
         constexpr std::uint32_t kMagic = 0xF11EDA2Au;
         constexpr std::uint32_t kHeaderBodySize = 0x40;
+        // The short form, seen in some effect files: its own magic, then 1, then twelve words.
+        constexpr std::uint32_t kShortMagic = 0xF11EDA1Au;
+        constexpr std::uint32_t kShortMark = 1;
+        constexpr std::size_t kShortHeaderSize = 0x40;
         constexpr std::size_t kPrefixSize = 16;
         constexpr std::uint32_t kMinVersion = 1;
         constexpr std::uint32_t kMaxVersion = 2;
@@ -237,18 +241,20 @@ namespace rct3::save
         {
             std::uint32_t prefix[4] = { };
             std::memcpy(prefix, data.data(), sizeof(prefix));
-            if (prefix[0] == 0 && prefix[1] == 0 && prefix[2] == kMagic)
+            const bool full = prefix[2] == kMagic;
+            if (prefix[0] == 0 && prefix[1] == 0 && (full || prefix[2] == kShortMagic))
             {
-                if (prefix[3] != kHeaderBodySize)
+                if (prefix[3] != (full ? kHeaderBodySize : kShortMark))
                     return std::unexpected(Error::BadHeader);
-                if (data.size() < kHeaderSize + sizeof(std::uint32_t))
+                const std::size_t size = full ? kHeaderSize : kShortHeaderSize;
+                if (data.size() < size + sizeof(std::uint32_t))
                     return std::unexpected(Error::Truncated);
-                std::memcpy(file.header.words.data(), data.data() + kPrefixSize, sizeof(file.header.words));
+                std::memcpy(file.header.words.data(), data.data() + kPrefixSize, size - kPrefixSize);
                 if (file.header.version() < kMinVersion || file.header.version() > kMaxVersion)
                     return std::unexpected(Error::UnsupportedVersion);
                 file.has_header = true;
-                body_start = kHeaderSize;
-                file.sections.push_back({ SectionKind::Header, 0, kHeaderSize });
+                body_start = size;
+                file.sections.push_back({ SectionKind::Header, 0, size });
             }
         }
 

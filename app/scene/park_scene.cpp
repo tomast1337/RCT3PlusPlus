@@ -1107,6 +1107,7 @@ namespace rct3::scene
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.bloom = options.flag(config::GameOption::Bloom);
+        scene.light_shafts = options.flag(config::GameOption::LightShafts);
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);

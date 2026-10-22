@@ -498,8 +498,17 @@ namespace rct3::scene
             scene.occlusion.before = false;
         if (scene.show_scenery)
             profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
-        if (scene.bloom)
-            profiling::section("Glow", [&] { draw_park_glow(device, scene.glow); });
+        LightShafts shafts;
+        if (scene.light_shafts)
+        {
+            // How strong the shafts are at most. They fade in as the sun rises, and read as far into
+            // the air as the shadow map reaches, beyond which nothing shadows it.
+            constexpr float kShaftStrength = 0.22f;
+            const float risen = glm::smoothstep(0.0f, 0.1f, glm::normalize(scene.light.sun_direction).y);
+            shafts = { .from_clip = glm::inverse(view_projection), .light = scene.light, .reach = park::shadow_radius(scene.camera.distance), .strength = kShaftStrength * risen };
+        }
+        if (scene.bloom || shafts.strength > 0.0f)
+            profiling::section("Glow", [&] { draw_park_glow(device, scene.glow, scene.bloom, shafts); });
 
         const profiling::Scope zone("Interface");
         scene.list.clear();

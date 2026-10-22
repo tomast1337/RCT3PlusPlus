@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <vector>
 
@@ -76,6 +77,14 @@ namespace rct3::park
     bool holds_water(std::span<const save::WaterBody> bodies, save::Tile tile)
     {
         return std::ranges::any_of(bodies, [&](const save::WaterBody& b) { return holds(b, tile); });
+    }
+
+    std::optional<std::int32_t> water_surface(std::span<const save::WaterBody> bodies, save::Tile tile)
+    {
+        const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return holds(b, tile); });
+        if (lake == bodies.end())
+            return std::nullopt;
+        return static_cast<std::int32_t>(std::ceil(lake->level));
     }
 
 } // namespace rct3::park

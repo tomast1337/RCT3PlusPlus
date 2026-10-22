@@ -8,6 +8,7 @@
 
 #include "save/model/world.hpp"
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <span>
@@ -24,5 +25,9 @@ namespace rct3::park
 
     /// Whether any of `bodies` holds water on `tile`.
     [[nodiscard]] bool holds_water(std::span<const save::WaterBody> bodies, save::Tile tile);
+
+    /// The whole height an item floating on the water over `tile` stands at, its surface rounded up, or
+    /// nothing on dry land.
+    [[nodiscard]] std::optional<std::int32_t> water_surface(std::span<const save::WaterBody> bodies, save::Tile tile);
 
 } // namespace rct3::park

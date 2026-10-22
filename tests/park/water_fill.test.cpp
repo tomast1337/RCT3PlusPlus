@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water_fill.hpp"
 
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -57,4 +58,13 @@ TEST_CASE("a flood reaching a refused tile is refused")
 {
     const auto lake = fill_water(valley(), { 1, 0 }, 2, [](save::Tile t) { return t.col != 2; });
     CHECK_FALSE(lake.has_value());
+}
+
+TEST_CASE("an item floating on water stands at its surface rounded up, and nowhere on dry land")
+{
+    const auto lake = fill_water(valley(), { 1, 0 }, 1.5f, any);
+    REQUIRE(lake.has_value());
+    const std::array bodies { *lake };
+    CHECK(water_surface(bodies, { 1, 0 }) == 2);
+    CHECK_FALSE(water_surface(bodies, { 4, 0 }).has_value());
 }

@@ -52,12 +52,9 @@ namespace rct3::ui
         search_->focused_skin = style_.search_box_focused;
 
         add_filters(themes);
-        const Rect& inset = style_.window.content_inset;
-        if (!filters_.empty())
-            min_size.x = std::max(min_size.x, filters_.back()->placement.offsets.x1 + inset.x0 + inset.x1);
-        const float top = kBarHeight + kGap + (filters_.empty() ? 0 : kFilter + kGap);
         list_ = &body.add<ScrollArea>("list", style_.scroll_bar);
-        list_->placement = { { 0, 0, 1, 1 }, { 0, top, 0, 0 } };
+        const Rect& inset = style_.window.content_inset;
+        wrap_filters(kWidth - inset.x0 - inset.x1);
 
         add_rows(data_, nullptr);
     }
@@ -67,13 +64,10 @@ namespace rct3::ui
         std::set<std::string, std::less<>> kinds;
         std::set<std::uint32_t> packs;
         collect(data_, kinds, packs);
-        float x = 0;
         const auto add = [&](FilterKey key, std::u16string help) -> Button& {
             auto& b = content().add<Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
             b.toggle = true;
             b.tooltip = std::move(help);
-            b.placement = top_left(x, kBarHeight + kGap, kFilter, kFilter);
-            x += kFilter;
             filters_.push_back(&b);
             keys_.push_back(std::move(key));
             return b;
@@ -83,14 +77,12 @@ namespace rct3::ui
         {
             for (const std::string& kind : kinds)
                 add({ FilterKey::Group::Object, kind }, std::u16string(strings_.get(style_.object_help + kind)));
-            x += kGroupGap;
         }
         if (themes.size() > 1)
         {
             const std::u16string help(strings_.get(style_.style_help));
             for (const PickerTheme& theme : themes)
                 add({ FilterKey::Group::Theme, theme.name }, theme.title + u'\n' + help);
-            x += kGroupGap;
         }
         for (const std::uint32_t pack : packs)
         {
@@ -99,6 +91,26 @@ namespace rct3::ui
             b.icon = style_.pack_filter + number;
             b.icon_scale = style_.pack_icon_scale;
         }
+    }
+
+    void BuildPicker::wrap_filters(float width)
+    {
+        laid_filter_width_ = width;
+        float x = 0;
+        float y = kBarHeight + kGap;
+        for (std::size_t i = 0; i < filters_.size(); ++i)
+        {
+            if (i > 0 && keys_[i].group != keys_[i - 1].group)
+                x += kGroupGap;
+            if (x > 0 && x + kFilter > width)
+            {
+                x = 0;
+                y += kFilter;
+            }
+            filters_[i]->placement = top_left(x, y, kFilter, kFilter);
+            x += kFilter;
+        }
+        list_->placement = { { 0, 0, 1, 1 }, { 0, filters_.empty() ? y : y + kFilter + kGap, 0, list_->placement.offsets.y1 } };
     }
 
     void BuildPicker::add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading)
@@ -169,6 +181,8 @@ namespace rct3::ui
     void BuildPicker::update(const UpdateContext& context)
     {
         Window::update(context);
+        if (const float width = content().rect().width(); width > 0 && width != laid_filter_width_)
+            wrap_filters(width);
         if (list_->content().rect().width() != laid_width_ || note.empty() == laid_note_)
             dirty_ = true;
         if (std::u16string query = strings::search_folded(search_->text); query != query_)

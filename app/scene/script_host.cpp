@@ -328,7 +328,10 @@ namespace rct3::scene
                 return nullptr;
             const auto c = b.catalogues.find(b.overlay);
             const bool named = b.picked && c != b.catalogues.end();
-            return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() } };
+            Json designs = Json::array();
+            for (const std::filesystem::path& file : b.designs)
+                designs.push_back(file.filename().string());
+            return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() }, { "designs", std::move(designs) } };
         });
         engine_.define("build.stop", [this](const Json&) {
             stop_ride_placing(park_of(park_));

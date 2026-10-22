@@ -976,6 +976,11 @@ int main(int argc, char** argv)
                 park_sounds = rct3::scene::load_park_sounds(*install, std::random_device { }());
             park->simulate = simulate;
             park->scale = scale;
+            if (front)
+            {
+                park->saves.data = front->saves.data;
+                park->saves.game_saves = front->saves.game_saves;
+            }
         }
         else
             log.error("park loading failed during {} after {:.2f} s: {}: {}", rct3::scene::park_load_name(shown), now - started, path.string(), loaded.error());

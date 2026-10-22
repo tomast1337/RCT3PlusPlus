@@ -239,7 +239,13 @@ namespace rct3::scene
             if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
             {
                 if (const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[ref.index]))
-                    f.flow = ui::RideFlow { cycle->capacity, cycle->queue.size(), cycle->per_hour };
+                {
+                    f.flow = ui::RideFlow { cycle->capacity, cycle->queue.size(), cycle->per_hour, cycle->riders.size() };
+                    // A tracked ride's riders are aboard its trains.
+                    if (const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[ref.index]))
+                        for (const auto& aboard : fleet->riders)
+                            f.flow->riding += aboard.size();
+                }
             }
             if (const auto painted = painted_object(scene, ref))
             {

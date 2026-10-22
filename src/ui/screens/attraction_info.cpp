@@ -834,6 +834,14 @@ namespace rct3::ui
                 words.name = "status";
                 words.kind = InfoControlKind::Words;
                 words.label = note;
+                // Running, how many are on it after its state.
+                if (f.flow && f.refusal.empty())
+                {
+                    std::u16string on = text(strings, f.flow->riding == 1 ? "PeopleOnRide1" : "PeopleOnRide0");
+                    if (const auto mark = on.find(u'#'); mark != std::u16string::npos)
+                        on.replace(mark, 1, count(static_cast<std::int64_t>(f.flow->riding)));
+                    words.label += u", " + on;
+                }
                 page.controls.push_back(std::move(words));
                 bool first = true;
                 const auto button = [&](AttractionControl id, std::string_view icon, std::string_view help, bool enabled = true) {

@@ -342,6 +342,8 @@ namespace rct3::scene
         /// Of tracked rides built here, by ride: how many cars their trains may have. Their trains can be changed
         /// while they are also in car_fits.
         std::map<std::size_t, ui::TrainLimits> train_limits;
+        /// Of the same rides: the trains their kind's file offers, by name, the first theirs at first.
+        std::map<std::size_t, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
         /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the

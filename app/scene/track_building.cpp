@@ -808,6 +808,34 @@ namespace rct3::scene
         return arm;
     }
 
+    std::optional<bool> use_train(ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name)
+    {
+        save::Ride& ride = scene.rides.rides[index];
+        std::error_code error;
+        const std::filesystem::path cars = install.find("Cars").value_or(std::filesystem::path { });
+        for (auto it = std::filesystem::recursive_directory_iterator(cars, error); !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
+        {
+            if (!strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
+                continue;
+            std::string path = std::filesystem::relative(it->path(), install.root()).generic_string();
+            path.resize(path.size() - std::string_view(".common.ovl").size());
+            ride.trains.assign(1, save::Train { });
+            save::Train& train = ride.trains.front();
+            train.symbol = std::format("{}:rit", train_name);
+            train.overlay_path = path;
+            // As many cars as its kind usually has, and the fewest and most it may have.
+            ui::TrainLimits& limits = scene.train_limits[index];
+            limits = { };
+            const auto car_file = ovl::Overlay::load(it->path());
+            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+                for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
+                    if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
+                        limits = { .fewest_cars = static_cast<int>(t.train->fewest_cars), .most_cars = static_cast<int>(t.train->most_cars), .usual_cars = static_cast<int>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
+            return fit_trains(scene, install, index, 1, limits.usual_cars);
+        }
+        return std::nullopt;
+    }
+
     bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets)
     {
         if (item.kind != park::BuildKind::TrackedRide || !assets.install)
@@ -860,6 +888,7 @@ namespace rct3::scene
                 {
                     if (!t.ride->operating->trains.empty())
                         train_name = t.ride->operating->trains.front();
+                    scene.train_choices[index].assign(t.ride->operating->trains.begin(), t.ride->operating->trains.end());
                     const ovl::RideOperatingDefaults& o = *t.ride->operating;
                     ride.platform_type = o.platform;
                     ride.mode = static_cast<save::OperatingMode>(o.mode);
@@ -878,28 +907,10 @@ namespace rct3::scene
                 ride.platform_style = it->path().filename().string();
         if (ride.platform_style.empty())
             ride.platform_type.clear();
-        const std::filesystem::path cars = assets.install->find("Cars").value_or(std::filesystem::path { });
-        bool arm = false; // Its riders sit on arms
-        for (auto it = std::filesystem::recursive_directory_iterator(cars, error); !train_name.empty() && !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
-        {
-            if (!strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
-                continue;
-            std::string path = std::filesystem::relative(it->path(), assets.install->root()).generic_string();
-            path.resize(path.size() - std::string_view(".common.ovl").size());
-            save::Train& train = ride.trains.emplace_back();
-            train.symbol = std::format("{}:rit", train_name);
-            train.overlay_path = path;
-            // As many cars as its kind usually has, and the fewest and most it may have.
-            ui::TrainLimits& limits = scene.train_limits[index];
-            const auto car_file = ovl::Overlay::load(it->path());
-            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
-                for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
-                    if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
-                        limits = { .fewest_cars = static_cast<int>(t.train->fewest_cars), .most_cars = static_cast<int>(t.train->most_cars), .usual_cars = static_cast<int>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
-            arm = fit_trains(scene, *assets.install, index, 1, limits.usual_cars);
+        // Its riders sit on arms.
+        const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
+        if (!ride.trains.empty())
             logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
-            break;
-        }
         // The simulation takes it on once its entrance and exit are placed beside its station (ride_placing.hpp).
         scene.track_rules.resize(scene.rides.rides.size());
         scene.track_rules[index] = park::load_track_rules(*file, ride.base.symbol);

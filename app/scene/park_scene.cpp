@@ -228,6 +228,8 @@ namespace rct3::scene
                     const auto fits = scene.car_fits.find(ref.index);
                     if (limits != scene.train_limits.end() && fits != scene.car_fits.end())
                     {
+                        const auto choices = scene.train_choices.find(ref.index);
+                        f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
                         f.trains->most_trains = course ? park::trains_fitting(*course, fits->second) : 1;
                     }
@@ -572,6 +574,17 @@ namespace rct3::scene
                 const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                 if (const int most = course ? park::trains_fitting(*course, scene.car_fits[ref.index]) : 1; ride->train_count > most)
                     fit_trains(scene, *assets.install, ref.index, most, ride->cars_per_train);
+            }
+            else if (change.id == ui::control_id(CarKind) && scene.car_fits.contains(ref.index) && assets.install && !ride->trains.empty())
+            {
+                // The next kind of train its kind runs, round to the first after the last.
+                const std::vector<std::string>& choices = scene.train_choices[ref.index];
+                const std::string_view symbol = ride->trains.front().symbol;
+                const std::string_view now = symbol.substr(0, symbol.find(':'));
+                const auto at = std::ranges::find_if(choices, [&](const std::string& c) { return strings::equals_ignoring_case(c, now); });
+                if (choices.size() > 1)
+                    if (const auto arm = use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
+                        scene.building.arm = *arm || scene.building.arm;
             }
             else if (change.id == ui::control_id(Circuits))
             {
@@ -1057,7 +1070,7 @@ namespace rct3::scene
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
                 // Longer trains fit fewer times round the track, so the page shows the new limits; a new name and
                 // the graph's series show.
-                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name) || (change->id >= ui::control_id(ui::AttractionControl::SpeedSeries) && change->id <= ui::control_id(ui::AttractionControl::LateralSeries)))
+                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name) || change->id == ui::control_id(ui::AttractionControl::CarKind) || (change->id >= ui::control_id(ui::AttractionControl::SpeedSeries) && change->id <= ui::control_id(ui::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
             else if (change && scene.shown_person)

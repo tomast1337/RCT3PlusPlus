@@ -873,7 +873,8 @@ namespace rct3::scene
         if (!ride.track || !ride.track->pieces.empty() || c == nullptr)
             return false;
         // A design is laid whole, piece after piece from the first, and paid for whatever the park has, then
-        // its doors where they stood beside its stations.
+        // its doors where they stood beside its stations. Its price is its pieces': the only scenery designs
+        // keep is the style's standard entrance and exit, which their files price at nothing.
         // shortcut: the ride's own settings and colours are left out, upgrade when the ride window sets them.
         const std::vector<save::TrackPiece> design = std::exchange(b.design, { });
         const std::vector<TrackBuilding::DesignDoor> doors = std::exchange(b.design_doors, { });

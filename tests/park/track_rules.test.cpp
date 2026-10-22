@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_rules.hpp"
 
+#include "ovl/tracked_ride.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -154,6 +156,18 @@ TEST_CASE("a ride whose station is shorter than its train, or whose cable lift i
     CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "CannotOpenOrTestNoReverseCableLiftHill");
     course.reverse_lift = true;
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+}
+
+TEST_CASE("a ride whose special pieces fill only the first two slots is built back from its station")
+{
+    ovl::TrackedRide stack;
+    stack.track_sections = { "Top", "Middle", "", "" };
+    CHECK(track_rules(stack).builds_back);
+    ovl::TrackedRide coaster;
+    coaster.track_sections = { "Lift", "Brake", "Station", "" };
+    CHECK_FALSE(track_rules(coaster).builds_back);
+    coaster.track_sections = { "", "", "", "" };
+    CHECK_FALSE(track_rules(coaster).builds_back);
 }
 
 TEST_CASE("a walk-through opens only when its exit comes after its entrance")

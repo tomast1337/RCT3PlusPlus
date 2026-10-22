@@ -29,9 +29,21 @@ TEST_CASE("a flat ride's timing is its starting, running and stopping animations
     CHECK(timing->run == 20);
     CHECK(timing->stop == 5);
     CHECK(timing->loops == 3);
-    CHECK(simulation::flat_ride_timing(seconds, 16, 0)->loops == 1);                         // Runs at least once
-    CHECK(simulation::flat_ride_timing(seconds, 0, 1) == std::nullopt);                      // Nowhere to sit
-    CHECK(simulation::flat_ride_timing(std::span(seconds).first(3), 16, 1) == std::nullopt); // Not a ride's animations
+    CHECK(simulation::flat_ride_timing(seconds, 16, 0)->loops == 1);                       // Runs at least once
+    CHECK(simulation::flat_ride_timing(seconds, 0, 1) == std::nullopt);                    // Nowhere to sit
+    CHECK(simulation::flat_ride_timing(std::array { 0.0f, 0.0f }, 16, 1) == std::nullopt); // Nothing that takes time
+}
+
+TEST_CASE("a ride without a starting, running and stopping cycle runs once for its longest animation")
+{
+    // A maze's standing animation alone takes time; a show lists two.
+    const auto maze = simulation::flat_ride_timing(std::array { 10.0f, 0.0f, 0.0f, 0.0f }, 2, 3);
+    REQUIRE(maze);
+    CHECK(maze->start == 0);
+    CHECK(maze->run == 10);
+    CHECK(maze->stop == 0);
+    CHECK(maze->loops == 1);
+    CHECK(simulation::flat_ride_timing(std::array { 0.5f, 30.0f }, 24, 1)->run == 30);
 }
 
 TEST_CASE("a stall sells what its items are named, or their kinds are, or its own kind is when neither tells")

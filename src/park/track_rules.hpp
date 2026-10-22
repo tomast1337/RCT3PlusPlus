@@ -19,7 +19,7 @@
 
 namespace rct3::ovl
 {
-    struct TrackRules;
+    struct TrackedRide;
 } // namespace rct3::ovl
 
 namespace rct3::park
@@ -69,8 +69,9 @@ namespace rct3::park
         bool builds_back = false;
     };
 
-    /// The rules a ride file's item stores, with names copied out of the file.
-    [[nodiscard]] TrackRules track_rules(const ovl::TrackRules& stored);
+    /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces
+    /// fill only the first two slots, a stack of them, is built back from its station.
+    [[nodiscard]] TrackRules track_rules(const ovl::TrackedRide& ride);
 
     /// The rules of the tracked ride `symbol` ("<name>:trr" or the name alone) in the overlay whose common file
     /// is `file`; defaults when the file holds no such ride.

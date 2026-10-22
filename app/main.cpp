@@ -337,7 +337,7 @@ namespace
 
     std::string widget_label(const rct3::ui::Widget& w)
     {
-        const rct3::ui::Rect& r = w.rect();
+        const rct3::ui::Rect r = rct3::ui::covered_bounds(w);
         return std::format("{} \"{}\"  {:.0f},{:.0f}  {:.0f}x{:.0f}{}", rct3::ui::type_name(w), w.name(), r.x0, r.y0, r.width(), r.height(), widget_flags(w));
     }
 
@@ -431,12 +431,13 @@ namespace
         const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * in.scale) / to_ui.x, (static_cast<float>(view.y) + cy * in.scale) / to_ui.y }; };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
         // The nearest holder smaller than the screen; full-screen frames and the desktop would only outline the game.
+        // The widget itself is outlined where it stops the pointer, so panels spanning the screen show their parts.
         const rct3::ui::Widget* holder = in.outlined->parent();
         while (holder != nullptr && holder->parent() != nullptr && holder->rect().width() >= holder->parent()->rect().width() && holder->rect().height() >= holder->parent()->rect().height())
             holder = holder->parent();
         if (holder != nullptr && holder->parent() != nullptr)
             draw.AddRect(corner(holder->rect().x0, holder->rect().y0), corner(holder->rect().x1, holder->rect().y1), IM_COL32(255, 200, 60, 160));
-        const rct3::ui::Rect& r = in.outlined->rect();
+        const rct3::ui::Rect r = rct3::ui::covered_bounds(*in.outlined);
         draw.AddRectFilled(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 40));
         draw.AddRect(corner(r.x0, r.y0), corner(r.x1, r.y1), IM_COL32(64, 150, 255, 255), 0.0f, 2.0f);
         const std::string label = std::format("{} {}", rct3::ui::type_name(*in.outlined), in.outlined->name());

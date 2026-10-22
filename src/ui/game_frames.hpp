@@ -104,6 +104,16 @@ namespace rct3::ui::game_frames
     [[nodiscard]] CodedFrame spinner(Arrow way, bool enabled);
     /// A tick box, 12 units square: white, with a dark grey line one unit in.
     [[nodiscard]] CodedFrame tickbox();
+    /// The light blue disc a window's close button sits on, 14 units across.
+    [[nodiscard]] CodedFrame title_button();
+    /// A list heading's box, 7 units square: pale grey with a dark minus, and a plus when `closed`.
+    [[nodiscard]] CodedFrame heading_box(bool closed);
+    /// A slider's thumb, 18 units by 13: two green arrows, left and right, outlined in black.
+    [[nodiscard]] CodedFrame slider_thumb();
+    /// The disc behind a colour in the colour picker, `size` units across.
+    [[nodiscard]] CodedFrame colour_ring(Color colour, float size);
+    /// What the colour picker sits on, 34 units by 37: light blue in a dark blue line, round, over a drop shadow.
+    [[nodiscard]] CodedFrame colour_back();
 
     /// The park bar along the screen's top: a light blue band over a dark shadow, its outer bottom corners
     /// round. The middle piece, `width` by `height` units, has a half disc notch of radius `notch` up from its

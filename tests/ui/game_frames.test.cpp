@@ -153,3 +153,12 @@ TEST_CASE("each piece of the front backdrop is the whole backdrop cut to that pi
         CHECK(layer.clip->y1.offset <= 255);
     }
 }
+
+TEST_CASE("a closed heading's box adds the plus's upright to the open one's minus")
+{
+    const CodedFrame open = game_frames::heading_box(false);
+    const CodedFrame closed = game_frames::heading_box(true);
+    REQUIRE(closed.layers.size() == open.layers.size() + 1);
+    const Rect upright = frame_rect(closed.layers.back().box, { 0, 0, 7, 7 }, closed.width, closed.height);
+    CHECK(upright.width() < upright.height());
+}

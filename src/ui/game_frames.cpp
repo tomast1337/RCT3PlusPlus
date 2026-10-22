@@ -209,6 +209,57 @@ namespace rct3::ui::game_frames
         return f;
     }
 
+    CodedFrame title_button()
+    {
+        return colour_ring(hex("#4baae4"), 14);
+    }
+
+    CodedFrame heading_box(bool closed)
+    {
+        constexpr Color kSign = hex("#535b5d");
+        CodedFrame f;
+        f.width = 7;
+        f.height = 7;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), solid(hex("#d5d8d4"), round_corners(1)), { } });
+        f.layers.push_back({ corner_box(1, 3, 5, 1), solid(kSign), { } });
+        if (closed)
+            f.layers.push_back({ corner_box(3, 1, 1, 5), solid(kSign), { } });
+        return f;
+    }
+
+    CodedFrame slider_thumb()
+    {
+        constexpr Color kGreen = hex("#36ca4a");
+        CodedFrame f;
+        f.width = 18;
+        f.height = 13;
+        add_triangle(f, corner_box(0, 0, 8, 13), Arrow::Left, hex("#000000"));
+        add_triangle(f, corner_box(1.5f, 1.5f, 5.5f, 10), Arrow::Left, kGreen);
+        add_triangle(f, corner_box(10, 0, 8, 13), Arrow::Right, hex("#000000"));
+        add_triangle(f, corner_box(11, 1.5f, 5.5f, 10), Arrow::Right, kGreen);
+        return f;
+    }
+
+    CodedFrame colour_ring(Color colour, float size)
+    {
+        CodedFrame f;
+        f.width = size;
+        f.height = size;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), solid(colour, round_corners(size / 2)), { } });
+        return f;
+    }
+
+    CodedFrame colour_back()
+    {
+        constexpr float kRound = 13;
+        CodedFrame f;
+        f.width = 34;
+        f.height = 37;
+        f.layers.push_back({ inset_box(2, 3, 0, 0), solid(hex("#00000070"), round_corners(kRound)), { } });
+        f.layers.push_back({ inset_box(0, 0, 2, 3), outlined(hex("#74c0ea"), hex("#1f73b0"), 2, round_corners(kRound)), { } });
+        return f;
+    }
+
     namespace
     {
         constexpr Color kBarShadow = hex("#00000098");

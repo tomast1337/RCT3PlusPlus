@@ -35,6 +35,16 @@ namespace
     }
 } // namespace
 
+namespace
+{
+    /// The state words the view page shows under the name.
+    std::u16string status_words(const InfoPage& page)
+    {
+        const auto found = std::ranges::find(page.controls, std::string("status"), &InfoControl::name);
+        return found == page.controls.end() ? std::u16string { } : found->label;
+    }
+} // namespace
+
 TEST_CASE("each kind of attraction has its own tabs, in the order of their places on the ring")
 {
     const auto tracked = attraction_tabs(AttractionKind::Tracked, save::AttractionState::Open);
@@ -91,7 +101,7 @@ TEST_CASE("why a ride was not opened shows in place of its state")
     f.ride = &ride;
     f.refusal = "RideHasNoStation";
     CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"No station");
-    CHECK(attraction_page(AttractionTab::View, f, s, { }).note == u"No station");
+    CHECK(status_words(attraction_page(AttractionTab::View, f, s, { })) == u"No station");
     f.refusal = { };
     CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"Closed");
 }
@@ -108,7 +118,7 @@ TEST_CASE("pages are written from the attraction's state")
 
     const InfoPage view = attraction_page(AttractionTab::View, f, s, units);
     CHECK(view.title == u"Ride");
-    CHECK(view.note == u"Open");
+    CHECK(status_words(view) == u"Open");
 
     const InfoPage money = attraction_page(AttractionTab::Finances, f, s, units);
     const auto profit = std::ranges::find(money.lines, std::u16string(u"Profit"), &InfoLine::label);
@@ -310,7 +320,18 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     REQUIRE(cars.controls.size() == 1);
     CHECK(cars.controls[0].kind == InfoControlKind::Paint);
     CHECK(cars.controls[0].paints == std::vector<std::size_t> { 3, 4, 5 });
-    CHECK(attraction_page(AttractionTab::View, f, s, { }).controls.empty());
+    // The name, the tune, the state, then the buttons: pulling down, finding it and riding along.
+    const InfoPage details = attraction_page(AttractionTab::View, f, s, { });
+    REQUIRE(details.controls.size() == 6);
+    CHECK(details.controls[0].kind == InfoControlKind::Text);
+    CHECK(details.controls[0].text == details.title);
+    CHECK(details.controls[1].id == control_id(AttractionControl::Music));
+    CHECK(details.controls[1].beside);
+    CHECK(details.controls[1].value == 0);
+    CHECK_FALSE(details.controls[3].beside);
+    CHECK_FALSE(details.controls[3].enabled);
+    CHECK(details.controls[4].id == control_id(AttractionControl::Locate));
+    CHECK(details.controls[4].beside);
 
     save::Stall stall;
     stall.base.symbol = "SweetShopStall:shs";
@@ -326,7 +347,8 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(items.controls[1].value == 90);
     const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
     CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
-    CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 1);
+    // A stall has no tune; its name, state, two buttons and its paint.
+    CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 5);
 }
 
 TEST_CASE("a running ride shows its riders an hour, the wait its queue now has and its seats")

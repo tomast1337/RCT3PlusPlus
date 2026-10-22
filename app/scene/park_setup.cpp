@@ -46,6 +46,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "strings/ascii.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/management_pages.hpp"
 #include "ui/screens/message_drawer.hpp"
@@ -878,6 +879,12 @@ namespace rct3::scene
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         log.info("{} lamps", scene.lamps.size());
         load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
+        // The tunes are the music files the install has, by name.
+        std::error_code missing;
+        for (const auto& file : std::filesystem::directory_iterator(install.root() / "Music", missing))
+            if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
+                scene.tunes.push_back(file.path().stem().u16string());
+        std::ranges::sort(scene.tunes);
         show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },

@@ -389,7 +389,7 @@ namespace rct3::scene
         std::vector<entt::entity> broken_rides;               ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
-        std::optional<park::AttractionRef> info_requested;          ///< Asked by a script, opened as a click on it does
+        std::optional<park::AttractionRef> info_requested;          ///< Asked by a script or a finished building, opened as a click on it does
         std::string refusal;                                        ///< String key: why the shown attraction was not opened, tested or edited
         std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;                     ///< Their tabs in the panel's order

@@ -86,6 +86,8 @@ namespace rct3::scene
         park::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
+        /// Every show trick the game names, read from its main file when the first show ride is placed.
+        std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
         std::vector<save::TrackPiece> stations;
     };

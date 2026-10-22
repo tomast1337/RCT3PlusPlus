@@ -147,3 +147,45 @@ TEST_CASE("as many trains run as fill half the course with gaps between them, an
     CHECK(park::trains_fitting(c, fits) == 5);
     CHECK(park::trains_fitting(corner(), fits) == 1);
 }
+
+TEST_CASE("a track in several stretches runs along the first one with a station")
+{
+    save::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::PieceShape plain;
+    plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
+    park::PieceShape station = plain;
+    station.use = park::PieceUse::Station;
+    save::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::PlacedObject> objects;
+    // Two plain pieces, then a stretch of a station and a plain piece that closes on itself.
+    for (std::uint64_t i = 0; i < 4; ++i)
+    {
+        save::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.col = static_cast<int>(i);
+        o.force_absolute_height = true;
+        save::TrackPiece& piece = track.pieces.emplace_back();
+        piece.symbol = i == 2 ? "Station" : "Plain";
+        piece.scenery = o.id;
+    }
+    track.segments = { { .first_piece = 0, .piece_count = 2 }, { .first_piece = 2, .piece_count = 2, .closed = true } };
+    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::PieceShape&> { return p.symbol == "Station" ? station : plain; };
+    const auto course = park::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(course);
+    CHECK(course->first_piece == 2);
+    CHECK(course->piece_starts.size() == 2);
+    CHECK(course->closed);
+    CHECK(course->kinds.front() == park::CourseKind::Station);
+    // Without a station anywhere, the first stretch.
+    track.pieces[2].symbol = "Plain";
+    const auto bare = park::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(bare);
+    CHECK(bare->first_piece == 0);
+    CHECK(!bare->closed);
+}

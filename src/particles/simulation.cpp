@@ -67,16 +67,6 @@ namespace rct3::particles
     {
         for (const Particle& p : effect.particles)
             widest_ = std::max(widest_, p.emitters.size());
-        // Reserved whole, so emitting never moves the arrays under a pass over them.
-        live_.position.reserve(capacity);
-        live_.velocity.reserve(capacity);
-        live_.age.reserve(capacity);
-        live_.life.reserve(capacity);
-        live_.scale.reserve(capacity);
-        live_.roll.reserve(capacity);
-        live_.kind.reserve(capacity);
-        live_.relative.reserve(capacity);
-        emitted_.reserve(capacity * widest_);
         life_ = effect.lifetime * (1 - fraction(random_) * effect.lifetime_random);
     }
 
@@ -102,10 +92,10 @@ namespace rct3::particles
             step(dt);
     }
 
-    void EffectRun::emit(const Emitter& emitter, float& emitted, float age, float life, glm::vec3 position, glm::vec3 velocity)
+    float EffectRun::emit(const Emitter& emitter, float emitted, float age, float life, glm::vec3 position, glm::vec3 velocity)
     {
         if (!emitter.particle || life <= 0)
-            return;
+            return emitted;
         const float count = static_cast<float>(emitter.count) * (emitter.count_scaled ? effect_->strength * strength_ : 1.0f);
         const float target = std::floor(count * due(emitter, age / life));
         const Particle& kind = effect_->particles[*emitter.particle];
@@ -134,6 +124,7 @@ namespace rct3::particles
             emitted_.resize(live_.count() * widest_, 0.0f);
             std::fill(emitted_.end() - static_cast<std::ptrdiff_t>(widest_), emitted_.end(), 0.0f);
         }
+        return emitted;
     }
 
     void EffectRun::step(float dt)
@@ -143,7 +134,7 @@ namespace rct3::particles
         {
             const float after = std::min(age_ + dt, life_);
             for (std::size_t i = 0; i < effect_->roots.size(); ++i)
-                emit(effect_->emitters[effect_->roots[i]], root_emitted_[i], after, life_, position_, velocity_);
+                root_emitted_[i] = emit(effect_->emitters[effect_->roots[i]], root_emitted_[i], after, life_, position_, velocity_);
             age_ += dt;
             if (age_ >= life_ && loops_)
             {
@@ -167,7 +158,7 @@ namespace rct3::particles
             live_.position[i] += live_.velocity[i] * dt;
             live_.roll[i] += kind.roll * dt;
             for (std::size_t e = 0; e < kind.emitters.size(); ++e)
-                emit(effect_->emitters[kind.emitters[e]], emitted_[i * widest_ + e], std::min(live_.age[i], live_.life[i]), live_.life[i], live_.position[i], live_.velocity[i]);
+                emitted_[i * widest_ + e] = emit(effect_->emitters[kind.emitters[e]], emitted_[i * widest_ + e], std::min(live_.age[i], live_.life[i]), live_.life[i], live_.position[i], live_.velocity[i]);
         }
         // Dead ones are replaced by the last, in every array, counters too.
         const auto replace = [&](auto& field, std::size_t i) {

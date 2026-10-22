@@ -42,6 +42,7 @@
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
+#include "scene/park_particles.hpp"
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
@@ -238,7 +239,8 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
-        bool bloom = false; ///< The Bloom option: glow round bright parts
+        ParkParticles particles; ///< The effects scenery and rides show
+        bool bloom = false;      ///< The Bloom option: glow round bright parts
         ParkOcclusion occlusion;
         bool ambient_occlusion = false; ///< Our Ambient occlusion option
         int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)

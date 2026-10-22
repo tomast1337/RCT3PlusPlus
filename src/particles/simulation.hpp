@@ -66,6 +66,10 @@ namespace rct3::particles
         /// Moves time on by `seconds`, in whole fixed steps; the rest waits for the next call.
         void advance(float seconds);
 
+        [[nodiscard]] const Effect& effect() const noexcept
+        {
+            return *effect_;
+        }
         [[nodiscard]] const ParticleArrays& particles() const noexcept
         {
             return live_;
@@ -77,8 +81,9 @@ namespace rct3::particles
 
     private:
         void step(float dt);
-        /// Emits what `emitter` owes once its owner is `age` into its `life`.
-        void emit(const Emitter& emitter, float& emitted, float age, float life, glm::vec3 position, glm::vec3 velocity);
+        /// Emits what `emitter`, having sent `emitted`, owes once its owner is `age` into its `life`; returns how
+        /// many it has sent then. Taken by value: emitting can move the counters.
+        float emit(const Emitter& emitter, float emitted, float age, float life, glm::vec3 position, glm::vec3 velocity);
 
         const Effect* effect_;
         random::RandomState random_;

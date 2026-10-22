@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/simulation.hpp"
 
+#include "particles/library.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -24,7 +26,7 @@ namespace
 
     auto seeded()
     {
-        return stream(Seed { 7 }, RandomStream::Effects);
+        return stream(Seed { 7 }, RandomStream::Particles);
     }
 
     /// `seconds` of time in frames of a tenth, as the park would call it.
@@ -153,4 +155,15 @@ TEST_CASE("a particle's look follows its curves, size and the effect's tint")
     kind.tinted = true;
     l = look(e, p, 0);
     CHECK(l.colour.r == doctest::Approx(0.5));
+}
+
+TEST_CASE("a sprite runs through its frames, or keeps the one a particle picks")
+{
+    rct3::particles::Sprite sprite { .frames = { { }, { }, { }, { } }, .animated = true, .loop_time = 2 };
+    CHECK(sprite.frame(0, 0.9f) == 0);
+    CHECK(sprite.frame(1.1f, 0) == 2);
+    CHECK(sprite.frame(4.6f, 0) == 1); // Round again
+    sprite.animated = false;
+    CHECK(sprite.frame(1.1f, 0.9f) == 3);
+    CHECK(rct3::particles::Sprite { }.frame(1, 1) == 0);
 }

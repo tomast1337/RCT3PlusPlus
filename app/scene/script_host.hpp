@@ -31,6 +31,7 @@
 //   map.screen(col, row) the middle of a tile on the view, or undefined when it is not in sight
 //   map.paths()         [{ col, row, raised, queue, height }] for each path tile; height only when raised
 //   map.water()         [{ level, triangles }] for each lake
+//   map.effects()       [{ effect, col, row, up, live }] for each particle effect shown; up above the ground
 //   build.flatRides()   the install's rides placed whole, { overlay, symbol, name, width, length, price, doors },
 //                       or undefined while the lists are still being read
 //   build.pick(overlay, symbol)  starts placing that ride, as picking it in its build list does; false when

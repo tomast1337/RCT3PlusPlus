@@ -877,6 +877,8 @@ namespace rct3::scene
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         log.info("{} lamps", scene.lamps.size());
+        load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
+        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
                                        std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
@@ -1089,6 +1091,7 @@ namespace rct3::scene
         destroy_park_water(device, scene.water);
         destroy_led_signs(device, scene.led_signs);
         destroy_park_glow(device, scene.glow);
+        destroy_park_particles(device, scene.particles);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })

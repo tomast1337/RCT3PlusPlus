@@ -1101,6 +1101,7 @@ namespace rct3::scene
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
+        advance_park_particles(scene.particles, elapsed, viewer);
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);

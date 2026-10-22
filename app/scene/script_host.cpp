@@ -295,6 +295,16 @@ namespace rct3::scene
             park_->camera = park::looking(world_point(g, a[1]), at);
             return Json(nullptr);
         });
+        engine_.define("map.effects", [this](const Json&) {
+            const save::TerrainGrid& g = grid_of(park_);
+            Json effects = Json::array();
+            for (const ParkParticles::Shown& s : park_->particles.shown)
+            {
+                const glm::vec3 p = s.position;
+                effects.push_back({ { "effect", s.effect }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
+            }
+            return effects;
+        });
         engine_.define("map.paths", [this](const Json&) {
             grid_of(park_);
             Json paths = Json::array();

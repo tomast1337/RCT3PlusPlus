@@ -427,7 +427,7 @@ int main(int argc, char** argv)
             for (const auto& p : effect->particles)
                 skins += std::format(" {}", p.skin.empty() ? "-" : p.skin);
             // Ten seconds of it running round, for the most particles it keeps alive at once.
-            rct3::particles::EffectRun run(*effect, rct3::random::stream(rct3::random::Seed { 1 }, rct3::random::RandomStream::Effects), true, 1u << 20);
+            rct3::particles::EffectRun run(*effect, rct3::random::stream(rct3::random::Seed { 1 }, rct3::random::RandomStream::Particles), true, 1u << 20);
             std::size_t peak = 0;
             for (int frame = 0; frame < 600; ++frame)
             {

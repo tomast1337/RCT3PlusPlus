@@ -36,9 +36,10 @@ namespace rct3::random
     /// What each stream is for. A stream's number is part of the format of saved states: never reorder.
     enum class RandomStream : std::uint64_t
     {
-        Gameplay = 1, ///< Anything that changes how the park plays: guests, rides, weather, research
-        Scenery = 2,  ///< Placing generated scenery, such as the trees beyond the map
-        Effects = 3,  ///< Looks only: particles, sound variations; never saved
+        Gameplay = 1,  ///< Anything that changes how the park plays: guests, rides, weather, research
+        Scenery = 2,   ///< Placing generated scenery, such as the trees beyond the map
+        Effects = 3,   ///< Looks only: people's colours, sound variations; never saved
+        Particles = 4, ///< Looks only: particle effects; never saved
     };
 
     /// One step of SplitMix64: advances `state` and returns a well-mixed value. Also good for mixing

@@ -496,6 +496,8 @@ namespace rct3::scene
             profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, park::projection(aspect(device))); });
         else
             scene.occlusion.before = false;
+        if (scene.show_scenery)
+            profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
         if (scene.bloom)
             profiling::section("Glow", [&] { draw_park_glow(device, scene.glow); });
 

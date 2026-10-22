@@ -688,6 +688,7 @@ namespace rct3::scene
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps_due = true;
+        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
     }

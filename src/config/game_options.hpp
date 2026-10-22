@@ -44,7 +44,7 @@ namespace rct3::config
         InterfaceVolume,
         ImportMyMusic,          ///< Play the player's own music in the park
         CycleMenuMusic,         ///< A different menu track each start
-        ShuffleBackgroundMusic, ///< The park's music when zoomed out is picked at random (ours; the game has no such choice)
+        ShuffleBackgroundMusic, ///< The park's music when zoomed out is picked at random
         MenuTrack,              ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
 
         // Camera
@@ -59,13 +59,13 @@ namespace rct3::config
         CameraFocusOnMiddle,
         FreeLookSpeed,
         IsometricRotation, ///< How far the pointer moves before the isometric view turns
-        PathCameraFollow,  ///< Ours: the camera follows the path being laid; the path panel's tab, not in the dialog
+        PathCameraFollow,  ///< The camera follows the path being laid; the path panel's tab, not in the dialog
 
         // Graphics
         GraphicsQuality, ///< 0 to 4 from fastest to finest, 5 custom
         AntiAliasing,    ///< 0 none, then each level the device offers
         Shadows,         ///< 0 none, 1 static, 2 dynamic
-        BlendShadows,    ///< Ours: shadows move smoothly between drawings from the sun, rather than step
+        BlendShadows,    ///< Shadows move smoothly between drawings from the sun, rather than step
         ShowDetailLevels,
         PeopleDetail,
         PeopleDistance,
@@ -89,11 +89,11 @@ namespace rct3::config
         RideDistance,
         ImposterDistance, ///< Beyond it, scenery is drawn as flat pictures
         BlendDetailLevels,
-        DetailBlendBand, ///< Ours: how far before a level's edge objects start blending into the next, as a share of its distance
+        DetailBlendBand, ///< How far before a level's edge objects start blending into the next, as a share of its distance
         CompressTextures,
         AggressiveDepthBias,
         TextureDetail,
-        SurfaceDetail, ///< Ours: 0 off, 1 fine grain up close, 2 also relief from maps made of the textures
+        SurfaceDetail, ///< 0 off, 1 fine grain up close, 2 also relief from maps made of the textures
         Trees3D,
         OffMapTrees,
         SimpleTerrain,
@@ -111,12 +111,12 @@ namespace rct3::config
         Mountains,
         DayNight, ///< 0 instant, 1 blend, 2 cycle
         Bloom,
+        LightShafts,      ///< Sunlight seen in the air, with dark gaps where shadows cross it
+        AmbientOcclusion, ///< Creases and corners darkened where less of the sky reaches
         Refraction,
         WaterDroplets,
         LaserOcclusion,
-        AmbientOcclusion, ///< Ours: creases and corners darkened where less of the sky reaches
-        ParticleBudget,   ///< Ours: at most this many particles alive at once, nearest effects first; 0 none
-        LightShafts,      ///< Ours: sunlight seen in the air, with dark gaps where shadows cross it
+        ParticleBudget, ///< At most this many particles alive at once, nearest effects first; 0 none
 
         Count_, ///< Number of options; not an option
     };

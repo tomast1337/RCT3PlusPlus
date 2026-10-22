@@ -25,8 +25,13 @@ namespace rct3::ovl
         std::array<std::string_view, 6> cars;
         /// Every reference in the fixed part of the record, in file order.
         std::vector<ItemReference> references;
-        /// The fixed part of the record, 184 bytes. From byte 32 it is single-precision numbers, whose
-        /// meanings are unconfirmed. More data follows it in the file: pointers to arrays of per-car data and
+        /// Passenger cars a train of this kind may have, fewest and most, and how many it has unless set
+        /// otherwise. Every train the game ships has fewest <= usual <= most.
+        std::uint32_t fewest_cars = 0;
+        std::uint32_t most_cars = 0;
+        std::uint32_t usual_cars = 0;
+        /// The fixed part of the record, 184 bytes. Bytes 32 to 43 are the car counts above; from byte 44 it is
+        /// single-precision numbers, whose meanings are unconfirmed. More data follows it in the file: pointers to arrays of per-car data and
         /// texture references, which are not interpreted.
         std::span<const std::byte> record;
     };

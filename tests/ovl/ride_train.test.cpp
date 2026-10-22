@@ -18,6 +18,8 @@ TEST_CASE("ride trains list their cars")
     pool.add("Back:ric");
     std::vector<std::byte> bytes;
     put(bytes, { name, display });
+    bytes.resize(0x20, std::byte { 0 });
+    put(bytes, { 2, 7, 3 });
     bytes.resize(200, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Test:rit", bytes, { { 0x08, "Front:ric" }, { 0x10, "Back:ric" } });
     const auto items = read_ride_trains(overlay, overlay.common());
@@ -29,6 +31,9 @@ TEST_CASE("ride trains list their cars")
     CHECK(t.cars[0] == "Front");
     CHECK(t.cars[1].empty());
     CHECK(t.cars[2] == "Back");
+    CHECK(t.fewest_cars == 2);
+    CHECK(t.most_cars == 7);
+    CHECK(t.usual_cars == 3);
     CHECK(t.references.size() == 2);
     CHECK(t.record.size() == 184);
 }

@@ -166,6 +166,14 @@ namespace rct3::park
         return to * back * saved;
     }
 
+    int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits)
+    {
+        float train = kTrainGap;
+        for (const CarFit& fit : fits)
+            train += fit.length;
+        return std::max(static_cast<int>(course.length() / 2 / train), 1);
+    }
+
     void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front)
     {
         if (fits.empty())

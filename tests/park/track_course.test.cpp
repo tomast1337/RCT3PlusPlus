@@ -135,3 +135,15 @@ TEST_CASE("an arm holds each piece's angles at its middle and turns evenly betwe
     CHECK(park::arm_angles_at(c, held, 40) == A { 10, 0, 0, 0 });
     CHECK_FALSE(park::arm_angles_at(c, std::vector<std::optional<A>>(4), 12));
 }
+
+TEST_CASE("as many trains run as fill half the course with gaps between them, and always one")
+{
+    park::TrackCourse c = corner();
+    c.points.push_back({ 0, 0, 10 });
+    c.distance.push_back(100);
+    c.kinds.push_back(park::CourseKind::Plain);
+    // Trains of two cars 3 and 5 long take 8, and 10 with the gap after them: five fill the 50 of half the course.
+    const std::array fits { park::CarFit { .length = 3 }, park::CarFit { .length = 5 } };
+    CHECK(park::trains_fitting(c, fits) == 5);
+    CHECK(park::trains_fitting(corner(), fits) == 1);
+}

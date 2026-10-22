@@ -365,7 +365,24 @@ namespace rct3::ui
             page.heading = kind_name(ride.base.symbol, strings);
             // How many a car or the ride holds is in the ride's kind, not in the save; a running park knows it.
             add(page, strings, "AttractionVehicleDialogLabelCapacity", f.flow ? count(f.flow->seats) : missing());
-            if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
+            if (f.trains)
+            {
+                // While it is built, its trains are chosen here.
+                const auto number = [&](AttractionControl id, std::string_view key, int value, int fewest, int most) {
+                    InfoControl c;
+                    c.id = control_id(id);
+                    c.name = key;
+                    c.label = text(strings, key);
+                    c.minimum = fewest;
+                    c.maximum = std::max(most, fewest);
+                    c.value = std::clamp(value, c.minimum, c.maximum);
+                    c.enabled = c.minimum < c.maximum;
+                    page.controls.push_back(std::move(c));
+                };
+                number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", ride.train_count, 1, f.trains->most_trains);
+                number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", ride.cars_per_train, f.trains->fewest_cars, f.trains->most_cars);
+            }
+            else if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
             {
                 add(page, strings, "AttractionVehicleDialogLabelNumTrains", count(static_cast<std::int64_t>(ride.trains.size())));
                 add(page, strings, "AttractionVehicleDialogLabelNumCars", count(static_cast<std::int64_t>(ride.trains.front().cars.size())));

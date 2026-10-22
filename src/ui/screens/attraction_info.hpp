@@ -100,6 +100,15 @@ namespace rct3::ui
         float per_hour = 0;
     };
 
+    /// How many trains and cars a tracked ride may be given.
+    struct TrainLimits
+    {
+        int fewest_cars = 1;
+        int most_cars = 1;
+        int usual_cars = 1; ///< What a new ride's trains have
+        int most_trains = 1;
+    };
+
     struct AttractionFacts
     {
         const save::AttractionCommon* common = nullptr;
@@ -117,6 +126,8 @@ namespace rct3::ui
         const save::RideShow* show = nullptr;
         /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside.
         std::optional<bool> station { };
+        /// Of a tracked ride whose trains can still be changed, how far.
+        std::optional<TrainLimits> trains { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.
         std::string_view refusal { };
     };
@@ -147,6 +158,8 @@ namespace rct3::ui
         ShowDelete, ///< Takes the trick at the picked place out of the show
         Entrance,   ///< Places a tracked ride's entrance
         Exit,       ///< And its exit
+        Trains,     ///< How many trains a tracked ride runs
+        Cars,       ///< Cars in each of its trains
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

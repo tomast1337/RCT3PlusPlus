@@ -5,6 +5,7 @@
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
+#include "ovl/ride_train.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/asset_index.hpp"
 #include "park/object_models.hpp"
@@ -79,8 +80,6 @@ namespace rct3::scene
         constexpr std::size_t kCompletionTries = 20000;
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
         constexpr float kCloses = 0.1f;
-        /// Passenger cars of a new ride's train.
-        constexpr std::int32_t kNewTrainCars = 4;
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
         constexpr std::string_view kSectionTag = ":tks";
         /// Above the tool row, so the two never overlap.
@@ -765,6 +764,47 @@ namespace rct3::scene
         return std::nullopt;
     }
 
+    bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)
+    {
+        save::Ride& ride = scene.rides.rides[index];
+        if (ride.trains.empty() || trains < 1 || cars < 1)
+            return false;
+        const std::string symbol = ride.trains.front().symbol;
+        const std::string path = ride.trains.front().overlay_path;
+        const std::string_view name = std::string_view(symbol).substr(0, symbol.find(':'));
+        park::AssetIndex found = park::AssetIndex::scan(install.root(), { });
+        if (const auto file = install.find(std::format("{}.common.ovl", path)))
+            (void)found.add_file(*file);
+        park::ModelLoader loader(found);
+        // The front car is the train's first design, the rest its second where it has one.
+        const auto front = loader.load_car(name, path, 0);
+        const auto rest = loader.load_car(name, path, 1);
+        ride.trains.assign(static_cast<std::size_t>(trains), save::Train { });
+        ride.seats.clear();
+        std::vector<park::CarFit>& fits = scene.car_fits[index];
+        fits.clear();
+        bool arm = false;
+        for (int t = 0; t < trains; ++t)
+        {
+            save::Train& train = ride.trains[static_cast<std::size_t>(t)];
+            train.symbol = symbol;
+            train.overlay_path = path;
+            for (int car = 0; car < cars; ++car)
+            {
+                const auto& seated = car == 0 || !rest ? front : rest;
+                arm = arm || (seated && !seated->arm_joints.empty());
+                train.cars.push_back({ .index = car, .car_count = cars, .design_slot = car == 0 || !rest ? 0 : 1 });
+                if (t == 0 && seated && seated->car_fit)
+                    fits.push_back(*seated->car_fit);
+                for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
+                    ride.seats.push_back({ .car = car, .seat = static_cast<std::int32_t>(seat), .train = t });
+            }
+        }
+        ride.train_count = trains;
+        ride.cars_per_train = cars;
+        return arm;
+    }
+
     bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets)
     {
         if (item.kind != park::BuildKind::TrackedRide || !assets.install)
@@ -808,10 +848,9 @@ namespace rct3::scene
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.track.emplace().segments.resize(1);
-        // shortcut: one train of kNewTrainCars cars of the first train the ride's file lists, seated as its car
-        // models are; upgrade when the vehicle window sets them.
+        // One train of the first the ride's file lists, seated as its car models are; its window changes them
+        // until it opens.
         std::string_view train_name;
-        bool arm = false; // Its riders sit on arms
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
             for (const ovl::TrackedRideItem& t : part ? ovl::read_tracked_rides(*overlay, *part) : std::vector<ovl::TrackedRideItem> { })
                 if (strings::equals_ignoring_case(t.name, item.symbol) && t.ride && t.ride->operating)
@@ -837,32 +876,24 @@ namespace rct3::scene
         if (ride.platform_style.empty())
             ride.platform_type.clear();
         const std::filesystem::path cars = assets.install->find("Cars").value_or(std::filesystem::path { });
+        bool arm = false; // Its riders sit on arms
         for (auto it = std::filesystem::recursive_directory_iterator(cars, error); !train_name.empty() && !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
         {
             if (!strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
                 continue;
-            park::AssetIndex assets_found = park::AssetIndex::scan(assets.install->root(), { });
-            (void)assets_found.add_file(it->path());
-            park::ModelLoader loader(assets_found);
             std::string path = std::filesystem::relative(it->path(), assets.install->root()).generic_string();
             path.resize(path.size() - std::string_view(".common.ovl").size());
             save::Train& train = ride.trains.emplace_back();
             train.symbol = std::format("{}:rit", train_name);
             train.overlay_path = path;
-            for (std::int32_t car = 0; car < kNewTrainCars; ++car)
-            {
-                // The front car is the train's first design, the rest its second where it has one.
-                const auto model = loader.load_car(train_name, path, car == 0 ? 0 : 1);
-                const auto seated = model ? model : loader.load_car(train_name, path, 0);
-                arm = arm || (seated && !seated->arm_joints.empty());
-                train.cars.push_back({ .index = car, .car_count = kNewTrainCars, .design_slot = car == 0 || !model ? 0 : 1 });
-                if (seated && seated->car_fit)
-                    scene.car_fits[index].push_back(*seated->car_fit);
-                for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
-                    ride.seats.push_back({ .car = car, .seat = static_cast<std::int32_t>(seat), .train = 0 });
-            }
-            ride.train_count = 1;
-            ride.cars_per_train = kNewTrainCars;
+            // As many cars as its kind usually has, and the fewest and most it may have.
+            ui::TrainLimits& limits = scene.train_limits[index];
+            const auto car_file = ovl::Overlay::load(it->path());
+            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+                for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
+                    if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
+                        limits = { .fewest_cars = static_cast<int>(t.train->fewest_cars), .most_cars = static_cast<int>(t.train->most_cars), .usual_cars = static_cast<int>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
+            arm = fit_trains(scene, *assets.install, index, 1, limits.usual_cars);
             logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
             break;
         }
@@ -1017,9 +1048,18 @@ namespace rct3::scene
         if (!design.empty() && ride.track->pieces.size() == design.size())
         {
             // It runs as the design was set to run, in the design's colours.
-            // shortcut: its trains stay the new ride's own, upgrade when the vehicle window sets them.
             if (settings)
             {
+                // Its trains as many and as long as the design's, as far as its kind and its track allow.
+                if (const auto limits = scene.train_limits.find(*b.ride); limits != scene.train_limits.end() && settings->train_count > 0 && settings->cars_per_train > 0)
+                {
+                    const int cars = std::clamp(settings->cars_per_train, limits->second.fewest_cars, limits->second.most_cars);
+                    b.arm = fit_trains(scene, *assets.install, *b.ride, 1, cars) || b.arm;
+                    const auto& course = scene.courses[*b.ride];
+                    const int trains = std::min(settings->train_count, course ? park::trains_fitting(*course, scene.car_fits[*b.ride]) : 1);
+                    if (trains > 1)
+                        fit_trains(scene, *assets.install, *b.ride, trains, cars);
+                }
                 ride.mode = settings->mode;
                 ride.options = settings->options;
                 ride.car_colours = settings->car_colours;

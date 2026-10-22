@@ -13,6 +13,7 @@
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once
 
+#include "config/game_install.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
@@ -101,6 +102,11 @@ namespace rct3::scene
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
     };
+
+    /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
+    /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. Whether
+    /// its riders sit on arms.
+    bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and
     /// opens the construction panel on it. False when its pieces cannot be found.

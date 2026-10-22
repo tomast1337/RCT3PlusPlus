@@ -214,6 +214,16 @@ namespace rct3::scene
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                     f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
+                    // Its trains can change until it joins the running park.
+                    // shortcut: cars are not held to what its station's length takes, upgrade with stations that
+                    // trains stop along.
+                    const auto limits = scene.train_limits.find(ref.index);
+                    const auto fits = scene.car_fits.find(ref.index);
+                    if (limits != scene.train_limits.end() && fits != scene.car_fits.end())
+                    {
+                        f.trains = limits->second;
+                        f.trains->most_trains = course ? park::trains_fitting(*course, fits->second) : 1;
+                    }
                 }
             }
             // A running ride's seats, queue and riders an hour.
@@ -473,7 +483,7 @@ namespace rct3::scene
 
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
-        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change)
+        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets)
         {
             using enum ui::AttractionControl;
             save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
@@ -524,6 +534,15 @@ namespace rct3::scene
                 ride->options.max_wait = change.value;
             else if (change.id == ui::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
+            else if ((change.id == ui::control_id(Trains) || change.id == ui::control_id(Cars)) && scene.car_fits.contains(ref.index) && assets.install)
+            {
+                const bool trains = change.id == ui::control_id(Trains);
+                scene.building.arm = fit_trains(scene, *assets.install, ref.index, trains ? change.value : std::max(ride->train_count, 1), trains ? std::max(ride->cars_per_train, 1) : change.value) || scene.building.arm;
+                // Longer trains fit fewer times round the track.
+                const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
+                if (const int most = course ? park::trains_fitting(*course, scene.car_fits[ref.index]) : 1; ride->train_count > most)
+                    fit_trains(scene, *assets.install, ref.index, most, ride->cars_per_train);
+            }
             else if (change.id == ui::control_id(Circuits))
             {
                 // A go under way runs as many times round as the new count, or stops if it is past it.
@@ -965,7 +984,12 @@ namespace rct3::scene
                 }
             }
             else if (change && scene.shown)
-                change_attraction(device, scene, *info, *scene.shown, *change);
+            {
+                change_attraction(device, scene, *info, *scene.shown, *change, assets);
+                // Longer trains fit fewer times round the track, so the page shows the new limits.
+                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars))
+                    show_info_page(scene, *info, assets, options);
+            }
             else if (change && scene.shown_person)
             {
                 if (change->id == ui::person_control(ui::PersonControl::Sack))

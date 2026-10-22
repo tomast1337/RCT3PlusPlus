@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/effect.hpp"
 
+#include "particles/display.hpp"
+
+#include <bit>
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
@@ -132,7 +135,78 @@ namespace
         return b.v;
     }
 
+    Bytes text(const std::string& s)
+    {
+        Bytes b;
+        return b.put(s.data(), s.size());
+    }
+
+    /// A display (id 1) with two launchers, the second named by an item object (id 2), and three shots out of
+    /// time order. The last shot fires from launcher `last_launcher`.
+    std::vector<std::byte> invented_display(std::uint32_t last_launcher = 1)
+    {
+        const Attr launcher { "SceneryEntriesElement", "struct", 20, { { "Col", "int32", 4 }, { "Row", "int32", 4 }, { "Dir", "int32", 4 }, { "SID", "reference", 8 } } };
+        const Attr shot { "EntriesElement", "struct", 0, { { "Name", "string", 0 }, { "SceneryEntry", "int32", 4 }, { "SlotIndex", "int32", 4 }, { "Time", "float32", 4 }, { "Track", "float32", 4 } } };
+        const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
+            { "SavedFireworkDisplay", { { "Name", "string", 0 }, { "MonthMask", "int32", 4 }, { "SceneryEntries", "array", 0, { launcher } }, { "Entries", "array", 0, { shot } } } },
+            { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0 } } },
+        };
+        Bytes b;
+        b.u32(static_cast<std::uint32_t>(classes.size()));
+        for (const auto& [name, attrs] : classes)
+        {
+            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            for (const Attr& a : attrs)
+                write_attr(b, a);
+        }
+        Bytes launchers;
+        launchers.u32(2);
+        launchers.u32(3).u32(4).u32(0).u64(0);
+        launchers.u32(5).u32(4).u32(1).u64(2);
+        // The lane is a whole number in a float-typed field.
+        const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint32_t from, std::uint32_t tube, float seconds, std::int32_t lane) {
+            Bytes one;
+            one.field(text(effect)).u32(from).u32(tube).f32(seconds).f32(std::bit_cast<float>(lane));
+            shots.field(one); // An element with a string in it is variable in size: it carries its length
+        };
+        Bytes shots;
+        shots.u32(3);
+        put_shot(shots, "Fireworks\\Peony.frw", 0, 2, 4.5f, 1);
+        put_shot(shots, "Fireworks\\Comet.frw", 1, 0, 0.5f, 0);
+        put_shot(shots, "Willow", last_launcher, 7, 2.0f, 3);
+        b.u32(2);
+        b.u32(0).u64(1).field(text("Night Sky")).u32(0x0f0).field(launchers).field(shots);
+        b.u32(1).u64(2).field(text("Mortar"));
+        return b.v;
+    }
+
 } // namespace
+
+TEST_CASE("a firework display reads its launchers and its shots, earliest first")
+{
+    const auto display = read_display(invented_display());
+    REQUIRE(display.has_value());
+    CHECK(display->name == "Night Sky");
+    CHECK(display->months == 0x0f0);
+    REQUIRE(display->launchers.size() == 2);
+    CHECK(display->launchers[0].item.empty());
+    CHECK(display->launchers[1].item == "Mortar");
+    CHECK(display->launchers[1].col == 5);
+    CHECK(display->launchers[1].direction == 1);
+    REQUIRE(display->shots.size() == 3);
+    CHECK(display->shots[0].effect == "Comet");
+    CHECK(display->shots[1].effect == "Willow");
+    CHECK(display->shots[1].lane == 3);
+    CHECK(display->shots[2].effect == "Peony");
+    CHECK(display->shots[2].seconds == doctest::Approx(4.5));
+    CHECK(display->shots[2].tube == 2);
+}
+
+TEST_CASE("a display shot from a launcher it does not have is refused")
+{
+    CHECK(read_display(invented_display(2)).error() == DisplayError::BadLauncher);
+    CHECK(read_display(invented_effect()).error() == DisplayError::NoDisplay);
+}
 
 TEST_CASE("a curve runs straight between its points, holding its ends")
 {

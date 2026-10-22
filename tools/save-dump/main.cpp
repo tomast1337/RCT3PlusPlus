@@ -6,6 +6,7 @@
 //   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
 //   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
 //   save-dump --effect PATH...   (particle effects: emitters, particles, the pictures they use and the most alive at once)
+//   save-dump --display PATH...  (firework displays: launchers, shots and how long they run)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -14,6 +15,7 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include "particles/display.hpp"
 #include "particles/effect.hpp"
 #include "particles/simulation.hpp"
 #include "save/model/park.hpp"
@@ -435,6 +437,40 @@ int main(int argc, char** argv)
                 peak = std::max(peak, run.particles().count());
             }
             std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles, peak %zu live:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
+        }
+        return bad == 0 ? 0 : 1;
+    }
+
+    // `save-dump --display FILE...`: each firework display, its launchers and when its shots go off.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--display") == 0; }))
+    {
+        int bad = 0;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            std::vector<char> chars((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto display = rct3::particles::read_display(std::as_bytes(std::span(chars)));
+            if (!display)
+            {
+                std::printf("%s: %s\n", argv[i], rct3::particles::to_string(display.error()));
+                ++bad;
+                continue;
+            }
+            std::map<std::string, int> effects;
+            int lanes = 0, tubes = 0;
+            for (const auto& shot : display->shots)
+            {
+                ++effects[shot.effect];
+                lanes = std::max(lanes, shot.lane + 1);
+                tubes = std::max(tubes, shot.tube + 1);
+            }
+            std::printf("%s: \"%s\" to %s, months %04x, at %02d:%02d, %zu launchers, %zu shots over %.1f s, %d lanes, %d tubes\n", argv[i], display->name.c_str(), display->music.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
+            for (const auto& l : display->launchers)
+                std::printf("  launcher %s at %d,%d corner %d turned %d\n", l.item.c_str(), l.col, l.row, l.corner, l.direction);
+            for (const auto& [name, count] : effects)
+                std::printf("  %4d %s\n", count, name.c_str());
         }
         return bad == 0 ? 0 : 1;
     }

@@ -573,8 +573,16 @@ namespace rct3::park
             level.distance = lod.distance;
             if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
             {
-                if (!add_static(level, lod.static_shape, visual_path))
+                const ovl::StaticShape* shape = add_static(level, lod.static_shape, visual_path);
+                if (shape == nullptr)
                     continue;
+                if (model.lights.empty())
+                {
+                    std::vector<NamedPlace> places;
+                    for (const ovl::ShapeEffect& e : shape->effects)
+                        places.push_back({ .name = e.name, .place = column_matrix(e.transform) });
+                    model.lights = model_lights(places);
+                }
             }
             else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
             {
@@ -611,6 +619,16 @@ namespace rct3::park
                             model.arm_joints.push_back(column_matrix(shape->bones[static_cast<std::size_t>(b)].world));
                 }
                 const bool rigged = joint_of.empty() && !model.rig && !lod.animations.empty();
+                if (model.lights.empty())
+                {
+                    std::vector<NamedPlace> places;
+                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                    {
+                        const auto bone = static_cast<std::int32_t>(b);
+                        places.push_back({ .name = shape->bones[b].name, .place = column_matrix(shape->bones[b].world), .bone = rigged ? bone : !joint_of.empty() ? joint_of[b] : -1 });
+                    }
+                    model.lights = model_lights(places);
+                }
                 if (rigged)
                 {
                     model.rig = rig_of(*shape);
@@ -696,19 +714,19 @@ namespace rct3::park
             level.parts.push_back(*strip);
     }
 
-    bool ModelLoader::add_static(ModelLevel& level, std::string_view name, std::string_view near)
+    const ovl::StaticShape* ModelLoader::add_static(ModelLevel& level, std::string_view name, std::string_view near)
     {
         const auto file = files_->holding(tagged(name, kStaticTag), near);
         const ovl::StaticShape* shape = file ? static_in(*file->second, name) : nullptr;
         if (shape == nullptr)
-            return false;
+            return nullptr;
         for (const ovl::ShapeMesh& mesh : shape->meshes)
         {
             level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
             set_texture(level.parts.back(), mesh.texture, mesh.style, file->first);
             level.parts.back().board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
         }
-        return true;
+        return shape;
     }
 
     std::optional<ObjectModel> ModelLoader::load_shape(std::string_view shape, std::string_view overlay)

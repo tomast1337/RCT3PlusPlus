@@ -14,6 +14,7 @@
 // meet the ground round them without a seam.
 #pragma once
 
+#include "park/lamp_grid.hpp"
 #include "park/object_models.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
@@ -72,6 +73,12 @@ namespace rct3::park
 
     /// Where each object's model origin lands in the park, by index.
     [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
+
+    /// The lamps the objects' models carry, placed in the park, in the colour each names or each object's slot
+    /// gives, at full strength. Hidden objects are left out.
+    /// shortcut: lamps on bones stand where the bone rests, so a turning ride's lamps stay put; move them with
+    /// the bones once ride lighting at night shows it.
+    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The level of each object seen from `eye`, with the models' distances times `scale`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);

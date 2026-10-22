@@ -15,6 +15,7 @@
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
+#include "park/model_lights.hpp"
 #include "park/ride_walks.hpp"
 #include "park/support_footprint.hpp"
 
@@ -31,6 +32,7 @@ namespace rct3::ovl
 {
     class Overlay;
     struct SceneryVisual;
+    struct StaticShape;
 } // namespace rct3::ovl
 
 namespace rct3::park
@@ -138,6 +140,9 @@ namespace rct3::park
         std::optional<CarFit> car_fit;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
+        /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone
+        /// names the rig's bone, or the arm's joint for a car on an arm.
+        std::vector<ModelLight> lights;
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).
@@ -211,7 +216,7 @@ namespace rct3::park
         /// Adds the levels of `visual`, held in the file at `visual_path`, to `model`.
         void add_levels(ObjectModel& model, const ovl::SceneryVisual& visual, std::string_view visual_path);
         /// Adds the meshes of static shape `name`, looked for near `near`, to `level`; false when it is missing.
-        bool add_static(ModelLevel& level, std::string_view name, std::string_view near);
+        const ovl::StaticShape* add_static(ModelLevel& level, std::string_view name, std::string_view near);
         /// Adds to every level of `model` the water running down it, when it is a track piece of the file at
         /// `path` that carries water (see water_flow.hpp).
         void add_flow(ObjectModel& model, std::string_view symbol, std::string_view path);

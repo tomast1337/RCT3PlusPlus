@@ -686,6 +686,8 @@ namespace rct3::scene
     void objects_changed(ParkScene& scene)
     {
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
+        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
+        scene.lamps_due = true;
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
     }
@@ -1404,7 +1406,7 @@ namespace rct3::scene
         light.shadow_map = { };
         light.shadow_view = { };
         light.shadow_map_before = { };
-        light.shadow_view_before = { };
+        light.lamps = { };
         return light;
     }
 

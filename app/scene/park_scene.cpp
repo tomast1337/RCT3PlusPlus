@@ -162,6 +162,7 @@ namespace rct3::scene
             const float column = park::sky_column(day.shown);
             const float faded = park::sky_column(day.faded);
             const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
+            scene.darkness = night;
             scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.clock });
             if (!scene.horizon_band.empty())
             {

@@ -107,6 +107,29 @@ namespace rct3::park
         return anchors;
     }
 
+    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    {
+        std::vector<Lamp> lamps;
+        for (const save::PlacedObject& object : objects)
+        {
+            const auto model = models.find(model_key(object));
+            if (object.hidden || model == models.end() || model->second.lights.empty())
+                continue;
+            const glm::mat4 placed = placed_transform(object, &model->second, grid, fitted);
+            for (const ModelLight& light : model->second.lights)
+            {
+                glm::vec3 colour = light.colour;
+                if (light.colour_slot)
+                {
+                    const Rgb c = flexi_colour(static_cast<std::size_t>(std::max(object.colours[static_cast<std::size_t>(*light.colour_slot)], 0)));
+                    colour = glm::vec3(c.r, c.g, c.b) / 255.0f;
+                }
+                lamps.push_back({ .position = glm::vec3(placed * glm::vec4(light.position, 1.0f)), .radius = light.radius, .colour = colour });
+            }
+        }
+        return lamps;
+    }
+
     LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };

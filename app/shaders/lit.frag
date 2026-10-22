@@ -11,14 +11,16 @@ layout(set = 2, binding = 0) uniform texture2D u_shadow;
 layout(set = 3, binding = 0) uniform texture2D u_sun_view;
 // Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1.
 layout(set = 4, binding = 0) uniform texture2D u_variation;
-// An older drawing of the shadow, mixed in as sun_direction.w says.
+// An older drawing of the shadow, mixed in as sun_direction.w says; the second row of u_sun_view says how.
 layout(set = 5, binding = 0) uniform texture2D u_shadow_before;
-layout(set = 6, binding = 0) uniform texture2D u_sun_view_before;
+// render::SceneLight's lamps, when sky.w says they are given.
+layout(set = 6, binding = 0) uniform texture2D u_lamps;
 // The texture's relief map (park/relief_maps.hpp), when sky.w says it is given.
 layout(set = 7, binding = 0) uniform texture2D u_relief;
 
 // render::SceneLight, packed. sun_direction.w is 0 without a shadow, else 1 plus the older shadow's weight; sky.w
-// is 1 when the variation is given, plus 2 when the relief map is, plus 4 times the surface detail (0 to 2);
+// is 1 when the variation is given, plus 2 when the relief map is, plus 4 times the surface detail (0 to 2),
+// plus 16 when the lamps are;
 // sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
 layout(push_constant) uniform Draw {
   mat4 transform;
@@ -51,10 +53,10 @@ float lit_at(texture2D shadow, vec2 at, vec2 size, float depth) {
 
 // 1 in full sunlight, 0 where something nearer the sun covers this point: an average over 3 by 3 texels, so the
 // edge is soft over about one texel either side. Fades out towards the map's edge, beyond which all is lit.
-float sunlit(texture2D shadow, texture2D sun_view, vec3 n) {
-  mat4 view = mat4(texelFetch(sampler2D(sun_view, u_sampler), ivec2(0, 0), 0), texelFetch(sampler2D(sun_view, u_sampler), ivec2(1, 0), 0),
-                   texelFetch(sampler2D(sun_view, u_sampler), ivec2(2, 0), 0), texelFetch(sampler2D(sun_view, u_sampler), ivec2(3, 0), 0));
-  vec4 extra = texelFetch(sampler2D(sun_view, u_sampler), ivec2(4, 0), 0);
+float sunlit(texture2D shadow, int row, vec3 n) {
+  mat4 view = mat4(texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(0, row), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(1, row), 0),
+                   texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(2, row), 0), texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(3, row), 0));
+  vec4 extra = texelFetch(sampler2D(u_sun_view, u_sampler), ivec2(4, row), 0);
   // Pushed off the surface along its normal, and compared with more slack the more the surface leans away from
   // the sun, so it does not shadow itself: a leaning surface spans several depths within one texel.
   float facing = clamp(dot(n, u_draw.sun_direction.xyz), 0.05, 1.0);
@@ -72,6 +74,43 @@ float sunlit(texture2D shadow, texture2D sun_view, vec3 n) {
     for (int x = -1; x <= 1; ++x)
       sum += lit_at(shadow, at + vec2(x, y), size, depth);
   return mix(sum / 9.0, 1.0, smoothstep(0.85, 1.0, edge));
+}
+
+// park/lamp_grid.hpp: the texture's width, and the most lamps a cell lists.
+const int kLampTexelsAcross = 256;
+const int kLampsPerCell = 16;
+
+vec4 lamp_texel(int i) {
+  return texelFetch(sampler2D(u_lamps, u_sampler), ivec2(i % kLampTexelsAcross, i / kLampTexelsAcross), 0);
+}
+
+// The light of the lamps whose reach covers this point: each fades smoothly to nothing at its reach, and lights
+// a little round the side facing away, as light thrown back by what is round it would.
+vec3 lamplight(vec3 n) {
+  vec4 grid = lamp_texel(0);
+  vec4 more = lamp_texel(1);
+  ivec2 cell = ivec2(floor((v_world.xz - grid.xy) / grid.z));
+  if (any(lessThan(cell, ivec2(0))) || cell.x >= int(grid.w) || cell.y >= int(more.x))
+    return vec3(0.0);
+  int start = int(more.z) + (cell.y * int(grid.w) + cell.x) * (kLampsPerCell / 4);
+  vec3 sum = vec3(0.0);
+  for (int t = 0; t < kLampsPerCell / 4; ++t) {
+    vec4 four = lamp_texel(start + t);
+    for (int k = 0; k < 4; ++k) {
+      if (four[k] < 0.0)
+        return sum;
+      int lamp = int(four[k]);
+      vec4 place = lamp_texel(2 + 2 * lamp);
+      vec3 to = place.xyz - v_world;
+      float d2 = dot(to, to) / (place.w * place.w);
+      if (d2 >= 1.0)
+        continue;
+      float fall = (1.0 - d2) * (1.0 - d2);
+      float facing = clamp((dot(n, to * inversesqrt(max(dot(to, to), 1e-6))) + 0.3) / 1.3, 0.0, 1.0);
+      sum += lamp_texel(3 + 2 * lamp).rgb * fall * facing;
+    }
+  }
+  return sum;
 }
 
 // How much lighter or darker the ground is here: three sizes of the noise, widest strongest, so no one size
@@ -225,7 +264,7 @@ void main() {
   duv1 = dFdx(v_uv);
   duv2 = dFdy(v_uv);
 
-  int detail = int(u_draw.sky.w / 4.0);
+  int detail = int(mod(u_draw.sky.w, 16.0) / 4.0);
   bool variation_given = mod(u_draw.sky.w, 2.0) > 0.5;
   bool relief_given = mod(u_draw.sky.w, 4.0) > 1.5;
   vec3 along_u;
@@ -271,9 +310,9 @@ void main() {
   // In shadow the sky still lights a surface, but less of it: part of the sky is behind what casts the shadow.
   if (u_draw.sun_direction.w > 0.5 && dot(direct, direct) > 0.0) {
     float before = u_draw.sun_direction.w - 1.0;
-    float lit = sunlit(u_shadow, u_sun_view, n);
+    float lit = sunlit(u_shadow, 0, n);
     if (before > 0.002)
-      lit = mix(lit, sunlit(u_shadow_before, u_sun_view_before, n), before);
+      lit = mix(lit, sunlit(u_shadow_before, 1, n), before);
     direct *= lit;
     ambient *= mix(0.7, 1.0, lit);
     sun_reaches *= lit;
@@ -284,6 +323,8 @@ void main() {
     vec3 half_way = normalize(u_draw.sun_direction.xyz + normalize(v_eye.xyz - v_world));
     shaded += u_draw.sun.rgb * kSheen * near * pow(max(dot(bumped, half_way), 0.0), kGlint) * sun_reaches * open;
   }
+  if (u_draw.sky.w > 15.5)
+    shaded += color.rgb * lamplight(n);
   shaded = eased_off(shaded);
   // Haze: beyond its start, far surfaces fade towards the haze colour. The distance is the depth from the eye,
   // which the perspective divide leaves in gl_FragCoord.w.

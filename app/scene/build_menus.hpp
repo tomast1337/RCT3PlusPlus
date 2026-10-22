@@ -35,6 +35,7 @@ namespace rct3::scene
         std::set<std::string, std::less<>> styles_off; ///< Theme filters turned off
         std::set<std::uint32_t> packs_only;            ///< Pack filters turned on
         std::optional<park::BuildItem> asked;          ///< Picked by a script, taken as a pick from a list
+        bool kinds_named = false;                      ///< Whether the strings know each kind's name by its symbol
     };
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if

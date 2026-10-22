@@ -80,11 +80,25 @@ namespace rct3::scene
         logging::logger("particles").info("{} particle effects{}", particles.shown.size(), missing > 0 ? std::format(", {} named effects not found", missing) : std::string { });
     }
 
-    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye)
+    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget)
     {
+        std::vector<std::pair<float, ParkParticles::Shown*>> near;
         for (ParkParticles::Shown& shown : particles.shown)
-            if (glm::distance(shown.position, eye) < kShowDistance)
-                shown.run.advance(seconds);
+        {
+            shown.awake = false;
+            if (const float d = glm::distance(shown.position, eye); d < kShowDistance)
+                near.emplace_back(d, &shown);
+        }
+        std::ranges::sort(near, { }, &std::pair<float, ParkParticles::Shown*>::first);
+        std::size_t alive = 0;
+        for (const auto& [distance, shown] : near)
+        {
+            if (alive >= budget)
+                break;
+            shown->run.advance(seconds);
+            shown->awake = true;
+            alive += shown->run.particles().count();
+        }
     }
 
     void draw_park_particles(render::Device& device, const ParkParticles& particles, const glm::mat4& view_projection, glm::vec3 eye, glm::vec3 target, const render::SceneLight& light)
@@ -107,7 +121,7 @@ namespace rct3::scene
         std::map<std::pair<std::string, bool>, std::vector<Quad>> batches;
         for (const ParkParticles::Shown& shown : particles.shown)
         {
-            if (glm::distance(shown.position, eye) >= kShowDistance)
+            if (!shown.awake)
                 continue;
             const particles::ParticleArrays& live = shown.run.particles();
             for (std::size_t i = 0; i < live.count(); ++i)

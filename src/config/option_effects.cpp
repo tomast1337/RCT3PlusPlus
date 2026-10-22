@@ -44,6 +44,7 @@ namespace rct3::config
             O::DetailBlendBand,
             O::Bloom,
             O::AmbientOcclusion,
+            O::ParticleBudget,
             O::AntiAliasing,  // The screen's passes
             O::SurfaceDetail, // The lit shaders
         };

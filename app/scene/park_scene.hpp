@@ -239,8 +239,9 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
-        ParkParticles particles; ///< The effects scenery and rides show
-        bool bloom = false;      ///< The Bloom option: glow round bright parts
+        ParkParticles particles;   ///< The effects scenery and rides show
+        bool bloom = false;        ///< The Bloom option: glow round bright parts
+        bool light_shafts = false; ///< Our Light shafts option
         ParkOcclusion occlusion;
         bool ambient_occlusion = false; ///< Our Ambient occlusion option
         int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)

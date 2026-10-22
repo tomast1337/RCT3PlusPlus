@@ -116,6 +116,7 @@ namespace rct3::config
         LaserOcclusion,
         AmbientOcclusion, ///< Ours: creases and corners darkened where less of the sky reaches
         ParticleBudget,   ///< Ours: at most this many particles alive at once, nearest effects first; 0 none
+        LightShafts,      ///< Ours: sunlight seen in the air, with dark gaps where shadows cross it
 
         Count_, ///< Number of options; not an option
     };

@@ -101,6 +101,7 @@ namespace rct3::config
             { O::LaserOcclusion, "laser_occlusion", 0, 1, 1, 1 },
             { O::AmbientOcclusion, "ambient_occlusion", 0, 1, 1, 1 },
             { O::ParticleBudget, "particle_budget", 0, 20000, 500, 8000 },
+            { O::LightShafts, "light_shafts", 0, 1, 1, 1 },
         } };
 
         // The table is indexed by GameOption, so its order must follow the enum.

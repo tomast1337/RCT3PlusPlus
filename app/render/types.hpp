@@ -217,6 +217,12 @@ namespace rct3::render
         /// Input: location 0 the position in clip space (Float2), drawn as is. The step and what it reads are
         /// in `DrawCommand::occlusion`; `DrawCommand::transform` is a matrix the step needs, not applied.
         Occlusion,
+        /// Sunlight seen in the air, as shafts where shadows cross it (app/scene/park_glow.hpp). Inputs as Glow,
+        /// with location 0 the position in clip space, drawn as is; colour red is the strength and green how far
+        /// into the air it reads, in world units. `DrawCommand::transform` takes the screen's clip space to the
+        /// world, not applied; the sun is `DrawCommand::light`'s. The extra textures are, in order: the screen's
+        /// depth, the sun's shadow map and the view it was drawn with (`SceneLight::shadow_view`).
+        Shafts,
     };
 
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.

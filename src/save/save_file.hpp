@@ -40,13 +40,15 @@ namespace rct3::save
     inline constexpr std::uint32_t kMaxClasses = 0x3fff;
     inline constexpr std::size_t kMaxAttributeDepth = 16;
 
-    /// Size of the optional header (prefix plus body) in bytes.
+    /// Size of the optional header (prefix plus body) in bytes. Some effect files carry a shorter form of it, a
+    /// prefix and twelve words (see read_save).
     inline constexpr std::size_t kHeaderSize = 0x50;
 
     /// Header of the newer file generation. Older files have none: the class table starts at offset 0.
     struct Header
     {
-        /// The 16 words after the 16-byte prefix, as stored. Index 0 is the format generation.
+        /// The 16 words after the 16-byte prefix, as stored (the short form's 12, then zeros). Index 0 is the
+        /// format generation.
         std::array<std::uint32_t, 16> words { };
         [[nodiscard]] std::uint32_t version() const noexcept
         {

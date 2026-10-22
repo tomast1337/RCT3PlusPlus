@@ -5,7 +5,7 @@
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
 //   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
 //   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
-//   save-dump --effect PATH...   (particle effects: emitters, particles and the pictures they use)
+//   save-dump --effect PATH...   (particle effects: emitters, particles, the pictures they use and the most alive at once)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -15,6 +15,7 @@
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
 #include "particles/effect.hpp"
+#include "particles/simulation.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -425,7 +426,15 @@ int main(int argc, char** argv)
             std::string skins;
             for (const auto& p : effect->particles)
                 skins += std::format(" {}", p.skin.empty() ? "-" : p.skin);
-            std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), skins.c_str());
+            // Ten seconds of it running round, for the most particles it keeps alive at once.
+            rct3::particles::EffectRun run(*effect, rct3::random::stream(rct3::random::Seed { 1 }, rct3::random::RandomStream::Effects), true, 1u << 20);
+            std::size_t peak = 0;
+            for (int frame = 0; frame < 600; ++frame)
+            {
+                run.advance(1 / 60.0f);
+                peak = std::max(peak, run.particles().size());
+            }
+            std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles, peak %zu live:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
         }
         return bad == 0 ? 0 : 1;
     }

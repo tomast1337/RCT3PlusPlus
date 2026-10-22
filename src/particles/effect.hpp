@@ -45,8 +45,8 @@ namespace rct3::particles
         std::int32_t count = 0;
         bool count_scaled = false;               ///< The count follows the effect's strength
         float speed = 0;                         ///< Along the owner's up, world units a second
-        float speed_random = 0;                  ///< Up to this added along up
-        float speed_circle = 0;                  ///< Up to this added across up, in any direction
+        float speed_random = 0;                  ///< Up to this added in any direction
+        float speed_circle = 0;                  ///< Up to this added across up
         float position_random = 0;               ///< Born up to this far from the owner, in any direction
         float position_circle = 0;               ///< Born up to this far from the owner, across its up
         float parent_speed = 0;                  ///< Share of the owner's own speed the particles keep

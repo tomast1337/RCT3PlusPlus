@@ -98,6 +98,8 @@ namespace rct3::scene
             save::PlacedObject object;
         };
         std::vector<DesignDoor> design_doors;
+        /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
+        std::optional<save::Ride> design_ride;
     };
 
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and

@@ -154,7 +154,8 @@ namespace rct3::scene
                 throw std::invalid_argument("ui.children takes a widget path");
             if (park_ == nullptr)
                 return nullptr;
-            auto w = park_->desktop->root().find(a[0].get<std::string>());
+            const std::string path = a[0].get<std::string>();
+            auto w = path.empty() ? std::optional<ui::Widget&>(park_->desktop->root()) : park_->desktop->root().find(path);
             if (!w || !w->visible)
                 return nullptr;
             Json names = Json::array();
@@ -198,6 +199,12 @@ namespace rct3::scene
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
             return park_->park.cash ? Json(*park_->park.cash) : Json(nullptr);
+        });
+        engine_.define("park.guests", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const auto& registry = park_->sim.registry;
+            return Json(std::ranges::distance(registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>)));
         });
         engine_.define("map.size", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);

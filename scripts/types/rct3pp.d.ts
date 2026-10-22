@@ -35,7 +35,7 @@ declare namespace ui {
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */
     function toggle(path: string, on: boolean): Promise<void>;
-    /** The names of the shown widgets in the one at `path`, in order; undefined when it is not shown. */
+    /** The names of the shown widgets in the one at `path` ("" for the top), in order; undefined when it is not shown. */
     function children(path: string): string[] | undefined;
 }
 
@@ -47,6 +47,8 @@ declare namespace park {
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */
     function cash(): number | undefined;
+    /** Guests in the park now. */
+    function guests(): number;
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */

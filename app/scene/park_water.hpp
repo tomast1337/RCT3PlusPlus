@@ -43,6 +43,7 @@ namespace rct3::scene
         bool reflection = true; ///< The scene mirrored in it; else only the sky's colour
         bool refraction = true; ///< What lies under it, bent and fading with depth; else it is blended over it
         bool waves = true;
+        bool shafts = true;             ///< Sunlight seen in the water, in rays from the waves' bright net (the Light shafts option)
         bool reflect_background = true; ///< Sky and mountains
         bool reflect_terrain = true;
         bool reflect_scenery = true;

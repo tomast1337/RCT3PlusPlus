@@ -129,6 +129,7 @@ namespace rct3::scene
             .reflection = options.flag(GameOption::ReflectiveWater),
             .refraction = options.flag(GameOption::Refraction),
             .waves = options.flag(GameOption::WaterBumps),
+            .shafts = options.flag(GameOption::LightShafts),
             .reflect_background = options.flag(GameOption::ReflectBackground),
             .reflect_terrain = options.flag(GameOption::ReflectTerrain),
             .reflect_scenery = options.flag(GameOption::ReflectScenery),
@@ -278,6 +279,7 @@ namespace rct3::scene
                 .waves = water.look.waves,
                 .foam = true,
                 .ripples = park::live_ripples(water.ripples) > 0,
+                .shafts = water.look.shafts,
             };
         };
         if (shaded && water.eye_in && water.have_behind)

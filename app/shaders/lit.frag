@@ -199,6 +199,18 @@ bool crossed_out() {
   return coarser != (v_cross.y > 0.0);
 }
 
+// Light past what the screen can show eased off rather than clipped: unchanged up to kKnee, then bending
+// towards 1 with no corner, all channels scaled alike so the hue holds. Lamps at night add to whatever light is
+// already there, which would otherwise flatten into blots of one colour.
+const float kKnee = 0.9;
+vec3 eased_off(vec3 c) {
+  float top = max(max(c.r, c.g), c.b);
+  if (top <= kKnee)
+    return c;
+  float eased = kKnee + (1.0 - kKnee) * (1.0 - exp((kKnee - top) / (1.0 - kKnee)));
+  return c * (eased / top);
+}
+
 void main() {
   if (crossed_out())
     discard;
@@ -272,6 +284,7 @@ void main() {
     vec3 half_way = normalize(u_draw.sun_direction.xyz + normalize(v_eye.xyz - v_world));
     shaded += u_draw.sun.rgb * kSheen * near * pow(max(dot(bumped, half_way), 0.0), kGlint) * sun_reaches * open;
   }
+  shaded = eased_off(shaded);
   // Haze: beyond its start, far surfaces fade towards the haze colour. The distance is the depth from the eye,
   // which the perspective divide leaves in gl_FragCoord.w.
   if (u_draw.sun.w > 0.0) {

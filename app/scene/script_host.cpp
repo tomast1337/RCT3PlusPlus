@@ -210,6 +210,17 @@ namespace rct3::scene
             park_->park.cash = a[0].get<std::int64_t>();
             return Json(nullptr);
         });
+        engine_.define("park.setTime", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            if (a.size() != 1 || !a[0].is_number())
+                throw std::invalid_argument("park.setTime takes a fraction of a day from midnight");
+            // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
+            const float time = a[0].get<float>();
+            park_->day.time = park_->day.shown = time;
+            park_->day.fade = 0;
+            return Json(nullptr);
+        });
         engine_.define("park.guests", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

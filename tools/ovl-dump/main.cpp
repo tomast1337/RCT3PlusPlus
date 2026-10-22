@@ -249,7 +249,7 @@ namespace
                     untextured += m.texture.empty();
                 std::printf("  %-32s meshes %zu vertices %u indices %u effects %zu untextured %zu\n", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.effects.size(), untextured);
                 for (const auto& e : sh.effects)
-                    std::printf("    effect %.*s at %.2f %.2f %.2f\n", static_cast<int>(e.name.size()), e.name.data(), e.transform[3], e.transform[7], e.transform[11]);
+                    std::printf("    effect %.*s at %.2f %.2f %.2f\n", static_cast<int>(e.name.size()), e.name.data(), e.transform[12], e.transform[13], e.transform[14]);
             }
         }
         if (opt.svd)

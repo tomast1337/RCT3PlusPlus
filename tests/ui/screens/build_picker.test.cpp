@@ -4,7 +4,9 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
+#include <format>
 #include <vector>
 
 using namespace rct3::ui;
@@ -224,4 +226,36 @@ TEST_CASE("object filters come first and hide their kind's items while off")
     CHECK_FALSE(f.picker->rows()[0]->visible);
     CHECK(f.picker->rows()[1]->visible);
     CHECK(f.picker->rows()[2]->visible); // No kind: always shown
+}
+
+TEST_CASE("theme filters too many for the window's width wrap onto more rows, the grid below them")
+{
+    std::vector<PickerRow> rows;
+    std::vector<PickerTheme> themes;
+    for (std::size_t i = 0; i < 20; ++i)
+    {
+        PickerTheme t { std::format("Theme{}", i), u"Theme" };
+        PickerRow r = row(u"Thing", i);
+        r.style = t.name;
+        rows.push_back(std::move(r));
+        themes.push_back(std::move(t));
+    }
+    Fixture f(std::move(rows), std::move(themes));
+    const Rect body = f.picker->content().rect();
+    float bottom = 0;
+    for (const Button* b : f.picker->filters())
+    {
+        CHECK(b->rect().x1 <= body.x1);
+        bottom = std::max(bottom, b->rect().y1);
+    }
+    CHECK(bottom > f.picker->filters()[0]->rect().y1); // More than one row
+    CHECK(f.picker->rows()[0]->rect().y0 >= bottom);
+    // Wider, they take fewer rows.
+    f.picker->placement = top_left(10, 10, 2 * build_picker::kWidth, build_picker::kHeight);
+    f.step();
+    f.step();
+    float wide_bottom = 0;
+    for (const Button* b : f.picker->filters())
+        wide_bottom = std::max(wide_bottom, b->rect().y1);
+    CHECK(wide_bottom < bottom);
 }

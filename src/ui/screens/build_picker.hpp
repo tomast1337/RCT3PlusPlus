@@ -161,6 +161,8 @@ namespace rct3::ui
     private:
         void add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading);
         void add_filters(const std::vector<PickerTheme>& themes);
+        /// Lays the filters out in rows `width` units wide, a little apart between groups, and the grid below.
+        void wrap_filters(float width);
         /// Whether the filters and the search let `row` show; a heading while any of its rows do.
         [[nodiscard]] bool shows(const PickerRow& row) const;
         void lay_out();
@@ -187,7 +189,8 @@ namespace rct3::ui
         ScrollArea* list_ = nullptr;
         std::u16string query_; ///< Folded, as the layout last filtered by
         bool dirty_ = true;
-        float laid_width_ = 0; ///< Of the grid when it was laid out
+        float laid_width_ = 0;        ///< Of the grid when it was laid out
+        float laid_filter_width_ = 0; ///< Of the window's content when the filters were wrapped
         bool laid_note_ = false;
         std::optional<std::size_t> picked_;
         std::optional<std::size_t> picked_out_;

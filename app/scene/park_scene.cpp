@@ -209,6 +209,9 @@ namespace rct3::scene
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
                 f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
+                f.music = scene.tunes;
+                if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
+                    f.tune = tune->second;
                 const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
                 if (f.ride->kind == save::RideKind::Tracked)
@@ -509,6 +512,29 @@ namespace rct3::scene
                         paint_prop(device, scene, i, slot, change.value);
                 }
             }
+            else if (change.id == ui::control_id(Name))
+            {
+                // A blank name keeps the old one, as in the game.
+                if (save::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr; common != nullptr && change.text.find_first_not_of(u' ') != std::u16string::npos)
+                    common->name = strings::to_utf8(change.text);
+            }
+            else if (change.id == ui::control_id(Locate))
+            {
+                // The view turns round to the middle of the attraction's objects.
+                glm::vec3 sum { };
+                std::size_t count = 0;
+                for (const save::PlacedObject& o : scene.objects)
+                {
+                    const auto owner = scene.attractions.find(o.id);
+                    if (owner == scene.attractions.end() || owner->second != ref)
+                        continue;
+                    const auto model = scene.models.find(park::model_key(o));
+                    sum += glm::vec3(park::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                    ++count;
+                }
+                if (count > 0)
+                    scene.camera.target = sum / static_cast<float>(count);
+            }
             else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
             {
                 if (const auto item = static_cast<std::size_t>(change.id - ui::control_id(ItemPrice)); item < stall->items.size())
@@ -568,9 +594,12 @@ namespace rct3::scene
                 }
                 stage_show(scene, *show);
             }
+            else if (change.id == ui::control_id(Music))
+                scene.ride_tunes[ride->base.id] = static_cast<std::size_t>(std::max(change.value, 0));
             else if (change.id == ui::control_id(QueueSigns))
             {
-                if (change.value != 0)
+                // The button turns them round.
+                if (scene.led_signs.hidden.contains(ride->base.id))
                     scene.led_signs.hidden.erase(ride->base.id);
                 else
                     scene.led_signs.hidden.insert(ride->base.id);
@@ -987,8 +1016,8 @@ namespace rct3::scene
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets);
-                // Longer trains fit fewer times round the track, so the page shows the new limits.
-                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars))
+                // Longer trains fit fewer times round the track, so the page shows the new limits; a new name shows.
+                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name))
                     show_info_page(scene, *info, assets, options);
             }
             else if (change && scene.shown_person)

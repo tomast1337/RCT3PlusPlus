@@ -130,6 +130,9 @@ namespace rct3::ui
         std::optional<TrainLimits> trains { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.
         std::string_view refusal { };
+        /// Of a ride, the tunes it may play, and which it plays: 0 for none, k for music[k - 1].
+        std::span<const std::u16string> music { };
+        std::size_t tune = 0;
     };
 
     struct GuestsSuited
@@ -160,6 +163,13 @@ namespace rct3::ui
         Exit,       ///< And its exit
         Trains,     ///< How many trains a tracked ride runs
         Cars,       ///< Cars in each of its trains
+        Name,       ///< Its new name, as typed
+        Music,      ///< The tune it plays, as AttractionFacts::tune
+        Demolish,   ///< Pulls it down
+        SaveDesign, ///< Keeps a tracked ride's design
+        Fence,      ///< Picks its queues' fence
+        Locate,     ///< Brings the view round to it
+        RideCam,    ///< Rides along in its cars
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 
@@ -181,6 +191,9 @@ namespace rct3::ui
     inline constexpr int kWaitStep = 5;
     /// Most times round a flat ride can be set to run each go.
     inline constexpr int kMostCircuits = 10;
+    /// Most letters in an attraction's name, and how wide its box and its tune's list are.
+    inline constexpr int kLongestAttractionName = 80;
+    inline constexpr float kNameWidth = 180;
     /// Most admission price, for rides and for other attractions and items, and its step (hundredths).
     inline constexpr int kMostRidePrice = 2000;
     inline constexpr int kMostPrice = 1000;

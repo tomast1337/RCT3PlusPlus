@@ -395,11 +395,16 @@ namespace rct3::scene
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
         std::size_t info_section = 0;                         ///< Of the open tab's page
-        float since_info_page = 0;                            ///< Seconds since a live page was shown again
-        std::uint32_t vandalism_seen = 0;                     ///< Breaks the park has been charged for
-        std::uint32_t vandalism_warnings_seen = 0;            ///< Warnings already posted as messages
-        std::int64_t wages_seen = 0;                          ///< Of the staff's pay, what has come out of the park's cash
-        std::vector<entt::entity> broken_rides;               ///< Rides the player has been told are broken down
+        std::vector<std::u16string> tunes;                    ///< The install's music, by name, for rides to play
+        /// The tune each ride plays, by ride id, as ui::AttractionFacts::tune; none for no music.
+        /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
+        /// ride music is read from and written to saves.
+        std::unordered_map<std::uint32_t, std::size_t> ride_tunes;
+        float since_info_page = 0;                 ///< Seconds since a live page was shown again
+        std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
+        std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages
+        std::int64_t wages_seen = 0;               ///< Of the staff's pay, what has come out of the park's cash
+        std::vector<entt::entity> broken_rides;    ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         std::optional<park::AttractionRef> info_requested;          ///< Asked by a script or a finished building, opened as a click on it does

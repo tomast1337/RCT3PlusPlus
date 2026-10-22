@@ -10,6 +10,7 @@
 #include <cmath>
 #include <format>
 #include <span>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -673,31 +674,72 @@ namespace rct3::ui
         switch (tab)
         {
             case AttractionTab::View:
-                page.note = note;
-                // A ride is painted from its vehicles page, as in the game.
-                if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
-                    paints(page, f, strings);
+            {
+                // Its name to type over, its tune beside it, its state under them and a row of picture buttons.
+                InfoControl name;
+                name.id = control_id(AttractionControl::Name);
+                name.name = "TT_AttractionDialogIconLabelButton";
+                name.kind = InfoControlKind::Text;
+                name.text = page.title;
+                name.maximum = kLongestAttractionName;
+                name.width = kNameWidth;
+                name.help = text(strings, name.name);
+                page.controls.push_back(std::move(name));
+                if (f.ride)
+                {
+                    InfoControl music;
+                    music.id = control_id(AttractionControl::Music);
+                    music.name = "AttractionViewDialogMusicToolTip";
+                    music.kind = InfoControlKind::Choice;
+                    music.items.push_back(text(strings, "AttractionViewDialogNoMusic"));
+                    music.items.insert(music.items.end(), f.music.begin(), f.music.end());
+                    music.value = static_cast<int>(f.tune < music.items.size() ? f.tune : 0);
+                    music.width = kNameWidth;
+                    music.beside = true;
+                    music.help = text(strings, music.name);
+                    page.controls.push_back(std::move(music));
+                }
+                InfoControl words;
+                words.name = "status";
+                words.kind = InfoControlKind::Words;
+                words.label = note;
+                page.controls.push_back(std::move(words));
+                bool first = true;
+                const auto button = [&](AttractionControl id, std::string_view icon, std::string_view help, bool enabled = true) {
+                    InfoControl c;
+                    c.id = control_id(id);
+                    c.name = icon;
+                    c.kind = InfoControlKind::Button;
+                    c.icon = icon;
+                    c.help = text(strings, help);
+                    c.enabled = enabled;
+                    c.beside = !std::exchange(first, false);
+                    page.controls.push_back(std::move(c));
+                };
+                // shortcut: pulling a whole attraction down, keeping a design, picking a fence and riding along
+                // are not built yet, so their buttons are greyed; enable each as it lands.
+                button(AttractionControl::Demolish, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyButton", false);
+                if (f.ride && f.ride->kind == save::RideKind::Tracked)
+                    button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton", false);
                 if (f.station)
                 {
+                    button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);
                     for (const bool exit : { false, true })
                     {
-                        InfoControl c;
-                        c.id = control_id(exit ? AttractionControl::Exit : AttractionControl::Entrance);
-                        c.name = exit ? "Attraction_General_Exit" : "Attraction_General_Entrance";
-                        c.kind = InfoControlKind::Button;
-                        c.icon = c.name;
                         const std::string_view help = exit ? "TT_AttractionDialogIconSetExitButton" : "TT_AttractionDialogIconSetEntranceButton";
-                        c.label = text(strings, *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation");
-                        c.enabled = *f.station;
-                        page.controls.push_back(std::move(c));
+                        button(exit ? AttractionControl::Exit : AttractionControl::Entrance, exit ? "Attraction_General_Exit" : "Attraction_General_Entrance", *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation", *f.station);
                     }
                 }
                 if (f.queue_signs)
-                {
-                    constexpr std::string_view key = "TT_AttractionDialogIconToggleQueueSigns";
-                    page.controls.push_back(tick(AttractionControl::QueueSigns, key, text(strings, key), *f.queue_signs));
-                }
+                    button(AttractionControl::QueueSigns, "Attraction_General_ToggleQueueSigns", "TT_AttractionDialogIconToggleQueueSigns");
+                button(AttractionControl::Locate, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton");
+                if (f.ride)
+                    button(AttractionControl::RideCam, "RideCamGUI_Disabled", "KeySetting_ToggleRideCam", false);
+                // A ride is painted from its vehicles page, as in the game.
+                if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
+                    paints(page, f, strings);
                 break;
+            }
             case AttractionTab::State:
                 page.note = note;
                 break;

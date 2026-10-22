@@ -108,6 +108,11 @@ namespace rct3::scene
     /// its riders sit on arms.
     bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
+    /// Gives the tracked ride `index` one train of the kind named `train_name`, as many cars long as that kind
+    /// usually is, and sets the ride's limits to the kind's. Whether its riders sit on arms; nothing when the
+    /// install has no such train.
+    std::optional<bool> use_train(ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name);
+
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and
     /// opens the construction panel on it. False when its pieces cannot be found.
     bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets);

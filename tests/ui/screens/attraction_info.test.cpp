@@ -202,9 +202,14 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
 
     const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });
     CHECK(vehicles.heading == u"Spinner");
-    const auto trains = std::ranges::find(vehicles.lines, std::u16string(u"Trains"), &InfoLine::label);
-    REQUIRE(trains != vehicles.lines.end());
-    CHECK(trains->value == u"3");
+    // Number boxes even once its trains are fixed, greyed then; the car button greyed too.
+    const auto trains = std::ranges::find(vehicles.controls, control_id(AttractionControl::Trains), &InfoControl::id);
+    REQUIRE(trains != vehicles.controls.end());
+    CHECK(trains->label == u"Trains");
+    CHECK(trains->value == 3);
+    CHECK_FALSE(trains->enabled);
+    CHECK(vehicles.controls.back().id == control_id(AttractionControl::CarKind));
+    CHECK_FALSE(vehicles.controls.back().enabled);
 
     // Its mode, greyed, and how it runs down the left; when its trains leave down the right.
     const InfoPage mode = attraction_page(AttractionTab::Mode, f, s, { });
@@ -403,7 +408,11 @@ TEST_CASE("a running ride shows its riders an hour, the wait its queue now has a
     const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
     CHECK(value(people, u"Per hour") == u"720");
     CHECK(value(people, u"Queue") == u"5:00"); // 60 in line at 12 a minute
-    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"24");
+    s.add("AttractionVehicleDialogLabelPassengersPerRide", u"%NUMBER% a go");
+    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"24 a go");
+    ride.seats = { { .car = 0, .seat = 0 }, { .car = 0, .seat = 1 }, { .car = 1, .seat = 0 } };
+    s.add("AttractionVehicleDialogLabelPassengersPerCar", u"%NUMBER% a car");
+    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"2 a car");
 
     f.flow->per_hour = 0; // Not yet measured
     CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == kMissingValue);

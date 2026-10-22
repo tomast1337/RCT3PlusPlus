@@ -218,6 +218,14 @@ namespace rct3::ui
             return ascii(std::to_string(n));
         }
 
+        /// `words` with its number mark standing for `n`.
+        std::u16string with_number(std::u16string words, std::int64_t n)
+        {
+            if (const auto at = words.find(u"%NUMBER%"); at != std::u16string::npos)
+                words.replace(at, std::u16string_view(u"%NUMBER%").size(), count(n));
+            return words;
+        }
+
         /// The pots of the attraction's colours, when it has any.
         void paints(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
@@ -366,12 +374,21 @@ namespace rct3::ui
         void vehicles(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
             const save::Ride& ride = *f.ride;
-            page.heading = kind_name(ride.base.symbol, strings);
-            // How many a car or the ride holds is in the ride's kind, not in the save; a running park knows it.
-            add(page, strings, "AttractionVehicleDialogLabelCapacity", f.flow ? count(f.flow->seats) : missing());
-            if (f.trains)
+            // The kind of car it runs, else the kind of ride it is.
+            page.heading = ride.trains.empty() ? std::u16string { } : kind_name(ride.trains.front().symbol, strings);
+            if (page.heading.empty())
+                page.heading = kind_name(ride.base.symbol, strings);
+            // A tracked ride's seats in a car, from its first car's; a flat ride's how many it takes each go.
+            const auto per_car = std::ranges::count_if(ride.seats, [](const auto& s) { return s.train == 0 && s.car == 0; });
+            std::u16string capacity = missing();
+            if (ride.kind == save::RideKind::Tracked && per_car > 0)
+                capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerCar"), per_car);
+            else if (f.flow)
+                capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerRide"), static_cast<std::int64_t>(f.flow->seats));
+            add(page, strings, "AttractionVehicleDialogLabelCapacity", capacity);
+            if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
             {
-                // While it is built, its trains are chosen here.
+                // Number boxes, greyed once the ride runs in the park: then its trains stay as they are.
                 const auto number = [&](AttractionControl id, std::string_view key, int value, int fewest, int most) {
                     InfoControl c;
                     c.id = control_id(id);
@@ -380,18 +397,29 @@ namespace rct3::ui
                     c.minimum = fewest;
                     c.maximum = std::max(most, fewest);
                     c.value = std::clamp(value, c.minimum, c.maximum);
-                    c.enabled = c.minimum < c.maximum;
+                    c.enabled = f.trains && c.minimum < c.maximum;
                     page.controls.push_back(std::move(c));
                 };
-                number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", ride.train_count, 1, f.trains->most_trains);
-                number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", ride.cars_per_train, f.trains->fewest_cars, f.trains->most_cars);
-            }
-            else if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
-            {
-                add(page, strings, "AttractionVehicleDialogLabelNumTrains", count(static_cast<std::int64_t>(ride.trains.size())));
-                add(page, strings, "AttractionVehicleDialogLabelNumCars", count(static_cast<std::int64_t>(ride.trains.front().cars.size())));
+                const int trains = static_cast<int>(ride.trains.size());
+                const int cars = static_cast<int>(ride.trains.front().cars.size());
+                number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", cars, f.trains ? f.trains->fewest_cars : cars, f.trains ? f.trains->most_cars : cars);
+                number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", trains, f.trains ? 1 : trains, f.trains ? f.trains->most_trains : trains);
+                InfoControl kind;
+                kind.id = control_id(AttractionControl::CarKind);
+                kind.name = "Ride_Coaster";
+                kind.kind = InfoControlKind::Button;
+                kind.icon = "Ride_Coaster";
+                kind.help = text(strings, "AttractionVehicleDialogChangeCarType");
+                kind.enabled = f.other_cars;
+                page.controls.push_back(std::move(kind));
             }
             paints(page, f, strings);
+            if (page.controls.size() > 1 && page.controls.back().kind == InfoControlKind::Paint && page.controls[page.controls.size() - 2].kind == InfoControlKind::Button)
+            {
+                // The pots go beside the car button, as one row of buttons.
+                page.controls.back().beside = true;
+                page.controls.back().label.clear();
+            }
         }
 
         InfoControl tick(AttractionControl id, std::string_view name, std::u16string label, bool on)

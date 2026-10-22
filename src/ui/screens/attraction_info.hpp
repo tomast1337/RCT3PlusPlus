@@ -136,6 +136,8 @@ namespace rct3::ui
         /// Of a ride, the tunes it may play, and which it plays: 0 for none, k for music[k - 1].
         std::span<const std::u16string> music { };
         std::size_t tune = 0;
+        /// Of a tracked ride whose trains can still be changed, whether its kind runs other kinds of train.
+        bool other_cars = false;
         /// Of a tracked ride, whether its track is greased.
         bool low_friction = false;
         /// Which of the graph's series show, a bit each: speed, altitude, vertical and lateral forces.
@@ -188,6 +190,7 @@ namespace rct3::ui
         AltitudeSeries, ///< Its height
         VerticalSeries, ///< Its vertical forces
         LateralSeries,  ///< Its lateral forces
+        CarKind,        ///< Moves a tracked ride on to the next kind of train it may run
         ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

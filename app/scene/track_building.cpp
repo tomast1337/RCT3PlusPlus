@@ -11,6 +11,8 @@
 #include "park/ride_placement.hpp"
 #include "park/track_completion.hpp"
 #include "park/track_rules.hpp"
+#include "park/track_supports.hpp"
+#include "park/water_fill.hpp"
 #include "save/save_file.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/ride_placing.hpp"
@@ -203,6 +205,7 @@ namespace rct3::scene
             b.picked.reset();
             b.ghost.reset();
             b.ghost_mesh = { };
+            b.off_water = false;
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
             b.backward = false;
@@ -261,10 +264,15 @@ namespace rct3::scene
             o.overlay = b.overlay;
             if (!load_object_model(scene, b.models, assets, o))
                 return;
+            if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end() && model->second.water_only)
+            {
+                const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
+                b.off_water = !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+            }
             const std::array<save::PlacedObject, 1> one { o };
             b.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
-                v.colour *= kGhostTint;
+                v.colour *= b.off_water ? kRefusedTint : kGhostTint;
         }
 
         ui::IconState state_of(bool picked, bool offered)
@@ -319,6 +327,8 @@ namespace rct3::scene
                 v.piece = piece_name(*assets.strings, shape.record.name);
                 if (!b.ghost)
                     v.piece = assets.strings->get(kCannotPlace);
+                else if (b.off_water)
+                    v.piece = assets.strings->get("PlaceObject_MustBeOnWater");
                 if (!b.complaint.empty())
                     v.piece = assets.strings->get(b.complaint);
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
@@ -390,7 +400,7 @@ namespace rct3::scene
         {
             const park::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
-            if (c == nullptr || !b.ghost || !b.picked || !ride.track)
+            if (c == nullptr || !b.ghost || b.off_water || !b.picked || !ride.track)
                 return;
             wait_for_build(scene);
             save::PlacedObject object = b.ghost->object;

@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <optional>
+#include <span>
 
 namespace rct3::park
 {
@@ -20,5 +21,8 @@ namespace rct3::park
 
     /// Whether `body` holds water on tile `col`, `row`.
     [[nodiscard]] bool holds(const save::WaterBody& body, save::Tile tile);
+
+    /// Whether any of `bodies` holds water on `tile`.
+    [[nodiscard]] bool holds_water(std::span<const save::WaterBody> bodies, save::Tile tile);
 
 } // namespace rct3::park

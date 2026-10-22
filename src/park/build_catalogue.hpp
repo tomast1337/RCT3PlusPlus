@@ -120,6 +120,7 @@ namespace rct3::park
         std::uint16_t placement = 0;
         std::uint32_t width = 0;
         std::uint32_t length = 0;
+        bool water_only = false; ///< Stands only on water
         std::uint32_t addon = 0; ///< 0 for the base game, else the expansion it came with
         /// The kind of attraction (ride_list's `kind`) or the scenery category (scenery_list's) that put the
         /// item in its list; 0 for others.

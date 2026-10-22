@@ -79,8 +79,9 @@ namespace rct3::scene
         std::optional<park::LaidPiece> picked;
         std::optional<park::PiecePlacement> ghost;
         park::ObjectMesh ghost_mesh;
-        std::string complaint; ///< String key: why the track was last not finished; cleared by the next action
-        bool arm = false;      ///< The ride's riders sit on arms, whose angles its pieces hold
+        bool off_water = false; ///< The ghost's piece stands only on water, and some of it is on dry land
+        std::string complaint;  ///< String key: why the track was last not finished; cleared by the next action
+        bool arm = false;       ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
         std::uint64_t arm_piece = 0;
         std::size_t arm_back = 0; ///< The piece the arm strip sets, counted back from the last

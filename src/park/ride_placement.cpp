@@ -2,6 +2,7 @@
 #include "park/ride_placement.hpp"
 
 #include "park/boundary_fence.hpp"
+#include "park/water_fill.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -62,6 +63,19 @@ namespace rct3::park
             }
         }
         return SiteProblem::None;
+    }
+
+    bool on_water(const RideSite& site, std::span<const save::WaterBody> bodies)
+    {
+        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        {
+            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            {
+                if (!holds_water(bodies, { c, r }))
+                    return false;
+            }
+        }
+        return true;
     }
 
     void level_ground(save::TerrainGrid& grid, const RideSite& site)

@@ -76,7 +76,8 @@ interface Slot {
     col: number; ///< Of the ride's first column
     lane: number;
 }
-const items = build.flatRides()!.slice().sort((a, b) => b.length - a.length || b.width - a.width);
+// Rides that stand on water need a lake, which this park has none of.
+const items = build.flatRides()!.filter((i) => !i.water).sort((a, b) => b.length - a.length || b.width - a.width);
 const slots: Slot[] = [];
 const roads: number[] = [];
 const crossings: number[] = [];

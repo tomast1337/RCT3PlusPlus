@@ -40,3 +40,15 @@ TEST_CASE("track pieces, placements and stations find their attraction")
     CHECK_FALSE(found.contains(4));
     CHECK_FALSE(found.contains(5));
 }
+
+TEST_CASE("an object kept twice, one hanging from the other at the same place, is found as a twin")
+{
+    std::vector<save::PlacedObject> objects(4);
+    objects[0] = { .id = 5, .symbol = "Wheel", .col = 3, .row = 4, .owner_ref = 1 };
+    objects[1] = { .id = 6, .symbol = "Wheel", .col = 3, .row = 4, .owner_ref = 5 }; // Its twin
+    objects[2] = { .id = 7, .symbol = "Wheel", .col = 9, .row = 4, .owner_ref = 5 }; // Elsewhere
+    objects[3] = { .id = 8, .symbol = "Gate", .col = 3, .row = 4, .owner_ref = 6 };  // Another thing
+    CHECK(twins(objects, std::vector<std::size_t> { 1 }) == std::vector<std::size_t> { 0 });
+    CHECK(twins(objects, std::vector<std::size_t> { 0 }) == std::vector<std::size_t> { 1 });
+    CHECK(twins(objects, std::vector<std::size_t> { 3 }).empty());
+}

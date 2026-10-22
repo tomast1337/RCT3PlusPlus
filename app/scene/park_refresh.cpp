@@ -587,8 +587,13 @@ namespace rct3::scene
             built.plan.finer[i] = park::kNotDrawn;
             built.plan.coarser[i] = park::kNotDrawn;
         };
+        std::vector<std::size_t> moving;
         for (const ParkScene::BonedRide& boned : scene.boned_rides)
-            leave_out(boned.object); // Drawn apart, moving
+            moving.push_back(boned.object);
+        // Drawn apart, moving; a twin the save keeps of one would stand still in it.
+        for (const auto& list : { moving, park::twins(scene.objects, moving) })
+            for (const std::size_t i : list)
+                leave_out(i);
         for (std::size_t i = 0; !supports && i < scene.objects.size() && i < built.plan.steady.size(); ++i)
         {
             if (scene.objects[i].overlay == park::kSupportOverlay)

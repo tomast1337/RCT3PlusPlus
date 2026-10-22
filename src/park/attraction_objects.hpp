@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <span>
 #include <unordered_map>
+#include <vector>
 
 namespace rct3::park
 {
@@ -33,5 +34,10 @@ namespace rct3::park
     using AttractionObjects = std::unordered_map<std::uint64_t, AttractionRef>;
 
     [[nodiscard]] AttractionObjects attraction_objects(const save::RideModel& rides, std::span<const save::PlacedObject> objects);
+
+    /// The objects that stand for the same thing as one of the objects at `of` (places in `objects`): of the same
+    /// asset at the same place and turn, one hanging from the other. Saves may keep a ride's building, entrance and
+    /// exit twice so; what draws one moving must leave out its twin.
+    [[nodiscard]] std::vector<std::size_t> twins(std::span<const save::PlacedObject> objects, std::span<const std::size_t> of);
 
 } // namespace rct3::park

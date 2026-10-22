@@ -368,7 +368,12 @@ namespace rct3::scene
                         one["cycleSeconds"] = simulation::cycle_seconds(*c);
                         one["queue"] = c->queue.size();
                         one["queueLine"] = c->line.size();
-                        one["riders"] = c->riders.size();
+                        // A tracked ride's riders are aboard its trains.
+                        std::size_t riders = c->riders.size();
+                        if (const auto* fleet = registry.try_get<simulation::Trains>(e))
+                            for (const auto& aboard : fleet->riders)
+                                riders += aboard.size();
+                        one["riders"] = riders;
                         one["ratings"] = { c->excitement, c->intensity, c->nausea };
                     }
                 }

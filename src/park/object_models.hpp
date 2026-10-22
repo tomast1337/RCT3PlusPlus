@@ -84,6 +84,16 @@ namespace rct3::park
         std::optional<Billboard> billboard;
     };
 
+    /// How a car sits on its track, in its own space, where it faces +z.
+    struct CarFit
+    {
+        float length = 0;       ///< From its front to its rear, which is how far apart cars of a train stand
+        float front_wheels = 0; ///< How far behind its front its front wheels are
+        float rear_wheels = 0;  ///< How far behind its front its rear wheels are
+        /// The point midway between its front and rear wheels, which stands on the track.
+        glm::vec3 on_track { 0.0f };
+    };
+
     struct ObjectModel
     {
         std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
@@ -123,6 +133,9 @@ namespace rct3::park
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;
+        /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
+        /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
+        std::optional<CarFit> car_fit;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
     };

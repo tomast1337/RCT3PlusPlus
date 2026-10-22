@@ -719,7 +719,7 @@ namespace rct3::scene
         ride.base.state = save::AttractionState::Closed;
         ride.track.emplace().segments.resize(1);
         // shortcut: one train of kNewTrainCars cars of the first train the ride's file lists, seated as its car
-        // models are and not drawn until the park is loaded again; upgrade when the vehicle window sets them.
+        // models are; upgrade when the vehicle window sets them.
         std::string_view train_name;
         bool arm = false; // Its riders sit on arms
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
@@ -728,8 +728,15 @@ namespace rct3::scene
                 {
                     if (!t.ride->operating->trains.empty())
                         train_name = t.ride->operating->trains.front();
-                    ride.platform_type = t.ride->operating->platform;
-                    ride.mode = static_cast<save::OperatingMode>(t.ride->operating->mode);
+                    const ovl::RideOperatingDefaults& o = *t.ride->operating;
+                    ride.platform_type = o.platform;
+                    ride.mode = static_cast<save::OperatingMode>(o.mode);
+                    // Its speeds as its file sets them, which the station pushes and the lift pulls trains at.
+                    ride.options.launch_speed = o.launch_speed;
+                    ride.options.lift_speed = o.lift_speed;
+                    ride.options.brake_speed = o.brake_speed;
+                    ride.options.block_brake_off_speed = o.block_brake_speed;
+                    ride.options.fixed_speed = o.fixed_speed.value_or(-1);
                 }
         // Its platforms come from the folder of tracks/Platforms that has its type.
         std::error_code error;
@@ -744,9 +751,9 @@ namespace rct3::scene
         {
             if (!strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
                 continue;
-            park::AssetIndex index = park::AssetIndex::scan(assets.install->root(), { });
-            (void)index.add_file(it->path());
-            park::ModelLoader loader(index);
+            park::AssetIndex assets_found = park::AssetIndex::scan(assets.install->root(), { });
+            (void)assets_found.add_file(it->path());
+            park::ModelLoader loader(assets_found);
             std::string path = std::filesystem::relative(it->path(), assets.install->root()).generic_string();
             path.resize(path.size() - std::string_view(".common.ovl").size());
             save::Train& train = ride.trains.emplace_back();
@@ -759,12 +766,14 @@ namespace rct3::scene
                 const auto seated = model ? model : loader.load_car(train_name, path, 0);
                 arm = arm || (seated && !seated->arm_joints.empty());
                 train.cars.push_back({ .index = car, .car_count = kNewTrainCars, .design_slot = car == 0 || !model ? 0 : 1 });
+                if (seated && seated->car_fit)
+                    scene.car_fits[index].push_back(*seated->car_fit);
                 for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
                     ride.seats.push_back({ .car = car, .seat = static_cast<std::int32_t>(seat), .train = 0 });
             }
             ride.train_count = 1;
             ride.cars_per_train = kNewTrainCars;
-            logging::logger("park").info("new {} runs {} with {} seats", item.symbol, train_name, ride.seats.size());
+            logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
             break;
         }
         // The simulation takes it on once its entrance and exit are placed beside its station (ride_placing.hpp).

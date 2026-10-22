@@ -202,6 +202,7 @@ namespace
         kSign,
         kBench,
         kPool,
+        kDesignScenery,
     };
 
     Attr u8a(const char* n)
@@ -264,6 +265,7 @@ namespace
             { "SignBehaviour", { refa("\"SceneryItem\""), i32a("SignType"), { "UserText", "string", 0, { } } } },
             { "ParkBenchBehaviour", { refa("\"SceneryItem\"") } },
             { "PoolSegment", { i32a("Col"), i32a("Depth"), { "Prototype", "bool", 1, { } }, i32a("Row"), i32a("SegmentType"), i32a("SurfaceHeight") } },
+            { "SceneryItemPlacementSingle", { colours("FlexiColourField"), refa("Owner"), refa("SIDDatabaseEntry"), refa("SceneryItem"), { "SceneryItemDataField", "struct", 20, { i32a("CORNER"), i32a("DIRECTION"), i32a("HEIGHT"), i32a("POSX"), i32a("POSZ") } } } },
         };
     }
 
@@ -814,6 +816,23 @@ TEST_CASE("load_world: litter bins and signs keep the object they belong to")
     CHECK(l->world->signs[0].object_ref == 301);
     CHECK(l->world->signs[0].text == "Welcome");
     CHECK(l->world->benches == std::vector<std::uint64_t> { 300 });
+}
+
+TEST_CASE("load_world: a saved design's scenery is read as placed objects")
+{
+    // Colours, owner, definition, no scenery item, then corner, direction, height, column and row.
+    const Obj door { kDesignScenery, 310, Bytes().i32(2).i32(0).i32(1).u64(200).u64(70).u64(0).i32(1).i32(3).i32(4).i32(12).i32(9) };
+    const auto l = load(schema(), { entry_obj(70, u"Gate", u"Style/Plain"), door });
+    REQUIRE(l->world);
+    REQUIRE(l->world->objects.size() == 1);
+    const PlacedObject& o = l->world->objects[0];
+    CHECK(o.symbol == "Gate");
+    CHECK(o.col == 12);
+    CHECK(o.row == 9);
+    CHECK(o.base_height == 4);
+    CHECK(o.rotation == 3);
+    CHECK(o.owner_ref == 200);
+    CHECK(o.colours == std::array { 2, 0, 1 });
 }
 
 TEST_CASE("load_world: dangling references resolve to nothing, not errors")

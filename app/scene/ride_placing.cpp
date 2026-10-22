@@ -545,6 +545,29 @@ namespace rct3::scene
         show_ghost();
     }
 
+    void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station_index, const save::PlacedObject& door, std::int32_t height, bool exit)
+    {
+        RidePlacing& p = scene.placing;
+        p.ride = ride;
+        p.step = exit ? RidePlacing::Step::Exit : RidePlacing::Step::Entrance;
+        const std::uint64_t object = add_object(scene, assets, door);
+        save::Ride& r = scene.rides.rides.at(ride);
+        if (r.stations.size() <= station_index)
+            r.stations.resize(station_index + 1);
+        save::Station& station = r.stations[station_index];
+        // One placed before moves.
+        if (const std::uint64_t old = exit ? station.exit : station.entrance; old != 0)
+        {
+            if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); at != scene.objects.end())
+                at->hidden = true;
+        }
+        (exit ? station.exit : station.entrance) = object;
+        (exit ? station.exit_spot : station.entrance_spot) = save::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
+        update_platforms(scene, ride, assets);
+        if (station.entrance != 0 && station.exit != 0 && !std::ranges::contains(p.unjoined, ride))
+            p.unjoined.push_back(ride);
+    }
+
     bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         RidePlacing& p = scene.placing;
@@ -599,32 +622,25 @@ namespace rct3::scene
             // The door stands on ground levelled to the ride's height, as the ride does.
             if (p.site->height <= p.ground)
                 park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
+            logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
+            if (!p.stations.empty())
+            {
+                // shortcut: doors placed by hand go to the ride's first station, wherever along the track they stand;
+                // give each its own station's once rides of several stations are built here.
+                place_station_door(scene, assets, p.ride, 0, *o, p.site->height, p.step == RidePlacing::Step::Exit);
+                stop_ride_placing(scene);
+                p.door.reset();
+                p.ghost_mesh = { };
+                refresh_ride_floors(scene);
+                rebuild_ground(device, scene, assets);
+                return true;
+            }
             const std::uint64_t object = add_object(scene, assets, *o);
             save::Ride& ride = scene.rides.rides.at(p.ride);
             if (ride.stations.empty())
                 ride.stations.emplace_back();
             const save::PlacementSpot spot { object, p.door->col, p.door->row, p.site->height, p.door->direction };
-            logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
-            if (!p.stations.empty())
-            {
-                // shortcut: a tracked ride's doors go to its first station, wherever along the track they stand;
-                // give each its own station's once rides of several stations are built here.
-                const bool exit = p.step == RidePlacing::Step::Exit;
-                save::Station& station = ride.stations.front();
-                // One placed before moves.
-                if (const std::uint64_t old = exit ? station.exit : station.entrance; old != 0)
-                {
-                    if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); at != scene.objects.end())
-                        at->hidden = true;
-                }
-                (exit ? station.exit : station.entrance) = object;
-                (exit ? station.exit_spot : station.entrance_spot) = spot;
-                update_platforms(scene, p.ride, assets);
-                if (station.entrance != 0 && station.exit != 0)
-                    p.unjoined.push_back(p.ride);
-                stop_ride_placing(scene);
-            }
-            else if (p.step == RidePlacing::Step::Entrance)
+            if (p.step == RidePlacing::Step::Entrance)
             {
                 ride.stations.front().entrance = object;
                 ride.stations.front().entrance_spot = spot;

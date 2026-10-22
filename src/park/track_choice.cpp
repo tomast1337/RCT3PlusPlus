@@ -163,7 +163,15 @@ namespace rct3::park
     {
         if (choice.named && !contains(candidates, *choice.named))
             choice.named.reset();
-        return nearest(offers(pieces, candidates), choice, [](const Offer&) { return true; });
+        const std::vector<Offer> all = offers(pieces, candidates);
+        // With no plain piece to pick, as at a tower's base, the first station or special piece is picked.
+        if (all.empty() && !choice.named)
+        {
+            const std::vector<LaidPiece> named = choice_options(pieces, candidates, choice).named;
+            if (!named.empty())
+                choice.named = named.front();
+        }
+        return nearest(all, choice, [](const Offer&) { return true; });
     }
 
 } // namespace rct3::park

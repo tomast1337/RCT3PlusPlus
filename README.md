@@ -142,7 +142,8 @@ and the detailed rules in [CLEAN_ROOM.md](CLEAN_ROOM.md).
 ## Contributing
 
 Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Read it, and
-[CLEAN_ROOM.md](CLEAN_ROOM.md), before opening a pull request.
+[CLEAN_ROOM.md](CLEAN_ROOM.md), before opening a pull request. [CONTRIBUTING.md](CONTRIBUTING.md) says how
+to report a bug or send a change, and [SECURITY.md](SECURITY.md) how to report a security problem.
 
 ## License
 
@@ -150,4 +151,5 @@ GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 RollerCoaster Tycoon is a registered trademark of Chris Sawyer. Frontier and the Frontier logo are
 trademarks of Frontier Developments plc. This project is not affiliated with, endorsed by, or
-sponsored by either.
+sponsored by either. The project's [legal position](docs/legal.md) explains the risks we
+see and how we work around them.

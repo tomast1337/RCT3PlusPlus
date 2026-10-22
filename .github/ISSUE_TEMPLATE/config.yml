@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/tomast1337/rct3pp/security/advisories/new
+    about: A file that crashes or misleads a parser. Report it privately, please.
+  - name: Code of Conduct and clean-room standards
+    url: https://github.com/tomast1337/rct3pp/blob/main/CODE_OF_CONDUCT.md
+    about: What may and may not be posted here. Read it before opening an issue.

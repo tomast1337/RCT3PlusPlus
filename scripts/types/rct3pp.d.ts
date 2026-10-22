@@ -75,6 +75,8 @@ interface Tile {
     cliff: number;
     /** Whether the park owns it outright. */
     owned: boolean;
+    /** The surface height of the water on it, when it holds any. */
+    water?: number;
 }
 
 interface PathPiece {
@@ -115,6 +117,8 @@ interface FlatRideItem {
     price: number;
     /** Whether it has an entrance and an exit to place. */
     doors: boolean;
+    /** Whether it stands only on water. */
+    water: boolean;
 }
 
 declare namespace build {
@@ -129,7 +133,7 @@ declare namespace build {
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked"; affordable: boolean } | undefined;
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water"; affordable: boolean } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */

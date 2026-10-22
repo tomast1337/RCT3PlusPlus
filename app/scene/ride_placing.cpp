@@ -511,6 +511,8 @@ namespace rct3::scene
             if (!over && size.x > 0 && size.y > 0)
                 follow_lift(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y }));
             p.problem = park::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
+            if (p.problem == park::SiteProblem::None && p.item->water_only && !park::on_water(*p.site, scene.footpaths.water.bodies))
+                p.problem = park::SiteProblem::OffWater;
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();
             return;
@@ -538,6 +540,8 @@ namespace rct3::scene
                     p.lift = RidePlacing::Lift { ray.origin + ray.direction * *distance, p.site->height };
             }
             p.problem = park::site_problem(*p.site, scene.grid, paths, p.solids);
+            if (p.problem == park::SiteProblem::None && p.item->water_only && !park::on_water(*p.site, scene.footpaths.water.bodies))
+                p.problem = park::SiteProblem::OffWater;
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
         }
         else

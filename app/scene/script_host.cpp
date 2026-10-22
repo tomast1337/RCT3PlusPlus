@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
+#include "park/water_fill.hpp"
 #include "random/generator.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
@@ -240,7 +241,11 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::TerrainCell& c = g.at(col, row);
-            return { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) } };
+            for (const save::WaterBody& b : park_->footpaths.water.bodies)
+                if (park::holds(b, { col, row }))
+                    tile["water"] = b.level;
+            return tile;
         });
         engine_.define("map.screen", [this](const Json& a) -> Json {
             const save::TerrainGrid& g = grid_of(park_);
@@ -291,7 +296,7 @@ namespace rct3::scene
             Json rides = Json::array();
             for (const park::BuildItem& item : *items)
                 if (item.kind == park::BuildKind::FlatRide)
-                    rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() } });
+                    rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only } });
             return rides;
         });
         engine_.define("build.pick", [this](const Json& a) -> Json {
@@ -343,7 +348,7 @@ namespace rct3::scene
             if (!p.item)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
-            constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "path", "blocked" };
+            constexpr std::array<std::string_view, 5> kProblems { "none", "not owned", "path", "blocked", "off water" };
             return { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
         });
         engine_.define("rides.list", [this](const Json&) {

@@ -73,4 +73,9 @@ namespace rct3::park
         return std::ranges::any_of(body.tris, [&](const save::WaterTri& t) { return t.col == col && t.row == row; });
     }
 
+    bool holds_water(std::span<const save::WaterBody> bodies, save::Tile tile)
+    {
+        return std::ranges::any_of(bodies, [&](const save::WaterBody& b) { return holds(b, tile); });
+    }
+
 } // namespace rct3::park

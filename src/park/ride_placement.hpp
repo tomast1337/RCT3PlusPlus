@@ -44,8 +44,12 @@ namespace rct3::park
         None,
         NotOwned, ///< Off the map, or land the park does not own outright
         Path,
-        Blocked, ///< Something solid stands there above the base
+        Blocked,  ///< Something solid stands there above the base
+        OffWater, ///< A ride that stands only on water, on a tile that holds none
     };
+
+    /// Whether every tile of `site` holds water.
+    [[nodiscard]] bool on_water(const RideSite& site, std::span<const save::WaterBody> bodies);
 
     /// What keeps a ride from `site`, if anything.
     [[nodiscard]] SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);

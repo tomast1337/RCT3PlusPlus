@@ -92,6 +92,7 @@ namespace rct3::park
                 item.placement = placed->positioning;
                 item.width = placed->x_squares;
                 item.length = placed->z_squares;
+                item.water_only = (placed->flags & ovl::kItemWaterOnly) != 0;
             }
             item.scenery = info.style.empty() ? symbol : info.style;
             return item;

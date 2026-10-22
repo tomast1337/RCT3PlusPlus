@@ -675,3 +675,18 @@ TEST_CASE("a ride being tested runs empty, and guests are let on only once it is
     CHECK(park.run_until([&] { return r.get<CycleRide>(ride).phase != RidePhase::Loading; }, 5));
     CHECK(r.get<CycleRide>(ride).riders.empty());
 }
+
+TEST_CASE("of two rides as near, guests do not always take the same one")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    // Both entered from the same path tile.
+    const auto one = park.flat_ride("One", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 20 });
+    const auto other = park.flat_ride("Other", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 20 });
+    for (int i = 0; i < 12; ++i)
+        park.guest({ 0, 0 }, { .cash = 1000 });
+    park.run_seconds(900);
+    const auto& r = park.world().registry;
+    CHECK(r.get<Attraction>(one).customers > 0);
+    CHECK(r.get<Attraction>(other).customers > 0);
+}

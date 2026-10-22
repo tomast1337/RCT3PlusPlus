@@ -22,6 +22,7 @@ namespace rct3::simulation::tuning
         float pressing = 0.7f;                 ///< A need this high spoils the guest's mood
         float want = 0.55f;                    ///< A need this high sends the guest to a shop
         double ride_chance = 0.25;             ///< Of a guest with no pressing need going for a ride
+        double ride_considered = 0.5;          ///< Of each ride that suits being thought of when choosing one
         float max_nausea = 0.6f;               ///< Guests feeling sicker skip rides
         float idle_seconds = 5;                ///< Between thoughts while wandering
         float treat = 0.05f;                   ///< Happiness from buying what was wanted

@@ -159,7 +159,13 @@ namespace rct3::simulation
                 return std::nullopt;
             const float wildest = std::min(mood.tolerance + kTuning.sickness.wildest, taste.most) + daring;
             const float least_cover = rained_on ? kTuning.weather.covered : 0;
-            const auto ride = [&](bool splash) { return nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least && o.cover >= least_cover && (!splash || o.splash); }); };
+            const auto ride = [&](bool splash) {
+                const auto suits = [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least && o.cover >= least_cover && (!splash || o.splash); };
+                // The nearest of those that come to mind, so a ride behind another on the same path still gets riders.
+                if (auto found = nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return suits(o) && random::chance(dice.state, kTuning.needs.ride_considered); }))
+                    return found;
+                return nearest_offer(paths, at, offers, wallet, suits);
+            };
             if (hot >= kTuning.needs.want)
                 if (auto found = ride(true))
                     return found;

@@ -91,6 +91,7 @@ namespace rct3::ui
         constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
         constexpr int kMostTrackCircuits = 20;
         constexpr int kAxisNumbers = 5;
+        constexpr float kMaintenancePageWidth = 420;
         constexpr float kModePageWidth = 600;
         constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
@@ -267,6 +268,8 @@ namespace rct3::ui
             if (ride)
                 add(page, strings, "AttractionFinancesDialogLabel_CostPerInspection", missing());
             page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
+            // The price over the sums, as the player sets it first.
+            page.controls_first = true;
         }
 
         std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings)
@@ -641,8 +644,13 @@ namespace rct3::ui
 
         void maintenance(InfoPage& page, const save::Ride& ride, const StringTable& strings)
         {
+            // Reliability on a green bar, down time on a red one.
             add(page, strings, "RideMaintenanceDialogLabel_Reliability", percent(ride.breakdown.reliability));
+            page.lines.back().bar = ride.breakdown.reliability / 100;
             add(page, strings, "RideMaintenanceDialogLabel_DownTime", percent(ride.breakdown.downtime_percent()));
+            page.lines.back().bar = ride.breakdown.downtime_percent() / 100;
+            page.lines.back().bar_colour = hex("#d04030");
+            page.width = kMaintenancePageWidth;
             const float since = ride.base.time_since_inspection;
             add(page, strings, "RideMaintenanceDialogLabel_TimeSinceLastInspection", since < 0 ? std::u16string(u"-") : ascii(std::to_string(std::lround(since / kSecondsPerMinute))));
             add(page, strings, "RideMaintenanceDialogLabel_LastBreakdownType", breakdown(ride.breakdown.last, strings));
@@ -656,6 +664,16 @@ namespace rct3::ui
             const std::int32_t interval = ride.breakdown.inspection_interval;
             c.value = interval >= 0 && std::cmp_less(interval, kInspectionIntervals.size()) ? interval : -1;
             page.controls.push_back(std::move(c));
+            // shortcut: the mechanic button is greyed, as no mechanic is sent anywhere yet; wire it with staff jobs.
+            InfoControl mechanic;
+            mechanic.id = control_id(AttractionControl::Mechanic);
+            mechanic.name = "Staff_JobIsMechanicIcon";
+            mechanic.kind = InfoControlKind::Button;
+            mechanic.icon = "Staff_JobIsMechanicIcon";
+            mechanic.help = text(strings, "TT_RideMaintenanceDialog_MechanicButton");
+            mechanic.beside = true;
+            mechanic.enabled = false;
+            page.controls.push_back(std::move(mechanic));
         }
 
         void items(InfoPage& page, const save::Stall& stall, const StringTable& strings)

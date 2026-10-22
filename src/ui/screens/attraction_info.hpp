@@ -191,6 +191,7 @@ namespace rct3::ui
         VerticalSeries, ///< Its vertical forces
         LateralSeries,  ///< Its lateral forces
         CarKind,        ///< Moves a tracked ride on to the next kind of train it may run
+        Mechanic,       ///< Calls a mechanic to it
         ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

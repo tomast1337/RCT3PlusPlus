@@ -71,6 +71,7 @@ namespace rct3::ui
         std::string button;                           ///< Behind its buttons' text
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
         Color picked_section_colour = hex("#ffffff"); ///< Of the shown section's
+        Color bar_back = hex("#00000040");            ///< Of a line's bar, behind its filled part
         float glass_alpha = 0.15f;
         /// In the bottom-left corner instead, turned the other way: tabs mirrored, the strip on the right.
         /// Drawn only in code.
@@ -137,6 +138,7 @@ namespace rct3::ui
         inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
         inline constexpr float kPageWidth = 360;   ///< Of a page of lines
         inline constexpr float kLineHeight = 15;
+        inline constexpr float kBarWidth = 100;     ///< Of a line's bar
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
         inline constexpr float kPlotHeight = 64;
@@ -163,8 +165,10 @@ namespace rct3::ui
     {
         std::u16string label;
         std::u16string value;
-        bool half = false;      ///< Short enough to share its row with the next half line
-        std::string name = { }; ///< Its widgets' name: the label's string key, to find where it is made by
+        bool half = false;                 ///< Short enough to share its row with the next half line
+        std::string name = { };            ///< Its widgets' name: the label's string key, to find where it is made by
+        std::optional<float> bar { };      ///< 0 to 1: its value sits on a bar filled that far
+        Color bar_colour = hex("#40c040"); ///< The bar's filled part
     };
 
     struct InfoSeries
@@ -240,6 +244,7 @@ namespace rct3::ui
         /// under the graph are left to the controls.
         std::vector<std::u16string> graph_axis;
         std::vector<InfoControl> controls; ///< Under the note
+        bool controls_first = false;       ///< Over the lines instead
         float width = 0;                   ///< Of the page; 0 for info_panel::kPageWidth
     };
 
@@ -415,6 +420,9 @@ namespace rct3::ui
         {
             Label* label = nullptr;
             Label* value = nullptr;
+            Widget* bar = nullptr; ///< Under the value when it has one, with its filled part
+            Widget* filled = nullptr;
+            float fill = 0;
         };
         std::vector<ValueRow> value_rows_;
         /// Where each of controls_ sits down the page, set as the page is filled; across is set by place_page.

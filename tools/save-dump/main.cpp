@@ -432,7 +432,7 @@ int main(int argc, char** argv)
             for (int frame = 0; frame < 600; ++frame)
             {
                 run.advance(1 / 60.0f);
-                peak = std::max(peak, run.particles().size());
+                peak = std::max(peak, run.particles().count());
             }
             std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles, peak %zu live:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
         }

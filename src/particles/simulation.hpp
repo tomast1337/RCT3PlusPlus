@@ -13,22 +13,29 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <vector>
 
 namespace rct3::particles
 {
 
-    struct LiveParticle
+    /// A run's live particles, one array per field, all as long as `count()`, so a pass over one field (moving
+    /// them, uploading them) reads only that field.
+    struct ParticleArrays
     {
-        glm::vec3 position { 0.0f };
-        glm::vec3 velocity { 0.0f };
-        float age = 0; ///< Seconds; below 0 it is not born yet (an emitter's time spread) and is not drawn
-        float life = 1;
-        float size = 1;         ///< Its share of the particle's size, from the size spread
-        float roll = 0;         ///< Radians on screen
-        std::uint32_t kind = 0; ///< In Effect::particles
-        bool relative = false;  ///< Moves along when the run is moved
+        std::vector<glm::vec3> position { };
+        std::vector<glm::vec3> velocity { };
+        /// Seconds; below 0 it is not born yet (an emitter's time spread) and is not drawn
+        std::vector<float> age { };
+        std::vector<float> life { };
+        std::vector<float> scale { };           ///< Its share of the particle's size, from the size spread
+        std::vector<float> roll { };            ///< Radians on screen
+        std::vector<std::uint32_t> kind { };    ///< In Effect::particles
+        std::vector<std::uint8_t> relative { }; ///< Moves along when the run is moved
+
+        [[nodiscard]] std::size_t count() const noexcept
+        {
+            return age.size();
+        }
     };
 
     /// How a live particle looks now: its colour and opacity, and its size in world units.
@@ -38,7 +45,8 @@ namespace rct3::particles
         float size = 1;
     };
 
-    [[nodiscard]] Look look(const Effect& effect, const LiveParticle& p);
+    /// How particle `i` of `particles` looks now.
+    [[nodiscard]] Look look(const Effect& effect, const ParticleArrays& particles, std::size_t i);
 
     /// Steps a second.
     inline constexpr float kParticleSteps = 60;
@@ -58,13 +66,13 @@ namespace rct3::particles
         /// Moves time on by `seconds`, in whole fixed steps; the rest waits for the next call.
         void advance(float seconds);
 
-        [[nodiscard]] std::span<const LiveParticle> particles() const noexcept
+        [[nodiscard]] const ParticleArrays& particles() const noexcept
         {
             return live_;
         }
         [[nodiscard]] bool finished() const noexcept
         {
-            return !loops_ && age_ >= life_ && live_.empty();
+            return !loops_ && age_ >= life_ && live_.count() == 0;
         }
 
     private:
@@ -84,7 +92,7 @@ namespace rct3::particles
         float life_ = 1;
         float pending_ = 0;
         std::vector<float> root_emitted_;
-        std::vector<LiveParticle> live_;
+        ParticleArrays live_;
         /// Per pool slot, how many each emitter of the slot's particle has sent: `widest_` counters a slot.
         std::vector<float> emitted_;
         std::size_t widest_ = 0;

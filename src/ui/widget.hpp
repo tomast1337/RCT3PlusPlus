@@ -15,6 +15,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/font_set.hpp"
 #include "ui/keyboard.hpp"
+#include "ui/palette.hpp"
 #include "ui/placement.hpp"
 #include "ui/skin_library.hpp"
 
@@ -53,6 +54,7 @@ namespace rct3::ui
         DrawList& list;
         const SkinLibrary& skins;
         const FontSet& fonts;
+        const Palette& palette = kGamePalette; ///< For what is drawn in code each frame
     };
 
     class Widget

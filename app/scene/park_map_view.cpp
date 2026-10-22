@@ -79,10 +79,10 @@ namespace rct3::scene
             return { c.r, c.g, c.b, c.a };
         }
 
-        ui::MapPanelStyle panel_style()
+        ui::MapPanelStyle panel_style(const ui::Palette& palette)
         {
             ui::MapPanelStyle s;
-            s.window = ui::game_skins::window_style();
+            s.window = ui::game_skins::window_style(palette);
             return s;
         }
 
@@ -271,7 +271,7 @@ namespace rct3::scene
         return map;
     }
 
-    void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings)
+    void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings, const ui::Palette& palette)
     {
         if (auto open = desktop.root().find(kMapName))
         {
@@ -284,7 +284,7 @@ namespace rct3::scene
             const bool dots = t.layer >= park::MapLayer::Food && t.layer != park::MapLayer::Patrols;
             entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots, std::string(t.key) });
         }
-        auto& panel = desktop.root().add<ui::MapPanel>(std::string(kMapName), panel_style(), text(strings, kTitleKey, u"Map"), std::move(entries));
+        auto& panel = desktop.root().add<ui::MapPanel>(std::string(kMapName), panel_style(palette), text(strings, kTitleKey, u"Map"), std::move(entries));
         panel.icon = kMapIcon;
         map.stale = true;
         map.since_people = 1e9f;

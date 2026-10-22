@@ -64,7 +64,7 @@ namespace rct3::ui
         }
         assets.textures = std::move(*textures);
         assets.skins = skin_library(set->skins, assets.textures);
-        game_skins::use_coded_skins(assets.skins);
+        game_skins::use_coded_skins(assets.skins, assets.palette);
 
         // Our own strings; a key the language lacks falls back to English.
         *assets.strings = own_strings(language);

@@ -19,7 +19,7 @@ namespace
         Fixture()
         {
             std::vector<ManagementTab> tabs { { "IconA", u"Lists" }, { "IconB", u"Sums" } };
-            window = &desktop.root().add<ManagementWindow>("window", game_skins::management_window_style(), 400, 300, std::move(tabs), 0);
+            window = &desktop.root().add<ManagementWindow>("window", game_skins::management_window_style(kGamePalette), 400, 300, std::move(tabs), 0);
             desktop.layout({ 0, 0, 1024, 768 });
             desktop.update({ });
         }

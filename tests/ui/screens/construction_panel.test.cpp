@@ -19,7 +19,7 @@ namespace
 
         Fixture()
         {
-            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(), u"Chain", u"Demolish");
+            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(kGamePalette), u"Chain", u"Demolish");
             desktop.layout({ 0, 0, 1280, 720 });
             desktop.update({ });
         }
@@ -104,7 +104,7 @@ TEST_CASE("the rows of curves and slopes sit side by side in the strip")
 TEST_CASE("each button shows the picture of its state, banks not offered left out")
 {
     Fixture f;
-    const auto style = game_skins::construction_panel_style();
+    const auto style = game_skins::construction_panel_style(kGamePalette);
     f.panel->show(straight());
     CHECK(f.panel->curve_button(3).icon == icon_skin(style.curves.at(3), IconState::On));
     CHECK(f.panel->curve_button(0).icon == icon_skin(style.curves.at(0), IconState::Dis));

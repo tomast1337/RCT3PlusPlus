@@ -26,7 +26,7 @@ TEST_CASE("legend rows stack, with a gap above each that starts a group")
 TEST_CASE("the legend fits in the smallest window")
 {
     MapPanelStyle style;
-    style.window = game_skins::window_style();
+    style.window = game_skins::window_style(kGamePalette);
     std::vector<MapLegendEntry> entries(16);
     for (const std::size_t i : { 4, 6, 14 })
         entries[i].starts_group = true;

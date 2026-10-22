@@ -50,7 +50,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Currency& currency)
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency)
     {
         const auto list = ui::build_list(item);
         if (!list || !menus.items.valid())
@@ -59,7 +59,7 @@ namespace rct3::scene
             root.remove(*open);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
-        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
+        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
         picker.kinds_off = menus.kinds_off;
         picker.styles_off = menus.styles_off;
         picker.packs_only = menus.packs_only;

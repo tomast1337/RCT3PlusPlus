@@ -24,7 +24,7 @@ namespace
             strings.add("GameOptionsDialog_GameSettingsTabHelp", u"General");
             strings.add("GameOptionsDialog_GraphicSettingsTabHelp", u"Pictures");
             strings.add("Language_Dutch", u"Nederlands");
-            dialog = &desktop.root().add<OptionsDialog>("options", game_skins::options_dialog_style(), strings, options, std::move(choices));
+            dialog = &desktop.root().add<OptionsDialog>("options", game_skins::options_dialog_style(kGamePalette), strings, options, std::move(choices));
             desktop.layout({ 0, 0, 1024, 768 });
             desktop.update({ });
         }
@@ -280,7 +280,7 @@ TEST_CASE("the camera page says what the mouse does in the chosen mode")
     f.strings.add("GameOptionsDialog_CameraControlsActionRotate", u"Rotate");
     // The strings are read when the window is made.
     f.desktop.root().remove(*f.dialog);
-    f.dialog = &f.desktop.root().add<OptionsDialog>("options", game_skins::options_dialog_style(), f.strings, f.options, OptionsChoices { });
+    f.dialog = &f.desktop.root().add<OptionsDialog>("options", game_skins::options_dialog_style(kGamePalette), f.strings, f.options, OptionsChoices { });
     f.dialog->show_page(OptionsPage::Camera);
     f.options.set(O::CameraMode, 3); // Normal
     f.desktop.update({ });

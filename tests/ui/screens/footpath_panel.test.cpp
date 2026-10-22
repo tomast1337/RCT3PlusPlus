@@ -19,7 +19,7 @@ namespace
         Fixture()
         {
             strings.add("Path_Left", u"Turn left");
-            panel = &desktop.root().add<FootpathPanel>("paths", game_skins::footpath_panel_style(), strings);
+            panel = &desktop.root().add<FootpathPanel>("paths", game_skins::footpath_panel_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
         }

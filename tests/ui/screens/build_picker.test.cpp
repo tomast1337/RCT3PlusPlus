@@ -21,7 +21,7 @@ namespace
 
         explicit Fixture(std::vector<PickerRow> rows, std::vector<PickerTheme> themes = { })
         {
-            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::move(rows), std::move(themes));
+            picker = &desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(kGamePalette), strings, u"Things", "ThingsIcon", std::move(rows), std::move(themes));
             picker->placement = top_left(10, 10, build_picker::kWidth, build_picker::kHeight);
             step();
         }
@@ -194,7 +194,7 @@ TEST_CASE("filters set by the owner before the first update hold")
     sea.style = "Sea";
     StringTable strings;
     Desktop desktop;
-    auto& picker = desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(), strings, u"Things", "ThingsIcon", std::vector { moon, sea }, std::vector<PickerTheme> { { "Moon", u"Lunar" }, { "Sea", u"Ocean" } });
+    auto& picker = desktop.root().add<BuildPicker>("list", game_skins::build_picker_style(kGamePalette), strings, u"Things", "ThingsIcon", std::vector { moon, sea }, std::vector<PickerTheme> { { "Moon", u"Lunar" }, { "Sea", u"Ocean" } });
     picker.styles_off = { "Sea" };
     desktop.layout({ 0, 0, 800, 600 });
     desktop.update({ });

@@ -44,7 +44,7 @@ namespace rct3::scene
                 if (front.assets.install && front.assets.install->find(kPackFiles.at(i)))
                     packs.push_back(static_cast<int>(i));
             }
-            root.add<ui::GameInfoBox>(std::string(kAboutName), skins::about_window_style(), *front.assets.strings, packs, park.seed);
+            root.add<ui::GameInfoBox>(std::string(kAboutName), skins::about_window_style(front.assets.palette), *front.assets.strings, packs, park.seed);
         }
 
         void open_options(ParkScene& park, FrontEndScene& front)
@@ -54,7 +54,7 @@ namespace rct3::scene
                 // What the front end's window offers, its keys and screen size as they are now.
                 ui::OptionsChoices choices = front.live->front->options().choices();
                 choices.language_locked = true;
-                park.options = std::make_unique<ui::OptionsSession>(*park.desktop, skins::options_dialog_style(), *front.assets.strings, front.live->options, std::move(choices));
+                park.options = std::make_unique<ui::OptionsSession>(*park.desktop, skins::options_dialog_style(front.assets.palette), *front.assets.strings, front.live->options, std::move(choices));
             }
             park.options->open();
         }
@@ -79,7 +79,7 @@ namespace rct3::scene
             park.saves.data = front.saves.data;
             park.saves.game_saves = front.saves.game_saves;
             ++park.file_windows_opened;
-            auto& dialog = root.add<ui::FileDialog>(std::string(kFilesName), skins::file_dialog_style(), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
+            auto& dialog = root.add<ui::FileDialog>(std::string(kFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
             dialog.set_file_name(park.file.stem() == kBlankLandscape ? std::u16string(kNewSandbox) : park.file.filename().u16string());
         }
 

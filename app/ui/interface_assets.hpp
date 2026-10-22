@@ -8,6 +8,7 @@
 #include "render/device.hpp"
 #include "ui/font_set.hpp"
 #include "ui/interface_fonts.hpp"
+#include "ui/palette.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/string_table.hpp"
 #include "ui/ui_renderer.hpp"
@@ -29,6 +30,10 @@ namespace rct3::ui
         UiRenderer renderer;
         UiTextures textures;
         SkinLibrary skins;
+        /// The colours of everything drawn in code and of the game's styles. shortcut: chosen before the skins
+        /// load and fixed after, windows keep the colours they opened with; upgrade when a palette can be
+        /// picked in the options, by recolouring the skins (use_coded_skins) and reopening the windows.
+        Palette palette;
         std::optional<config::GameInstall> install; ///< Where font sets come from as the width changes
         InterfaceFonts fonts;
         /// On the heap: windows keep a reference, and the assets move.

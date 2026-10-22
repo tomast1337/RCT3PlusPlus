@@ -32,7 +32,7 @@ namespace
             strings.add("ShortMonth1", u"Sec");
             strings.add("Year", u"Season");
             strings.add("ManyGuests", u"# visitors");
-            dialog = &desktop.root().add<FileDialog>("files", game_skins::file_dialog_style(), strings, mode, true);
+            dialog = &desktop.root().add<FileDialog>("files", game_skins::file_dialog_style(kGamePalette), strings, mode, true);
             desktop.layout({ 0, 0, 1024, 768 });
             desktop.update({ });
         }

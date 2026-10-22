@@ -2,6 +2,7 @@
 #include "ui/draw_list_painter.hpp"
 #include "ui/game_style.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <doctest/doctest.h>
 
@@ -9,7 +10,7 @@ using namespace rct3::ui;
 
 TEST_CASE("each coded skin draws shapes alone, within the rectangle its picture would cover")
 {
-    for (const game_skins::CodedSkin& coded : game_skins::coded_skins())
+    for (const game_skins::CodedSkin& coded : game_skins::coded_skins(kGamePalette))
     {
         CAPTURE(coded.skin);
         const Rect target { 20, 30, 220, 150 };
@@ -31,8 +32,8 @@ TEST_CASE("each coded skin draws shapes alone, within the rectangle its picture 
 TEST_CASE("the game's look draws in code only the panels moved to code")
 {
     SkinLibrary skins;
-    game_skins::use_coded_skins(skins);
-    for (const game_skins::CodedSkin& coded : game_skins::coded_skins())
+    game_skins::use_coded_skins(skins, kGamePalette);
+    for (const game_skins::CodedSkin& coded : game_skins::coded_skins(kGamePalette))
     {
         CAPTURE(coded.skin);
         auto skin = skins.find(coded.skin);
@@ -43,7 +44,7 @@ TEST_CASE("the game's look draws in code only the panels moved to code")
 TEST_CASE("the window frame leaves its middle empty for the window's background")
 {
     DrawList list;
-    draw_frame(list, game_frames::window(), { 0, 0, 300, 200 });
+    draw_frame(list, game_frames::window(kGamePalette), { 0, 0, 300, 200 });
     // Shapes whose quads span the middle are outlines only: the middle point is outside every filled one.
     int filled_over_middle = 0;
     const auto vertices = list.shape_vertices();
@@ -101,7 +102,7 @@ TEST_CASE("an arrow button's arrow points its way, with no seam down its middle"
     const Rect target { 0, 0, 60, 60 };
     const auto drawn = [&](game_frames::Arrow way) {
         DrawList list;
-        draw_frame(list, game_frames::scroll_arrow(way), target);
+        draw_frame(list, game_frames::scroll_arrow(kGamePalette, way), target);
         auto picture = blank_picture(60, 60, hex("#000000"));
         paint_draw_list(list, { }, picture);
         return picture;
@@ -127,7 +128,7 @@ TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches
     const Rect screen { 0, 0, 400, 768 * kScale };
     const Rect design_screen { 0, 0, screen.x1 / kScale, 768 };
     DrawList list;
-    draw_frame(list, game_frames::front_backdrop(design_screen), { 0, 0, 1024 * kScale, 768 * kScale });
+    draw_frame(list, game_frames::front_backdrop(kGamePalette, design_screen), { 0, 0, 1024 * kScale, 768 * kScale });
     for (const ShapeVertex& v : list.shape_vertices())
     {
         if (v.edge[3] > 0) // Rings are round
@@ -142,7 +143,7 @@ TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches
 
 TEST_CASE("each piece of the front backdrop is the whole backdrop cut to that piece")
 {
-    const CodedFrame whole = game_frames::front_backdrop({ 0, 0, 1024, 768 });
+    const CodedFrame whole = game_frames::front_backdrop(kGamePalette, { 0, 0, 1024, 768 });
     const CodedFrame piece = game_frames::front_piece(whole, { 512, 513, 1024, 768 });
     CHECK(piece.width == doctest::Approx(512));
     CHECK(piece.height == doctest::Approx(255));
@@ -156,9 +157,23 @@ TEST_CASE("each piece of the front backdrop is the whole backdrop cut to that pi
 
 TEST_CASE("a closed heading's box adds the plus's upright to the open one's minus")
 {
-    const CodedFrame open = game_frames::heading_box(false);
-    const CodedFrame closed = game_frames::heading_box(true);
+    const CodedFrame open = game_frames::heading_box(kGamePalette, false);
+    const CodedFrame closed = game_frames::heading_box(kGamePalette, true);
     REQUIRE(closed.layers.size() == open.layers.size() + 1);
     const Rect upright = frame_rect(closed.layers.back().box, { 0, 0, 7, 7 }, closed.width, closed.height);
     CHECK(upright.width() < upright.height());
+}
+
+TEST_CASE("another palette recolours the frames drawn in code and the styles' text")
+{
+    Palette dark;
+    dark.accent = { 200, 90, 20, 255 };
+    dark.text = { 230, 230, 230, 255 };
+    const auto uses = [](const CodedFrame& f, Color c) { return std::ranges::any_of(f.layers, [&](const FrameLayer& l) { return l.shape.top == c || l.shape.outline == c; }); };
+    CHECK(uses(game_frames::window(dark), dark.accent));
+    CHECK_FALSE(uses(game_frames::window(dark), kGamePalette.accent));
+    CHECK(uses(game_frames::window(kGamePalette), kGamePalette.accent));
+    CHECK(game_skins::window_style(dark).title_colour == dark.text);
+    CHECK(game_skins::list_box_style(dark).text_colour == dark.text);
+    CHECK(game_skins::window_style(kGamePalette).title_colour == kGamePalette.text);
 }

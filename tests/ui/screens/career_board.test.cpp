@@ -40,7 +40,7 @@ namespace
                 s.can_resume = i == 0;
                 scenarios.push_back(std::move(s));
             }
-            map = &desktop.root().add<CareerBoard>("map", game_skins::career_board_style(), strings, std::move(scenarios), picked);
+            map = &desktop.root().add<CareerBoard>("map", game_skins::career_board_style(kGamePalette), strings, std::move(scenarios), picked);
             desktop.layout({ 0, 0, 1024, 768 });
             tick();
         }

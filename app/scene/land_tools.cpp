@@ -369,7 +369,7 @@ namespace rct3::scene
             const ui::StringTable& strings = *assets.strings;
             auto panel = panel_of(scene);
             if (!panel)
-                panel = scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(), strings);
+                panel = scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(assets.palette), strings);
             std::vector<ui::LandTab> tabs;
             ui::LandPick chosen;
             if (l.tool == LandTools::Tool::Paint)

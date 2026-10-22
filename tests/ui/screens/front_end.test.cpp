@@ -12,7 +12,7 @@ namespace
 {
     FrontEndStyle style()
     {
-        return { game_skins::options_dialog_style(), game_skins::question_box_style(), game_skins::file_dialog_style(), game_skins::career_dialog_style(), game_skins::career_board_style(), game_skins::tutorial_picker_style() };
+        return { game_skins::options_dialog_style(kGamePalette), game_skins::question_box_style(kGamePalette), game_skins::file_dialog_style(kGamePalette), game_skins::career_dialog_style(kGamePalette), game_skins::career_board_style(kGamePalette), game_skins::tutorial_picker_style(kGamePalette) };
     }
 
     struct Fixture

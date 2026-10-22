@@ -24,7 +24,7 @@ namespace
             strings.add("MapHelp", u"Karten");
             strings.add("File_QuitHelp", u"Ende");
             strings.add("File_CareerMapHelp", u"Karriere");
-            row = &desktop.root().add<ToolRow>("tools", game_skins::tool_row_style(), strings);
+            row = &desktop.root().add<ToolRow>("tools", game_skins::tool_row_style(kGamePalette), strings);
             desktop.layout({ 0, 0, width, height });
             desktop.update({ });
         }

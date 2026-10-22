@@ -23,8 +23,8 @@ namespace
 
         Fixture()
         {
-            drawer = &desktop.root().add<MessageDrawer>("messages", game_skins::message_drawer_style(), strings);
-            bar = &desktop.root().add<ParkBar>("bar", game_skins::park_bar_style(), strings);
+            drawer = &desktop.root().add<MessageDrawer>("messages", game_skins::message_drawer_style(kGamePalette), strings);
+            bar = &desktop.root().add<ParkBar>("bar", game_skins::park_bar_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
         }

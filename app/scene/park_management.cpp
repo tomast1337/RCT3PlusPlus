@@ -32,7 +32,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void toggle_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units)
+    void toggle_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units)
     {
         if (auto open = find_window(desktop, topic))
         {
@@ -40,7 +40,7 @@ namespace rct3::scene
             return;
         }
         const ui::ManagementLayout layout = ui::management_layout(topic);
-        auto& window = desktop.root().add<ui::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(), layout.width, layout.height, ui::management_tabs(topic, strings), 0);
+        auto& window = desktop.root().add<ui::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::management_tabs(topic, strings), 0);
         window.title = strings.get(layout.title);
         window.icon = layout.icon;
         show(window, topic, facts, strings, units);

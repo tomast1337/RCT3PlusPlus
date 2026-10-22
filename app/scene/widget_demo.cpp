@@ -71,9 +71,10 @@ namespace rct3::scene
         class DemoWindow : public ui::Window
         {
         public:
-            DemoWindow(std::string name, float cascade, const ui::StringTable& strings)
-                : ui::Window(std::move(name), skins::window_style(), kWidth, kHeight)
+            DemoWindow(std::string name, float cascade, const ui::StringTable& strings, const ui::Palette& palette)
+                : ui::Window(std::move(name), skins::window_style(palette), kWidth, kHeight)
                 , strings_(strings)
+                , palette_(palette)
             {
                 placement = ui::centred(kWidth, kHeight, cascade, cascade);
                 title = strings.get(kTitleKey);
@@ -83,7 +84,7 @@ namespace rct3::scene
                 ui::Widget& body = content();
 
                 // Three pages above the button row: text, a list and controls.
-                auto& tabs = body.add<ui::Tabs>("tabs", skins::tabs_style());
+                auto& tabs = body.add<ui::Tabs>("tabs", skins::tabs_style(palette_));
                 tabs.placement = { { 0, 0, 1, 1 }, { 0, 0, 0, -kButtonRow } };
                 build_text_page(tabs.add_page("text", u"Text"), strings);
                 build_list_page(tabs.add_page("list", u"List"));
@@ -122,7 +123,7 @@ namespace rct3::scene
                 std::u16string text = std::u16string(strings.get(kHelpKey)) + std::u16string(kFallbackSample);
                 for (const std::string_view key : kOptionTips)
                     text += u"\n\n" + std::u16string(strings.get(key));
-                auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(ui::Orientation::Vertical));
+                auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(palette_, ui::Orientation::Vertical));
                 scroll.placement = ui::fill(2);
                 auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::FontRole::Small);
                 help.placement = ui::fill(4);
@@ -140,7 +141,7 @@ namespace rct3::scene
             void build_list_page(ui::Widget& page)
             {
                 // Rides to pick a window name from: a double click or Enter takes one.
-                rides_ = &page.add<ui::ListBox>("rides", skins::list_box_style(), skins::scroll_bar_style(ui::Orientation::Vertical));
+                rides_ = &page.add<ui::ListBox>("rides", skins::list_box_style(palette_), skins::scroll_bar_style(palette_, ui::Orientation::Vertical));
                 rides_->items.assign(kRideNames.begin(), kRideNames.end());
             }
 
@@ -163,7 +164,7 @@ namespace rct3::scene
 
                 // A slider and a spinner, each showing its value beside it.
                 const float y = static_cast<float>(kOptionKeys.size()) * kRowHeight + 8;
-                volume_ = &page.add<ui::Slider>("volume", skins::slider_style());
+                volume_ = &page.add<ui::Slider>("volume", skins::slider_style(palette_));
                 volume_->maximum = 100;
                 volume_->set_value(70);
                 volume_->placement = { { 0, 0, 1, 0 }, { 0, y, -50, y + kRowHeight } };
@@ -171,7 +172,7 @@ namespace rct3::scene
                 volume_label_->placement = { { 1, 0, 1, 0 }, { -44, y, 0, y + kRowHeight } };
                 volume_label_->style.vertical = ui::Align::Centre;
 
-                guests_ = &page.add<ui::Spinner>("guests", skins::spinner_style());
+                guests_ = &page.add<ui::Spinner>("guests", skins::spinner_style(palette_));
                 guests_->maximum = 9999;
                 guests_->step = 50;
                 guests_->set_value(500);
@@ -180,7 +181,7 @@ namespace rct3::scene
                 guests_label_->placement = ui::top_left(96, y + kRowHeight + 8, 120, 16);
                 guests_label_->style.vertical = ui::Align::Centre;
 
-                auto& detail = page.add<ui::Dropdown>("detail", skins::dropdown_style());
+                auto& detail = page.add<ui::Dropdown>("detail", skins::dropdown_style(palette_));
                 detail.items.assign(kDetailLevels.begin(), kDetailLevels.end());
                 detail.select(1);
                 detail.placement = ui::top_left(0, y + 2 * (kRowHeight + 8), 120, 18);
@@ -206,12 +207,13 @@ namespace rct3::scene
                 if (open && parent() != nullptr)
                 {
                     const auto n = static_cast<float>(parent()->children().size());
-                    parent()->add<DemoWindow>(std::format("window{}", parent()->children().size()), n * kCascade, strings_);
+                    parent()->add<DemoWindow>(std::format("window{}", parent()->children().size()), n * kCascade, strings_, palette_);
                 }
             }
 
         private:
             const ui::StringTable& strings_;
+            const ui::Palette& palette_;
             ui::Button* confirm_ = nullptr;
             ui::Button* cancel_ = nullptr;
             ui::Button* ok_ = nullptr;
@@ -233,7 +235,7 @@ namespace rct3::scene
         {
             ui::Widget& root = demo.desktop.root();
             const auto n = std::ranges::count_if(root.children(), [](const auto& c) { return is_demo_window(*c); });
-            root.add<DemoWindow>(std::format("window{}", root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings);
+            root.add<DemoWindow>(std::format("window{}", root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings, demo.assets.palette);
         }
 
         std::vector<ui::MenuItem> scale_items(std::optional<float> chosen)
@@ -248,7 +250,7 @@ namespace rct3::scene
         void add_bars(WidgetDemo& demo)
         {
             ui::Widget& root = demo.desktop.root();
-            demo.menu_bar = &root.add<ui::MenuBar>("menu_bar", skins::menu_bar_style());
+            demo.menu_bar = &root.add<ui::MenuBar>("menu_bar", skins::menu_bar_style(demo.assets.palette));
             demo.menu_bar->placement = { { 0, 0, 1, 0 }, { 0, 0, 0, kMenuBarHeight } };
             std::vector<ui::MenuItem> window_items(4);
             window_items[kNewWindowItem].text = u"New window";
@@ -257,7 +259,7 @@ namespace rct3::scene
             window_items[kCloseAllItem].text = u"Close all windows...";
             demo.menu_bar->menus = { { u"Window", std::move(window_items) }, { u"Scale", scale_items(demo.scale) } };
 
-            demo.toolbar = &root.add<ui::Toolbar>("toolbar", skins::toolbar_style(), ui::Orientation::Vertical);
+            demo.toolbar = &root.add<ui::Toolbar>("toolbar", skins::toolbar_style(demo.assets.palette), ui::Orientation::Vertical);
             for (std::size_t i = 0; i < kToolIcons.size(); ++i)
                 demo.toolbar->add_button(std::format("tool{}", i), std::string(kToolIcons[i]), std::u16string(kToolTips[i]));
             demo.toolbar->placement = ui::top_left(0, kMenuBarHeight + 4, 38, demo.toolbar->length());
@@ -277,7 +279,7 @@ namespace rct3::scene
                         (*top)->close();
                 }
                 if (choice->menu == kWindowMenu && choice->item == kCloseAllItem && demo.question == nullptr)
-                    demo.question = &demo.desktop.root().add<ui::QuestionBox>("question", skins::question_box_style(), u"Close every window? A new one opens in their place.", std::vector<ui::QuestionAnswer> { { u"Yes", std::string(skins::kConfirmIcon) }, { u"No", std::string(skins::kCancelIcon) } });
+                    demo.question = &demo.desktop.root().add<ui::QuestionBox>("question", skins::question_box_style(demo.assets.palette), u"Close every window? A new one opens in their place.", std::vector<ui::QuestionAnswer> { { u"Yes", std::string(skins::kConfirmIcon) }, { u"No", std::string(skins::kCancelIcon) } });
                 if (choice->menu == kScaleMenu)
                 {
                     demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<float>(choice->item));
@@ -317,7 +319,7 @@ namespace rct3::scene
             return std::unexpected(assets.error());
         WidgetDemo demo;
         demo.assets = std::move(*assets);
-        demo.desktop.tooltip_style = skins::tooltip_style();
+        demo.desktop.tooltip_style = skins::tooltip_style(demo.assets.palette);
         add_bars(demo);
         open_window(demo);
         return demo;
@@ -346,7 +348,7 @@ namespace rct3::scene
         demo.list.clear();
         demo.list.set_scale(scale_for(device, demo));
         static const ui::FontSet kNoFonts;
-        ui::DrawContext context { demo.list, demo.assets.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts };
+        ui::DrawContext context { demo.list, demo.assets.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts, demo.assets.palette };
         demo.desktop.draw(context);
         ui::render_draw_list(device, demo.assets.renderer, demo.list);
     }

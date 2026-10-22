@@ -45,7 +45,7 @@ namespace rct3::scene
     [[nodiscard]] ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::ObjectModels& models, const park::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::GroundImages& images, const config::GameInstall& install);
 
     /// Opens the map window, or closes it when it is open.
-    void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings);
+    void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings, const ui::Palette& palette);
 
     /// Brings the open window up to date: its pictures, the people (`people` is asked only when they are
     /// drawn again) and the camera, seen in a view `aspect` times as wide as it is tall. Returns the park

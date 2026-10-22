@@ -191,7 +191,7 @@ namespace rct3::ui
         // Drawn in code, the backdrop is one piece that reaches every edge of the screen, round on any.
         if (const auto top = context.skins.find(kBandTopSkin); top && top->coded)
         {
-            draw_frame(context.list, game_frames::front_backdrop(frame.design_screen()), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
+            draw_frame(context.list, game_frames::front_backdrop(context.palette, frame.design_screen()), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
             return;
         }
         draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
@@ -202,7 +202,7 @@ namespace rct3::ui
     void draw_front_arc(DrawContext& context, const fs::Frame& frame, std::string_view logo)
     {
         // Always drawn in code: our layout does not place the game's arc pictures.
-        draw_frame(context.list, game_frames::front_arc(), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
+        draw_frame(context.list, game_frames::front_arc(context.palette), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
         draw_at_size(context, frame, context.skins.find(logo) ? logo : kLogoSkin, fs::kLogo);
     }
 

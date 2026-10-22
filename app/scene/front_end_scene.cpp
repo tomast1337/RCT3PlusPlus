@@ -67,7 +67,7 @@ namespace rct3::scene
         }
 
         ui::Desktop& desktop = scene.live->desktop;
-        desktop.tooltip_style = skins::tooltip_style();
+        desktop.tooltip_style = skins::tooltip_style(scene.assets.palette);
         ui::FrontEndSetup front;
         front.expansions = ui::named_expansions(*scene.assets.strings);
         front.choices.languages = std::move(setup.languages);
@@ -85,7 +85,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(), skins::question_box_style(), skins::file_dialog_style(), skins::career_dialog_style(), skins::career_board_style(), skins::tutorial_picker_style(), skins::front_screen_round() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(scene.assets.palette), skins::question_box_style(scene.assets.palette), skins::file_dialog_style(scene.assets.palette), skins::career_dialog_style(scene.assets.palette), skins::career_board_style(scene.assets.palette), skins::tutorial_picker_style(scene.assets.palette), skins::front_screen_round() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -183,7 +183,7 @@ namespace rct3::scene
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
         static const ui::FontSet kNoFonts;
-        ui::DrawContext context { scene.list, scene.assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts };
+        ui::DrawContext context { scene.list, scene.assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts, scene.assets.palette };
         // The pictures show through the front screen's open corner and circle.
         const ui::Rect& screen = scene.live->desktop.root().rect();
         draw_slideshow_view(scene.slideshow, scene.list, ui::slideshow_rect(screen.width(), screen.height()));

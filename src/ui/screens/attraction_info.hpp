@@ -109,6 +109,9 @@ namespace rct3::ui
         int most_trains = 1;
     };
 
+    /// The graph's series, as AttractionFacts::graph_series has them: speed alone at first.
+    inline constexpr std::uint8_t kSpeedOnly = 1;
+
     struct AttractionFacts
     {
         const save::AttractionCommon* common = nullptr;
@@ -135,6 +138,8 @@ namespace rct3::ui
         std::size_t tune = 0;
         /// Of a tracked ride, whether its track is greased.
         bool low_friction = false;
+        /// Which of the graph's series show, a bit each: speed, altitude, vertical and lateral forces.
+        std::uint8_t graph_series = kSpeedOnly;
     };
 
     struct GuestsSuited
@@ -179,6 +184,10 @@ namespace rct3::ui
         LowFriction,    ///< Whether the track is greased
         LaunchSpeed,    ///< In hundredths of the player's speed unit
         LiftSpeed,      ///< Likewise
+        SpeedSeries,    ///< Whether the graph shows the speed
+        AltitudeSeries, ///< Its height
+        VerticalSeries, ///< Its vertical forces
+        LateralSeries,  ///< Its lateral forces
         ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

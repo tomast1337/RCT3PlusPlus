@@ -265,18 +265,38 @@ namespace rct3::ui
         if (!page.graph.empty())
         {
             LinePlot& plot = body_->add<LinePlot>("graph");
-            plot.placement = top_left(0, y, info_panel::kPageWidth, info_panel::kPlotHeight);
+            const float left = page.graph_axis.empty() ? 0 : info_panel::kAxisWidth;
+            const float plot_width = info_panel::kPageWidth - left - (page.graph_axis.empty() ? 0 : info_panel::kRingReach);
+            const float plot_height = page.graph_axis.empty() ? info_panel::kPlotHeight : info_panel::kAxisPlotHeight;
+            if (!page.graph_axis.empty())
+                y += info_panel::kLineHeight / 2; // Room for the top number's upper half
+            plot.placement = top_left(left, y, plot_width, plot_height);
+            for (std::size_t i = 0; i < page.graph_axis.size(); ++i)
+            {
+                // Each number centred on its height up the plot.
+                const float at = page.graph_axis.size() > 1 ? plot_height * static_cast<float>(i) / static_cast<float>(page.graph_axis.size() - 1) : 0;
+                Label& n = line(std::format("axis{}", i), page.graph_axis[i], 0, left - info_panel::kPairGap, FontRole::Tiny);
+                n.placement = top_left(0, y + at - info_panel::kLineHeight / 2, left - info_panel::kPairGap, info_panel::kLineHeight);
+                n.style.horizontal = Align::End;
+                n.style.vertical = Align::Centre;
+            }
             const float width = std::floor(info_panel::kPageWidth / static_cast<float>(page.graph.size()));
-            y += info_panel::kPlotHeight + 1;
+            y += plot_height + 1;
             for (std::size_t i = 0; i < page.graph.size(); ++i)
             {
-                const Color colour = style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
-                plot.series.push_back({ page.graph[i].values, colour });
+                const Color colour = series_colour(i);
+                if (page.graph[i].shown)
+                    plot.series.push_back({ page.graph[i].values, colour });
+                if (!page.graph_axis.empty())
+                    continue;
                 Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, FontRole::Small);
                 name.placement = top_left(width * static_cast<float>(i), y, width, info_panel::kLineHeight);
                 name.style.colour = colour;
             }
-            y += info_panel::kLineHeight;
+            if (page.graph_axis.empty())
+                y += info_panel::kLineHeight;
+            else
+                y += info_panel::kLineHeight / 2; // Room for the lowest number's lower half
         }
         // The controls go in rows under the rest, down the page's left or, for those that ask, down its right half.
         std::array<float, 2> bottom { y, y };
@@ -293,6 +313,8 @@ namespace rct3::ui
             label.style.vertical = Align::Centre;
             if (c.colour)
                 label.style.colour = *c.colour;
+            if (c.series)
+                label.style.colour = series_colour(*c.series);
             const std::string name = keyed_name(c.name, c.name.empty() ? "control" : "", i);
             Widget* w = nullptr;
             switch (c.kind)

@@ -90,6 +90,7 @@ namespace rct3::ui
         constexpr std::pair<float, float> kLaunchSpeeds { 4, 50 };
         constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
         constexpr int kMostTrackCircuits = 20;
+        constexpr int kAxisNumbers = 5;
         constexpr float kModePageWidth = 600;
         constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
@@ -552,7 +553,7 @@ namespace rct3::ui
             }
         }
 
-        void graphs(InfoPage& page, const save::Ride& ride, const StringTable& strings)
+        void graphs(InfoPage& page, const save::Ride& ride, std::uint8_t shown, const StringTable& strings, const InfoUnits& units)
         {
             const save::RideGraphs& g = ride.graphs;
             if (g.speed.empty() && g.altitude.empty() && g.vertical_g.empty() && g.lateral_g.empty())
@@ -560,12 +561,38 @@ namespace rct3::ui
                 page.note = text(strings, "AttractionResultsDialogLabel_NoTestResults");
                 return;
             }
-            page.graph = {
-                { text(strings, "Graph_Speed"), g.speed },
-                { text(strings, "Graph_Altitude"), g.altitude },
-                { text(strings, "Graph_VerticalG"), g.vertical_g },
-                { text(strings, "Graph_LateralG"), g.lateral_g },
-            };
+            // In the player's units: speeds as they set them, heights in metres or feet, forces in g.
+            const bool feet = units.distance == DistanceUnits::Imperial;
+            const std::u16string speed_words = std::u16string(speed_unit(units.distance));
+            const std::array<std::tuple<std::string_view, const std::vector<float>*, float, std::u16string, AttractionControl>, 4> all { {
+                { "Graph_Speed", &g.speed, speed_scale(units.distance), speed_words, AttractionControl::SpeedSeries },
+                { "Graph_Altitude", &g.altitude, feet ? kFeetPerMetre : 1.0f, feet ? u"ft" : u"m", AttractionControl::AltitudeSeries },
+                { "Graph_VerticalG", &g.vertical_g, 1 / kGravity, u"g", AttractionControl::VerticalSeries },
+                { "Graph_LateralG", &g.lateral_g, 1 / kGravity, u"g", AttractionControl::LateralSeries },
+            } };
+            for (std::size_t i = 0; i < all.size(); ++i)
+            {
+                const auto& [key, values, scale, unit, id] = all[i];
+                InfoSeries series { .name = text(strings, key), .values = *values, .key = std::string(key), .shown = (shown >> i & 1) != 0 };
+                for (float& v : series.values)
+                    v *= scale;
+                // The numbers up the left follow the first series shown, which the plot stretches top to bottom.
+                if (series.shown && page.graph_axis.empty() && !series.values.empty())
+                {
+                    const auto [low, high] = std::ranges::minmax(series.values);
+                    for (int k = 0; k < kAxisNumbers; ++k)
+                        page.graph_axis.push_back(ascii(std::format("{:.2f} ", high - (high - low) * static_cast<float>(k) / (kAxisNumbers - 1))) + unit);
+                }
+                // A tick for each, two to a row.
+                InfoControl c = tick(id, key, series.name, series.shown);
+                c.series = i;
+                c.column = static_cast<int>(i % 2);
+                page.controls.push_back(std::move(c));
+                page.graph.push_back(std::move(series));
+            }
+            // With none ticked, the left holds no numbers but the names still go to the ticks.
+            if (page.graph_axis.empty())
+                page.graph_axis.assign(kAxisNumbers, std::u16string { });
         }
 
         void thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)
@@ -823,7 +850,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Graphs:
                 if (f.ride)
-                    graphs(page, *f.ride, strings);
+                    graphs(page, *f.ride, f.graph_series, strings, units);
                 break;
             case AttractionTab::Extras:
                 if (f.stall && f.stall->extras.empty())

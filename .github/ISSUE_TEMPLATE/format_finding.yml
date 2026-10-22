@@ -1,0 +1,40 @@
+name: Format finding
+description: Something you learnt about a game data, save or scenario file's layout.
+labels: [formats]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the layout in your own words: field positions, sizes, meanings, which files show it.
+        **Do not paste bytes, hex dumps or files from the game, and nothing obtained by decompiling,
+        disassembling or debugging the game's program.** Use invented example values when one helps.
+        See the Code of Conduct and CLEAN_ROOM.md.
+  - type: input
+    id: format
+    attributes:
+      label: Format
+      description: Which kind of file or item.
+      placeholder: Save file, park section / OVL texture item / ...
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding
+      description: What the data holds and where, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How you checked it
+      description: Which kinds of files you compared and what you changed in the game to see the field move. Describe, do not paste.
+    validations:
+      required: true
+  - type: checkboxes
+    id: clean
+    attributes:
+      label: Clean room
+      options:
+        - label: This comes from reading data files or watching the game play, not from the game's program, and contains no copied bytes.
+          required: true

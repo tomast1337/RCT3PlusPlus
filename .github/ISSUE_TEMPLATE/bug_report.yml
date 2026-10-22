@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in rct3++ crashes, looks wrong or behaves differently from the original game.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe what you see in words. Please do not attach game files, dumps or screenshots of the
+        original game (see the Code of Conduct). Screenshots of rct3++ are welcome.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What should happen instead. If it differs from the original game, say what the original does.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce
+      description: Steps from starting rct3++. Name the park or scenario if it matters; you may attach your own save.
+      placeholder: |
+        1. Open the sandbox park
+        2. Build a carousel next to the entrance
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: rct3++ version
+      description: The commit you built (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Operating system, graphics card and driver.
+      placeholder: Arch Linux, AMD RX 6700, Mesa 25.1
+  - type: input
+    id: game
+    attributes:
+      label: Game edition
+      description: Which copy of RollerCoaster Tycoon 3 rct3++ reads from.
+      placeholder: Complete Edition (Steam)
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The end of rct3++'s log, if there is one. Remove anything personal, such as your home directory's name.
+      render: text

@@ -1,0 +1,26 @@
+name: Feature request
+description: Something from the original game that rct3++ lacks, or an idea of your own.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you would like
+      description: Describe it as a player sees it.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would let you do, or what is missing without it.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Missing from the original game
+        - New idea, not in the original
+        - Tools, modding or development
+    validations:
+      required: true

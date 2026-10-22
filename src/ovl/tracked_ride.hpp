@@ -28,6 +28,11 @@ namespace rct3::ovl
         float lift_min = 0, lift_max = 0;     ///< Range the player may set the lift speed in
         float launch_min = 0, launch_max = 0; ///< Range the player may set the launch speed in
         std::int32_t cost = 0;                ///< Base build cost, hundredths
+        /// Names of the "rit" trains the ride may run, the one it starts with first: a count at 0x08 and a
+        /// pointer at 0x0C to as many string pointers.
+        std::vector<std::string_view> trains;
+        /// The station platform type, string at 0x38: an overlay of that name in a folder of tracks/Platforms.
+        std::string_view platform;
     };
 
     /// Which piece a piece pattern entry takes, and where. Kinds: 0 any piece of the group `name`

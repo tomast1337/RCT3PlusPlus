@@ -421,7 +421,7 @@ namespace rct3::park
                     items.push_back(attraction_item(*list, BuildKind::Shop, e.name, path, e.stall->info, placed_as(e.stall->info.style, e.name)));
             }
         }
-        // Rides placed whole take the first entrance and exit of their own theme.
+        // Rides take the first entrance and exit of their own theme.
         const auto first_of = [&](ItemCategory category) {
             const auto found = std::ranges::find_if(scenery, [&](const ovl::SceneryItemEntry& e) { return e.item && e.item->type == std::to_underlying(category); });
             return found == scenery.end() ? std::string { } : std::string(found->name);
@@ -451,7 +451,7 @@ namespace rct3::park
             items[i].style_index = style_index;
             items[i].style = style;
             items[i].style_title = style_title;
-            if (items[i].kind == BuildKind::FlatRide && !entrance.empty() && !exit.empty())
+            if ((items[i].kind == BuildKind::FlatRide || items[i].kind == BuildKind::TrackedRide) && !entrance.empty() && !exit.empty())
             {
                 items[i].entrance = entrance;
                 items[i].exit = exit;
@@ -542,7 +542,7 @@ namespace rct3::park
         const auto plain = std::ranges::find_if(items, [](const BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.door_overlay, kPlainStyle); });
         for (BuildItem& item : items)
         {
-            if (item.kind == BuildKind::FlatRide && item.entrance.empty() && plain != items.end())
+            if ((item.kind == BuildKind::FlatRide || item.kind == BuildKind::TrackedRide) && item.entrance.empty() && plain != items.end())
             {
                 item.entrance = plain->entrance;
                 item.exit = plain->exit;

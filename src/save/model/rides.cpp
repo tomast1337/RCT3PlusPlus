@@ -224,6 +224,9 @@ namespace rct3::save
             constexpr std::string_view kPieceColours = "FlexiColourField";
             constexpr std::string_view kPieceBrake = "BrakeSpeed";
             constexpr std::string_view kPieceHolding = "HoldingTime";
+            constexpr std::string_view kArmAngles = "RobotArmAngles";
+            constexpr std::string_view kArmAnglesList = "Angles";
+            constexpr std::string_view kArmAnglesSet = "Set";
             constexpr std::string_view kPieceSpeed = "Speed";
             constexpr std::string_view kNext = "Next";
             constexpr std::string_view kPrev = "Prev";
@@ -561,6 +564,14 @@ namespace rct3::save
                         p.brake_speed = f[id::kPieceBrake].i32(-1);
                         p.holding_time = f[id::kPieceHolding].i32(0);
                         p.speed_class = f[id::kPieceSpeed].i32(-1);
+                        if (const View arm = f[id::kArmAngles]; arm[id::kArmAnglesSet].boolean())
+                        {
+                            const auto angles = arm[id::kArmAnglesList].items();
+                            std::array<float, 4> held { };
+                            for (std::size_t j = 0; j < held.size() && j < angles.size(); ++j)
+                                held[j] = View(angles[j]).number();
+                            p.arm_angles = held;
+                        }
                         rec.next = f[id::kNext].ref();
                         rec.prev = f[id::kPrev].ref();
                         rec.segment_ref = f[id::kPieceSegment].ref();

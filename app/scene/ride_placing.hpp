@@ -8,6 +8,8 @@
 // goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
+// A tracked ride's entrance or exit, asked for from its window, is placed the same way beside its station;
+// with both, it runs on the track built for it as the flat rides do.
 //
 // Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
@@ -54,11 +56,11 @@ namespace rct3::scene
         std::optional<park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
         std::int32_t turns = 0;
-        std::optional<park::RideSite> site; ///< Pointed at, then where the ride was placed
-        std::optional<park::DoorSpot> door; ///< The entrance or exit pointed at
-        std::optional<park::DoorSpot> entrance;
-        std::int32_t quadrant = 0; ///< Of the tile, for scenery that takes a quarter of one
-        std::int32_t ground = 0;   ///< Height of the ground under the site, of scenery or a ride
+        std::optional<park::RideSite> site;     ///< Pointed at, then where the ride was placed
+        std::optional<park::DoorSpot> door;     ///< The entrance or exit pointed at
+        std::optional<park::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
+        std::int32_t quadrant = 0;              ///< Of the tile, for scenery that takes a quarter of one
+        std::int32_t ground = 0;                ///< Height of the ground under the site, of scenery or a ride
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {
@@ -84,16 +86,24 @@ namespace rct3::scene
         park::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
+        /// Of a tracked ride getting a door: its station pieces, which the door stands beside
+        std::vector<save::TrackPiece> stations;
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
     [[nodiscard]] std::optional<glm::vec2> ground_spot(const ParkScene& scene, ui::Point at, ui::Point size);
+    /// The highest id the park's objects, rides and stalls use; a new one takes the next.
+    [[nodiscard]] std::uint64_t last_id(const ParkScene& scene);
     /// The tile of the ground under `at`, in a view of `size`.
     [[nodiscard]] std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole and scenery are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);
+
+    /// Starts placing the entrance, or the `exit`, of the tracked ride `ride` beside its `stations`, as `item`
+    /// (the ride's) has it; one placed before moves. False without stations or a door in the item.
+    bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
 
     /// Puts the tool away.
     void stop_ride_placing(ParkScene& scene);

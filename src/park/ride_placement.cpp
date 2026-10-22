@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <numeric>
 
 namespace rct3::park
@@ -125,6 +126,50 @@ namespace rct3::park
             default:
                 return { c, site.row - 1, 1 };
         }
+    }
+
+    std::optional<DoorSpot> station_door_spot(std::span<const save::TrackPiece> stations, save::Tile tile)
+    {
+        std::optional<DoorSpot> best;
+        std::int64_t nearest = 0;
+        for (const save::TrackPiece& p : stations)
+        {
+            // A track facing 0 or 2 runs along x, so its sides are across z; facing 1 or 3 the other way.
+            const bool along_x = p.direction % 2 == 0;
+            for (const std::int32_t side : { -1, 1 })
+            {
+                const DoorSpot spot {
+                    along_x ? p.tile_x : p.tile_x + side,
+                    along_x ? p.tile_z + side : p.tile_z,
+                    static_cast<std::uint8_t>(along_x ? (side > 0 ? 3 : 1) : (side > 0 ? 0 : 2)),
+                    p.height,
+                };
+                const std::int64_t dc = spot.col - tile.col, dr = spot.row - tile.row;
+                if (!best || dc * dc + dr * dr < nearest)
+                {
+                    best = spot;
+                    nearest = dc * dc + dr * dr;
+                }
+            }
+        }
+        return best;
+    }
+
+    std::string platform_symbol(std::string_view type, const save::TrackPiece& piece, bool station_before, bool station_after, std::span<const DoorSpot> doors)
+    {
+        bool left = false, right = false;
+        for (const DoorSpot& d : doors)
+        {
+            if (d.height != piece.height || std::abs(d.col - piece.tile_x) + std::abs(d.row - piece.tile_z) != 1)
+                continue;
+            // A door faces the piece, so the side it stands on is where it faces from.
+            const int turn = (d.direction - piece.direction + 4) % 4;
+            left = left || turn == 3;
+            right = right || turn == 1;
+        }
+        const std::string_view stairs = left && right ? "2stair" : left ? "1stairLeft" : right ? "1stairRight" : "";
+        const std::string_view run = station_before && station_after ? "middle" : station_after ? "start" : station_before ? "end" : "startEnd";
+        return std::format("{}{}{}", type, run, stairs);
     }
 
     SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids)

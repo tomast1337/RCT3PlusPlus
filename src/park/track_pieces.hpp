@@ -34,6 +34,11 @@
 #include <string_view>
 #include <vector>
 
+namespace rct3::ovl
+{
+    class Overlay;
+} // namespace rct3::ovl
+
 namespace rct3::park
 {
 
@@ -47,6 +52,9 @@ namespace rct3::park
     // first, station pieces the second, and nearly every piece of later files the third.
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceStation = 0x40;
+    inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
+    inline constexpr std::uint32_t kPieceCableLift = 0x20;       ///< A cable pulls the cars up it
+    inline constexpr std::uint32_t kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
     inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
     /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.
     inline constexpr std::uint32_t kPieceStarts = 0x1;
@@ -146,6 +154,11 @@ namespace rct3::park
     /// The catalogue of the track overlay whose common file is `file`, named `overlay` as a park names it.
     /// Sections whose splines or scenery item are missing are left out.
     [[nodiscard]] std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay);
+
+    /// The track overlays a tracked ride's file names among its strings, as paths relative to the ride's folder
+    /// ("../Track7/Track7"), in AssetIndex's form from `path`, where the ride's overlay is. Its pieces come from
+    /// the first that holds any; other paths, such as the folder of its icons, hold none.
+    [[nodiscard]] std::vector<std::string> named_overlays(const ovl::Overlay& ride, std::string_view path);
 
     /// The piece of `catalogue` a track piece's symbol names, with or without its tag; nothing when not there.
     [[nodiscard]] std::optional<const PieceShape&> shape_named(const PieceCatalogue& catalogue, std::string_view symbol);

@@ -587,7 +587,30 @@ namespace rct3::park
                     model.walkways = walkways_in(*file->second);
                 if (model.seat_places.empty())
                     model.seat_places = seat_places(*shape);
-                const bool rigged = !model.rig && !lod.animations.empty();
+                // A car on an arm: each bone is carried by the nearest of the arm's joints it hangs from.
+                constexpr std::array<std::string_view, 4> kArmJoints { "ik_robotjoint01", "ik_robotjoint02", "ik_robotjoint03", "ik_robotjoint04" };
+                std::array<std::int32_t, 4> joint_bones;
+                joint_bones.fill(-1);
+                for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                    for (std::size_t j = 0; j < kArmJoints.size(); ++j)
+                        if (strings::equals_ignoring_case(shape->bones[b].name, kArmJoints[j]))
+                            joint_bones[j] = static_cast<std::int32_t>(b);
+                std::vector<std::int32_t> joint_of;
+                if (!std::ranges::contains(joint_bones, -1))
+                {
+                    joint_of.assign(shape->bones.size(), -1);
+                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                    {
+                        auto up = static_cast<std::int32_t>(b);
+                        for (std::size_t hops = 0; up >= 0 && up < std::ssize(shape->bones) && hops < shape->bones.size() && joint_of[b] < 0; ++hops, up = shape->bones[static_cast<std::size_t>(up)].parent)
+                            if (const auto j = std::ranges::find(joint_bones, up); j != joint_bones.end())
+                                joint_of[b] = static_cast<std::int32_t>(j - joint_bones.begin());
+                    }
+                    if (model.arm_joints.empty())
+                        for (const std::int32_t b : joint_bones)
+                            model.arm_joints.push_back(column_matrix(shape->bones[static_cast<std::size_t>(b)].world));
+                }
+                const bool rigged = joint_of.empty() && !model.rig && !lod.animations.empty();
                 if (rigged)
                 {
                     model.rig = rig_of(*shape);
@@ -618,9 +641,13 @@ namespace rct3::park
                     ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
                     set_texture(part, mesh.texture, mesh.style, file->first);
                     part.board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
-                    if (rigged)
+                    if (rigged || !joint_of.empty())
                         for (ModelPart& one : parts_by_bone(mesh, std::move(part)))
+                        {
+                            if (!joint_of.empty())
+                                one.bone = one.bone >= 0 && one.bone < std::ssize(joint_of) ? joint_of[static_cast<std::size_t>(one.bone)] : -1;
                             level.parts.push_back(std::move(one));
+                        }
                     else
                         level.parts.push_back(std::move(part));
                 }

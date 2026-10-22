@@ -59,7 +59,8 @@ namespace rct3::park
         bool one_sided = false; ///< Only the side its triangles face is drawn; the file marks the rest as both
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
-        /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part.
+        /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part. Of a
+        /// car on an arm, at every level: the arm's joint that carries it, or -1 for the car itself.
         std::int32_t bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
     };
@@ -119,6 +120,9 @@ namespace rct3::park
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
+        /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
+        /// first turns about its own up, the others about their own sideways.
+        std::vector<glm::mat4> arm_joints;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
     };

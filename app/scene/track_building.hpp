@@ -7,22 +7,29 @@
 // swap the pieces they match (a station run's ends for its end pieces). A ride may not be edited while it is
 // open. Nothing is paid and no supports are built under new pieces yet.
 //
+// A new ride starts with no pieces: its first piece, one its kind may start a track with, follows the
+// pointer over the ground until it is built.
+//
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once
 
+#include "park/build_catalogue.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/track_choice.hpp"
 #include "park/track_pieces.hpp"
-#include "park/track_rules.hpp"
 #include "render/device.hpp"
+#include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "ui/key_map.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -59,21 +66,45 @@ namespace rct3::scene
     {
         std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
         std::string overlay;             ///< The ride's track overlay, as its objects name it
-        park::TrackRules rules;          ///< Of the ride's kind
         std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit
+        /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
+        std::optional<save::Tile> aim;
+        std::int32_t turns = 0;
         std::vector<park::LaidPiece> candidates;
         park::TrackChoice choice;
         std::optional<park::LaidPiece> picked;
         std::optional<park::PiecePlacement> ghost;
         park::ObjectMesh ghost_mesh;
+        std::string complaint; ///< String key: why the track was last not finished; cleared by the next action
+        bool arm = false;      ///< The ride's riders sit on arms, whose angles its pieces hold
+        /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
+        std::uint64_t arm_piece = 0;
+        /// Saved designs of the ride's kind, offered while its track has no pieces.
+        std::vector<std::filesystem::path> designs;
+        /// The pieces of the design picked, in track order, laid whole by the first click; empty for a track
+        /// built piece by piece.
+        std::vector<save::TrackPiece> design;
     };
+
+    /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and
+    /// opens the construction panel on it. False when its pieces cannot be found.
+    bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets);
 
     /// Opens the construction panel on the tracked ride `ride` of the scene's rides, its pieces coming from
     /// the track overlay `overlay` (as a park names it). False when the ride has no track or the overlay
     /// cannot be read. The selection windows open new rides through this.
     bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
+
+    /// Gives each station piece of the tracked ride `ride` the platform piece its type, its place in the
+    /// station and the doors beside it call for (park::platform_symbol), adding those it lacks. Nothing for a
+    /// ride without a platform type.
+    void update_platforms(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+
+    /// A click on the park while the ride being built has no pieces yet: lays its first piece where the ghost
+    /// shows it. False, doing nothing, at other times.
+    bool track_building_click(ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// Closes the construction panel and leaves the building idle.
     void close_track_building(ParkScene& scene);
@@ -81,8 +112,12 @@ namespace rct3::scene
     /// The track overlay of the ride's built pieces, if it has any.
     [[nodiscard]] std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride);
 
-    /// Handles the panel's events. Call once per update after the interface.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency);
+    /// The station pieces of the ride's track, which its entrance and exit stand beside.
+    [[nodiscard]] std::vector<save::TrackPiece> station_pieces(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+
+    /// Handles the panel's events, and for a track with no pieces the ground tile `pointed` at (none while the
+    /// pointer is off the ground) and the turn commands. Call once per update after the interface.
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands);
 
     /// Draws the ghost of the picked piece with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_pieces.hpp"
 
+#include "../ovl/record_file.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
@@ -277,4 +279,15 @@ TEST_CASE("a track starts only with pieces marked to, backwards only when marked
     pieces[1].record.flags = kPieceStarts | kPieceStartsBackward;
     pieces[2].record.flags = kPieceStartsBackward;
     CHECK(starting_pieces(pieces) == std::vector<LaidPiece> { { 0, false }, { 1, false }, { 1, true } });
+}
+
+TEST_CASE("a ride's file names the track overlay its pieces come from")
+{
+    test::Pool pool;
+    pool.add("../Pieces/Pieces");
+    pool.add("../../Icons/Icons");
+    pool.add("plain words");
+    pool.add("Ride:trr");
+    const ovl::Overlay ride = test::make_record_overlay(5, pool, "Ride:trr", std::vector<std::byte>(16));
+    CHECK(named_overlays(ride, "rides/Ride/Ride") == std::vector<std::string> { "rides/Pieces/Pieces", "Icons/Icons" });
 }

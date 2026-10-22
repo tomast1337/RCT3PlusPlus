@@ -131,6 +131,25 @@ namespace rct3::park
         return lamps;
     }
 
+    std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places)
+    {
+        std::vector<PlacedEffect> effects;
+        for (std::size_t i = 0; i < objects.size(); ++i)
+        {
+            const auto model = models.find(model_key(objects[i]));
+            if (objects[i].hidden || model == models.end() || model->second.effects.empty())
+                continue;
+            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(objects[i], &model->second, grid, fitted);
+            for (const ModelEffect& e : model->second.effects)
+            {
+                const glm::vec3 up = glm::normalize(glm::mat3(placed) * e.up);
+                const glm::vec3 side = glm::normalize(glm::cross(up, std::abs(up.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)));
+                effects.push_back({ .effect = e.effect, .position = glm::vec3(placed * glm::vec4(e.position, 1.0f)), .axes = glm::mat3(side, up, glm::cross(side, up)), .object = i });
+            }
+        }
+        return effects;
+    }
+
     LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };

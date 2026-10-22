@@ -143,6 +143,8 @@ namespace rct3::park
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone
         /// names the rig's bone, or the arm's joint for a car on an arm.
         std::vector<ModelLight> lights;
+        /// The particle effects it shows, found as its lamps are.
+        std::vector<ModelEffect> effects;
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).

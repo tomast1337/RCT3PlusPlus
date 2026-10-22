@@ -81,6 +81,19 @@ namespace rct3::park
     /// move them with the bones once ride lighting at night shows it.
     [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
 
+    /// A particle effect a placed object shows.
+    struct PlacedEffect
+    {
+        std::string_view effect { }; ///< As ModelEffect::effect, a view into the model
+        glm::vec3 position { 0.0f };
+        glm::mat3 axes { 1.0f }; ///< Its second column the way it points
+        std::size_t object = 0;  ///< By index
+    };
+
+    /// The particle effects the objects' models show, placed in the park as object_lamps places lamps.
+    /// shortcut: effects on bones stand where the bone rests, as lamps do.
+    [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
+
     /// The level of each object seen from `eye`, with the models' distances times `scale`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
 

@@ -40,54 +40,59 @@ Where the knowledge comes from:
   approximated, or replaced by a design of our own. Matching the original exactly is not a goal.
 - **Other projects' public documentation**, where it exists and agrees with the files.
 
-## The three bodies of law
+## What could happen
 
-### Contract: high risk
+**In short:** projects like this one, free reimplementations that need the player's own copy of the game,
+have run in the open for many years (OpenRCT2, OpenTTD, OpenMW and others). When a rights holder does
+object, the usual first step is a request to take the project down or to stop, not a lawsuit.
 
-The licence agreement is a contract with the buyer. In _Bowers v. Baystate Technologies_ (Fed. Cir. 2003)
-a US court enforced a licence term against reverse engineering even though the same act could have been
-fair use under copyright. _ProCD v. Zeidenberg_ (7th Cir. 1996) upheld shrink-wrap licences as contracts in
-the first place.
+Three areas of law touch the project. They are listed from the one that would give an objection the most
+weight to the one that would give it the least. This is a ranking between the three, not a forecast that
+any of it will happen.
 
-Breach of contract does not need any copying: the clause covers reverse engineering as such. A rights
-holder who objects can ask for the project to stop.
+### 1. The licence agreement (contract)
 
-In the European Union the picture differs: Directive 2009/24/EC lets a lawful user observe, study and test
-a program while running it (article 5(3)), allows decompiling it when that is needed for interoperability
-with an independently created program (article 6), and makes contract terms that forbid either void
-(article 8). How far this covers a game, and its data files rather than its program, has not been settled
-by a court that we know of.
+**What could happen:** a rights holder says that studying the game broke the licence agreement, and asks
+us to stop.
 
-### Copyright: medium risk
+**Why it ranks first:** the agreement forbids reverse engineering outright, and breaking a contract does not
+need anything to be copied. In the United States, courts have enforced such terms
+(_Bowers v. Baystate Technologies_, 2003) and upheld shrink-wrap licences as contracts
+(_ProCD v. Zeidenberg_, 1996).
 
-Copyright protects expression, not ideas, methods or file layouts.
+**What softens it:** in the European Union, Directive 2009/24/EC lets a lawful user observe, study and test
+a program while running it (article 5(3)), allows decompiling it where that is needed to make an
+independent program work with it (article 6), and makes contract terms forbidding either void (article 8).
+How far this reaches for a game and its data files has not been settled by a court that we know of.
 
-- _Sega Enterprises v. Accolade_ (9th Cir. 1992): disassembling a program to reach the unprotected
-  facts needed for compatibility was fair use.
-- _Sony Computer Entertainment v. Connectix_ (9th Cir. 2000): copying and studying a console's firmware
-  to build a compatible emulator was fair use, as an intermediate step that did not end up in the product.
+### 2. Copyright
 
-Our code is original and our documents describe layouts in our own words, so we believe the published
-work holds no protected expression of the game. That weakens an infringement claim a lot. It does not
-remove it: an argument about structure or about derivative work can still be made.
+**What could happen:** a claim that rct3++ copies the game's code or content.
 
-### Anti-circumvention (DMCA): medium-low risk
+**What we do about it:** the repository holds only code and text we wrote, and no game content. Copyright
+protects expression, not ideas, methods or file layouts, and courts have found studying a program for
+compatibility to be fair use (_Sega v. Accolade_, 1992; _Sony v. Connectix_, 2000). That leaves little to
+claim, though an argument about structure or derivative work can always be made.
 
-17 U.S.C. § 1201 forbids getting around access controls. rct3++ does not bypass any copy protection or
-DRM: it reads files the player already has on disk, from the game the player installed. Section 1201(f)
-also exempts circumvention done only to make an independently created program interoperate, though that
-exemption does not override a contract.
+### 3. Copy protection (DMCA)
 
-### Summary
+**What could happen:** a claim that rct3++ gets around the game's copy protection.
 
-| Area      | Risk       | Why                                                                     |
-| --------- | ---------- | ----------------------------------------------------------------------- |
-| Contract  | High       | The licence forbids reverse engineering, and US courts have enforced that |
-| Copyright | Medium     | Original code and own-words specifications leave little to claim        |
-| DMCA      | Medium-low | No protection is bypassed; files are read from the player's own install |
+**What we do about it:** it does not. It reads files already on the player's disk, from a game they
+installed, and bypasses nothing. US law (17 U.S.C. § 1201(f)) also allows getting around protection where
+that is needed only to make an independent program work with another.
 
-The likeliest outcome of an objection is a takedown request or a cease-and-desist letter, not a lawsuit.
-If a rights holder contacts the project, we will take it seriously and answer.
+### What keeps the risk low
+
+- No game files, extracted assets or leaked material, ever (see [CLEAN_ROOM.md](../CLEAN_ROOM.md)).
+- The player needs their own copy of the game; rct3++ replaces none of it.
+- The project is free and sells nothing.
+- No official logos or branding, and a clear statement that the project is not affiliated.
+
+### If a rights holder gets in touch
+
+We take it seriously and answer politely. We pause what they ask about while we get advice, rather than
+arguing in public.
 
 ## Sources
 

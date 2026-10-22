@@ -31,11 +31,11 @@ namespace rct3::ui
             { AttractionTab::Vehicles, 3, "Attraction_Vehicles", "AttractionDetails_RideVehiclesHelp" },
             { AttractionTab::Tests, 5, "Attraction_TestResults", "AttractionDetails_RideTestHelp" },
             { AttractionTab::Mode, 6, "Attraction_OpMode", "AttractionDetails_RideOpModeHelp" },
-            { AttractionTab::Maintenance, 11, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp" },
+            { AttractionTab::Maintenance, 10, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp" },
         } };
         constexpr std::array<AttractionTabInfo, 2> kTrackTabs { {
             { AttractionTab::Construction, 7, "Attraction_Construction", "AttractionDetails_ConstructionHelp", true },
-            { AttractionTab::Graphs, 10, "Attraction_Graphs", "AttractionDetails_GraphsHelp" },
+            { AttractionTab::Graphs, 9, "Attraction_Graphs", "AttractionDetails_GraphsHelp" },
         } };
         constexpr std::array<AttractionTabInfo, 2> kStallTabs { {
             { AttractionTab::Items, 3, "Stall_ItemsIcon", "AttractionDetails_StallItemsHelp" },

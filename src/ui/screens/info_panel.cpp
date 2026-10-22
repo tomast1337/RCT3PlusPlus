@@ -41,6 +41,10 @@ namespace rct3::ui
         placement = fill();
         body_ = &add<Widget>("body");
         body_->clip_children = true;
+        // Over the band along the strip's top, outside the body, which cuts its lines to itself.
+        title_ = &add<Label>("title", std::u16string { }, FontRole::Medium);
+        title_->style.colour = style_.text_colour;
+        title_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);
         const float close_bottom = info_panel::kCloseBottom + style_.raise;
         close_->placement = style_.left ? bottom_left(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize) : bottom_right(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize);
@@ -173,6 +177,7 @@ namespace rct3::ui
         while (!body_->children().empty())
             (void)body_->remove(*body_->children().back());
         sections_.clear();
+        value_rows_.clear();
         float y = 0;
         const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
             Label& l = body_->add<Label>(std::move(name), text, font);
@@ -180,11 +185,7 @@ namespace rct3::ui
             l.style.colour = style_.text_colour;
             return l;
         };
-        if (!page.title.empty())
-        {
-            line("title", page.title, 0, info_panel::kPageWidth, FontRole::Medium);
-            y += info_panel::kLineHeight + 2;
-        }
+        title_->text = page.title;
         if (!page.heading.empty())
         {
             line("heading", page.heading, 0, info_panel::kPageWidth, FontRole::Small);
@@ -235,8 +236,10 @@ namespace rct3::ui
             }
             // A line without a value is text across the whole page.
             const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
-            line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
-            line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+            Label& label = line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
+            Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+            if (!l.value.empty())
+                value_rows_.push_back({ &label, &value, true });
             y += info_panel::kLineHeight;
         }
         if (right)
@@ -343,9 +346,17 @@ namespace rct3::ui
                 w_x = info_panel::kPageWidth - info_panel::kRingReach - info_panel::kPaintSize;
             if (c.kind == InfoControlKind::Choice)
                 w_width = info_panel::kChoiceWidth;
+            // A tick box comes first, its label after it to the page's end.
+            if (c.kind == InfoControlKind::Tick)
+            {
+                w_x = 0;
+                label.placement = top_left(info_panel::kTickSize + info_panel::kPairGap, y, info_panel::kPageWidth - info_panel::kTickSize - info_panel::kPairGap, height);
+            }
             const float w_height = c.kind == InfoControlKind::Tick ? info_panel::kTickSize : height;
             w->placement = top_left(w_x, y + (height - w_height) / 2, w_width, w_height);
             w->enabled = c.enabled;
+            if (c.icon.empty() && c.kind != InfoControlKind::Tick)
+                value_rows_.push_back({ &label, w, false });
             controls_.emplace_back(c, w);
             y += height + 1;
         }
@@ -474,7 +485,9 @@ namespace rct3::ui
             palette_->placement = top_left(std::round(x), std::round(y), size.x, size.y);
         }
         const Rect s = strip();
-        body_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0 + info_panel::kBodyTop, body_width_, std::min(body_height_, info_panel::kStripHeight - 2 * info_panel::kBodyTop));
+        body_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0 + info_panel::kBodyTop, body_width_, std::min(body_height_, info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom));
+        title_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0, body_width_, std::min(style_.coded.band_height, info_panel::kBodyTop));
+        title_->visible = body_width_ > 0;
     }
 
     void InfoPanel::mark_picked()
@@ -492,10 +505,28 @@ namespace rct3::ui
         return dx * dx + dy * dy <= radius * radius || ((!style_.left || body_width_ > 0) && contains(strip(), p));
     }
 
-    void InfoPanel::update(const UpdateContext&)
+    void InfoPanel::update(const UpdateContext& context)
     {
         // The parts follow the screen's corner.
         place();
+        if (const auto f = context.fonts && !value_rows_.empty() ? context.fonts->get(FontRole::Small) : std::nullopt)
+        {
+            const auto needs = [&](const ValueRow& r) { return std::ceil(text_width(*f, r.label->text)) + 2 * info_panel::kPairGap; };
+            float column = info_panel::kValueColumn;
+            for (const ValueRow& r : value_rows_)
+                if (r.column)
+                    column = std::max(column, needs(r));
+            for (const ValueRow& r : value_rows_)
+            {
+                Rect& at = r.value->placement.offsets;
+                const float shift = std::max((r.column ? column : needs(r)) - at.x0, 0.0f);
+                at.x0 += shift;
+                // A line's value keeps to the page; a control keeps its size.
+                at.x1 = r.column ? std::max(at.x1, at.x0) : at.x1 + shift;
+                r.label->placement.offsets.x1 = std::max(r.label->placement.offsets.x1, at.x0);
+            }
+            value_rows_.clear();
+        }
         if (close_->take_click())
         {
             hide();

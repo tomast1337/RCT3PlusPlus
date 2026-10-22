@@ -135,7 +135,7 @@ namespace rct3::ui
         inline constexpr float kBodyLeft = 16;     ///< Of the content, from the strip's left edge
         inline constexpr float kBodyTop = 22;      ///< From the strip's top edge, below its band
         inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
-        inline constexpr float kPageWidth = 310;   ///< Of a page of lines
+        inline constexpr float kPageWidth = 360;   ///< Of a page of lines
         inline constexpr float kLineHeight = 15;
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
@@ -180,6 +180,7 @@ namespace rct3::ui
         Button, ///< Pressed for its value, which is 0
         Paint,  ///< Pots of colours, each opening the colours to pick from
         Text,   ///< A line to type in, told when Enter is pressed
+        Words,  ///< Its label alone, across its column
     };
 
     /// Something on a page the player can change, on a row of its own under the lines: its label on the left,
@@ -200,6 +201,12 @@ namespace rct3::ui
         std::string icon;                  ///< A button's picture, instead of text
         std::vector<std::size_t> paints;   ///< The colour of each pot
         bool enabled = true;
+        /// On the row of the control before it, after it, instead of on a row of its own.
+        bool beside = false;
+        int column = 0;                  ///< 0 the page's left, or all of it; 1 its right half
+        float width = 0;                 ///< Of the control itself; 0 for its kind's own
+        std::u16string help;             ///< Shown under the pointer
+        std::optional<Color> colour { }; ///< Of its label, instead of the panel's text colour
     };
 
     /// A change the player made to a page's control: the control's id and its new value. For pots, `pot` is the
@@ -225,6 +232,7 @@ namespace rct3::ui
         std::u16string note;
         std::vector<InfoSeries> graph;
         std::vector<InfoControl> controls; ///< Under the note
+        float width = 0;                   ///< Of the page; 0 for info_panel::kPageWidth
     };
 
     /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search
@@ -358,6 +366,9 @@ namespace rct3::ui
 
     private:
         void place();
+        /// Places the lines' values and the controls across the page, measuring the labels with `font`, or
+        /// guessing at their widths without one.
+        void place_page(std::optional<const Font&> font);
         void draw_skins(DrawContext& context) const;
         void draw_coded(DrawList& list) const;
         void mark_picked();
@@ -386,15 +397,24 @@ namespace rct3::ui
         std::optional<InfoChange> change_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
-        /// The page's labels with something to their right, to move that clear of the label once the fonts can
-        /// measure it; empty once moved. The lines' values move together, to one column clear of the widest.
+        /// A line of the page with a value, whose value lines up with the others clear of the widest label.
         struct ValueRow
         {
             Label* label = nullptr;
-            Widget* value = nullptr;
-            bool column = false; ///< A line's value, kept in line with the others
+            Label* value = nullptr;
         };
         std::vector<ValueRow> value_rows_;
+        /// Where each of controls_ sits down the page, set as the page is filled; across is set by place_page.
+        struct ControlRow
+        {
+            Label* label = nullptr;
+            std::size_t column = 0;
+            float y = 0;
+            float height = 0;
+        };
+        std::vector<ControlRow> control_rows_;
+        float page_width_ = 0;
+        bool measured_ = false; ///< Whether place_page has run with the fonts since the page was shown
         std::optional<std::size_t> section_now_;
         Button* close_ = nullptr;
         Widget* body_ = nullptr;

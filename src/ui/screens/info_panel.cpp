@@ -8,6 +8,7 @@
 #include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <format>
 #include <numbers>
@@ -178,6 +179,8 @@ namespace rct3::ui
             (void)body_->remove(*body_->children().back());
         sections_.clear();
         value_rows_.clear();
+        control_rows_.clear();
+        measured_ = false;
         float y = 0;
         const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
             Label& l = body_->add<Label>(std::move(name), text, font);
@@ -239,7 +242,7 @@ namespace rct3::ui
             Label& label = line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
             Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
             if (!l.value.empty())
-                value_rows_.push_back({ &label, &value, true });
+                value_rows_.push_back({ &label, &value });
             y += info_panel::kLineHeight;
         }
         if (right)
@@ -265,22 +268,28 @@ namespace rct3::ui
             }
             y += info_panel::kLineHeight;
         }
+        // The controls go in rows under the rest, down the page's left or, for those that ask, down its right half.
+        std::array<float, 2> bottom { y, y };
         for (std::size_t i = 0; i < page.controls.size(); ++i)
         {
             const InfoControl& c = page.controls[i];
+            const auto column = static_cast<std::size_t>(std::clamp(c.column, 0, 1));
             const bool big = c.kind == InfoControlKind::Paint || !c.icon.empty();
             const float height = big ? info_panel::kPaintSize : info_panel::kControlHeight;
+            const bool joins = c.beside && !control_rows_.empty() && control_rows_.back().column == column;
+            const float top = joins ? control_rows_.back().y : bottom[column];
+            bottom[column] = std::max(joins ? bottom[column] : top, top + height + 1);
             Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, FontRole::Small);
-            label.placement = top_left(0, y, c.icon.empty() ? info_panel::kValueColumn : info_panel::kPageWidth, height);
             label.style.vertical = Align::Centre;
-            const float x = info_panel::kValueColumn;
-            const float width = info_panel::kPageWidth - info_panel::kValueColumn;
+            if (c.colour)
+                label.style.colour = *c.colour;
+            const std::string name = keyed_name(c.name, c.name.empty() ? "control" : "", i);
             Widget* w = nullptr;
             switch (c.kind)
             {
                 case InfoControlKind::Number:
                 {
-                    Spinner& n = body_->add<Spinner>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.spinner);
+                    Spinner& n = body_->add<Spinner>(name, style_.spinner);
                     n.minimum = c.minimum;
                     n.maximum = c.maximum;
                     n.step = c.step;
@@ -291,7 +300,7 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Choice:
                 {
-                    Dropdown& d = body_->add<Dropdown>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.dropdown);
+                    Dropdown& d = body_->add<Dropdown>(name, style_.dropdown);
                     d.items = c.items;
                     d.select(c.value >= 0 ? std::optional<std::size_t>(static_cast<std::size_t>(c.value)) : std::nullopt);
                     w = &d;
@@ -299,14 +308,14 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Tick:
                 {
-                    Tickbox& t = body_->add<Tickbox>(keyed_name(c.name, c.name.empty() ? "control" : "", i), style_.tick_box, style_.tick);
+                    Tickbox& t = body_->add<Tickbox>(name, style_.tick_box, style_.tick);
                     t.ticked = c.value != 0;
                     w = &t;
                     break;
                 }
                 case InfoControlKind::Button:
                 {
-                    Button& b = body_->add<Button>(keyed_name(c.name, c.name.empty() ? "control" : "", i), c.icon.empty() ? style_.button : std::string { }, c.icon);
+                    Button& b = body_->add<Button>(name, c.icon.empty() ? style_.button : std::string { }, c.icon);
                     b.text = c.text;
                     b.font = FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
@@ -315,7 +324,7 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Text:
                 {
-                    EditBox& e = body_->add<EditBox>(keyed_name(c.name, c.name.empty() ? "control" : "", i), c.text);
+                    EditBox& e = body_->add<EditBox>(name, c.text);
                     e.skin = style_.spinner.field;
                     e.focused_skin = style_.spinner.field_focused;
                     e.max_length = static_cast<std::size_t>(std::max(c.maximum, 0));
@@ -326,42 +335,110 @@ namespace rct3::ui
                 {
                     PaintButtonStyle look = style_.paint;
                     look.face = style_.tab_face;
-                    w = &body_->add<PaintButton>(keyed_name(c.name, c.name.empty() ? "control" : "", i), std::move(look), c.paints);
+                    w = &body_->add<PaintButton>(name, std::move(look), c.paints);
                     break;
                 }
+                case InfoControlKind::Words:
+                    break;
             }
-            float w_width = width;
-            if (c.kind == InfoControlKind::Tick)
-                w_width = info_panel::kTickSize;
-            else if (!c.icon.empty())
-                w_width = info_panel::kPaintSize;
-            else if (c.kind == InfoControlKind::Paint)
-                w_width = info_panel::kPaintSize * static_cast<float>(c.paints.size());
-            else if (c.kind == InfoControlKind::Number)
-                w_width = info_panel::kNumberWidth;
-            // A list takes room from the label's side, for the longest item.
-            float w_x = c.kind == InfoControlKind::Choice ? info_panel::kPageWidth - info_panel::kChoiceWidth : x;
-            // A picture button sits clear of the ring at the end, after its label's long words.
-            if (!c.icon.empty())
-                w_x = info_panel::kPageWidth - info_panel::kRingReach - info_panel::kPaintSize;
-            if (c.kind == InfoControlKind::Choice)
-                w_width = info_panel::kChoiceWidth;
-            // A tick box comes first, its label after it to the page's end.
+            if (w != nullptr)
+            {
+                w->enabled = c.enabled;
+                w->tooltip = c.help;
+            }
+            if (!c.enabled)
+                label.style.colour.a /= 2;
+            controls_.emplace_back(c, w);
+            control_rows_.push_back({ &label, column, top, height });
+        }
+        y = std::max(bottom[0], bottom[1]);
+        page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;
+        place_page(std::nullopt);
+        // An empty page has no strip.
+        set_body_size(y > 0 ? page_width_ : 0, y);
+    }
+
+    void InfoPanel::place_page(std::optional<const Font&> font)
+    {
+        const float gap = info_panel::kPairGap;
+        // shortcut: without the fonts a label is guessed at 6 units a letter; they are measured on the next update.
+        const auto needs = [&](const std::u16string& text) { return text.empty() ? 0.0f : (font ? std::ceil(text_width(*font, text)) : 6.0f * static_cast<float>(text.size())) + 2 * gap; };
+        const bool halves = std::ranges::any_of(control_rows_, [](const ControlRow& r) { return r.column == 1; });
+        // The ring's tabs reach over the page's right end.
+        const float end = page_width_ - info_panel::kRingReach;
+        const std::array<std::pair<float, float>, 2> spans { { { 0.0f, halves ? end / 2 - gap : end }, { end / 2 + gap, end } } };
+        const auto starts_row = [](const InfoControl& c) { return !c.beside && !c.label.empty() && c.kind != InfoControlKind::Tick && c.kind != InfoControlKind::Words; };
+        // The lines' values and the controls starting their rows after a label line up clear of the widest label
+        // of their column; on a page of halves the left starts no further than its labels need.
+        std::array<float, 2> aligned { halves ? 0.0f : info_panel::kValueColumn, 0.0f };
+        for (const ValueRow& r : value_rows_)
+            aligned[0] = std::max(aligned[0], needs(r.label->text));
+        for (std::size_t i = 0; i < controls_.size(); ++i)
+            if (starts_row(controls_[i].first))
+                aligned[control_rows_[i].column] = std::max(aligned[control_rows_[i].column], needs(controls_[i].first.label));
+        for (const ValueRow& r : value_rows_)
+        {
+            r.label->placement.offsets.x1 = std::max(r.label->placement.offsets.x1, aligned[0]);
+            r.value->placement.offsets.x0 = aligned[0];
+            r.value->placement.offsets.x1 = std::max(page_width_, aligned[0]);
+        }
+        float x = 0;
+        for (std::size_t i = 0; i < controls_.size(); ++i)
+        {
+            const auto& [c, w] = controls_[i];
+            const ControlRow& row = control_rows_[i];
+            const auto [x0, x1] = spans[row.column];
+            if (!c.beside || i == 0 || control_rows_[i - 1].column != row.column)
+                x = x0;
+            Label& label = *row.label;
+            if (c.kind == InfoControlKind::Words)
+            {
+                label.placement = top_left(x, row.y, std::max(x1 - x, 0.0f), row.height);
+                x = x1;
+                continue;
+            }
+            float width = c.width;
+            if (width <= 0)
+            {
+                switch (c.kind)
+                {
+                    case InfoControlKind::Number:
+                        width = info_panel::kNumberWidth;
+                        break;
+                    case InfoControlKind::Tick:
+                        width = info_panel::kTickSize;
+                        break;
+                    case InfoControlKind::Paint:
+                        width = info_panel::kPaintSize * static_cast<float>(c.paints.size());
+                        break;
+                    case InfoControlKind::Choice:
+                        width = info_panel::kChoiceWidth;
+                        break;
+                    case InfoControlKind::Button:
+                    case InfoControlKind::Text:
+                    case InfoControlKind::Words:
+                        width = c.icon.empty() ? x1 : info_panel::kPaintSize;
+                        break;
+                }
+            }
+            const float w_height = c.kind == InfoControlKind::Tick ? info_panel::kTickSize : row.height;
             if (c.kind == InfoControlKind::Tick)
             {
-                w_x = 0;
-                label.placement = top_left(info_panel::kTickSize + info_panel::kPairGap, y, info_panel::kPageWidth - info_panel::kTickSize - info_panel::kPairGap, height);
+                // The box first, its label after it.
+                w->placement = top_left(x, row.y + (row.height - w_height) / 2, width, w_height);
+                x += width + gap;
+                label.placement = top_left(x, row.y, std::max(needs(c.label), x1 - x), row.height);
+                x += needs(c.label);
+                continue;
             }
-            const float w_height = c.kind == InfoControlKind::Tick ? info_panel::kTickSize : height;
-            w->placement = top_left(w_x, y + (height - w_height) / 2, w_width, w_height);
-            w->enabled = c.enabled;
-            if (c.icon.empty() && c.kind != InfoControlKind::Tick)
-                value_rows_.push_back({ &label, w, false });
-            controls_.emplace_back(c, w);
-            y += height + 1;
+            label.placement = top_left(x, row.y, needs(c.label), row.height);
+            x = starts_row(c) ? std::max(x0 + aligned[row.column], x + needs(c.label)) : x + needs(c.label);
+            // What would run past the column keeps to it.
+            if (c.icon.empty() && c.kind != InfoControlKind::Number && c.kind != InfoControlKind::Paint)
+                width = std::min(width, std::max(x1 - x, 0.0f));
+            w->placement = top_left(x, row.y + (row.height - w_height) / 2, width, w_height);
+            x += width + gap;
         }
-        // An empty page has no strip.
-        set_body_size(y > 0 ? info_panel::kPageWidth : 0, y);
     }
 
     std::optional<Widget&> InfoPanel::control(int id) const
@@ -396,6 +473,8 @@ namespace rct3::ui
                 case InfoControlKind::Text:
                     if (auto* e = static_cast<EditBox*>(w); e->take_commit())
                         change_now_ = InfoChange { c.id, 0, 0, e->text };
+                    break;
+                case InfoControlKind::Words:
                     break;
                 case InfoControlKind::Paint:
                     if (const auto pot = static_cast<PaintButton*>(w)->take_pot())
@@ -509,23 +588,10 @@ namespace rct3::ui
     {
         // The parts follow the screen's corner.
         place();
-        if (const auto f = context.fonts && !value_rows_.empty() ? context.fonts->get(FontRole::Small) : std::nullopt)
+        if (const auto f = context.fonts && !measured_ ? context.fonts->get(FontRole::Small) : std::nullopt)
         {
-            const auto needs = [&](const ValueRow& r) { return std::ceil(text_width(*f, r.label->text)) + 2 * info_panel::kPairGap; };
-            float column = info_panel::kValueColumn;
-            for (const ValueRow& r : value_rows_)
-                if (r.column)
-                    column = std::max(column, needs(r));
-            for (const ValueRow& r : value_rows_)
-            {
-                Rect& at = r.value->placement.offsets;
-                const float shift = std::max((r.column ? column : needs(r)) - at.x0, 0.0f);
-                at.x0 += shift;
-                // A line's value keeps to the page; a control keeps its size.
-                at.x1 = r.column ? std::max(at.x1, at.x0) : at.x1 + shift;
-                r.label->placement.offsets.x1 = std::max(r.label->placement.offsets.x1, at.x0);
-            }
-            value_rows_.clear();
+            place_page(f);
+            measured_ = true;
         }
         if (close_->take_click())
         {

@@ -176,6 +176,52 @@ TEST_CASE("the title sits in the band above the lines, and the values clear the 
     CHECK(f.panel->body().find("tick_label")->rect().x0 == body.x0 + info_panel::kTickSize + info_panel::kPairGap);
 }
 
+TEST_CASE("controls share a row when beside, and a page of halves stacks its right half on its own")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    FontSet fonts;
+    fonts.set(FontRole::Small, test_font());
+    InfoPage page;
+    page.width = 400;
+    const auto control = [](std::string name, InfoControlKind kind, std::u16string label, int column, bool beside) {
+        InfoControl c;
+        c.name = std::move(name);
+        c.kind = kind;
+        c.label = std::move(label);
+        c.column = column;
+        c.beside = beside;
+        return c;
+    };
+    // Left: a list without a label, then a tick with a number after it on its row. Right: words, then a number.
+    page.controls = {
+        control("mode", InfoControlKind::Choice, u"", 0, false), control("wait", InfoControlKind::Tick, u"abcde", 0, false), control("seconds", InfoControlKind::Number, u"", 0, true), control("note", InfoControlKind::Words, u"abc", 1, false), control("speed", InfoControlKind::Number, u"abcdefgh", 1, false),
+    };
+    f.panel->show_page(page);
+    f.desktop.update({ }, { .fonts = &fonts });
+    f.desktop.update({ }, { .fonts = &fonts });
+    const Widget& body = f.panel->body();
+    const auto at = [&](std::string_view name) {
+        const Rect r = body.find(name)->rect();
+        return Rect { r.x0 - body.rect().x0, r.y0 - body.rect().y0, r.x1 - body.rect().x0, r.y1 - body.rect().y0 };
+    };
+    CHECK(body.rect().width() == 400);
+    CHECK(at("mode").x0 == 0);
+    const float end = 400 - info_panel::kRingReach;
+    const float half = end / 2 - info_panel::kPairGap;
+    CHECK(at("mode").x1 == doctest::Approx(std::min(info_panel::kChoiceWidth, half)));
+    // The tick's row: the box, its label (50 wide and a gap either side) and the number after them.
+    CHECK(at("wait").x0 == 0);
+    CHECK(at("wait").y0 > at("mode").y0);
+    CHECK(at("seconds").x0 == info_panel::kTickSize + info_panel::kPairGap + 50 + 2 * info_panel::kPairGap);
+    CHECK(at("seconds").y0 < at("wait").y1);
+    // The right half starts back at the top.
+    const float right = end / 2 + info_panel::kPairGap;
+    CHECK(at("note_label").x0 == right);
+    CHECK(at("note_label").y0 == at("mode").y0);
+    CHECK(at("speed").x0 == right + 80 + 2 * info_panel::kPairGap);
+}
+
 TEST_CASE("an action tab is reported when pressed but never opens, and the panel may open with no tab open")
 {
     Fixture f;

@@ -798,9 +798,8 @@ namespace rct3::scene
         ride.base.id = last_id(scene) + 1;
         ride.base.symbol = std::format("{}:trr", item.symbol);
         ride.base.overlay_path = item.overlay;
-        // Its kind's name, kept as the string's key as the park keeps such names.
-        // shortcut: no number after it as the game gives a second ride of a kind; upgrade when names are numbered.
-        ride.base.name = std::format("#{}#", item.name_text);
+        // Its kind's name and a number, as the game names a new ride.
+        ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.track.emplace().segments.resize(1);

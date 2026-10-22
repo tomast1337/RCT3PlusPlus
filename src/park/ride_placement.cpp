@@ -65,17 +65,20 @@ namespace rct3::park
         return SiteProblem::None;
     }
 
-    bool on_water(const RideSite& site, std::span<const save::WaterBody> bodies)
+    SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::WaterBody> bodies)
     {
         for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
         {
             for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
             {
-                if (!holds_water(bodies, { c, r }))
-                    return false;
+                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return holds(b, { c, r }); });
+                if (water_only && lake == bodies.end())
+                    return SiteProblem::OffWater;
+                if (!water_only && lake != bodies.end() && lake->level > static_cast<float>(site.height))
+                    return SiteProblem::UnderWater;
             }
         }
-        return true;
+        return SiteProblem::None;
     }
 
     void level_ground(save::TerrainGrid& grid, const RideSite& site)

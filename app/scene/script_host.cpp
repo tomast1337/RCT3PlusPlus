@@ -348,7 +348,7 @@ namespace rct3::scene
             if (!p.item)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
-            constexpr std::array<std::string_view, 5> kProblems { "none", "not owned", "path", "blocked", "off water" };
+            constexpr std::array<std::string_view, 6> kProblems { "none", "not owned", "path", "blocked", "off water", "under water" };
             return { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
         });
         engine_.define("rides.list", [this](const Json&) {

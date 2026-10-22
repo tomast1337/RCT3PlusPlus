@@ -26,7 +26,7 @@ namespace rct3::park
         };
     } // namespace
 
-    std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, std::size_t tries)
+    std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, const std::function<bool(const save::PlacedObject&)>& allowed, std::size_t tries)
     {
         if (first.index >= pieces.size() || last.index >= pieces.size() || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::unexpected(CompletionFailure::NoWay);
@@ -57,7 +57,7 @@ namespace rct3::park
                 if (shape.use != PieceUse::Plain || shape.chain)
                     continue;
                 auto placed = place_after(steps[at].tip, shape, next.reversed, grid);
-                if (!placed || !seen.insert(key(placed->next, next)).second)
+                if (!placed || !allowed(placed->object) || !seen.insert(key(placed->next, next)).second)
                     continue;
                 const float come = steps[at].come + std::max(glm::length(shape.line.end - shape.line.start) / tile, 1.0f);
                 steps.push_back({ placed->next, { next, std::move(placed->object) }, at, come });

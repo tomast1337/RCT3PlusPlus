@@ -147,9 +147,9 @@ TEST_CASE("a station piece's platform is capped where the station ends and has s
     CHECK(platform_symbol("deck", along_z, true, true, std::vector<DoorSpot> { { 5, 4, 0, 3 } }) == "deckmiddle1stairLeft");
 }
 
-TEST_CASE("a ride that stands only on water needs water under every tile of its site")
+TEST_CASE("a ride that stands only on water needs water under every tile, and others no water over their base")
 {
-    // A lake whose triangles fill the tiles 2..4 along 2..3.
+    // A lake at height 5 whose triangles fill the tiles 2..4 along 2..3.
     save::WaterBody lake;
     lake.level = 5;
     for (std::int32_t r = 2; r <= 3; ++r)
@@ -157,7 +157,11 @@ TEST_CASE("a ride that stands only on water needs water under every tile of its 
             for (std::uint8_t t = 0; t < 2; ++t)
                 lake.tris.push_back({ .col = static_cast<std::uint8_t>(c), .row = static_cast<std::uint8_t>(r), .triangle = t, .mask = 7 });
     const std::vector bodies { lake };
-    CHECK(on_water(RideSite { 2, 2, 0, 2, { 3, 2 } }, bodies));
-    CHECK_FALSE(on_water(RideSite { 2, 2, 0, 2, { 3, 3 } }, bodies));
-    CHECK_FALSE(on_water(RideSite { 2, 2, 0, 2, { 1, 1 } }, { }));
+    CHECK(water_problem(RideSite { 2, 2, 0, 2, { 3, 2 } }, true, bodies) == SiteProblem::None);
+    CHECK(water_problem(RideSite { 2, 2, 0, 2, { 3, 3 } }, true, bodies) == SiteProblem::OffWater);
+    CHECK(water_problem(RideSite { 2, 2, 0, 2, { 1, 1 } }, true, { }) == SiteProblem::OffWater);
+    CHECK(water_problem(RideSite { 0, 0, 0, 2, { 2, 2 } }, false, bodies) == SiteProblem::None);
+    CHECK(water_problem(RideSite { 1, 1, 0, 2, { 2, 2 } }, false, bodies) == SiteProblem::UnderWater);
+    // Raised over the water, it stands clear of it.
+    CHECK(water_problem(RideSite { 1, 1, 0, 6, { 2, 2 } }, false, bodies) == SiteProblem::None);
 }

@@ -161,6 +161,8 @@ interface RideInfo {
     open?: boolean;
     /** Whether its entrance was found on the paths. */
     onPaths?: boolean;
+    /** Where the guests walking to it are now. */
+    heading?: { col: number; row: number }[];
     capacity?: number;
     cycleSeconds?: number;
     queue?: number;

@@ -57,6 +57,9 @@ namespace rct3::save
             constexpr std::string_view kDataCorner = "CORNER";
             constexpr std::string_view kDataAdjust = "HEIGHTADJUST";
             constexpr std::string_view kSceneryDefinition = "DATABASEENTRY";
+            // A saved design's scenery (its ride's doors): the scenery fields with the definition under another name.
+            constexpr std::string_view kDesignSceneryClass = "SceneryItemPlacementSingle";
+            constexpr std::string_view kDesignSceneryDefinition = "SIDDatabaseEntry";
             constexpr std::string_view kSceneryOwner = "Owner";
             constexpr std::string_view kSceneryColours = "FlexiColourField";
             constexpr std::string_view kSceneryHeightOffset = "HEIGHTOFFSET";
@@ -753,7 +756,7 @@ namespace rct3::save
                 p.quadrant = int_or(d->field(names::kDataCorner));
                 p.height_adjust = get_float(d->field(names::kDataAdjust));
             }
-            p.definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(0);
+            p.definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(get_ref(o.find(names::kDesignSceneryDefinition)).value_or(0));
             p.owner_ref = get_ref(o.find(names::kSceneryOwner)).value_or(0);
             if (std::optional<const Value&> c = o.find(names::kSceneryColours); c && c->kind() == ValueKind::Struct)
             {
@@ -852,7 +855,7 @@ namespace rct3::save
                 kinds[i] = Kind::Water;
             else if (name == names::kQueueLineClass)
                 kinds[i] = Kind::QueueLine;
-            else if (name == names::kSceneryClass)
+            else if (name == names::kSceneryClass || name == names::kDesignSceneryClass)
                 kinds[i] = Kind::Scenery;
             else if (name == names::kBinClass)
                 kinds[i] = Kind::Bin;

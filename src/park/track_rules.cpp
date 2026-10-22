@@ -73,8 +73,13 @@ namespace rct3::park
                 continue;
             for (const ovl::TrackedRideItem& item : ovl::read_tracked_rides(*overlay, *part))
             {
-                if (item.ride && strings::equals_ignoring_case(item.name, name))
-                    return track_rules(item.ride->rules);
+                if (!item.ride || !strings::equals_ignoring_case(item.name, name))
+                    continue;
+                TrackRules rules = track_rules(item.ride->rules);
+                // Its stack of special pieces named in the first two special slots alone.
+                const auto& slots = item.ride->track_sections;
+                rules.builds_back = !slots[0].empty() && !slots[1].empty() && slots[2].empty() && slots[3].empty();
+                return rules;
             }
         }
         return { };

@@ -139,3 +139,13 @@ TEST_CASE("after a new open end the picks settle on the nearest that have a piec
     // Nothing fitting leaves the picks alone.
     CHECK(settle_choice(all, { }, picks(2)).curve == 2);
 }
+
+TEST_CASE("with no plain piece offered, the station is picked before other special pieces")
+{
+    const std::vector<PieceShape> all = pieces();
+    const std::vector<LaidPiece> tower_base { { 5, false }, { 6, false } };
+    const TrackChoice settled = settle_choice(all, tower_base, picks(0));
+    REQUIRE(settled.named);
+    CHECK(settled.named->index == 6);
+    CHECK(chosen_piece(all, tower_base, settled)->index == 6);
+}

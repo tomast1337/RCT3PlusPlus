@@ -65,6 +65,8 @@ namespace rct3::park
         std::uint32_t entrances = 3;
         std::uint32_t exits = 3;
         std::vector<PiecePattern> patterns;
+        /// Built from its station back towards where its riders start, as a giant slide is from its bottom up.
+        bool builds_back = false;
     };
 
     /// The rules a ride file's item stores, with names copied out of the file.

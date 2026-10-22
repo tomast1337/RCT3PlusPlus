@@ -69,6 +69,8 @@ namespace rct3::scene
         std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit
+        /// The track is built on before its first piece, as a giant slide is from its bottom up to its top.
+        bool backward = false;
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
         std::optional<save::Tile> aim;
         std::int32_t turns = 0;
@@ -81,11 +83,20 @@ namespace rct3::scene
         bool arm = false;      ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
         std::uint64_t arm_piece = 0;
+        std::size_t arm_back = 0; ///< The piece the arm strip sets, counted back from the last
         /// Saved designs of the ride's kind, offered while its track has no pieces.
         std::vector<std::filesystem::path> designs;
         /// The pieces of the design picked, in track order, laid whole by the first click; empty for a track
         /// built piece by piece.
         std::vector<save::TrackPiece> design;
+        /// A door the design places with its track: of which station, whether the exit, and where it stood.
+        struct DesignDoor
+        {
+            std::size_t station = 0;
+            bool exit = false;
+            save::PlacedObject object;
+        };
+        std::vector<DesignDoor> design_doors;
     };
 
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and

@@ -122,6 +122,15 @@ TEST_CASE("pages are written from the attraction's state")
     const InfoPage view = attraction_page(AttractionTab::View, f, s, units);
     CHECK(view.title == u"Ride");
     CHECK(status_words(view) == u"Open");
+    // Running, how many are on it follows.
+    StringTable counted = s;
+    counted.add("PeopleOnRide0", u"# aboard");
+    counted.add("PeopleOnRide1", u"# alone");
+    AttractionFacts running = f;
+    running.flow = RideFlow { .riding = 3 };
+    CHECK(status_words(attraction_page(AttractionTab::View, running, counted, units)) == u"Open, 3 aboard");
+    running.flow->riding = 1;
+    CHECK(status_words(attraction_page(AttractionTab::View, running, counted, units)) == u"Open, 1 alone");
 
     const InfoPage money = attraction_page(AttractionTab::Finances, f, s, units);
     const auto profit = std::ranges::find(money.lines, std::u16string(u"Profit"), &InfoLine::label);

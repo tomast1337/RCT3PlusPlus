@@ -98,6 +98,7 @@ namespace rct3::ui
         std::uint32_t seats = 0;
         std::size_t queued = 0;
         float per_hour = 0;
+        std::size_t riding = 0; ///< On it now
     };
 
     /// How many trains and cars a tracked ride may be given.

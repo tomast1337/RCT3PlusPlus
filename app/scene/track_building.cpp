@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track_building.hpp"
 
+#include "config/game_saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
@@ -866,18 +867,28 @@ namespace rct3::scene
         scene.track_rules[index] = park::load_track_rules(*file, ride.base.symbol);
         scene.courses.resize(scene.rides.rides.size());
         logging::logger("park").info("new {} built from {}", item.symbol, *pieces);
-        // The saved designs of its kind, offered until its first piece is laid.
-        // shortcut: only the install's designs, none locked, upgrade with the player's own and their scenarios.
+        // The saved designs of its kind, offered until its first piece is laid: the install's, then the player's
+        // own in our folder and in the game's.
+        // shortcut: none locked, as none the install ships is; upgrade with designs a scenario locks.
         std::vector<std::filesystem::path> designs;
-        error.clear();
-        for (auto it = std::filesystem::directory_iterator(assets.install->find(kDesignFolder).value_or(std::filesystem::path { }), error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
+        std::vector<std::filesystem::path> folders { assets.install->find(kDesignFolder).value_or(std::filesystem::path { }) };
+        if (scene.saves.data)
+            folders.push_back(scene.saves.data->folder(config::UserFolder::Coasters));
+        if (const auto name = config::game_saves_folder(config::UserFolder::Coasters); scene.saves.game_saves && name)
+            folders.push_back(*scene.saves.game_saves / *name);
+        for (const std::filesystem::path& folder : folders)
         {
-            if (!strings::equals_ignoring_case(it->path().extension().string(), kDesignExtension))
-                continue;
-            if (const auto design = design_ride(it->path()); design && strings::equals_ignoring_case(std::string_view(design->ride.base.symbol).substr(0, design->ride.base.symbol.find(':')), item.symbol))
-                designs.push_back(it->path());
+            const std::size_t first = designs.size();
+            error.clear();
+            for (auto it = std::filesystem::directory_iterator(folder, error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
+            {
+                if (!strings::equals_ignoring_case(it->path().extension().string(), kDesignExtension))
+                    continue;
+                if (const auto design = design_ride(it->path()); design && strings::equals_ignoring_case(std::string_view(design->ride.base.symbol).substr(0, design->ride.base.symbol.find(':')), item.symbol))
+                    designs.push_back(it->path());
+            }
+            std::ranges::sort(designs.begin() + static_cast<std::ptrdiff_t>(first), designs.end());
         }
-        std::ranges::sort(designs);
         const bool opened = open_track_building(scene, index, *pieces, assets);
         scene.building.arm = scene.building.arm || arm;
         scene.building.designs = std::move(designs);

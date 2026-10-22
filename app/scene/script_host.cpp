@@ -202,6 +202,14 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             return park_->park.cash ? Json(*park_->park.cash) : Json(nullptr);
         });
+        engine_.define("park.setCash", [this](const Json& a) -> Json {
+            if (park_ == nullptr || !park_->park.cash)
+                throw std::runtime_error("no park with money is open");
+            if (a.size() != 1 || !a[0].is_number_integer())
+                throw std::invalid_argument("park.setCash takes hundredths of the currency");
+            park_->park.cash = a[0].get<std::int64_t>();
+            return Json(nullptr);
+        });
         engine_.define("park.guests", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

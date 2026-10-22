@@ -424,6 +424,7 @@ namespace rct3::ui
         rows.section();
         rows.tick(O::Bloom, str(strings, "GameOptionsDialog_Bloom"), str(strings, "GameOptionsDialog_Bloom_TT"));
         rows.tick(O::AmbientOcclusion, str(strings, "Rct3pp_AmbientOcclusion"), str(strings, "Rct3pp_AmbientOcclusionHelp"));
+        rows.number(O::ParticleBudget, str(strings, "Rct3pp_ParticleBudget"), str(strings, "Rct3pp_ParticleBudgetHelp"));
         rows.tick(O::Refraction, str(strings, "GameOptionsDialog_Refraction"), str(strings, "GameOptionsDialog_Refraction_TT"));
         rows.tick(O::WaterDroplets, str(strings, "GameOptionsDialog_WaterDroplets"), str(strings, "GameOptionsDialog_WaterDroplets_TT"));
         rows.indent();

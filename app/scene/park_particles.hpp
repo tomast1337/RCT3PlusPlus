@@ -31,6 +31,7 @@ namespace rct3::scene
             std::vector<const particles::Sprite*> sprites;
             glm::vec3 position { 0.0f };
             std::string effect { }; ///< Its file's name
+            bool awake = false;     ///< Ran in the last advance, so it is drawn
         };
 
         std::optional<particles::Library> library;
@@ -46,8 +47,9 @@ namespace rct3::scene
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
     /// Starts the effects `effects` name, in place of any running.
     void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects);
-    /// Moves time on for the effects near enough `eye` to be seen.
-    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye);
+    /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are
+    /// alive; the rest wait and are not drawn.
+    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget);
     /// Draws them into the open pass, lit by `light` (smoke dims at night; fire does not).
     void draw_park_particles(render::Device& device, const ParkParticles& particles, const glm::mat4& view_projection, glm::vec3 eye, glm::vec3 target, const render::SceneLight& light);
     void destroy_park_particles(render::Device& device, ParkParticles& particles);

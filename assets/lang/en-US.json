@@ -42,6 +42,8 @@
         "SurfaceDetailOff": "Off",
         "AmbientOcclusion": "Ambient occlusion",
         "AmbientOcclusionHelp": "Creases, corners and the ground under things are darker where less of the sky reaches them. Costs a little more to draw.",
+        "ParticleBudget": "Particles",
+        "ParticleBudgetHelp": "The most fire, smoke and spray particles alive at once. Effects nearest the camera run first; the rest wait. 0 shows none.",
         "SurfaceDetailRelief": "Grain",
         "SurfaceDetailGrain": "Grain and relief",
         "DetailBlendBandHelp": "How long the stretch is over which scenery blends from one level of detail to the next as the camera moves.",

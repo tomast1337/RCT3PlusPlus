@@ -6,10 +6,12 @@
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <format>
 #include <numeric>
+#include <optional>
 #include <vector>
 
 namespace rct3::park
@@ -50,6 +52,46 @@ namespace rct3::park
         while (std::ranges::contains(taken, number))
             ++number;
         return std::format("{}{}", kNumbered, number);
+    }
+
+    std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
+    {
+        // Lower case, without "anim" and the zeros that lead a number.
+        const auto plain = [](std::string_view text) {
+            std::string out;
+            for (std::size_t i = 0; i < text.size(); ++i)
+            {
+                const char c = strings::ascii_lower(text[i]);
+                if (c == '0' && (out.empty() || !std::isdigit(static_cast<unsigned char>(out.back()))) && i + 1 < text.size() && std::isdigit(static_cast<unsigned char>(text[i + 1])))
+                    continue;
+                out.push_back(c);
+            }
+            for (std::size_t at; (at = out.find("anim")) != std::string::npos;)
+                out.erase(at, 4);
+            return out;
+        };
+        const auto lasting = [&](std::string_view tail) -> std::optional<float> {
+            for (std::size_t i = 0; i < animations.size() && i < seconds.size(); ++i)
+                if (plain(animations[i]).ends_with(plain(tail)))
+                    return seconds[i];
+            return std::nullopt;
+        };
+        std::vector<std::string> known;
+        for (const std::string& name : names)
+            if (const auto show = name.find("Show"); show != std::string::npos && plain(kind).ends_with(plain(std::string_view(name).substr(0, show + 4))))
+                known.push_back(name);
+        std::ranges::sort(known);
+        std::stable_partition(known.begin(), known.end(), [&](const std::string& n) { return plain(n).contains("idle"); });
+        std::vector<save::ShowTrick> tricks;
+        for (const std::string& name : known)
+        {
+            const std::string_view tail = std::string_view(name).substr(name.find("Show") + 4);
+            auto lasts = lasting(tail);
+            if (!lasts && tricks.empty())
+                lasts = lasting("loop");
+            tricks.push_back({ .name = name, .seconds = lasts.value_or(0), .available = true, .invented = true });
+        }
+        return tricks;
     }
 
     RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid)

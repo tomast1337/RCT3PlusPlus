@@ -21,6 +21,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rct3::park
 {
@@ -40,6 +41,15 @@ namespace rct3::park
     /// The name a new ride of `symbol` takes: its kind's name and the lowest number no other ride of its kind
     /// has, in the form the park keeps such names ("%ME% 2").
     [[nodiscard]] std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol);
+
+    /// The tricks a show ride of kind `kind` (its symbol without the tag, as "KillerWhaleShow") knows: of
+    /// `names` (every show trick the game names, as "WhaleShowAnimTrick1" or "LionShowFireHoop"), those whose
+    /// part up to "Show" ends `kind`; its idle first, then the rest by name. Each lasts as long as the one of
+    /// `animations` (the ride model's animation names, by place in `seconds`) whose name ends the way the
+    /// trick's does after that part, leaving out "Anim", case and leading zeros ("Trick1" or
+    /// "KillerWhaleShowTrick01" for "WhaleShowAnimTrick1"); an idle without one lasts as the animation called a
+    /// loop, and a trick with none lasts nothing. All are offered and researched.
+    [[nodiscard]] std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds);
 
     [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
 

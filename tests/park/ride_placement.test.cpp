@@ -181,3 +181,29 @@ TEST_CASE("a new ride is named after its kind with the lowest number its kind ha
     CHECK(numbered_name(rides, "Carousel:anr") == "%ME% 1");
     CHECK(numbered_name(rides, "Swings:anr") == "%ME% 1");
 }
+
+TEST_CASE("a show ride knows the tricks named for its kind, its idle first, each as long as its animation")
+{
+    const std::vector<std::string> names { "SealShowAnimTrick2", "SealShowAnimIdle", "SealShowAnimTrick1", "BearShowJuggle", "BearShowIdleLoop", "BigSealShowAnimTrick1" };
+    // A kind whose animations are named apart from its tricks, and the loop for its idle.
+    const std::vector<std::string> seal { "Trick1", "loop", "PlainSealShowTrick02" };
+    const std::vector<float> seal_seconds { 10, 4, 20 };
+    const auto tricks = show_tricks("PlainSealShow", names, seal, seal_seconds);
+    REQUIRE(tricks.size() == 3);
+    CHECK(tricks[0].name == "SealShowAnimIdle");
+    CHECK(tricks[0].seconds == 4);
+    CHECK(tricks[1].name == "SealShowAnimTrick1");
+    CHECK(tricks[1].seconds == 10);
+    CHECK(tricks[2].name == "SealShowAnimTrick2");
+    CHECK(tricks[2].seconds == 20);
+    CHECK((tricks[2].available && tricks[2].invented && !tricks[2].hidden));
+    // Another kind's tricks are left out, and one without an animation lasts nothing.
+    const std::vector<std::string> bear { "BearShowIdleLoop" };
+    const std::vector<float> bear_seconds { 3 };
+    const auto bears = show_tricks("BearShow", names, bear, bear_seconds);
+    REQUIRE(bears.size() == 2);
+    CHECK(bears[0].name == "BearShowIdleLoop");
+    CHECK(bears[0].seconds == 3);
+    CHECK(bears[1].seconds == 0);
+    CHECK(show_tricks("Carousel", names, bear, bear_seconds).empty());
+}

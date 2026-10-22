@@ -2,11 +2,13 @@
 #include "scene/ride_placing.hpp"
 
 #include "logging/log.hpp"
+#include "ovl/overlay.hpp"
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
 #include "park/ride_fences.hpp"
+#include "park/ride_placement.hpp"
 #include "park/track_supports.hpp"
 #include "park/water_fill.hpp"
 #include "scene/park_footpaths.hpp"
@@ -226,6 +228,8 @@ namespace rct3::scene
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);
                 scene.ride_entities[i] = added.front();
+                if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::RideShow::ride); show != scene.shows.end())
+                    stage_show(scene, *show);
                 seat_flat_ride(device, scene, i);
                 if (assets.install)
                 {
@@ -648,8 +652,25 @@ namespace rct3::scene
             ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
             // Built closed, as in the game: the player tests it and opens it from its window.
             ride.base.state = save::AttractionState::Closed;
-            // shortcut: a new show ride gets no show, so it runs as a plain flat ride without a MixMaster page; give it
-            // the tricks its kind knows once those are read from the game's data.
+            // A show ride knows the tricks the game's main file names for its kind (each has a picture there,
+            // "<trick>Skin"), and puts on the first two after its idle until its window changes
+            // them.
+            if (!p.trick_names && assets.install)
+            {
+                p.trick_names.emplace();
+                const auto main = assets.install->find("Main.common.ovl");
+                const auto overlay = main ? ovl::Overlay::load(*main) : std::unexpected(ovl::Error { });
+                for (const ovl::Symbol& symbol : overlay ? overlay->common().symbols : std::vector<ovl::Symbol> { })
+                    if (const ovl::SymbolName n = ovl::split_symbol_name(symbol.name); n.tag == "txt" && n.name.contains("Show") && n.name.ends_with("Skin"))
+                        p.trick_names->emplace_back(n.name.substr(0, n.name.size() - 4));
+            }
+            if (const auto model = scene.models.find(park::model_key(*o)); model != scene.models.end() && p.trick_names)
+                if (auto tricks = park::show_tricks(p.item->symbol, *p.trick_names, model->second.animation_names, model->second.animation_seconds); !tricks.empty())
+                {
+                    save::RideShow& show = scene.shows.emplace_back(save::RideShow { .ride = ride.base.id, .tricks = std::move(tricks), .order = { } });
+                    for (std::uint32_t t = 1; t < show.tricks.size() && t <= 2; ++t)
+                        show.order.push_back(t);
+                }
             ride.base.placement = object;
             ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turns);

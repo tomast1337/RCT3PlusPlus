@@ -14,6 +14,7 @@ namespace
         StringTable s;
         s.add("SpinnerRideName", u"Spinner");
         s.add("SweetShopStallName", u"Sweets");
+        s.add("TwirlerRideName", u"Twirl");
         s.add("RideNameZoom", u"Zoom!");
         s.add("TT_AttractionInstance_UnnamedAttraction", u"Nameless");
         s.add("RideRating0", u"Low");
@@ -78,6 +79,8 @@ TEST_CASE("an attraction's name is its own, a named string, or its kind and numb
     a.symbol = "SweetShopstall:sta";
     a.name = "%ME% 01";
     CHECK(attraction_name(a, s) == u"Sweets 1");
+    a.symbol = "Twirler:anr"; // Its name's string has "Ride" before "Name"
+    CHECK(attraction_name(a, s) == u"Twirl 1");
     a.symbol = "Unknown:sta";
     CHECK(attraction_name(a, s) == u"Nameless");
 }

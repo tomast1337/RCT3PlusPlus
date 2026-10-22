@@ -49,7 +49,7 @@ namespace rct3::ui
         constexpr std::string_view kNumbered = "%ME%"; ///< Before the number of a name made from the kind's
         constexpr std::string_view kNameSuffix = "Name";
         /// Tried between a kind's asset name and kNameSuffix to find the string of its name.
-        constexpr std::array<std::string_view, 3> kNameInfixes = { "", "RC", "Stall" };
+        constexpr std::array<std::string_view, 4> kNameInfixes = { "", "RC", "Stall", "Ride" };
         constexpr std::string_view kStallSuffix = "stall"; ///< Left off a stall's asset name as well
 
         /// The highest rating each word is used up to, then the word for anything higher.

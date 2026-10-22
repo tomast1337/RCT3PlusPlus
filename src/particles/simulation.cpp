@@ -47,14 +47,14 @@ namespace rct3::particles
 
     } // namespace
 
-    Look look(const Effect& effect, const LiveParticle& p)
+    Look look(const Effect& effect, const ParticleArrays& particles, std::size_t i)
     {
-        const Particle& kind = effect.particles[p.kind];
-        const float t = std::clamp(p.age / p.life, 0.0f, 1.0f);
+        const Particle& kind = effect.particles[particles.kind[i]];
+        const float t = std::clamp(particles.age[i] / particles.life[i], 0.0f, 1.0f);
         glm::vec4 colour { kind.colour[0].at(t), kind.colour[1].at(t), kind.colour[2].at(t), kind.colour[3].at(t) };
         if (kind.tinted)
             colour *= effect.tint;
-        return { colour, std::lerp(kind.start_size, kind.end_size, t) * p.size };
+        return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i] };
     }
 
     EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength)
@@ -67,7 +67,15 @@ namespace rct3::particles
     {
         for (const Particle& p : effect.particles)
             widest_ = std::max(widest_, p.emitters.size());
-        live_.reserve(capacity);
+        // Reserved whole, so emitting never moves the arrays under a pass over them.
+        live_.position.reserve(capacity);
+        live_.velocity.reserve(capacity);
+        live_.age.reserve(capacity);
+        live_.life.reserve(capacity);
+        live_.scale.reserve(capacity);
+        live_.roll.reserve(capacity);
+        live_.kind.reserve(capacity);
+        live_.relative.reserve(capacity);
         emitted_.reserve(capacity * widest_);
         life_ = effect.lifetime * (1 - fraction(random_) * effect.lifetime_random);
     }
@@ -76,9 +84,9 @@ namespace rct3::particles
     {
         // shortcut: carried particles follow the run's move but not its turn, upgrade if turning rides show it
         const glm::vec3 moved = position - position_;
-        for (LiveParticle& p : live_)
-            if (p.relative)
-                p.position += moved;
+        for (std::size_t i = 0; i < live_.count(); ++i)
+            if (live_.relative[i] != 0)
+                live_.position[i] += moved;
         position_ = position;
         axes_ = axes;
         velocity_ = velocity;
@@ -104,24 +112,26 @@ namespace rct3::particles
         for (; emitted < target; ++emitted)
         {
             // shortcut: a full pool drops new particles, upgrade to recycling the oldest if effects thin out
-            if (live_.size() >= capacity_)
+            if (live_.count() >= capacity_)
                 continue;
             // The emitter turns over its owner's life; its up is where its particles head.
             const glm::vec3 angles = emitter.spin_offset + emitter.spin_rate * age;
             const glm::quat turn = glm::angleAxis(angles.z, glm::vec3(0, 0, 1)) * glm::angleAxis(angles.y, glm::vec3(0, 1, 0)) * glm::angleAxis(angles.x, glm::vec3(1, 0, 0));
             const glm::vec3 up = glm::normalize(axes_ * (turn * glm::vec3(0, 1, 0)));
-            LiveParticle p {
-                .position = position + in_ball(random_) * emitter.position_random + in_disc(random_, up) * emitter.position_circle,
-                .velocity = up * emitter.speed + in_ball(random_) * emitter.speed_random + in_disc(random_, up) * emitter.speed_circle + velocity * emitter.parent_speed,
-                .age = -fraction(random_) * emitter.time_random * life,
-                .life = std::max(kind.lifetime * (1 - fraction(random_) * kind.lifetime_random), 1 / kParticleSteps),
-                .size = 1 - fraction(random_) * kind.size_random,
-                .roll = kTau * fraction(random_),
-                .kind = static_cast<std::uint32_t>(*emitter.particle),
-                .relative = emitter.relative,
-            };
-            live_.push_back(p);
-            emitted_.resize(live_.size() * widest_, 0.0f);
+            // One draw a statement: within one expression C++ leaves their order open, and a seed must replay.
+            const glm::vec3 place_ball = in_ball(random_);
+            const glm::vec3 place_disc = in_disc(random_, up);
+            const glm::vec3 speed_ball = in_ball(random_);
+            const glm::vec3 speed_disc = in_disc(random_, up);
+            live_.position.push_back(position + place_ball * emitter.position_random + place_disc * emitter.position_circle);
+            live_.velocity.push_back(up * emitter.speed + speed_ball * emitter.speed_random + speed_disc * emitter.speed_circle + velocity * emitter.parent_speed);
+            live_.age.push_back(-fraction(random_) * emitter.time_random * life);
+            live_.life.push_back(std::max(kind.lifetime * (1 - fraction(random_) * kind.lifetime_random), 1 / kParticleSteps));
+            live_.scale.push_back(1 - fraction(random_) * kind.size_random);
+            live_.roll.push_back(kTau * fraction(random_));
+            live_.kind.push_back(static_cast<std::uint32_t>(*emitter.particle));
+            live_.relative.push_back(emitter.relative ? 1 : 0);
+            emitted_.resize(live_.count() * widest_, 0.0f);
             std::fill(emitted_.end() - static_cast<std::ptrdiff_t>(widest_), emitted_.end(), 0.0f);
         }
     }
@@ -144,34 +154,43 @@ namespace rct3::particles
         }
 
         // Particles: age, move, emit, die. Ones born this step are moved from the next.
-        const std::size_t count = live_.size();
+        const std::size_t count = live_.count();
         const glm::vec3 down(0, -kGravity, 0);
         for (std::size_t i = 0; i < count; ++i)
         {
-            LiveParticle& p = live_[i];
-            p.age += dt;
-            if (p.age <= 0)
+            live_.age[i] += dt;
+            if (live_.age[i] <= 0)
                 continue;
-            const Particle& kind = effect_->particles[p.kind];
-            p.velocity += down * kind.gravity * dt;
-            p.velocity *= std::max(0.0f, 1 - kind.drag * dt);
-            p.position += p.velocity * dt;
-            p.roll += kind.roll * dt;
+            const Particle& kind = effect_->particles[live_.kind[i]];
+            live_.velocity[i] += down * kind.gravity * dt;
+            live_.velocity[i] *= std::max(0.0f, 1 - kind.drag * dt);
+            live_.position[i] += live_.velocity[i] * dt;
+            live_.roll[i] += kind.roll * dt;
             for (std::size_t e = 0; e < kind.emitters.size(); ++e)
-                emit(effect_->emitters[kind.emitters[e]], emitted_[i * widest_ + e], std::min(live_[i].age, live_[i].life), live_[i].life, live_[i].position, live_[i].velocity);
+                emit(effect_->emitters[kind.emitters[e]], emitted_[i * widest_ + e], std::min(live_.age[i], live_.life[i]), live_.life[i], live_.position[i], live_.velocity[i]);
         }
-        // Dead ones are replaced by the last, with their counters.
-        for (std::size_t i = 0; i < live_.size();)
+        // Dead ones are replaced by the last, in every array, counters too.
+        const auto replace = [&](auto& field, std::size_t i) {
+            field[i] = field.back();
+            field.pop_back();
+        };
+        for (std::size_t i = 0; i < live_.count();)
         {
-            if (live_[i].age < live_[i].life)
+            if (live_.age[i] < live_.life[i])
             {
                 ++i;
                 continue;
             }
-            live_[i] = live_.back();
             std::copy_n(emitted_.end() - static_cast<std::ptrdiff_t>(widest_), widest_, emitted_.begin() + static_cast<std::ptrdiff_t>(i * widest_));
-            live_.pop_back();
-            emitted_.resize(live_.size() * widest_);
+            emitted_.resize((live_.count() - 1) * widest_);
+            replace(live_.position, i);
+            replace(live_.velocity, i);
+            replace(live_.age, i);
+            replace(live_.life, i);
+            replace(live_.scale, i);
+            replace(live_.roll, i);
+            replace(live_.kind, i);
+            replace(live_.relative, i);
         }
     }
 

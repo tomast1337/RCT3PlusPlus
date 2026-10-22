@@ -43,10 +43,10 @@ TEST_CASE("an emitter spreads its particles over its share of the owner's life")
     run.advance(0.2f);
     run.advance(0.2f);
     run.advance(0.1f);
-    CHECK(run.particles().size() == 5);
+    CHECK(run.particles().count() == 5);
     for (int i = 0; i < 10; ++i)
         run.advance(0.1f);
-    CHECK(run.particles().size() == 10);
+    CHECK(run.particles().count() == 10);
     CHECK_FALSE(run.finished());
     for (int i = 0; i < 40; ++i)
         run.advance(0.2f);
@@ -61,7 +61,7 @@ TEST_CASE("a looping run starts its effect again")
     for (int i = 0; i < 100; ++i)
     {
         run.advance(0.05f);
-        most = std::max(most, run.particles().size());
+        most = std::max(most, run.particles().count());
     }
     CHECK_FALSE(run.finished());
     CHECK(most >= 2);
@@ -79,9 +79,9 @@ TEST_CASE("the same seed gives the same particles")
     a.advance(0.25f);
     b.advance(0.25f);
     b.advance(0.25f);
-    REQUIRE(a.particles().size() == b.particles().size());
-    for (std::size_t i = 0; i < a.particles().size(); ++i)
-        CHECK(a.particles()[i].position == b.particles()[i].position);
+    REQUIRE(a.particles().count() == b.particles().count());
+    for (std::size_t i = 0; i < a.particles().count(); ++i)
+        CHECK(a.particles().position[i] == b.particles().position[i]);
 }
 
 TEST_CASE("particles fall with gravity, head along the run's up and slow with drag")
@@ -93,17 +93,17 @@ TEST_CASE("particles fall with gravity, head along the run's up and slow with dr
     EffectRun run(e, seeded(), false, 8);
     run.place({ 10, 0, 0 }, glm::mat3(glm::vec3(0, 1, 0), glm::vec3(-1, 0, 0), glm::vec3(0, 0, 1))); // Up is -x
     run_for(run, 1);
-    REQUIRE(run.particles().size() == 1);
-    const LiveParticle& p = run.particles()[0];
-    CHECK(p.velocity.x == doctest::Approx(-2));
-    CHECK(p.velocity.y == doctest::Approx(-9.81).epsilon(0.02));
-    CHECK(p.position.x == doctest::Approx(8).epsilon(0.02));
+    REQUIRE(run.particles().count() == 1);
+    const glm::vec3 v = run.particles().velocity[0];
+    CHECK(v.x == doctest::Approx(-2));
+    CHECK(v.y == doctest::Approx(-9.81).epsilon(0.02));
+    CHECK(run.particles().position[0].x == doctest::Approx(8).epsilon(0.02));
 
     e.particles[0].gravity = 0;
     e.particles[0].drag = 1;
     EffectRun slowed(e, seeded(), false, 8);
     run_for(slowed, 1);
-    CHECK(glm::length(slowed.particles()[0].velocity) == doctest::Approx(2 * 0.3679).epsilon(0.02));
+    CHECK(glm::length(slowed.particles().velocity[0]) == doctest::Approx(2 * 0.3679).epsilon(0.02));
 }
 
 TEST_CASE("a particle's own emitters send theirs from where it is")
@@ -116,11 +116,10 @@ TEST_CASE("a particle's own emitters send theirs from where it is")
     e.particles.push_back(Particle { .lifetime = 0.5f });
     EffectRun run(e, seeded(), false, 16);
     run_for(run, 1.1f);
-    REQUIRE(run.particles().size() == 4);
-    const auto born = std::ranges::count_if(run.particles(), [](const LiveParticle& p) { return p.kind == 1; });
-    CHECK(born == 3);
-    for (const LiveParticle& p : run.particles())
-        CHECK(p.position.y == doctest::Approx(1).epsilon(0.05));
+    REQUIRE(run.particles().count() == 4);
+    CHECK(std::ranges::count(run.particles().kind, 1u) == 3);
+    for (const glm::vec3 p : run.particles().position)
+        CHECK(p.y == doctest::Approx(1).epsilon(0.05));
 }
 
 TEST_CASE("a full pool takes no more, and carried particles follow the run")
@@ -132,10 +131,10 @@ TEST_CASE("a full pool takes no more, and carried particles follow the run")
     run.advance(0.25f);
     run.advance(0.25f);
     run.advance(0.25f);
-    CHECK(run.particles().size() == 8);
+    CHECK(run.particles().count() == 8);
     run.place({ 0, 0, 3 });
-    for (const LiveParticle& p : run.particles())
-        CHECK(p.position.z == doctest::Approx(3));
+    for (const glm::vec3 p : run.particles().position)
+        CHECK(p.z == doctest::Approx(3));
 }
 
 TEST_CASE("a particle's look follows its curves, size and the effect's tint")
@@ -146,12 +145,12 @@ TEST_CASE("a particle's look follows its curves, size and the effect's tint")
     kind.start_size = 1;
     kind.end_size = 3;
     kind.colour[3] = Curve { .times = { 0, 1 }, .values = { 1, 0 } };
-    LiveParticle p { .age = 0.5f, .life = 2, .size = 0.5f };
-    Look l = look(e, p);
+    const ParticleArrays p { .age = { 0.5f }, .life = { 2 }, .scale = { 0.5f }, .kind = { 0 } };
+    Look l = look(e, p, 0);
     CHECK(l.size == doctest::Approx(0.75));
     CHECK(l.colour.a == doctest::Approx(0.75));
     CHECK(l.colour.r == doctest::Approx(1));
     kind.tinted = true;
-    l = look(e, p);
+    l = look(e, p, 0);
     CHECK(l.colour.r == doctest::Approx(0.5));
 }

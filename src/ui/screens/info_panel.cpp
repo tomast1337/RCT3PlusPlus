@@ -5,6 +5,7 @@
 #include "ui/shape.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/panel.hpp"
 #include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
@@ -225,43 +226,57 @@ namespace rct3::ui
             }
             y += info_panel::kSectionHeight + 2;
         }
-        bool right = false; // Whether the row has a half line on its left, waiting for one on its right
-        for (std::size_t i = 0; i < page.lines.size(); ++i)
-        {
-            const InfoLine& l = page.lines[i];
-            if (l.half)
+        const auto lines = [&] {
+            bool right = false; // Whether the row has a half line on its left, waiting for one on its right
+            for (std::size_t i = 0; i < page.lines.size(); ++i)
             {
-                // The right column stops short of the page's end, where the ring's tabs reach over it.
-                const float width = (info_panel::kPageWidth - info_panel::kRingReach) / 2 - info_panel::kPairGap;
-                const float x = right ? info_panel::kPageWidth - info_panel::kRingReach - width : 0;
-                // The value at the column's right edge, so a long label keeps the room a short value leaves it.
-                line(keyed_name(l.name, "label", i), l.label, x, width, FontRole::Small);
-                line(keyed_name(l.name, "value", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
+                const InfoLine& l = page.lines[i];
+                if (l.half)
+                {
+                    // The right column stops short of the page's end, where the ring's tabs reach over it.
+                    const float width = (info_panel::kPageWidth - info_panel::kRingReach) / 2 - info_panel::kPairGap;
+                    const float x = right ? info_panel::kPageWidth - info_panel::kRingReach - width : 0;
+                    // The value at the column's right edge, so a long label keeps the room a short value leaves it.
+                    line(keyed_name(l.name, "label", i), l.label, x, width, FontRole::Small);
+                    line(keyed_name(l.name, "value", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
+                    if (right)
+                        y += info_panel::kLineHeight;
+                    right = !right;
+                    continue;
+                }
                 if (right)
+                {
                     y += info_panel::kLineHeight;
-                right = !right;
-                continue;
+                    right = false;
+                }
+                // A line without a value is text across the whole page.
+                const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
+                Label& label = line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
+                // A bar goes under its value, so it is made first; place_page puts it where the value goes.
+                Panel* bar = l.bar ? &body_->add<Panel>(keyed_name(l.name, "bar", i), std::string { }) : nullptr;
+                Panel* filled = l.bar ? &body_->add<Panel>(keyed_name(l.name, "filled", i), std::string { }) : nullptr;
+                if (bar != nullptr)
+                {
+                    bar->colour = style_.bar_back;
+                    filled->colour = l.bar_colour;
+                    bar->placement = top_left(0, y + 1, info_panel::kBarWidth, info_panel::kLineHeight - 2);
+                    filled->placement = bar->placement;
+                }
+                Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+                if (!l.value.empty())
+                    value_rows_.push_back({ &label, &value, bar, filled, std::clamp(l.bar.value_or(0), 0.0f, 1.0f) });
+                y += info_panel::kLineHeight;
             }
             if (right)
-            {
                 y += info_panel::kLineHeight;
-                right = false;
+            if (!page.note.empty())
+            {
+                line("note", page.note, 0, info_panel::kPageWidth, FontRole::Small);
+                y += info_panel::kLineHeight;
             }
-            // A line without a value is text across the whole page.
-            const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
-            Label& label = line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
-            Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
-            if (!l.value.empty())
-                value_rows_.push_back({ &label, &value });
-            y += info_panel::kLineHeight;
-        }
-        if (right)
-            y += info_panel::kLineHeight;
-        if (!page.note.empty())
-        {
-            line("note", page.note, 0, info_panel::kPageWidth, FontRole::Small);
-            y += info_panel::kLineHeight;
-        }
+        };
+        if (!page.controls_first)
+            lines();
         if (!page.graph.empty())
         {
             LinePlot& plot = body_->add<LinePlot>("graph");
@@ -386,6 +401,8 @@ namespace rct3::ui
             control_rows_.push_back({ &label, column, top, height });
         }
         y = std::max(bottom[0], bottom[1]);
+        if (page.controls_first)
+            lines();
         page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;
         place_page(std::nullopt);
         // An empty page has no strip.
@@ -415,6 +432,14 @@ namespace rct3::ui
             r.label->placement.offsets.x1 = std::max(r.label->placement.offsets.x1, aligned[0]);
             r.value->placement.offsets.x0 = aligned[0];
             r.value->placement.offsets.x1 = std::max(page_width_, aligned[0]);
+            if (r.bar == nullptr)
+                continue;
+            // The value written on its bar.
+            r.value->placement.offsets.x0 = aligned[0] + gap;
+            r.bar->placement.offsets.x0 = aligned[0];
+            r.bar->placement.offsets.x1 = aligned[0] + info_panel::kBarWidth;
+            r.filled->placement.offsets.x0 = aligned[0];
+            r.filled->placement.offsets.x1 = aligned[0] + std::round(info_panel::kBarWidth * r.fill);
         }
         float x = 0;
         for (std::size_t i = 0; i < controls_.size(); ++i)

@@ -147,6 +147,7 @@ TEST_CASE("pages are written from the attraction's state")
 
     ride.breakdown.reliability = 87.4f;
     CHECK(attraction_page(AttractionTab::Maintenance, f, s, units).lines[0].value == u"87 %");
+    CHECK(attraction_page(AttractionTab::Maintenance, f, s, units).lines[0].bar == doctest::Approx(0.874f));
 }
 
 TEST_CASE("rides can be tested as well as opened and closed, other attractions only opened and closed")
@@ -347,12 +348,14 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(money.controls[0].value == 150);
     CHECK(money.controls[0].decimals == 2);
     CHECK(money.controls[0].maximum == kMostRidePrice);
+    CHECK(money.controls_first);
 
     const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
     CHECK(std::ranges::find(people.lines, std::u16string(u"Per hour"), &InfoLine::label)->value == kMissingValue);
 
     const InfoPage care = attraction_page(AttractionTab::Maintenance, f, s, { });
-    REQUIRE(care.controls.size() == 1);
+    REQUIRE(care.controls.size() == 2); // The interval, and the mechanic's button beside it
+    CHECK_FALSE(care.controls[1].enabled);
     CHECK(care.controls[0].items.size() == 7);
     CHECK(care.controls[0].items[2] == u"Half hourly");
     CHECK(care.controls[0].value == 2);

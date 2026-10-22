@@ -16,6 +16,7 @@
 #include "park/water_fill.hpp"
 #include "save/save_file.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
 #include "scene/ride_placing.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -24,6 +25,7 @@
 #include "ui/money_text.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/construction_panel.hpp"
+#include "ui/screens/info_panel.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/panel.hpp"
@@ -746,6 +748,8 @@ namespace rct3::scene
             arm->close();
         if (auto designs = scene.desktop->root().find(kDesignName))
             designs->close();
+        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !ride_placing(scene))
+            placing->hide();
     }
 
     std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride)
@@ -1085,6 +1089,22 @@ namespace rct3::scene
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
             panel.placement = ui::bottom_left(0, kPanelBottom, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
         }
+        // A ride that is one building is set down whole, as a flat ride is: the round panel with its turn button
+        // stands in for the construction panel, which keeps the building's state out of sight.
+        const bool whole = ride < scene.track_rules.size() && scene.track_rules[ride].one_piece;
+        scene.desktop->root().find(kPanelName)->visible = !whole;
+        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
+        {
+            // shortcut: the round view stays empty, upgrade by drawing the ride's one piece in it.
+            std::vector<ui::InfoTab> tabs(1);
+            tabs[0].icon = "IconAttractionEditorRotate";
+            tabs[0].help = assets.strings->get("ATE_TT_Rotate");
+            tabs[0].action = true;
+            if (whole)
+                placing->show(std::move(tabs), 1);
+            else if (placing->showing())
+                placing->hide();
+        }
         return true;
     }
 
@@ -1202,13 +1222,21 @@ namespace rct3::scene
         auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
         if (!panel || !b.ride)
             return;
-        if (panel->take_closed())
+        auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        const bool whole = !panel->visible && placing && placing->showing();
+        if (panel->take_closed() || (whole && placing->take_closed()))
         {
             close_track_building(scene);
             return;
         }
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
+        // Each press of the round panel's tab turns the ride a quarter, as a flat ride's does.
+        if (whole && placing->take_action())
+        {
+            b.turns = (b.turns + 1) % 4;
+            changed = true;
+        }
         if (const save::Ride& ride = scene.rides.rides.at(*b.ride); opening(ride))
         {
             // The pointer off the ground, say over the panel, leaves the first piece where it was aimed.

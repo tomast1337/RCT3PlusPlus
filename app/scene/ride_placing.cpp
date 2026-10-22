@@ -298,6 +298,9 @@ namespace rct3::scene
     {
         RidePlacing& p = scene.placing;
         join_rides(device, scene, assets);
+        // A ride that is one building borrows the round panel while it is set down (track_building.cpp).
+        if (!p.item && scene.building.ride)
+            return;
         auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
         if (panel && panel->take_closed())
             stop_ride_placing(scene);

@@ -44,6 +44,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <future>
 #include <set>
 #include <span>
@@ -1327,6 +1328,18 @@ namespace rct3::scene
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
+            // A ride's window names it after its kind, looked up by the kind's symbol; some kinds' files give their
+            // name under another key, so once the items are read each such kind's name is kept under its symbol too.
+            if (!scene.build.kinds_named && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+            {
+                scene.build.kinds_named = true;
+                for (const park::BuildItem& item : scene.build.items.get())
+                {
+                    const std::string own = std::format("{}Name", item.symbol);
+                    if (const auto name = assets.strings->get(item.name_text); !name.empty() && assets.strings->get_ignoring_case(own).empty())
+                        assets.strings->add(own, std::u16string(name));
+                }
+            }
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {
                 if (start_ride_placing(scene, *picked))
@@ -1337,6 +1350,7 @@ namespace rct3::scene
                 }
                 else if (new_tracked_ride(scene, *picked, assets))
                 {
+                    stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                 }

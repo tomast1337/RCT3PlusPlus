@@ -15,6 +15,7 @@
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/colour_palette.hpp"
 #include "ui/widgets/dropdown.hpp"
+#include "ui/widgets/label.hpp"
 #include "ui/widgets/line_plot.hpp"
 #include "ui/widgets/paint_button.hpp"
 #include "ui/widgets/spinner.hpp"
@@ -132,7 +133,8 @@ namespace rct3::ui
         inline constexpr float kStripNarrowest = 136;
         inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content
         inline constexpr float kBodyLeft = 16;     ///< Of the content, from the strip's left edge
-        inline constexpr float kBodyTop = 12;      ///< From the strip's top edge
+        inline constexpr float kBodyTop = 22;      ///< From the strip's top edge, below its band
+        inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
         inline constexpr float kPageWidth = 310;   ///< Of a page of lines
         inline constexpr float kLineHeight = 15;
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
@@ -322,8 +324,9 @@ namespace rct3::ui
         }
         /// The size of the open tab's content; the strip fits round it.
         void set_body_size(float width, float height);
-        /// Fills the body with `page`: its title, its lines in two columns and its note. An empty page hides the
-        /// strip.
+        /// Fills the body with `page`: its title in the band along the strip's top, its lines in two columns, the
+        /// values clear of the widest label, its note and its controls, each clear of its label. An empty page
+        /// hides the strip.
         void show_page(const InfoPage& page);
 
         /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.
@@ -383,9 +386,20 @@ namespace rct3::ui
         std::optional<InfoChange> change_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
+        /// The page's labels with something to their right, to move that clear of the label once the fonts can
+        /// measure it; empty once moved. The lines' values move together, to one column clear of the widest.
+        struct ValueRow
+        {
+            Label* label = nullptr;
+            Widget* value = nullptr;
+            bool column = false; ///< A line's value, kept in line with the others
+        };
+        std::vector<ValueRow> value_rows_;
         std::optional<std::size_t> section_now_;
         Button* close_ = nullptr;
         Widget* body_ = nullptr;
+        Label* title_ = nullptr; ///< The page's, in the band
+
         std::size_t picked_ = 0;
         std::optional<std::size_t> picked_now_;
         std::optional<std::size_t> action_now_;

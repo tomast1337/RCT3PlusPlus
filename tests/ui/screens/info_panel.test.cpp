@@ -41,6 +41,18 @@ namespace
         }
     };
 
+    // Letters 10 wide.
+    Font test_font()
+    {
+        rct3::ovl::Font f;
+        f.metrics = { 0.1f, 1.5f, 0.5f };
+        f.has_code_table = true;
+        for (char16_t c = u'a'; c <= u'z'; ++c)
+            f.glyphs.push_back({ c, 1, 0, { 0, 0, 0.1f, 0.1f }, { 0, 0 }, 0 });
+        const std::array<Font::Page, 1> pages = { { { 4, 100, 100 } } };
+        return Font::from(f, pages);
+    }
+
     std::vector<InfoTab> three()
     {
         return { { "A", u"a", 0, { }, false, { } }, { "B", u"b", 3, { }, false, { } }, { "C", u"c", 6, { }, false, { } } };
@@ -108,7 +120,7 @@ TEST_CASE("the strip fits round the page's width beside the disc, and stands ful
     const Rect strip = f.panel->strip();
     CHECK(strip.x1 == f.panel->disc().x0 + info_panel::kStripOverlap);
     CHECK(strip.width() == info_panel::kPageWidth + info_panel::kStripExtra);
-    CHECK(f.panel->body().children().size() == 5);
+    CHECK(f.panel->body().children().size() == 4);
     CHECK(strip.height() == info_panel::kStripHeight);
     CHECK(strip.y0 == f.panel->disc().y0);
     // A new page replaces the old one; an empty one has no strip.
@@ -116,6 +128,52 @@ TEST_CASE("the strip fits round the page's width beside the disc, and stands ful
     CHECK(f.panel->body().children().empty());
     f.desktop.update({ });
     CHECK(f.panel->body().rect().width() == 0);
+}
+
+TEST_CASE("the title sits in the band above the lines, and the values clear the widest label")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    page.title = u"Title";
+    page.lines = { { u"one", u"1", false, "one" }, { u"two", u"2", false, "two" } };
+    f.panel->show_page(page);
+    FontSet fonts;
+    fonts.set(FontRole::Small, test_font());
+    f.desktop.update({ }, { .fonts = &fonts });
+    f.desktop.update({ }, { .fonts = &fonts });
+    const Rect body = f.panel->body().rect();
+    const Rect title = f.panel->find("title")->rect();
+    CHECK(title.y0 == f.panel->strip().y0);
+    CHECK(title.y1 <= body.y0);
+    CHECK(f.panel->body().find("one_value")->rect().x0 == body.x0 + info_panel::kValueColumn);
+
+    // 20 letters, 200 wide: past the usual column, so the values move right of it.
+    page.lines[1].label = u"abcdefghijabcdefghij";
+    f.panel->show_page(page);
+    f.desktop.update({ }, { .fonts = &fonts });
+    f.desktop.update({ }, { .fonts = &fonts });
+    const float column = 200 + 2 * info_panel::kPairGap;
+    CHECK(f.panel->body().find("one_value")->rect().x0 == body.x0 + column);
+    CHECK(f.panel->body().find("two_label")->rect().width() == column);
+
+    // A control moves clear of its own label, keeping its size; a tick box comes before its label instead.
+    InfoControl number;
+    number.name = "number";
+    number.kind = InfoControlKind::Number;
+    number.label = u"abcdefghijabcdefghijabc";
+    InfoControl tick = number;
+    tick.name = "tick";
+    tick.kind = InfoControlKind::Tick;
+    page.controls = { number, tick };
+    f.panel->show_page(page);
+    f.desktop.update({ }, { .fonts = &fonts });
+    f.desktop.update({ }, { .fonts = &fonts });
+    const Rect spinner = f.panel->body().find("number")->rect();
+    CHECK(spinner.x0 == body.x0 + 230 + 2 * info_panel::kPairGap);
+    CHECK(spinner.width() == info_panel::kNumberWidth);
+    CHECK(f.panel->body().find("tick")->rect().x0 == body.x0);
+    CHECK(f.panel->body().find("tick_label")->rect().x0 == body.x0 + info_panel::kTickSize + info_panel::kPairGap);
 }
 
 TEST_CASE("an action tab is reported when pressed but never opens, and the panel may open with no tab open")

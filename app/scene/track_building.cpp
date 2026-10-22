@@ -21,6 +21,7 @@
 #include "ui/game_style.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/money_text.hpp"
+#include "ui/screens/attraction_info.hpp"
 #include "ui/screens/construction_panel.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -349,7 +350,13 @@ namespace rct3::scene
                 else if (b.off_water)
                     v.piece = assets.strings->get("PlaceObject_MustBeOnWater");
                 if (!b.complaint.empty())
+                {
+                    // Some say which ride they are about.
                     v.piece = assets.strings->get(b.complaint);
+                    constexpr std::u16string_view kNameMark = u"%NAME%";
+                    if (const auto at = v.piece.find(kNameMark); at != std::u16string::npos)
+                        v.piece.replace(at, kNameMark.size(), ui::attraction_name(scene.rides.rides.at(*b.ride).base, *assets.strings));
+                }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
             }
@@ -777,7 +784,9 @@ namespace rct3::scene
         ride.base.id = last_id(scene) + 1;
         ride.base.symbol = std::format("{}:trr", item.symbol);
         ride.base.overlay_path = item.overlay;
-        ride.base.name = item.name_text;
+        // Its kind's name, kept as the string's key as the park keeps such names.
+        // shortcut: no number after it as the game gives a second ride of a kind; upgrade when names are numbered.
+        ride.base.name = std::format("#{}#", item.name_text);
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.track.emplace().segments.resize(1);

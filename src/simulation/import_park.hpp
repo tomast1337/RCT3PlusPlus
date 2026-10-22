@@ -64,7 +64,8 @@ namespace rct3::simulation
 
     /// The timing of a flat ride from its model: its seats, and its animations' lengths in the order the model
     /// lists them (standing, starting, running, stopping), the running one played `loops` times (at least
-    /// once). Nothing when the model has no seats, too few animations, or a cycle that takes no time.
+    /// once). A model without that cycle, as a maze or a show has, runs once for its longest animation.
+    /// Nothing when the model has no seats or no animation that takes time.
     [[nodiscard]] std::optional<RideTiming> flat_ride_timing(std::span<const float> animation_seconds, std::uint32_t seats, std::int32_t loops);
 
     /// Has `ride` put on `show`: a go is the show's tricks one after another, with no starting or stopping. A

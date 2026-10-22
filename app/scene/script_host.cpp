@@ -337,6 +337,18 @@ namespace rct3::scene
                     for (const save::TrackPiece& p : ride.track->pieces)
                         arms.push_back(p.arm_angles ? Json(std::vector<float>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));
                     one["arms"] = std::move(arms);
+                    // Where its cars stand now, as map points above the ground.
+                    Json cars = Json::array();
+                    for (std::size_t k = 0; k < park.car_spots.size() && k < park.car_places.size(); ++k)
+                    {
+                        if (park.car_spots[k].ride != i)
+                            continue;
+                        const glm::vec3 at = park.car_places[k][3];
+                        const float col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
+                        const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
+                        cars.push_back({ { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) } });
+                    }
+                    one["cars"] = std::move(cars);
                 }
                 const entt::entity e = i < park.ride_entities.size() ? park.ride_entities[i] : entt::null;
                 const auto& registry = park.sim.registry;

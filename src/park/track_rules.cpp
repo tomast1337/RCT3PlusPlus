@@ -43,8 +43,9 @@ namespace rct3::park
         }
     } // namespace
 
-    TrackRules track_rules(const ovl::TrackRules& stored)
+    TrackRules track_rules(const ovl::TrackedRide& ride)
     {
+        const ovl::TrackRules& stored = ride.rules;
         TrackRules rules;
         rules.never_tested = (stored.flags & kNeverTested) != 0;
         rules.may_be_split = (stored.flags & kMayBeSplit) != 0;
@@ -58,6 +59,8 @@ namespace rct3::park
             for (const ovl::PatternEntry& e : pattern)
                 copied.push_back({ piece_test(e.when), piece_test(e.becomes) });
         }
+        const auto& slots = ride.track_sections;
+        rules.builds_back = !slots[0].empty() && !slots[1].empty() && slots[2].empty() && slots[3].empty();
         return rules;
     }
 
@@ -75,11 +78,7 @@ namespace rct3::park
             {
                 if (!item.ride || !strings::equals_ignoring_case(item.name, name))
                     continue;
-                TrackRules rules = track_rules(item.ride->rules);
-                // Its stack of special pieces named in the first two special slots alone.
-                const auto& slots = item.ride->track_sections;
-                rules.builds_back = !slots[0].empty() && !slots[1].empty() && slots[2].empty() && slots[3].empty();
-                return rules;
+                return track_rules(*item.ride);
             }
         }
         return { };

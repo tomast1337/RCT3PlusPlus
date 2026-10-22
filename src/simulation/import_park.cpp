@@ -227,13 +227,22 @@ namespace rct3::simulation
 
     std::optional<RideTiming> flat_ride_timing(std::span<const float> animation_seconds, std::uint32_t seats, std::int32_t loops)
     {
+        if (animation_seconds.empty() || seats == 0)
+            return std::nullopt;
         // Flat rides list their animations as standing, starting, running and stopping.
-        if (animation_seconds.size() < 4 || seats == 0)
+        if (animation_seconds.size() >= 4)
+        {
+            const RideTiming timing { .seats = seats, .start = animation_seconds[1], .run = animation_seconds[2], .stop = animation_seconds[3], .loops = static_cast<std::uint32_t>(std::max(loops, 1)) };
+            if (timing.start + static_cast<float>(timing.loops) * timing.run + timing.stop > 0)
+                return timing;
+        }
+        // Rides walked through or watched, a maze or a show, have no such cycle: they run once for their longest.
+        // shortcut: a walk-through lasts as long as its animation, not as long as its riders take to walk it;
+        // time it by its walkways once riders are timed walking.
+        const float longest = std::ranges::max(animation_seconds);
+        if (longest <= 0)
             return std::nullopt;
-        const RideTiming timing { .seats = seats, .start = animation_seconds[1], .run = animation_seconds[2], .stop = animation_seconds[3], .loops = static_cast<std::uint32_t>(std::max(loops, 1)) };
-        if (timing.start + static_cast<float>(timing.loops) * timing.run + timing.stop <= 0)
-            return std::nullopt;
-        return timing;
+        return RideTiming { .seats = seats, .run = longest, .loops = 1 };
     }
 
     void stage_show(CycleRide& ride, const save::RideShow& show)

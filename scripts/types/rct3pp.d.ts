@@ -146,6 +146,8 @@ interface RideInfo {
     platforms?: string[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
+    /** Rides with a track: where each of its cars stands now. */
+    cars?: MapPoint[];
     site: Spot | null;
     entrance: Spot | null;
     exit: Spot | null;

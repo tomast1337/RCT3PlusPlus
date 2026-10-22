@@ -47,6 +47,8 @@ declare namespace park {
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */
     function cash(): number | undefined;
+    /** Sets the cash, in hundredths of the currency, of a park with money. */
+    function setCash(hundredths: number): void;
     /** Guests in the park now. */
     function guests(): number;
     /** Brings `parties` parties of guests in at once, each on a path tile of the park picked at random from

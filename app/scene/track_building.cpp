@@ -197,6 +197,19 @@ namespace rct3::scene
             return SavedDesign { std::move(rides->rides.front()), world ? std::move(world->objects) : std::vector<save::PlacedObject> { } };
         }
 
+        /// Whether `o`, a piece of the ride being built, goes only on water and has dry land under it.
+        bool off_water(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, save::PlacedObject o)
+        {
+            o.overlay = b.overlay;
+            if (!load_object_model(scene, b.models, assets, o))
+                return false;
+            const auto model = scene.models.find(park::model_key(o));
+            if (model == scene.models.end() || !model->second.water_only)
+                return false;
+            const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
+            return !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+        }
+
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
@@ -255,6 +268,16 @@ namespace rct3::scene
                 on.col = b.aim->col;
                 on.row = b.aim->row;
                 on.rotation = b.turns;
+                on.symbol = shape.record.item;
+                on.overlay = b.overlay;
+                // A piece that goes only on water floats on it, not on the lake's floor.
+                const auto& bodies = scene.footpaths.water.bodies;
+                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& w) { return park::holds(w, *b.aim); });
+                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::model_key(on)) : scene.models.end(); lake != bodies.end() && model != scene.models.end() && model->second.water_only)
+                {
+                    on.base_height = static_cast<std::int32_t>(std::lround(lake->level));
+                    on.force_absolute_height = true;
+                }
                 b.tip = park::start_of(on, shape, b.picked->reversed, scene.grid);
             }
             b.ghost = park::place_after(*b.tip, shape, b.picked->reversed, scene.grid);
@@ -264,11 +287,7 @@ namespace rct3::scene
             o.overlay = b.overlay;
             if (!load_object_model(scene, b.models, assets, o))
                 return;
-            if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end() && model->second.water_only)
-            {
-                const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
-                b.off_water = !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
-            }
+            b.off_water = off_water(scene, b, assets, o);
             const std::array<save::PlacedObject, 1> one { o };
             b.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
@@ -474,7 +493,7 @@ namespace rct3::scene
             if (object == objects.end() || !shape)
                 return;
             const park::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
-            const auto way = park::complete_track(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, kCompletionTries);
+            const auto way = park::complete_track(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&](const save::PlacedObject& o) { return !off_water(scene, b, assets, o); }, kCompletionTries);
             if (!way)
             {
                 b.complaint = way.error() == park::CompletionFailure::OutOfTries ? "RideAutoCompleteOutOfTime" : "RideAutoCompleteNoSolution";
@@ -498,6 +517,7 @@ namespace rct3::scene
                     return;
                 b.picked = p.piece;
                 b.ghost = park::PiecePlacement { o, park::tip_of(o, laid, p.piece.reversed, scene.grid) };
+                b.off_water = false; // The way was found on water
                 build(scene, b, assets);
             }
         }

@@ -133,7 +133,7 @@ declare namespace build {
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water"; affordable: boolean } | undefined;
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water"; affordable: boolean } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */

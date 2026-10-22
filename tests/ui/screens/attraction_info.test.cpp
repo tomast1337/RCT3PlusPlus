@@ -247,6 +247,21 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     REQUIRE(graphs.graph.size() == 4);
     CHECK(graphs.graph[0].name == u"Speed");
     CHECK(graphs.graph[0].values.size() == 3);
+    // Speed alone shows at first, its numbers up the left in km/h from the top; a tick for each series.
+    CHECK(graphs.graph[0].shown);
+    CHECK_FALSE(graphs.graph[1].shown);
+    REQUIRE(graphs.graph_axis.size() == 5);
+    CHECK(graphs.graph_axis.front() == u"10.80 km/h");
+    CHECK(graphs.graph_axis.back() == u"3.60 km/h");
+    REQUIRE(graphs.controls.size() == 4);
+    CHECK(graphs.controls[1].id == control_id(AttractionControl::AltitudeSeries));
+    CHECK(graphs.controls[1].series == 1u);
+    CHECK(graphs.controls[1].column == 1);
+    CHECK(graphs.controls[0].value == 1);
+    AttractionFacts heights = f;
+    heights.graph_series = 0b10;
+    ride.graphs.altitude = { 2, 4 };
+    CHECK(attraction_page(AttractionTab::Graphs, heights, s, { }).graph_axis.front() == u"4.00 m");
 }
 
 TEST_CASE("a flat ride's operating mode page sets how many times round it runs, and has no waits")

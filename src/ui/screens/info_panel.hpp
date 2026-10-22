@@ -140,9 +140,11 @@ namespace rct3::ui
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
         inline constexpr float kPlotHeight = 64;
-        inline constexpr float kPairGap = 6;     ///< Between the two half lines of a row
-        inline constexpr float kRingReach = 30;  ///< Of the page's right end, under the ring's tabs
-        inline constexpr float kChoiceSize = 22; ///< A choice button
+        inline constexpr float kAxisWidth = 76;      ///< Of the numbers left of a graph
+        inline constexpr float kAxisPlotHeight = 48; ///< Of a graph with numbers, leaving room for two rows of controls
+        inline constexpr float kPairGap = 6;         ///< Between the two half lines of a row
+        inline constexpr float kRingReach = 30;      ///< Of the page's right end, under the ring's tabs
+        inline constexpr float kChoiceSize = 22;     ///< A choice button
         inline constexpr float kChoiceIconScale = 0.7f;
         inline constexpr float kChoiceRadius = 26; ///< From the tab's middle to its choices'
         /// Radians either side of the line out from the disc through the tab, for two and for three choices.
@@ -170,6 +172,7 @@ namespace rct3::ui
         std::u16string name;
         std::vector<float> values;
         std::string key = { }; ///< Its name's string key, which its widget is named by
+        bool shown = true;     ///< Drawn, or left out while keeping its colour
     };
 
     enum class InfoControlKind : std::uint8_t
@@ -203,10 +206,11 @@ namespace rct3::ui
         bool enabled = true;
         /// On the row of the control before it, after it, instead of on a row of its own.
         bool beside = false;
-        int column = 0;                  ///< 0 the page's left, or all of it; 1 its right half
-        float width = 0;                 ///< Of the control itself; 0 for its kind's own
-        std::u16string help;             ///< Shown under the pointer
-        std::optional<Color> colour { }; ///< Of its label, instead of the panel's text colour
+        int column = 0;                        ///< 0 the page's left, or all of it; 1 its right half
+        float width = 0;                       ///< Of the control itself; 0 for its kind's own
+        std::u16string help;                   ///< Shown under the pointer
+        std::optional<Color> colour { };       ///< Of its label, instead of the panel's text colour
+        std::optional<std::size_t> series { }; ///< The graph's series whose colour its label takes
     };
 
     /// A change the player made to a page's control: the control's id and its new value. For pots, `pot` is the
@@ -232,6 +236,9 @@ namespace rct3::ui
 
         std::u16string note;
         std::vector<InfoSeries> graph;
+        /// Numbers up the graph's left, top first, evenly apart from its top to its bottom; with them, the names
+        /// under the graph are left to the controls.
+        std::vector<std::u16string> graph_axis;
         std::vector<InfoControl> controls; ///< Under the note
         float width = 0;                   ///< Of the page; 0 for info_panel::kPageWidth
     };
@@ -367,6 +374,10 @@ namespace rct3::ui
 
     private:
         void place();
+        [[nodiscard]] Color series_colour(std::size_t i) const
+        {
+            return style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
+        }
         /// Places the lines' values and the controls across the page, measuring the labels with `font`, or
         /// guessing at their widths without one.
         void place_page(std::optional<const Font&> font);

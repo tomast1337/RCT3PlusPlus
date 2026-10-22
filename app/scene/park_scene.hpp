@@ -404,6 +404,9 @@ namespace rct3::scene
         /// shortcut: kept only while the park is open and the trains run as before; save it and lower the
         /// trains' losses once friction is part of the train model.
         std::unordered_set<std::uint32_t> low_friction;
+        /// Which series each ride's graph shows, by ride id, as ui::AttractionFacts::graph_series; speed alone
+        /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
+        std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
         float since_info_page = 0;                 ///< Seconds since a live page was shown again
         std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages

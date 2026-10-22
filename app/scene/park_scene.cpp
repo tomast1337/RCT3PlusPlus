@@ -213,6 +213,8 @@ namespace rct3::scene
                 if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                     f.tune = tune->second;
                 f.low_friction = scene.low_friction.contains(f.ride->base.id);
+                if (const auto series = scene.graph_series.find(f.ride->base.id); series != scene.graph_series.end())
+                    f.graph_series = series->second;
                 const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
                 if (f.ride->kind == save::RideKind::Tracked)
@@ -624,6 +626,12 @@ namespace rct3::scene
                             for (simulation::Coaster& c : fleet->trains)
                                 c.lift_speed = c.station_speed = speed;
                 }
+            }
+            else if (change.id >= ui::control_id(SpeedSeries) && change.id <= ui::control_id(LateralSeries))
+            {
+                const auto bit = static_cast<std::uint8_t>(1u << (change.id - ui::control_id(SpeedSeries)));
+                std::uint8_t& shown = scene.graph_series.try_emplace(ride->base.id, ui::kSpeedOnly).first->second;
+                shown = static_cast<std::uint8_t>(change.value != 0 ? shown | bit : shown & ~bit);
             }
             else if (change.id == ui::control_id(Music))
                 scene.ride_tunes[ride->base.id] = static_cast<std::size_t>(std::max(change.value, 0));
@@ -1047,8 +1055,9 @@ namespace rct3::scene
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
-                // Longer trains fit fewer times round the track, so the page shows the new limits; a new name shows.
-                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name))
+                // Longer trains fit fewer times round the track, so the page shows the new limits; a new name and
+                // the graph's series show.
+                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name) || (change->id >= ui::control_id(ui::AttractionControl::SpeedSeries) && change->id <= ui::control_id(ui::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
             else if (change && scene.shown_person)

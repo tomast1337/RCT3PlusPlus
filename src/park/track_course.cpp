@@ -32,45 +32,63 @@ namespace rct3::park
         std::unordered_map<std::uint64_t, const save::PlacedObject*> by_id;
         for (const save::PlacedObject& o : objects)
             by_id.emplace(o.id, &o);
-        TrackCourse course;
-        for (const save::TrackPiece& piece : ride.track->pieces)
+        const auto& segments = ride.track->segments;
+        // A track in one stretch runs along all its pieces; one in several, along each stretch on its own.
+        std::optional<TrackCourse> first;
+        for (std::size_t s = 0; s < std::max<std::size_t>(segments.size(), 1); ++s)
         {
-            const auto found = by_id.find(piece.scenery);
-            if (found == by_id.end())
-                return std::nullopt;
-            const save::PlacedObject& object = *found->second;
-            const auto shape = shape_of(piece, object);
-            if (!shape || shape->line.path.size() < 2)
-                return std::nullopt;
-            const auto model = models.find(model_key(object));
-            const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
-            CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
-            if ((shape->record.flags & kPieceCableLift) != 0)
-                kind = CourseKind::Cable;
-            course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
-            std::vector<glm::vec3> path = shape->line.path;
-            std::vector<glm::vec3> ups = shape->line.ups;
-            ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
-            if (piece.reversed)
+            const bool whole = segments.size() <= 1;
+            const std::size_t from = whole ? 0 : segments[s].first_piece;
+            const std::size_t to = whole ? ride.track->pieces.size() : std::min(from + segments[s].piece_count, ride.track->pieces.size());
+            if (from >= to)
+                continue;
+            TrackCourse course;
+            course.first_piece = from;
+            for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(from, to - from))
             {
-                std::ranges::reverse(path);
-                std::ranges::reverse(ups); // Up stays up: the way and the rails both turn round
+                const auto found = by_id.find(piece.scenery);
+                if (found == by_id.end())
+                    return std::nullopt;
+                const save::PlacedObject& object = *found->second;
+                const auto shape = shape_of(piece, object);
+                if (!shape || shape->line.path.size() < 2)
+                    return std::nullopt;
+                const auto model = models.find(model_key(object));
+                const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
+                CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
+                if ((shape->record.flags & kPieceCableLift) != 0)
+                    kind = CourseKind::Cable;
+                course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
+                std::vector<glm::vec3> path = shape->line.path;
+                std::vector<glm::vec3> ups = shape->line.ups;
+                ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
+                if (piece.reversed)
+                {
+                    std::ranges::reverse(path);
+                    std::ranges::reverse(ups); // Up stays up: the way and the rails both turn round
+                }
+                // Each piece starts where the last one ended; that point is taken once, and runs into this piece.
+                if (!course.kinds.empty())
+                    course.kinds.back() = kind;
+                course.piece_starts.push_back(course.length());
+                for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
+                {
+                    const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
+                    course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at));
+                    course.points.push_back(at);
+                    course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
+                    course.kinds.push_back(kind);
+                }
             }
-            // Each piece starts where the last one ended; that point is taken once, and runs into this piece.
-            if (!course.kinds.empty())
-                course.kinds.back() = kind;
-            course.piece_starts.push_back(course.length());
-            for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
-            {
-                const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
-                course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at));
-                course.points.push_back(at);
-                course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
-                course.kinds.push_back(kind);
-            }
+            course.closed = whole ? ride.track->circuit : segments[s].closed;
+            // shortcut: trains run only on the first stretch with a station, the others stand empty; upgrade when
+            // a ride's trains are kept by stretch.
+            if (std::ranges::contains(course.kinds, CourseKind::Station))
+                return course;
+            if (!first)
+                first = std::move(course);
         }
-        course.closed = ride.track->circuit;
-        return course;
+        return first;
     }
 
     std::vector<float> station_runs(const TrackCourse& course)

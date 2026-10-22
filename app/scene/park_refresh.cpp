@@ -433,7 +433,7 @@ namespace rct3::scene
             if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
             {
                 std::vector<std::optional<park::ArmAngles>> held;
-                for (const save::TrackPiece& piece : ride.track->pieces)
+                for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
                     held.push_back(piece.arm_angles);
                 angles = park::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
             }

@@ -542,7 +542,7 @@ namespace rct3::ui
             };
             if (rides)
             {
-                page.columns.push_back({ text(strings, "AttractionListDialogParameterQueueLength"), 90, Align::End, true });
+                page.columns.push_back({ text(strings, "AttractionListDialogParameterQueueLength"), 100, Align::End, true });
                 page.columns.push_back({ text(strings, "AttractionListDialogParameterQueueTime"), 82, Align::End, true });
                 page.columns.push_back({ text(strings, "AttractionListDialogParameterReliability"), 78, Align::End, true });
                 page.columns.push_back({ text(strings, "AttractionListDialogParameterDownTime"), 76, Align::End, true });

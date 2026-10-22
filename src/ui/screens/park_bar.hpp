@@ -69,7 +69,8 @@ namespace rct3::ui
         inline constexpr float kWidth = 680;
         inline constexpr float kHeight = 28;
         inline constexpr float kLeftWidth = 304; ///< Of the left part; the divider starts there
-        inline constexpr float kLowerEdge = 3;   ///< The frame's border along the bottom; items centre above it
+        inline constexpr float kDividerWidth = 38;
+        inline constexpr float kLowerEdge = 3; ///< The frame's border along the bottom; items centre above it
         /// The notch in the middle of the bar that lets the pointer through to the message drawer behind it:
         /// a half disc of this radius up from the bar's bottom edge, centred on the divider.
         inline constexpr float kNotchRadius = 18;

@@ -76,7 +76,7 @@ TEST_CASE("a layer cut along its diagonal keeps the half below it, however its b
     FrameLayer layer { corner_box(0, 0, 10, 10), Shape { }, { } };
     layer.shape.top = hex("#ff0000");
     layer.shape.bottom = hex("#ff0000");
-    layer.below_diagonal = true;
+    layer.cut_line = kBelowDiagonal;
     frame.layers.push_back(layer);
     for (const Rect target : { Rect { 0, 0, 40, 40 }, Rect { 0, 0, 80, 20 }, Rect { 0, 0, 16, 64 } })
     {
@@ -93,6 +93,31 @@ TEST_CASE("a layer cut along its diagonal keeps the half below it, however its b
         CHECK(pixel(picture, w / 2 - w / 8, h / 2 + h / 8).r == 255);
         CHECK(pixel(picture, w / 2 + w / 8, h / 2 - h / 8).r == 0);
     }
+}
+
+TEST_CASE("an arrow button's arrow points its way, with no seam down its middle")
+{
+    // A scroll arrow drawn at four times its size: the arrow's base 48 wide, 24 to its point.
+    const Rect target { 0, 0, 60, 60 };
+    const auto drawn = [&](game_frames::Arrow way) {
+        DrawList list;
+        draw_frame(list, game_frames::scroll_arrow(way), target);
+        auto picture = blank_picture(60, 60, hex("#000000"));
+        paint_draw_list(list, { }, picture);
+        return picture;
+    };
+    const auto white = [](const auto& picture, std::uint32_t x, std::uint32_t y) { return pixel(picture, x, y).r == 255; };
+    const auto up = drawn(game_frames::Arrow::Up);
+    CHECK(white(up, 30, 30));
+    CHECK(white(up, 30, 37)); // On the line the halves meet along
+    CHECK(white(up, 12, 38));
+    CHECK_FALSE(white(up, 12, 20)); // Beside the point
+    CHECK_FALSE(white(up, 30, 12)); // Beyond the point
+    const auto left = drawn(game_frames::Arrow::Left);
+    CHECK(white(left, 30, 30));
+    CHECK(white(left, 37, 12));
+    CHECK_FALSE(white(left, 20, 12));
+    CHECK_FALSE(white(left, 12, 30));
 }
 
 TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches the right edge")

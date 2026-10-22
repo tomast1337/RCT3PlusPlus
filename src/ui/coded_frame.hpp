@@ -11,6 +11,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/shape.hpp"
 
+#include <array>
 #include <optional>
 #include <vector>
 
@@ -44,15 +45,26 @@ namespace rct3::ui
         return { { 0, x }, { 0, y }, { 0, x + width }, { 0, y + height } };
     }
 
+    /// A straight line across a layer's box, from `from` to `to`, each a share of the box's width and height
+    /// from its top-left, so it stays on the same points however the box is stretched.
+    struct CutLine
+    {
+        std::array<float, 2> from;
+        std::array<float, 2> to;
+    };
+
+    /// The line from a box's top-left corner to its bottom-right: a layer cut along it keeps the half below.
+    inline constexpr CutLine kBelowDiagonal { { 0, 0 }, { 1, 1 } };
+
     struct FrameLayer
     {
         FrameBox box;
         /// Its look; `rect` is replaced by the box, and the cut's centre is measured from the box's top-left.
         Shape shape;
         std::optional<FrameBox> clip; ///< When set, the layer only shows inside this
-        /// Keeps only the part of the shape under the line from its box's top-left corner to its bottom-right,
-        /// whatever shape the box is stretched to; this takes the place of the shape's own cut.
-        bool below_diagonal = false;
+        /// When set, keeps only the part of the shape on the right hand of this line, walking it on screen
+        /// (y down); this takes the place of the shape's own cut.
+        std::optional<CutLine> cut_line { };
     };
 
     struct CodedFrame

@@ -2,6 +2,8 @@
 #include "ui/game_frames.hpp"
 
 #include <algorithm>
+#include <array>
+#include <initializer_list>
 #include <utility>
 
 namespace rct3::ui::game_frames
@@ -61,15 +63,199 @@ namespace rct3::ui::game_frames
             frame.layers.push_back({ shadow, solid(colour, corners), FrameBox { { 0, 0 }, { 1, -dy }, { 1, -dx }, { 1, 0 } } });
         }
 
+        // A triangle filling `box`, its point toward `way`: two halves of the box, each cut along one slanted
+        // side, walked so the triangle lies on its right.
+        void add_triangle(CodedFrame& frame, const FrameBox& box, Arrow way, Color colour)
+        {
+            const auto middle = [](FrameEdge a, FrameEdge b) { return FrameEdge { (a.share + b.share) / 2, (a.offset + b.offset) / 2 }; };
+            FrameBox first = box;
+            FrameBox second = box;
+            std::array<CutLine, 2> sides;
+            switch (way)
+            {
+                case Arrow::Up:
+                    first.x1 = second.x0 = middle(box.x0, box.x1);
+                    sides = { CutLine { { 0, 1 }, { 0.5f, 0 } }, CutLine { { 0.5f, 0 }, { 1, 1 } } };
+                    break;
+                case Arrow::Down:
+                    first.x1 = second.x0 = middle(box.x0, box.x1);
+                    sides = { CutLine { { 0.5f, 1 }, { 0, 0 } }, CutLine { { 1, 0 }, { 0.5f, 1 } } };
+                    break;
+                case Arrow::Left:
+                    first.y1 = second.y0 = middle(box.y0, box.y1);
+                    sides = { CutLine { { 0, 0.5f }, { 1, 0 } }, CutLine { { 1, 1 }, { 0, 0.5f } } };
+                    break;
+                case Arrow::Right:
+                    first.y1 = second.y0 = middle(box.y0, box.y1);
+                    sides = { CutLine { { 0, 0 }, { 1, 0.5f } }, CutLine { { 1, 0.5f }, { 0, 1 } } };
+                    break;
+            }
+            frame.layers.push_back({ box, solid(colour), first, sides[0] });
+            frame.layers.push_back({ box, solid(colour), second, sides[1] });
+        }
+
+        // A button `width` by `height` units: `rims` one unit each from the outside in, then `fill`, and an
+        // arrow toward `way` in `mark` filling `mark_box`.
+        CodedFrame arrow_button(float width, float height, std::initializer_list<Color> rims, Color fill, Arrow way, const FrameBox& mark_box, Color mark)
+        {
+            CodedFrame f;
+            f.width = width;
+            f.height = height;
+            float in = 0;
+            for (const Color rim : rims)
+            {
+                f.layers.push_back({ inset_box(in, in, in, in), solid(rim), { } });
+                ++in;
+            }
+            f.layers.push_back({ inset_box(in, in, in, in), solid(fill), { } });
+            add_triangle(f, mark_box, way, mark);
+            return f;
+        }
+
+        // Where the arrow sits on a scroll arrow, 15 units square, moved in by `in` for a button with more rims:
+        // 12 units across its base and 6 to its point, its base just off the middle.
+        FrameBox arrow_mark(Arrow way, float in)
+        {
+            switch (way)
+            {
+                case Arrow::Up:
+                    return corner_box(1.5f + in, 4 + in, 12, 6);
+                case Arrow::Down:
+                    return corner_box(1.5f + in, 5 + in, 12, 6);
+                case Arrow::Left:
+                    return corner_box(4 + in, 1.5f + in, 6, 12);
+                case Arrow::Right:
+                    return corner_box(5 + in, 1.5f + in, 6, 12);
+            }
+            return { };
+        }
+
+        constexpr Color kDisabledLight = hex("#ededed"); // Rims and arrows of controls that cannot be used
+        constexpr Color kDisabledFill = hex("#c1c1c1");
+        constexpr Color kBoxLine = hex("#bea9a9"); // Round boxes and page arrows
+
     } // namespace
 
-    CodedFrame lozenge()
+    CodedFrame plain_box()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), outlined(kNone, kBoxLine, 1, { }), { } });
+        return f;
+    }
+
+    CodedFrame focused_box()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), outlined(kNone, kFrameBlue, 2, { }), { } });
+        return f;
+    }
+
+    CodedFrame round_button()
+    {
+        CodedFrame f;
+        f.width = 30;
+        f.height = 30;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), outlined(kWhite, hex("#c8c1c1"), 1, round_corners(15)), { } });
+        return f;
+    }
+
+    CodedFrame scroll_rail()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), solid(kWhite), { } });
+        return f;
+    }
+
+    CodedFrame scroll_rider()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), outlined(kBorderBlue, kWhite, 1, { }), { } });
+        return f;
+    }
+
+    CodedFrame scroll_arrow(Arrow way)
+    {
+        return arrow_button(15, 15, { kWhite }, kBorderBlue, way, arrow_mark(way, 0), kWhite);
+    }
+
+    CodedFrame opener_disabled()
+    {
+        return arrow_button(15, 15, { kDisabledLight }, kDisabledFill, Arrow::Down, arrow_mark(Arrow::Down, 0), kDisabledLight);
+    }
+
+    CodedFrame square_arrow(Arrow way, bool enabled)
+    {
+        if (enabled)
+            return arrow_button(17, 17, { kBoxLine, kWhite }, kBorderBlue, way, arrow_mark(way, 1), kWhite);
+        return arrow_button(17, 17, { hex("#dedede"), kDisabledLight }, kDisabledFill, way, arrow_mark(way, 1), kDisabledLight);
+    }
+
+    CodedFrame spinner(Arrow way, bool enabled)
+    {
+        // The arrow is 10 units across its base and 5 to its point, nearer the side it points to.
+        const FrameBox mark = corner_box(5, way == Arrow::Up ? 1 : 2, 10, 5);
+        if (enabled)
+            return arrow_button(20, 8, { kWhite }, hex("#1f70ae"), way, mark, kWhite);
+        return arrow_button(20, 8, { kDisabledLight }, hex("#c7c7c7"), way, mark, kDisabledLight);
+    }
+
+    CodedFrame tickbox()
+    {
+        CodedFrame f;
+        f.width = 12;
+        f.height = 12;
+        f.layers.push_back({ inset_box(0, 0, 0, 0), solid(kWhite), { } });
+        f.layers.push_back({ inset_box(1, 1, 1, 1), outlined(kWhite, hex("#6b696b"), 1, { }), { } });
+        return f;
+    }
+
+    namespace
+    {
+        constexpr Color kBarShadow = hex("#00000098");
+        constexpr float kBarCorner = 13;
+        constexpr float kBarShadowDrop = 3; // Below the band, and so the band stops this far above the bottom
+        constexpr float kBarShadowShift = 2;
+    } // namespace
+
+    CodedFrame park_bar_left()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(kBarShadowShift, kBarShadowDrop, 0, 0), solid(kBarShadow, { 0, 0, 0, kBarCorner }), { } });
+        f.layers.push_back({ inset_box(0, 0, 0, kBarShadowDrop), solid(kPatchBlue, { 0, 0, 0, kBarCorner }), { } });
+        return f;
+    }
+
+    CodedFrame park_bar_middle(float width, float height, float notch)
+    {
+        // The notch cuts the band and, shifted with it, the shadow, which then shows as a crescent inside the
+        // notch's upper left.
+        Shape band = solid(kPatchBlue);
+        band.cut_x = width / 2;
+        band.cut_y = height;
+        band.cut_radius = notch;
+        CodedFrame f;
+        Shape shadow = band;
+        shadow.top = shadow.bottom = kBarShadow;
+        f.layers.push_back({ FrameBox { { 0, kBarShadowShift }, { 0, kBarShadowDrop }, { 1, kBarShadowShift }, { 1, 0 } }, shadow, inset_box(0, 0, 0, 0) });
+        f.layers.push_back({ inset_box(0, 0, 0, kBarShadowDrop), band, { } });
+        return f;
+    }
+
+    CodedFrame park_bar_right()
+    {
+        CodedFrame f;
+        f.layers.push_back({ inset_box(0, kBarShadowDrop, 0, 0), solid(kBarShadow, { 0, 0, kBarCorner, 0 }), { } });
+        f.layers.push_back({ inset_box(0, 0, kBarShadowShift, kBarShadowDrop), solid(kPatchBlue, { 0, 0, kBarCorner, 0 }), { } });
+        return f;
+    }
+
+    CodedFrame lozenge(bool enabled)
     {
         // The body leaves two units on the right and three below to its shadow.
         constexpr float kRadius = 10;
         CodedFrame f;
         f.layers.push_back({ inset_box(2, 3, 0, 0), solid(hex("#0000005d"), round_corners(kRadius)), { } });
-        f.layers.push_back({ inset_box(0, 0, 2, 3), outlined(kWhite, kBorderBlue, 2, round_corners(kRadius)), { } });
+        f.layers.push_back({ inset_box(0, 0, 2, 3), outlined(kWhite, enabled ? kBorderBlue : kDisabledFill, 2, round_corners(kRadius)), { } });
         return f;
     }
 
@@ -413,7 +599,7 @@ namespace rct3::ui::game_frames
         f.width = 95;
         f.height = 85;
         FrameLayer triangle { corner_box(0, 0, 85, 85), solid(kBandWhite), { } };
-        triangle.below_diagonal = true;
+        triangle.cut_line = kBelowDiagonal;
         f.layers.push_back(triangle);
         return f;
     }

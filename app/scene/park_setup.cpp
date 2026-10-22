@@ -871,6 +871,8 @@ namespace rct3::scene
         begin(ParkLoadStage::Scene);
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
+        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
+        log.info("{} lamps", scene.lamps.size());
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
                                        std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
@@ -1115,7 +1117,7 @@ namespace rct3::scene
             device.destroy_texture(scene.placing.preview_target);
         if (scene.photo_target)
             device.destroy_texture(scene.photo_target);
-        for (const render::TextureHandle t : { scene.shadow_drawings[0].target, scene.shadow_drawings[0].view, scene.shadow_drawings[1].target, scene.shadow_drawings[1].view })
+        for (const render::TextureHandle t : { scene.shadow_drawings[0].target, scene.shadow_drawings[1].target, scene.shadow_views, scene.lamp_texture })
         {
             if (t)
                 device.destroy_texture(t);

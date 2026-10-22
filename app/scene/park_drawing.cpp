@@ -208,28 +208,13 @@ namespace rct3::scene
 
         constexpr std::uint32_t kShadowTexels = 2048;
 
-        /// Makes the textures of `drawing`; false when the device cannot.
+        /// Makes the target of `drawing`; false when the device cannot.
         bool make_shadow_drawing(render::Device& device, ShadowDrawing& drawing)
         {
-            render::TextureDesc desc;
-            desc.width = kShadowTexels;
-            desc.height = kShadowTexels;
-            desc.target = true;
-            desc.readable_depth = true;
-            desc.label = "shadow map";
-            auto made = device.create_texture(desc);
-            std::vector<std::byte> blank(5 * 16);
-            auto view = device.create_texture({ .width = 5, .height = 1, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow view" });
-            if (!made || !view)
-            {
-                if (made)
-                    device.destroy_texture(*made);
-                if (view)
-                    device.destroy_texture(*view);
+            auto made = device.create_texture({ .width = kShadowTexels, .height = kShadowTexels, .label = "shadow map", .target = true, .readable_depth = true });
+            if (!made)
                 return false;
-            }
             drawing.target = *made;
-            drawing.view = *view;
             return true;
         }
 
@@ -259,14 +244,15 @@ namespace rct3::scene
             const std::array<float, 20> values
                 = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
             drawing.drawn = sun.view_projection;
-            device.update_texture(drawing.view, std::as_bytes(std::span(values)));
+            drawing.view = values;
             render::PassDesc into;
             into.target = drawing.target;
             device.begin_pass(into);
             // Without shadows: the map would be read while drawn into.
             render::SceneLight light = scene.light;
             light.shadow_map = light.shadow_map_before = { };
-            light.shadow_view = light.shadow_view_before = { };
+            light.shadow_view = { };
+            light.lamps = { };
             draw_world(device, scene, sun.view_projection, light, { .background = false, .water = false, .see_through = false });
             device.end_pass();
         }
@@ -284,7 +270,6 @@ namespace rct3::scene
             scene.light.shadow_map = { };
             scene.light.shadow_view = { };
             scene.light.shadow_map_before = { };
-            scene.light.shadow_view_before = { };
             scene.light.shadow_before = 0;
             if (!scene.shadows || scene.light.sun_direction.y <= 0.02f)
                 return;
@@ -295,6 +280,17 @@ namespace rct3::scene
                     scene.shadows = 0;
                     return;
                 }
+            }
+            if (!scene.shadow_views)
+            {
+                const std::vector<std::byte> blank(5 * 2 * 16);
+                auto made = device.create_texture({ .width = 5, .height = 2, .format = render::TextureFormat::Rgba32Float, .pixels = blank, .label = "shadow views" });
+                if (!made)
+                {
+                    scene.shadows = 0;
+                    return;
+                }
+                scene.shadow_views = *made;
             }
             const float step = glm::radians(0.5f);
             const glm::vec3 to_sun = glm::normalize(scene.light.sun_direction);
@@ -322,11 +318,10 @@ namespace rct3::scene
             const bool draw_now = dynamic || timed || stepped || sun.view_projection != now->drawn;
             const bool draw_before = blend && (timed || scene.shadow_before_due || sun_before.view_projection != before.drawn);
             scene.light.shadow_map = device.depth_texture(now->target);
-            scene.light.shadow_view = now->view;
+            scene.light.shadow_view = scene.shadow_views;
             if (blend)
             {
                 scene.light.shadow_map_before = device.depth_texture(before.target);
-                scene.light.shadow_view_before = before.view;
                 scene.light.shadow_before = 1 - park::sun_step_share(now->sun, to_sun, step);
             }
             if (!draw_now && !draw_before)
@@ -338,6 +333,11 @@ namespace rct3::scene
                 profiling::section("Now", [&] { draw_shadow(device, scene, *now, sun); });
             if (draw_before)
                 profiling::section("Before", [&] { draw_shadow(device, scene, before, sun_before); });
+            // A step swaps which drawing is the latest, and it is always drawn then, so the rows follow here.
+            std::array<float, 40> views { };
+            std::ranges::copy(now->view, views.begin());
+            std::ranges::copy(before.view, views.begin() + 20);
+            device.update_texture(scene.shadow_views, std::as_bytes(std::span(views)));
             render::PassDesc back;
             back.clear = false;
             device.begin_pass(back);
@@ -436,6 +436,47 @@ namespace rct3::scene
         const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));
         const glm::vec3 eye = park::eye(scene.camera);
         profiling::section("Shadows", [&] { draw_shadow_map(device, scene); });
+        profiling::section("Lamps", [&] {
+            // Lamps come on as the sky darkens, packed again when the strength has moved enough to see.
+            scene.light.lamps = { };
+            constexpr float kLampStrength = 0.75f; // Path lamps light their pools without washing them white
+            const float strength = scene.darkness * kLampStrength;
+            if (strength < 0.01f || scene.lamps.empty())
+                return;
+            if (scene.lamps_due || std::abs(strength - scene.lamp_strength) > 0.01f)
+            {
+                std::vector<park::Lamp> lamps = scene.lamps;
+                for (park::Lamp& l : lamps)
+                    l.colour *= strength;
+                constexpr float kCell = 8; // Two tiles, a lamp's usual reach
+                const park::LampTexels texels = park::lamp_texels(lamps, kCell);
+                if (scene.lamp_texture && scene.lamp_rows != texels.rows)
+                {
+                    device.destroy_texture(scene.lamp_texture);
+                    scene.lamp_texture = { };
+                }
+                const auto bytes = std::as_bytes(std::span(texels.values));
+                if (!scene.lamp_texture)
+                {
+                    auto made = device.create_texture({ .width = park::kLampTexelsAcross, .height = texels.rows, .format = render::TextureFormat::Rgba32Float, .pixels = bytes, .label = "lamps" });
+                    if (!made)
+                        return;
+                    scene.lamp_texture = *made;
+                    scene.lamp_rows = texels.rows;
+                }
+                else
+                {
+                    device.end_pass();
+                    device.update_texture(scene.lamp_texture, bytes);
+                    render::PassDesc back;
+                    back.clear = false;
+                    device.begin_pass(back);
+                }
+                scene.lamps_due = false;
+                scene.lamp_strength = strength;
+            }
+            scene.light.lamps = scene.lamp_texture;
+        });
         profiling::section("Reflections", [&] {
             const WaterLook& look = scene.water.look;
             const WorldParts mirrored { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false };

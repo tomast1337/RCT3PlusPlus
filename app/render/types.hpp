@@ -283,16 +283,25 @@ namespace rct3::render
         glm::vec3 sun { 0.0f };    ///< On a surface facing the sun
         glm::vec3 sky { 1.0f };    ///< From above, on a surface facing up
         glm::vec3 ground { 0.0f }; ///< From below, on a surface facing down
-        /// The sun's shadow: the depth of a target drawn from the sun, and a 5 by 1 Rgba32Float texture of how it
-        /// was drawn: the world-to-map transform's four columns, then texel size in world units and depth bias in
-        /// map depth. Without both, nothing is in shadow.
+        /// The sun's shadow: the depth of a target drawn from the sun, and a 5 by 2 Rgba32Float texture of how it
+        /// was drawn, in its first row: the world-to-map transform's four columns, then texel size in world units
+        /// and depth bias in map depth. Without both, nothing is in shadow.
         TextureHandle shadow_map;
         TextureHandle shadow_view;
-        /// The Lit shaders only: an older shadow drawn as `shadow_map` and `shadow_view` are, mixed in with
+        /// The Lit shaders only: an older shadow, drawn as the second row of `shadow_view` says, mixed in with
         /// `shadow_before` (0 to 1) of the weight, so the shadow moves smoothly between two drawings of it.
         TextureHandle shadow_map_before;
-        TextureHandle shadow_view_before;
         float shadow_before = 0;
+        /// The Lit shaders only: lamps, each lighting what is round it, fading to nothing at its reach. An
+        /// Rgba32Float texture `park::kLampTexelsAcross` texels wide, read as one run of texels row after row (see
+        /// park/lamp_grid.hpp, which fills it):
+        ///  - 0: the grid's corner (world x, z), its cell size, and its cells along x;
+        ///  - 1: its cells along z, the number of lamps, and where the grid's cells start;
+        ///  - from 2, two per lamp: its middle (world x, y, z) and reach; its colour, times its strength;
+        ///  - then per cell, row by row along x, `park::kLampsPerCell / 4` texels of the numbers of the lamps that reach
+        ///    into it, ended by -1 when fewer.
+        /// Without it, no lamp is lit.
+        TextureHandle lamps;
         /// Haze: far surfaces fade towards this colour (each channel 0 to 1), more the further they are from the
         /// eye. None when `haze_rate` is 0.
         glm::vec3 haze { 0.0f };

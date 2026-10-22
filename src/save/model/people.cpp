@@ -468,67 +468,73 @@ namespace rct3::save
 
         Mood mood(std::optional<const Value&> v) noexcept
         {
-            Mood m;
-            m.energy = f32(sub(v, at::energy_f), 0.5f);
-            m.happiness = f32(sub(v, at::happiness_f), 0.5f);
-            m.nausea = f32(sub(v, at::nausea_f), 0);
-            m.sunburn = opt_f32(sub(v, at::sunburn_f));
-            return m;
+            return Mood {
+                .energy = f32(sub(v, at::energy_f), 0.5f),
+                .happiness = f32(sub(v, at::happiness_f), 0.5f),
+                .nausea = f32(sub(v, at::nausea_f), 0),
+                .sunburn = opt_f32(sub(v, at::sunburn_f)),
+            };
         }
 
         Person build_person(const DecodedObject& o, const ObjectIndex& index, PersonType default_type)
         {
             const auto get = [&](std::string_view n) { return o.find(n); };
-            Person p;
-            p.id = o.id;
-            p.type = static_cast<PersonType>(u8(get(at::person_type), static_cast<std::uint8_t>(default_type)));
-            p.sub_type = u8(get(at::sub_type));
-            p.name = str(get(at::name));
-            p.position = matrix_position(get(at::world_matrix));
+            const auto mask = [&](std::string_view n) { return bits32(get(n)).value_or(0); };
+            Person p {
+                .id = o.id,
+                .type = static_cast<PersonType>(u8(get(at::person_type), static_cast<std::uint8_t>(default_type))),
+                .sub_type = u8(get(at::sub_type)),
+                .name = str(get(at::name)),
+                .position = matrix_position(get(at::world_matrix)),
+                .heading = f32(get(at::facing_angle)),
+                .lane_offset = vec3(get(at::path_offset)),
+                .state = static_cast<PersonState>(i32(get(at::state))),
+                .sub_state = i32(get(at::sub_state)),
+                .state_target = ref(get(at::state_target), index),
+                .decide_time = f32(get(at::decide_time)),
+                .start_time = f32(get(at::start_date)),
+                .animation = {
+                    .anim_type = i32(get(at::anim_type), -1),
+                    .walk = i32(get(at::current_walk_anim), -1),
+                    .idle = i32(get(at::idle_anim), -1),
+                    .alternate_walk = i32(get(at::alternate_walk_anim), -1),
+                    .time = f32(get(at::anim_time)),
+                    .speed = f32(get(at::anim_speed)),
+                    .move_speed = f32(get(at::move_speed)),
+                },
+                .appearance = {
+                    .head = ref(get(at::head_group), index),
+                    .body = ref(get(at::body_group), index),
+                    .legs = ref(get(at::legs_group), index),
+                    .swim_body = ref(get(at::swim_body_group), index),
+                    .swim_legs = ref(get(at::swim_legs_group), index),
+                    .palettes = { u8(get(at::skin_palette), 255), u8(get(at::upper_palette), 255), u8(get(at::lower_palette), 255), u8(get(at::upper_swim_palette), 255), u8(get(at::lower_swim_palette), 255) },
+                    .optionals = { mask(at::head_optionals), mask(at::body_optionals), mask(at::legs_optionals) },
+                    .wearing_swimsuit = flag(get(at::use_swim_suit)),
+                    .level_of_detail = u8(get(at::level_of_detail)),
+                    .visible = flag(get(at::rendering), true),
+                },
+                .look_at = {
+                    .type = i32(get(at::look_type)),
+                    .target = ref(get(at::look_target), index),
+                    .horizontal = f32(get(at::look_h)),
+                    .vertical = f32(get(at::look_v)),
+                    .distance = f32(get(at::look_dist), 1.5f),
+                    .extra_bits = bits32(get(at::look_extra)).value_or(0),
+                },
+                .thoughts = thoughts(get(at::recent_thoughts), index),
+                .attractions_visited = ref_list(get(at::attractions_visited), index, kMaxVisited),
+                .attraction_info = ref(get(at::attraction_info), index),
+                .route_controller = ref(get(at::route_controller), index),
+                .holder = ref(get(at::holders), index),
+                .time_to_next_think = f32(get(at::time_to_next_think)),
+                .thinks_to_big_think = i32(get(at::thinks_to_big)),
+            };
             if (std::optional<const Value&> world = get(at::world_matrix))
             {
                 if (const auto f = world->floats(); f.size() == p.world.size())
                     std::ranges::copy(f, p.world.begin());
             }
-            p.heading = f32(get(at::facing_angle));
-            p.lane_offset = vec3(get(at::path_offset));
-            p.state = static_cast<PersonState>(i32(get(at::state)));
-            p.sub_state = i32(get(at::sub_state));
-            p.state_target = ref(get(at::state_target), index);
-            p.decide_time = f32(get(at::decide_time));
-            p.start_time = f32(get(at::start_date));
-            p.animation.anim_type = i32(get(at::anim_type), -1);
-            p.animation.walk = i32(get(at::current_walk_anim), -1);
-            p.animation.idle = i32(get(at::idle_anim), -1);
-            p.animation.alternate_walk = i32(get(at::alternate_walk_anim), -1);
-            p.animation.time = f32(get(at::anim_time));
-            p.animation.speed = f32(get(at::anim_speed));
-            p.animation.move_speed = f32(get(at::move_speed));
-            auto& a = p.appearance;
-            a.head = ref(get(at::head_group), index);
-            a.body = ref(get(at::body_group), index);
-            a.legs = ref(get(at::legs_group), index);
-            a.swim_body = ref(get(at::swim_body_group), index);
-            a.swim_legs = ref(get(at::swim_legs_group), index);
-            a.palettes = { u8(get(at::skin_palette), 255), u8(get(at::upper_palette), 255), u8(get(at::lower_palette), 255), u8(get(at::upper_swim_palette), 255), u8(get(at::lower_swim_palette), 255) };
-            const auto mask = [&](std::string_view n) { return bits32(get(n)).value_or(0); };
-            a.optionals = { mask(at::head_optionals), mask(at::body_optionals), mask(at::legs_optionals) };
-            a.wearing_swimsuit = flag(get(at::use_swim_suit));
-            a.level_of_detail = u8(get(at::level_of_detail));
-            a.visible = flag(get(at::rendering), true);
-            p.look_at.type = i32(get(at::look_type));
-            p.look_at.target = ref(get(at::look_target), index);
-            p.look_at.horizontal = f32(get(at::look_h));
-            p.look_at.vertical = f32(get(at::look_v));
-            p.look_at.distance = f32(get(at::look_dist), 1.5f);
-            p.look_at.extra_bits = bits32(get(at::look_extra)).value_or(0);
-            p.thoughts = thoughts(get(at::recent_thoughts), index);
-            p.attractions_visited = ref_list(get(at::attractions_visited), index, kMaxVisited);
-            p.attraction_info = ref(get(at::attraction_info), index);
-            p.route_controller = ref(get(at::route_controller), index);
-            p.holder = ref(get(at::holders), index);
-            p.time_to_next_think = f32(get(at::time_to_next_think));
-            p.thinks_to_big_think = i32(get(at::thinks_to_big));
             return p;
         }
 
@@ -718,54 +724,63 @@ namespace rct3::save
         if (o.class_name != cls::guest)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        Guest g;
-        g.person = build_person(o, index, PersonType::Adult);
         const auto cash = get(at::cash);
-        g.cash.arrival = i32(sub(cash, at::atm_cash));
-        g.cash.current = i32(sub(cash, at::current_cash));
-        g.cash.withdrawn = i32(sub(cash, at::withdrawn));
-        g.cash.spent_drink = i32(sub(cash, at::spent_drink));
-        g.cash.spent_food = i32(sub(cash, at::spent_food));
-        g.cash.spent_park_entry = i32(sub(cash, at::spent_entry));
-        g.cash.spent_rides = i32(sub(cash, at::spent_rides));
-        g.cash.spent_souvenirs = i32(sub(cash, at::spent_souvenirs));
-        g.cash.total_spent = i32(sub(cash, at::total_spent));
         const auto need = get(at::consumption);
-        g.needs.food = f32(sub(need, at::food_f), 1);
-        g.needs.drink = f32(sub(need, at::drink_f), 1);
-        g.needs.toilet = f32(sub(need, at::toilet_f), 0);
-        g.mood_now = mood(get(at::current_health));
-        g.mood_target = get(at::target_health) ? mood(get(at::target_health)) : g.mood_now;
-        g.ride_preference.intensity = static_cast<RideIntensity>(u8(get(at::intensity), 1));
-        g.ride_preference.min = f32(get(at::intensity_min));
-        g.ride_preference.max = f32(get(at::intensity_max));
-        g.nausea_tolerance = static_cast<NauseaTolerance>(u8(get(at::nausea_tolerance), 1));
-        g.favourite_ride = ref(get(at::favourite_ride), index);
-        g.favourite_ride_rating = f32(get(at::favourite_rating));
-        g.group = ref(get(at::guest_group), index);
-        g.counters.rides = i32(get(at::rides_done));
-        g.counters.drinks = i32(get(at::drinks_bought));
-        g.counters.food_items = i32(get(at::food_bought));
-        g.counters.souvenirs = i32(get(at::souvenirs_bought));
-        g.counters.photos = i32(get(at::photos_taken));
-        g.counters.times_lost = i32(get(at::man_lost));
-        g.counters.minutes_in_park = i32(get(at::time_in_park_int));
-        g.scenery_assess_timer = i32(get(at::assess_scenery));
-        g.consuming_amount = f32(get(at::consuming_amount));
-        g.in_park = flag(get(at::is_in_park), true);
-        g.is_avatar = flag(get(at::is_avatar));
-        g.facing_photo = flag(get(at::is_facing_photo));
-        g.bad_entertainer = flag(get(at::bad_entertainer));
-        g.enjoyed_last_ride = flag(get(at::enjoyed_last_ride));
-        g.last_ride_was_favourite = flag(get(at::last_ride_favourite));
-        g.got_gift = flag(get(at::got_gift));
-        g.needs_cash = flag(get(at::needs_cash));
-        g.wants_leave_park = flag(get(at::want_leave));
-        g.leaving_due_to_closed_park = flag(get(at::leaving_closed));
-        g.pool_need = opt_f32(get(at::pool_need));
-        g.pool_preference = opt_f32(get(at::pool_preference));
-        g.price_modifier = opt_f32(get(at::price_modifier));
-        return g;
+        const Mood now = mood(get(at::current_health));
+        return Guest {
+            .person = build_person(o, index, PersonType::Adult),
+            .cash = {
+                .arrival = i32(sub(cash, at::atm_cash)),
+                .current = i32(sub(cash, at::current_cash)),
+                .withdrawn = i32(sub(cash, at::withdrawn)),
+                .spent_drink = i32(sub(cash, at::spent_drink)),
+                .spent_food = i32(sub(cash, at::spent_food)),
+                .spent_park_entry = i32(sub(cash, at::spent_entry)),
+                .spent_rides = i32(sub(cash, at::spent_rides)),
+                .spent_souvenirs = i32(sub(cash, at::spent_souvenirs)),
+                .total_spent = i32(sub(cash, at::total_spent)),
+            },
+            .needs = {
+                .food = f32(sub(need, at::food_f), 1),
+                .drink = f32(sub(need, at::drink_f), 1),
+                .toilet = f32(sub(need, at::toilet_f), 0),
+            },
+            .mood_now = now,
+            .mood_target = get(at::target_health) ? mood(get(at::target_health)) : now,
+            .ride_preference = {
+                .intensity = static_cast<RideIntensity>(u8(get(at::intensity), 1)),
+                .min = f32(get(at::intensity_min)),
+                .max = f32(get(at::intensity_max)),
+            },
+            .nausea_tolerance = static_cast<NauseaTolerance>(u8(get(at::nausea_tolerance), 1)),
+            .favourite_ride = ref(get(at::favourite_ride), index),
+            .favourite_ride_rating = f32(get(at::favourite_rating)),
+            .group = ref(get(at::guest_group), index),
+            .counters = {
+                .rides = i32(get(at::rides_done)),
+                .drinks = i32(get(at::drinks_bought)),
+                .food_items = i32(get(at::food_bought)),
+                .souvenirs = i32(get(at::souvenirs_bought)),
+                .photos = i32(get(at::photos_taken)),
+                .times_lost = i32(get(at::man_lost)),
+                .minutes_in_park = i32(get(at::time_in_park_int)),
+            },
+            .scenery_assess_timer = i32(get(at::assess_scenery)),
+            .consuming_amount = f32(get(at::consuming_amount)),
+            .in_park = flag(get(at::is_in_park), true),
+            .is_avatar = flag(get(at::is_avatar)),
+            .facing_photo = flag(get(at::is_facing_photo)),
+            .bad_entertainer = flag(get(at::bad_entertainer)),
+            .enjoyed_last_ride = flag(get(at::enjoyed_last_ride)),
+            .last_ride_was_favourite = flag(get(at::last_ride_favourite)),
+            .got_gift = flag(get(at::got_gift)),
+            .needs_cash = flag(get(at::needs_cash)),
+            .wants_leave_park = flag(get(at::want_leave)),
+            .leaving_due_to_closed_park = flag(get(at::leaving_closed)),
+            .pool_need = opt_f32(get(at::pool_need)),
+            .pool_preference = opt_f32(get(at::pool_preference)),
+            .price_modifier = opt_f32(get(at::price_modifier)),
+        };
     }
 
     std::optional<Staff> make_staff(const DecodedObject& o, const ObjectIndex& index)
@@ -774,85 +789,86 @@ namespace rct3::save
         if (!c)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        Staff s;
-        s.kind = c->kind;
-        s.person = build_person(o, index, c->type);
-        s.type_id = i32(get(at::staff_type_id));
-        s.wage_level = i32(get(at::wage_level), 1);
-        s.warnings = i32(get(at::warnings));
-        s.training = i32(get(at::training));
-        s.laziness = f32(get(at::laziness));
-        s.happiness = f32(get(at::happiness), 0.5f);
-        s.think_timer = f32(get(at::think_timer));
-        s.last_task_type = i32(get(at::last_task_type));
-        s.thinks_since_last_task = i32(get(at::thinks_last_task), -1);
-        s.thinks_since_different_task = i32(get(at::thinks_different_task), -1);
-        s.thinks_since_no_task = i32(get(at::thinks_no_task), -1);
-        s.thinks_since_happy = i32(get(at::thinks_happy), -1);
-        s.patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) };
-        s.task_flags = i32(get(at::task_flags));
+        Staff s {
+            .person = build_person(o, index, c->type),
+            .kind = c->kind,
+            .type_id = i32(get(at::staff_type_id)),
+            .wage_level = i32(get(at::wage_level), 1),
+            .warnings = i32(get(at::warnings)),
+            .training = i32(get(at::training)),
+            .laziness = f32(get(at::laziness)),
+            .happiness = f32(get(at::happiness), 0.5f),
+            .think_timer = f32(get(at::think_timer)),
+            .last_task_type = i32(get(at::last_task_type)),
+            .thinks_since_last_task = i32(get(at::thinks_last_task), -1),
+            .thinks_since_different_task = i32(get(at::thinks_different_task), -1),
+            .thinks_since_no_task = i32(get(at::thinks_no_task), -1),
+            .thinks_since_happy = i32(get(at::thinks_happy), -1),
+            .patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) },
+            .task_flags = i32(get(at::task_flags)),
+        };
         switch (c->kind)
         {
             case StaffKind::Handyman:
             {
-                HandymanWork w;
-                w.bins_emptied = i32(get(at::bins_emptied));
-                w.gardens_watered = i32(get(at::gardens_watered));
-                w.grass_mown = i32(get(at::grass_mown));
-                w.paths_swept = i32(get(at::paths_swept));
-                w.duty_waypoint = vec3(get(at::duty_waypoint));
-                s.work = w;
+                s.work = HandymanWork {
+                    .bins_emptied = i32(get(at::bins_emptied)),
+                    .gardens_watered = i32(get(at::gardens_watered)),
+                    .grass_mown = i32(get(at::grass_mown)),
+                    .paths_swept = i32(get(at::paths_swept)),
+                    .duty_waypoint = vec3(get(at::duty_waypoint)),
+                };
                 break;
             }
             case StaffKind::Mechanic:
             {
-                MechanicWork w;
-                w.info = ref(get(at::mechanic_info), index);
-                w.objects_fixed = i32(get(at::objects_fixed));
-                w.objects_inspected = i32(get(at::objects_inspected));
-                w.state_timer = f32(get(at::state_timer));
-                s.work = w;
+                s.work = MechanicWork {
+                    .info = ref(get(at::mechanic_info), index),
+                    .objects_fixed = i32(get(at::objects_fixed)),
+                    .objects_inspected = i32(get(at::objects_inspected)),
+                    .state_timer = f32(get(at::state_timer)),
+                };
                 break;
             }
             case StaffKind::Entertainer:
             {
-                EntertainerWork w;
-                w.anim_count = i32(get(at::anim_count));
-                w.bad = flag(get(at::bad));
-                w.facing = flag(get(at::facing));
-                w.guests_ok = flag(get(at::guests_ok));
-                w.show_piece_index = i32(get(at::show_piece));
-                w.time_till_entertain = f32(get(at::time_till_entertain));
-                w.too_few_many_guests_time = f32(get(at::too_few_many));
-                s.work = w;
+                s.work = EntertainerWork {
+                    .anim_count = i32(get(at::anim_count)),
+                    .bad = flag(get(at::bad)),
+                    .facing = flag(get(at::facing)),
+                    .guests_ok = flag(get(at::guests_ok)),
+                    .show_piece_index = i32(get(at::show_piece)),
+                    .time_till_entertain = f32(get(at::time_till_entertain)),
+                    .too_few_many_guests_time = f32(get(at::too_few_many)),
+                };
                 break;
             }
             case StaffKind::Vendor:
             {
-                VendorWork w;
-                w.attraction_instance = ref(get(at::attraction_instance), index);
-                w.customer = ref(get(at::customer), index);
-                w.scenery_item = ref(get(at::scenery_item), index);
-                w.shop_item = ref(get(at::shop_item), index);
-                s.work = w;
+                s.work = VendorWork {
+                    .attraction_instance = ref(get(at::attraction_instance), index),
+                    .customer = ref(get(at::customer), index),
+                    .scenery_item = ref(get(at::scenery_item), index),
+                    .shop_item = ref(get(at::shop_item), index),
+                };
                 break;
             }
             case StaffKind::AnimalKeeper:
             {
-                KeeperWork w;
-                w.shelters_to_fill = ref_list(get(at::shelters_to_fill), index, kMaxVisited);
-                w.enclosure_id = i32(get(at::enclosure_id));
-                w.dung_cleared = i32(get(at::dung_cleared));
-                w.troughs_filled = i32(get(at::troughs_filled));
-                s.work = std::move(w);
+                s.work = KeeperWork {
+                    .shelters_to_fill = ref_list(get(at::shelters_to_fill), index, kMaxVisited),
+                    .enclosure_id = i32(get(at::enclosure_id)),
+                    .dung_cleared = i32(get(at::dung_cleared)),
+                    .troughs_filled = i32(get(at::troughs_filled)),
+                };
                 break;
             }
             case StaffKind::LifeGuard:
             {
-                LifeGuardWork w;
-                w.chair = ref(get(at::life_guard_chair), index);
-                w.chair_been_set = flag(get(at::chair_been_set));
-                s.work = w;
+                s.work = LifeGuardWork {
+                    .chair = ref(get(at::life_guard_chair), index),
+                    .chair_been_set = flag(get(at::chair_been_set)),
+                };
                 break;
             }
             case StaffKind::SecurityGuard:
@@ -871,20 +887,21 @@ namespace rct3::save
         if (!kind)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        Animal a;
-        a.id = o.id;
-        a.kind = *kind;
-        a.position = matrix_position(get(at::world_matrix));
-        a.anim_type = i32(get(at::anim_type));
-        a.anim_time = f32(get(at::anim_time));
-        a.anim_speed = f32(get(at::anim_speed));
-        a.state = i32(get(at::state));
-        a.sub_state = i32(get(at::sub_state));
-        a.state_timer = f32(get(at::state_timer_a));
-        a.palette = u8(get(at::palette));
-        a.time_in_park = f32(get(at::time_in_park_f));
-        a.target = vec3(get(at::target_pos));
-        a.leader = flag(get(at::leader));
+        Animal a {
+            .id = o.id,
+            .kind = *kind,
+            .position = matrix_position(get(at::world_matrix)),
+            .anim_type = i32(get(at::anim_type)),
+            .anim_time = f32(get(at::anim_time)),
+            .anim_speed = f32(get(at::anim_speed)),
+            .state = i32(get(at::state)),
+            .sub_state = i32(get(at::sub_state)),
+            .state_timer = f32(get(at::state_timer_a)),
+            .palette = u8(get(at::palette)),
+            .time_in_park = f32(get(at::time_in_park_f)),
+            .target = vec3(get(at::target_pos)),
+            .leader = flag(get(at::leader)),
+        };
         if (*kind == AnimalKind::Fish)
         {
             a.left = ref(get(at::left_fish), index);
@@ -915,40 +932,40 @@ namespace rct3::save
         if (o.class_name != cls::wild_animal)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        ZooAnimal z;
-        z.id = o.id;
-        z.name_template = str(get(at::wa_name));
-        z.first_names = str(get(at::wa_first_names));
-        z.generation_suffix = i32(get(at::wa_suffix));
-        z.is_male = flag(get(at::wa_is_male));
-        z.is_adult = flag(get(at::wa_is_adult));
-        z.date_of_birth = f32(get(at::wa_birth));
-        z.health = f32(get(at::wa_health));
-        z.food = f32(get(at::wa_food));
-        z.drink = f32(get(at::wa_drink));
-        z.tiredness = f32(get(at::wa_tiredness));
-        z.social = f32(get(at::wa_social));
-        z.dung = f32(get(at::wa_dung));
-        z.sleeping = flag(get(at::wa_sleeping));
-        z.tranquilised = flag(get(at::wa_tranquilised));
-        z.can_be_picked_up = flag(get(at::wa_pickup));
-        z.in_crate = flag(get(at::wa_crate));
-        z.been_paid_for = flag(get(at::wa_paid));
-        z.adoption_fee = i32(get(at::wa_fee));
-        z.species_hunger = i32(get(at::wa_hunger));
-        z.species_life_expectancy = i32(get(at::wa_life));
-        z.species_peep_enjoyment = i32(get(at::wa_enjoyment));
-        z.species_social = i32(get(at::wa_species_social));
-        z.species_water_req = i32(get(at::wa_water));
-        z.type = i32(get(at::wa_type));
-        z.entry = ref(get(at::wa_entry), index);
-        z.family_membership = ref(get(at::wa_family), index);
-        z.visual = ref(get(at::wa_visual), index);
-        z.pregnancy_timer = f32(get(at::wa_pregnancy), -1);
-        z.babies_in_womb = i32(get(at::wa_babies));
-        z.enclosure_health_score = f32(get(at::wa_enclosure_score));
-        z.thoughts = thoughts(get(at::wa_thoughts), index);
-        return z;
+        return ZooAnimal {
+            .id = o.id,
+            .name_template = str(get(at::wa_name)),
+            .first_names = str(get(at::wa_first_names)),
+            .generation_suffix = i32(get(at::wa_suffix)),
+            .is_male = flag(get(at::wa_is_male)),
+            .is_adult = flag(get(at::wa_is_adult)),
+            .date_of_birth = f32(get(at::wa_birth)),
+            .health = f32(get(at::wa_health)),
+            .food = f32(get(at::wa_food)),
+            .drink = f32(get(at::wa_drink)),
+            .tiredness = f32(get(at::wa_tiredness)),
+            .social = f32(get(at::wa_social)),
+            .dung = f32(get(at::wa_dung)),
+            .sleeping = flag(get(at::wa_sleeping)),
+            .tranquilised = flag(get(at::wa_tranquilised)),
+            .can_be_picked_up = flag(get(at::wa_pickup)),
+            .in_crate = flag(get(at::wa_crate)),
+            .been_paid_for = flag(get(at::wa_paid)),
+            .adoption_fee = i32(get(at::wa_fee)),
+            .species_hunger = i32(get(at::wa_hunger)),
+            .species_life_expectancy = i32(get(at::wa_life)),
+            .species_peep_enjoyment = i32(get(at::wa_enjoyment)),
+            .species_social = i32(get(at::wa_species_social)),
+            .species_water_req = i32(get(at::wa_water)),
+            .type = i32(get(at::wa_type)),
+            .entry = ref(get(at::wa_entry), index),
+            .family_membership = ref(get(at::wa_family), index),
+            .visual = ref(get(at::wa_visual), index),
+            .pregnancy_timer = f32(get(at::wa_pregnancy), -1),
+            .babies_in_womb = i32(get(at::wa_babies)),
+            .enclosure_health_score = f32(get(at::wa_enclosure_score)),
+            .thoughts = thoughts(get(at::wa_thoughts), index),
+        };
     }
 
     std::optional<GuestGroup> make_guest_group(const DecodedObject& o, const ObjectIndex& index)
@@ -956,35 +973,38 @@ namespace rct3::save
         if (o.class_name != cls::group)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        GuestGroup g;
-        g.id = o.id;
-        g.group_type = i32(get(at::g_type));
-        g.num_members = i32(get(at::g_num_members));
-        g.leader = ref(get(at::g_leader), index);
-        g.avatar = ref(get(at::g_avatar), index);
-        g.members = ref_list(get(at::g_members), index, kMaxGroupMembers);
-        g.flock_state = i32(get(at::g_flock_state));
-        g.flock_sub_state = i32(get(at::g_flock_sub));
-        g.flock_focus = ref(get(at::g_flock_focus), index);
-        g.flock_target = ref(get(at::g_flock_target), index);
-        g.flock_index = i32(get(at::g_flock_index));
-        g.flock_progress = f32(get(at::g_flock_progress));
-        g.flock_decay = f32(get(at::g_flock_decay));
-        g.average_mood.energy = f32(get(at::g_avg_energy));
-        g.average_mood.happiness = f32(get(at::g_avg_happiness));
-        g.average_mood.nausea = f32(get(at::g_avg_nausea));
-        g.average_mood.sunburn = opt_f32(get(at::g_avg_sunburn));
-        g.min_food = f32(get(at::g_min_food));
-        g.min_drink = f32(get(at::g_min_drink));
-        g.max_toilet = f32(get(at::g_max_toilet));
-        g.min_intensity = f32(get(at::g_min_intensity));
-        g.max_intensity = f32(get(at::g_max_intensity));
-        g.set_piece_type = i32(get(at::g_sp_type));
-        g.set_piece_state = i32(get(at::g_sp_state));
-        g.set_piece_focus = vec3(get(at::g_sp_focus));
-        g.set_piece_path = ref(get(at::g_sp_path), index);
-        g.set_piece_actor0 = ref(get(at::g_sp_actor0), index);
-        g.set_piece_actor1 = ref(get(at::g_sp_actor1), index);
+        GuestGroup g {
+            .id = o.id,
+            .group_type = i32(get(at::g_type)),
+            .num_members = i32(get(at::g_num_members)),
+            .leader = ref(get(at::g_leader), index),
+            .avatar = ref(get(at::g_avatar), index),
+            .members = ref_list(get(at::g_members), index, kMaxGroupMembers),
+            .flock_state = i32(get(at::g_flock_state)),
+            .flock_sub_state = i32(get(at::g_flock_sub)),
+            .flock_focus = ref(get(at::g_flock_focus), index),
+            .flock_target = ref(get(at::g_flock_target), index),
+            .flock_index = i32(get(at::g_flock_index)),
+            .flock_progress = f32(get(at::g_flock_progress)),
+            .flock_decay = f32(get(at::g_flock_decay)),
+            .average_mood = {
+                .energy = f32(get(at::g_avg_energy)),
+                .happiness = f32(get(at::g_avg_happiness)),
+                .nausea = f32(get(at::g_avg_nausea)),
+                .sunburn = opt_f32(get(at::g_avg_sunburn)),
+            },
+            .min_food = f32(get(at::g_min_food)),
+            .min_drink = f32(get(at::g_min_drink)),
+            .max_toilet = f32(get(at::g_max_toilet)),
+            .min_intensity = f32(get(at::g_min_intensity)),
+            .max_intensity = f32(get(at::g_max_intensity)),
+            .set_piece_type = i32(get(at::g_sp_type)),
+            .set_piece_state = i32(get(at::g_sp_state)),
+            .set_piece_focus = vec3(get(at::g_sp_focus)),
+            .set_piece_path = ref(get(at::g_sp_path), index),
+            .set_piece_actor0 = ref(get(at::g_sp_actor0), index),
+            .set_piece_actor1 = ref(get(at::g_sp_actor1), index),
+        };
         if (const auto pos = get(at::g_sp_pos); pos && pos->kind() == ValueKind::List)
         {
             const auto items = pos->items();
@@ -1001,19 +1021,20 @@ namespace rct3::save
         if (o.class_name != cls::holder)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        ItemHolder h;
-        h.id = o.id;
-        h.owner = ref(get(at::h_owner), index);
-        h.consuming_slot = i32(get(at::h_consuming), -1);
-        h.head = ref(get(at::h_head), index);
-        h.left_hand = ref(get(at::h_lhand), index);
-        h.right_hand = ref(get(at::h_rhand), index);
-        h.left_pocket = ref(get(at::h_lpocket), index);
-        h.right_pocket = ref(get(at::h_rpocket), index);
-        h.umbrella = ref(get(at::h_umbrella), index);
-        h.sunglasses = ref(get(at::h_sunglasses), index);
-        h.swimsuit = ref(get(at::h_swimsuit), index);
-        h.slotless = ref_list(get(at::h_slotless), index, kMaxVisited);
+        ItemHolder h {
+            .id = o.id,
+            .owner = ref(get(at::h_owner), index),
+            .consuming_slot = i32(get(at::h_consuming), -1),
+            .head = ref(get(at::h_head), index),
+            .left_hand = ref(get(at::h_lhand), index),
+            .right_hand = ref(get(at::h_rhand), index),
+            .left_pocket = ref(get(at::h_lpocket), index),
+            .right_pocket = ref(get(at::h_rpocket), index),
+            .umbrella = ref(get(at::h_umbrella), index),
+            .sunglasses = ref(get(at::h_sunglasses), index),
+            .swimsuit = ref(get(at::h_swimsuit), index),
+            .slotless = ref_list(get(at::h_slotless), index, kMaxVisited),
+        };
         if (const auto b = bits32(get(at::h_hidden)); b && *b != kFillBits)
             h.hidden_parts = *b;
         return h;
@@ -1024,19 +1045,19 @@ namespace rct3::save
         if (o.class_name != cls::carried)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        CarriedItem c;
-        c.id = o.id;
-        c.definition = ref(get(at::i_definition), index);
-        c.name = str(get(at::i_name));
-        c.food = f32(get(at::i_food));
-        c.drink = f32(get(at::i_drink));
-        c.nausea = f32(get(at::i_nausea));
-        c.bad = flag(get(at::i_bad));
-        c.becomes = ref(get(at::i_becomes), index);
-        c.voucher_target = ref(get(at::i_voucher), index);
-        c.colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) };
-        c.inventory_choice = i32(get(at::i_inventory), -1);
-        return c;
+        return CarriedItem {
+            .id = o.id,
+            .definition = ref(get(at::i_definition), index),
+            .name = str(get(at::i_name)),
+            .food = f32(get(at::i_food)),
+            .drink = f32(get(at::i_drink)),
+            .nausea = f32(get(at::i_nausea)),
+            .bad = flag(get(at::i_bad)),
+            .becomes = ref(get(at::i_becomes), index),
+            .voucher_target = ref(get(at::i_voucher), index),
+            .colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) },
+            .inventory_choice = i32(get(at::i_inventory), -1),
+        };
     }
 
     std::optional<ShopItem> make_shop_item(const DecodedObject& o, const ObjectIndex& index)
@@ -1044,57 +1065,57 @@ namespace rct3::save
         if (o.class_name != cls::shop_item)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
-        ShopItem s;
-        s.id = o.id;
-        s.definition = ref(get(at::i_definition), index);
-        s.name = str(get(at::i_name));
-        s.price = i32(get(at::i_price));
-        s.total_sold = i32(get(at::i_total_sold));
-        s.extras = i32(get(at::i_extras));
-        s.colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) };
-        s.sale_item = ref(get(at::i_sale_item), index);
-        s.stall = ref(get(at::i_stall), index);
-        return s;
+        return ShopItem {
+            .id = o.id,
+            .definition = ref(get(at::i_definition), index),
+            .name = str(get(at::i_name)),
+            .price = i32(get(at::i_price)),
+            .total_sold = i32(get(at::i_total_sold)),
+            .extras = i32(get(at::i_extras)),
+            .colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) },
+            .sale_item = ref(get(at::i_sale_item), index),
+            .stall = ref(get(at::i_stall), index),
+        };
     }
 
     std::optional<ShopExtra> make_shop_extra(const DecodedObject& o, const ObjectIndex& index)
     {
         if (o.class_name != cls::shop_extra)
             return std::nullopt;
-        ShopExtra s;
-        s.id = o.id;
-        s.definition = ref(o.find(at::i_definition), index);
-        s.setting = i32(o.find(at::i_setting));
-        return s;
+        return ShopExtra {
+            .id = o.id,
+            .definition = ref(o.find(at::i_definition), index),
+            .setting = i32(o.find(at::i_setting)),
+        };
     }
 
     std::optional<Litter> make_litter(const DecodedObject& o, const ObjectIndex& index)
     {
         if (o.class_name != cls::litter)
             return std::nullopt;
-        Litter l;
-        l.id = o.id;
-        l.position = vec3(o.find(at::l_position));
-        l.orientation = vec3(o.find(at::l_orientation));
-        l.type = u8(o.find(at::l_type));
-        l.state = static_cast<LitterState>(u8(o.find(at::l_state)));
-        l.create_time = f32(o.find(at::l_create));
-        l.path_tile = ref(o.find(at::l_tile), index);
-        l.flags = bits32(o.find(at::l_flags));
-        return l;
+        return Litter {
+            .id = o.id,
+            .position = vec3(o.find(at::l_position)),
+            .orientation = vec3(o.find(at::l_orientation)),
+            .type = u8(o.find(at::l_type)),
+            .state = static_cast<LitterState>(u8(o.find(at::l_state))),
+            .create_time = f32(o.find(at::l_create)),
+            .path_tile = ref(o.find(at::l_tile), index),
+            .flags = bits32(o.find(at::l_flags)),
+        };
     }
 
     std::optional<PartGroup> make_part_group(const DecodedObject& o)
     {
         if (o.class_name != cls::part_group)
             return std::nullopt;
-        PartGroup g;
-        g.id = o.id;
-        g.symbol = str(o.find(at::pg_symbol));
-        g.section = u8(o.find(at::pg_section));
-        g.sex = u8(o.find(at::pg_sex));
-        g.type = u8(o.find(at::pg_type));
-        return g;
+        return PartGroup {
+            .id = o.id,
+            .symbol = str(o.find(at::pg_symbol)),
+            .section = u8(o.find(at::pg_section)),
+            .sex = u8(o.find(at::pg_sex)),
+            .type = u8(o.find(at::pg_type)),
+        };
     }
 
     // ---- loading ----

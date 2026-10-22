@@ -320,46 +320,50 @@ namespace rct3::save
         // Per-section loaders
         // ---------------------------------------------------------------------------------------------------------
 
-        void load_park_object(const DecodedObject& o, const ObjectIndex& index, Park& p)
+        Park park_of(const DecodedObject& o, const ObjectIndex& index)
         {
             using namespace names;
-            p.name = string_of(o.find(kName));
-            p.scenario_name = string_of(o.find(kScenarioName));
-            p.scenario_description = string_of(o.find(kScenarioDescription));
-            p.objective_text = string_of(o.find(kObjectiveText));
+            Park p {
+                .name = string_of(o.find(kName)),
+                .scenario_name = string_of(o.find(kScenarioName)),
+                .scenario_description = string_of(o.find(kScenarioDescription)),
+                .objective_text = string_of(o.find(kObjectiveText)),
+                .flags = {
+                    .raw = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0)),
+                },
+                .opening_minutes = i32_of(o.find(kOpening), 0),
+                .closing_minutes = i32_of(o.find(kClosing), 0),
+                .guest_generation_rate = float_of(o.find(kGenerationRate), 1.0f),
+                .ride_intensity_preference = float_of(o.find(kIntensity), 0.5f),
+                .initial_happiness = float_of(o.find(kInitialHappiness), 0.5f),
+                .initial_hunger = float_of(o.find(kInitialHunger), 1.0f),
+                .initial_thirst = float_of(o.find(kInitialThirst), 1.0f),
+                .rating_penalty = i32_of(o.find(kRatingPenalty), 0),
+                .guest_think_cycle = i32_of(o.find(kThinkCycle), 0),
+                .fence_entry = ref_of(o.find(kFenceEntry), index),
+                .pools_wanted = bool_of(o.find(kPools), false),
+                .allow_adult_animals = bool_of(o.find(kAdultAnimals), false),
+                .allow_baby_animals = bool_of(o.find(kBabyAnimals), false),
+                .rescued_animals = bool_of(o.find(kRescued), false),
+                .guests_in_park = series_of(o.find(kGuestsInPark)),
+                .adults_in_park = series_of(o.find(kAdultsInPark)),
+                .teenagers_in_park = series_of(o.find(kTeenagersInPark)),
+                .children_in_park = series_of(o.find(kChildrenInPark)),
+                .guests_on_way = series_of(o.find(kGuestsOnWay)),
+                .ideal_guests = series_of(o.find(kIdealGuests)),
+                .guest_intake = series_of(o.find(kGuestIntake)),
+                .adult_appeal = series_of(o.find(kAdultAppeal)),
+                .teenager_appeal = series_of(o.find(kTeenagerAppeal)),
+                .children_appeal = series_of(o.find(kChildrenAppeal)),
+                .assessed_entrance_fee = series_of(o.find(kAssessedFee)),
+                .park_rating = series_of(o.find(kParkRating)),
+                .publicity_level = series_of(o.find(kPublicity)),
+            };
             if (const auto t = o.find(kBreakdownText); t && t->kind() == ValueKind::String)
             {
                 p.rating_breakdown_text = std::string(t->text());
             }
-            p.flags.raw = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0));
-            p.opening_minutes = i32_of(o.find(kOpening), 0);
-            p.closing_minutes = i32_of(o.find(kClosing), 0);
-            p.guest_generation_rate = float_of(o.find(kGenerationRate), 1.0f);
-            p.ride_intensity_preference = float_of(o.find(kIntensity), 0.5f);
-            p.initial_happiness = float_of(o.find(kInitialHappiness), 0.5f);
-            p.initial_hunger = float_of(o.find(kInitialHunger), 1.0f);
-            p.initial_thirst = float_of(o.find(kInitialThirst), 1.0f);
-            p.guest_think_cycle = i32_of(o.find(kThinkCycle), 0);
-            p.rating_penalty = i32_of(o.find(kRatingPenalty), 0);
-            p.fence_entry = ref_of(o.find(kFenceEntry), index);
-            p.pools_wanted = bool_of(o.find(kPools), false);
-            p.allow_adult_animals = bool_of(o.find(kAdultAnimals), false);
-            p.allow_baby_animals = bool_of(o.find(kBabyAnimals), false);
-            p.rescued_animals = bool_of(o.find(kRescued), false);
-
-            p.guests_in_park = series_of(o.find(kGuestsInPark));
-            p.adults_in_park = series_of(o.find(kAdultsInPark));
-            p.teenagers_in_park = series_of(o.find(kTeenagersInPark));
-            p.children_in_park = series_of(o.find(kChildrenInPark));
-            p.guests_on_way = series_of(o.find(kGuestsOnWay));
-            p.ideal_guests = series_of(o.find(kIdealGuests));
-            p.guest_intake = series_of(o.find(kGuestIntake));
-            p.adult_appeal = series_of(o.find(kAdultAppeal));
-            p.teenager_appeal = series_of(o.find(kTeenagerAppeal));
-            p.children_appeal = series_of(o.find(kChildrenAppeal));
-            p.assessed_entrance_fee = series_of(o.find(kAssessedFee));
-            p.park_rating = series_of(o.find(kParkRating));
-            p.publicity_level = series_of(o.find(kPublicity));
+            return p;
         }
 
         struct RequiredCounter
@@ -415,28 +419,30 @@ namespace rct3::save
             return p;
         }
 
-        void load_money_object(const DecodedObject& o, Finance& f)
+        Finance finance_of(const DecodedObject& o)
         {
             using namespace names;
-            f.cash = i32_of(o.find(kCash), 0);
-            f.loan = i32_of(o.find(kLoan), 0);
-            f.max_loan = i32_of(o.find(kMaxLoan), 0);
-            f.entrance_fee = i32_of(o.find(kEntranceFee), 0);
-            f.interest_rate_percent = float_of(o.find(kInterest), 5.0f);
-            f.land_buy_cost = i32_of(o.find(kLandBuy), 0);
-            f.land_sell_cost = i32_of(o.find(kLandSell), 0);
-            f.rights_buy_cost = i32_of(o.find(kRightsBuy), 0);
-            f.rights_sell_cost = i32_of(o.find(kRightsSell), 0);
-            f.average_guest_cash = i32_of(o.find(kGuestCash), 0);
-            f.average_guest_bank_funds = i32_of(o.find(kGuestBank), 0);
-            f.flags = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0));
-            f.cash_less_loan = series_of(o.find(kCashLessLoan));
-            f.company_value = series_of(o.find(kCompanyValue));
-            f.expenditure = series_of(o.find(kExpenditure));
-            f.income = series_of(o.find(kIncome));
-            f.park_value = series_of(o.find(kParkValue));
-            f.share_price = series_of(o.find(kSharePrice));
-            f.weekly_profit = series_of(o.find(kWeeklyProfit));
+            Finance f {
+                .cash = i32_of(o.find(kCash), 0),
+                .loan = i32_of(o.find(kLoan), 0),
+                .max_loan = i32_of(o.find(kMaxLoan), 0),
+                .entrance_fee = i32_of(o.find(kEntranceFee), 0),
+                .interest_rate_percent = float_of(o.find(kInterest), 5.0f),
+                .land_buy_cost = i32_of(o.find(kLandBuy), 0),
+                .land_sell_cost = i32_of(o.find(kLandSell), 0),
+                .rights_buy_cost = i32_of(o.find(kRightsBuy), 0),
+                .rights_sell_cost = i32_of(o.find(kRightsSell), 0),
+                .average_guest_cash = i32_of(o.find(kGuestCash), 0),
+                .average_guest_bank_funds = i32_of(o.find(kGuestBank), 0),
+                .flags = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0)),
+                .cash_less_loan = series_of(o.find(kCashLessLoan)),
+                .company_value = series_of(o.find(kCompanyValue)),
+                .expenditure = series_of(o.find(kExpenditure)),
+                .income = series_of(o.find(kIncome)),
+                .park_value = series_of(o.find(kParkValue)),
+                .share_price = series_of(o.find(kSharePrice)),
+                .weekly_profit = series_of(o.find(kWeeklyProfit)),
+            };
             if (const auto l = o.find(kLedger); l && l->kind() == ValueKind::List)
             {
                 const auto items = l->items();
@@ -447,6 +453,7 @@ namespace rct3::save
             }
             if (const auto c = o.find(kCumulative); c && c->kind() == ValueKind::Struct)
                 f.cumulative = ledger_of(*c);
+            return f;
         }
 
         [[nodiscard]] std::optional<float> unset_if_negative(std::optional<const Value&> v) noexcept
@@ -459,15 +466,17 @@ namespace rct3::save
             return f;
         }
 
-        void load_clock_object(const DecodedObject& o, GameClock& c)
+        GameClock clock_of(const DecodedObject& o)
         {
             using namespace names;
-            c.time = float_of(o.find(kTime), 0.0f);
-            c.zero_time = float_of(o.find(kZeroTime), 0.0f);
-            c.day_night_phase = unset_if_negative(o.find(kDayNight));
-            if (const auto m = o.find(kDayNightMode); is_numeric(m))
-                c.day_night_mode = static_cast<std::int32_t>(m->as_integer());
-            c.day_night_rendered_phase = unset_if_negative(o.find(kDayNightRendered));
+            const auto mode = o.find(kDayNightMode);
+            return GameClock {
+                .time = float_of(o.find(kTime), 0.0f),
+                .zero_time = float_of(o.find(kZeroTime), 0.0f),
+                .day_night_phase = unset_if_negative(o.find(kDayNight)),
+                .day_night_mode = is_numeric(mode) ? std::optional(static_cast<std::int32_t>(mode->as_integer())) : std::nullopt,
+                .day_night_rendered_phase = unset_if_negative(o.find(kDayNightRendered)),
+            };
         }
 
         [[nodiscard]] std::optional<GroupMix> group_mix_of(const DecodedObject& o)
@@ -519,33 +528,35 @@ namespace rct3::save
         void load_objective_object(const DecodedObject& o, ObjectiveSet& set)
         {
             using namespace names;
-            Objective ob;
-            ob.difficulty = i32_of(o.find(kDifficulty), 0);
-            ob.objective_id = i32_of(o.find(kObjectiveId), 0);
-            ob.prize_id = i32_of(o.find(kPrize), 0);
-            ob.success = bool_of(o.find(kSuccess), false);
-            set.objectives.push_back(ob);
+            set.objectives.push_back(
+                Objective {
+                    .difficulty = i32_of(o.find(kDifficulty), 0),
+                    .objective_id = i32_of(o.find(kObjectiveId), 0),
+                    .prize_id = i32_of(o.find(kPrize), 0),
+                    .success = bool_of(o.find(kSuccess), false),
+                });
         }
 
         void load_condition_object(const DecodedObject& o, ObjectiveSet& set)
         {
             using namespace names;
-            Condition c;
-            c.class_name = std::string(o.class_name);
+            Condition c {
+                .class_name = std::string(o.class_name),
+                .id = o.id,
+                .difficulty = i32_of(o.find(kDifficulty), 0),
+                .objective_id = i32_of(o.find(kObjectiveId), 0),
+                .slot = i32_of(o.find(kConditionId), 0),
+                .completed = bool_of(o.find(kCompleted), false),
+                .months_to_hold = i32_of(o.find(kConsistant), 0),
+                .start_time = float_of(o.find(kStartTime), 0.0f),
+                .next_check_time = float_of(o.find(kNextCheckTime), 0.0f),
+                .consistency_flags = static_cast<std::uint32_t>(i32_of(o.find(kConsistantFlags), 0)),
+            };
             for (const auto& [name, kind] : kConditionKinds)
             {
                 if (o.class_name == name)
                     c.kind = kind;
             }
-            c.id = o.id;
-            c.difficulty = i32_of(o.find(kDifficulty), 0);
-            c.objective_id = i32_of(o.find(kObjectiveId), 0);
-            c.slot = i32_of(o.find(kConditionId), 0);
-            c.completed = bool_of(o.find(kCompleted), false);
-            c.months_to_hold = i32_of(o.find(kConsistant), 0);
-            c.start_time = float_of(o.find(kStartTime), 0.0f);
-            c.next_check_time = float_of(o.find(kNextCheckTime), 0.0f);
-            c.consistency_flags = static_cast<std::uint32_t>(i32_of(o.find(kConsistantFlags), 0));
             if (const auto v = o.find(kValue); is_numeric(v))
                 c.value = v->as_integer();
             if (const auto v = o.find(kGreaterThan); v && v->kind() == ValueKind::Bool)
@@ -556,32 +567,34 @@ namespace rct3::save
         void load_challenge_object(const DecodedObject& o, ObjectiveSet& set)
         {
             using namespace names;
-            Challenge c;
-            c.name_key = string_of(o.find(kChallengeName));
-            c.description_key = string_of(o.find(kChallengeDescription));
-            c.acceptance_key = string_of(o.find(kChallengeAcceptance));
-            c.completion_key = string_of(o.find(kChallengeCompletion));
-            c.challenge_id = i32_of(o.find(kChallengeId), 0);
-            c.state = i32_of(o.find(kChallengeState), 0);
-            c.prize_cash = i32_of(o.find(kChallengePrizeCash), 0);
-            c.prize_publicity = i32_of(o.find(kChallengePrizePublicity), 0);
-            c.prize_research_boost = i32_of(o.find(kChallengePrizeResearch), 0);
-            c.time_limit = float_of(o.find(kChallengeTimeLimit), 0.0f);
-            c.time_remaining = float_of(o.find(kChallengeTimeRemaining), 0.0f);
-            c.times_postponed = i32_of(o.find(kChallengePostponed), 0);
-            set.challenges.push_back(std::move(c));
+            set.challenges.push_back(
+                Challenge {
+                    .name_key = string_of(o.find(kChallengeName)),
+                    .description_key = string_of(o.find(kChallengeDescription)),
+                    .acceptance_key = string_of(o.find(kChallengeAcceptance)),
+                    .completion_key = string_of(o.find(kChallengeCompletion)),
+                    .challenge_id = i32_of(o.find(kChallengeId), 0),
+                    .state = i32_of(o.find(kChallengeState), 0),
+                    .prize_cash = i32_of(o.find(kChallengePrizeCash), 0),
+                    .prize_publicity = i32_of(o.find(kChallengePrizePublicity), 0),
+                    .prize_research_boost = i32_of(o.find(kChallengePrizeResearch), 0),
+                    .time_limit = float_of(o.find(kChallengeTimeLimit), 0.0f),
+                    .time_remaining = float_of(o.find(kChallengeTimeRemaining), 0.0f),
+                    .times_postponed = i32_of(o.find(kChallengePostponed), 0),
+                });
         }
 
         void load_category_object(const DecodedObject& o, ResearchState& r)
         {
             using namespace names;
-            ResearchCategory c;
-            c.name = string_of(o.find(kCategoryName));
-            c.budget = float_of(o.find(kBudget), 0.0f);
-            c.current_level = float_of(o.find(kCurrentLevel), 0.0f);
-            c.develop_cost = float_of(o.find(kDevelopCost), 0.0f);
-            c.available = bool_of(o.find(kIsAvailable), false);
-            c.hidden = bool_of(o.find(kIsHidden), false);
+            ResearchCategory c {
+                .name = string_of(o.find(kCategoryName)),
+                .budget = float_of(o.find(kBudget), 0.0f),
+                .current_level = float_of(o.find(kCurrentLevel), 0.0f),
+                .develop_cost = float_of(o.find(kDevelopCost), 0.0f),
+                .available = bool_of(o.find(kIsAvailable), false),
+                .hidden = bool_of(o.find(kIsHidden), false),
+            };
             if (const auto v = o.find(kIsInvented); v && v->kind() == ValueKind::Bool)
                 c.invented = v->as_bool();
             r.categories.push_back(std::move(c));
@@ -708,17 +721,18 @@ namespace rct3::save
                 ++content.entries_without_overlay;
                 return;
             }
-            AssetRequirement r;
-            r.kind = kind_of_entry(o.class_name);
-            r.class_name = std::string(o.class_name);
-            r.overlay_stem = std::move(*stem);
-            r.symbol = string_of(o.find(kSymbolName));
-            r.available = bool_of(o.find(kEntryAvailable), false);
-            r.hidden = bool_of(o.find(kEntryHidden), false);
-            r.invented = bool_of(o.find(kEntryInvented), false);
-            r.unlocked = bool_of(o.find(kEntryUnlocked), false);
-            r.id = o.id;
-            content.entries.push_back(std::move(r));
+            content.entries.push_back(
+                AssetRequirement {
+                    .kind = kind_of_entry(o.class_name),
+                    .class_name = std::string(o.class_name),
+                    .overlay_stem = std::move(*stem),
+                    .symbol = string_of(o.find(kSymbolName)),
+                    .available = bool_of(o.find(kEntryAvailable), false),
+                    .hidden = bool_of(o.find(kEntryHidden), false),
+                    .invented = bool_of(o.find(kEntryInvented), false),
+                    .unlocked = bool_of(o.find(kEntryUnlocked), false),
+                    .id = o.id,
+                });
         }
 
         void load_console(const SaveFile& file, const DecodedObject& o, const ObjectIndex& index, MessageLog& log)
@@ -745,15 +759,16 @@ namespace rct3::save
                 const auto time = decoded->find(kMessageTime);
                 if (!text && !time)
                     continue; // not a message entry
-                Message m;
-                m.id = decoded->id;
-                m.class_name = std::string(decoded->class_name);
-                m.text_key = string_of(text);
-                m.time = float_of(time, 0.0f);
-                m.object = ref_of(decoded->find(kMessageObject), index);
+                Message m {
+                    .id = decoded->id,
+                    .class_name = std::string(decoded->class_name),
+                    .text_key = string_of(text),
+                    .time = float_of(time, 0.0f),
+                    .object = ref_of(decoded->find(kMessageObject), index),
+                    .object_name = string_of(decoded->find(kMessageObjectName)),
+                };
                 if (const auto p = decoded->find(kMessagePanel); is_numeric(p))
                     m.panel = i32_of(p, 0);
-                m.object_name = string_of(decoded->find(kMessageObjectName));
                 if (const auto a = decoded->find(kMessageAward); is_numeric(a))
                     m.award = i32_of(a, 0);
                 log.ordered.push_back(std::move(m));
@@ -785,18 +800,18 @@ namespace rct3::save
 
     CalendarDate GameClock::split(float units) noexcept
     {
-        CalendarDate d;
         if (!(units > 0.0f) || !std::isfinite(units))
-            return d;
+            return { };
         const double u = units;
         const double years = std::floor(u / kUnitsPerYear);
-        d.year = years >= 9.0e18 ? std::int64_t { 9'000'000'000'000'000'000 } : static_cast<std::int64_t>(years);
         const double in_year = std::fmod(u, static_cast<double>(kUnitsPerYear));
-        d.month = static_cast<std::int32_t>(in_year / kUnitsPerMonth);
         const double in_month = std::fmod(in_year, static_cast<double>(kUnitsPerMonth));
-        d.week = static_cast<std::int32_t>(in_month / kUnitsPerWeek);
-        d.into_week = static_cast<float>(std::fmod(in_month, static_cast<double>(kUnitsPerWeek)));
-        return d;
+        return CalendarDate {
+            .year = years >= 9.0e18 ? std::int64_t { 9'000'000'000'000'000'000 } : static_cast<std::int64_t>(years),
+            .month = static_cast<std::int32_t>(in_year / kUnitsPerMonth),
+            .week = static_cast<std::int32_t>(in_month / kUnitsPerWeek),
+            .into_week = static_cast<float>(std::fmod(in_month, static_cast<double>(kUnitsPerWeek))),
+        };
     }
 
     std::vector<const Condition*> ObjectiveSet::conditions_for(std::int32_t difficulty, std::int32_t objective_id) const
@@ -924,9 +939,10 @@ namespace rct3::save
         const auto common = candidates(dir, base + std::string(names::kCommonPart) + std::string(names::kOvlExt));
         if (common.empty())
             return std::nullopt;
-        OverlayFiles out;
-        out.common = dir / common.front().first;
-        out.exact_case = exact && common.front().second;
+        OverlayFiles out {
+            .common = dir / common.front().first,
+            .exact_case = exact && common.front().second,
+        };
         const auto unique = candidates(dir, base + std::string(names::kUniquePart) + std::string(names::kOvlExt));
         if (!unique.empty())
         {
@@ -1033,7 +1049,7 @@ namespace rct3::save
             switch (role)
             {
                 case Role::Park:
-                    load_park_object(*decoded, index, m.park);
+                    m.park = park_of(*decoded, index);
                     if (std::optional<const Object&> fence = m.park.fence_entry ? index.find(*m.park.fence_entry) : std::nullopt)
                     {
                         if (const auto entry = decode_object(file, *fence))
@@ -1045,11 +1061,11 @@ namespace rct3::save
                     m.has_park = true;
                     break;
                 case Role::Money:
-                    load_money_object(*decoded, m.finance);
+                    m.finance = finance_of(*decoded);
                     m.has_finance = true;
                     break;
                 case Role::Clock:
-                    load_clock_object(*decoded, m.clock);
+                    m.clock = clock_of(*decoded);
                     m.has_clock = true;
                     break;
                 case Role::Awards:

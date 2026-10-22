@@ -544,57 +544,60 @@ namespace rct3::save
                     const View f(d->fields);
                     if (r == Role::Piece)
                     {
-                        PieceRecord rec;
-                        TrackPiece& p = rec.piece;
-                        p.id = d->id;
-                        p.symbol = f[id::kPieceSymbol].text();
-                        p.asset = live(f[id::kPieceAsset]);
-                        p.scenery = live(f[id::kPieceScenery]);
                         const View at = f[id::kPlacementField];
-                        p.tile_x = at[id::kPosX].i32();
-                        p.tile_z = at[id::kPosZ].i32();
-                        p.height = at[id::kHeight].i32();
-                        p.height_adjust = at[id::kHeightAdjust].number();
-                        p.direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer());
-                        p.corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer());
-                        p.reversed = f[id::kReversed].boolean();
-                        p.start_distance = f[id::kStartDistance].number();
-                        p.reverse_start_distance = f[id::kStartDistanceBack].number();
-                        p.colours = colours_of(f[id::kPieceColours]);
-                        p.brake_speed = f[id::kPieceBrake].i32(-1);
-                        p.holding_time = f[id::kPieceHolding].i32(0);
-                        p.speed_class = f[id::kPieceSpeed].i32(-1);
+                        PieceRecord rec {
+                            .piece = {
+                                .id = d->id,
+                                .symbol = f[id::kPieceSymbol].text(),
+                                .asset = live(f[id::kPieceAsset]),
+                                .scenery = live(f[id::kPieceScenery]),
+                                .tile_x = at[id::kPosX].i32(),
+                                .tile_z = at[id::kPosZ].i32(),
+                                .height = at[id::kHeight].i32(),
+                                .height_adjust = at[id::kHeightAdjust].number(),
+                                .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
+                                .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
+                                .reversed = f[id::kReversed].boolean(),
+                                .start_distance = f[id::kStartDistance].number(),
+                                .reverse_start_distance = f[id::kStartDistanceBack].number(),
+                                .colours = colours_of(f[id::kPieceColours]),
+                                .brake_speed = f[id::kPieceBrake].i32(-1),
+                                .holding_time = f[id::kPieceHolding].i32(0),
+                                .speed_class = f[id::kPieceSpeed].i32(-1),
+                            },
+                            .next = f[id::kNext].ref(),
+                            .prev = f[id::kPrev].ref(),
+                            .segment_ref = f[id::kPieceSegment].ref(),
+                            .platform_ref = f[id::kPiecePlatform].ref(),
+                        };
                         if (const View arm = f[id::kArmAngles]; arm[id::kArmAnglesSet].boolean())
                         {
                             const auto angles = arm[id::kArmAnglesList].items();
                             std::array<float, 4> held { };
                             for (std::size_t j = 0; j < held.size() && j < angles.size(); ++j)
                                 held[j] = View(angles[j]).number();
-                            p.arm_angles = held;
+                            rec.piece.arm_angles = held;
                         }
-                        rec.next = f[id::kNext].ref();
-                        rec.prev = f[id::kPrev].ref();
-                        rec.segment_ref = f[id::kPieceSegment].ref();
-                        rec.platform_ref = f[id::kPiecePlatform].ref();
                         if (rec.segment_ref != 0)
                             ++segment_owned_[rec.segment_ref];
                         pieces_.emplace(d->id, std::move(rec));
                     }
                     else if (r == Role::Platform)
                     {
-                        PlatformRecord rec;
-                        TrackPlatform& p = rec.platform;
-                        p.id = d->id;
                         const View at = f[id::kPlacementField];
-                        p.tile_x = at[id::kPosX].i32();
-                        p.tile_z = at[id::kPosZ].i32();
-                        p.height = at[id::kHeight].i32();
-                        p.direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer());
-                        p.corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer());
-                        p.flags = static_cast<std::uint32_t>(f[id::kFlags].integer());
-                        p.colours = colours_of(f[id::kPieceColours]);
-                        rec.piece_ref = f[id::kPlatformPiece].ref();
-                        platforms_.emplace(d->id, rec);
+                        platforms_.emplace(d->id, PlatformRecord {
+                            .platform = {
+                                .id = d->id,
+                                .tile_x = at[id::kPosX].i32(),
+                                .tile_z = at[id::kPosZ].i32(),
+                                .height = at[id::kHeight].i32(),
+                                .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
+                                .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
+                                .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
+                                .colours = colours_of(f[id::kPieceColours]),
+                            },
+                            .piece_ref = f[id::kPlatformPiece].ref(),
+                        });
                     }
                     else
                     {
@@ -618,13 +621,13 @@ namespace rct3::save
                 const View at = f[id::kPlacementField];
                 if (!at.present())
                     return std::nullopt;
-                PlacementSpot s;
-                s.object = live(f[id::kPlacedItem]);
-                s.col = at[id::kPosX].i32();
-                s.row = at[id::kPosZ].i32();
-                s.height = at[id::kHeight].i32();
-                s.direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer() & 3);
-                return s;
+                return PlacementSpot {
+                    .object = live(f[id::kPlacedItem]),
+                    .col = at[id::kPosX].i32(),
+                    .row = at[id::kPosZ].i32(),
+                    .height = at[id::kHeight].i32(),
+                    .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer() & 3),
+                };
             }
 
             /// The symbol and overlay of the asset entry `oid`, both empty when it is none.
@@ -640,29 +643,32 @@ namespace rct3::save
                 return { f[id::kEntrySymbol].text(), f[id::kEntryOverlay].text() };
             }
 
-            void read_common(AttractionCommon& c, const DecodedObject& d, std::string_view symbol_key, std::string_view overlay_key)
+            AttractionCommon read_common(const DecodedObject& d, std::string_view symbol_key, std::string_view overlay_key)
             {
                 const View f(d.fields);
-                c.id = d.id;
-                c.kind_asset = live(f[id::kKindAsset]);
-                c.symbol = f[symbol_key].text();
-                c.overlay_path = f[overlay_key].text();
-                c.name = f[id::kName].text();
-                c.state = static_cast<AttractionState>(f[id::kState].i32());
-                c.flags = static_cast<std::uint32_t>(f[id::kFlags].integer());
-                c.build_time = f[id::kBuildTime].number();
-                c.total_guests = f[id::kTotalGuests].integer();
-                c.total_profit = f[id::kTotalProfit].integer();
-                c.running_cost = f[id::kRunningCost].integer();
-                c.popularity = f[id::kPopularity].number();
-                c.satisfaction = f[id::kSatisfaction].number();
-                c.repair_status = static_cast<RepairStatus>(f[id::kRepair].i32());
-                c.time_since_inspection = f[id::kSinceInspection].number(-1);
-                c.time_since_breakdown = f[id::kSinceBreakdown].number(-1);
-                c.time_since_crash = f[id::kSinceCrash].number(-1);
-                c.placement = live(f[id::kPlacement]);
-                c.spot = spot_of(c.placement);
-                c.facing = static_cast<std::uint8_t>(f[id::kDirection].integer());
+                const ObjectId placement = live(f[id::kPlacement]);
+                return AttractionCommon {
+                    .id = d.id,
+                    .kind_asset = live(f[id::kKindAsset]),
+                    .symbol = f[symbol_key].text(),
+                    .overlay_path = f[overlay_key].text(),
+                    .name = f[id::kName].text(),
+                    .state = static_cast<AttractionState>(f[id::kState].i32()),
+                    .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
+                    .build_time = f[id::kBuildTime].number(),
+                    .total_guests = f[id::kTotalGuests].integer(),
+                    .total_profit = f[id::kTotalProfit].integer(),
+                    .running_cost = f[id::kRunningCost].integer(),
+                    .popularity = f[id::kPopularity].number(),
+                    .satisfaction = f[id::kSatisfaction].number(),
+                    .repair_status = static_cast<RepairStatus>(f[id::kRepair].i32()),
+                    .time_since_inspection = f[id::kSinceInspection].number(-1),
+                    .time_since_breakdown = f[id::kSinceBreakdown].number(-1),
+                    .time_since_crash = f[id::kSinceCrash].number(-1),
+                    .placement = placement,
+                    .spot = spot_of(placement),
+                    .facing = static_cast<std::uint8_t>(f[id::kDirection].integer()),
+                };
             }
 
             static std::vector<IntervalStats> read_intervals(View f)
@@ -692,23 +698,24 @@ namespace rct3::save
 
             static TestResults read_results(View r)
             {
-                TestResults t;
-                t.max_speed = r[id::kMaxSpeed].number();
-                t.average_speed = r[id::kAverageSpeed].number();
-                t.ride_time = r[id::kRideTime].number();
-                t.ride_length = r[id::kRideLength].number();
-                t.max_positive_vertical = r[id::kMaxPositiveG].number();
-                t.max_negative_vertical = r[id::kMaxNegativeG].number();
-                t.max_lateral = r[id::kMaxLateralG].number();
-                t.air_time = r[id::kAirTime].number();
-                t.drop_count = r[id::kDrops].i32();
-                t.highest_drop = r[id::kHighestDrop].number();
-                t.inversion_count = r[id::kInversions].i32();
-                t.lift_hill_count = r[id::kLiftHills].i32();
                 const auto corners = [](View c) { return std::array<std::int32_t, 4> { c[id::kCorner90].i32(), c[id::kCorner180].i32(), c[id::kCorner270].i32(), c[id::kCorner360].i32() }; };
-                t.corners_flat = corners(r[id::kCorners]);
-                t.corners_banked = corners(r[id::kBankedCorners]);
-                t.corners_sloped = corners(r[id::kSlopedCorners]);
+                TestResults t {
+                    .max_speed = r[id::kMaxSpeed].number(),
+                    .average_speed = r[id::kAverageSpeed].number(),
+                    .ride_time = r[id::kRideTime].number(),
+                    .ride_length = r[id::kRideLength].number(),
+                    .max_positive_vertical = r[id::kMaxPositiveG].number(),
+                    .max_negative_vertical = r[id::kMaxNegativeG].number(),
+                    .max_lateral = r[id::kMaxLateralG].number(),
+                    .air_time = r[id::kAirTime].number(),
+                    .drop_count = r[id::kDrops].i32(),
+                    .highest_drop = r[id::kHighestDrop].number(),
+                    .inversion_count = r[id::kInversions].i32(),
+                    .lift_hill_count = r[id::kLiftHills].i32(),
+                    .corners_flat = corners(r[id::kCorners]),
+                    .corners_banked = corners(r[id::kBankedCorners]),
+                    .corners_sloped = corners(r[id::kSlopedCorners]),
+                };
                 for (std::size_t i = 0; i < 7; ++i)
                     t.special_sections[i] = r[id::kSections][id::kSectionNames[i]].i32();
                 t.valid = (r[id::kValid].integer() & 1) != 0; // upper bytes are uninitialised memory
@@ -748,14 +755,17 @@ namespace rct3::save
                 for (const auto& item : list.items())
                 {
                     const View v(item);
-                    Station s;
-                    s.entrance = live(v[id::kEntrance]);
-                    s.exit = live(v[id::kExit]);
-                    s.entrance_spot = spot_of(s.entrance);
-                    s.exit_spot = spot_of(s.exit);
-                    s.entrance_timer = v[id::kEntranceTimer].number();
-                    s.exit_timer = v[id::kExitTimer].number();
-                    s.queue_time = v[id::kQueueTime].number();
+                    const ObjectId entrance = live(v[id::kEntrance]);
+                    const ObjectId exit = live(v[id::kExit]);
+                    Station s {
+                        .entrance = entrance,
+                        .exit = exit,
+                        .entrance_spot = spot_of(entrance),
+                        .exit_spot = spot_of(exit),
+                        .entrance_timer = v[id::kEntranceTimer].number(),
+                        .exit_timer = v[id::kExitTimer].number(),
+                        .queue_time = v[id::kQueueTime].number(),
+                    };
                     if (auto q = fetch(v[id::kQueueLineRef].ref(), Role::QueueLine))
                     {
                         s.queue_line = q->id;
@@ -777,21 +787,22 @@ namespace rct3::save
                 ride.intervals = read_intervals(f);
                 ride.thoughts = read_thoughts(f);
 
-                const View a = f[id::kAssessment];
-                ride.assessment.valid = a[id::kAssessValid].boolean();
-                if (ride.assessment.valid)
+                if (const View a = f[id::kAssessment]; a[id::kAssessValid].boolean())
                 {
                     const auto r = a[id::kAssessRatings].floats();
                     const auto at = [&](std::size_t i) {
                         const float x = i < r.size() ? r[i] : 0;
                         return (std::isfinite(x) && std::fabs(x) <= kFloatLimit) ? x : 0.0f;
                     };
-                    ride.assessment.excitement = at(0);
-                    ride.assessment.intensity = at(1);
-                    ride.assessment.nausea = at(2);
-                    ride.assessment.reliability_base = a[id::kAssessReliability].number();
-                    ride.assessment.under_cover = a[id::kAssessCover].number();
-                    ride.assessment.value = a[id::kAssessValue].number();
+                    ride.assessment = Assessment {
+                        .valid = true,
+                        .excitement = at(0),
+                        .intensity = at(1),
+                        .nausea = at(2),
+                        .reliability_base = a[id::kAssessReliability].number(),
+                        .under_cover = a[id::kAssessCover].number(),
+                        .value = a[id::kAssessValue].number(),
+                    };
                 }
 
                 const View testing = f[id::kStats][id::kTesting];
@@ -802,21 +813,25 @@ namespace rct3::save
                 if (testing[id::kResultsCombined].present())
                     ride.stats.combined = read_results(testing[id::kResultsCombined]);
 
-                ride.graphs.speed = read_graph(f[id::kGraphSpeed]);
-                ride.graphs.acceleration = read_graph(f[id::kGraphAccel]);
-                ride.graphs.altitude = read_graph(f[id::kGraphAltitude]);
-                ride.graphs.vertical_g = read_graph(f[id::kGraphVertical]);
-                ride.graphs.lateral_g = read_graph(f[id::kGraphLateral]);
+                ride.graphs = RideGraphs {
+                    .speed = read_graph(f[id::kGraphSpeed]),
+                    .acceleration = read_graph(f[id::kGraphAccel]),
+                    .altitude = read_graph(f[id::kGraphAltitude]),
+                    .vertical_g = read_graph(f[id::kGraphVertical]),
+                    .lateral_g = read_graph(f[id::kGraphLateral]),
+                };
 
+                ride.breakdown = Breakdown {
+                    .current = static_cast<BreakdownKind>(f[id::kBreakdownType].i32()),
+                    .last = static_cast<BreakdownKind>(f[id::kLastBreakdownType].i32()),
+                    .station = f[id::kBreakdownStation].i32(-1),
+                    .train = f[id::kBreakdownTrain].i32(-1),
+                    .car = f[id::kBreakdownCar].i32(-1),
+                    .seat = f[id::kBreakdownSeat].i32(-1),
+                    .inspection_interval = f[id::kInspectionInterval].i32(),
+                    .reliability = f[id::kReliability].number(100),
+                };
                 Breakdown& b = ride.breakdown;
-                b.current = static_cast<BreakdownKind>(f[id::kBreakdownType].i32());
-                b.last = static_cast<BreakdownKind>(f[id::kLastBreakdownType].i32());
-                b.station = f[id::kBreakdownStation].i32(-1);
-                b.train = f[id::kBreakdownTrain].i32(-1);
-                b.car = f[id::kBreakdownCar].i32(-1);
-                b.seat = f[id::kBreakdownSeat].i32(-1);
-                b.inspection_interval = f[id::kInspectionInterval].i32();
-                b.reliability = f[id::kReliability].number(100);
                 if (f[id::kDowntimePercent].present())
                     b.saved_downtime_percent = std::clamp(f[id::kDowntimePercent].number(), 0.0f, 100.0f);
                 std::size_t i = 0;
@@ -828,23 +843,26 @@ namespace rct3::save
                     b.downtime_windows[i++] = static_cast<std::uint8_t>(w < 0 ? 0 : (w > 20 ? 20 : w));
                 }
 
-                OperatingOptions& o = ride.options;
-                o.block_sectioned = f[id::kBlockSectioned].boolean();
-                o.sync_trains = f[id::kSyncTrains].boolean();
-                o.leave_if_other_train_enters_station = f[id::kLeaveIfEnters].boolean();
-                o.min_wait = f[id::kMinWait].i32(-1);
-                o.max_wait = f[id::kMaxWait].i32(-1);
-                o.wait_for_load = f[id::kWaitForLoad].i32(4);
-                o.launch_speed = f[id::kLaunchSpeed].number();
-                o.lift_speed = f[id::kLiftSpeed].number();
-                o.brake_speed = f[id::kBrakeSpeed].number();
-                o.block_brake_off_speed = f[id::kBlockBrakeOff].number();
-                o.fixed_speed = f[id::kFixedSpeed].number(-1);
+                ride.options = OperatingOptions {
+                    .block_sectioned = f[id::kBlockSectioned].boolean(),
+                    .sync_trains = f[id::kSyncTrains].boolean(),
+                    .leave_if_other_train_enters_station = f[id::kLeaveIfEnters].boolean(),
+                    .min_wait = f[id::kMinWait].i32(-1),
+                    .max_wait = f[id::kMaxWait].i32(-1),
+                    .wait_for_load = f[id::kWaitForLoad].i32(4),
+                    .launch_speed = f[id::kLaunchSpeed].number(),
+                    .lift_speed = f[id::kLiftSpeed].number(),
+                    .brake_speed = f[id::kBrakeSpeed].number(),
+                    .block_brake_off_speed = f[id::kBlockBrakeOff].number(),
+                    .fixed_speed = f[id::kFixedSpeed].number(-1),
+                };
 
-                ride.race.in_progress = f[id::kRaceInProgress].boolean();
-                ride.race.over = f[id::kRaceOver].boolean();
-                ride.race.winner = f[id::kRaceWinner].i32(-1);
-                ride.race.seconds_since_end = f[id::kRaceSince].number();
+                ride.race = RaceState {
+                    .in_progress = f[id::kRaceInProgress].boolean(),
+                    .over = f[id::kRaceOver].boolean(),
+                    .winner = f[id::kRaceWinner].i32(-1),
+                    .seconds_since_end = f[id::kRaceSince].number(),
+                };
 
                 ride.car_colours = colours_of(f[id::kCarColours]);
                 ride.fence_colours = colours_of(f[id::kFenceColours]);
@@ -869,15 +887,15 @@ namespace rct3::save
                 {
                     case Role::TrackedRide:
                         ride.kind = RideKind::Tracked;
-                        read_common(ride.base, *d, id::kTrackedSymbol, id::kTrackedOverlay);
+                        ride.base = read_common(*d, id::kTrackedSymbol, id::kTrackedOverlay);
                         break;
                     case Role::FlatRide:
                         ride.kind = RideKind::Flat;
-                        read_common(ride.base, *d, id::kFlatSymbol, id::kFlatOverlay);
+                        ride.base = read_common(*d, id::kFlatSymbol, id::kFlatOverlay);
                         break;
                     default:
                         ride.kind = RideKind::Special;
-                        read_common(ride.base, *d, id::kSpecialSymbol, id::kSpecialOverlay);
+                        ride.base = read_common(*d, id::kSpecialSymbol, id::kSpecialOverlay);
                         break;
                 }
                 read_ride_common(ride, *d);
@@ -931,12 +949,13 @@ namespace rct3::save
             Track build_track(const DecodedObject& d)
             {
                 const View f(d.fields);
-                Track t;
-                t.id = d.id;
-                t.ride = live(f[id::kTrackRide]);
-                t.facing = static_cast<std::uint8_t>(f[id::kDirection].integer());
-                t.prototype = f[id::kPrototype].boolean();
-                t.colours = colours_of(f[id::kTrackColours]);
+                Track t {
+                    .id = d.id,
+                    .ride = live(f[id::kTrackRide]),
+                    .facing = static_cast<std::uint8_t>(f[id::kDirection].integer()),
+                    .prototype = f[id::kPrototype].boolean(),
+                    .colours = colours_of(f[id::kTrackColours]),
+                };
 
                 const ObjectId last_segment = f[id::kLastSegment].ref();
                 ObjectId seg_id = f[id::kFirstSegment].ref();
@@ -957,9 +976,10 @@ namespace rct3::save
                         break;
                     }
                     const View sf(s->fields);
-                    TrackSegment seg;
-                    seg.id = seg_id;
-                    seg.first_piece = t.pieces.size();
+                    TrackSegment seg {
+                        .id = seg_id,
+                        .first_piece = t.pieces.size(),
+                    };
                     if (const auto it = segment_owned_.find(seg_id); it != segment_owned_.end())
                         seg.owned_pieces = it->second;
                     const std::uint32_t seg_index = static_cast<std::uint32_t>(t.segments.size());
@@ -1055,28 +1075,29 @@ namespace rct3::save
                         continue;
                     }
                     const View tf(d->fields);
-                    Train t;
-                    t.id = d->id;
-                    t.ride = tf[id::kTrainRide].ref();
-                    t.index = tf[id::kWhichTrain].i32();
-                    t.state = static_cast<TrainState>(tf[id::kState].i32());
-                    t.state_time = tf[id::kStateTime].number();
-                    t.front_piece = live(tf[id::kFrontPiece]);
-                    t.rear_piece = live(tf[id::kRearPiece]);
-                    t.distance = tf[id::kDistance].number();
-                    t.speed = tf[id::kSpeed].number();
-                    t.acceleration = tf[id::kAccel].number();
-                    t.station = tf[id::kStation].i32(-1);
-                    t.start_station = tf[id::kStartStation].i32(-1);
-                    t.current_station = tf[id::kOnStation].i32(-1);
-                    t.lap_count = tf[id::kCircuits].i32();
-                    t.shuttle_direction = tf[id::kShuttle].i32();
-                    t.static_friction = tf[id::kStaticFriction].number();
-                    t.dynamic_friction = tf[id::kDynamicFriction].number();
-                    t.mass = tf[id::kMass].number();
-                    t.length = tf[id::kLength].number();
-                    t.symbol = tf[id::kTrainSymbol].text();
-                    t.overlay_path = tf[id::kTrainOverlay].text();
+                    Train t {
+                        .id = d->id,
+                        .ride = tf[id::kTrainRide].ref(),
+                        .index = tf[id::kWhichTrain].i32(),
+                        .state = static_cast<TrainState>(tf[id::kState].i32()),
+                        .state_time = tf[id::kStateTime].number(),
+                        .front_piece = live(tf[id::kFrontPiece]),
+                        .rear_piece = live(tf[id::kRearPiece]),
+                        .distance = tf[id::kDistance].number(),
+                        .speed = tf[id::kSpeed].number(),
+                        .acceleration = tf[id::kAccel].number(),
+                        .station = tf[id::kStation].i32(-1),
+                        .start_station = tf[id::kStartStation].i32(-1),
+                        .current_station = tf[id::kOnStation].i32(-1),
+                        .lap_count = tf[id::kCircuits].i32(),
+                        .shuttle_direction = tf[id::kShuttle].i32(),
+                        .static_friction = tf[id::kStaticFriction].number(),
+                        .dynamic_friction = tf[id::kDynamicFriction].number(),
+                        .mass = tf[id::kMass].number(),
+                        .length = tf[id::kLength].number(),
+                        .symbol = tf[id::kTrainSymbol].text(),
+                        .overlay_path = tf[id::kTrainOverlay].text(),
+                    };
                     if (t.ride != ride.base.id)
                         ++model_.diagnostics.train_back_link_mismatch;
                     if (t.index != at)
@@ -1102,21 +1123,26 @@ namespace rct3::save
                             continue;
                         }
                         const View cf(c->fields);
-                        Car car;
-                        car.id = c->id;
-                        car.index = cf[id::kWhichCar].i32();
-                        car.car_count = cf[id::kCarCount].i32();
-                        car.design_slot = cf[id::kCarSlot].i32();
-                        car.state = static_cast<CarState>(cf[id::kState].i32());
-                        car.passengers = cf[id::kPeeps].i32();
                         const View st = cf[id::kCarStats];
-                        car.distance = st[id::kDistance].number();
-                        car.speed = st[id::kSpeed].number();
-                        car.length = st[id::kLength].number();
-                        car.mass = st[id::kMass].number();
-                        car.reversed = st[id::kReversed].boolean();
                         const auto pos = st[id::kStatPos].floats();
-                        car.position_valid = st[id::kStatPosValid].boolean() && pos.size() == 3;
+                        Car car {
+                            .id = c->id,
+                            .index = cf[id::kWhichCar].i32(),
+                            .car_count = cf[id::kCarCount].i32(),
+                            .design_slot = cf[id::kCarSlot].i32(),
+                            .state = static_cast<CarState>(cf[id::kState].i32()),
+                            .passengers = cf[id::kPeeps].i32(),
+                            .distance = st[id::kDistance].number(),
+                            .speed = st[id::kSpeed].number(),
+                            .length = st[id::kLength].number(),
+                            .mass = st[id::kMass].number(),
+                            .reversed = st[id::kReversed].boolean(),
+                            .front_wheel_distance = cf[id::kFrontWheel].number(),
+                            .rear_wheel_distance = cf[id::kRearWheel].number(),
+                            .position_valid = st[id::kStatPosValid].boolean() && pos.size() == 3,
+                            .front_piece = live(st[id::kStatPiece]),
+                            .rear_piece = live(st[id::kRearPiece]),
+                        };
                         if (car.position_valid)
                         {
                             for (std::size_t i = 0; i < 3; ++i)
@@ -1129,10 +1155,6 @@ namespace rct3::save
                             for (std::size_t i = 0; i < 3; ++i)
                                 car.orientation[i] = (std::isfinite(turn[i]) && std::fabs(turn[i]) <= kFloatLimit) ? turn[i] : 0.0f;
                         }
-                        car.front_wheel_distance = cf[id::kFrontWheel].number();
-                        car.rear_wheel_distance = cf[id::kRearWheel].number();
-                        car.front_piece = live(st[id::kStatPiece]);
-                        car.rear_piece = live(st[id::kRearPiece]);
                         if (cf[id::kCarTrain].ref() != t.id)
                             ++model_.diagnostics.car_back_link_mismatch;
                         if (car.index != cat)
@@ -1153,10 +1175,11 @@ namespace rct3::save
                 if (!d)
                     return;
                 const View f(d->fields);
-                Stall s;
-                read_common(s.base, *d, id::kStallSymbol, id::kStallOverlay);
-                s.intervals = read_intervals(f);
-                s.thoughts = read_thoughts(f);
+                Stall s {
+                    .base = read_common(*d, id::kStallSymbol, id::kStallOverlay),
+                    .intervals = read_intervals(f),
+                    .thoughts = read_thoughts(f),
+                };
                 for (const auto& item : f[id::kShopItems].items())
                 {
                     const ObjectId iid = View(item).ref();
@@ -1174,18 +1197,19 @@ namespace rct3::save
                         continue;
                     }
                     const View v(it->fields);
-                    StallItem si;
-                    si.id = it->id;
-                    si.item_asset = live(v[id::kItemAsset]);
+                    StallItem si {
+                        .id = it->id,
+                        .item_asset = live(v[id::kItemAsset]),
+                        .price = v[id::kPrice].integer(),
+                        .total_sold = v[id::kSold].integer(),
+                        .name = v[id::kName].text(),
+                        .stall = v[id::kItemStall].ref(),
+                        .sale_item = live(v[id::kSaleItem]),
+                        .colours = { static_cast<std::uint8_t>(v[id::kItemColours[0]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[1]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[2]].integer()) },
+                    };
                     if (std::optional<const Object&> kind = si.item_asset != 0 ? index_.find(si.item_asset) : std::nullopt)
                         if (auto k = decode(*kind))
                             si.kind_symbol = View(k->fields)[id::kItemKindSymbol].text();
-                    si.price = v[id::kPrice].integer();
-                    si.total_sold = v[id::kSold].integer();
-                    si.name = v[id::kName].text();
-                    si.stall = v[id::kItemStall].ref();
-                    si.sale_item = live(v[id::kSaleItem]);
-                    si.colours = { static_cast<std::uint8_t>(v[id::kItemColours[0]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[1]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[2]].integer()) };
                     if (si.stall != s.base.id)
                         ++model_.diagnostics.item_back_link_mismatch;
                     s.items.push_back(std::move(si));

@@ -113,10 +113,10 @@ namespace rct3::save
     struct AttractionCommon
     {
         ObjectId id = 0;
-        ObjectId kind_asset = 0;  ///< Reference to the asset-database entry of the attraction's kind
-        std::string symbol;       ///< Asset symbol of the kind, e.g. "<name>:<tag>"; compare case-insensitively
-        std::string overlay_path; ///< Asset overlay path (no extension)
-        std::string name;         ///< User name, a text key, or a numbered placeholder
+        ObjectId kind_asset = 0;      ///< Reference to the asset-database entry of the attraction's kind
+        std::string symbol { };       ///< Asset symbol of the kind, e.g. "<name>:<tag>"; compare case-insensitively
+        std::string overlay_path { }; ///< Asset overlay path (no extension)
+        std::string name { };         ///< User name, a text key, or a numbered placeholder
         AttractionState state = AttractionState::Closed;
         std::uint32_t flags = 0; ///< Bit set; all bits preserved. 0x40 never opened, 0x200 low-reliability warning
         /// Set while the attraction is broken down. The repair status can stay at a mechanic called after the
@@ -187,15 +187,15 @@ namespace rct3::save
 
     struct RideStats
     {
-        std::optional<TestResults> current_lap; ///< Accumulators of the lap in progress
-        std::optional<TestResults> last_lap;    ///< Last completed valid lap
-        std::optional<TestResults> combined;    ///< Multi-station result, newer files only
+        std::optional<TestResults> current_lap { }; ///< Accumulators of the lap in progress
+        std::optional<TestResults> last_lap { };    ///< Last completed valid lap
+        std::optional<TestResults> combined { };    ///< Multi-station result, newer files only
     };
 
     /// Per-ride history graphs of the last test lap (samples; at most 200).
     struct RideGraphs
     {
-        std::vector<float> speed, acceleration, altitude, vertical_g, lateral_g;
+        std::vector<float> speed { }, acceleration { }, altitude { }, vertical_g { }, lateral_g { };
     };
 
     struct Breakdown
@@ -212,7 +212,7 @@ namespace rct3::save
         std::array<std::uint8_t, 8> downtime_windows { };
         /// The downtime percentage as saved. It is worked out just before the windows move on by one, so it can
         /// still include a window the counters no longer hold.
-        std::optional<float> saved_downtime_percent;
+        std::optional<float> saved_downtime_percent { };
         /// The saved percentage, or when the save has none, one derived from the windows: sum * 100 / 160.
         [[nodiscard]] float downtime_percent() const noexcept;
     };
@@ -284,9 +284,9 @@ namespace rct3::save
     struct TrackPiece
     {
         ObjectId id = 0;
-        std::string symbol;   ///< Track section asset symbol: identifies the piece shape
-        ObjectId asset = 0;   ///< Asset-database entry of the piece
-        ObjectId scenery = 0; ///< World object that carries the piece, 0 if none
+        std::string symbol { }; ///< Track section asset symbol: identifies the piece shape
+        ObjectId asset = 0;     ///< Asset-database entry of the piece
+        ObjectId scenery = 0;   ///< World object that carries the piece, 0 if none
         std::int32_t tile_x = 0;
         std::int32_t tile_z = 0;
         std::int32_t height = 0;    ///< Integer height level
@@ -301,10 +301,10 @@ namespace rct3::save
         std::int32_t brake_speed = -1;
         std::int32_t holding_time = 0;
         std::int32_t speed_class = -1;
-        std::optional<TrackPlatform> platform; ///< Station pieces
+        std::optional<TrackPlatform> platform { }; ///< Station pieces
         /// Of a ride whose cars ride on arms, the arm's four joint angles in degrees where the player set them:
         /// the arm holds them at the piece's middle.
-        std::optional<std::array<float, 4>> arm_angles;
+        std::optional<std::array<float, 4>> arm_angles { };
         std::uint32_t segment = 0; ///< Index of the owning segment within Track::segments
     };
 
@@ -327,8 +327,8 @@ namespace rct3::save
         std::uint8_t facing = 0;
         bool prototype = false;
         RideColours colours { };
-        std::vector<TrackSegment> segments;
-        std::vector<TrackPiece> pieces; ///< All pieces in travel order
+        std::vector<TrackSegment> segments { };
+        std::vector<TrackPiece> pieces { }; ///< All pieces in travel order
         /// True when the whole chain closes on itself (last piece links to the first and back) or when every
         /// segment is a closed loop of its own. Derived from the chain; the stored circuit flag is not used
         /// because real files contradict it.
@@ -406,10 +406,10 @@ namespace rct3::save
         float static_friction = 0;
         float dynamic_friction = 0;
         float mass = 0;
-        float length = 0;   ///< Metres
-        std::string symbol; ///< Train design asset symbol
-        std::string overlay_path;
-        std::vector<Car> cars; ///< Front to back
+        float length = 0;       ///< Metres
+        std::string symbol { }; ///< Train design asset symbol
+        std::string overlay_path { };
+        std::vector<Car> cars { }; ///< Front to back
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -418,32 +418,32 @@ namespace rct3::save
     struct Ride
     {
         RideKind kind = RideKind::Tracked;
-        AttractionCommon base;
+        AttractionCommon base { };
         OperatingMode mode = OperatingMode::ContinuousCircuit;
         std::int64_t ticket_price = 0; ///< Hundredths
-        std::vector<Station> stations;
-        std::vector<IntervalStats> intervals;
-        std::vector<ThoughtEntry> thoughts;
-        Assessment assessment;
-        RideStats stats;
-        RideGraphs graphs;
-        Breakdown breakdown;
-        OperatingOptions options;
-        RaceState race;
+        std::vector<Station> stations { };
+        std::vector<IntervalStats> intervals { };
+        std::vector<ThoughtEntry> thoughts { };
+        Assessment assessment { };
+        RideStats stats { };
+        RideGraphs graphs { };
+        Breakdown breakdown { };
+        OperatingOptions options { };
+        RaceState race { };
         RideColours car_colours { }, fence_colours { }, queue_colours { };
         ObjectId fence = 0; ///< Fence asset entries, 0 if none
         ObjectId override_fence = 0;
         /// The asset symbols and overlays those entries name, as PlacedObject::symbol and overlay; empty when the
         /// entry is none or does not resolve.
-        std::string fence_symbol, fence_overlay;
-        std::string override_fence_symbol, override_fence_overlay;
-        std::string platform_style; ///< Tracked rides
-        std::string platform_type;
+        std::string fence_symbol { }, fence_overlay { };
+        std::string override_fence_symbol { }, override_fence_overlay { };
+        std::string platform_style { }; ///< Tracked rides
+        std::string platform_type { };
 
         // Tracked rides
         ObjectId track_id = 0;
-        std::optional<Track> track; ///< Absent when the reference does not resolve
-        std::vector<Train> trains;
+        std::optional<Track> track { }; ///< Absent when the reference does not resolve
+        std::vector<Train> trains { };
         std::int32_t train_count = -1;    ///< Requested; -1 never set
         std::int32_t cars_per_train = -1; ///< Requested passenger cars per train; -1 never set
         std::int32_t train_selection = 0; ///< Index of the chosen train design
@@ -451,10 +451,10 @@ namespace rct3::save
         {
             std::int32_t car = 0, seat = 0, train = 0;
         };
-        std::vector<Seat> seats;
-        std::vector<ObjectId> block_sections;    ///< Occupying train per block section; 0 free
-        std::vector<std::int32_t> sorted_trains; ///< Train indices in spatial order (older files)
-        std::vector<ObjectId> cable_lift_trains, thrill_lift_trains, reverse_cable_lift_trains;
+        std::vector<Seat> seats { };
+        std::vector<ObjectId> block_sections { };    ///< Occupying train per block section; 0 free
+        std::vector<std::int32_t> sorted_trains { }; ///< Train indices in spatial order (older files)
+        std::vector<ObjectId> cable_lift_trains { }, thrill_lift_trains { }, reverse_cable_lift_trains { };
 
         // Flat rides
         std::int32_t ride_state = 0; ///< 0 idle; 2 and 3 seen
@@ -473,7 +473,7 @@ namespace rct3::save
         std::string kind_symbol { }; ///< That entry's symbol, as `Soda:cid`; empty when unresolved
         std::int64_t price = 0;      ///< Hundredths
         std::int64_t total_sold = 0;
-        std::string name;
+        std::string name { };
         ObjectId stall = 0;     ///< Back reference as stored
         ObjectId sale_item = 0; ///< Sale prototype object, 0 if none
         RideColours colours { };
@@ -490,11 +490,11 @@ namespace rct3::save
 
     struct Stall
     {
-        AttractionCommon base;
-        std::vector<IntervalStats> intervals;
-        std::vector<ThoughtEntry> thoughts;
-        std::vector<StallItem> items;
-        std::vector<StallExtra> extras;
+        AttractionCommon base { };
+        std::vector<IntervalStats> intervals { };
+        std::vector<ThoughtEntry> thoughts { };
+        std::vector<StallItem> items { };
+        std::vector<StallExtra> extras { };
     };
 
     /// Consistency counts gathered while loading. All are zero in sound files.
@@ -522,16 +522,16 @@ namespace rct3::save
 
     struct RideModel
     {
-        std::vector<Ride> rides;       ///< Tracked, flat and special attractions in file order
-        std::vector<Stall> stalls;     ///< In file order
+        std::vector<Ride> rides { };   ///< Tracked, flat and special attractions in file order
+        std::vector<Stall> stalls { }; ///< In file order
         std::size_t orphan_pieces = 0; ///< Track pieces in the file that no track reaches
-        RideDiagnostics diagnostics;
+        RideDiagnostics diagnostics { };
     };
 
     /// A trick the performers of a show ride know.
     struct ShowTrick
     {
-        std::string name;       ///< String key of its name, as "DolphinShowAnimTrick1"
+        std::string name { };   ///< String key of its name, as "DolphinShowAnimTrick1"
         float seconds = 0;      ///< How long it lasts
         bool hidden = false;    ///< Kept out of the lists
         bool available = false; ///< Offered in this park
@@ -543,8 +543,8 @@ namespace rct3::save
     struct RideShow
     {
         ObjectId ride = 0; ///< The ride's id (AttractionCommon::id)
-        std::vector<ShowTrick> tricks;
-        std::vector<std::uint32_t> order;
+        std::vector<ShowTrick> tricks { };
+        std::vector<std::uint32_t> order { };
     };
 
     /// The shows of the show rides in `file`. A trick the save names but does not hold is left out of the

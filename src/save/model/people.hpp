@@ -177,8 +177,8 @@ namespace rct3::save
 
     struct Thought
     {
-        PeopleRef about;          ///< Object the thought is about
-        PeopleRef other;          ///< A second person involved (a guest, for staff thoughts)
+        PeopleRef about { };      ///< Object the thought is about
+        PeopleRef other { };      ///< A second person involved (a guest, for staff thoughts)
         std::int32_t id = 0;      ///< Thought identifier, 0 = empty slot. Label list not modelled.
         float time = -1;          ///< Game clock when it was had, -1 for an empty slot
         std::int32_t variant = 0; ///< Seed choosing a text variant
@@ -192,7 +192,7 @@ namespace rct3::save
 
     struct Appearance
     {
-        PeopleRef head, body, legs, swim_body, swim_legs; ///< Part group database entries
+        PeopleRef head { }, body { }, legs { }, swim_body { }, swim_legs { }; ///< Part group database entries
         /// skin, upper clothes, lower clothes, upper swimsuit, lower swimsuit. 255 means "pick at random".
         std::array<std::uint8_t, 5> palettes { 255, 255, 255, 255, 255 };
         std::array<std::uint32_t, 3> optionals { }; ///< Optional mesh part masks: head, body, legs
@@ -215,7 +215,7 @@ namespace rct3::save
     struct LookAt
     {
         std::int32_t type = 0; ///< 0 none; 1, 2, 6 seen
-        PeopleRef target;
+        PeopleRef target { };
         float horizontal = 0;  ///< radians
         float vertical = 0;    ///< radians
         float distance = 1.5f; ///< metres
@@ -229,25 +229,25 @@ namespace rct3::save
         PeopleObjectId id = 0;
         PersonType type = PersonType::Adult;
         std::uint8_t sub_type = 0; ///< Sex for guests (see Sex), costume variant for entertainers
-        std::string name;          ///< Guests: a real name. Staff: a placeholder to be localised.
-        PeopleVec3 position;       ///< World position
+        std::string name { };      ///< Guests: a real name. Staff: a placeholder to be localised.
+        PeopleVec3 position { };   ///< World position
         /// Model to world as stored: four rows, the model's x, y and z axes then its position.
         std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-        float heading = 0;      ///< Radians, 0..2pi
-        PeopleVec3 lane_offset; ///< Offset from the path centre line
+        float heading = 0;          ///< Radians, 0..2pi
+        PeopleVec3 lane_offset { }; ///< Offset from the path centre line
         PersonState state = PersonState::Decision;
         std::int32_t sub_state = 0;
-        PeopleRef state_target;
+        PeopleRef state_target { };
         float decide_time = 0; ///< Countdown to the next decision
         float start_time = 0;  ///< Game clock when the person entered the park
-        Animation animation;
-        Appearance appearance;
-        LookAt look_at;
-        std::array<Thought, kThoughtSlots> thoughts;
-        std::vector<PeopleRef> attractions_visited;
-        PeopleRef attraction_info; ///< Per-attraction session object
-        PeopleRef route_controller;
-        PeopleRef holder;             ///< The person's item holder object (MyHolders)
+        Animation animation { };
+        Appearance appearance { };
+        LookAt look_at { };
+        std::array<Thought, kThoughtSlots> thoughts { };
+        std::vector<PeopleRef> attractions_visited { };
+        PeopleRef attraction_info { }; ///< Per-attraction session object
+        PeopleRef route_controller { };
+        PeopleRef holder { };         ///< The person's item holder object (MyHolders)
         float time_to_next_think = 0; ///< Seconds
         std::int32_t thinks_to_big_think = 0;
         [[nodiscard]] std::optional<GuestState> guest_state() const noexcept;
@@ -281,7 +281,7 @@ namespace rct3::save
         float energy = 0.5f;
         float happiness = 0.5f;
         float nausea = 0;
-        std::optional<float> sunburn; ///< Only newer saves store it
+        std::optional<float> sunburn { }; ///< Only newer saves store it
     };
 
     struct RidePreference
@@ -304,17 +304,17 @@ namespace rct3::save
 
     struct Guest
     {
-        Person person;
-        Cash cash;
-        Needs needs;
-        Mood mood_now;
-        Mood mood_target; ///< The current mood eases towards this
-        RidePreference ride_preference;
+        Person person { };
+        Cash cash { };
+        Needs needs { };
+        Mood mood_now { };
+        Mood mood_target { }; ///< The current mood eases towards this
+        RidePreference ride_preference { };
         NauseaTolerance nausea_tolerance = NauseaTolerance::Medium;
-        PeopleRef favourite_ride;
+        PeopleRef favourite_ride { };
         float favourite_ride_rating = 0; ///< Unit not confirmed
-        PeopleRef group;                 ///< The group the guest belongs to
-        GuestCounters counters;
+        PeopleRef group { };             ///< The group the guest belongs to
+        GuestCounters counters { };
         std::int32_t scenery_assess_timer = 0;
         float consuming_amount = 0; ///< 0..1 progress of the item being eaten or drunk
         bool in_park = true;
@@ -328,9 +328,9 @@ namespace rct3::save
         bool needs_cash = false;
         bool wants_leave_park = false;
         bool leaving_due_to_closed_park = false;
-        std::optional<float> pool_need;
-        std::optional<float> pool_preference;
-        std::optional<float> price_modifier; ///< Willingness-to-pay multiplier
+        std::optional<float> pool_need { };
+        std::optional<float> pool_preference { };
+        std::optional<float> price_modifier { }; ///< Willingness-to-pay multiplier
     };
 
     // ----- staff -----
@@ -350,12 +350,12 @@ namespace rct3::save
         std::int32_t gardens_watered = 0;
         std::int32_t grass_mown = 0;
         std::int32_t paths_swept = 0;
-        PeopleVec3 duty_waypoint;
+        PeopleVec3 duty_waypoint { };
     };
 
     struct MechanicWork
     {
-        PeopleRef info; ///< Per-object mechanic bookkeeping
+        PeopleRef info { }; ///< Per-object mechanic bookkeeping
         std::int32_t objects_fixed = 0;
         std::int32_t objects_inspected = 0;
         float state_timer = 0;
@@ -374,15 +374,15 @@ namespace rct3::save
 
     struct VendorWork
     {
-        PeopleRef attraction_instance; ///< Stall or ride instance, or none
-        PeopleRef customer;
-        PeopleRef scenery_item; ///< The stall prop
-        PeopleRef shop_item;
+        PeopleRef attraction_instance { }; ///< Stall or ride instance, or none
+        PeopleRef customer { };
+        PeopleRef scenery_item { }; ///< The stall prop
+        PeopleRef shop_item { };
     };
 
     struct KeeperWork
     {
-        std::vector<PeopleRef> shelters_to_fill;
+        std::vector<PeopleRef> shelters_to_fill { };
         std::int32_t enclosure_id = 0;
         std::int32_t dung_cleared = 0;
         std::int32_t troughs_filled = 0;
@@ -390,13 +390,13 @@ namespace rct3::save
 
     struct LifeGuardWork
     {
-        PeopleRef chair;
+        PeopleRef chair { };
         bool chair_been_set = false;
     };
 
     struct Staff
     {
-        Person person;
+        Person person { };
         StaffKind kind = StaffKind::Handyman;
         std::int32_t type_id = 0; ///< Per-class variant; for vendors a per-park vendor id
         std::int32_t wage_level = 1;
@@ -411,9 +411,9 @@ namespace rct3::save
         std::int32_t thinks_since_different_task = -1;
         std::int32_t thinks_since_no_task = -1;
         std::int32_t thinks_since_happy = -1;
-        PatrolArea patrol;
+        PatrolArea patrol { };
         std::int32_t task_flags = 0;
-        std::variant<std::monostate, HandymanWork, MechanicWork, EntertainerWork, VendorWork, KeeperWork, LifeGuardWork> work;
+        std::variant<std::monostate, HandymanWork, MechanicWork, EntertainerWork, VendorWork, KeeperWork, LifeGuardWork> work { };
     };
 
     // ----- animals -----
@@ -422,7 +422,7 @@ namespace rct3::save
     {
         PeopleObjectId id = 0;
         AnimalKind kind = AnimalKind::Duck;
-        PeopleVec3 position;
+        PeopleVec3 position { };
         std::int32_t anim_type = 0;
         float anim_time = 0;
         float anim_speed = 0;
@@ -431,13 +431,13 @@ namespace rct3::save
         float state_timer = 0;
         std::uint8_t palette = 0; ///< Colour variant, 0..3
         float time_in_park = 0;
-        PeopleVec3 target;
+        PeopleVec3 target { };
         bool leader = false; ///< Flock or school leader (ducks, fish)
-        PeopleRef left;      ///< Neighbour in the formation (ducks, fish)
-        PeopleRef right;
-        PeopleRef flight_route; ///< Ducks and gulls
+        PeopleRef left { };  ///< Neighbour in the formation (ducks, fish)
+        PeopleRef right { };
+        PeopleRef flight_route { }; ///< Ducks and gulls
         // Gulls
-        PeopleRef victim;
+        PeopleRef victim { };
         std::int32_t litter_pecked = 0;
         std::int32_t guests_attacked = 0;
         // Fish
@@ -452,8 +452,8 @@ namespace rct3::save
     struct ZooAnimal
     {
         PeopleObjectId id = 0;
-        std::string name_template; ///< Name pattern with placeholders to localise
-        std::string first_names;
+        std::string name_template { }; ///< Name pattern with placeholders to localise
+        std::string first_names { };
         std::int32_t generation_suffix = 0;
         bool is_male = false;
         bool is_adult = false;
@@ -471,13 +471,13 @@ namespace rct3::save
         std::int32_t species_social = 0;
         std::int32_t species_water_req = 0;
         std::int32_t type = 0;
-        PeopleRef entry;
-        PeopleRef family_membership;
-        PeopleRef visual;
+        PeopleRef entry { };
+        PeopleRef family_membership { };
+        PeopleRef visual { };
         float pregnancy_timer = -1; ///< -1 when not pregnant
         std::int32_t babies_in_womb = 0;
         float enclosure_health_score = 0;
-        std::array<Thought, kThoughtSlots> thoughts;
+        std::array<Thought, kThoughtSlots> thoughts { };
     };
 
     // ----- groups, holders, items, litter -----
@@ -489,28 +489,28 @@ namespace rct3::save
         PeopleObjectId id = 0;
         std::int32_t group_type = 0;  ///< 0..10, names not modelled
         std::int32_t num_members = 0; ///< As stored; see live_members()
-        PeopleRef leader;
-        PeopleRef avatar;
+        PeopleRef leader { };
+        PeopleRef avatar { };
         /// Member slots in file order; unused or dangling slots are none.
-        std::vector<PeopleRef> members;
+        std::vector<PeopleRef> members { };
         std::int32_t flock_state = 0;
         std::int32_t flock_sub_state = 0;
-        PeopleRef flock_focus;
-        PeopleRef flock_target;
+        PeopleRef flock_focus { };
+        PeopleRef flock_target { };
         std::int32_t flock_index = 0;
         float flock_progress = 0;
         float flock_decay = 0;
-        Mood average_mood;
+        Mood average_mood { };
         float min_food = 0, min_drink = 0, max_toilet = 0;
         float min_intensity = 0, max_intensity = 0;
         std::int32_t set_piece_type = 0;
         std::int32_t set_piece_state = 0;
-        PeopleVec3 set_piece_focus;
-        PeopleRef set_piece_path;
-        PeopleRef set_piece_actor0, set_piece_actor1;
-        std::vector<PeopleVec3> set_piece_positions;
+        PeopleVec3 set_piece_focus { };
+        PeopleRef set_piece_path { };
+        PeopleRef set_piece_actor0 { }, set_piece_actor1 { };
+        std::vector<PeopleVec3> set_piece_positions { };
         bool set_piece_take_photo = false;
-        PeopleRef hold_hands_route;
+        PeopleRef hold_hands_route { };
         [[nodiscard]] std::size_t live_members() const noexcept;
     };
 
@@ -518,25 +518,25 @@ namespace rct3::save
     struct ItemHolder
     {
         PeopleObjectId id = 0;
-        PeopleRef owner;
+        PeopleRef owner { };
         std::int32_t consuming_slot = -1; ///< -1 none
-        PeopleRef head, left_hand, right_hand, left_pocket, right_pocket;
-        PeopleRef umbrella, sunglasses, swimsuit;
-        std::vector<PeopleRef> slotless;
-        std::optional<std::uint32_t> hidden_parts; ///< Mask of hidden body parts, when stored
+        PeopleRef head { }, left_hand { }, right_hand { }, left_pocket { }, right_pocket { };
+        PeopleRef umbrella { }, sunglasses { }, swimsuit { };
+        std::vector<PeopleRef> slotless { };
+        std::optional<std::uint32_t> hidden_parts { }; ///< Mask of hidden body parts, when stored
     };
 
     struct CarriedItem
     {
         PeopleObjectId id = 0;
-        PeopleRef definition; ///< The item's database entry
-        std::string name;
+        PeopleRef definition { }; ///< The item's database entry
+        std::string name { };
         float food = 0;
         float drink = 0; ///< May be negative
         float nausea = 0;
         bool bad = false;
-        PeopleRef becomes; ///< Item this turns into when used up
-        PeopleRef voucher_target;
+        PeopleRef becomes { }; ///< Item this turns into when used up
+        PeopleRef voucher_target { };
         std::array<std::uint8_t, 3> colours { };
         std::int32_t inventory_choice = -1; ///< -1 none
     };
@@ -544,27 +544,27 @@ namespace rct3::save
     struct ShopItem
     {
         PeopleObjectId id = 0;
-        PeopleRef definition;
-        std::string name;
+        PeopleRef definition { };
+        std::string name { };
         std::int32_t price = 0; ///< Minor units
         std::int32_t total_sold = 0;
         std::int32_t extras = 0;
         std::array<std::uint8_t, 3> colours { };
-        PeopleRef sale_item;
-        PeopleRef stall;
+        PeopleRef sale_item { };
+        PeopleRef stall { };
     };
 
     struct ShopExtra
     {
         PeopleObjectId id = 0;
-        PeopleRef definition;
+        PeopleRef definition { };
         std::int32_t setting = 0;
     };
 
     struct Litter
     {
         PeopleObjectId id = 0;
-        PeopleVec3 position;
+        PeopleVec3 position { };
         PeopleVec3 orientation { }; ///< Euler angles in radians; y is the heading
         std::uint8_t type = 0;      ///< 0..5, names not modelled
         LitterState state = LitterState::OnGround;
@@ -579,7 +579,7 @@ namespace rct3::save
     struct PartGroup
     {
         PeopleObjectId id = 0;
-        std::string symbol;
+        std::string symbol { };
         std::uint8_t section = 0; ///< 0 head, 1 body, 2 legs
         std::uint8_t sex = 0;
         std::uint8_t type = 0; ///< Same numbers as PersonType
@@ -587,17 +587,17 @@ namespace rct3::save
 
     struct PeopleModel
     {
-        std::vector<PartGroup> part_groups;
-        std::vector<Guest> guests;
-        std::vector<Staff> staff;
-        std::vector<Animal> animals;
-        std::vector<ZooAnimal> zoo_animals;
-        std::vector<GuestGroup> groups;
-        std::vector<ItemHolder> holders;
-        std::vector<CarriedItem> carried_items;
-        std::vector<ShopItem> shop_items;
-        std::vector<ShopExtra> shop_extras;
-        std::vector<Litter> litter;
+        std::vector<PartGroup> part_groups { };
+        std::vector<Guest> guests { };
+        std::vector<Staff> staff { };
+        std::vector<Animal> animals { };
+        std::vector<ZooAnimal> zoo_animals { };
+        std::vector<GuestGroup> groups { };
+        std::vector<ItemHolder> holders { };
+        std::vector<CarriedItem> carried_items { };
+        std::vector<ShopItem> shop_items { };
+        std::vector<ShopExtra> shop_extras { };
+        std::vector<Litter> litter { };
     };
 
     // ----- builders: nullopt only when the object is of another class -----
@@ -634,8 +634,8 @@ namespace rct3::save
 
     struct Issue
     {
-        IssueKind kind;
-        PeopleObjectId id; ///< Object the issue concerns
+        IssueKind kind { };
+        PeopleObjectId id { }; ///< Object the issue concerns
     };
 
     /// Checks the invariants that hold for every consistent save. The model is never modified.

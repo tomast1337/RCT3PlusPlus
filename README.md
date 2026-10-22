@@ -19,7 +19,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob test --sanitize --no-tools   # the same without building the tools
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
 ./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
-./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, glslc)
+./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, slangc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
 ./nob test -j 4                # at most 4 compilers at once (NOB_JOBS=4 does the same); default one per core

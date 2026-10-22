@@ -14,9 +14,9 @@
 namespace rct3::park
 {
 
-    /// Width of the lamps' texture, in texels. Also in app/shaders/lit.frag.
+    /// Width of the lamps' texture, in texels. Also in app/shaders/lit.slang.
     inline constexpr std::uint32_t kLampTexelsAcross = 256;
-    /// Most lamps one cell lists. Also in app/shaders/lit.frag.
+    /// Most lamps one cell lists. Also in app/shaders/lit.slang.
     inline constexpr std::uint32_t kLampsPerCell = 16;
     /// Most cells along each side of the grid: the cells grow when the lamps spread wider.
     inline constexpr std::uint32_t kLampCellsAcross = 128;

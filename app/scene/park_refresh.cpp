@@ -619,7 +619,7 @@ namespace rct3::scene
     {
         scene.levels = std::move(built.plan);
         show_shapes(device, scene, scene.steady_objects, std::move(built.steady), scene.levels);
-        const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.frag)
+        const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.slang)
         show_shapes(device, scene, scene.finer_objects, std::move(built.finer), scene.levels, -side);
         show_shapes(device, scene, scene.coarser_objects, std::move(built.coarser), scene.levels, side);
         scene.billboards_eye.reset();

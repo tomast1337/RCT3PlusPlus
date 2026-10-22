@@ -1366,6 +1366,9 @@ namespace rct3::scene
                     if (const auto name = assets.strings->get(item.name_text); !name.empty() && assets.strings->get_ignoring_case(own).empty())
                         assets.strings->add(own, std::u16string(name));
                 }
+                // A ride's window opened before then named it from the kind's name it could not yet find.
+                if (info && info->visible)
+                    show_info_page(scene, *info, assets, options);
             }
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {

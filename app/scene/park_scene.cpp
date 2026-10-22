@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park_scene.hpp"
 
+#include "core/maybe.hpp"
 #include "park/daylight.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
@@ -8,7 +9,6 @@
 #include "park/object_placement.hpp"
 #include "park/ride_fences.hpp"
 #include "park/sky_look.hpp"
-#include "park/track_rules.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -28,6 +28,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
@@ -40,6 +41,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <future>
@@ -207,6 +209,11 @@ namespace rct3::scene
                 f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
                 const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
+                if (f.ride->kind == save::RideKind::Tracked)
+                {
+                    const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
+                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
+                }
             }
             // A running ride's seats, queue and riders an hour.
             if (f.ride != nullptr && scene.simulate && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
@@ -787,6 +794,17 @@ namespace rct3::scene
             }
     }
 
+    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state)
+    {
+        save::Ride& r = scene.rides.rides.at(ride);
+        const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
+        const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
+        auto refused = park::open_refusal(r, rules, state, scene.building.ride == ride, course);
+        if (!refused)
+            set_attraction_state(scene, r.base, state);
+        return refused;
+    }
+
     void stage_show(ParkScene& scene, const save::RideShow& show)
     {
         for (auto [_, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
@@ -881,7 +899,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (painting_patrol(scene) || land_tool(scene))
                     ;
-                else if (still && !over && ride_placing_click(device, scene, assets))
+                else if (still && !over && (ride_placing_click(device, scene, assets) || track_building_click(scene, assets)))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
                 {
@@ -929,7 +947,23 @@ namespace rct3::scene
             }
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
-            if (const auto change = info->take_change(); change && scene.shown)
+            const auto door = [](const ui::InfoChange& c) { return c.id == ui::control_id(ui::AttractionControl::Entrance) || c.id == ui::control_id(ui::AttractionControl::Exit); };
+            if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && door(*change))
+            {
+                // A tracked ride's entrance or exit goes beside its station, placed as its kind's item has it.
+                const std::size_t ride = scene.shown->index;
+                const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
+                std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
+                std::ranges::replace(overlay, '\\', '/');
+                const auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); });
+                const auto any = std::ranges::find_if(items, [](const park::BuildItem& i) { return !i.entrance.empty(); });
+                if (const auto item = kind != items.end() ? kind : any; item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), change->id == ui::control_id(ui::AttractionControl::Exit)))
+                {
+                    stop_land_tools(scene);
+                    info->hide();
+                }
+            }
+            else if (change && scene.shown)
                 change_attraction(device, scene, *info, *scene.shown, *change);
             else if (change && scene.shown_person)
             {
@@ -988,15 +1022,10 @@ namespace rct3::scene
                 if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
                     const save::AttractionState state = states[choice->second].state;
-                    std::optional<std::string> refused;
-                    if (f.ride != nullptr && assets.install)
-                    {
-                        const auto file = assets.install->find(std::format("{}.common.ovl", f.ride->base.overlay_path));
-                        const park::TrackRules rules = file ? park::load_track_rules(*file, f.ride->base.symbol) : park::TrackRules { };
-                        refused = park::open_refusal(*f.ride, rules, state, scene.building.ride == scene.shown->index);
-                    }
-                    scene.refusal = refused.value_or("");
-                    if (!refused)
+                    scene.refusal.clear();
+                    if (f.ride != nullptr)
+                        scene.refusal = change_ride_state(scene, scene.shown->index, state).value_or("");
+                    else
                         set_attraction_state(scene, *common, state);
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
@@ -1008,6 +1037,8 @@ namespace rct3::scene
                 scene.shown_prop.reset();
             }
         }
+        if (const auto asked = std::exchange(scene.info_requested, std::nullopt); asked && info)
+            open_info(scene, *info, *asked, assets, options);
         // The Construction tab has no page: it opens the panel that builds the ride's track.
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
         {
@@ -1027,7 +1058,10 @@ namespace rct3::scene
                 }
             }
         }
-        profiling::section("TrackBuilding", [&] { update_track_building(device, scene, assets, options.choice(config::GameOption::Currency)); });
+        profiling::section("TrackBuilding", [&] {
+            const ui::Rect screen = desktop.root().rect();
+            update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), over ? std::nullopt : ground_tile(scene, pointer.position, { screen.width(), screen.height() }), input.commands);
+        });
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
@@ -1293,11 +1327,19 @@ namespace rct3::scene
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
             }
-            if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash); picked && start_ride_placing(scene, *picked))
+            if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {
-                close_track_building(scene);
-                close_footpath_panel(scene);
-                stop_land_tools(scene);
+                if (start_ride_placing(scene, *picked))
+                {
+                    close_track_building(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                }
+                else if (new_tracked_ride(scene, *picked, assets))
+                {
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                }
             }
         }
         update_view_lines(device, scene);

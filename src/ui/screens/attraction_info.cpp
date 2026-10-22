@@ -660,6 +660,21 @@ namespace rct3::ui
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
                     paints(page, f, strings);
+                if (f.station)
+                {
+                    for (const bool exit : { false, true })
+                    {
+                        InfoControl c;
+                        c.id = control_id(exit ? AttractionControl::Exit : AttractionControl::Entrance);
+                        c.name = exit ? "Attraction_General_Exit" : "Attraction_General_Entrance";
+                        c.kind = InfoControlKind::Button;
+                        c.icon = c.name;
+                        const std::string_view help = exit ? "TT_AttractionDialogIconSetExitButton" : "TT_AttractionDialogIconSetEntranceButton";
+                        c.label = text(strings, *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation");
+                        c.enabled = *f.station;
+                        page.controls.push_back(std::move(c));
+                    }
+                }
                 if (f.queue_signs)
                 {
                     constexpr std::string_view key = "TT_AttractionDialogIconToggleQueueSigns";

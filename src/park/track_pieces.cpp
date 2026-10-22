@@ -7,6 +7,7 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/track_section.hpp"
+#include "park/asset_index.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <iterator>
 #include <map>
 #include <numbers>
+#include <ranges>
 #include <tuple>
 
 namespace rct3::park
@@ -145,6 +147,31 @@ namespace rct3::park
             return line;
         }
     } // namespace
+
+    std::vector<std::string> named_overlays(const ovl::Overlay& ride, std::string_view path)
+    {
+        std::vector<std::string> out;
+        for (const auto part : { maybe(&ride.common()), ride.unique() })
+        {
+            if (!part)
+                continue;
+            for (const ovl::Block& block : part->file.block_types[0].blocks)
+            {
+                if (block.file_offset > part->bytes.size() || part->bytes.size() - block.file_offset < block.size)
+                    continue;
+                const std::string_view text(reinterpret_cast<const char*>(part->bytes.data() + block.file_offset), block.size);
+                for (const auto word : std::views::split(text, '\0'))
+                {
+                    const std::string_view s(word.begin(), word.end());
+                    if (!s.starts_with("../"))
+                        continue;
+                    if (auto named = referenced_overlay(path, s); named && !std::ranges::contains(out, *named))
+                        out.push_back(std::move(*named));
+                }
+            }
+        }
+        return out;
+    }
 
     std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay)
     {

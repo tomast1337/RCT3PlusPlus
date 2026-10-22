@@ -272,7 +272,20 @@ namespace rct3::scene
             if (!items)
                 return false;
             const auto found = std::ranges::find_if(*items, [&](const park::BuildItem& item) { return item.overlay == a[0].get<std::string>() && item.symbol == a[1].get<std::string>(); });
-            return found != items->end() && start_ride_placing(park, *found);
+            if (found == items->end())
+                return false;
+            // A ride built piece by piece needs the interface's assets, which it gets as a pick from a list does.
+            if (found->kind == park::BuildKind::TrackedRide)
+                park.build.asked = *found;
+            return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found);
+        });
+        engine_.define("build.construction", [this](const Json&) -> Json {
+            const TrackBuilding& b = park_of(park_).building;
+            if (!b.ride)
+                return nullptr;
+            const auto c = b.catalogues.find(b.overlay);
+            const bool named = b.picked && c != b.catalogues.end();
+            return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() } };
         });
         engine_.define("build.stop", [this](const Json&) {
             stop_ride_placing(park_of(park_));
@@ -284,7 +297,15 @@ namespace rct3::scene
             const auto state = a.size() == 2 && a[1].is_string() ? std::ranges::find(kStates, a[1].get<std::string>(), &std::pair<std::string_view, save::AttractionState>::first) : kStates.end();
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size() || state == kStates.end())
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
-            set_attraction_state(park, park.rides.rides[a[0].get<std::size_t>()].base, state->second);
+            // The reason it stays as it was, as a string key; null once changed.
+            const auto refused = change_ride_state(park, a[0].get<std::size_t>(), state->second);
+            return refused ? Json(*refused) : Json(nullptr);
+        });
+        engine_.define("rides.show", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size())
+                throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
+            park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
         });
         engine_.define("build.placing", [this](const Json&) -> Json {
@@ -303,6 +324,20 @@ namespace rct3::scene
                 const save::Ride& ride = park.rides.rides[i];
                 const save::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
                 Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false } };
+                if (ride.track)
+                {
+                    one["pieces"] = ride.track->pieces.size();
+                    Json platforms = Json::array();
+                    for (const save::TrackPiece& p : ride.track->pieces)
+                        for (const save::PlacedObject& o : p.platform ? park.objects : std::vector<save::PlacedObject> { })
+                            if (o.owner_ref == p.platform->id && o.id != p.platform->id && !o.hidden)
+                                platforms.push_back(o.symbol);
+                    one["platforms"] = std::move(platforms);
+                    Json arms = Json::array();
+                    for (const save::TrackPiece& p : ride.track->pieces)
+                        arms.push_back(p.arm_angles ? Json(std::vector<float>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));
+                    one["arms"] = std::move(arms);
+                }
                 const entt::entity e = i < park.ride_entities.size() ? park.ride_entities[i] : entt::null;
                 const auto& registry = park.sim.registry;
                 if (e != entt::null && registry.valid(e))

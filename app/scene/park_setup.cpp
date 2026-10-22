@@ -474,7 +474,8 @@ namespace rct3::scene
                     boned.placed = placed;
                     std::tie(boned.mesh, boned.bones) = park::boned_meshes(scene.objects[k], model->second, scene.grid);
                     boned.first_seat = scene.seat_carriers.size();
-                    scene.seat_carriers.resize(scene.seat_carriers.size() + model->second.seat_bones.size(), boned.placed);
+                    boned.seats = model->second.seat_bones.size();
+                    scene.seat_carriers.resize(scene.seat_carriers.size() + boned.seats, boned.placed);
                     add_textures(device, scene, boned.mesh.mesh.batches);
                 }
                 return;
@@ -791,9 +792,16 @@ namespace rct3::scene
             for (const save::PlacedObject& car : scene.cars)
                 scene.car_places.push_back(scene.saved_cars.at(car.id));
             scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
-            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_places); });
+            scene.car_mesh_places = scene.car_places;
+            for (std::size_t i = 0; i < scene.cars.size(); ++i)
+                if (const auto model = scene.models.find(park::model_key(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
+                {
+                    scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
+                    scene.car_mesh_places.insert(scene.car_mesh_places.end(), model->second.arm_joints.size(), scene.car_places[i]);
+                }
+            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_mesh_places); });
             add_textures(device, scene, scene.car_meshes.mesh.batches);
-            log.info("{} ride cars, {} vertices", scene.cars.size(), scene.car_meshes.own.size());
+            log.info("{} ride cars, {} on arms, {} vertices", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
             refresh_ride_floors(scene);
         }
@@ -929,8 +937,7 @@ namespace rct3::scene
                     if (auto course = park::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
                     {
                         coasters[i] = simulation::coaster_of(*course, scene.rides.rides[i]);
-                        if (coasters[i])
-                            scene.courses[i] = std::move(*course);
+                        scene.courses[i] = std::move(*course);
                     }
                 }
                 const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
@@ -986,6 +993,18 @@ namespace rct3::scene
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
                 simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
+                // Each kind's rules read once, however many of its rides the park has.
+                std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;
+                for (const save::Ride& ride : scene.rides.rides)
+                {
+                    const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
+                    if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
+                    {
+                        const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
+                        kinds[key] = file ? park::load_track_rules(*file, ride.base.symbol) : park::TrackRules { };
+                    }
+                    scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::TrackRules { });
+                }
                 simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
                     const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
                     return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;

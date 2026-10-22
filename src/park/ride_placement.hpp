@@ -7,16 +7,20 @@
 // and slope down or up to it.
 //
 // Its entrance and its exit each stand on a tile across the rim of the footprint, at the ride's height,
-// facing the ride: their back is where the queue or path joins.
+// facing the ride: their back is where the queue or path joins. A tracked ride's stand beside a station piece,
+// across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
 #include "park/path_clearance.hpp"
+#include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
+#include <string_view>
 
 namespace rct3::park
 {
@@ -59,12 +63,23 @@ namespace rct3::park
         std::int32_t col = 0;
         std::int32_t row = 0;
         std::uint8_t direction = 0; ///< 0 faces -x, 1 +z, 2 +x, 3 -z
+        std::int32_t height = 0;    ///< Whole units; set for a tracked ride's, a flat ride's stand at the ride's
         auto operator<=>(const DoorSpot&) const = default;
     };
 
     /// The tile across the rim of `site` nearest to the tile `col`, `row`, facing the ride. Never a corner
     /// tile, which touches the footprint only diagonally.
     [[nodiscard]] DoorSpot door_spot(const RideSite& site, save::Tile tile);
+
+    /// The tile beside one of `stations` (a tracked ride's station pieces) nearest to `tile`, across a side its
+    /// track does not run through, facing the piece; nothing without stations.
+    [[nodiscard]] std::optional<DoorSpot> station_door_spot(std::span<const save::TrackPiece> stations, save::Tile tile);
+
+    /// The platform piece (its "sid" name) a station piece of the platform type `type` takes: the type, then
+    /// "start" where the station begins (the piece before it is no station), "end" where it ends, "startEnd"
+    /// for both and "middle" for neither; then "1stairLeft" or "1stairRight" for a door beside it on the left or
+    /// right of the way the track runs, "2stair" for doors on both sides.
+    [[nodiscard]] std::string platform_symbol(std::string_view type, const save::TrackPiece& piece, bool station_before, bool station_after, std::span<const DoorSpot> doors);
 
     /// What keeps an entrance or exit from `door`, if anything. `taken`: a door already placed for the ride.
     [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);

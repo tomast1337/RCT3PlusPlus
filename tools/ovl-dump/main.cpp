@@ -545,6 +545,11 @@ namespace
                 std::printf("  %-32s type %u name %s text %s splines %s sections %s\n", name.c_str(), r.info.type_id, std::string(r.name).c_str(), std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 if (const auto& d = r.operating)
                     std::printf("    mode %u allowed 0x%x launch %g [%g, %g] lift %g [%g, %g] brake %g block %g fixed %g cost %d\n", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->block_brake_speed, d->fixed_speed.value_or(-1), d->cost);
+                if (const auto& d = r.operating)
+                    for (const std::string_view train : d->trains)
+                        std::printf("    train %.*s\n", static_cast<int>(train.size()), train.data());
+                if (const auto& d = r.operating)
+                    std::printf("    platform %.*s\n", static_cast<int>(d->platform.size()), d->platform.data());
             }
         }
         if (opt.anr)

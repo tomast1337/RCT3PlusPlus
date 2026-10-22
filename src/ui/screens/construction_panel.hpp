@@ -6,7 +6,7 @@
 // at (vertical, steep and gentle down, level, then gentle, steep and vertical up). Right of them are the
 // toggles (only the lift chain here) in a column, then the bank dial: eight small buttons round a disc,
 // upside down at the top, level at the bottom. Under the rows go the picked piece's name and its price, and
-// the button that pulls down the last piece sits to the right of them. The right part lists the pieces with
+// the buttons that finish the track for the player and that pull down the last piece sit to the right of them. The right part lists the pieces with
 // a use of their own (stations, loops, brakes and the like) by name, a page at a time.
 //
 // Each picture button shows one of three pictures: picked, offered, or not offered (see IconState). The
@@ -57,6 +57,8 @@ namespace rct3::ui
         inline constexpr float kLabelHeight = 15;
         inline constexpr Point kDemolishAt { 322, 72 };
         inline constexpr Point kDemolishSize { 40, 26 };
+        inline constexpr Point kCompleteAt { 278, 70 };
+        inline constexpr Point kCompleteSize { 40, 28 };
         inline constexpr float kNamedLeft = 410;
         inline constexpr float kNamedWidth = 205;
         inline constexpr std::size_t kNamedRows = 4;
@@ -102,6 +104,7 @@ namespace rct3::ui
         std::string dial;
         std::string chain; ///< Base name
         std::string demolish;
+        std::string complete;     ///< Finishes the track
         std::string named_button; ///< Skin family of the named pieces' buttons
         Rect named_inset;
         std::string page_up;
@@ -118,7 +121,8 @@ namespace rct3::ui
         std::array<IconState, construction_panel::kBanks> banks { };
         std::optional<IconState> chain; ///< None when the track has no chain pieces at all
         bool can_demolish = false;
-        std::u16string piece; ///< Name of the piece picked, empty when nothing fits
+        bool can_complete = false; ///< The track has an open end to finish from
+        std::u16string piece;      ///< Name of the piece picked, empty when nothing fits
         std::u16string cost;
         std::vector<std::u16string> named;   ///< Names of the pieces with a use of their own
         std::optional<std::size_t> named_on; ///< The one picked
@@ -133,6 +137,7 @@ namespace rct3::ui
         Named, ///< `index` of the view's named pieces
         Build, ///< The picked button clicked again
         Demolish,
+        Complete, ///< Finish the track
     };
 
     struct ConstructionEvent
@@ -181,6 +186,10 @@ namespace rct3::ui
         {
             return *demolish_;
         }
+        [[nodiscard]] Button& complete_button() const
+        {
+            return *complete_;
+        }
         [[nodiscard]] Button& named_button(std::size_t i) const
         {
             return *named_.at(i);
@@ -217,6 +226,7 @@ namespace rct3::ui
         std::array<Button*, construction_panel::kNamedRows * construction_panel::kNamedColumns> named_ { };
         Button* chain_ = nullptr;
         Button* demolish_ = nullptr;
+        Button* complete_ = nullptr;
         Button* close_ = nullptr;
         Button* page_up_ = nullptr;
         Button* page_down_ = nullptr;

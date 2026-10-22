@@ -34,16 +34,21 @@
 //   build.flatRides()   the install's rides placed whole, { overlay, symbol, name, width, length, price, doors },
 //                       or undefined while the lists are still being read
 //   build.pick(overlay, symbol)  starts placing that ride, as picking it in its build list does; false when
-//                       there is no such ride. Scripts reach rides this way because the lists name their rows
+//                       there is no such ride; a ride built piece by piece opens its construction panel the
+//                       next frame. Scripts reach rides this way because the lists name their rows
 //                       by nothing a script can know
+//   build.construction() { ride, offered, piece, ghost } while the construction panel is open: its ride, how many
+//                       pieces fit where the track goes on, the one picked and whether it can be built there
 //   build.stop()        puts the placing tool away, as a right click does
 //   build.placing()     { step, problem, affordable } while something is being placed: step "ride", "entrance",
 //                       "exit" or "scenery"; problem "none", "not owned", "path" or "blocked"
-//   rides.list()        each ride: { name, symbol, overlay, flat, site, entrance, exit, joined }, places as
+//   rides.list()        each ride: { name, symbol, overlay, flat, pieces, site, entrance, exit, joined }, places as
 //                       { col, row, direction }; joined when the simulation runs it, then also customers,
 //                       price, open, onPaths (its entrance found on the paths), capacity, cycleSeconds,
 //                       queue, queueLine (its tiles), riders and ratings ([excitement, intensity, nausea], 0..1)
-//   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does
+//   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does;
+//                       null once changed, else the string key of why it stays (a track without a station...)
+//   rides.show(i)       opens ride `i`'s window, as clicking the ride does
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.

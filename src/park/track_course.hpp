@@ -10,6 +10,7 @@
 #include "park/track_pieces.hpp"
 #include "save/model/rides.hpp"
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -25,6 +26,7 @@ namespace rct3::park
         Plain,
         Chain,   ///< A lift chain pulls the cars up
         Station, ///< Riders get on and off
+        Cable,   ///< A cable pulls the cars up, as a chain does
     };
 
     struct TrackCourse
@@ -35,6 +37,7 @@ namespace rct3::park
         std::vector<CourseKind> kinds;   ///< Of the stretch from each point to the next; the last is unused
         std::vector<float> piece_starts; ///< Distance at the start of each of the track's pieces
         bool closed = false;             ///< The end joins the start, so cars go round
+        bool reverse_lift = false;       ///< Has the hill a reverse cable lift pulls the train up
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();
@@ -58,6 +61,10 @@ namespace rct3::park
     /// Which way is up for the track at `distance`, as course_point finds it; a unit vector.
     [[nodiscard]] glm::vec3 course_up(const TrackCourse& course, float distance);
 
+    /// How long each run of station stretches of `course` is, in the order they start; on a closed course a
+    /// run over the end goes on from the start.
+    [[nodiscard]] std::vector<float> station_runs(const TrackCourse& course);
+
     /// Where a car's front and rear wheels stand on a course, as distances along it. A car without wheels of
     /// its own has both at one point.
     struct Axles
@@ -70,5 +77,13 @@ namespace rct3::park
     /// moved on by `by`: it points from its rear wheels to its front ones, leans with the track's bank
     /// between them, and keeps the place and turn it had against the track.
     [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
+
+    using ArmAngles = std::array<float, 4>; ///< An arm's joint angles, degrees, from its base out
+
+    /// The arm angles of a car `distance` along `course`, whose pieces hold `held` (by piece) at their middles.
+    /// Between the middles of a piece and the one before or after, each joint turns evenly from one's angle to
+    /// the other's, round the end of a closed course; where only one of the two holds angles the car takes
+    /// those. Nothing where neither does.
+    [[nodiscard]] std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance);
 
 } // namespace rct3::park

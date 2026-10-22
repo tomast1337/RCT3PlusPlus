@@ -676,6 +676,7 @@ namespace rct3::ui::game_skins
         s.dial = "AttractionEditor_BankBackground";
         s.chain = named("Chain");
         s.demolish = named("DeleteOn");
+        s.complete = named("ForwardOn");
         s.named_button = kTextButton;
         s.named_inset = kLozengeInset;
         s.page_up = "SquareArrowUp";

@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <string_view>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -83,6 +84,8 @@ namespace rct3::scene
 
     std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
+        if (menus.asked)
+            return std::exchange(menus.asked, std::nullopt);
         auto picker = root.find_as<ui::BuildPicker>(kListName);
         if (!picker)
             return std::nullopt;

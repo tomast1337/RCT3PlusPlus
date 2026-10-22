@@ -69,3 +69,41 @@ TEST_CASE("a car points from its rear wheels to its front ones, and leans with t
     check_near(glm::vec3(banked * glm::vec4(0, 1, 0, 0)), leaning);
     check_near(glm::vec3(banked * glm::vec4(0, 0, 1, 0)), { 0, 0, 1 });
 }
+
+TEST_CASE("station runs are measured from one end of the station to the other, joined over a closed course's end")
+{
+    using K = park::CourseKind;
+    park::TrackCourse c;
+    c.points.resize(6);
+    c.distance = { 0, 4, 10, 12, 15, 20 };
+    c.kinds = { K::Station, K::Plain, K::Station, K::Station, K::Plain, K::Plain };
+    CHECK(park::station_runs(c) == std::vector<float> { 4, 5 });
+    c.closed = true;
+    CHECK(park::station_runs(c) == std::vector<float> { 4, 5 });
+    // The last stretch is a station too: on a closed course it runs on into the first.
+    c.kinds = { K::Station, K::Plain, K::Plain, K::Plain, K::Station, K::Plain };
+    CHECK(park::station_runs(c) == std::vector<float> { 9 });
+    c.closed = false;
+    CHECK(park::station_runs(c) == std::vector<float> { 4, 5 });
+    CHECK(park::station_runs(corner()).empty());
+}
+
+TEST_CASE("an arm holds each piece's angles at its middle and turns evenly between them")
+{
+    park::TrackCourse c;
+    c.distance = { 0, 40 };
+    c.points = { { 0, 0, 0 }, { 40, 0, 0 } };
+    c.piece_starts = { 0, 10, 20, 30 }; // Middles at 5, 15, 25 and 35
+    c.closed = true;
+    using A = park::ArmAngles;
+    const std::vector<std::optional<A>> held { A { 0, 0, 0, 0 }, A { 100, 10, -20, 40 }, std::nullopt, A { 20, 0, 0, 0 } };
+    CHECK(park::arm_angles_at(c, held, 15) == A { 100, 10, -20, 40 });
+    CHECK(park::arm_angles_at(c, held, 10) == A { 50, 5, -10, 20 });
+    // Beside a piece that holds none, the car takes the angles of the one that does.
+    CHECK(park::arm_angles_at(c, held, 22) == A { 100, 10, -20, 40 });
+    CHECK(park::arm_angles_at(c, held, 28) == A { 20, 0, 0, 0 });
+    // Round the end of the circuit, from the last middle to the first.
+    CHECK(park::arm_angles_at(c, held, 0) == A { 10, 0, 0, 0 });
+    CHECK(park::arm_angles_at(c, held, 40) == A { 10, 0, 0, 0 });
+    CHECK_FALSE(park::arm_angles_at(c, std::vector<std::optional<A>>(4), 12));
+}

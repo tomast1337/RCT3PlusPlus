@@ -42,7 +42,10 @@ namespace rct3::park
                 return std::nullopt;
             const auto model = models.find(model_key(object));
             const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
-            const CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
+            CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
+            if ((shape->record.flags & kPieceCableLift) != 0)
+                kind = CourseKind::Cable;
+            course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
             std::vector<glm::vec3> path = shape->line.path;
             std::vector<glm::vec3> ups = shape->line.ups;
             ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
@@ -66,6 +69,33 @@ namespace rct3::park
         }
         course.closed = ride.track->circuit;
         return course;
+    }
+
+    std::vector<float> station_runs(const TrackCourse& course)
+    {
+        std::vector<float> runs;
+        bool in_run = false;
+        for (std::size_t k = 0; k + 1 < course.points.size(); ++k)
+        {
+            const float stretch = course.distance[k + 1] - course.distance[k];
+            if (course.kinds[k] != CourseKind::Station)
+                in_run = false;
+            else if (in_run)
+                runs.back() += stretch;
+            else
+            {
+                runs.push_back(stretch);
+                in_run = true;
+            }
+        }
+        // A run that reaches the end of a closed course and one from its start are the same run.
+        const bool starts_in_run = !course.kinds.empty() && course.kinds.front() == CourseKind::Station;
+        if (course.closed && in_run && starts_in_run && runs.size() > 1)
+        {
+            runs.front() += runs.back();
+            runs.pop_back();
+        }
+        return runs;
     }
 
     glm::vec3 course_point(const TrackCourse& course, float distance)
@@ -132,6 +162,47 @@ namespace rct3::park
         glm::mat4 back = glm::transpose(glm::mat4(glm::mat3(from)));
         back[3] = glm::vec4(-(glm::mat3(back) * glm::vec3(from[3])), 1);
         return to * back * saved;
+    }
+
+    std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance)
+    {
+        const std::size_t n = std::min(course.piece_starts.size(), held.size());
+        const float length = course.length();
+        if (n == 0 || length <= 0)
+            return std::nullopt;
+        if (course.closed)
+            distance = std::fmod(std::fmod(distance, length) + length, length);
+        const auto middle = [&](std::size_t i) { return (course.piece_starts[i] + (i + 1 < course.piece_starts.size() ? course.piece_starts[i + 1] : length)) / 2; };
+        // The piece the car is on, and the one whose middle is on the other side of it.
+        const std::size_t on = static_cast<std::size_t>(std::ranges::upper_bound(course.piece_starts.begin(), course.piece_starts.begin() + static_cast<std::ptrdiff_t>(n), distance) - course.piece_starts.begin()) - 1;
+        const std::size_t piece = std::min(on, n - 1);
+        const bool behind = distance < middle(piece);
+        std::optional<std::size_t> other;
+        if (behind && piece > 0)
+            other = piece - 1;
+        else if (!behind && piece + 1 < n)
+            other = piece + 1;
+        else if (course.closed)
+            other = behind ? n - 1 : 0;
+        const std::optional<ArmAngles>& here = held[piece];
+        const std::optional<ArmAngles> there = other ? held[*other] : std::nullopt;
+        if (!here || !there)
+            return here ? here : there;
+        // From the earlier middle to the later one, a whole course further on where they wrap round.
+        float from = behind ? middle(*other) : middle(piece);
+        float to = behind ? middle(piece) : middle(*other);
+        if (to < from)
+            (behind ? from : to) += behind ? -length : length;
+        float at = distance;
+        if (at < from)
+            at += length;
+        const float t = to > from ? std::clamp((at - from) / (to - from), 0.0f, 1.0f) : 0.0f;
+        const ArmAngles& a = behind ? *there : *here;
+        const ArmAngles& b = behind ? *here : *there;
+        ArmAngles out;
+        for (std::size_t j = 0; j < out.size(); ++j)
+            out[j] = a[j] + (b[j] - a[j]) * t;
+        return out;
     }
 
 } // namespace rct3::park

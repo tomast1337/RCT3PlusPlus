@@ -29,6 +29,7 @@
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/track_course.hpp"
+#include "park/track_rules.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
 #include "save/model/park.hpp"
@@ -306,11 +307,22 @@ namespace rct3::scene
         float sim_time = 0;                ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
-        std::vector<park::CarSpot> car_spots;                  ///< By car, as the park kept them
-        park::Fitted saved_cars;                               ///< Where the park kept each car, by id
-        std::vector<glm::mat4> car_places;                     ///< Where each car stands now, by car
-        park::MovingMeshes car_meshes;                         ///< At car_places
-        std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose trains go round
+        std::vector<park::CarSpot> car_spots; ///< By car, as the park kept them
+        park::Fitted saved_cars;              ///< Where the park kept each car, by id
+        std::vector<glm::mat4> car_places;    ///< Where each car stands now, by car
+        park::MovingMeshes car_meshes;        ///< At car_mesh_places
+        /// A car whose riders sit on an arm: its place in `cars`, its arm's joints at rest, and how the last
+        /// joint, the riders' seat, is moved now in the car's own space.
+        struct ArmCar
+        {
+            std::size_t car = 0;
+            std::vector<glm::mat4> joints;
+            glm::mat4 seats { 1.0f };
+        };
+        std::vector<ArmCar> arm_cars;
+        std::vector<glm::mat4> car_mesh_places;                ///< car_places, then each arm car's joints from the base out
+        std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
+        std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
@@ -326,6 +338,7 @@ namespace rct3::scene
             park::MovingMeshes mesh;
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
             std::size_t first_seat = 0;      ///< Its first seat's place in seat_carriers
+            std::size_t seats = 0;           ///< Of seat_carriers it owns; none for gates and scenery
             float reach = 0;                 ///< Of scenery, about how far it reaches from its place
             /// Of a ride's entrance or exit, its motions shut, opening, open and shutting (park::kGateShut...): it
             /// opens while the ride's riders walk through, on or off as `exit` says.
@@ -373,6 +386,7 @@ namespace rct3::scene
         std::vector<entt::entity> broken_rides;               ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
+        std::optional<park::AttractionRef> info_requested;          ///< Asked by a script, opened as a click on it does
         std::string refusal;                                        ///< String key: why the shown attraction was not opened, tested or edited
         std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;                     ///< Their tabs in the panel's order
@@ -497,6 +511,10 @@ namespace rct3::scene
 
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
+
+    /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
+    /// key of why not.
+    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state);
 
     /// Has the running show ride that `show` is for put it on from its next go.
     void stage_show(ParkScene& scene, const save::RideShow& show);

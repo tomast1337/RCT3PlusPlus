@@ -2,6 +2,7 @@
 #include "park/ride_placement.hpp"
 
 #include <doctest/doctest.h>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::park;
@@ -104,4 +105,44 @@ TEST_CASE("an entrance goes across the footprint's rim nearest the pointer, faci
     const DoorSpot entrance = door_spot(site, { 0, 3 });
     CHECK(door_problem(site, entrance, std::nullopt, grid, { }, { }) == SiteProblem::None);
     CHECK(door_problem(site, entrance, entrance, grid, { }, { }) == SiteProblem::Blocked);
+}
+
+TEST_CASE("a tracked ride's entrance stands beside its station, across the track, facing it")
+{
+    save::TrackPiece along_x;
+    along_x.tile_x = 4;
+    along_x.tile_z = 4;
+    along_x.height = 3;
+    save::TrackPiece along_z = along_x;
+    along_z.tile_x = 10;
+    along_z.direction = 1;
+    const std::vector stations { along_x, along_z };
+    CHECK_FALSE(station_door_spot({ }, { 0, 0 }));
+    CHECK(station_door_spot(stations, { 4, 7 }) == DoorSpot { 4, 5, 3, 3 });
+    CHECK(station_door_spot(stations, { 3, 1 }) == DoorSpot { 4, 3, 1, 3 });
+    // Never at the station's ends, where the track runs on.
+    CHECK(station_door_spot(stations, { 1, 4 }) == DoorSpot { 4, 3, 1, 3 });
+    CHECK(station_door_spot(stations, { 12, 4 }) == DoorSpot { 11, 4, 0, 3 });
+    CHECK(station_door_spot(stations, { 9, 4 }) == DoorSpot { 9, 4, 2, 3 });
+}
+
+TEST_CASE("a station piece's platform is capped where the station ends and has stairs where its doors are")
+{
+    save::TrackPiece along_x;
+    along_x.tile_x = 4;
+    along_x.tile_z = 4;
+    along_x.height = 3;
+    CHECK(platform_symbol("deck", along_x, false, true, { }) == "deckstart");
+    CHECK(platform_symbol("deck", along_x, true, false, { }) == "deckend");
+    CHECK(platform_symbol("deck", along_x, false, false, { }) == "deckstartEnd");
+    // Left of the way it runs is +z, right is -z; a door at another height is not beside it.
+    const std::vector<DoorSpot> left { { 4, 5, 3, 3 } }, right { { 4, 3, 1, 3 } }, both { { 4, 5, 3, 3 }, { 4, 3, 1, 3 } }, above { { 4, 5, 3, 4 } };
+    CHECK(platform_symbol("deck", along_x, true, true, left) == "deckmiddle1stairLeft");
+    CHECK(platform_symbol("deck", along_x, true, false, right) == "deckend1stairRight");
+    CHECK(platform_symbol("deck", along_x, false, false, both) == "deckstartEnd2stair");
+    CHECK(platform_symbol("deck", along_x, true, true, above) == "deckmiddle");
+    // Turned a quarter, its left is +x.
+    save::TrackPiece along_z = along_x;
+    along_z.direction = 1;
+    CHECK(platform_symbol("deck", along_z, true, true, std::vector<DoorSpot> { { 5, 4, 0, 3 } }) == "deckmiddle1stairLeft");
 }

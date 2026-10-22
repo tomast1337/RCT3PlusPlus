@@ -80,7 +80,7 @@ namespace rct3::park
         return { };
     }
 
-    std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing)
+    std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course)
     {
         if (state == save::AttractionState::Closed || ride.kind != save::RideKind::Tracked)
             return std::nullopt;
@@ -89,7 +89,8 @@ namespace rct3::park
         const bool circuit = ride.track && ride.track->circuit;
         if (ride.track && ride.track->segments.size() > 1 && !rules.may_be_split && ride.mode != save::OperatingMode::WaterTransport)
             return "TrackedRideIsDisjoint";
-        if (ride.stations.empty())
+        // A track being built has its station pieces before the park keeps its stations.
+        if (course ? !std::ranges::contains(course->kinds, CourseKind::Station) : ride.stations.empty())
             return "RideHasNoStation";
         if (rules.min_pieces && pieces < *rules.min_pieces)
             return "CannotOpenOrTestInsufficientPieces";
@@ -99,8 +100,13 @@ namespace rct3::park
             return "CannotTestTrackedRide";
         if (!test && editing)
             return "CannotOpenTrackedRideWhileEditing";
-        // shortcut: no check that a station is as long as a train or that a reverse cable lift ride has its
-        // lift, upgrade when built tracks carry station lengths and lift pieces.
+        // Golfers walk their station, so it need not hold a train.
+        if (course && !ride.trains.empty() && ride.mode != save::OperatingMode::MiniGolf && std::ranges::any_of(station_runs(*course), [&](float run) { return run < ride.trains.front().length; }))
+            return "RideStationTooShort";
+        // shortcut: the hill may stand anywhere on the track, not only on a straight downhill run back from a
+        // station; upgrade when building offers the hill piece away from one.
+        if (course && ride.mode == save::OperatingMode::ReverseCableLiftHill && !course->reverse_lift)
+            return "CannotOpenOrTestNoReverseCableLiftHill";
         const auto door = [&](std::uint32_t rule, auto built, std::string_view which) -> std::optional<std::string> {
             const auto placed = static_cast<std::size_t>(std::ranges::count_if(ride.stations, built));
             const bool enough = rule == 0 ? placed >= ride.stations.size() : rule == 2 || rule == 3 ? placed > 0 : true;
@@ -108,9 +114,17 @@ namespace rct3::park
                 return std::nullopt;
             return std::format("Cant{}Ride{}{}", test ? "Test" : "Open", rule == 0 ? "Missing" : "No", which);
         };
-        if (auto refused = door(rules.entrances, [](const save::Station& s) { return s.entrance != 0; }, "Entrance"))
+        const auto has_entrance = [](const save::Station& s) { return s.entrance != 0; };
+        const auto has_exit = [](const save::Station& s) { return s.exit != 0; };
+        if (auto refused = door(rules.entrances, has_entrance, "Entrance"))
             return refused;
-        return door(rules.exits, [](const save::Station& s) { return s.exit != 0; }, "Exit");
+        if (auto refused = door(rules.exits, has_exit, "Exit"))
+            return refused;
+        // A walk-through is walked from its entrance on to its exit. Stations are kept in the order the track
+        // runs through them; doors at one station are taken to be in order.
+        if (!test && rules.entrances == kOneDoor && rules.exits == kOneDoor && !circuit && std::ranges::find_if(ride.stations, has_exit) < std::ranges::find_if(ride.stations, has_entrance))
+            return "CannotOpenExitBeforeEntrance";
+        return std::nullopt;
     }
 
     std::vector<LaidPiece> apply_patterns(std::span<const PieceShape> pieces, std::vector<LaidPiece> track, std::span<const PiecePattern> patterns, bool circuit)

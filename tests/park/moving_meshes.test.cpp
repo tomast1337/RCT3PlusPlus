@@ -51,3 +51,30 @@ TEST_CASE("moving shapes are built once, drawn alike in one batch, and then only
     CHECK(m.mesh.vertices[4].normal.y == doctest::Approx(1));
     CHECK(m.mesh.indices[3] == 3); // The second car's triangle uses its own vertices
 }
+
+TEST_CASE("a car on an arm has its joints' parts apart, after every car, and each joint turns what it carries")
+{
+    ObjectModels models;
+    ObjectModel model;
+    ModelPart body = triangle("paint");
+    ModelPart seat = triangle("paint");
+    seat.bone = 1;
+    model.levels = { { 100, { body, seat }, { } } };
+    model.arm_joints = { glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), { 0, 2, 0 }) };
+    models.emplace("Rides/Rides|Car", model);
+    const std::vector objects { car(1), car(2) };
+    const MovingMeshes m = moving_meshes(objects, models, { });
+    // Each car's body, then each car's two joints, the first carrying nothing.
+    CHECK(m.ends == std::vector<std::uint32_t> { 3, 6, 6, 9, 9, 12 });
+
+    // The base turned a quarter about up, the next joint a quarter about sideways, about its own place.
+    const std::vector<glm::mat4> moves = arm_moves(model.arm_joints, std::vector { 90.0f, 90.0f });
+    REQUIRE(moves.size() == 2);
+    const glm::vec3 above = moves[1] * glm::vec4(0, 3, 0, 1); // One above the second joint
+    // Leant over towards z by the second joint, and that swung round to x by the base.
+    CHECK(above.x == doctest::Approx(1));
+    CHECK(above.y == doctest::Approx(2));
+    CHECK(above.z == doctest::Approx(0).epsilon(1e-5));
+    const glm::vec3 joint = moves[1] * glm::vec4(0, 2, 0, 1);
+    CHECK(joint.y == doctest::Approx(2)); // A joint stays where it is
+}

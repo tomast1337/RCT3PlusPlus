@@ -121,3 +121,52 @@ TEST_CASE("a pattern lays its piece backwards when asked, unless the piece keeps
     pieces[1].record.flags = kPieceKeepsWay;
     CHECK(apply_patterns(pieces, { LaidPiece { 0 } }, patterns, false) == std::vector<LaidPiece> { { 0 } });
 }
+
+TEST_CASE("a ride whose station is shorter than its train, or whose cable lift is missing, does not open")
+{
+    using K = CourseKind;
+    TrackCourse course;
+    course.points.resize(4);
+    course.distance = { 0, 6, 10, 30 };
+    course.kinds = { K::Station, K::Plain, K::Plain, K::Plain };
+    course.closed = true;
+    save::Ride r = ride(6);
+    r.trains.resize(1);
+    r.trains[0].length = 5;
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+    r.trains[0].length = 7;
+    CHECK(open_refusal(r, TrackRules { }, kTest, false, course) == "RideStationTooShort");
+    // Golfers walk their station; with no course known nothing is measured.
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false));
+    r.mode = save::OperatingMode::MiniGolf;
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+
+    // Its station pieces count before the park keeps the station.
+    save::Ride bare = r;
+    bare.stations.clear();
+    CHECK(open_refusal(bare, TrackRules { }, kOpen, false, course) == "CantOpenRideNoEntrance");
+    course.kinds[0] = K::Plain;
+    CHECK(open_refusal(bare, TrackRules { }, kOpen, false, course) == "RideHasNoStation");
+    course.kinds[0] = K::Station;
+
+    r.mode = save::OperatingMode::ReverseCableLiftHill;
+    r.trains[0].length = 5;
+    CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "CannotOpenOrTestNoReverseCableLiftHill");
+    course.reverse_lift = true;
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+}
+
+TEST_CASE("a walk-through opens only when its exit comes after its entrance")
+{
+    const TrackRules walk = rules_with([](TrackRules& r) { r.entrances = r.exits = kOneDoor; });
+    save::Ride r = ride(6, 2, false);
+    r.stations[0] = { .entrance = 1 };
+    r.stations[1] = { .exit = 2 };
+    CHECK_FALSE(open_refusal(r, walk, kOpen, false));
+    std::swap(r.stations[0], r.stations[1]);
+    CHECK(open_refusal(r, walk, kOpen, false) == "CannotOpenExitBeforeEntrance");
+    // Tested either way, and on a circuit there is no before.
+    CHECK_FALSE(open_refusal(r, walk, kTest, false));
+    r.track->circuit = true;
+    CHECK_FALSE(open_refusal(r, walk, kOpen, false));
+}

@@ -84,6 +84,9 @@ namespace rct3::ui
         demolish_->icon = style.demolish;
         demolish_->tooltip = std::move(demolish_help);
         demolish_->placement = top_left(cp::kDemolishAt.x, cp::kDemolishAt.y, cp::kDemolishSize.x, cp::kDemolishSize.y);
+        complete_ = picture("complete");
+        complete_->icon = style.complete;
+        complete_->placement = top_left(cp::kCompleteAt.x, cp::kCompleteAt.y, cp::kCompleteSize.x, cp::kCompleteSize.y);
         close_ = &add<Button>("close", style.title_button, style.close_icon);
         close_->placement = top_left(cp::kCloseAt.x, cp::kCloseAt.y, cp::kCloseSize, cp::kCloseSize);
 
@@ -159,6 +162,7 @@ namespace rct3::ui
             chain_->inert = *view_.chain == IconState::Dis;
         }
         demolish_->enabled = view_.can_demolish;
+        complete_->enabled = view_.can_complete;
         piece_->text = view_.piece;
         cost_->text = view_.cost;
         for (std::size_t i = 0; i < kNamedSlots; ++i)
@@ -214,6 +218,8 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Chain, 0 });
         if (demolish_->take_click() && view_.can_demolish)
             events_.push_back({ ConstructionAction::Demolish, 0 });
+        if (complete_->take_click() && view_.can_complete)
+            events_.push_back({ ConstructionAction::Complete, 0 });
         for (std::size_t i = 0; i < kNamedSlots; ++i)
         {
             if (!named_.at(i)->take_click())

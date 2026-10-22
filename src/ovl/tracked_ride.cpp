@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/tracked_ride.hpp"
 
+#include <algorithm>
+#include <cstring>
+
 namespace rct3::ovl
 {
 
@@ -43,6 +46,19 @@ namespace rct3::ovl
             d.cost = r->i32(0xFC);
             d.launch_min = r->real(0x108);
             d.launch_max = r->real(0x10C);
+            d.platform = r->text(0x38);
+            constexpr std::uint32_t kMostTrains = 64; // Our own bound against a stray count
+            const std::uint32_t list = r->u32(0x0C);
+            for (std::uint32_t i = 0; i < std::min(r->u32(0x08), kMostTrains) && list != 0; ++i)
+            {
+                const auto entry = space.bytes_at(list + i * 4, 4);
+                if (!entry)
+                    break;
+                std::uint32_t name = 0;
+                std::memcpy(&name, entry->data(), 4);
+                if (const auto text = space.cstring_at(name); text && !text->empty())
+                    d.trains.push_back(*text);
+            }
             return d;
         }
 

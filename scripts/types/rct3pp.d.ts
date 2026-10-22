@@ -115,8 +115,12 @@ interface FlatRideItem {
 declare namespace build {
     /** The install's rides placed whole; undefined while the lists are still being read. */
     function flatRides(): FlatRideItem[] | undefined;
-    /** Starts placing a ride, as picking it in its build list does; false when there is no such ride. */
+    /** Starts placing a ride, as picking it in its build list does; false when there is no such ride. A ride
+     * built piece by piece opens its construction panel on the next frame. */
     function pick(overlay: string, symbol: string): boolean;
+    /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
+     * the one picked and whether it can be built there; undefined while the panel is shut. */
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean } | undefined;
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
@@ -136,6 +140,12 @@ interface RideInfo {
     symbol: string;
     overlay: string;
     flat: boolean;
+    /** Rides with a track: how many pieces it has. */
+    pieces?: number;
+    /** Rides with a track: the platform pieces of its stations, in track order. */
+    platforms?: string[];
+    /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
+    arms?: (number[] | null)[];
     site: Spot | null;
     entrance: Spot | null;
     exit: Spot | null;
@@ -158,6 +168,9 @@ interface RideInfo {
 
 declare namespace rides {
     function list(): RideInfo[];
-    /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. */
-    function setState(i: number, state: "closed" | "testing" | "open"): void;
+    /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
+     *  string key of why the ride stays as it was (a track without a station, a missing exit...). */
+    function setState(i: number, state: "closed" | "testing" | "open"): string | null;
+    /** Opens ride `i`'s window, as clicking the ride does, on the next frame. */
+    function show(i: number): void;
 }

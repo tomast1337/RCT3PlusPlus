@@ -5,6 +5,7 @@
 // station's ends or a waterfall's parts are always the right pieces without the player picking them.
 #pragma once
 
+#include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
 #include "save/model/rides.hpp"
 
@@ -77,10 +78,12 @@ namespace rct3::park
     inline constexpr std::uint32_t kOneDoor = 2;
 
     /// Why `ride` cannot be put in `state` (open or testing) under `rules`, as a string key; nothing when it
-    /// can. `editing`: its track is open in the construction panel. Checked in the order the player meets
-    /// them: an unjoined track, no station, too few pieces, not a circuit, a ride never tested, the panel
-    /// open, then its entrances and exits.
-    [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing);
+    /// can. `editing`: its track is open in the construction panel. `course`: its track's course, when known,
+    /// for the length of its stations and its reverse cable lift hill. Checked in the order the player meets them: an
+    /// unjoined track, no station, too few pieces, not a circuit, a ride never tested, the panel open, a
+    /// station shorter than a train, a cable lift ride without its lift, its entrances and exits, then for
+    /// a ride of one entrance and one exit on an open track, an exit before the entrance.
+    [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt);
 
     /// `track` (pieces of `pieces` laid in order) after every pattern of `patterns` has swapped what it
     /// matches: each pattern is tried at each piece in turn, its steps taking that piece and those after.

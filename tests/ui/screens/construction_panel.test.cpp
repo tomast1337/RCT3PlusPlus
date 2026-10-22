@@ -205,3 +205,16 @@ TEST_CASE("demolish is heard only while there is a piece to take down, and closi
     CHECK(f.panel->take_closed());
     CHECK_FALSE(f.panel->take_closed());
 }
+
+TEST_CASE("finishing the track is heard only while it has an open end")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    f.panel->show(v);
+    f.press(f.panel->complete_button());
+    CHECK_FALSE(f.panel->take_event());
+    v.can_complete = true;
+    f.panel->show(v);
+    f.press(f.panel->complete_button());
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Complete, 0 });
+}

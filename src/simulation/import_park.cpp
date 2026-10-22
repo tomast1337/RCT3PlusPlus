@@ -440,7 +440,7 @@ namespace rct3::simulation
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
         for (const park::CourseKind k : course.kinds)
-            c.kinds.push_back(k == park::CourseKind::Chain ? Stretch::Chain : k == park::CourseKind::Station ? Stretch::Station : Stretch::Plain);
+            c.kinds.push_back(k == park::CourseKind::Chain || k == park::CourseKind::Cable ? Stretch::Chain : k == park::CourseKind::Station ? Stretch::Station : Stretch::Plain);
         // Trains set off from where a station stretch ends.
         for (std::size_t i = 0; i + 1 < c.kinds.size(); ++i)
             if (c.kinds[i] == Stretch::Station && c.kinds[i + 1] != Stretch::Station)

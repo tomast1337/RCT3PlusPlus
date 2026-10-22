@@ -49,7 +49,10 @@ namespace rct3::scene
             if (k == kNoCar)
                 return glm::mat4(1.0f);
             if (k < scene.car_places.size())
-                return scene.car_places[k];
+            {
+                const auto arm = std::ranges::find(scene.arm_cars, k, &ParkScene::ArmCar::car);
+                return arm != scene.arm_cars.end() ? scene.car_places[k] * arm->seats : scene.car_places[k];
+            }
             k -= scene.cars.size();
             return k < scene.seat_carriers.size() ? scene.seat_carriers[k] : glm::mat4(1.0f);
         }
@@ -86,7 +89,7 @@ namespace rct3::scene
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
                 // On a ride its bones move, the seat's bone carries the seat.
-                if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end())
+                if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
                     return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
                 return std::pair { kNoCar, park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
             }
@@ -322,7 +325,7 @@ namespace rct3::scene
                     places[p] = boned.placed * moves[static_cast<std::size_t>(boned.bones[p])];
                 park::move_meshes(boned.mesh, places);
                 const auto& seat_bones = model->second.seat_bones;
-                for (std::size_t seat = 0; seat < seat_bones.size(); ++seat)
+                for (std::size_t seat = 0; seat < std::min(boned.seats, seat_bones.size()); ++seat)
                     if (seat_bones[seat] >= 0 && static_cast<std::size_t>(seat_bones[seat]) < moves.size())
                         scene.seat_carriers[boned.first_seat + seat] = boned.placed * moves[static_cast<std::size_t>(seat_bones[seat])];
             }
@@ -398,6 +401,7 @@ namespace rct3::scene
     /// while it does not run.
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
     {
+        std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
         {
             const std::uint64_t id = scene.cars[i].id;
@@ -410,13 +414,37 @@ namespace rct3::scene
                 const simulation::Coaster& train = fleet->trains[spot.train];
                 // Between ticks, on as far as the train's speed takes it, from where the park kept it.
                 const float at = train.at + (train.running ? train.speed * scene.sim_time : 0.0f);
-                place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, at - scene.rides.rides[spot.ride].trains[spot.train].distance);
+                moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
+                place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
             }
             scene.car_places[i] = place;
         }
+        // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
+        std::size_t joints = 0;
+        for (const ParkScene::ArmCar& arm : scene.arm_cars)
+            joints += arm.joints.size();
+        scene.car_mesh_places.resize(scene.car_places.size() + joints);
+        std::ranges::copy(scene.car_places, scene.car_mesh_places.begin());
+        auto joint_place = scene.car_mesh_places.begin() + static_cast<std::ptrdiff_t>(scene.car_places.size());
+        for (ParkScene::ArmCar& arm : scene.arm_cars)
+        {
+            const park::CarSpot spot = scene.car_spots[arm.car];
+            std::optional<park::ArmAngles> angles;
+            if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
+            {
+                std::vector<std::optional<park::ArmAngles>> held;
+                for (const save::TrackPiece& piece : ride.track->pieces)
+                    held.push_back(piece.arm_angles);
+                angles = park::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
+            }
+            const std::vector<glm::mat4> moves = park::arm_moves(arm.joints, angles ? std::span<const float>(*angles) : std::span<const float> { });
+            for (const glm::mat4& move : moves)
+                *joint_place++ = scene.car_places[arm.car] * move;
+            arm.seats = moves.empty() ? glm::mat4(1.0f) : moves.back();
+        }
         profiling::section("Rides", [&] { swing_rides(scene, eye, view); });
         profiling::section("Mesh", [&] {
-            park::move_meshes(scene.car_meshes, scene.car_places);
+            park::move_meshes(scene.car_meshes, scene.car_mesh_places);
             scene.rider_places.resize(scene.rider_cars.size());
             for (std::size_t k = 0; k < scene.rider_cars.size(); ++k)
                 scene.rider_places[k] = carrier_place(scene, scene.rider_cars[k]);

@@ -115,6 +115,8 @@ namespace rct3::ui
         std::optional<bool> queue_signs { };
         /// Of a show ride, what it puts on.
         const save::RideShow* show = nullptr;
+        /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside.
+        std::optional<bool> station { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.
         std::string_view refusal { };
     };
@@ -143,6 +145,8 @@ namespace rct3::ui
         Circuits,   ///< Times a flat ride runs round each go
         ShowTrick,  ///< The trick at the show's picked place, by place in show_offers; a new place's adds one
         ShowDelete, ///< Takes the trick at the picked place out of the show
+        Entrance,   ///< Places a tracked ride's entrance
+        Exit,       ///< And its exit
         ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/moving_meshes.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <iterator>
 #include <map>
 #include <string>
 #include <tuple>
@@ -11,12 +13,43 @@ namespace rct3::park
 
     MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
-        // Each object alone at the origin.
+        // Each object alone at the origin, and the joints of those on arms after them.
         std::vector<ObjectMesh> alone;
+        std::vector<ObjectMesh> joints;
         alone.reserve(objects.size());
         for (const save::PlacedObject& o : objects)
-            alone.push_back(object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
+        {
+            const auto model = models.find(model_key(o));
+            if (model == models.end() || model->second.arm_joints.empty())
+            {
+                alone.push_back(object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
+                continue;
+            }
+            for (std::int32_t joint = -1; joint < std::ssize(model->second.arm_joints); ++joint)
+            {
+                ObjectModels one;
+                ObjectModel& piece = one[model->first] = model->second;
+                for (ModelLevel& level : piece.levels)
+                    std::erase_if(level.parts, [&](const ModelPart& part) { return part.bone != joint; });
+                (joint < 0 ? alone : joints).push_back(object_mesh(std::span(&o, 1), one, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
+            }
+        }
+        alone.insert(alone.end(), std::make_move_iterator(joints.begin()), std::make_move_iterator(joints.end()));
         return gathered_meshes(alone);
+    }
+
+    std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees)
+    {
+        std::vector<glm::mat4> moves;
+        glm::mat4 carried(1.0f);
+        for (std::size_t j = 0; j < joints.size(); ++j)
+        {
+            const float turn = j < degrees.size() ? glm::radians(degrees[j]) : 0.0f;
+            // Turned in the joint's own space: taken there from the model's, turned, and put back.
+            carried = carried * joints[j] * glm::rotate(glm::mat4(1.0f), turn, j == 0 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)) * glm::inverse(joints[j]);
+            moves.push_back(carried);
+        }
+        return moves;
     }
 
     std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid)

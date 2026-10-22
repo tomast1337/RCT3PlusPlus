@@ -551,6 +551,13 @@ namespace rct3::scene
             else
                 p.door = park::door_spot(*p.site, { tile->col, tile->row });
             p.problem = park::door_problem(*p.site, *p.door, p.step == RidePlacing::Step::Exit || !p.stations.empty() ? p.entrance : std::nullopt, scene.grid, paths, p.solids);
+            // The ride's own door of that kind standing there moves when this one is placed, so it is no block.
+            const bool exit = p.step == RidePlacing::Step::Exit;
+            if (p.problem == park::SiteProblem::Blocked && !p.stations.empty() && std::ranges::any_of(scene.rides.rides.at(p.ride).stations, [&](const save::Station& st) {
+                    const auto& old = exit ? st.exit_spot : st.entrance_spot;
+                    return old && old->col == p.door->col && old->row == p.door->row;
+                }))
+                p.problem = park::SiteProblem::None;
             p.affordable = true;
         }
         show_ghost();

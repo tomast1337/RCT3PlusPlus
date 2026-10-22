@@ -971,6 +971,12 @@ namespace rct3::scene
         }
         if (!design.empty())
             logging::logger("park").info("design laid with {} of {} pieces for {}", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0));
+        // A ride that is one building is done once set down: on to its window, where its doors are placed.
+        if (*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece && !ride.track->pieces.empty())
+        {
+            scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            close_track_building(scene);
+        }
         return true;
     }
 

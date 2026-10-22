@@ -42,6 +42,11 @@ TEST_CASE("a widget is named by its class and found again by its path")
     desktop.layout({ 0, 0, 100, 100 });
     CHECK(rct3::as_pointer(widget_at(desktop.root(), { 15, 15 })) == &ok);
     CHECK(rct3::as_pointer(widget_at(desktop.root(), { 60, 60 })) == nullptr);
+    // Nor is an overlay over the whole screen, drawing here and there.
+    Widget& overlay = desktop.root().add<Widget>("floaters");
+    desktop.layout({ 0, 0, 100, 100 });
+    CHECK(rct3::as_pointer(widget_at(desktop.root(), { 60, 60 })) == nullptr);
+    overlay.visible = false;
     ok.visible = false;
     CHECK(rct3::as_pointer(widget_at(desktop.root(), { 15, 15 })) == nullptr);
     ok.visible = true;

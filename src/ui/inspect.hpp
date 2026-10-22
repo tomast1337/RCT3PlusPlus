@@ -15,7 +15,8 @@ namespace rct3::ui
 
     /// The top-most visible widget at `p` that shows there: one taking the pointer over `p`, or one without
     /// children, such as a label. Frames that only hold others and let the pointer through are passed over,
-    /// and so is `root`: none when nothing else is there.
+    /// as are childless overlays over the whole screen that let it through, and `root`: none when nothing
+    /// else is there.
     [[nodiscard]] std::optional<const Widget&> widget_at(const Widget& root, Point p);
 
     /// The part of the widget's rectangle that stops the pointer, to within `step` units: all of it, unless the

@@ -29,16 +29,19 @@ namespace rct3::ui
 
     namespace
     {
-        const Widget* shown_at(const Widget& w, Point p)
+        const Widget* shown_at(const Widget& w, Point p, const Rect& screen)
         {
             if (!w.visible || !contains(w.rect(), p))
                 return nullptr;
             for (auto it = w.children().rbegin(); it != w.children().rend(); ++it)
             {
-                if (const Widget* found = shown_at(**it, p))
+                if (const Widget* found = shown_at(**it, p, screen))
                     return found;
             }
-            const bool shows = w.takes_pointer() ? w.covers(p) : w.children().empty();
+            // A childless widget over the whole screen letting the pointer through is an overlay drawing here
+            // and there, such as money floating up from the park; it would be found everywhere.
+            const bool overlay = w.rect().x0 <= screen.x0 && w.rect().y0 <= screen.y0 && w.rect().x1 >= screen.x1 && w.rect().y1 >= screen.y1;
+            const bool shows = w.takes_pointer() ? w.covers(p) : w.children().empty() && !overlay;
             return shows ? &w : nullptr;
         }
     } // namespace
@@ -47,7 +50,7 @@ namespace rct3::ui
     {
         for (auto it = root.children().rbegin(); it != root.children().rend(); ++it)
         {
-            if (const Widget* found = shown_at(**it, p))
+            if (const Widget* found = shown_at(**it, p, root.rect()))
                 return *found;
         }
         return std::nullopt;

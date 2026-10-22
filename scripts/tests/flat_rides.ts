@@ -16,6 +16,8 @@
 //   |  q      |  q    |        q queue
 //   +=========================  road
 //
+// Every `crossEvery` columns a path runs down across the lanes, joining the roads; rides keep clear of it.
+//
 // Only a failure to set up (a path that would not lay, a ride the script could not reach) fails the script;
 // rides that misbehave are listed in the log and the report.
 
@@ -30,8 +32,11 @@ function expect(ok: boolean, what: string): void {
 const slotGap = 4;
 /** Rows between a ride's last row and its lane's road: entrance, queue, queue. */
 const toRoad = 4;
+/** Columns between the paths that run north to south across the lanes, joining the roads, so guests need not
+ * walk round by the map's west edge to reach a lane. */
+const crossEvery = 32;
 /** Frames the park runs at its fastest before the rides are looked at. */
-const runFrames = 3600;
+const runFrames = 9000;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the tool row and the build lists");
@@ -72,11 +77,18 @@ interface Slot {
 const items = build.flatRides()!.slice().sort((a, b) => b.length - a.length || b.width - a.width);
 const slots: Slot[] = [];
 const roads: number[] = [];
+const crossings: number[] = [];
+for (let c = crossEvery; c < lastCol - 1; c += crossEvery)
+    crossings.push(c);
 {
     let col = 2;
     let laneTop = topRoad + 1;
     let laneLength = 0;
     for (const ride of items) {
+        // The slot takes the ride, its exit and the path from it; it moves past a crossing in its way.
+        const blocked = crossings.find((c) => c >= col && c <= col + ride.width + 2);
+        if (blocked !== undefined)
+            col = blocked + 2;
         if (laneLength === 0 || col + ride.width + slotGap > lastCol) {
             if (laneLength > 0) {
                 laneTop += laneLength + toRoad;
@@ -84,6 +96,9 @@ const roads: number[] = [];
             }
             col = 2;
             laneLength = ride.length;
+            const first = crossings.find((c) => c >= col && c <= col + ride.width + 2);
+            if (first !== undefined)
+                col = first + 2;
         }
         slots.push({ ride, col, lane: roads.length });
         col += ride.width + slotGap;
@@ -115,8 +130,9 @@ async function choose(queue: boolean): Promise<void> {
     if (queue === queueNow)
         return;
     await ui.click(`footpaths/${queue ? "queues" : "paths"}`);
-    await frames(2);
-    await ui.click(`footpaths/body/${queue ? queueStyle : pathStyle}`);
+    const style = `footpaths/body/${queue ? queueStyle : pathStyle}`;
+    await until(() => ui.find(style) !== undefined, 60, style);
+    await ui.click(style);
     await frames(2);
     queueNow = queue;
 }
@@ -152,7 +168,8 @@ await route([gate.col, gate.row + 1], [gate.col, topRoad - 1]);
 for (const row of [topRoad, ...roads])
     await road(row);
 for (const [i, row] of roads.entries())
-    await route([1, (i === 0 ? topRoad : roads[i - 1]) + 1], [1, row - 1]);
+    for (const c of [1, ...crossings])
+        await route([c, (i === 0 ? topRoad : roads[i - 1]) + 1], [c, row - 1]);
 const roadGaps: string[] = [];
 const paths = laid();
 const has = (col: number, row: number) => paths.has(`${col},${row}`);
@@ -160,9 +177,10 @@ for (const row of [topRoad, ...roads])
     for (let c = 1; c <= lastCol; ++c)
         if (!has(c, row))
             roadGaps.push(`${c},${row}`);
-for (let r = topRoad; r <= roads[roads.length - 1]; ++r)
-    if (!has(1, r))
-        roadGaps.push(`1,${r}`);
+for (const c of [1, ...crossings])
+    for (let r = topRoad; r <= roads[roads.length - 1]; ++r)
+        if (!has(c, r))
+            roadGaps.push(`${c},${r}`);
 expect(roadGaps.length === 0, `every road tile laid; missing ${roadGaps.slice(0, 20).join(" ")}`);
 await look(width >> 1, (topRoad + roads[roads.length - 1]) >> 1, 300);
 await screenshot("roads");
@@ -240,7 +258,7 @@ for (const [i] of rides.list().entries())
 for (let i = 0; i < runFrames; i += 60) {
     await frames(60);
     if (i % 600 === 0)
-        log("running", i, "frames;", rides.list().filter((r) => (r.riders ?? 0) > 0).length, "rides carrying riders");
+        log("running", i, "frames;", rides.list().filter((r) => (r.riders ?? 0) > 0).length, "rides carrying riders,", park.guests(), "guests");
 }
 await ui.click("bar/Top_Pause");
 await look(gate.col, topRoad + 4, 60);

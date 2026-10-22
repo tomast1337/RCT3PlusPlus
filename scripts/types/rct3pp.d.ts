@@ -151,6 +151,8 @@ interface RideInfo {
     flat: boolean;
     /** Rides with a track: how many pieces it has. */
     pieces?: number;
+    /** Rides with a track: each piece's name, in track order. */
+    track?: string[];
     /** Rides with a track: the platform pieces of its stations, in track order. */
     platforms?: string[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */

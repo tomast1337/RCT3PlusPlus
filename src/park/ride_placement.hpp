@@ -50,7 +50,8 @@ namespace rct3::park
     };
 
     /// What keeps a ride from `site` for the water of `bodies`, if anything: one `water_only` needs water under
-    /// every tile, others none over their base.
+    /// every tile, others none over their base. Any depth of water will do: the parks shipped with the game hold
+    /// their water shows in deep lakes, and nothing in their files asks for more.
     [[nodiscard]] SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::WaterBody> bodies);
 
     /// What keeps a ride from `site`, if anything.

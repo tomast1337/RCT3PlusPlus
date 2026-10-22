@@ -362,6 +362,10 @@ namespace rct3::scene
                 if (ride.track)
                 {
                     one["pieces"] = ride.track->pieces.size();
+                    Json symbols = Json::array();
+                    for (const save::TrackPiece& p : ride.track->pieces)
+                        symbols.push_back(p.symbol);
+                    one["track"] = std::move(symbols);
                     Json platforms = Json::array();
                     for (const save::TrackPiece& p : ride.track->pieces)
                         for (const save::PlacedObject& o : p.platform ? park.objects : std::vector<save::PlacedObject> { })

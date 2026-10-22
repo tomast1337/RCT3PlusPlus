@@ -198,7 +198,8 @@ namespace rct3::scene
             return SavedDesign { std::move(rides->rides.front()), world ? std::move(world->objects) : std::vector<save::PlacedObject> { } };
         }
 
-        /// Whether `o`, a piece of the ride being built, goes only on water and has dry land under it.
+        /// Whether `o`, a piece of the ride being built, goes only on water and has dry land under it. Pieces of
+        /// other rides may run under water, as rides that splash through it need.
         bool off_water(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, save::PlacedObject o)
         {
             o.overlay = b.overlay;

@@ -241,9 +241,9 @@ namespace rct3::scene
         ParkGlow glow;
         ParkParticles particles;   ///< The effects scenery and rides show
         bool bloom = false;        ///< The Bloom option: glow round bright parts
-        bool light_shafts = false; ///< Our Light shafts option
+        bool light_shafts = false; ///< The Light shafts option
         ParkOcclusion occlusion;
-        bool ambient_occlusion = false; ///< Our Ambient occlusion option
+        bool ambient_occlusion = false; ///< The Ambient occlusion option
         int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)
         /// Relief maps are made for the pictures loaded, as the Surface detail option was when the park loaded:
         /// they cost memory and loading time, so a park loaded without them gets them only when loaded again.

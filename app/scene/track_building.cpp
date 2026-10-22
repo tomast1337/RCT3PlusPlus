@@ -289,8 +289,22 @@ namespace rct3::scene
             if (!load_object_model(scene, b.models, assets, o))
                 return;
             b.off_water = off_water(scene, b, assets, o);
-            const std::array<save::PlacedObject, 1> one { o };
-            b.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
+            // A design shows whole, as far as its pieces go on from the first.
+            std::vector<save::PlacedObject> shown { o };
+            park::TrackTip tip = b.ghost->next;
+            for (std::size_t i = 1; starting && i < b.design.size(); ++i)
+            {
+                const auto next = park::shape_named(*c, b.design[i].symbol);
+                auto placed = next ? park::place_after(tip, *next, b.design[i].reversed, scene.grid) : std::nullopt;
+                if (!placed)
+                    break;
+                placed->object.overlay = b.overlay;
+                if (!load_object_model(scene, b.models, assets, placed->object))
+                    break;
+                tip = placed->next;
+                shown.push_back(std::move(placed->object));
+            }
+            b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
                 v.colour *= b.off_water ? kRefusedTint : kGhostTint;
         }

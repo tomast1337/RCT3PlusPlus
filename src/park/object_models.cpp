@@ -811,6 +811,33 @@ namespace rct3::park
             if (place)
                 add(car->wheels[i], *place);
         }
+        if (const auto front = bone_of(car->visual, "carfront"), rear = bone_of(car->visual, "carrear"); front && rear)
+        {
+            CarFit& fit = model.car_fit.emplace();
+            const float front_z = (*front)[3].z;
+            fit.length = front_z - (*rear)[3].z;
+            // By axle, the middle of the wheels it has bones for, on the car or at its axle's ends.
+            std::array<glm::vec3, 2> sum { };
+            std::array<int, 2> found { };
+            for (std::size_t i = 0; i < kWheelBones.size(); ++i)
+            {
+                std::optional<glm::mat4> wheel = bone_of(car->visual, kWheelBones[i]);
+                if (!wheel && axles[i / 2])
+                    if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
+                        wheel = *axles[i / 2] * *end;
+                if (wheel)
+                {
+                    sum[i / 2] += glm::vec3((*wheel)[3]);
+                    ++found[i / 2];
+                }
+            }
+            const glm::vec3 middle { 0, 0, front_z - fit.length / 2 };
+            const glm::vec3 front_wheels = found[0] > 0 ? sum[0] / static_cast<float>(found[0]) : middle;
+            const glm::vec3 rear_wheels = found[1] > 0 ? sum[1] / static_cast<float>(found[1]) : middle;
+            fit.front_wheels = front_z - front_wheels.z;
+            fit.rear_wheels = front_z - rear_wheels.z;
+            fit.on_track = (front_wheels + rear_wheels) / 2.0f;
+        }
         if (model.levels.empty())
             return std::nullopt;
         return model;

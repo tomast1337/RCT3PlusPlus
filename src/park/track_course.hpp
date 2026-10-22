@@ -78,6 +78,13 @@ namespace rct3::park
     /// between them, and keeps the place and turn it had against the track.
     [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
 
+    /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
+    /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the
+    /// track that far behind its front, and its on_track point midway between them, the car pointing from its
+    /// rear wheels to its front ones. Sets each car's distance (its front), length, wheels and place and turn
+    /// as the park keeps them, and the train's distance (its front) and length. Nothing without fits.
+    void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front);
+
     using ArmAngles = std::array<float, 4>; ///< An arm's joint angles, degrees, from its base out
 
     /// The arm angles of a car `distance` along `course`, whose pieces hold `held` (by piece) at their middles.

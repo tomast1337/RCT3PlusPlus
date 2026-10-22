@@ -483,6 +483,78 @@ namespace rct3::scene
         }
     }
 
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count)
+    {
+        std::uint64_t last = 0;
+        for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(scene.cars) })
+            for (const save::PlacedObject& o : list)
+                last = std::max(last, o.id);
+        park::RideCars cars = park::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
+        for (park::CarSpot& spot : cars.spots)
+            spot.ride += from;
+        load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
+        const std::size_t first = scene.cars.size();
+        scene.cars.insert(scene.cars.end(), cars.pieces.begin(), cars.pieces.end());
+        scene.car_spots.insert(scene.car_spots.end(), cars.spots.begin(), cars.spots.end());
+        scene.saved_cars.merge(cars.fitted);
+        scene.car_places.clear();
+        for (const save::PlacedObject& car : scene.cars)
+            scene.car_places.push_back(scene.saved_cars.at(car.id));
+        scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
+        for (std::size_t i = first; i < scene.cars.size(); ++i)
+            if (const auto model = scene.models.find(park::model_key(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
+                scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
+        // Arms' joints follow the cars, each where its car stands until the cars are next placed.
+        scene.car_mesh_places = scene.car_places;
+        for (const ParkScene::ArmCar& arm : scene.arm_cars)
+            scene.car_mesh_places.insert(scene.car_mesh_places.end(), arm.joints.size(), scene.car_places[arm.car]);
+        profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_mesh_places); });
+        add_textures(device, scene, scene.car_meshes.mesh.batches);
+    }
+
+    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    {
+        const entt::entity entity = ride_index < scene.ride_entities.size() ? scene.ride_entities[ride_index] : entt::null;
+        if (entity == entt::null)
+            return;
+        std::vector<std::size_t>& cars = scene.ride_cars[entity];
+        cars.clear();
+        for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
+            if (scene.car_spots[i].ride == ride_index)
+                cars.push_back(i);
+        const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
+        const save::Ride& ride = scene.rides.rides[ride_index];
+        if (cars.empty())
+            scene.ride_cars.erase(entity);
+        if (cars.empty() || fleet == nullptr || fleet->trains.empty() || !scene.courses[ride_index] || ride.trains.empty())
+            return;
+        // Riders of tracked rides board the first train as it waits at the station, seats front to back.
+        // shortcut: rides built in the running park keep boarding straight in, upgrade with the station's
+        // platform there.
+        const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
+        const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
+        walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
+            std::vector<glm::vec3> seats;
+            // A car without its model (from a file the game lacks) seats its share of the train at its middle.
+            const auto first_train = std::ranges::count(cars, std::size_t { 0 }, [&](std::size_t car) { return scene.car_spots[car].train; });
+            const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
+            for (const std::size_t car : cars)
+            {
+                const park::CarSpot& spot = scene.car_spots[car];
+                if (spot.train != 0)
+                    continue;
+                const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                const glm::mat4 place = park::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
+                if (model == scene.models.end())
+                    seats.insert(seats.end(), share, glm::vec3(place[3]));
+                else
+                    for (const glm::mat4& seat : model->second.seat_places)
+                        seats.emplace_back((place * seat)[3]);
+            }
+            return park::track_ride_ways(platform.value_or(park::Platform { }), seats, entrance, exit);
+        });
+    }
+
     void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k)
     {
         const auto model = k < scene.objects.size() ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
@@ -784,25 +856,9 @@ namespace rct3::scene
                 if (const auto found = scene.models.find(park::model_key(built[i])); found != scene.models.end())
                     built[i].colours = found->second.default_colours;
             }
-            park::RideCars cars = park::ride_cars(scene.rides.rides, largest_id());
-            load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
-            scene.cars = std::move(cars.pieces);
-            scene.car_spots = std::move(cars.spots);
-            scene.saved_cars = std::move(cars.fitted);
-            for (const save::PlacedObject& car : scene.cars)
-                scene.car_places.push_back(scene.saved_cars.at(car.id));
-            scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
-            scene.car_mesh_places = scene.car_places;
-            for (std::size_t i = 0; i < scene.cars.size(); ++i)
-                if (const auto model = scene.models.find(park::model_key(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
-                {
-                    scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
-                    scene.car_mesh_places.insert(scene.car_mesh_places.end(), model->second.arm_joints.size(), scene.car_places[i]);
-                }
-            profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_mesh_places); });
-            add_textures(device, scene, scene.car_meshes.mesh.batches);
-            log.info("{} ride cars, {} on arms, {} vertices", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
+            add_ride_cars(device, scene, install, 0, scene.rides.rides.size());
+            log.info("{} ride cars, {} on arms, {} vertices", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size());
             refresh_ride_floors(scene);
         }
         if (options.flag(config::GameOption::OffMapTrees))
@@ -944,43 +1000,10 @@ namespace rct3::scene
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
                 for (const save::RideShow& show : scene.shows)
                     stage_show(scene, show);
-                for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
-                    if (const std::size_t ride = scene.car_spots[i].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
-                        scene.ride_cars[scene.ride_entities[ride]].push_back(i);
                 for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
-                    seat_flat_ride(device, scene, i);
-                // Riders of tracked rides board the first train as it waits at the station, seats front to back.
-                // shortcut: rides built in the running park keep boarding straight in, upgrade with the station's
-                // platform there.
-                for (const auto& [entity, cars] : scene.ride_cars)
                 {
-                    const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
-                    const std::size_t i = scene.car_spots[cars.front()].ride;
-                    const save::Ride& ride = scene.rides.rides[i];
-                    if (fleet == nullptr || fleet->trains.empty() || !scene.courses[i] || ride.trains.empty())
-                        continue;
-                    const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
-                    const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
-                    walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
-                        std::vector<glm::vec3> seats;
-                        // A car without its model (from a file the game lacks) seats its share of the train at its middle.
-                        const auto first_train = std::ranges::count(cars, std::size_t { 0 }, [&](std::size_t car) { return scene.car_spots[car].train; });
-                        const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
-                        for (const std::size_t car : cars)
-                        {
-                            const park::CarSpot& spot = scene.car_spots[car];
-                            if (spot.train != 0)
-                                continue;
-                            const auto model = scene.models.find(park::model_key(scene.cars[car]));
-                            const glm::mat4 place = park::moved_along(*scene.courses[i], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
-                            if (model == scene.models.end())
-                                seats.insert(seats.end(), share, glm::vec3(place[3]));
-                            else
-                                for (const glm::mat4& seat : model->second.seat_places)
-                                    seats.emplace_back((place * seat)[3]);
-                        }
-                        return park::track_ride_ways(platform.value_or(park::Platform { }), seats, entrance, exit);
-                    });
+                    seat_flat_ride(device, scene, i);
+                    board_tracked_ride(device, scene, install, i);
                 }
                 simulation::start_guests(scene.sim);
                 if (kept != nullptr)

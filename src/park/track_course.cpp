@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <unordered_map>
 
 namespace rct3::park
@@ -162,6 +164,32 @@ namespace rct3::park
         glm::mat4 back = glm::transpose(glm::mat4(glm::mat3(from)));
         back[3] = glm::vec4(-(glm::mat3(back) * glm::vec3(from[3])), 1);
         return to * back * saved;
+    }
+
+    void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front)
+    {
+        if (fits.empty())
+            return;
+        train.distance = front;
+        train.length = 0;
+        float at = front;
+        for (std::size_t k = 0; k < train.cars.size(); ++k)
+        {
+            save::Car& car = train.cars[k];
+            const CarFit& fit = fits[std::min(k, fits.size() - 1)];
+            car.distance = at;
+            car.length = fit.length;
+            car.front_wheel_distance = at - fit.front_wheels;
+            car.rear_wheel_distance = at - fit.rear_wheels;
+            const glm::mat4 place = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), -fit.on_track);
+            car.position = { place[3].x, place[3].y, place[3].z };
+            const glm::quat turn = glm::quat_cast(glm::mat3(place));
+            const glm::vec3 axis = glm::angle(turn) > 0 ? glm::axis(turn) * glm::angle(turn) : glm::vec3(0.0f);
+            car.orientation = { axis.x, axis.y, axis.z };
+            car.position_valid = true;
+            at -= fit.length;
+            train.length += fit.length;
+        }
     }
 
     std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance)

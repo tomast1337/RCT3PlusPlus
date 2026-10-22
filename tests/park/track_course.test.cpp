@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_course.hpp"
 
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -45,6 +46,33 @@ TEST_CASE("a car moved along a course keeps its place off the track and turns wi
     check_near(glm::vec3(moved[3]), { 10, 2, 5 });
     check_near(glm::vec3(moved * glm::vec4(0, 0, 1, 0)), { 0, 0, 1 }); // Its front now faces along z
     check_near(glm::vec3(moved * glm::vec4(0, 1, 0, 0)), { 0, 1, 0 });
+}
+
+TEST_CASE("a train stands nose to tail back from its front, its wheels on the track")
+{
+    const park::TrackCourse c = corner();
+    save::Train train;
+    train.cars.resize(3);
+    // A car 2 long, its wheels 0.5 and 1.5 behind its front and 1 below its middle; the last fits as the second.
+    const std::array fits { park::CarFit { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, -1, 0 } }, park::CarFit { .length = 3, .front_wheels = 1, .rear_wheels = 2, .on_track = { 0, 0, -0.5f } } };
+    park::stand_train(c, train, fits, 8);
+    CHECK(train.distance == 8);
+    CHECK(train.length == 8);
+    const save::Car& first = train.cars[0];
+    CHECK(first.distance == 8);
+    CHECK(first.length == 2);
+    CHECK(first.front_wheel_distance == doctest::Approx(7.5f));
+    CHECK(first.rear_wheel_distance == doctest::Approx(6.5f));
+    CHECK(first.position_valid);
+    // Raised so the point between its wheels is on the track, which is at 7 along.
+    check_near({ first.position[0], first.position[1], first.position[2] }, { 7, 1, 0 });
+    // Turned from its model, which faces +z, to face +x along the track.
+    const glm::vec3 axis { first.orientation[0], first.orientation[1], first.orientation[2] };
+    check_near(glm::vec3(glm::rotate(glm::mat4(1.0f), glm::length(axis), glm::normalize(axis)) * glm::vec4(0, 0, 1, 0)), { 1, 0, 0 });
+    // The second's front 2 behind, its wheels at 5 and 4 along, its point between them 0.5 behind its origin.
+    CHECK(train.cars[1].distance == 6);
+    check_near({ train.cars[1].position[0], train.cars[1].position[1], train.cars[1].position[2] }, { 5, 0, 0 });
+    CHECK(train.cars[2].distance == 3);
 }
 
 TEST_CASE("a car points from its rear wheels to its front ones, and leans with the track")

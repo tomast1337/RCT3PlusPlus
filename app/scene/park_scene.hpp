@@ -326,6 +326,9 @@ namespace rct3::scene
         std::vector<entt::entity> ride_entities;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
+        /// Of rides built here whose train has not yet stood on its track, by ride (of rides): how each car of
+        /// it sits on the track, by car.
+        std::map<std::size_t, std::vector<park::CarFit>> car_fits;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
         /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the
@@ -522,6 +525,14 @@ namespace rct3::scene
     /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
     void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);
+
+    /// Adds the cars of `count` rides from `from` (of scene.rides) to the scene, where the park keeps them; cars
+    /// without a kept place are left out.
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count);
+
+    /// Has the simulated tracked ride `ride_index` (of scene.rides) carry riders in its scene cars, boarding its
+    /// first train at the station. Nothing for a ride the simulation does not run.
+    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
 
     /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
     /// as animatronics are.

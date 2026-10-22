@@ -34,6 +34,7 @@
 #include <initializer_list>
 #include <map>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -138,6 +139,47 @@ namespace
         draw_skin_at(context, "SpinnerDownDisabled", { { 102, 104, 122, 112 } });
     }
 
+    // Each at its picture's size in a row: the slider's thumb, a list heading's boxes, the colour picker's
+    // rings and back.
+    void draw_small_parts(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        float x = 8;
+        float y = 8;
+        float row = 0;
+        for (const std::string_view name : { ui::game_skins::kSliderThumb.data(), ui::game_skins::kOpenHeading.data(), ui::game_skins::kClosedHeading.data(), "FlexiColourHighlightBlue", "FlexiColourHighlightWhite", "FlexiColourSurround" })
+        {
+            const auto skin = context.skins.find(name);
+            if (!skin)
+            {
+                std::println(stderr, "small-parts: no skin {}", name);
+                continue;
+            }
+            const auto [w, h] = skin->size();
+            if (x + w > 232)
+            {
+                x = 8;
+                y += row + 8;
+                row = 0;
+            }
+            ui::draw_skin(context.list, skin, { x, y, x + w, y + h });
+            x += w + 8;
+            row = std::max(row, h);
+        }
+    }
+
+    // The window's title button in its three states, with the close icon on it as windows draw it: its
+    // pictures carry an arrow under the icon, which the coded disc leaves out.
+    void draw_title_buttons(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        float x = 8;
+        for (const std::string_view name : { "GUI2Dialog_TitleButtonUp", "GUI2Dialog_TitleButtonUpOver", "GUI2Dialog_TitleButtonPressed" })
+        {
+            draw_skin_at(context, name, { { x, 8, x + 14, 22 } });
+            draw_skin_at(context, ui::game_skins::kCloseIcon, { { x, 8, x + 14, 22 } });
+            x += 22;
+        }
+    }
+
     void draw_park_bar(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // A short bar: the left part, the divider with its notch, the right part.
@@ -236,6 +278,8 @@ namespace
             { "label-band", 324, 138, draw_label_band },
             { "controls", 240, 136, draw_controls },
             { "park-bar", 268, 44, draw_park_bar },
+            { "small-parts", 240, 56, draw_small_parts },
+            { "title-button", 74, 30, draw_title_buttons },
         };
     }
 

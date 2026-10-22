@@ -121,6 +121,10 @@ namespace rct3::simulation
     /// seeded from the world's seed and its id, so the same park always plays out the same way.
     void start_walking(SimWorld& world, entt::entity guest, NodeId at);
 
+    /// Brings a whole party in on path node `at`, of a kind the park's mix picks, as the gate does: a lone guest
+    /// or a party, each walking with nothing to do yet. Returns its members, the leader first.
+    std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at);
+
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);
 

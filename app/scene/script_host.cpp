@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
+#include "random/generator.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
 #include "simulation/systems.hpp"
@@ -205,6 +206,28 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             const auto& registry = park_->sim.registry;
             return Json(std::ranges::distance(registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>)));
+        });
+        engine_.define("park.dropParties", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            // The park's own walkable tiles, not its queues nor the road out to the gate.
+            const save::TerrainGrid& g = park_->grid;
+            std::vector<simulation::NodeId> spots;
+            const auto& nodes = park_->sim.paths.nodes();
+            for (simulation::NodeId n = 0; n < nodes.size(); ++n)
+                if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && g.contains(t.col, t.row) && park::owned_outright(g.at(t.col, t.row)))
+                    spots.push_back(n);
+            if (spots.empty())
+                return Json::array();
+            auto dice = random::seeded({ static_cast<std::uint64_t>(a.size() > 1 ? number(a, 1) : 1) });
+            Json dropped = Json::array();
+            for (auto n = static_cast<int>(number(a, 0)); n > 0; --n)
+            {
+                const auto spot = spots[random::below(dice, spots.size())];
+                const auto party = simulation::admit_party(park_->sim, dice, spot);
+                dropped.push_back({ { "col", nodes[spot].tile.col }, { "row", nodes[spot].tile.row }, { "guests", party.size() } });
+            }
+            return dropped;
         });
         engine_.define("map.size", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);

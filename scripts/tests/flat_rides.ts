@@ -36,7 +36,9 @@ const toRoad = 4;
  * walk round by the map's west edge to reach a lane. */
 const crossEvery = 32;
 /** Frames the park runs at its fastest before the rides are looked at. */
-const runFrames = 9000;
+const runFrames = 3600;
+/** Parties put straight onto the park's paths once the rides open, so riders need not walk in from the gate. */
+const dropped = 300;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the tool row and the build lists");
@@ -253,6 +255,7 @@ await ui.click("bar/Top_SuperFastForward");
 await frames(120);
 for (const [i] of rides.list().entries())
     rides.setState(i, "open");
+log("dropped", park.dropParties(dropped).reduce((n, p) => n + p.guests, 0), "guests across the paths");
 
 // Run the park.
 for (let i = 0; i < runFrames; i += 60) {

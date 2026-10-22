@@ -6,9 +6,9 @@
 // the open page shows on the left of the tabs.
 //
 // Every control writes the option it shows as soon as it changes; there is no OK or Cancel, and the owner
-// saves the options once the window has closed. Rows that only matter for some choices appear with them:
-// the detailed graphics settings only with the custom quality level, the per-kind detail sliders only
-// while asked for, the reflection choices only with reflective water, and the camera settings of the
+// saves the options once the window has closed. The detailed graphics settings always show but can be changed
+// only at the custom quality level. Rows that only matter for some choices appear with them: the per-kind
+// detail sliders only while asked for, the reflection choices only with reflective water, and the camera settings of the
 // chosen control mode only.
 //
 // The language and the screen size are not game options: the window offers them and the owner takes the
@@ -216,6 +216,7 @@ namespace rct3::ui
         std::vector<std::unique_ptr<OptionRows>> rows_;
         OptionRows* graphics_top_ = nullptr;
         ScrollArea* custom_ = nullptr;
+        OptionRows* custom_rows_ = nullptr;
         Dropdown* language_ = nullptr;
         Dropdown* resolution_ = nullptr;
         Dropdown* music_ = nullptr; // The park's: the files, then shuffle, then none

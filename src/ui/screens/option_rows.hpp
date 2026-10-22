@@ -107,6 +107,8 @@ namespace rct3::ui
         /// Sets every control from the options, e.g. after the owner changed them.
         void refresh();
 
+        bool locked = false; ///< Every row shows but none can be used
+
         /// Where the two slider columns of pair rows start.
         static constexpr float kFirstColumn = 120;
         static constexpr float kSecondColumn = 260;

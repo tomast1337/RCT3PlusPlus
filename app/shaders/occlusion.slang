@@ -88,11 +88,14 @@ float trace(float2 at, float4 frag)
         return 1.0; // The sky
     const float3 p = eye_point(at, stored);
     const float3 v = normalize(-p);
+    // Every read is an even number of pixels away. An object crossing between levels of detail shows them in a
+    // 4 by 4 pattern (lit.slang) whose pixels an even step apart rank close together, so they nearly always show
+    // the same level; reading the other level, a little off this one's surface, would shade it as a crease.
     // The normal from the neighbours on whichever side is nearer in depth, so edges do not bend it.
-    const float3 right = eye_point_at(at + float2(texel.x, 0.0)) - p;
-    const float3 left = p - eye_point_at(at - float2(texel.x, 0.0));
-    const float3 up = eye_point_at(at + float2(0.0, texel.y)) - p;
-    const float3 down = p - eye_point_at(at - float2(0.0, texel.y));
+    const float3 right = eye_point_at(at + float2(2.0 * texel.x, 0.0)) - p;
+    const float3 left = p - eye_point_at(at - float2(2.0 * texel.x, 0.0));
+    const float3 up = eye_point_at(at + float2(0.0, 2.0 * texel.y)) - p;
+    const float3 down = p - eye_point_at(at - float2(0.0, 2.0 * texel.y));
     const float3 across = abs(right.z) < abs(left.z) ? right : left;
     const float3 along = abs(up.z) < abs(down.z) ? up : down;
     float3 n = normalize(cross(across, along));
@@ -102,7 +105,7 @@ float trace(float2 at, float4 frag)
     // How many pixels the radius spans here: the projection's scale on y is 1 over the inverse's.
     const float radius = u_draw.a.z;
     const float pixels = min(radius / u_draw.transform[1][1] * 0.5 * size.y / p.z, kMostPixels);
-    if (pixels < 1.0)
+    if (pixels < 2.0)
         return 1.0;
     const int2 cell = int2(frag.xy) & 3;
     const float frame = u_draw.a.y;
@@ -127,12 +130,16 @@ float trace(float2 at, float4 frag)
         for (int side = 0; side < 2; ++side)
         {
             // The slice runs along omega in eye space, so down the texture where it rises.
-            const float2 way = float2(omega.x, -omega.y) * (side == 0 ? -1.0 : 1.0) * pixels * texel;
+            const float2 way = float2(omega.x, -omega.y) * (side == 0 ? -1.0 : 1.0) * pixels;
             for (int j = 0; j < kSteps; ++j)
             {
-                // Closer together near the pixel, where what is near counts most; at least a pixel out.
+                // Closer together near the pixel, where what is near counts most; at least two pixels out.
                 const float t = (float(j) + shift) / float(kSteps);
-                const float2 uv = at + way * max(t * t, 1.0 / pixels);
+                const float2 off = way * max(t * t, 2.0 / pixels);
+                float2 even = 2.0 * round(off * 0.5);
+                if (all(even == 0.0))
+                    even = abs(off.x) > abs(off.y) ? float2(2.0 * sign(off.x), 0.0) : float2(0.0, 2.0 * sign(off.y));
+                const float2 uv = at + even * texel;
                 const float3 delta = eye_point_at(uv) - p;
                 const float reach = length(delta);
                 const float rises = dot(delta, v) / max(reach, 1e-5);

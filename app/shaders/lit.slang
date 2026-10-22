@@ -58,7 +58,8 @@ float4 sun_view_texel(int column, int row)
 
 // 1 in full sunlight, 0 where something nearer the sun covers this point: an average over 3 by 3 texels, so the
 // edge is soft over about one texel either side. Fades out towards the map's edge, beyond which all is lit.
-float sunlit(Texture2D shadow, int row, float3 world, float3 n)
+// `slack` is extra depth bias, in steps of the map's own.
+float sunlit(Texture2D shadow, int row, float3 world, float3 n, float slack)
 {
     const float4x4 view = from_columns(sun_view_texel(0, row), sun_view_texel(1, row), sun_view_texel(2, row), sun_view_texel(3, row));
     const float4 extra = sun_view_texel(4, row);
@@ -73,7 +74,7 @@ float sunlit(Texture2D shadow, int row, float3 world, float3 n)
         return 1.0;
     const float2 size = size_of(shadow);
     const float2 at = float2(0.5 + 0.5 * p.x, 0.5 - 0.5 * p.y) * size;
-    const float depth = p.z - extra.y * (1.0 + 2.0 * lean);
+    const float depth = p.z - extra.y * (1.0 + 2.0 * lean + slack);
     float sum = 0.0;
     for (int y = -1; y <= 1; ++y)
         for (int x = -1; x <= 1; ++x)
@@ -336,9 +337,12 @@ float4 fragment_main(LitVaryings f) : SV_Target
     if (u_draw.sun_direction.w > 0.5 && dot(direct, direct) > 0.0)
     {
         const float before = u_draw.sun_direction.w - 1.0;
-        float lit = sunlit(u_shadow, 0, f.world, n);
+        // Both levels of a crossing object cast, and they nearly coincide, so each would shadow the other where it
+        // sits a little higher and the object would darken through its band. Half a world unit.
+        const float slack = f.cross.y != 0.0 ? 4.0 : 0.0;
+        float lit = sunlit(u_shadow, 0, f.world, n, slack);
         if (before > 0.002)
-            lit = lerp(lit, sunlit(u_shadow_before, 1, f.world, n), before);
+            lit = lerp(lit, sunlit(u_shadow_before, 1, f.world, n, slack), before);
         direct *= lit;
         ambient *= lerp(0.7, 1.0, lit);
         sun_reaches *= lit;

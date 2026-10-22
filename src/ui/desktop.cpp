@@ -168,6 +168,11 @@ namespace rct3::ui
         }
     }
 
+    std::optional<Widget&> Desktop::keyboard_focus() const
+    {
+        return focus_ != nullptr && in_tree(*root_, focus_) ? maybe(focus_) : std::nullopt;
+    }
+
     std::optional<Widget&> Desktop::hit(Point p) const
     {
         if (!root_->visible || (root_->clip_children && !contains(root_->rect(), p)))

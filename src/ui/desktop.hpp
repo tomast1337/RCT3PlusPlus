@@ -74,11 +74,9 @@ namespace rct3::ui
         /// The same, with the keys pressed since the last update, routed after the pointer.
         bool update(const PointerState& pointer, const KeyboardState& keyboard, const UpdateContext& context = { });
 
-        /// The widget keys go to first; nothing when keys start at the top-most window.
-        [[nodiscard]] std::optional<Widget&> keyboard_focus() const
-        {
-            return maybe(focus_);
-        }
+        /// The widget keys go to first; nothing when keys start at the top-most window, or when the focused
+        /// widget was taken out of the tree since the last update.
+        [[nodiscard]] std::optional<Widget&> keyboard_focus() const;
         /// Gives `w` the keyboard focus, or takes it away with nullptr. `show` draws the mark around it.
         void set_keyboard_focus(Widget* w, bool show = false)
         {

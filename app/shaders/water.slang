@@ -8,8 +8,9 @@
 // water does so the park shows in it even from high up; light under the water is absorbed over the length of
 // water it crosses (Beer-Lambert), red first, and replaced by light scattered in the water's own blue, so
 // shallows are clear and depths turn blue, though even deep water lets a little of the bottom through. The
-// bottom catches a moving net of sunlight focused by the waves (caustics), fading with depth. A faint, broken
-// foam gathers in the shallows and on ripple crests.
+// bottom catches a moving net of sunlight focused by the waves (caustics), fading with depth, and the water
+// between catches it too, so the net shows as rays slanting down through it. A faint, broken foam gathers in the
+// shallows and on ripple crests.
 //
 // Seen from below, the surface shows the world above inside a bright circle overhead and mirrors the dark water
 // outside it, where the light cannot leave (total internal reflection). With the eye under water the draw is
@@ -61,6 +62,7 @@ static const uint kFoam = 8u;
 static const uint kRipples = 16u;
 static const uint kUnderwater = 32u;
 static const uint kShadow = 64u;
+static const uint kShafts = 128u;
 
 static const float kFresnelBase = 0.02;                       // Reflectance seen straight on, for a refractive index near 1.33
 static const float kMirrorLeast = 0.42;                       // The least the mirror shows, looking straight down
@@ -87,6 +89,8 @@ static const float kCausticLine = 0.09;                       // Width of a brig
 static const float kCausticFade = 7.0;                        // Depth over which caustics fade to a third
 static const float kCausticGain = 2.2;                        // Light a full line adds, as a share of the bottom's own
 static const float kCausticDim = 0.25;                        // Light the bottom loses between the lines, where the net drew it
+static const float kShaftReach = 12.0;                        // The most water a line of sight is read through
+static const float kShaftGain = 0.5;                          // Light a full line scatters to the eye, per world unit of water
 
 bool has(uint flag)
 {
@@ -236,6 +240,36 @@ float caustic_factor(float3 at, float depth, float facing, float3 to_sun, float3
     return 1.0 + strength * (kCausticGain * light - kCausticDim);
 }
 
+// Sunlight the water scatters towards the eye along `dir` from `from`, over `span` world units, under a surface at
+// height `level`: each point is lit as the waves' bright net falls there, so the light reads as rays slanting
+// down from the surface along the sunlight. It dims crossing water on its way down and on to the eye (`absorb`
+// per unit). It reads `steps` points along the line. `blur` is how many cells of the net a pixel spans at `from`,
+// growing by `spread` a world unit away; `pixel` the pixel, which shifts where it reads.
+float3 water_shafts(float3 from, float3 dir, float span, float level, float3 absorb, float3 to_sun, float3 sun, float time, int steps, float blur, float spread, float2 pixel)
+{
+    if (!has(kShafts) || !has(kWaves) || to_sun.y <= 0.0 || span <= 0.0)
+        return float3(0.0);
+    const float3 down = sun_in_water(to_sun);
+    const float stride = min(span, kShaftReach) / float(steps);
+    // A different start on each pixel, so the reads blur together instead of banding (interleaved gradient noise,
+    // Jimenez, "Next generation post processing in Call of Duty: Advanced Warfare", SIGGRAPH 2014).
+    const float jitter = frac(52.9829189 * frac(dot(pixel, float2(0.06711056, 0.00583715))));
+    float3 sum = float3(0.0);
+    for (int i = 0; i < steps; ++i)
+    {
+        const float t = (float(i) + jitter) * stride;
+        const float3 q = from + dir * t;
+        const float depth = level - q.y;
+        if (depth <= 0.0)
+            continue;
+        // As caustic_factor: the surface point the sunlight reaching `q` passed through.
+        const float2 entry = q.xz + down.xz / min(down.y, -0.2) * depth;
+        const float light = caustics(entry * kCausticScale, time, blur + spread * t + depth * 0.02);
+        sum += light * exp(-absorb * (depth / max(-down.y, 0.2) + t));
+    }
+    return sun * sum * stride * kShaftGain * smoothstep(0.0, 0.3, to_sun.y);
+}
+
 // What reaches the eye from something `along` world units away through water, starting `eye_depth` under the
 // surface: its light dims, red first, and the water's own glow, lit from above, takes its place.
 float3 through_water(Varyings v, float3 seen, float along, float eye_depth, float3 body_light)
@@ -271,7 +305,11 @@ float4 under_water(Varyings v, float3 sun, float3 to_sun, float3 body_light, flo
     const float facing = clamp(dot(normalize(normal + float3(0.0, 1e-6, 0.0)), -sun_in_water(to_sun)) * 1.5, 0.0, 1.0);
     const float pixel = length(fwidth(at.xz));
     seen *= caustic_factor(at, level - at.y, facing, to_sun, sun, time, pixel);
-    return float4(through_water(v, seen, along, level - eye.y, body_light), 1.0);
+    const float3 absorb = kAbsorption * (0.5 + v.color.a) * kInsideClarity;
+    // A swimmer looks along the rays through much more water: more reads, and softer lines that soften further
+    // away, so they do not break into grain.
+    const float3 shafts = water_shafts(eye, dir, along, level, absorb, to_sun, sun, time, 16, 0.12, 0.012, v.position.xy);
+    return float4(through_water(v, seen, along, level - eye.y, body_light) + shafts, 1.0);
 }
 
 // The surface seen from under it, along `view` (towards the eye) with normal `n` (up).
@@ -357,6 +395,7 @@ float4 fragment_main(Varyings v) : SV_Target
     // The bottom under this point, lit by the caustics before the water dims it on the way up.
     const float3 bottom = v.world - view * path;
     const float caustic = caustic_factor(bottom, depth, 1.0, to_sun, sun, time, length(fwidth(bottom.xz)));
+    const float3 shafts = water_shafts(v.world, -view, path, v.world.y, kAbsorption * (0.5 + v.color.a), to_sun, sun, time, 8, length(fwidth(v.world.xz)) * kCausticScale, 0.0, v.position.xy);
 
     const float facing = clamp(dot(n, view), 0.0, 1.0);
     const float fresnel = lerp(kMirrorLeast, 1.0, kFresnelBase + (1.0 - kFresnelBase) * pow(1.0 - facing, 5.0));
@@ -377,7 +416,7 @@ float4 fragment_main(Varyings v) : SV_Target
     float alpha;
     if (see_below)
     {
-        colour = lerp(below * caustic * kept + scattered * (1.0 - kept), mirrored, fresnel) + glint;
+        colour = lerp(below * caustic * kept + scattered * (1.0 - kept) + shafts, mirrored, fresnel) + glint;
         alpha = 1.0;
     }
     else
@@ -387,7 +426,7 @@ float4 fragment_main(Varyings v) : SV_Target
         alpha = 1.0 - through;
         // shortcut: the bottom's colour is unknown here, so the caustics' extra light is added as if it were mid grey.
         const float3 sunlit = sun * max(to_sun.y, 0.0) * 0.4 * (caustic - 1.0) * kept;
-        colour = ((1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit) + fresnel * mirrored + glint) / max(alpha, 1e-3);
+        colour = ((1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit + shafts) + fresnel * mirrored + glint) / max(alpha, 1e-3);
     }
 
     if (has(kFoam))

@@ -36,7 +36,7 @@ const toRoad = 4;
  * walk round by the map's west edge to reach a lane. */
 const crossEvery = 32;
 /** Frames the park runs at its fastest before the rides are looked at. */
-const runFrames = 3600;
+const runFrames = 6000;
 /** Parties put straight onto the park's paths once the rides open, so riders need not walk in from the gate. */
 const dropped = 300;
 

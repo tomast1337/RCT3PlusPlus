@@ -68,6 +68,7 @@ namespace rct3::scene
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
         constexpr std::string_view kCompleteHelp = "ATE_TT_Autocomplete";
+        constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
         /// Ends tried before finishing a track gives up, a few seconds at most.
         constexpr std::size_t kCompletionTries = 20000;
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
@@ -125,6 +126,18 @@ namespace rct3::scene
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
                 out.emplace(scene.objects[i].id, i);
             return out;
+        }
+
+        /// Whether the ride's track waits for the first piece of a stretch: it has none yet, or a new one was begun.
+        bool opening(const save::Ride& ride)
+        {
+            return ride.track && (ride.track->pieces.empty() || (!ride.track->segments.empty() && ride.track->segments.back().piece_count == 0));
+        }
+
+        /// The first piece of the stretch being built, where laying round to it closes it.
+        const save::TrackPiece& stretch_start(const save::Track& track)
+        {
+            return track.pieces.at(track.segments.empty() ? 0 : track.segments.back().first_piece);
         }
 
         /// The open end of the ride's track: past its last piece, unless the track closes on itself.
@@ -191,17 +204,18 @@ namespace rct3::scene
             b.ghost.reset();
             b.ghost_mesh = { };
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
-            const bool starting = ride.track && ride.track->pieces.empty();
+            const bool starting = opening(ride);
             b.backward = false;
+            const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
             if (!starting)
                 b.tip = track_tip(scene, b);
-            if (c == nullptr || (starting ? !b.aim : !b.tip))
+            if (c == nullptr || (starting ? !b.aim : !b.tip) || (!starting && rules.one_piece))
                 return;
             b.candidates = starting ? park::starting_pieces(c->pieces) : park::pieces_after(c->pieces, b.tip->end, last_piece(scene, b));
             // A ride built back from its station goes on from where its first piece starts: pieces laid backwards
             // from there, then kept in the track's own direction.
             // shortcut: the way follows the ride's file, never the player, upgrade with a forward and backward button.
-            if (!starting && *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].builds_back)
+            if (!starting && rules.builds_back)
             {
                 b.candidates.clear();
                 b.backward = true;
@@ -273,7 +287,10 @@ namespace rct3::scene
             v.banks.fill(ui::IconState::Dis);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             v.can_demolish = ride.track && !ride.track->pieces.empty();
-            v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward;
+            v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride);
+            // A ride whose track may lie in several stretches, or a water transport, can begin another.
+            if (const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { }; rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
+                v.new_segment = v.can_demolish && !opening(ride) && !b.backward;
             const park::PieceCatalogue* c = catalogue(b);
             if (c == nullptr || !b.tip)
                 return v;
@@ -385,7 +402,7 @@ namespace rct3::scene
             {
                 const save::TrackPiece& before = ride.track->pieces.back();
                 piece.colours = before.colours;
-                piece.segment = before.segment;
+                piece.segment = ride.track->segments.empty() ? before.segment : static_cast<std::uint32_t>(ride.track->segments.size() - 1);
                 piece.asset = before.asset;
                 if (const auto found = objects.find(before.scenery); found != objects.end())
                     object.colours = scene.objects[found->second].colours;
@@ -398,15 +415,18 @@ namespace rct3::scene
                 *scene.park.cash -= shape.record.cost;
             }
             // Its end meeting where the first piece starts closes the track.
-            if (!ride.track->pieces.empty() && !b.backward)
+            if (!opening(ride) && !b.backward)
             {
-                const save::TrackPiece& first = ride.track->pieces.front();
+                const save::TrackPiece& first = stretch_start(*ride.track);
                 const auto first_object = objects.find(first.scenery);
                 const auto first_shape = park::shape_named(*c, first.symbol);
                 if (first_object != objects.end() && first_shape)
                 {
                     const park::TrackTip start = park::start_of(scene.objects[first_object->second], *first_shape, first.reversed, scene.grid);
-                    ride.track->circuit = glm::length(b.ghost->next.position - start.position) < kCloses && b.ghost->next.end == start.end;
+                    const bool closes = glm::length(b.ghost->next.position - start.position) < kCloses && b.ghost->next.end == start.end;
+                    if (!ride.track->segments.empty())
+                        ride.track->segments.back().closed = closes;
+                    ride.track->circuit = closes && std::ranges::all_of(ride.track->segments, &save::TrackSegment::closed);
                 }
             }
             piece.id = object.id;
@@ -437,7 +457,7 @@ namespace rct3::scene
             const auto last = last_piece(scene, b);
             if (c == nullptr || !b.tip || !last || !ride.track || b.backward)
                 return;
-            const save::TrackPiece& first = ride.track->pieces.front();
+            const save::TrackPiece& first = stretch_start(*ride.track);
             const auto objects = object_indices(scene);
             const auto object = objects.find(first.scenery);
             const auto shape = park::shape_named(*c, first.symbol);
@@ -478,6 +498,14 @@ namespace rct3::scene
             save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (!ride.track || ride.track->pieces.empty())
                 return;
+            // A stretch begun but not yet laid is given up instead.
+            if (opening(ride))
+            {
+                ride.track->segments.pop_back();
+                b.tip = track_tip(scene, b);
+                refresh(scene, b, assets);
+                return;
+            }
             wait_for_build(scene);
             // Built backwards, the first piece is the one laid last.
             const bool front = b.backward && ride.track->pieces.size() > 1;
@@ -486,6 +514,11 @@ namespace rct3::scene
             ride.track->circuit = false;
             if (!ride.track->segments.empty() && ride.track->segments.back().piece_count > 0)
                 --ride.track->segments.back().piece_count;
+            // A stretch emptied gives way to the one before, open at its end again.
+            if (ride.track->segments.size() > 1 && ride.track->segments.back().piece_count == 0)
+                ride.track->segments.pop_back();
+            if (!ride.track->segments.empty())
+                ride.track->segments.back().closed = false;
             const auto objects = object_indices(scene);
             if (const auto found = objects.find(last.scenery); found != objects.end())
                 scene.objects[found->second].hidden = true;
@@ -879,7 +912,7 @@ namespace rct3::scene
             return false;
         save::Ride& ride = scene.rides.rides.at(*b.ride);
         const park::PieceCatalogue* c = catalogue(b);
-        if (!ride.track || !ride.track->pieces.empty() || c == nullptr)
+        if (!opening(ride) || c == nullptr)
             return false;
         // A design is laid whole, piece after piece from the first, and paid for whatever the park has, then
         // its doors where they stood beside its stations. Its price is its pieces': the only scenery designs
@@ -969,6 +1002,7 @@ namespace rct3::scene
         {
             auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
+            panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
             panel.placement = ui::bottom_left(0, kPanelBottom, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
         }
         return true;
@@ -1095,7 +1129,7 @@ namespace rct3::scene
         }
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
-        if (const save::Ride& ride = scene.rides.rides.at(*b.ride); ride.track && ride.track->pieces.empty())
+        if (const save::Ride& ride = scene.rides.rides.at(*b.ride); opening(ride))
         {
             // The pointer off the ground, say over the panel, leaves the first piece where it was aimed.
             if (pointed && pointed != b.aim)
@@ -1148,6 +1182,15 @@ namespace rct3::scene
                 case Complete:
                     complete(scene, b, assets);
                     break;
+                case NewSegment:
+                {
+                    // shortcut: cars run the stretches as one course, jumping between them, upgrade when the course
+                    // follows each stretch on its own.
+                    save::Track& track = *scene.rides.rides.at(*b.ride).track;
+                    track.segments.push_back({ .first_piece = track.pieces.size() });
+                    b.design.clear();
+                    break;
+                }
             }
             changed = true;
         }

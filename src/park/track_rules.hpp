@@ -67,6 +67,8 @@ namespace rct3::park
         std::vector<PiecePattern> patterns;
         /// Built from its station back towards where its riders start, as a giant slide is from its bottom up.
         bool builds_back = false;
+        /// One building set down whole: its first piece is all its track, and nothing goes on after it.
+        bool one_piece = false;
     };
 
     /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces

@@ -87,6 +87,10 @@ namespace rct3::ui
         complete_ = picture("complete");
         complete_->icon = style.complete;
         complete_->placement = top_left(cp::kCompleteAt.x, cp::kCompleteAt.y, cp::kCompleteSize.x, cp::kCompleteSize.y);
+        new_segment_ = picture("new_segment");
+        new_segment_->icon = style.new_segment;
+        new_segment_->placement = top_left(cp::kNewSegmentAt.x, cp::kNewSegmentAt.y, cp::kNewSegmentSize.x, cp::kNewSegmentSize.y);
+        new_segment_->visible = false;
         close_ = &add<Button>("close", style.title_button, style.close_icon);
         close_->placement = top_left(cp::kCloseAt.x, cp::kCloseAt.y, cp::kCloseSize, cp::kCloseSize);
 
@@ -163,6 +167,8 @@ namespace rct3::ui
         }
         demolish_->enabled = view_.can_demolish;
         complete_->enabled = view_.can_complete;
+        new_segment_->visible = view_.new_segment.has_value();
+        new_segment_->enabled = view_.new_segment.value_or(false);
         piece_->text = view_.piece;
         cost_->text = view_.cost;
         for (std::size_t i = 0; i < kNamedSlots; ++i)
@@ -220,6 +226,8 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Demolish, 0 });
         if (complete_->take_click() && view_.can_complete)
             events_.push_back({ ConstructionAction::Complete, 0 });
+        if (new_segment_->take_click() && view_.new_segment.value_or(false))
+            events_.push_back({ ConstructionAction::NewSegment, 0 });
         for (std::size_t i = 0; i < kNamedSlots; ++i)
         {
             if (!named_.at(i)->take_click())

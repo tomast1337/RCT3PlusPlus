@@ -711,6 +711,7 @@ namespace rct3::ui::game_skins
         s.chain = named("Chain");
         s.demolish = named("DeleteOn");
         s.complete = named("ForwardOn");
+        s.new_segment = "IconAttractionEditorNewTrackSegment";
         s.named_button = kTextButton;
         s.named_inset = kLozengeInset;
         s.page_up = "SquareArrowUp";

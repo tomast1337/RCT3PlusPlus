@@ -315,6 +315,11 @@ TEST_CASE("pressing gives the focus to the nearest widget that takes it")
         CHECK(f.top.seen == std::vector { Key::Escape });
         CHECK(f.inner.seen.empty());
     }
+    SUBCASE("taking it out of the tree takes it away at once")
+    {
+        auto taken = f.field.parent()->remove(f.field);
+        CHECK(!f.desktop.keyboard_focus());
+    }
     SUBCASE("pressing elsewhere takes it away")
     {
         f.desktop.update(at(150, 80, true));

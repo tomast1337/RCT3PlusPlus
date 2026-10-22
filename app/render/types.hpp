@@ -167,7 +167,7 @@ namespace rct3::render
     };
 
     /// Shader programs are chosen by what they do, not supplied as code: each backend implements every
-    /// program in its own shading language (SPIR-V, GLSL, C++ for a software rasteriser).
+    /// program in its own shading language (SPIR-V, Slang, C++ for a software rasteriser).
     enum class Shader : std::uint8_t
     {
         /// Inputs: location 0 position (Float3), location 1 colour (Float4). Output: the colour, untextured.

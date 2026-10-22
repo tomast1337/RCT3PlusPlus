@@ -3,7 +3,7 @@
 // Build script. Bootstrap once with:  g++ -std=c++26 -o nob nob.cpp
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
-//   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, glslc)
+//   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, slangc)
 //   ./nob script [FILE.ts|FILE.js] [-- APP_ARGS...] runs the viewer with the script FILE, or each of
 //                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
 //                                                 typescript) first. Report: build/scripts/report/index.html
@@ -23,9 +23,12 @@
 #include "nob.hpp"
 
 #include <array>
+#include <cstdint>
+#include <cstring>
 #include <format>
 #include <fstream>
 #include <future>
+#include <iterator>
 #include <ranges>
 #include <thread>
 
@@ -436,7 +439,7 @@ namespace
         return cfg;
     }
 
-    // The app's flags: ImGui and Vulkan headers, app/ and the shaders glslc writes to build/<mode>/gen.
+    // The app's flags: ImGui and Vulkan headers, app/ and the shaders slangc writes to build/<mode>/gen.
     Config app_config(const Config& cfg)
     {
         Config app = cfg;
@@ -493,7 +496,9 @@ namespace
     }
 
     // The graphical viewer in app/. Not part of `build` so the library and tests never need GLFW or Vulkan.
-    // Shaders (app/shaders/NAME.{vert,frag}) are compiled with glslc into C arrays included by the sources.
+    // Shaders (app/shaders/NAME.slang, entry points vertex_main and fragment_main) are compiled with slangc into
+    // NAME.vert.inc and NAME.frag.inc, C arrays of SPIR-V words included by the sources. Files without an entry
+    // point are modules the others import.
     bool build_app(const Config& cfg, fs::path& binary)
     {
         if (!mkdir_p(cfg.obj_dir()))
@@ -502,18 +507,35 @@ namespace
         if (!mkdir_p(gen_dir))
             return false;
 
-        // Stages compile on their own: a program may share another's vertex stage.
-        for (const char* ext : { ".vert", ".frag" })
+        // Stages compile on their own: a program may share another's vertex stage. Any shader file changing
+        // rebuilds them all, as a module may have changed.
+        const std::vector<fs::path> shaders = find_files("app/shaders", ".slang");
+        for (const auto& source : shaders)
         {
-            for (const auto& source : find_files("app/shaders", ext))
+            std::ifstream in(source);
+            const std::string text { std::istreambuf_iterator<char>(in), { } };
+            for (const auto [stage, ext] : { std::pair { "vertex", "vert" }, std::pair { "fragment", "frag" } })
             {
-                const fs::path output = gen_dir / std::format("{}.inc", source.filename().string());
-                if (!needs_rebuild(output, std::array<fs::path, 1> { source }))
+                if (text.find(std::format("[shader(\"{}\")]", stage)) == std::string::npos)
                     continue;
+                const fs::path output = gen_dir / std::format("{}.{}.inc", source.stem().string(), ext);
+                if (!needs_rebuild(output, shaders))
+                    continue;
+                const fs::path spirv = gen_dir / std::format("{}.{}.spv", source.stem().string(), ext);
                 Cmd cmd;
-                cmd << "glslc" << "-mfmt=c" << "--target-env=vulkan1.3" << source.string() << "-o" << output.string();
+                cmd << "slangc" << source.string() << "-I" << "app/shaders" << "-entry" << std::format("{}_main", stage) << "-stage" << stage << "-target" << "spirv" << "-profile" << "spirv_1_6" << "-O2" << "-o" << spirv.string();
                 if (!run(cmd))
                     return false;
+                std::ifstream code(spirv, std::ios::binary);
+                const std::string bytes { std::istreambuf_iterator<char>(code), { } };
+                std::string words = "{";
+                for (std::size_t i = 0; i + 4 <= bytes.size(); i += 4)
+                {
+                    std::uint32_t word = 0;
+                    std::memcpy(&word, bytes.data() + i, 4);
+                    words += std::format("{}0x{:08x}", i == 0 ? "" : ",", word);
+                }
+                std::ofstream(output) << words << "}\n";
             }
         }
 

@@ -233,7 +233,7 @@ namespace rct3::render::vulkan
         VkDeviceMemory multi_depth_memory_ = VK_NULL_HANDLE;
         VkImageView multi_depth_view_ = VK_NULL_HANDLE;
 
-        // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.frag), sets 2 on the extra textures
+        // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.slang), sets 2 on the extra textures
         // when the device can bind that many sets.
         static constexpr std::uint32_t kSetCount = 2 + kExtraTextures;
         std::uint32_t set_count_ = 4;

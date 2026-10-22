@@ -306,12 +306,9 @@ namespace rct3::save
             const float tz = (z - g.origin_z) / g.tile_size_z;
             if (!(tx >= 0) || !(tz >= 0) || !(tx <= static_cast<float>(g.width)) || !(tz <= static_cast<float>(g.height)))
                 return std::nullopt;
-            TilePos p;
-            p.col = std::min(static_cast<int>(tx), g.width - 1);
-            p.row = std::min(static_cast<int>(tz), g.height - 1);
-            p.fx = tx - static_cast<float>(p.col);
-            p.fz = tz - static_cast<float>(p.row);
-            return p;
+            const int col = std::min(static_cast<int>(tx), g.width - 1);
+            const int row = std::min(static_cast<int>(tz), g.height - 1);
+            return TilePos { .col = col, .row = row, .fx = tx - static_cast<float>(col), .fz = tz - static_cast<float>(row) };
         }
 
     } // namespace
@@ -346,45 +343,41 @@ namespace rct3::save
         const std::size_t h = rd_u8(blob, 1);
         if (w == 0 || h == 0)
             return std::unexpected(Error::ImplausibleCount);
-        TerrainGrid g;
-        g.width = static_cast<int>(w);
-        g.height = static_cast<int>(h);
-        g.origin_x = rd_f32(blob, 2);
-        g.origin_z = rd_f32(blob, 6);
-        g.tile_size_x = rd_f32(blob, 10);
-        g.tile_size_z = rd_f32(blob, 14);
-        if (!std::isfinite(g.origin_x) || !std::isfinite(g.origin_z) || !std::isfinite(g.tile_size_x) || !std::isfinite(g.tile_size_z) || !(g.tile_size_x > 0) || !(g.tile_size_z > 0))
+        const float origin_x = rd_f32(blob, 2);
+        const float origin_z = rd_f32(blob, 6);
+        const float tile_size_x = rd_f32(blob, 10);
+        const float tile_size_z = rd_f32(blob, 14);
+        if (!std::isfinite(origin_x) || !std::isfinite(origin_z) || !std::isfinite(tile_size_x) || !std::isfinite(tile_size_z) || !(tile_size_x > 0) || !(tile_size_z > 0))
             return std::unexpected(Error::BadHeader);
 
         const std::size_t n = w * h; // at most kMaxTerrainCells
         const std::size_t avail = blob.size() - kTerrainHeader;
-        std::size_t stride = 0;
-        if (avail >= n * 24 && avail - n * 24 <= kTerrainTailSlack)
-        {
-            stride = 24;
-            g.layout = TerrainCellLayout::Cell24;
-        }
-        else if (avail >= n * 20 && avail - n * 20 <= kTerrainTailSlack)
-        {
-            stride = 20;
-            g.layout = TerrainCellLayout::Cell20;
-        }
-        else
-        {
+        const auto fits = [&](std::size_t stride) { return avail >= n * stride && avail - n * stride <= kTerrainTailSlack; };
+        if (!fits(24) && !fits(20))
             return std::unexpected(avail < n * 24 ? Error::Truncated : Error::ImplausibleCount);
-        }
+        const std::size_t stride = fits(24) ? 24 : 20;
 
-        g.trailing_bytes = avail - n * stride;
-        g.cells.resize(n);
+        TerrainGrid g {
+            .width = static_cast<int>(w),
+            .height = static_cast<int>(h),
+            .origin_x = origin_x,
+            .origin_z = origin_z,
+            .tile_size_x = tile_size_x,
+            .tile_size_z = tile_size_z,
+            .layout = stride == 24 ? TerrainCellLayout::Cell24 : TerrainCellLayout::Cell20,
+            .trailing_bytes = avail - n * stride,
+        };
+        g.cells.reserve(n);
         for (std::size_t i = 0; i < n; ++i)
         {
             const std::size_t at = kTerrainHeader + i * stride;
-            auto& c = g.cells[i];
-            for (std::size_t k = 0; k < 4; ++k)
-                c.corners[k] = rd_f32(blob, at + k * 4);
-            c.surface = rd_u8(blob, at + 16);
-            c.cliff = rd_u8(blob, at + 17);
-            c.flags = stride == 24 ? rd_u8(blob, at + 20) : static_cast<std::uint8_t>(rd_u8(blob, at + 19) & 0x0f);
+            g.cells.push_back(
+                {
+                    .corners = { rd_f32(blob, at), rd_f32(blob, at + 4), rd_f32(blob, at + 8), rd_f32(blob, at + 12) },
+                    .surface = rd_u8(blob, at + 16),
+                    .cliff = rd_u8(blob, at + 17),
+                    .flags = stride == 24 ? rd_u8(blob, at + 20) : static_cast<std::uint8_t>(rd_u8(blob, at + 19) & 0x0f),
+                });
         }
         return g;
     }
@@ -395,9 +388,7 @@ namespace rct3::save
     {
         if (blob.size() < 6)
             return std::unexpected(Error::Truncated);
-        WaterLayer layer;
-        layer.width = rd_u8(blob, 0);
-        layer.height = rd_u8(blob, 1);
+        WaterLayer layer { .width = rd_u8(blob, 0), .height = rd_u8(blob, 1) };
         const std::uint32_t count = rd_u32(blob, 2);
         std::size_t pos = 6;
         if (count > (blob.size() - pos) / 8)
@@ -407,13 +398,12 @@ namespace rct3::save
         {
             if (blob.size() - pos < 8)
                 return std::unexpected(Error::Truncated);
-            WaterBody body;
-            body.level = rd_f32(blob, pos);
+            const float level = rd_f32(blob, pos);
             const std::uint32_t n = rd_u32(blob, pos + 4);
             pos += 8;
             if (n > (blob.size() - pos) / 4)
                 return std::unexpected(Error::ImplausibleCount);
-            body.tris.resize(n);
+            WaterBody body { .level = level, .tris = std::vector<WaterTri>(n) };
             for (std::uint32_t i = 0; i < n; ++i, pos += 4)
             {
                 body.tris[i] = { rd_u8(blob, pos), rd_u8(blob, pos + 1), rd_u8(blob, pos + 2), rd_u8(blob, pos + 3) };
@@ -540,15 +530,19 @@ namespace rct3::save
             return x ? static_cast<std::uint8_t>(*x) : d;
         }
 
+        /// The three picked colours of a colour struct, or nothing when `v` is not one.
+        std::optional<std::array<std::int32_t, 3>> get_colours(std::optional<const Value&> v) noexcept
+        {
+            if (!v || v->kind() != ValueKind::Struct)
+                return std::nullopt;
+            return std::array { int_or(v->field(names::kColour0)), int_or(v->field(names::kColour1)), int_or(v->field(names::kColour2)) };
+        }
+
         WorldColour colour_of(std::optional<const Value&> v) noexcept
         {
-            WorldColour c;
             if (!v || v->kind() != ValueKind::Struct)
-                return c;
-            c.r = float_or(v->field("Red"));
-            c.g = float_or(v->field("Green"));
-            c.b = float_or(v->field("Blue"));
-            return c;
+                return { };
+            return WorldColour { .r = float_or(v->field("Red")), .g = float_or(v->field("Green")), .b = float_or(v->field("Blue")) };
         }
 
         class Issues
@@ -626,10 +620,7 @@ namespace rct3::save
                 if (const auto obj = index_.find(ref))
                 {
                     if (const auto d = decode_object(file_, *obj))
-                    {
-                        if (std::optional<const Value&> c = d->find(names::kSurfaceColours); c && c->kind() == ValueKind::Struct)
-                            out = std::array<std::int32_t, 3> { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
-                    }
+                        out = get_colours(d->find(names::kSurfaceColours));
                 }
                 return colours_.emplace(ref, out).first->second;
             }
@@ -696,56 +687,67 @@ namespace rct3::save
 
         PathTile read_path(const DecodedObject& o, Resolver& res)
         {
-            PathTile t;
-            t.id = o.id;
-            t.raw_kind = byte_or(o.find(names::kPathType), 0);
-            t.kind = path_kind_of(t.raw_kind);
-            t.col = byte_or(o.find(names::kPathCol));
-            t.row = byte_or(o.find(names::kPathRow));
-            t.direction = byte_or(o.find(names::kPathDirection), kNoDirection);
-            t.surface_variant = byte_or(o.find(names::kPathVariant));
-            t.surface_ref = get_ref(o.find(names::kPathSurface)).value_or(0);
-            t.surface_name = res.surface(t.surface_ref);
-            t.surface_colours = res.surface_colours(t.surface_ref);
+            const std::uint8_t raw_kind = byte_or(o.find(names::kPathType), 0);
+            const std::uint64_t surface_ref = get_ref(o.find(names::kPathSurface)).value_or(0);
+            PathTile t {
+                .id = o.id,
+                .kind = path_kind_of(raw_kind),
+                .raw_kind = raw_kind,
+                .col = byte_or(o.find(names::kPathCol)),
+                .row = byte_or(o.find(names::kPathRow)),
+                .direction = byte_or(o.find(names::kPathDirection), kNoDirection),
+                .surface_variant = byte_or(o.find(names::kPathVariant)),
+                .surface_ref = surface_ref,
+                .surface_name = res.surface(surface_ref),
+                .surface_colours = res.surface_colours(surface_ref),
+            };
 
             std::optional<const Value&> slope = o.find(names::kPathSlope);
             std::optional<const Value&> quant = o.find(names::kPathQuantised);
             std::optional<const Value&> base = o.find(names::kPathBaseHeight);
             if (slope || quant || base)
             {
-                PathElevation e;
-                e.slope = byte_or(slope);
-                if (const auto b = get_int(base); b && *b != -1)
-                    e.base_height = static_cast<std::int32_t>(*b);
-                e.quantised_height = int_or(quant);
-                e.scenery_ref = get_ref(o.find(names::kPathScenery)).value_or(0);
-                e.underground = get_bool(o.find(names::kPathUnderground)).value_or(false);
-                t.elevation = e;
+                const auto b = get_int(base);
+                t.elevation = PathElevation {
+                    .slope = byte_or(slope),
+                    .base_height = b && *b != -1 ? std::optional(static_cast<std::int32_t>(*b)) : std::nullopt,
+                    .quantised_height = int_or(quant),
+                    .scenery_ref = get_ref(o.find(names::kPathScenery)).value_or(0),
+                    .underground = get_bool(o.find(names::kPathUnderground)).value_or(false),
+                };
             }
             std::optional<const Value&> fence = o.find(names::kPathFence);
             std::optional<const Value&> line = o.find(names::kPathQueueLine);
             if (fence || line || o.find(names::kPathStartDir))
             {
-                PathQueueInfo q;
-                q.start_direction = byte_or(o.find(names::kPathStartDir));
-                q.end_direction = byte_or(o.find(names::kPathEndDir));
-                q.fence_ref = get_ref(fence).value_or(0);
-                q.fence_symbol = res.symbol(q.fence_ref);
-                q.fence_overlay = res.overlay(q.fence_ref);
-                q.queue_line_ref = get_ref(line).value_or(0);
-                if (std::optional<const Value&> c = o.find(names::kPathFenceColours); c && c->kind() == ValueKind::Struct)
-                {
-                    q.fence_colours = { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
-                }
-                t.queue = q;
+                const std::uint64_t fence_ref = get_ref(fence).value_or(0);
+                t.queue = PathQueueInfo {
+                    .start_direction = byte_or(o.find(names::kPathStartDir)),
+                    .end_direction = byte_or(o.find(names::kPathEndDir)),
+                    .fence_ref = fence_ref,
+                    .fence_symbol = res.symbol(fence_ref),
+                    .fence_overlay = res.overlay(fence_ref),
+                    .fence_colours = get_colours(o.find(names::kPathFenceColours)).value_or(std::array<std::int32_t, 3> { }),
+                    .queue_line_ref = get_ref(line).value_or(0),
+                };
             }
             return t;
         }
 
         PlacedObject read_scenery(const DecodedObject& o)
         {
-            PlacedObject p;
-            p.id = o.id;
+            PlacedObject p {
+                .id = o.id,
+                .definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(get_ref(o.find(names::kDesignSceneryDefinition)).value_or(0)),
+                .owner_ref = get_ref(o.find(names::kSceneryOwner)).value_or(0),
+                .colours = get_colours(o.find(names::kSceneryColours)).value_or(std::array<std::int32_t, 3> { }),
+                .height_offset = int_or(o.find(names::kSceneryHeightOffset)),
+                .frame_offset = int_or(o.find(names::kSceneryFrameOffset)),
+                .force_absolute_height = get_bool(o.find(names::kSceneryAbsolute)).value_or(false),
+                .hidden = get_bool(o.find(names::kSceneryHidden)).value_or(false),
+                .break_flags = int_or(o.find(names::kSceneryBreakFlags)),
+                .break_time = float_or(o.find(names::kSceneryBreakTime)),
+            };
             if (std::optional<const Value&> d = o.find(names::kSceneryData); d && d->kind() == ValueKind::Struct)
             {
                 p.col = int_or(d->field(names::kDataCol));
@@ -756,18 +758,6 @@ namespace rct3::save
                 p.quadrant = int_or(d->field(names::kDataCorner));
                 p.height_adjust = get_float(d->field(names::kDataAdjust));
             }
-            p.definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(get_ref(o.find(names::kDesignSceneryDefinition)).value_or(0));
-            p.owner_ref = get_ref(o.find(names::kSceneryOwner)).value_or(0);
-            if (std::optional<const Value&> c = o.find(names::kSceneryColours); c && c->kind() == ValueKind::Struct)
-            {
-                p.colours = { int_or(c->field(names::kColour0)), int_or(c->field(names::kColour1)), int_or(c->field(names::kColour2)) };
-            }
-            p.height_offset = int_or(o.find(names::kSceneryHeightOffset));
-            p.frame_offset = int_or(o.find(names::kSceneryFrameOffset));
-            p.force_absolute_height = get_bool(o.find(names::kSceneryAbsolute)).value_or(false);
-            p.hidden = get_bool(o.find(names::kSceneryHidden)).value_or(false);
-            p.break_flags = int_or(o.find(names::kSceneryBreakFlags));
-            p.break_time = float_or(o.find(names::kSceneryBreakTime));
             if (std::optional<const Value&> b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
                 p.behaviour_count = static_cast<std::uint32_t>(b->items().size());
             return p;
@@ -775,33 +765,36 @@ namespace rct3::save
 
         Weather read_weather(const DecodedObject& o)
         {
-            Weather w;
-            w.raw_type = int_or(o.find("Type"));
-            w.type = weather_type_from(w.raw_type);
-            w.raw_forecast = int_or(o.find("ForecastType"));
-            w.forecast = weather_type_from(w.raw_forecast);
-            w.climate = int_or(o.find("Climate"));
-            w.temperature = float_or(o.find("Temperature"));
-            w.forecast_temperature = float_or(o.find("ForecastTemperature"));
-            w.forecast_delay = float_or(o.find("ForecastDelay"));
-            w.sequence_delay = float_or(o.find("SequenceDelay"));
-            w.wind_speed = float_or(o.find("WindSpeed"));
-            w.wind_acceleration = float_or(o.find("WindAccel"));
-            w.overlay = int_or(o.find("Overlay"));
-            w.forecast_overlay = int_or(o.find("ForecastOverlay"));
-            w.colour = int_or(o.find("Colour"));
-            w.forecast_colour = int_or(o.find("ForecastColour"));
-            w.sound = int_or(o.find("SoundType"));
-            w.forecast_sound = int_or(o.find("ForecastSound"));
-            w.thunder_time = get_float(o.find("ThunderTime"));
+            const std::int32_t raw_type = int_or(o.find("Type"));
+            const std::int32_t raw_forecast = int_or(o.find("ForecastType"));
+            Weather w {
+                .type = weather_type_from(raw_type),
+                .raw_type = raw_type,
+                .forecast = weather_type_from(raw_forecast),
+                .raw_forecast = raw_forecast,
+                .climate = int_or(o.find("Climate")),
+                .temperature = float_or(o.find("Temperature")),
+                .forecast_temperature = float_or(o.find("ForecastTemperature")),
+                .forecast_delay = float_or(o.find("ForecastDelay")),
+                .sequence_delay = float_or(o.find("SequenceDelay")),
+                .wind_speed = float_or(o.find("WindSpeed")),
+                .wind_acceleration = float_or(o.find("WindAccel")),
+                .overlay = int_or(o.find("Overlay")),
+                .forecast_overlay = int_or(o.find("ForecastOverlay")),
+                .colour = int_or(o.find("Colour")),
+                .forecast_colour = int_or(o.find("ForecastColour")),
+                .sound = int_or(o.find("SoundType")),
+                .forecast_sound = int_or(o.find("ForecastSound")),
+                .thunder_time = get_float(o.find("ThunderTime")),
+            };
             if (std::optional<const Value&> f = o.find("FogSetting"); f && f->kind() == ValueKind::Struct)
             {
-                FogSetting fog;
-                fog.colour = colour_of(f->field("FColourValue"));
-                fog.far = float_or(f->field("Far"));
-                fog.near = float_or(f->field("Near"));
-                fog.shadow_damper = float_or(f->field("ShadowDamper"));
-                w.fog = fog;
+                w.fog = FogSetting {
+                    .colour = colour_of(f->field("FColourValue")),
+                    .far = float_or(f->field("Far")),
+                    .near = float_or(f->field("Near")),
+                    .shadow_damper = float_or(f->field("ShadowDamper")),
+                };
             }
             if (std::optional<const Value&> c = o.find("CloudSetting"); c && c->kind() == ValueKind::Struct)
             {
@@ -816,14 +809,14 @@ namespace rct3::save
 
         WorldTime read_time(const DecodedObject& o)
         {
-            WorldTime t;
-            t.day_fraction = float_or(o.find("DayNightTime"));
-            t.time = float_or(o.find("Time"));
-            t.time_origin = float_or(o.find("ZeroTime"));
-            if (const auto m = get_int(o.find("DayNightMode")))
-                t.day_night_mode = static_cast<std::int32_t>(*m);
-            t.day_fraction_as_rendered = get_float(o.find("DayNightTimeAsRendered"));
-            return t;
+            const auto mode = get_int(o.find("DayNightMode"));
+            return WorldTime {
+                .day_fraction = float_or(o.find("DayNightTime")),
+                .time = float_or(o.find("Time")),
+                .time_origin = float_or(o.find("ZeroTime")),
+                .day_night_mode = mode ? std::optional(static_cast<std::int32_t>(*mode)) : std::nullopt,
+                .day_fraction_as_rendered = get_float(o.find("DayNightTimeAsRendered")),
+            };
         }
 
         WorldPoint3 point_of(std::optional<const Value&> v) noexcept
@@ -972,13 +965,14 @@ namespace rct3::save
                 }
                 case Kind::QueueLine:
                 {
-                    QueueLine q;
-                    q.id = o.id;
-                    q.head_ref = get_ref(o.find(names::kQueueHead)).value_or(0);
-                    q.length = int_or(o.find(names::kQueueSize));
-                    q.ride_ref = get_ref(o.find(names::kQueueRide)).value_or(0);
-                    q.station_index = int_or(o.find(names::kQueueStation));
-                    m.queue_lines.push_back(q);
+                    m.queue_lines.push_back(
+                        {
+                            .id = o.id,
+                            .head_ref = get_ref(o.find(names::kQueueHead)).value_or(0),
+                            .length = int_or(o.find(names::kQueueSize)),
+                            .ride_ref = get_ref(o.find(names::kQueueRide)).value_or(0),
+                            .station_index = int_or(o.find(names::kQueueStation)),
+                        });
                     break;
                 }
                 case Kind::Scenery:
@@ -986,23 +980,25 @@ namespace rct3::save
                     break;
                 case Kind::Bin:
                 {
-                    BinState b;
-                    b.object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0);
-                    b.capacity = float_or(o.find(names::kBinCapacity));
-                    b.contents = float_or(o.find(names::kBinContents));
                     // Never emptied is stored as a time before the park began.
-                    if (const auto t = get_float(o.find(names::kBinEmptied)); t && *t >= 0)
-                        b.last_emptied = *t;
-                    m.bins.push_back(b);
+                    const auto emptied = get_float(o.find(names::kBinEmptied));
+                    m.bins.push_back(
+                        {
+                            .object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0),
+                            .capacity = float_or(o.find(names::kBinCapacity)),
+                            .contents = float_or(o.find(names::kBinContents)),
+                            .last_emptied = emptied && *emptied >= 0 ? emptied : std::nullopt,
+                        });
                     break;
                 }
                 case Kind::Sign:
                 {
-                    SignState s;
-                    s.object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0);
-                    s.kind = int_or(o.find(names::kSignKind));
-                    s.text = string_or(o.find(names::kSignText));
-                    m.signs.push_back(std::move(s));
+                    m.signs.push_back(
+                        {
+                            .object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0),
+                            .kind = int_or(o.find(names::kSignKind)),
+                            .text = string_or(o.find(names::kSignText)),
+                        });
                     break;
                 }
                 case Kind::Bench:

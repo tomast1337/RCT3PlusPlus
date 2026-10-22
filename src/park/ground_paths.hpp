@@ -103,9 +103,9 @@ namespace rct3::park
         int row0 = 0;
         int col1 = -1;
         int row1 = -1;
-        std::optional<save::Tile> beyond_exit; ///< The tile the exit lets out onto
-        std::vector<std::array<int, 2>> doors; ///< The stations' entrance and exit tiles, paved alike
-        std::optional<std::int32_t> raised;    ///< Height of a ride standing over the ground, whose floor is a raised deck there
+        std::optional<save::Tile> beyond_exit;     ///< The tile the exit lets out onto
+        std::vector<std::array<int, 2>> doors { }; ///< The stations' entrance and exit tiles, paved alike
+        std::optional<std::int32_t> raised { };    ///< Height of a ride standing over the ground, whose floor is a raised deck there
     };
 
     /// The plain grey path style floors take while their exit leads nowhere.

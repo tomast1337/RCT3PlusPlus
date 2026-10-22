@@ -106,11 +106,11 @@ namespace rct3::park
         std::uint8_t heading = 0;
         PathSlope slope = PathSlope::Flat;
         bool cut_into_ground = false;
-        bool queue = false;                       ///< Lays queue tiles rather than paths
-        bool on_slope = false;                    ///< The last piece laid slopes, so the heading cannot change
-        std::optional<save::Tile> start;          ///< Where the trail began
-        std::optional<std::int32_t> start_height; ///< Of the trail's first piece when set; otherwise on the ground
-        std::vector<TrailStep> trail;             ///< The tiles laid or walked over since, oldest first
+        bool queue = false;                           ///< Lays queue tiles rather than paths
+        bool on_slope = false;                        ///< The last piece laid slopes, so the heading cannot change
+        std::optional<save::Tile> start { };          ///< Where the trail began
+        std::optional<std::int32_t> start_height { }; ///< Of the trail's first piece when set; otherwise on the ground
+        std::vector<TrailStep> trail { };             ///< The tiles laid or walked over since, oldest first
     };
 
     /// Why the next piece cannot be laid.

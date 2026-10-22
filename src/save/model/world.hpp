@@ -113,8 +113,8 @@ namespace rct3::save
         float tile_size_x = 0;
         float tile_size_z = 0;
         TerrainCellLayout layout = TerrainCellLayout::Cell24;
-        std::size_t trailing_bytes = 0; ///< Unused bytes after the last cell in the blob (0 in well-formed data)
-        std::vector<TerrainCell> cells; ///< Row-major, index = row * width + col
+        std::size_t trailing_bytes = 0;     ///< Unused bytes after the last cell in the blob (0 in well-formed data)
+        std::vector<TerrainCell> cells { }; ///< Row-major, index = row * width + col
 
         [[nodiscard]] bool empty() const noexcept
         {
@@ -182,14 +182,14 @@ namespace rct3::save
     struct WaterBody
     {
         float level = 0; ///< Surface height in world units
-        std::vector<WaterTri> tris;
+        std::vector<WaterTri> tris { };
     };
 
     struct WaterLayer
     {
         int width = 0; ///< Map size the layer was written for
         int height = 0;
-        std::vector<WaterBody> bodies;
+        std::vector<WaterBody> bodies { };
 
         [[nodiscard]] std::size_t triangle_count() const noexcept;
     };
@@ -206,14 +206,14 @@ namespace rct3::save
     struct SkirtTree
     {
         std::uint64_t scenery_ref = 0;
-        WorldPoint3 position;
-        std::string symbol; ///< Asset symbol of the referenced scenery, empty when it does not resolve
+        WorldPoint3 position { };
+        std::string symbol { }; ///< Asset symbol of the referenced scenery, empty when it does not resolve
     };
 
     struct RawSkirtTree
     {
         std::uint64_t scenery_ref = 0;
-        WorldPoint3 position;
+        WorldPoint3 position { };
     };
 
     [[nodiscard]] std::expected<std::vector<RawSkirtTree>, Error> decode_skirt_trees(std::span<const std::byte> blob);
@@ -238,10 +238,10 @@ namespace rct3::save
     /// Extra data stored by elevated paths and queues.
     struct PathElevation
     {
-        std::uint8_t slope = 0;                  ///< Slope id as stored
-        std::optional<std::int32_t> base_height; ///< Empty when the stored value is the unset marker
-        std::int32_t quantised_height = 0;       ///< Height in steps; the step size is not confirmed
-        std::uint64_t scenery_ref = 0;           ///< Placed object that draws the piece
+        std::uint8_t slope = 0;                      ///< Slope id as stored
+        std::optional<std::int32_t> base_height { }; ///< Empty when the stored value is the unset marker
+        std::int32_t quantised_height = 0;           ///< Height in steps; the step size is not confirmed
+        std::uint64_t scenery_ref = 0;               ///< Placed object that draws the piece
         bool underground = false;
     };
 
@@ -250,8 +250,8 @@ namespace rct3::save
         std::uint8_t start_direction = 0;
         std::uint8_t end_direction = 0;
         std::uint64_t fence_ref = 0;
-        std::string fence_symbol;  ///< Asset symbol of the fence along the queue's sides, empty when it does not resolve
-        std::string fence_overlay; ///< Overlay holding it, as PlacedObject::overlay
+        std::string fence_symbol { };  ///< Asset symbol of the fence along the queue's sides, empty when it does not resolve
+        std::string fence_overlay { }; ///< Overlay holding it, as PlacedObject::overlay
         std::array<std::int32_t, 3> fence_colours { };
         std::uint64_t queue_line_ref = 0;
     };
@@ -266,10 +266,10 @@ namespace rct3::save
         std::uint8_t direction = kNoDirection; ///< Quarter turns 0..3, or kNoDirection
         std::uint8_t surface_variant = 0;      ///< Stored as 0, 1 or 255
         std::uint64_t surface_ref = 0;
-        std::string surface_name;                                   ///< System name of the surface style, empty when unresolved
-        std::optional<std::array<std::int32_t, 3>> surface_colours; ///< Picked colours of a queue's ground surface
-        std::optional<PathElevation> elevation;                     ///< Present for elevated paths and queues
-        std::optional<PathQueueInfo> queue;                         ///< Present for queues
+        std::string surface_name { };                                   ///< System name of the surface style, empty when unresolved
+        std::optional<std::array<std::int32_t, 3>> surface_colours { }; ///< Picked colours of a queue's ground surface
+        std::optional<PathElevation> elevation { };                     ///< Present for elevated paths and queues
+        std::optional<PathQueueInfo> queue { };                         ///< Present for queues
     };
 
     struct QueueLine
@@ -289,17 +289,17 @@ namespace rct3::save
     {
         std::uint64_t id = 0;
         std::uint64_t definition_ref = 0; ///< Database entry that names the asset
-        std::string symbol;               ///< Asset symbol from that entry, empty when it does not resolve
+        std::string symbol { };           ///< Asset symbol from that entry, empty when it does not resolve
         /// The overlay that holds the asset, from the same entry: a path relative to the game's folder, without
         /// the ".common.ovl" ending, with either kind of slash; empty when it does not resolve.
-        std::string overlay;
+        std::string overlay { };
         std::int32_t col = 0;
         std::int32_t row = 0;
-        std::optional<std::int32_t> base_height; ///< Whole-unit base height; empty when stored as unset
-        std::int32_t rotation = 0;               ///< Quarter turns 0..3
-        std::int32_t quadrant = 0;               ///< Sub-tile corner 0..3
-        std::optional<float> height_adjust;      ///< Only in newer layouts
-        std::uint64_t owner_ref = 0;             ///< Own id when free-standing, else the parent piece
+        std::optional<std::int32_t> base_height { }; ///< Whole-unit base height; empty when stored as unset
+        std::int32_t rotation = 0;                   ///< Quarter turns 0..3
+        std::int32_t quadrant = 0;                   ///< Sub-tile corner 0..3
+        std::optional<float> height_adjust { };      ///< Only in newer layouts
+        std::uint64_t owner_ref = 0;                 ///< Own id when free-standing, else the parent piece
         std::array<std::int32_t, 3> colours { };
         std::int32_t height_offset = 0; ///< Unit not confirmed
         std::int32_t frame_offset = 0;
@@ -321,8 +321,8 @@ namespace rct3::save
     {
         std::uint64_t object_ref = 0; ///< The placed object that is the bin
         float capacity = 0;
-        float contents = 0;                ///< In the same measure as `capacity`
-        std::optional<float> last_emptied; ///< Park time, as the clock counts it; empty when never emptied
+        float contents = 0;                    ///< In the same measure as `capacity`
+        std::optional<float> last_emptied { }; ///< Park time, as the clock counts it; empty when never emptied
     };
 
     /// A square of a pool that holds water. Its pieces stand in a stack from the floor up to the rim: the rim
@@ -340,7 +340,7 @@ namespace rct3::save
     {
         std::uint64_t object_ref = 0; ///< The placed object that is the sign
         std::int32_t kind = 0;        ///< 0 shows `text`; 1 forbids entry
-        std::string text;             ///< Written by the player
+        std::string text { };         ///< Written by the player
     };
 
     // ---- Environment ---------------------------------------------------------------------------------------
@@ -362,7 +362,7 @@ namespace rct3::save
 
     struct FogSetting
     {
-        WorldColour colour;
+        WorldColour colour { };
         float far = 0;
         float near = 0;
         float shadow_damper = 0;
@@ -387,10 +387,10 @@ namespace rct3::save
         std::int32_t forecast_colour = 0;
         std::int32_t sound = 0;
         std::int32_t forecast_sound = 0;
-        std::optional<float> thunder_time;
-        std::optional<FogSetting> fog;
-        std::optional<std::array<WorldColour, 2>> cloud_colours;
-        std::optional<std::array<WorldColour, 3>> light_colours;
+        std::optional<float> thunder_time { };
+        std::optional<FogSetting> fog { };
+        std::optional<std::array<WorldColour, 2>> cloud_colours { };
+        std::optional<std::array<WorldColour, 3>> light_colours { };
     };
 
     struct WorldTime
@@ -398,14 +398,14 @@ namespace rct3::save
         float day_fraction = 0; ///< 0..1 through the day
         float time = 0;         ///< Seconds accumulated
         float time_origin = 0;  ///< Reference stamp for `time`
-        std::optional<std::int32_t> day_night_mode;
-        std::optional<float> day_fraction_as_rendered;
+        std::optional<std::int32_t> day_night_mode { };
+        std::optional<float> day_fraction_as_rendered { };
     };
 
     struct Camera
     {
-        WorldPoint3 position;
-        WorldPoint3 orientation; ///< Three stored floats; likely Euler angles in radians, not confirmed
+        WorldPoint3 position { };
+        WorldPoint3 orientation { }; ///< Three stored floats; likely Euler angles in radians, not confirmed
     };
 
     // ---- Model and loader ----------------------------------------------------------------------------------
@@ -442,22 +442,22 @@ namespace rct3::save
 
     struct WorldModel
     {
-        TerrainGrid terrain;
-        std::vector<std::byte> blocking_scenery; ///< Raw blob, kept as stored
-        std::vector<SkirtTree> skirt_trees;
-        WaterLayer water;
-        std::vector<PathTile> paths;
-        std::vector<QueueLine> queue_lines;
-        std::vector<PlacedObject> objects;
-        std::vector<BinState> bins;
-        std::vector<SignState> signs;
-        std::vector<std::uint64_t> benches; ///< The placed objects that are benches guests can sit on
-        std::vector<PoolWater> pool_water;
-        std::optional<Weather> weather;
-        std::optional<std::int32_t> sky_background; ///< Background (sky box) index
-        std::optional<WorldTime> time;
-        std::optional<Camera> camera;
-        std::vector<WorldIssue> issues;
+        TerrainGrid terrain { };
+        std::vector<std::byte> blocking_scenery { }; ///< Raw blob, kept as stored
+        std::vector<SkirtTree> skirt_trees { };
+        WaterLayer water { };
+        std::vector<PathTile> paths { };
+        std::vector<QueueLine> queue_lines { };
+        std::vector<PlacedObject> objects { };
+        std::vector<BinState> bins { };
+        std::vector<SignState> signs { };
+        std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
+        std::vector<PoolWater> pool_water { };
+        std::optional<Weather> weather { };
+        std::optional<std::int32_t> sky_background { }; ///< Background (sky box) index
+        std::optional<WorldTime> time { };
+        std::optional<Camera> camera { };
+        std::vector<WorldIssue> issues { };
 
         [[nodiscard]] std::size_t issue_count(WorldIssueKind k) const noexcept;
     };

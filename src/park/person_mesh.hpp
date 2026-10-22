@@ -37,7 +37,7 @@ namespace rct3::park
     /// One person to draw.
     struct PlacedPerson
     {
-        PersonLook look;
+        PersonLook look { };
         std::size_t level = 0;             ///< Of detail, 0 the finest
         std::int32_t motion = 0;           ///< By number (see person_motions.hpp)
         float time = 0;                    ///< Seconds into the motion

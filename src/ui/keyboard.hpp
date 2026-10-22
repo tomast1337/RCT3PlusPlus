@@ -83,7 +83,7 @@ namespace rct3::ui
     struct KeyboardState
     {
         std::vector<KeyPress> presses; ///< Since the last update, oldest first
-        Composition composition;       ///< As it stands now
+        Composition composition { };   ///< As it stands now
     };
 
 } // namespace rct3::ui

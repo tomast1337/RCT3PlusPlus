@@ -49,8 +49,9 @@ for (let r = 0; r < Math.max(width, height) && col < 0; ++r)
         }
 expect(col >= 0, "an owned tile in sight");
 log("working on tile", col, row);
-// From high up, so the bottom of the pit stays in sight.
-camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col - 3, row: row - 6, up: 40 });
+// From high up and close to overhead, so the bottom of the pit stays in sight past its rim: a tile dug a
+// tile deep hides its floor from any view flatter than its walls are high.
+camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col - 1, row: row - 2, up: 60 });
 await frames(2);
 
 const lakes = map.water().length;

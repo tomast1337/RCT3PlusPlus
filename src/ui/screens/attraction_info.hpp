@@ -133,6 +133,8 @@ namespace rct3::ui
         /// Of a ride, the tunes it may play, and which it plays: 0 for none, k for music[k - 1].
         std::span<const std::u16string> music { };
         std::size_t tune = 0;
+        /// Of a tracked ride, whether its track is greased.
+        bool low_friction = false;
     };
 
     struct GuestsSuited
@@ -147,30 +149,37 @@ namespace rct3::ui
     /// Ids of the controls on an attraction's pages (InfoControl::id).
     enum class AttractionControl : std::uint8_t
     {
-        Price,      ///< A ride's admission, in hundredths
-        Colours,    ///< Its pots
-        MinWaitOn,  ///< Whether the trains wait at least a while
-        MinWait,    ///< Seconds
-        MaxWaitOn,  ///< Whether they leave after a while at most
-        MaxWait,    ///< Seconds
-        Inspection, ///< The interval's place in the list
-        WaitFor,    ///< The load the trains wait for, its place in the list
-        QueueSigns, ///< Whether signs stand over a ride's queues
-        Circuits,   ///< Times a flat ride runs round each go
-        ShowTrick,  ///< The trick at the show's picked place, by place in show_offers; a new place's adds one
-        ShowDelete, ///< Takes the trick at the picked place out of the show
-        Entrance,   ///< Places a tracked ride's entrance
-        Exit,       ///< And its exit
-        Trains,     ///< How many trains a tracked ride runs
-        Cars,       ///< Cars in each of its trains
-        Name,       ///< Its new name, as typed
-        Music,      ///< The tune it plays, as AttractionFacts::tune
-        Demolish,   ///< Pulls it down
-        SaveDesign, ///< Keeps a tracked ride's design
-        Fence,      ///< Picks its queues' fence
-        Locate,     ///< Brings the view round to it
-        RideCam,    ///< Rides along in its cars
-        ItemPrice,  ///< The first of a stall's items' prices; the next item's is one more, and so on
+        Price,          ///< A ride's admission, in hundredths
+        Colours,        ///< Its pots
+        MinWaitOn,      ///< Whether the trains wait at least a while
+        MinWait,        ///< Seconds
+        MaxWaitOn,      ///< Whether they leave after a while at most
+        MaxWait,        ///< Seconds
+        Inspection,     ///< The interval's place in the list
+        WaitFor,        ///< The load the trains wait for, its place in the list
+        QueueSigns,     ///< Whether signs stand over a ride's queues
+        Circuits,       ///< Times a flat ride runs round each go
+        ShowTrick,      ///< The trick at the show's picked place, by place in show_offers; a new place's adds one
+        ShowDelete,     ///< Takes the trick at the picked place out of the show
+        Entrance,       ///< Places a tracked ride's entrance
+        Exit,           ///< And its exit
+        Trains,         ///< How many trains a tracked ride runs
+        Cars,           ///< Cars in each of its trains
+        Name,           ///< Its new name, as typed
+        Music,          ///< The tune it plays, as AttractionFacts::tune
+        Demolish,       ///< Pulls it down
+        SaveDesign,     ///< Keeps a tracked ride's design
+        Fence,          ///< Picks its queues' fence
+        Locate,         ///< Brings the view round to it
+        RideCam,        ///< Rides along in its cars
+        Mode,           ///< The operating mode, its place in the list
+        BlockSection,   ///< Whether trains keep a block apart
+        SyncStations,   ///< Whether trains leave with those at stations beside
+        LeaveOnArrival, ///< Whether a train leaves when another comes into the station
+        LowFriction,    ///< Whether the track is greased
+        LaunchSpeed,    ///< In hundredths of the player's speed unit
+        LiftSpeed,      ///< Likewise
+        ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 
     /// The tricks the player may put in `show`, by place in its tricks: not the first, which the performers do
@@ -198,6 +207,10 @@ namespace rct3::ui
     inline constexpr int kMostRidePrice = 2000;
     inline constexpr int kMostPrice = 1000;
     inline constexpr int kPriceStep = 10;
+
+    /// Speeds as the player reads them: so many of their unit to a metre a second, and the unit after a number.
+    [[nodiscard]] float speed_scale(DistanceUnits units);
+    [[nodiscard]] std::u16string_view speed_unit(DistanceUnits units);
 
     /// The page of `tab`, at `section` when the page has several.
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);

@@ -69,7 +69,7 @@ namespace rct3::ui
 
     void Spinner::show_value()
     {
-        const std::u16string text = format(value_, decimals);
+        const std::u16string text = format(value_, decimals) + unit;
         if (field_->text != text)
         {
             field_->text = text;
@@ -100,7 +100,12 @@ namespace rct3::ui
         if (!typing_)
             return;
         typing_ = false;
-        const std::string digits = without_point(strings::to_utf8(field_->text), decimals);
+        std::u16string_view typed = field_->text;
+        if (!unit.empty() && typed.ends_with(unit))
+            typed.remove_suffix(unit.size());
+        while (typed.ends_with(u' '))
+            typed.remove_suffix(1);
+        const std::string digits = without_point(strings::to_utf8(typed), decimals);
         long long parsed = 0;
         const auto [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), parsed);
         // Anything that is not a whole number puts the old value back.

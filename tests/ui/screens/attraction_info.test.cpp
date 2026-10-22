@@ -205,20 +205,40 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     REQUIRE(trains != vehicles.lines.end());
     CHECK(trains->value == u"3");
 
+    // Its mode, greyed, and how it runs down the left; when its trains leave down the right.
     const InfoPage mode = attraction_page(AttractionTab::Mode, f, s, { });
-    CHECK(mode.heading == u"Back and forth");
-    CHECK(mode.sections.size() == 2);
-    const InfoPage waits = attraction_page(AttractionTab::Mode, f, s, { }, 1);
-    REQUIRE(waits.controls.size() == 5);
-    CHECK(waits.controls[0].id == control_id(AttractionControl::WaitFor));
-    CHECK(waits.controls[0].items.size() == 5);
-    CHECK(waits.controls[0].value == 4); // Any load, the list's last
-    CHECK(waits.controls[1].label == u"Least wait");
-    CHECK(waits.controls[1].value == 1);
-    CHECK(waits.controls[2].value == 12);
-    CHECK(waits.controls[2].enabled);
-    CHECK(waits.controls[3].value == 0); // No longest wait: unticked, its seconds greyed
-    CHECK_FALSE(waits.controls[4].enabled);
+    const auto find = [&](AttractionControl id) {
+        const auto found = std::ranges::find(mode.controls, control_id(id), &InfoControl::id);
+        REQUIRE(found != mode.controls.end());
+        return *found;
+    };
+    CHECK(mode.width > 0);
+    CHECK(find(AttractionControl::Mode).items == std::vector<std::u16string> { u"Back and forth" });
+    CHECK_FALSE(find(AttractionControl::Mode).enabled);
+    CHECK(find(AttractionControl::BlockSection).column == 0);
+    CHECK(find(AttractionControl::WaitFor).items.size() == 5);
+    CHECK(find(AttractionControl::WaitFor).value == 4); // Any load, the list's last
+    CHECK(find(AttractionControl::WaitFor).column == 1);
+    CHECK(find(AttractionControl::MinWaitOn).label == u"Least wait");
+    CHECK(find(AttractionControl::MinWaitOn).value == 1);
+    CHECK(find(AttractionControl::MinWait).value == 12);
+    CHECK(find(AttractionControl::MinWait).beside);
+    CHECK(find(AttractionControl::MaxWaitOn).value == 0); // No longest wait: unticked, its seconds greyed
+    CHECK_FALSE(find(AttractionControl::MaxWait).enabled);
+    CHECK(find(AttractionControl::LowFriction).column == 1);
+
+    // A launch's speed is set in the player's unit, in hundredths.
+    ride.mode = save::OperatingMode::PoweredLaunch;
+    ride.options.launch_speed = 10;
+    InfoUnits imperial;
+    imperial.distance = DistanceUnits::Imperial;
+    const InfoPage launch = attraction_page(AttractionTab::Mode, f, s, imperial);
+    const auto speed = std::ranges::find(launch.controls, control_id(AttractionControl::LaunchSpeed), &InfoControl::id);
+    REQUIRE(speed != launch.controls.end());
+    CHECK(speed->value == 2237);
+    CHECK(speed->text == u" mph");
+    CHECK(speed->decimals == 2);
+    CHECK(static_cast<float>(speed->value) / 100 / speed_scale(DistanceUnits::Imperial) == doctest::Approx(10).epsilon(0.001));
 
     CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
     ride.graphs.speed = { 1, 2, 3 };

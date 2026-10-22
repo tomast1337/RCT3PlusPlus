@@ -197,7 +197,7 @@ namespace rct3::ui
         int step = 1;
         int decimals = 0;                  ///< Of a number shown with a point, such as money in hundredths
         std::vector<std::u16string> items; ///< Of a list
-        std::u16string text;               ///< On a button, or typed
+        std::u16string text;               ///< On a button, typed, or a number's unit after it
         std::string icon;                  ///< A button's picture, instead of text
         std::vector<std::size_t> paints;   ///< The colour of each pot
         bool enabled = true;

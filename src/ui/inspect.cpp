@@ -3,6 +3,7 @@
 
 #include "core/maybe.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <format>
 #include <memory>
@@ -50,6 +51,24 @@ namespace rct3::ui
                 return *found;
         }
         return std::nullopt;
+    }
+
+    Rect covered_bounds(const Widget& w, float step)
+    {
+        const Rect r = w.rect();
+        if (!w.takes_pointer())
+            return r;
+        Rect found { r.x1, r.y1, r.x0, r.y0 };
+        for (float y = r.y0 + step / 2; y < r.y1; y += step)
+            for (float x = r.x0 + step / 2; x < r.x1; x += step)
+            {
+                if (!w.covers({ x, y }))
+                    continue;
+                found = { std::min(found.x0, x - step / 2), std::min(found.y0, y - step / 2), std::max(found.x1, x + step / 2), std::max(found.y1, y + step / 2) };
+            }
+        if (found.x0 > found.x1)
+            return { r.x0, r.y0, r.x0, r.y0 };
+        return { std::max(found.x0, r.x0), std::max(found.y0, r.y0), std::min(found.x1, r.x1), std::min(found.y1, r.y1) };
     }
 
     std::string type_name(const Widget& w)

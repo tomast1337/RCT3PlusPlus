@@ -108,6 +108,46 @@ namespace
         draw_skin_at(context, ui::game_skins::kMenuButtonSmall, { { 8, 8, 40, 41 }, { 50, 8, 82, 40 }, { 92, 8, 128, 44 }, { 138, 8, 162, 32 } });
     }
 
+    void draw_controls(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // Each at its picture's size; the boxes, rails and riders also stretched as their widgets stretch them.
+        using namespace ui::game_skins;
+        draw_skin_at(context, kStandardBorder, { { 8, 8, 88, 40 } });
+        draw_skin_at(context, kListBoxFocused, { { 96, 8, 176, 40 } });
+        draw_skin_at(context, kButton, { { 184, 8, 214, 38 } });
+        draw_skin_at(context, kTickbox, { { 222, 8, 234, 20 } });
+        draw_skin_at(context, kVerticalRail, { { 8, 48, 23, 128 } });
+        draw_skin_at(context, "VScrollBar_RiderUp", { { 8, 70, 23, 100 } });
+        draw_skin_at(context, kScrollUp, { { 8, 48, 23, 63 } });
+        draw_skin_at(context, kScrollDown, { { 8, 113, 23, 128 } });
+        draw_skin_at(context, kHorizontalRail, { { 32, 48, 132, 63 } });
+        draw_skin_at(context, "HScrollBar_RiderUp", { { 60, 48, 100, 63 } });
+        draw_skin_at(context, kScrollLeft, { { 32, 48, 47, 63 } });
+        draw_skin_at(context, kScrollRight, { { 117, 48, 132, 63 } });
+        float x = 32;
+        for (const std::string_view name : { "SquareArrowUp", "SquareArrowDown", "SquareArrowLeft", "SquareArrowRight", "SquareArrowUpDisabled", "SquareArrowDownDisabled" })
+        {
+            draw_skin_at(context, name, { { x, 72, x + 17, 89 } });
+            x += 22;
+        }
+        draw_skin_at(context, kDropdownOpener, { { 32, 96, 49, 113 } });
+        draw_skin_at(context, "ListBoxOpenerDisabled", { { 54, 96, 69, 111 } });
+        draw_skin_at(context, kSpinnerUp, { { 76, 96, 96, 104 } });
+        draw_skin_at(context, kSpinnerDown, { { 76, 104, 96, 112 } });
+        draw_skin_at(context, "SpinnerUpDisabled", { { 102, 96, 122, 104 } });
+        draw_skin_at(context, "SpinnerDownDisabled", { { 102, 104, 122, 112 } });
+    }
+
+    void draw_park_bar(ui::DrawContext& context, PanelLook, ui::Rect)
+    {
+        // A short bar: the left part, the divider with its notch, the right part.
+        constexpr float kTop = 8;
+        constexpr float kBottom = kTop + ui::park_bar::kHeight;
+        draw_skin_at(context, "Top_WindowFrame_Left", { { 8, kTop, 128, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::park_bar::kDividerWidth, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::park_bar::kDividerWidth, kTop, 260, kBottom } });
+    }
+
     void draw_menu_circles(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         draw_skin_at(context, ui::game_skins::kMenuCircle, { { 8, 8, 86, 88 }, { 100, 8, 160, 68 }, { 170, 8, 210, 48 } });
@@ -181,8 +221,21 @@ namespace
     std::vector<PanelCase> panel_cases()
     {
         return {
-            { "info-panel", 520, 175, draw_info_panel },         { "lozenge", 256, 104, draw_lozenges },        { "menu", 298, 146, draw_menus },         { "selected-row", 198, 66, draw_selected_rows },           { "button-face", 170, 52, draw_button_faces },        { "menu-circle", 218, 96, draw_menu_circles }, { "tutorial-disc", 340, 338, draw_tutorial_disc },
-            { "message-drawer", 490, 163, draw_message_drawer }, { "mini-window", 256, 136, draw_mini_window }, { "window", 336, 236, draw_main_window }, { "window-background", 200, 140, draw_window_background }, { "front-backdrop", 1024, 768, draw_front_backdrop }, { "label-band", 324, 138, draw_label_band },
+            { "info-panel", 520, 175, draw_info_panel },
+            { "lozenge", 256, 104, draw_lozenges },
+            { "menu", 298, 146, draw_menus },
+            { "selected-row", 198, 66, draw_selected_rows },
+            { "button-face", 170, 52, draw_button_faces },
+            { "menu-circle", 218, 96, draw_menu_circles },
+            { "tutorial-disc", 340, 338, draw_tutorial_disc },
+            { "message-drawer", 490, 163, draw_message_drawer },
+            { "mini-window", 256, 136, draw_mini_window },
+            { "window", 336, 236, draw_main_window },
+            { "window-background", 200, 140, draw_window_background },
+            { "front-backdrop", 1024, 768, draw_front_backdrop },
+            { "label-band", 324, 138, draw_label_band },
+            { "controls", 240, 136, draw_controls },
+            { "park-bar", 268, 44, draw_park_bar },
         };
     }
 

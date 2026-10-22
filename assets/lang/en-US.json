@@ -52,10 +52,10 @@
         "TurnItemLeft": "Turn the item being placed counterclockwise",
         "TurnItemRight": "Turn the item being placed clockwise",
         "Paths": {
-            "PickStart": "Click the ground to start a path",
-            "NotOwned": "The park does not own this land",
+            "PickStart": "Click to start a path",
+            "NotOwned": "The park does not own this",
             "OffMap": "Off the edge of the park",
-            "Underground": "The path would go into the ground; turn on cutting to dig it in",
+            "Underground": "Too low: turn on cutting",
             "Occupied": "Another path is in the way",
             "Blocked": "Something is in the way",
             "RouteHelp": "Route: point at a tile and the path finds its own way there from the arrow",

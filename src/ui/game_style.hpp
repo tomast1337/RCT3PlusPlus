@@ -148,9 +148,11 @@ namespace rct3::ui::game_skins
     [[nodiscard]] inline std::vector<CodedSkin> coded_skins()
     {
         using enum PanelLook;
+        using game_frames::Arrow;
         using game_frames::Quarter;
         return {
             { kTextButton, "lozenge", Coded, game_frames::lozenge() },
+            { "GUI2Swatch_BackgroundDisabled", "lozenge", Coded, game_frames::lozenge(false) },
             { kMenuBackground, "menu", Coded, game_frames::lozenge() },
             { kSelectedRow, "selected-row", Coded, game_frames::selected_row() },
             { kMenuButtonSmall, "button-face", Coded, game_frames::button_face() },
@@ -173,6 +175,38 @@ namespace rct3::ui::game_skins
             { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(kFrontDesign), front_screen::kStripRight) },
             { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch() },
             { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end() },
+            { kStandardBorder, "controls", Coded, game_frames::plain_box() },
+            { kListBox, "controls", Coded, game_frames::plain_box() },
+            { kListBoxFocused, "controls", Coded, game_frames::focused_box() },
+            { kButton, "controls", Coded, game_frames::round_button() },
+            { kTickbox, "controls", Coded, game_frames::tickbox() },
+            { kVerticalRail, "controls", Coded, game_frames::scroll_rail() },
+            { kHorizontalRail, "controls", Coded, game_frames::scroll_rail() },
+            { "VScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider() },
+            { "VScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider() },
+            { "VScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider() },
+            { "HScrollBar_RiderUp", "controls", Coded, game_frames::scroll_rider() },
+            { "HScrollBar_RiderUpOver", "controls", Coded, game_frames::scroll_rider() },
+            { "HScrollBar_RiderPressed", "controls", Coded, game_frames::scroll_rider() },
+            { kScrollUp, "controls", Coded, game_frames::scroll_arrow(Arrow::Up) },
+            { kScrollDown, "controls", Coded, game_frames::scroll_arrow(Arrow::Down) },
+            { kScrollLeft, "controls", Coded, game_frames::scroll_arrow(Arrow::Left) },
+            { kScrollRight, "controls", Coded, game_frames::scroll_arrow(Arrow::Right) },
+            { kDropdownOpener, "controls", Coded, game_frames::square_arrow(Arrow::Down, true) },
+            { "ListBoxOpenerDisabled", "controls", Coded, game_frames::opener_disabled() },
+            { "SquareArrowUp", "controls", Coded, game_frames::square_arrow(Arrow::Up, true) },
+            { "SquareArrowDown", "controls", Coded, game_frames::square_arrow(Arrow::Down, true) },
+            { "SquareArrowLeft", "controls", Coded, game_frames::square_arrow(Arrow::Left, true) },
+            { "SquareArrowRight", "controls", Coded, game_frames::square_arrow(Arrow::Right, true) },
+            { "SquareArrowUpDisabled", "controls", Coded, game_frames::square_arrow(Arrow::Up, false) },
+            { "SquareArrowDownDisabled", "controls", Coded, game_frames::square_arrow(Arrow::Down, false) },
+            { kSpinnerUp, "controls", Coded, game_frames::spinner(Arrow::Up, true) },
+            { kSpinnerDown, "controls", Coded, game_frames::spinner(Arrow::Down, true) },
+            { "SpinnerUpDisabled", "controls", Coded, game_frames::spinner(Arrow::Up, false) },
+            { "SpinnerDownDisabled", "controls", Coded, game_frames::spinner(Arrow::Down, false) },
+            { "Top_WindowFrame_Left", "park-bar", Coded, game_frames::park_bar_left() },
+            { "Top_WindowFrame_Middle", "park-bar", Coded, game_frames::park_bar_middle(park_bar::kDividerWidth, park_bar::kHeight, park_bar::kNotchRadius) },
+            { "Top_WindowFrame_Right", "park-bar", Coded, game_frames::park_bar_right() },
         };
     }
 

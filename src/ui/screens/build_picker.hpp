@@ -55,7 +55,7 @@ namespace rct3::ui
         inline constexpr float kCaptionX = 59;  ///< Right of the window's icon, under the title
         inline constexpr float kBarHeight = 20; ///< Of the search box and of the filters' row
         inline constexpr float kGap = 4;
-        inline constexpr float kFilter = 20;  ///< Width and height of a filter
+        inline constexpr float kFilter = 30;  ///< Width and height of a filter: the kinds' icons are this big
         inline constexpr float kGroupGap = 8; ///< Between the object, theme and pack filters
         inline constexpr float kNote = 16;    ///< Under the grid, while there is a note
 

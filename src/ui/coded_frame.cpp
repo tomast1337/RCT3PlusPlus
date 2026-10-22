@@ -11,7 +11,7 @@ namespace rct3::ui
     namespace
     {
 
-        /// How many times the diagonal's length the disc that cuts along it is: its edge then bows by under a
+        /// How many times the box's diagonal the disc that cuts along a line is: its edge then bows by under a
         /// thousandth of the diagonal, while staying small enough to measure in single precision.
         constexpr float kStraightCut = 256;
 
@@ -77,15 +77,20 @@ namespace rct3::ui
             shape.cut_x = shape.rect.x0 + shape.cut_x * s.x;
             shape.cut_y = shape.rect.y0 + shape.cut_y * s.y;
             shape.cut_radius *= r;
-            if (layer.below_diagonal)
+            if (layer.cut_line)
             {
-                // A disc so large that its edge is straight along the diagonal, lying over the part above it.
-                const float w = shape.rect.width();
-                const float h = shape.rect.height();
-                const float length = std::hypot(w, h);
-                const float radius = kStraightCut * length;
-                shape.cut_x = (shape.rect.x0 + shape.rect.x1) / 2 + h / length * radius;
-                shape.cut_y = (shape.rect.y0 + shape.rect.y1) / 2 - w / length * radius;
+                // A disc so large that its edge is straight along the line, lying over its left-hand side.
+                const auto at = [&](std::array<float, 2> p) { return std::array { shape.rect.x0 + p[0] * shape.rect.width(), shape.rect.y0 + p[1] * shape.rect.height() }; };
+                const auto [ax, ay] = at(layer.cut_line->from);
+                const auto [bx, by] = at(layer.cut_line->to);
+                const float dx = bx - ax;
+                const float dy = by - ay;
+                const float length = std::hypot(dx, dy);
+                if (length <= 0)
+                    continue;
+                const float radius = kStraightCut * std::hypot(shape.rect.width(), shape.rect.height());
+                shape.cut_x = (ax + bx) / 2 + dy / length * radius;
+                shape.cut_y = (ay + by) / 2 - dx / length * radius;
                 shape.cut_radius = radius;
             }
             if (tint != kWhite)

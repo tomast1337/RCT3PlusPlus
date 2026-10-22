@@ -49,8 +49,7 @@ namespace rct3::ui
         constexpr float kWeatherSize = 20;
         constexpr float kArrowWidth = 9;
         constexpr float kDateWidth = 210;
-        constexpr float kDividerWidth = 38;
-        constexpr float kRightStart = park_bar::kLeftWidth + kDividerWidth;
+        constexpr float kRightStart = park_bar::kLeftWidth + park_bar::kDividerWidth;
 
         /// Top of an item `height` tall centred above the frame's lower edge.
         float centred_top(float height)
@@ -229,7 +228,7 @@ namespace rct3::ui
     bool ParkBar::covers(Point p) const
     {
         const Rect r = rect();
-        const float dx = p.x - (r.x0 + park_bar::kLeftWidth + kDividerWidth / 2);
+        const float dx = p.x - (r.x0 + park_bar::kLeftWidth + park_bar::kDividerWidth / 2);
         const float dy = p.y - r.y1;
         return dx * dx + dy * dy > park_bar::kNotchRadius * park_bar::kNotchRadius;
     }

@@ -209,9 +209,9 @@ namespace rct3::render
         /// corner radii (Float4), 3 softness, outline width, light width and ring width (Float4), 4 to 7 the
         /// top, bottom, outline and light colours (UByte4Norm). Lengths in pixels. No texture.
         Shape,
-        /// For glow round bright parts of the screen. Inputs as Textured. Reads `DrawCommand::texture` four times,
-        /// colour red texels of it out from the point on each diagonal, and gives the average's part above colour
-        /// green, times colour blue, opaque.
+        /// One step of the glow round bright parts of the screen. Inputs as Textured. With colour alpha 1 it
+        /// shrinks `DrawCommand::texture` by half, keeping the part above colour green (0 keeps all); with alpha 0
+        /// it grows it with a tent of reads colour red texels apart. Times colour blue, opaque.
         Glow,
         /// Ambient occlusion worked out on the screen, one step of it a draw (app/scene/park_occlusion.hpp).
         /// Input: location 0 the position in clip space (Float2), drawn as is. The step and what it reads are

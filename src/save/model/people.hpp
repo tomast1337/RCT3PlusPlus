@@ -565,13 +565,13 @@ namespace rct3::save
     {
         PeopleObjectId id = 0;
         PeopleVec3 position;
-        PeopleVec3 orientation; ///< Euler angles in radians; y is the heading
-        std::uint8_t type = 0;  ///< 0..5, names not modelled
+        PeopleVec3 orientation { }; ///< Euler angles in radians; y is the heading
+        std::uint8_t type = 0;      ///< 0..5, names not modelled
         LitterState state = LitterState::OnGround;
         float create_time = 0;
-        PeopleRef path_tile;
+        PeopleRef path_tile { };
         /// Newer saves only. Bit 5 keeps the piece out of the park's rating; the other bits are not known.
-        std::optional<std::uint32_t> flags;
+        std::optional<std::uint32_t> flags { };
     };
 
     /// One of the sets of meshes people's heads, bodies and legs are picked from, named by the symbol the

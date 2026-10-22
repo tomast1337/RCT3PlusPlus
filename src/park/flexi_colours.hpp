@@ -57,9 +57,9 @@ namespace rct3::park
         std::uint32_t width = 0;
         std::uint32_t height = 0;
         std::array<Rgb, 256> palette { };
-        std::vector<std::uint8_t> indices; ///< width * height
-        std::vector<std::uint8_t> alpha;   ///< width * height, or empty for an opaque picture
-        std::uint32_t slots = 0;           ///< Bit k set: slot k is recoloured
+        std::vector<std::uint8_t> indices { }; ///< width * height
+        std::vector<std::uint8_t> alpha { };   ///< width * height, or empty for an opaque picture
+        std::uint32_t slots = 0;               ///< Bit k set: slot k is recoloured
     };
 
     /// `frame` as a palette image whose recoloured slots are `slots`. Nothing when the frame is malformed.

@@ -74,7 +74,7 @@ namespace rct3::parkfile
         simulation::Needs needs;
         simulation::Mood mood;
         std::int64_t cash = 0;
-        std::optional<simulation::Taste> taste;
+        std::optional<simulation::Taste> taste { };
         std::int32_t party = -1; ///< Guests with the same number go round together; -1 alone
         bool leader = false;
     };
@@ -92,7 +92,7 @@ namespace rct3::parkfile
         float laziness = 0;
         glm::vec3 position { 0.0f };
         float heading = 0;
-        std::optional<simulation::Patrol> patrol;
+        std::optional<simulation::Patrol> patrol { };
     };
 
     struct SavedPeople

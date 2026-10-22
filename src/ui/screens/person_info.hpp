@@ -59,7 +59,7 @@ namespace rct3::ui
         const save::RideModel* rides = nullptr;
         /// Staff the simulation walks: the tiles of their patrol area (0 for none, the whole park), and whether
         /// clicks on the ground paint it. Empty for others.
-        std::optional<std::size_t> patrol_tiles;
+        std::optional<std::size_t> patrol_tiles { };
         bool painting_patrol = false;
         int patrol_brush = 0;            ///< Of kPatrolBrushes
         std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none

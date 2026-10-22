@@ -93,3 +93,6 @@ field, are fine. A new duplicate of an existing constant needs a reason in its c
   `std::format("cannot read {}: {}", path.string(), ec.message())`, not `"cannot read " + path.string() + ...`.
   Pass values straight in, without `std::to_string` or `std::string(view)`. Appending one piece with `+=` is
   fine. `std::u16string` text has no `std::format`, so it keeps `+`.
+- Build a value with designated initializers (`T { .a = x, .b = y }`), fields in declaration order, not by
+  declaring it and assigning field after field. Assign afterwards only fields that depend on control flow.
+  Give every struct member a default (`{ }` when nothing else fits) so leaving a field out does not warn.

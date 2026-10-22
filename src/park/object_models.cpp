@@ -576,12 +576,15 @@ namespace rct3::park
                 const ovl::StaticShape* shape = add_static(level, lod.static_shape, visual_path);
                 if (shape == nullptr)
                     continue;
-                if (model.lights.empty())
+                if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;
                     for (const ovl::ShapeEffect& e : shape->effects)
                         places.push_back({ .name = e.name, .place = column_matrix(e.transform) });
-                    model.lights = model_lights(places);
+                    if (model.lights.empty())
+                        model.lights = model_lights(places);
+                    if (model.effects.empty())
+                        model.effects = model_effects(places);
                 }
             }
             else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
@@ -619,7 +622,7 @@ namespace rct3::park
                             model.arm_joints.push_back(column_matrix(shape->bones[static_cast<std::size_t>(b)].world));
                 }
                 const bool rigged = joint_of.empty() && !model.rig && !lod.animations.empty();
-                if (model.lights.empty())
+                if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;
                     for (std::size_t b = 0; b < shape->bones.size(); ++b)
@@ -627,7 +630,10 @@ namespace rct3::park
                         const auto bone = static_cast<std::int32_t>(b);
                         places.push_back({ .name = shape->bones[b].name, .place = column_matrix(shape->bones[b].world), .bone = rigged ? bone : !joint_of.empty() ? joint_of[b] : -1 });
                     }
-                    model.lights = model_lights(places);
+                    if (model.lights.empty())
+                        model.lights = model_lights(places);
+                    if (model.effects.empty())
+                        model.effects = model_effects(places);
                 }
                 if (rigged)
                 {

@@ -78,3 +78,15 @@ TEST_CASE("lights come in number order, white unless named")
     CHECK(lights[0].colour == glm::vec3(1.0f));
     CHECK(lights[0].radius == doctest::Approx(1));
 }
+
+TEST_CASE("particle effects take their name from the start and their way from the end")
+{
+    const std::array places { at("particlestart02_Smoke", { 1, 0, 0 }), at("particleend02", { 1, 0, 2 }), at("ParticleStart01_campfire", { 0, 1, 0 }), at("particlestart03", { }), at("particleend01_campfire", { 0, 1, 0 }) };
+    const std::vector<ModelEffect> effects = model_effects(places);
+    REQUIRE(effects.size() == 2);
+    CHECK(effects[0].effect == "campfire");
+    CHECK(effects[0].up == glm::vec3(0, 1, 0)); // An end on the start itself gives no way: up
+    CHECK(effects[1].effect == "smoke");
+    CHECK(effects[1].position == glm::vec3(1, 0, 0));
+    CHECK(effects[1].up == glm::vec3(0, 0, 1));
+}

@@ -121,4 +121,32 @@ namespace rct3::park
         return out;
     }
 
+    std::vector<ModelEffect> model_effects(std::span<const NamedPlace> places)
+    {
+        std::vector<std::pair<int, ModelEffect>> effects;
+        for (const NamedPlace& start : places)
+        {
+            const auto mark = mark_of(start.name, "particlestart");
+            if (!mark || !mark->words.starts_with('_') || mark->words.size() < 2)
+                continue;
+            ModelEffect effect { .effect = mark->words.substr(1), .position = position_of(start), .bone = start.bone };
+            for (const NamedPlace& other : places)
+            {
+                const auto end = mark_of(other.name, "particleend");
+                const glm::vec3 way = position_of(other) - effect.position;
+                if (end && end->number == mark->number && glm::length(way) > 0)
+                {
+                    effect.up = glm::normalize(way);
+                    break;
+                }
+            }
+            effects.emplace_back(mark->number, std::move(effect));
+        }
+        std::ranges::stable_sort(effects, { }, &std::pair<int, ModelEffect>::first);
+        std::vector<ModelEffect> out;
+        for (auto& e : effects)
+            out.push_back(std::move(e.second));
+        return out;
+    }
+
 } // namespace rct3::park

@@ -12,6 +12,9 @@
 //
 // Words before "lightstart" (seen: "simple", "medium", "nb") and a word naming the kind of lamp ("lamp",
 // "torch") are read past: every light shines alike here.
+//
+// Particle effects are marked the same way: "particlestart" N, then an underscore and the effect's name (an
+// effect file's name, any case). A point "particleend" N, named or not, gives the way the effect points.
 #pragma once
 
 #include "math/glm.hpp"
@@ -19,6 +22,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -44,5 +48,16 @@ namespace rct3::park
 
     /// The lights `places` mark, in light number order.
     [[nodiscard]] std::vector<ModelLight> model_lights(std::span<const NamedPlace> places);
+
+    struct ModelEffect
+    {
+        std::string effect { };            ///< The effect file's name, lower case, without its extension
+        glm::vec3 position { 0.0f };       ///< Model space
+        glm::vec3 up { 0.0f, 1.0f, 0.0f }; ///< The way it points, model space, length 1
+        std::int32_t bone = -1;            ///< The bone that carries it, for a bone shape
+    };
+
+    /// The particle effects `places` mark, in number order.
+    [[nodiscard]] std::vector<ModelEffect> model_effects(std::span<const NamedPlace> places);
 
 } // namespace rct3::park

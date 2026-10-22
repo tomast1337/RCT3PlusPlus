@@ -1,7 +1,7 @@
 # Clean room: keeping game material out of the repository
 
 This repository is public-facing. Nothing that comes from the game, or from reading the game, belongs in it.
-This guide is mainly for AI agents, who see game files and decompiler output constantly and copy things
+This guide is mainly for AI agents, who see game files constantly and copy things
 into the tree without noticing.
 
 ## The rule
@@ -22,9 +22,8 @@ Original code, original prose and synthetic test data are in. Everything below i
 - Screenshots or recordings of the original game.
 
 **Derived documentation**
-- Decompiler output: Ghidra listings, pseudocode, call graphs, struct dumps, RTTI dumps, function names
-  recovered from the binary, and addresses of functions in `RCT3.exe`.
-- Ghidra project files (`.gpr`, `.rep`, `.lock`), exported databases, scripts that embed the above.
+- Decompiler or disassembler output of any kind: listings, pseudocode, call graphs, structure dumps,
+  names or addresses recovered from the game's program.
 - Copied text from game manuals, in-game text, or the original developer's documentation or SDK.
 - Long verbatim quotes from other projects' docs or code. Link to them instead.
 
@@ -77,14 +76,13 @@ Values read from data or save files are fine to use; say which file they come fr
 
 ## Where game-derived material goes
 
-Long-term private notes live in a workspace outside this repository, not here. `local/` at the repository
-root is git-ignored and is for short-lived scratch: dumps, exports, decompiler excerpts and anything else
-game-derived that you need while working. It exists on one machine only.
+`local/` at the repository root is git-ignored and is for short-lived scratch: dumps, exports and anything
+else game-derived that you need while working. It exists on one machine only.
 
 - Agents may create and write files in `local/` freely.
-- Agents must not reference `local/` contents or the private workspace from tracked files: no `#include`,
+- Agents must not reference `local/` contents from tracked files: no `#include`,
   no doc links, no paths, no pasted excerpts. A tracked file must build and read correctly on a machine
-  where both are absent.
+  where it is absent.
 - `.gitignore` also blocks common game extensions as a safety net. Do not rely on it, and do not add
   negations (`!pattern`) for them.
 

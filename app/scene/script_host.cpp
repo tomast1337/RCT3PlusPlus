@@ -298,12 +298,19 @@ namespace rct3::scene
         engine_.define("map.effects", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             Json effects = Json::array();
-            for (const ParkParticles::Shown& s : park_->particles.shown)
-            {
-                const glm::vec3 p = s.position;
-                effects.push_back({ { "effect", s.effect }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
-            }
+            for (const auto* list : { &park_->particles.shown, &park_->particles.fired })
+                for (const ParkParticles::Shown& s : *list)
+                {
+                    const glm::vec3 p = s.position;
+                    effects.push_back({ { "effect", s.effect }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
+                }
             return effects;
+        });
+        engine_.define("map.fire", [this](const Json& a) {
+            const save::TerrainGrid& g = grid_of(park_);
+            if (a.empty() || !a[0].is_object() || !a[0].contains("effect"))
+                return Json(false);
+            return Json(fire_park_particles(park_->particles, a[0]["effect"].get<std::string>(), world_point(g, a[0]), glm::vec3(0, 1, 0)));
         });
         engine_.define("map.paths", [this](const Json&) {
             grid_of(park_);

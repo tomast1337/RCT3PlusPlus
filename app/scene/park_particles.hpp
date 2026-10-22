@@ -17,6 +17,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::scene
@@ -36,6 +37,7 @@ namespace rct3::scene
 
         std::optional<particles::Library> library;
         std::vector<Shown> shown;
+        std::vector<Shown> fired; ///< Effects set off once, such as fireworks; dropped when they end
         random::RandomState random;
         std::map<std::string, render::TextureHandle> atlases;
         render::PipelineHandle added;
@@ -47,6 +49,8 @@ namespace rct3::scene
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
     /// Starts the effects `effects` name, in place of any running.
     void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects);
+    /// Sets off the effect `effect` once at `position`, pointing along `up`. False when there is no such effect.
+    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up);
     /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are
     /// alive; the rest wait and are not drawn.
     void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget);

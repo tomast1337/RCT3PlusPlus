@@ -31,6 +31,20 @@ namespace rct3::scene
             render::VertexAttribute { 1, render::VertexFormat::Float4, offsetof(Corner, colour) },
             render::VertexAttribute { 2, render::VertexFormat::Float2, offsetof(Corner, uv) },
         };
+        /// A run of `effect` at `position`, each on numbers of its own; nothing when the install lacks it.
+        std::optional<ParkParticles::Shown> start(ParkParticles& particles, std::string_view name, glm::vec3 position, const glm::mat3& axes, bool loops)
+        {
+            const particles::Effect* effect = particles.library->effect(name);
+            if (effect == nullptr)
+                return std::nullopt;
+            const random::RandomState own = random::seeded(random::Seed { random::next(particles.random) });
+            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, loops, kRunCapacity), .sprites = { }, .position = position, .effect = std::string(name) };
+            shown.run.place(position, axes);
+            for (const particles::Particle& kind : effect->particles)
+                shown.sprites.push_back(particles.library->sprite(kind.skin));
+            return shown;
+        }
+
     } // namespace
 
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random)
@@ -63,32 +77,37 @@ namespace rct3::scene
         std::size_t missing = 0;
         for (const park::PlacedEffect& placed : effects)
         {
-            const particles::Effect* effect = particles.library->effect(placed.effect);
-            if (effect == nullptr)
-            {
+            if (auto shown = start(particles, placed.effect, placed.position, placed.axes, true))
+                particles.shown.push_back(std::move(*shown));
+            else
                 ++missing;
-                continue;
-            }
-            // Each effect runs on numbers of its own.
-            const random::RandomState own = random::seeded(random::Seed { random::next(particles.random) });
-            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, true, kRunCapacity), .sprites = { }, .position = placed.position, .effect = std::string(placed.effect) };
-            shown.run.place(placed.position, placed.axes);
-            for (const particles::Particle& kind : effect->particles)
-                shown.sprites.push_back(particles.library->sprite(kind.skin));
-            particles.shown.push_back(std::move(shown));
         }
         logging::logger("particles").info("{} particle effects{}", particles.shown.size(), missing > 0 ? std::format(", {} named effects not found", missing) : std::string { });
     }
 
+    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up)
+    {
+        if (!particles.library)
+            return false;
+        const glm::vec3 along = glm::normalize(up);
+        const glm::vec3 side = glm::normalize(glm::cross(std::abs(along.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0), along));
+        auto shown = start(particles, effect, position, glm::mat3(side, along, glm::cross(side, along)), false);
+        if (shown)
+            particles.fired.push_back(std::move(*shown));
+        return shown.has_value();
+    }
+
     void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget)
     {
+        std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
         std::vector<std::pair<float, ParkParticles::Shown*>> near;
-        for (ParkParticles::Shown& shown : particles.shown)
-        {
-            shown.awake = false;
-            if (const float d = glm::distance(shown.position, eye); d < kShowDistance)
-                near.emplace_back(d, &shown);
-        }
+        for (auto* list : { &particles.shown, &particles.fired })
+            for (ParkParticles::Shown& shown : *list)
+            {
+                shown.awake = false;
+                if (const float d = glm::distance(shown.position, eye); d < kShowDistance)
+                    near.emplace_back(d, &shown);
+            }
         std::ranges::sort(near, { }, &std::pair<float, ParkParticles::Shown*>::first);
         std::size_t alive = 0;
         for (const auto& [distance, shown] : near)
@@ -119,35 +138,36 @@ namespace rct3::scene
             std::array<Corner, 6> corners;
         };
         std::map<std::pair<std::string, bool>, std::vector<Quad>> batches;
-        for (const ParkParticles::Shown& shown : particles.shown)
-        {
-            if (!shown.awake)
-                continue;
-            const particles::ParticleArrays& live = shown.run.particles();
-            for (std::size_t i = 0; i < live.count(); ++i)
+        for (const auto* list : { &particles.shown, &particles.fired })
+            for (const ParkParticles::Shown& shown : *list)
             {
-                const particles::Sprite* sprite = shown.sprites[live.kind[i]];
-                if (live.age[i] < 0 || sprite == nullptr || sprite->frames.empty())
+                if (!shown.awake)
                     continue;
-                // shortcut: no stretching along the motion, trails or taller drawing yet (VelStretch, BurnLength,
-                // UpScale); upgrade when fireworks are compared with the original.
-                const particles::Look look = particles::look(shown.run.effect(), live, i);
-                // Added sprites (fire, sparks) are only their colour; their opacity curve is left at 0.
-                if (look.size <= 0 || (sprite->blended ? look.colour.a <= 0 : glm::vec3(look.colour) == glm::vec3(0.0f)))
-                    continue;
-                const auto& f = sprite->frames[sprite->frame(live.age[i], live.roll[i] / 6.2832f)];
-                const float half = look.size / 2;
-                const glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
-                const glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
-                const glm::vec3 p = live.position[i];
-                const glm::vec4 c = sprite->blended ? glm::vec4(glm::vec3(look.colour) * dim, look.colour.a) : glm::vec4(glm::vec3(look.colour), 1.0f);
-                const Corner a { p - across - along, c, { f[0], f[3] } };
-                const Corner b { p + across - along, c, { f[2], f[3] } };
-                const Corner d { p + across + along, c, { f[2], f[1] } };
-                const Corner e { p - across + along, c, { f[0], f[1] } };
-                batches[{ sprite->atlas, sprite->blended }].push_back({ glm::distance(p, eye), { a, b, d, a, d, e } });
+                const particles::ParticleArrays& live = shown.run.particles();
+                for (std::size_t i = 0; i < live.count(); ++i)
+                {
+                    const particles::Sprite* sprite = shown.sprites[live.kind[i]];
+                    if (live.age[i] < 0 || sprite == nullptr || sprite->frames.empty())
+                        continue;
+                    // shortcut: no stretching along the motion, trails or taller drawing yet (VelStretch, BurnLength,
+                    // UpScale); upgrade when fireworks are compared with the original.
+                    const particles::Look look = particles::look(shown.run.effect(), live, i);
+                    // Added sprites (fire, sparks) are only their colour; their opacity curve is left at 0.
+                    if (look.size <= 0 || (sprite->blended ? look.colour.a <= 0 : glm::vec3(look.colour) == glm::vec3(0.0f)))
+                        continue;
+                    const auto& f = sprite->frames[sprite->frame(live.age[i], live.roll[i] / 6.2832f)];
+                    const float half = look.size / 2;
+                    const glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
+                    const glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
+                    const glm::vec3 p = live.position[i];
+                    const glm::vec4 c = sprite->blended ? glm::vec4(glm::vec3(look.colour) * dim, look.colour.a) : glm::vec4(glm::vec3(look.colour), 1.0f);
+                    const Corner a { p - across - along, c, { f[0], f[3] } };
+                    const Corner b { p + across - along, c, { f[2], f[3] } };
+                    const Corner d { p + across + along, c, { f[2], f[1] } };
+                    const Corner e { p - across + along, c, { f[0], f[1] } };
+                    batches[{ sprite->atlas, sprite->blended }].push_back({ glm::distance(p, eye), { a, b, d, a, d, e } });
+                }
             }
-        }
         for (auto& [key, quads] : batches)
         {
             const auto atlas = particles.atlases.find(key.first);

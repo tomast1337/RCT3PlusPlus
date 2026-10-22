@@ -956,9 +956,9 @@ namespace rct3::scene
         // A design is laid whole, piece after piece from the first, and paid for whatever the park has, then
         // its doors where they stood beside its stations. Its price is its pieces': the only scenery designs
         // keep is the style's standard entrance and exit, which their files price at nothing.
-        // shortcut: the ride's own settings and colours are left out, upgrade when the ride window sets them.
         const std::vector<save::TrackPiece> design = std::exchange(b.design, { });
         const std::vector<TrackBuilding::DesignDoor> doors = std::exchange(b.design_doors, { });
+        const std::optional<save::Ride> settings = std::exchange(b.design_ride, std::nullopt);
         const std::int64_t cash = scene.park.cash.value_or(0);
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
@@ -988,6 +988,16 @@ namespace rct3::scene
         }
         if (!design.empty() && ride.track->pieces.size() == design.size())
         {
+            // It runs as the design was set to run, in the design's colours.
+            // shortcut: its trains stay the new ride's own, upgrade when the vehicle window sets them.
+            if (settings)
+            {
+                ride.mode = settings->mode;
+                ride.options = settings->options;
+                ride.car_colours = settings->car_colours;
+                ride.fence_colours = settings->fence_colours;
+                ride.queue_colours = settings->queue_colours;
+            }
             // Moved and turned as the first piece was.
             const save::TrackPiece& from = design.front();
             const save::TrackPiece& to = ride.track->pieces.front();
@@ -1009,7 +1019,7 @@ namespace rct3::scene
             }
         }
         if (!design.empty())
-            logging::logger("park").info("design laid with {} of {} pieces for {}", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0));
+            logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0), std::to_underlying(ride.mode), ride.options.lift_speed);
         // A ride that is one building is done once set down: on to its window, where its doors are placed.
         if (*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece && !ride.track->pieces.empty())
         {
@@ -1042,6 +1052,7 @@ namespace rct3::scene
         b.arm_back = 0;
         b.designs.clear();
         b.design.clear();
+        b.design_ride.reset();
         refresh(scene, b, assets);
         if (!scene.desktop->root().find(kPanelName))
         {
@@ -1234,6 +1245,7 @@ namespace rct3::scene
                     save::Track& track = *scene.rides.rides.at(*b.ride).track;
                     track.segments.push_back({ .first_piece = track.pieces.size() });
                     b.design.clear();
+                    b.design_ride.reset();
                     break;
                 }
             }
@@ -1270,6 +1282,7 @@ namespace rct3::scene
             const std::size_t picked = designs->selected().value_or(0);
             const auto design = picked > 0 && picked <= b.designs.size() ? design_ride(b.designs[picked - 1]) : std::nullopt;
             b.design = design ? design->ride.track->pieces : std::vector<save::TrackPiece> { };
+            b.design_ride = design ? std::optional(design->ride) : std::nullopt;
             b.design_doors.clear();
             for (std::size_t i = 0; design && i < design->ride.stations.size(); ++i)
             {

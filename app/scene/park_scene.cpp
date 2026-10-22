@@ -212,6 +212,7 @@ namespace rct3::scene
                 f.music = scene.tunes;
                 if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                     f.tune = tune->second;
+                f.low_friction = scene.low_friction.contains(f.ride->base.id);
                 const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
                 if (f.ride->kind == save::RideKind::Tracked)
@@ -487,7 +488,7 @@ namespace rct3::scene
 
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
-        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets)
+        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             using enum ui::AttractionControl;
             save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
@@ -573,6 +574,8 @@ namespace rct3::scene
             else if (change.id == ui::control_id(Circuits))
             {
                 // A go under way runs as many times round as the new count, or stops if it is past it.
+                // shortcut: a tracked ride keeps the count but its trains go round once; run the laps once the
+                // trains count them.
                 ride->loop_count = change.value;
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
@@ -593,6 +596,34 @@ namespace rct3::scene
                         show->order.push_back(offers[static_cast<std::size_t>(change.value)]);
                 }
                 stage_show(scene, *show);
+            }
+            else if (change.id == ui::control_id(BlockSection))
+                ride->options.block_sectioned = change.value != 0; // shortcut: stored, the trains do not keep blocks yet
+            else if (change.id == ui::control_id(SyncStations))
+                ride->options.sync_trains = change.value != 0; // shortcut: stored, stations do not wait for each other yet
+            else if (change.id == ui::control_id(LeaveOnArrival))
+                ride->options.leave_if_other_train_enters_station = change.value != 0; // shortcut: stored, not yet obeyed
+            else if (change.id == ui::control_id(LowFriction))
+            {
+                if (change.value != 0)
+                    scene.low_friction.insert(ride->base.id);
+                else
+                    scene.low_friction.erase(ride->base.id);
+            }
+            else if (change.id == ui::control_id(LaunchSpeed) || change.id == ui::control_id(LiftSpeed))
+            {
+                // The page shows hundredths of the player's unit.
+                const float speed = static_cast<float>(change.value) / 100 / ui::speed_scale(info_units(assets, options).distance);
+                if (change.id == ui::control_id(LaunchSpeed))
+                    ride->options.launch_speed = speed; // shortcut: stored, launches run at the track's own speed yet
+                else
+                {
+                    ride->options.lift_speed = speed;
+                    if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                        if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
+                            for (simulation::Coaster& c : fleet->trains)
+                                c.lift_speed = c.station_speed = speed;
+                }
             }
             else if (change.id == ui::control_id(Music))
                 scene.ride_tunes[ride->base.id] = static_cast<std::size_t>(std::max(change.value, 0));
@@ -1015,7 +1046,7 @@ namespace rct3::scene
             }
             else if (change && scene.shown)
             {
-                change_attraction(device, scene, *info, *scene.shown, *change, assets);
+                change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
                 // Longer trains fit fewer times round the track, so the page shows the new limits; a new name shows.
                 if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name))
                     show_info_page(scene, *info, assets, options);

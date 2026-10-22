@@ -10,6 +10,7 @@
 #include <cmath>
 #include <format>
 #include <span>
+#include <tuple>
 #include <utility>
 
 namespace rct3::ui
@@ -85,7 +86,12 @@ namespace rct3::ui
         /// The loads a train can wait for, in the order of the operating page's list, which is the order the
         /// save numbers them in.
         constexpr std::array<std::string_view, 5> kLoads = { "RideOpModeDialog_FullLoad", "RideOpModeDialog_3_4Load", "RideOpModeDialog_1_2Load", "RideOpModeDialog_1_4Load", "RideOpModeDialog_AnyLoad" };
-        constexpr std::array<std::string_view, 2> kModeSections = { "AttractionDetails_RideOpModeHelp", "RideOpModeDialog_WaitFor" };
+        /// Our own ranges for the speeds the operating page sets, in metres a second.
+        constexpr std::pair<float, float> kLaunchSpeeds { 4, 50 };
+        constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
+        constexpr int kMostTrackCircuits = 20;
+        constexpr float kModePageWidth = 600;
+        constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
 
         constexpr float kGravity = 9.81f;
@@ -158,11 +164,6 @@ namespace rct3::ui
         std::u16string force(float acceleration)
         {
             return ascii(std::format("{:.2f} g", acceleration / kGravity));
-        }
-
-        std::u16string yes_no(bool value, const StringTable& strings)
-        {
-            return text(strings, value ? "Yes" : "No");
         }
 
         std::u16string percent(float value)
@@ -402,10 +403,12 @@ namespace rct3::ui
             return c;
         }
 
-        /// A waiting time: its tick, and its seconds while ticked.
+        /// A waiting time: its tick, and its seconds beside it while ticked.
         void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::int32_t value)
         {
-            page.controls.push_back(tick(on, key, text(strings, key), value >= 0));
+            InfoControl t = tick(on, key, text(strings, key), value >= 0);
+            t.column = 1;
+            page.controls.push_back(std::move(t));
             InfoControl c;
             c.id = control_id(seconds);
             c.name = std::format("{}_seconds", key);
@@ -414,6 +417,11 @@ namespace rct3::ui
             c.maximum = kMostWait;
             c.step = kWaitStep;
             c.enabled = value >= 0;
+            c.column = 1;
+            c.beside = true;
+            c.width = kSpeedWidth;
+            const std::u16string seconds_words = text(strings, "ManySeconds");
+            c.text = seconds_words.substr(std::min(seconds_words.find(u'#') + 1, seconds_words.size()));
             page.controls.push_back(std::move(c));
         }
 
@@ -451,7 +459,7 @@ namespace rct3::ui
             page.controls.push_back(std::move(del));
         }
 
-        void mode(InfoPage& page, const save::Ride& ride, std::size_t section, const StringTable& strings, const InfoUnits& units)
+        void mode(InfoPage& page, const save::Ride& ride, bool low_friction, const StringTable& strings, const InfoUnits& units)
         {
             const auto m = static_cast<std::size_t>(ride.mode);
             if (ride.kind != save::RideKind::Tracked)
@@ -472,36 +480,75 @@ namespace rct3::ui
                 }
                 return;
             }
+            // Two columns, as the game lays them out: how it runs on the left, when its trains leave on the right.
             const save::OperatingOptions& o = ride.options;
-            for (const std::string_view key : kModeSections)
-                page.sections.push_back(text(strings, key));
-            page.section = std::min(section, kModeSections.size() - 1);
-            if (page.section == 1)
-            {
-                // The page has room for these five rows only under the sections.
-                InfoControl c;
-                c.id = control_id(AttractionControl::WaitFor);
-                c.name = "RideOpModeDialog_WaitFor";
-                c.kind = InfoControlKind::Choice;
-                c.label = text(strings, "RideOpModeDialog_WaitFor");
-                for (const std::string_view key : kLoads)
-                    c.items.push_back(text(strings, key));
-                c.value = o.wait_for_load >= 0 && std::cmp_less(o.wait_for_load, kLoads.size()) ? o.wait_for_load : -1;
-                page.controls.push_back(std::move(c));
-                wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, "RideOpModeDialog_MinWaitTime", strings, o.min_wait);
-                wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, "RideOpModeDialog_MaxWaitTime", strings, o.max_wait);
-                return;
-            }
+            page.width = kModePageWidth;
+            InfoControl list;
+            list.id = control_id(AttractionControl::Mode);
+            list.name = "RideOpModeDialog_Mode";
+            list.kind = InfoControlKind::Choice;
+            // shortcut: the modes a ride's track allows are not read, so the list holds its own mode only and is
+            // greyed; offer the others once the track kinds' modes are read.
             if (m < kModeNames.size())
-                page.heading = text(strings, kModeNames[m]);
-            add(page, strings, "RideOpModeDialog_BlockSection", yes_no(o.block_sectioned, strings));
-            add(page, strings, "RideOpModeDialog_SyncStations", yes_no(o.sync_trains, strings));
+                list.items.push_back(text(strings, kModeNames[m]));
+            list.enabled = false;
+            page.controls.push_back(std::move(list));
+            const auto left_tick = [&](AttractionControl id, std::string_view key, bool on, std::string_view help = { }) {
+                InfoControl c = tick(id, key, text(strings, key), on);
+                c.help = help.empty() ? std::u16string { } : text(strings, help);
+                page.controls.push_back(std::move(c));
+            };
+            left_tick(AttractionControl::BlockSection, "RideOpModeDialog_BlockSection", o.block_sectioned);
             using enum save::OperatingMode;
             const bool launched = ride.mode == PoweredLaunch || ride.mode == ReverseInclinedLaunch || ride.mode == UpwardsLaunch || ride.mode == MultiplePoweredLaunch;
-            if (launched)
-                add(page, strings, "RideOpModeDialog_LaunchSpeed", speed(o.launch_speed, units.distance));
-            else if (o.lift_speed > 0)
-                add(page, strings, "RideOpModeDialog_LiftChainSpeed", speed(o.lift_speed, units.distance));
+            if (launched || o.lift_speed > 0)
+            {
+                // In hundredths of the player's unit, over a range of our own.
+                const float scale = speed_scale(units.distance) * 100;
+                const auto [low, high, step] = launched ? std::tuple { kLaunchSpeeds.first, kLaunchSpeeds.second, 1.0f } : std::tuple { kLiftSpeeds.first, kLiftSpeeds.second, 0.1f };
+                const std::string_view key = launched ? "RideOpModeDialog_LaunchSpeed" : "RideOpModeDialog_LiftChainSpeed";
+                InfoControl c;
+                c.id = control_id(launched ? AttractionControl::LaunchSpeed : AttractionControl::LiftSpeed);
+                c.name = key;
+                c.label = text(strings, key);
+                c.minimum = static_cast<int>(std::lround(low * scale));
+                c.maximum = static_cast<int>(std::lround(high * scale));
+                c.value = static_cast<int>(std::lround((launched ? o.launch_speed : o.lift_speed) * scale));
+                c.step = static_cast<int>(std::lround(step * 100));
+                c.decimals = 2;
+                c.text = std::u16string(u" ") + std::u16string(speed_unit(units.distance));
+                c.width = kSpeedWidth;
+                page.controls.push_back(std::move(c));
+            }
+            InfoControl laps;
+            laps.id = control_id(AttractionControl::Circuits);
+            laps.name = "RideOpModeDialog_NumCircuits";
+            laps.label = text(strings, laps.name);
+            laps.value = std::clamp(ride.loop_count, 1, kMostTrackCircuits);
+            laps.minimum = 1;
+            laps.maximum = kMostTrackCircuits;
+            page.controls.push_back(std::move(laps));
+            left_tick(AttractionControl::SyncStations, "RideOpModeDialog_SyncStations", o.sync_trains, "RideOpModeDialog_SyncStations_Tooltip");
+
+            InfoControl wait;
+            wait.id = control_id(AttractionControl::WaitFor);
+            wait.name = "RideOpModeDialog_WaitFor";
+            wait.kind = InfoControlKind::Choice;
+            wait.label = text(strings, "RideOpModeDialog_WaitFor");
+            for (const std::string_view key : kLoads)
+                wait.items.push_back(text(strings, key));
+            wait.value = o.wait_for_load >= 0 && std::cmp_less(o.wait_for_load, kLoads.size()) ? o.wait_for_load : -1;
+            wait.column = 1;
+            page.controls.push_back(std::move(wait));
+            wait_controls(page, AttractionControl::MinWaitOn, AttractionControl::MinWait, "RideOpModeDialog_MinWaitTime", strings, o.min_wait);
+            wait_controls(page, AttractionControl::MaxWaitOn, AttractionControl::MaxWait, "RideOpModeDialog_MaxWaitTime", strings, o.max_wait);
+            for (const auto& [id, key, on, help] : { std::tuple { AttractionControl::LeaveOnArrival, "RideOpModeDialog_LeaveIfAnotherArrives", o.leave_if_other_train_enters_station, "RideOpModeDialog_LeaveIfAnotherArrives_Tooltip" }, std::tuple { AttractionControl::LowFriction, "RideOpModeDialog_LowFriction", low_friction, "RideOpModeDialog_LowFriction_TT" } })
+            {
+                InfoControl c = tick(id, key, text(strings, key), on);
+                c.help = text(strings, help);
+                c.column = 1;
+                page.controls.push_back(std::move(c));
+            }
         }
 
         void graphs(InfoPage& page, const save::Ride& ride, const StringTable& strings)
@@ -609,6 +656,16 @@ namespace rct3::ui
     std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings)
     {
         return status(attraction, strings);
+    }
+
+    float speed_scale(DistanceUnits units)
+    {
+        return units == DistanceUnits::Imperial ? kMphPerMs : units == DistanceUnits::SI ? 1.0f : kKmhPerMs;
+    }
+
+    std::u16string_view speed_unit(DistanceUnits units)
+    {
+        return units == DistanceUnits::Imperial ? u"mph" : units == DistanceUnits::SI ? u"m/s" : u"km/h";
     }
 
     std::u16string attraction_name(const save::AttractionCommon& attraction, const StringTable& strings)
@@ -761,7 +818,7 @@ namespace rct3::ui
                 if (f.show)
                     show(page, *f.show, section, strings);
                 else if (f.ride)
-                    mode(page, *f.ride, section, strings, units);
+                    mode(page, *f.ride, f.low_friction, strings, units);
                 break;
             case AttractionTab::Graphs:
                 if (f.ride)

@@ -294,6 +294,8 @@ namespace rct3::ui
                     n.maximum = c.maximum;
                     n.step = c.step;
                     n.decimals = c.decimals;
+                    n.unit = c.text;
+                    n.unit = c.text;
                     n.set_value(c.value);
                     w = &n;
                     break;

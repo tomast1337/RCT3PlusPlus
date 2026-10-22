@@ -39,6 +39,8 @@ namespace rct3::ui
         int step = 1;
         /// Places after the point the value is shown with: 2 shows 150 as 1.50, and reads 1.5 back as 150.
         int decimals = 0;
+        /// Shown after the number, as " mph"; typed text may keep it or leave it out.
+        std::u16string unit;
 
         [[nodiscard]] int value() const
         {

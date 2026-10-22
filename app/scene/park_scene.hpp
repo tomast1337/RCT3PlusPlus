@@ -400,6 +400,10 @@ namespace rct3::scene
         /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
         /// ride music is read from and written to saves.
         std::unordered_map<std::uint32_t, std::size_t> ride_tunes;
+        /// The tracked rides, by id, whose track is greased.
+        /// shortcut: kept only while the park is open and the trains run as before; save it and lower the
+        /// trains' losses once friction is part of the train model.
+        std::unordered_set<std::uint32_t> low_friction;
         float since_info_page = 0;                 ///< Seconds since a live page was shown again
         std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages

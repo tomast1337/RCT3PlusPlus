@@ -144,3 +144,22 @@ TEST_CASE("a spinner with decimals shows a point and reads one back")
     CHECK(f.spinner.value() == 300);
     CHECK(f.spinner.field().text == u"3.00");
 }
+
+TEST_CASE("a spinner with a unit shows it after the number and reads the number with or without it")
+{
+    Fixture f;
+    f.spinner.unit = u" mph";
+    f.spinner.set_value(7);
+    CHECK(f.spinner.field().text == u"7 mph");
+    f.desktop.set_keyboard_focus(&f.spinner.field());
+    // Backspace takes the unit's last letters, leaving "7 m": not a number, so 7 stays.
+    f.keys({ { Key::Backspace }, { Key::Backspace }, { Key::Enter } });
+    CHECK(f.spinner.value() == 7);
+    CHECK(f.spinner.field().text == u"7 mph");
+    std::vector<KeyPress> presses(5, { Key::Backspace });
+    presses.push_back({ Key::Character, false, false, U'9' });
+    presses.push_back({ Key::Enter });
+    f.keys(std::move(presses));
+    CHECK(f.spinner.value() == 9);
+    CHECK(f.spinner.field().text == u"9 mph");
+}

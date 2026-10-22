@@ -170,6 +170,16 @@ TEST_CASE("a ride whose special pieces fill only the first two slots is built ba
     CHECK_FALSE(track_rules(coaster).builds_back);
 }
 
+TEST_CASE("a ride its file marks as one building is set down in one piece")
+{
+    ovl::TrackedRide house;
+    house.rules.flags = 0x410;
+    CHECK(track_rules(house).one_piece);
+    CHECK(track_rules(house).never_tested);
+    house.rules.flags = 0x2;
+    CHECK_FALSE(track_rules(house).one_piece);
+}
+
 TEST_CASE("a walk-through opens only when its exit comes after its entrance")
 {
     const TrackRules walk = rules_with([](TrackRules& r) { r.entrances = r.exits = kOneDoor; });

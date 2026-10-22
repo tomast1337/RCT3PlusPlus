@@ -565,13 +565,20 @@ namespace rct3::scene
         save::Ride& r = scene.rides.rides.at(ride);
         if (r.stations.size() <= station_index)
             r.stations.resize(station_index + 1);
-        save::Station& station = r.stations[station_index];
-        // One placed before moves.
-        if (const std::uint64_t old = exit ? station.exit : station.entrance; old != 0)
+        // One placed before moves: at this station, or anywhere on a ride that has just one of that door.
+        const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
+        const bool only_one = (exit ? rules.exits : rules.entrances) == park::kOneDoor;
+        for (std::size_t k = 0; k < r.stations.size(); ++k)
         {
-            if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); at != scene.objects.end())
+            if (k != station_index && !only_one)
+                continue;
+            std::uint64_t& old = exit ? r.stations[k].exit : r.stations[k].entrance;
+            if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); old != 0 && at != scene.objects.end())
                 at->hidden = true;
+            old = 0;
+            (exit ? r.stations[k].exit_spot : r.stations[k].entrance_spot).reset();
         }
+        save::Station& station = r.stations[station_index];
         (exit ? station.exit : station.entrance) = object;
         (exit ? station.exit_spot : station.entrance_spot) = save::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
         update_platforms(scene, ride, assets);

@@ -18,6 +18,7 @@ namespace rct3::park
         // Bits of a ride file's attraction flags.
         constexpr std::uint32_t kNeverTested = 0x10 | 0x4000;
         constexpr std::uint32_t kMayBeSplit = 0x200;
+        constexpr std::uint32_t kOnePiece = 0x400;
 
         PieceTest piece_test(const ovl::PieceTest& t)
         {
@@ -49,6 +50,7 @@ namespace rct3::park
         TrackRules rules;
         rules.never_tested = (stored.flags & kNeverTested) != 0;
         rules.may_be_split = (stored.flags & kMayBeSplit) != 0;
+        rules.one_piece = (stored.flags & kOnePiece) != 0;
         rules.min_pieces = stored.min_pieces;
         rules.circuit_only = stored.circuit_only;
         rules.entrances = stored.entrances;

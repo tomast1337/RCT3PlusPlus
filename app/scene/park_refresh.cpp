@@ -399,7 +399,7 @@ namespace rct3::scene
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run.
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
     {
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
@@ -430,6 +430,23 @@ namespace rct3::scene
             }
             scene.car_places[i] = place;
         }
+        // Riding along, the view looks out from the rider's eyes in the car where it is now, at the track as far
+        // ahead as its train looks.
+        scene.seat.reset();
+        if (scene.riding && *scene.riding < scene.cars.size())
+            if (const auto model = scene.models.find(park::model_ref(scene.cars[*scene.riding])); model != scene.models.end() && model->second.ride_eye)
+            {
+                const std::size_t i = *scene.riding;
+                const park::CarSpot spot = scene.car_spots[i];
+                const park::ObjectModel& car = model->second;
+                std::optional<glm::vec3> ahead;
+                // shortcut: a train running backwards still looks the way the car faces; look behind once the
+                // trains know which way they run.
+                if (const auto& course = scene.courses[spot.ride]; course && car.ride_look.look_ahead > 0 && !car.ride_nose)
+                    ahead = glm::vec3(park::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + car.ride_look.look_ahead) * (*car.ride_eye)[3]);
+                const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
+                scene.seat = park::ride_look(scene.ride_view, scene.car_places[i] * *car.ride_eye, ahead, !car.ride_nose, car.ride_look, elapsed, dice);
+            }
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)

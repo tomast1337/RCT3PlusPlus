@@ -577,6 +577,8 @@ namespace rct3::scene
                 scene.paused_for_ride = scene.park.speed.paused;
                 scene.park.speed.paused = false;
             }
+            if (scene.riding != car)
+                scene.ride_view = { };
             scene.riding = car;
             // Named as the game names them: the ride, then the train and the car counting from 1.
             const park::CarSpot spot = scene.car_spots[car];
@@ -1706,12 +1708,7 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat)); });
-            // Riding along, the view looks out from the rider's eyes in the car where it is now.
-            scene.seat.reset();
-            if (scene.riding && *scene.riding < scene.cars.size())
-                if (const auto model = scene.models.find(park::model_ref(scene.cars[*scene.riding])); model != scene.models.end() && model->second.ride_eye)
-                    scene.seat = scene.car_places[*scene.riding] * *model->second.ride_eye;
+            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat), elapsed); });
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 

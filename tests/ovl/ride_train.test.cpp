@@ -3,6 +3,7 @@
 
 #include "record_file.hpp"
 
+#include <bit>
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
@@ -20,6 +21,10 @@ TEST_CASE("ride trains list their cars")
     put(bytes, { name, display });
     bytes.resize(0x20, std::byte { 0 });
     put(bytes, { 2, 7, 3 });
+    bytes.resize(0x38, std::byte { 0 });
+    put(bytes, { std::bit_cast<std::uint32_t>(6.0f), std::bit_cast<std::uint32_t>(0.25f) });
+    bytes.resize(0x68, std::byte { 0 });
+    put(bytes, { std::bit_cast<std::uint32_t>(0.75f) });
     bytes.resize(200, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Test:rit", bytes, { { 0x08, "Front:ric" }, { 0x10, "Back:ric" } });
     const auto items = read_ride_trains(overlay, overlay.common());
@@ -36,6 +41,9 @@ TEST_CASE("ride trains list their cars")
     CHECK(t.usual_cars == 3);
     CHECK(t.references.size() == 2);
     CHECK(t.record.size() == 184);
+    CHECK(t.camera.look_ahead == 6.0f);
+    CHECK(t.camera.sway_per_g == 0.25f);
+    CHECK(t.camera.look_tilt == 0.75f);
 }
 
 TEST_CASE("a name field of -1 gives an empty name")

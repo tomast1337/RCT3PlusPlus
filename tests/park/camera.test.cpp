@@ -177,3 +177,44 @@ TEST_CASE("riding a car looks out ahead of it and leans as it banks")
     CHECK(screen({ 4, 3, 10 }).y > 0.05f); // Over the rider's head is up the screen
     CHECK(screen({ 5, 3, -10 }).z > 1);    // Behind is not seen
 }
+
+TEST_CASE("riding along looks at the track ahead, sways against the pull and shakes with speed")
+{
+    ovl::RideCameraTuning tuning { .look_ahead = 8, .sway_per_g = 0.5f, .sway_most = 0.4f, .shake_from = 1, .shake = 0.01f, .shake_across = 0.1f, .shake_up = 0.1f, .look_tilt = 0.5f };
+    const glm::mat4 still = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0));
+
+    // The track bends off to the right ahead: the view turns to it and leans into the turn.
+    RideView view;
+    const glm::mat4 turned = ride_look(view, still, glm::vec3(8, 2, 8), true, tuning, 0.1f, { });
+    CHECK(turned[2].x == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(turned[1].x > 0);
+    // Track lying behind is not looked at.
+    view = { };
+    CHECK(ride_look(view, still, glm::vec3(0, 2, -8), true, tuning, 0.1f, { })[2].z == doctest::Approx(1));
+
+    // Speeding up along +Z: the head sways back, up to the most it may.
+    view = { };
+    float speed = 0;
+    float along = 0;
+    glm::mat4 seat;
+    for (int i = 0; i < 20; ++i)
+    {
+        speed += 2;
+        along += speed * 0.1f;
+        seat = ride_look(view, glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, along)), std::nullopt, true, tuning, 0.1f, { 0, 0 });
+    }
+    CHECK(seat[3].z < along);
+    CHECK(glm::length(view.sway) <= 0.4f + 1e-5f);
+    // Without sway the eyes stay put.
+    RideView nose;
+    nose.last = glm::vec3(0, 2, -4);
+    nose.velocity = glm::vec3(0, 0, 0);
+    CHECK(glm::vec3(ride_look(nose, still, std::nullopt, false, tuning, 0.1f, { })[3]) == glm::vec3(0, 2, 0));
+
+    // Fast, it shakes; at a crawl it does not.
+    const glm::mat4 shaken = ride_look(view, glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, along + 4)), std::nullopt, true, tuning, 0.1f, { 1, 1 });
+    CHECK(shaken[2].x > 0.01f);
+    RideView slow;
+    slow.last = glm::vec3(0, 2, 0);
+    CHECK(ride_look(slow, glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0.05f)), std::nullopt, true, tuning, 0.1f, { 1, 1 })[2].x == doctest::Approx(0));
+}

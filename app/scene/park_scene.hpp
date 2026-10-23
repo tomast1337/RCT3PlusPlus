@@ -319,14 +319,16 @@ namespace rct3::scene
         float sim_time = 0;                ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
-        std::vector<park::CarSpot> car_spots;     ///< By car, as the park kept them
-        park::Fitted saved_cars;                  ///< Where the park kept each car, by id
-        std::vector<glm::mat4> car_places;        ///< Where each car stands now, by car
-        std::optional<std::size_t> riding;        ///< The car the view rides along in, of `cars`
-        park::Seat seat;                          ///< Its rider's eyes, while riding
-        std::vector<std::string> hidden_for_ride; ///< The windows put away while riding, to show again after
-        bool paused_for_ride = false;             ///< The park was paused, so riding set it going
-        park::MovingMeshes car_meshes;            ///< At car_mesh_places
+        std::vector<park::CarSpot> car_spots;                ///< By car, as the park kept them
+        park::Fitted saved_cars;                             ///< Where the park kept each car, by id
+        std::vector<glm::mat4> car_places;                   ///< Where each car stands now, by car
+        std::optional<std::size_t> riding;                   ///< The car the view rides along in, of `cars`
+        park::Seat seat;                                     ///< Its rider's eyes, while riding
+        park::RideView ride_view;                            ///< How the rider's view moved, while riding
+        random::RandomState ride_dice = random::seeded({ }); ///< For the shake of the rider's view
+        std::vector<std::string> hidden_for_ride;            ///< The windows put away while riding, to show again after
+        bool paused_for_ride = false;                        ///< The park was paused, so riding set it going
+        park::MovingMeshes car_meshes;                       ///< At car_mesh_places
         /// A car whose riders sit on an arm: its place in `cars`, its arm's joints at rest, and how the last
         /// joint, the riders' seat, is moved now in the car's own space.
         struct ArmCar

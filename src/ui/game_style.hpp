@@ -707,6 +707,8 @@ namespace rct3::ui::game_skins
     {
         FootpathPanelStyle s;
         s.text_colour = p.text_on_band;
+        s.page_text_colour = p.text;
+        s.chosen = p.stripe;
         s.look = PanelLook::Coded;
         s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;

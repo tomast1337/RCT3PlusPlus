@@ -212,11 +212,11 @@ namespace rct3::simulation
             case 1:
             case 2:
                 if (park.cash)
-                    *park.cash += id == 1 ? p.large_cash : p.small_cash;
+                    *park.cash += id == 1 ? p.large_cash.value : p.small_cash.value;
                 break;
             case 4:
                 if (park.rating)
-                    *park.rating = std::min(*park.rating + p.rating_bonus, 1.0f);
+                    *park.rating = std::min(*park.rating + p.rating_bonus.value, 1.0f);
                 break;
             case 5:
                 finance.interest_rate_percent /= 2;

@@ -635,7 +635,7 @@ namespace rct3::simulation
             else if (ride.kind == save::RideKind::Tracked && !ride.seats.empty() && (ride.mode == save::OperatingMode::Boat || ride.mode == save::OperatingMode::WaterTransport))
                 // shortcut: boats that sail off their dock go out all at once and come back after a set trip, with
                 // no boat moving on the water; upgrade with boats steering over the lake.
-                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size()), .run = kTuning.boats.trip_seconds };
+                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size()), .run = kTuning.boats.trip.value };
             // Rides left out still make room in the park while open and working.
             const auto elsewhere = [&] {
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)

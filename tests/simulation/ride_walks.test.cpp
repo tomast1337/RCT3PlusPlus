@@ -44,7 +44,7 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     // On to the seat, and only then off it goes.
     REQUIRE(park.run_until([&] { return !r.all_of<RideWalk>(g); }, 30));
     CHECK(near(r.get<Pose>(g).position, seat));
-    CHECK(park.world().tick - at_ticket >= ticks(kTuning.queues.ticket_seconds));
+    CHECK(park.world().tick - at_ticket >= ticks(kTuning.queues.ticket.value));
     CHECK(park.run_until([&] { return r.get<CycleRide>(ride).phase != RidePhase::Loading; }, 1));
 
     // Off the seat on foot once the ride is done, still riding till on the paths at the exit.

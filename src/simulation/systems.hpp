@@ -66,7 +66,7 @@ namespace rct3::simulation
     /// stays stopped with its riders aboard till it is not.
     bool advance_cycle(CycleRide& ride, float dt, bool held);
 
-    /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old_seconds).
+    /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
 
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has

@@ -102,7 +102,7 @@ namespace rct3::simulation
     void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing);
 
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
-    /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths.
+    /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& object, PathItemKind kind);
     /// What a bin the player places holds, in pieces of rubbish, as the bins saved in the game's parks do.
     inline constexpr float kNewBinPieces = 40;

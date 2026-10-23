@@ -256,7 +256,13 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Bin>(bins.front()).capacity == doctest::Approx(40));
     CHECK(world.registry.get<simulation::Bin>(bins.front()).contents == 3);
     for (const auto [_, item] : world.registry.view<simulation::PathItem>().each())
+    {
         CHECK(item.node == tile);
+        CHECK(item.object != 0); // So it goes when its object is taken away
+    }
+    save::PlacedObject gone { .id = 5, .col = 2, .row = 1 };
+    gone.hidden = true;
+    CHECK(simulation::add_path_item(world, gone, simulation::PathItemKind::Bench) == entt::null);
 
     people.staff.resize(4);
     people.staff[0].kind = save::StaffKind::Handyman;

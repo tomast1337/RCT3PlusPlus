@@ -685,7 +685,7 @@ namespace rct3::simulation
         {
             const save::Ride& ride = rides.rides[i];
             const auto& course = courses[i];
-            if ((ride.mode != save::OperatingMode::Boat && ride.mode != save::OperatingMode::WaterTransport) || !r.valid(added[i]) || !course || course->points.empty() || ride.trains.empty())
+            if ((ride.mode != save::OperatingMode::Boat && ride.mode != save::OperatingMode::WaterTransport) || !r.valid(added[i]) || r.all_of<Trains>(added[i]) || !course || course->points.empty() || ride.trains.empty())
                 continue;
             if (!r.ctx().contains<WaterTiles>())
                 r.ctx().emplace<WaterTiles>(water_tiles(grid, water));

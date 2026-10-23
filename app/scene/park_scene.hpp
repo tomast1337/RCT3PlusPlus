@@ -326,7 +326,14 @@ namespace rct3::scene
         /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
         /// never with `riding`.
         std::optional<std::pair<std::size_t, std::size_t>> riding_flat;
-        bool riding_fixed = false;                           ///< On a flat ride, from one of its own fixed cameras rather than a seat
+        bool riding_fixed = false; ///< On a flat ride, from one of its own fixed cameras rather than a seat
+        /// Of `shown_people`, the person the view goes with, from their eyes or from behind them; never with
+        /// `riding` or `riding_flat`.
+        std::optional<std::size_t> riding_person;
+        bool person_behind = false; ///< Following the person from behind rather than from their eyes
+        float ride_pull = 0;        ///< How far the wheel has pulled the view back off its mount, in notches
+        /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
+        std::optional<std::pair<std::size_t, std::u16string>> rename_requested;
         park::Seat seat;                                     ///< Its rider's eyes, while riding
         park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden
         glm::vec2 ride_turn { };                             ///< How far the rider looks round from ahead, yaw and pitch
@@ -440,6 +447,11 @@ namespace rct3::scene
         std::vector<entt::entity> broken_rides;    ///< Rides the player has been told are broken down
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
+        /// Whether the view rides along in a car, on a flat ride or with a person.
+        [[nodiscard]] bool riding_along() const
+        {
+            return riding || riding_flat || riding_person;
+        }
         std::optional<park::AttractionRef> info_requested;          ///< Asked by a script or a finished building, opened as a click on it does
         std::string refusal;                                        ///< String key: why the shown attraction was not opened, tested or edited
         std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead

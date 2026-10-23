@@ -11,6 +11,7 @@
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
+#include "strings/unicode.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -119,6 +120,10 @@ namespace rct3::scene
     {
         engine_.define("pointer.move", [this](const Json& a) {
             at_ = glm::vec2 { number(a, 0), number(a, 1) };
+            return Json(nullptr);
+        });
+        engine_.define("pointer.wheel", [this](const Json& a) {
+            wheel_ = number(a, 0);
             return Json(nullptr);
         });
         engine_.define("pointer.press", [this](const Json&) {
@@ -349,7 +354,9 @@ namespace rct3::scene
         engine_.define("camera.riding", [this](const Json&) -> Json {
             const ParkScene& park = park_of(park_);
             Json out;
-            if (park.riding_flat)
+            if (park.riding_person)
+                out = { { "ride", -1 }, { "car", *park.riding_person }, { "kind", park.person_behind ? "behind" : "guest" } };
+            else if (park.riding_flat)
                 out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", park.riding_fixed ? "fixed" : "seat" } };
             else if (park.riding && *park.riding < park.car_spots.size())
             {
@@ -454,6 +461,23 @@ namespace rct3::scene
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
             park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
+        });
+        engine_.define("people.rename", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size() || !a.at(1).is_string())
+                throw std::invalid_argument("people.rename takes a person's place in people.list() and a name");
+            park.rename_requested = std::pair { a[0].get<std::size_t>(), strings::to_utf16(a[1].get<std::string>()) };
+            return Json(nullptr);
+        });
+        engine_.define("people.list", [this](const Json&) {
+            const ParkScene& park = park_of(park_);
+            Json out = Json::array();
+            for (const ShownPerson& p : park.shown_people)
+            {
+                const save::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
+                out.push_back({ { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff } });
+            }
+            return out;
         });
         engine_.define("rides.shown", [this](const Json&) -> Json {
             const ParkScene& park = park_of(park_);
@@ -563,6 +587,7 @@ namespace rct3::scene
 
     void ScriptHost::tick(const render::Device& device, ParkScene* park)
     {
+        wheel_ = 0; // Turned for one frame only
         if (quit_)
             return;
         device_ = &device;
@@ -582,7 +607,7 @@ namespace rct3::scene
         if (!at_)
             return std::nullopt;
         const render::Extent view = device.extent();
-        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_, control_ };
+        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_, control_, wheel_ };
     }
 
     void ScriptHost::write(const std::string& line, bool error)

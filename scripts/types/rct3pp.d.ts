@@ -22,6 +22,8 @@ declare namespace pointer {
     function shift(on: boolean): void;
     /** Holds Control down with the pointer, or lets it go. */
     function control(on: boolean): void;
+    /** Turns the wheel `notches` for one frame, positive away from the user. */
+    function wheel(notches: number): void;
     /** Moves to (x, y), presses and lets go. */
     function click(x: number, y: number): Promise<void>;
     /** Presses at `from`, moves to `to` over `count` frames and lets go. */
@@ -75,9 +77,10 @@ interface MapPoint {
 declare namespace camera {
     /** Looks at `at` from `from`; without `from`, keeps the way it faces and how far back it is. */
     function look(at: MapPoint, from?: MapPoint): void;
-    /** Riding along in a car: its ride's place in rides.list(), the car (on a flat ride, the seat or fixed camera), and once it
+    /** Riding along in a car: its ride's place in rides.list(), the car (on a flat ride, the seat or fixed camera; going with a person, ride is -1 and car their place in
+     *  people.list()), and once it
      *  is seen from, the rider's eyes in world units and the way they look. Undefined while the view is overhead. */
-    function riding(): { ride: number; car: number; kind: "nose" | "front" | "rear" | "seat" | "fixed"; turn: [number, number]; eye?: [number, number, number]; ahead?: [number, number, number] } | undefined;
+    function riding(): { ride: number; car: number; kind: "nose" | "front" | "rear" | "seat" | "fixed" | "guest" | "behind"; turn: [number, number]; eye?: [number, number, number]; ahead?: [number, number, number] } | undefined;
 }
 
 interface Tile {
@@ -208,4 +211,11 @@ declare namespace rides {
     function show(i: number): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
     function shown(): { ride: number; tab?: string } | undefined;
+}
+
+declare namespace people {
+    /** The people shown in the park, guests and staff, in the order the park keeps them. */
+    function list(): { name: string; staff: boolean }[];
+    /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */
+    function rename(i: number, name: string): void;
 }

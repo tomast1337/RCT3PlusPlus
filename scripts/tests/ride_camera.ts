@@ -3,7 +3,8 @@
 // Riding along: a ride with trains in the game's Vanilla Hills is opened, its window's ride camera clicked, and
 // the view looks out from one of its cars, moving with it as it goes round. Everything else on screen is put
 // away for the ride camera's panel, which slides out of sight while the pointer is still and back when it
-// moves; leaving brings the rest back. A flat ride is then looked out from its riders' seats.
+// moves; leaving brings the rest back. A flat ride is then looked out from its riders' seats, and a guest
+// renamed with the game's cheat name is followed.
 //
 //   ./nob script scripts/tests/ride_camera.ts -- --no-audio
 
@@ -99,4 +100,31 @@ await screenshot("next seat");
 await ui.click(exit);
 await frames(5);
 expect(camera.riding() === undefined, "the overhead view after the flat ride");
+
+// Renaming a guest Jonny Watts, the game's cheat, goes with them from their eyes; the type button changes to
+// behind them and the train buttons to the next person. The wheel pulls the view back off its mount.
+const guest = people.list().findIndex((p) => !p.staff);
+expect(guest >= 0, "a guest");
+people.rename(guest, "Jonny Watts");
+await until(() => camera.riding()?.eye !== undefined, 60, "the view from the guest");
+log("guest", JSON.stringify(camera.riding()));
+expect(camera.riding()!.kind === "guest" && camera.riding()!.car === guest, "the guest's eyes");
+await screenshot("guest");
+const near = camera.riding()!.eye!;
+pointer.move(0.5, 0.5);
+pointer.wheel(-4);
+await frames(2);
+const back = camera.riding()!.eye!;
+log("pulled", Math.hypot(...back.map((v, i) => v - near[i])));
+expect(Math.hypot(...back.map((v, i) => v - near[i])) > 1, "the wheel pulling the view back");
+await ui.click("ride_camera/RidecamGUI_Type");
+await frames(2);
+expect(camera.riding()!.kind === "behind", "behind the guest");
+await screenshot("behind guest");
+await ui.click("ride_camera/RidecamGUI_NextTrain");
+await frames(2);
+expect(camera.riding()!.car !== guest && camera.riding()!.kind === "behind", "the next person");
+await ui.click(exit);
+await frames(5);
+expect(camera.riding() === undefined, "the overhead view after the guest");
 quit(0);

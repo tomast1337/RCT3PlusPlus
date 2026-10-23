@@ -22,8 +22,11 @@ namespace rct3::scene
         return build.valid() && build.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     }
 
-    /// Where `shown` stands now: where the simulation has walked it while that runs, else where it was saved.
-    /// Reads the simulation, so only on the frame's thread.
+    /// Where `shown` stands now, facing +Z with +Y up: in their seat while riding, else where the simulation
+    /// has walked them while that runs, else where they were saved. Reads the simulation, so only on the
+    /// frame's thread.
+    [[nodiscard]] glm::mat4 person_place(const ParkScene& scene, const ShownPerson& shown);
+    /// Where person_place has `shown`.
     glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown);
 
     /// Whether something standing at `at` may be in the view `transform` gives, with room to spare so it does

@@ -381,8 +381,6 @@ namespace rct3::scene
 
     } // namespace
 
-    /// Where `shown` stands now: where the simulation has walked it while that runs, else where it was saved.
-    /// Reads the simulation, so only on the frame's thread.
     bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach)
     {
         constexpr float kSpare = 1.3f;
@@ -391,14 +389,22 @@ namespace rct3::scene
         return clip.w > -reach && std::abs(clip.x) <= edge && std::abs(clip.y) <= edge;
     }
 
-    glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
+    glm::mat4 person_place(const ParkScene& scene, const ShownPerson& shown)
     {
         if (scene.simulate && shown.guest != entt::null)
             if (const auto seat = seat_place(scene, shown.guest))
-                return glm::vec3((*seat)[3]);
+                return *seat;
         if (scene.simulate && shown.guest != entt::null)
-            return simulation::between_steps(scene.sim.registry.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds).position;
-        return glm::vec3(shown.pose.world[3]);
+        {
+            const auto at = simulation::between_steps(scene.sim.registry.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
+            return glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        return shown.pose.world;
+    }
+
+    glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown)
+    {
+        return glm::vec3(person_place(scene, shown)[3]);
     }
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
@@ -494,6 +500,24 @@ namespace rct3::scene
         constexpr glm::vec3 kSeatEyes { 0, 0.75f, 0.2f }; ///< Where a sitting rider's eyes are, just before their face
         if (const auto seat = scene.riding_flat ? flat_view(scene, scene.riding_flat->first, scene.riding_fixed, scene.riding_flat->second) : std::nullopt)
             scene.seat = park::looked_round(scene.riding_fixed ? *seat : glm::translate(*seat, kSeatEyes), scene.ride_turn);
+        // With a person, from their eyes, or from behind and over them looking down a little; people are
+        // modelled facing +Z with +Y up.
+        constexpr float kEyeHeight = 1.6f;    ///< A standing person's eyes over their feet
+        constexpr float kBehindHeight = 1.2f; ///< The point followed from behind, over their feet
+        constexpr float kBehindPitch = 0.4f;  ///< How far down that view looks, radians
+        constexpr float kBehindDistance = 3;  ///< How far back from that point
+        const float pulled = scene.ride_pull * scene.ride_pull;
+        if (scene.riding_person && *scene.riding_person < scene.shown_people.size())
+        {
+            const glm::mat4 place = person_place(scene, scene.shown_people[*scene.riding_person]);
+            if (scene.person_behind)
+                scene.seat = glm::translate(park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn), glm::vec3(0, 0, -kBehindDistance - pulled));
+            else
+                scene.seat = park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
+        }
+        // The wheel pulls the view back off its mount, the farther the more it is turned.
+        if (scene.seat && !(scene.riding_person && scene.person_behind))
+            scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -pulled));
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)

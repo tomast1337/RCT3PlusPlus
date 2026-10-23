@@ -9,6 +9,7 @@
 //
 //   until(check, limit, what)  waits frames until check() holds; throws after `limit` frames (300)
 //   pointer.move(x, y), pointer.press(), pointer.release(), pointer.click(x, y), pointer.drag(from, to, frames)
+//   pointer.wheel(n)    turns the wheel `n` notches for one frame, positive away from the user
 //   pointer.shift(on)   holds Shift down with the pointer, or lets it go
 //   pointer.control(on) holds Control down with the pointer, or lets it go
 //   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch, or undefined
@@ -51,6 +52,8 @@
 //   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does;
 //                       null once changed, else the string key of why it stays (a track without a station...)
 //   rides.show(i)       opens ride `i`'s window, as clicking the ride does
+//   people.list()       each person shown in the park: { name, staff }
+//   people.rename(i, name)  renames person `i` of people.list(), as their window's name box does
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.
@@ -91,6 +94,7 @@ namespace rct3::scene
             bool down = false;
             bool shift = false;
             bool control = false;
+            float wheel = 0; ///< Notches turned this frame, positive away from the user
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         /// The park the script asked for, once: a path in the game's folder.
@@ -116,6 +120,7 @@ namespace rct3::scene
         std::optional<glm::vec2> at_; ///< Share of the view
         bool down_ = false;
         bool shift_ = false;
+        float wheel_ = 0;
         bool control_ = false;
         std::optional<std::filesystem::path> screenshot_;
         std::optional<std::filesystem::path> report_;

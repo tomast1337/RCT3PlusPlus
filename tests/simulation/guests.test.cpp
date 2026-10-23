@@ -133,7 +133,7 @@ TEST_CASE("guests stand a moment at a ride's exit to show how it left them, then
     park.run_seconds(1);
     for (const auto& [g, at] : standing)
         CHECK(r.get<Pose>(g).position == at);
-    park.run_seconds(kTuning.gestures.seconds);
+    park.run_seconds(kTuning.gestures.shown.value);
     CHECK(r.view<Gesture>().size() == 0);
 }
 

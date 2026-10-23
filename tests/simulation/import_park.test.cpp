@@ -163,7 +163,7 @@ TEST_CASE("boats for hire carry their riders out and back, though their dock is 
     REQUIRE(world.registry.valid(added[0]));
     const auto& cycle = world.registry.get<simulation::CycleRide>(added[0]);
     CHECK(cycle.capacity == 8);
-    CHECK(cycle.run_seconds == simulation::kTuning.boats.trip_seconds);
+    CHECK(cycle.run_seconds == simulation::kTuning.boats.trip.value);
     CHECK_FALSE(world.registry.all_of<simulation::Trains>(added[0]));
 }
 

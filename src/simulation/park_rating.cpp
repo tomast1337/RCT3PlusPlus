@@ -20,8 +20,8 @@ namespace rct3::simulation
         /// 0..1: exciting is good, too intense is not.
         float appeal(float excitement, float intensity) noexcept
         {
-            const float thrill = std::clamp(excitement / kTuning.rating.good_excitement, 0.0f, 1.0f);
-            const float comfort = std::clamp(1.0f - (intensity - kTuning.rating.harsh_intensity) / kTuning.rating.intensity_range, 0.0f, 1.0f);
+            const float thrill = std::clamp(excitement / kTuning.rating.good_excitement.value, 0.0f, 1.0f);
+            const float comfort = std::clamp(1.0f - (intensity - kTuning.rating.harsh_intensity.value) / kTuning.rating.intensity_range.value, 0.0f, 1.0f);
             return thrill * comfort;
         }
     } // namespace
@@ -29,8 +29,8 @@ namespace rct3::simulation
     RatingParts rate_park(const RatingInput& input)
     {
         RatingParts p;
-        const float happiness = input.guests_inside > 0 ? input.happiness / static_cast<float>(input.guests_inside) : kTuning.rating.empty_park_happiness;
-        p.happiness = whole(kTuning.rating.happiness_share * std::clamp(happiness, 0.0f, 1.0f));
+        const float happiness = input.guests_inside > 0 ? input.happiness / static_cast<float>(input.guests_inside) : kTuning.rating.empty_park_happiness.value;
+        p.happiness = whole(kTuning.rating.happiness_share.value * std::clamp(happiness, 0.0f, 1.0f));
 
         float appeal_sum = 0;
         float up_sum = 0;
@@ -46,16 +46,16 @@ namespace rct3::simulation
         }
         const auto count = static_cast<float>(input.rides.size());
         if (tested > 0)
-            p.rides = whole(kTuning.rating.rides_share * appeal_sum / static_cast<float>(tested) * (1.0f - std::exp(-count / kTuning.rating.rides_for_variety)));
+            p.rides = whole(kTuning.rating.rides_share.value * appeal_sum / static_cast<float>(tested) * (1.0f - std::exp(-count / kTuning.rating.rides_for_variety)));
         if (!input.rides.empty())
-            p.reliability = whole(kTuning.rating.reliability_share * up_sum / count);
+            p.reliability = whole(kTuning.rating.reliability_share.value * up_sum / count);
 
-        p.guests = whole(kTuning.rating.guests_share * (1.0f - std::exp(-static_cast<float>(std::max(input.guests, 0)) / kTuning.rating.guests_for_busy)));
+        p.guests = whole(kTuning.rating.guests_share.value * (1.0f - std::exp(-static_cast<float>(std::max(input.guests, 0)) / kTuning.rating.guests_for_busy)));
         p.litter = -std::min(kTuning.rating.most_litter, kTuning.rating.per_litter * std::max(input.old_litter, 0));
 
         const std::int32_t sum = p.happiness + p.rides + p.reliability + p.guests + p.litter;
         if (input.harder)
-            p.harder = -whole(static_cast<float>(std::max(sum, 0)) * kTuning.rating.harder_share);
+            p.harder = -whole(static_cast<float>(std::max(sum, 0)) * kTuning.rating.harder_share.value);
         p.total = std::clamp(sum + p.harder, 0, kMaxRating);
         return p;
     }
@@ -92,7 +92,7 @@ namespace rct3::simulation
     float next_rating(std::optional<float> before, std::int32_t score) noexcept
     {
         const float target = static_cast<float>(std::clamp(score, 0, kMaxRating)) / static_cast<float>(kMaxRating);
-        return before ? *before + (target - *before) * kTuning.rating.weekly_move : target;
+        return before ? *before + (target - *before) * kTuning.rating.weekly_move.value : target;
     }
 
 } // namespace rct3::simulation

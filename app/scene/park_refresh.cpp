@@ -160,7 +160,7 @@ namespace rct3::scene
         {
             for (const auto [g, walk, pose] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Pose>().each())
                 if (!walk.off && walk.next == 1 && walk.pause > 0 && glm::distance(pose.position, at) < kServeReach)
-                    return { kTakeMoneyMotion, simulation::kTuning.queues.ticket_seconds - walk.pause };
+                    return { kTakeMoneyMotion, simulation::kTuning.queues.ticket.value - walk.pause };
             const float turn = scene.clock / kVendorTurnSeconds + static_cast<float>(entt::to_integral(shown.guest));
             const auto whole = static_cast<std::size_t>(turn);
             return { whole % kShelvesEvery == 0 ? kShelvesMotion : kBoredMotion, (turn - static_cast<float>(whole)) * kVendorTurnSeconds };
@@ -214,14 +214,14 @@ namespace rct3::scene
                     if (at_ticket)
                     {
                         pose.motion = kTicketMotion;
-                        pose.time = simulation::kTuning.queues.ticket_seconds - ride_walk->pause;
+                        pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause;
                     }
                     if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
                     {
                         // By the names the people's meshes give these motions, in GestureKind's order.
                         constexpr std::array<std::string_view, 6> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit" };
                         pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
-                        pose.time = simulation::kTuning.gestures.seconds - gesture->left + scene.sim_time;
+                        pose.time = simulation::kTuning.gestures.shown.value - gesture->left + scene.sim_time;
                     }
                     // An umbrella held up in the rain.
                     // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen

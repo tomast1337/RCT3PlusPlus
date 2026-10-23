@@ -22,6 +22,8 @@
 //   "QSGN" v1  std::vector<save::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
 //   "SHOW" v1  std::vector<save::RideShow>: the show rides' shows. Only when there are any; without it, the
 //              shows are read again from the original park.
+//   "GOAL" v1  SavedGoals: how far the scenario's goals have got. Only for parks that set goals; without it,
+//              they start again from the original park.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -102,6 +104,14 @@ namespace rct3::parkfile
         std::vector<SavedWorker> staff;
     };
 
+    /// How far the scenario's goals have got, and the loan terms their prizes may have changed.
+    struct SavedGoals
+    {
+        save::ObjectiveSet objectives { };
+        std::int32_t max_loan = 0;
+        float interest_rate_percent = 0;
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -117,6 +127,7 @@ namespace rct3::parkfile
         std::optional<SavedPeople> people;          ///< None in saves made before people were kept
         std::vector<save::ObjectId> no_queue_signs; ///< Rides whose queues have no signs
         std::optional<std::vector<save::RideShow>> shows;
+        std::optional<SavedGoals> goals;
     };
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one

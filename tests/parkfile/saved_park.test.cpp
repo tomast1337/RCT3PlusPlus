@@ -74,6 +74,17 @@ TEST_CASE("a saved park reads back as written")
     CHECK(shown->shows->front().tricks.at(1).name == "PonyShowHop");
     CHECK(shown->shows->front().tricks.at(1).invented);
     CHECK(shown->shows->front().order == std::vector<std::uint32_t> { 1, 1 });
+    CHECK_FALSE(shown->goals); // None kept: they start again from the original park
+
+    hidden.goals = parkfile::SavedGoals { .max_loan = 400, .interest_rate_percent = 2.5f };
+    hidden.goals->objectives.objectives = { { .difficulty = 1, .prize_id = 5, .success = true } };
+    hidden.goals->objectives.conditions = { { .kind = save::ConditionKind::ParkGuests, .completed = true, .value = 250 } };
+    const auto goals = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(goals);
+    REQUIRE(goals->goals);
+    CHECK(goals->goals->objectives.objectives.at(0).success);
+    CHECK(goals->goals->objectives.conditions.at(0).value == 250);
+    CHECK(goals->goals->interest_rate_percent == 2.5f);
 }
 
 TEST_CASE("a cut or changed saved park is refused")

@@ -53,6 +53,14 @@ namespace rct3::park
     /// bone as far along the track as the train looks ahead (nothing not to look ahead), and `dice` two
     /// numbers in -1..1 for the shake. The view looks at the track ahead, leaning into its turns, follows the
     /// car's turns a little late, sways against the car's pull, and shakes faster the faster the car goes.
+    inline constexpr float kRideLookPerScreen = glm::pi<float>(); ///< A drag the screen's width turns the head this far
+    inline constexpr float kRideLookMostPitch = 1.3f;             ///< How far up or down it turns
+
+    /// The rider's eyes `seat` with their head turned `turn` (yaw to the left, then pitch up, in radians).
+    [[nodiscard]] glm::mat4 looked_round(const glm::mat4& seat, glm::vec2 turn);
+    /// `turn` with its pitch kept within reach and its yaw within a turn either way.
+    [[nodiscard]] glm::vec2 look_round_limited(glm::vec2 turn);
+
     [[nodiscard]] glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, float elapsed, glm::vec2 dice);
     /// The camera with its eye at `from` looking at `at`, within the tilt's and distance's limits.
     [[nodiscard]] ParkCamera looking(glm::vec3 from, glm::vec3 at);

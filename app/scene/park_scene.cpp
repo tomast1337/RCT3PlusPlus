@@ -576,7 +576,10 @@ namespace rct3::scene
                 scene.park.speed.paused = false;
             }
             if (scene.riding != car || scene.riding_eye != eye)
+            {
                 scene.ride_view = { };
+                scene.ride_turn = { };
+            }
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
@@ -1192,11 +1195,25 @@ namespace rct3::scene
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
+        const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         // Riding along, the park takes no clicks: the whole screen counts as interface.
-        const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); }) || scene.riding.has_value();
+        const bool over = over_interface || scene.riding.has_value();
         if (auto panel = scene.riding ? desktop.root().find_as<ui::RideCameraPanel>(kRideCameraName) : std::nullopt)
         {
-            panel->pointer_moved(glm::distance(glm::vec2(input.pointer.position.x, input.pointer.position.y), glm::vec2(scene.last_pointer.x, scene.last_pointer.y)) / scale);
+            const glm::vec2 moved(input.pointer.position.x - scene.last_pointer.x, input.pointer.position.y - scene.last_pointer.y);
+            panel->pointer_moved(glm::length(moved) / scale);
+            // Dragging over the view looks round from the seat, the way the pointer goes; a drag begun on the panel
+            // does not.
+            if (!input.pointer.down)
+                scene.ride_dragging = false;
+            else if (!over_interface && !scene.ride_dragging)
+                scene.ride_dragging = true;
+            else if (scene.ride_dragging)
+            {
+                const glm::vec2 screen(desktop.root().rect().width() * scale, desktop.root().rect().height() * scale);
+                const float pitch = options.flag(config::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
+                scene.ride_turn = park::look_round_limited(scene.ride_turn + glm::vec2(-moved.x / screen.x, -pitch * moved.y / screen.y) * park::kRideLookPerScreen);
+            }
             scene.last_pointer = input.pointer.position;
             if (const auto action = panel->take_action())
                 ride_action(scene, assets, *action);

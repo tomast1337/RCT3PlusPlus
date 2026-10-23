@@ -80,7 +80,7 @@ namespace rct3::simulation
         using enum save::WeatherType;
         // A snowstorm keeps guests in as a thunderstorm does.
         const bool storm = state.weather == Thunderstorm || state.weather == Snowstorm;
-        return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = state.temperature.value_or(Weather { }.temperature) };
+        return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = { state.temperature.value_or(Weather { }.temperature.value) } };
     }
 
 } // namespace rct3::simulation

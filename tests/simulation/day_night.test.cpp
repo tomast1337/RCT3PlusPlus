@@ -65,9 +65,9 @@ TEST_CASE("guests done with the park go home by day: the broke with no cash mach
     r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
     const auto content = park.guest({ 5, 0 });
     const auto broke = park.guest({ 5, 0 });
-    r.get<Wallet>(broke).cash = 0;
+    r.get<Wallet>(broke).cash.value = 0;
     const auto miserable = park.guest({ 5, 0 });
-    r.get<Mood>(miserable).happiness = 0.05f;
+    r.get<Mood>(miserable).happiness.value = 0.05f;
     CHECK(park.run_until([&] { return r.all_of<Left>(broke); }, 120));
     CHECK(park.run_until([&] { return r.all_of<Left>(miserable); }, 1200));
     CHECK_FALSE(r.all_of<Left>(content));

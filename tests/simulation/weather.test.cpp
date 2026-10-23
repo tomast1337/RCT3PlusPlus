@@ -18,13 +18,13 @@ TEST_CASE("rain soaks a guest with nothing over them and spoils their mood, not 
     const auto covered = park.guest({ 0, 0 }, { .happiness = 0.8f });
     r.emplace<Umbrella>(covered);
     park.run_seconds(180);
-    CHECK(r.get<Mood>(bare).wet == doctest::Approx(1));
-    CHECK(r.get<Mood>(bare).happiness < 0.8f);
-    CHECK(r.get<Mood>(covered).wet == 0);
+    CHECK(r.get<Mood>(bare).wet.value == doctest::Approx(1));
+    CHECK(r.get<Mood>(bare).happiness.value < 0.8f);
+    CHECK(r.get<Mood>(covered).wet.value == 0);
     // Out of the rain they dry off.
     r.ctx().get<Weather>().rain = false;
     park.run_seconds(300);
-    CHECK(r.get<Mood>(bare).wet < 0.01f);
+    CHECK(r.get<Mood>(bare).wet.value < 0.01f);
 }
 
 TEST_CASE("a guest getting wet goes and buys an umbrella")
@@ -37,7 +37,7 @@ TEST_CASE("a guest getting wet goes and buys an umbrella")
     const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
     CHECK(park.run_until([&] { return r.all_of<Umbrella>(g); }, 60));
     CHECK(r.get<Attraction>(stall).customers == 1);
-    CHECK(r.get<Wallet>(g).cash == 700);
+    CHECK(r.get<Wallet>(g).cash.value == 700);
 }
 
 TEST_CASE("in the rain an open-air ride's queue empties while a covered ride's does not")
@@ -68,7 +68,7 @@ TEST_CASE("guests get thirsty faster on a hot day")
         r.ctx().emplace<Weather>(Weather { .temperature = hot ? 35.0f : 20.0f });
         const auto g = park.guest({ 0, 0 });
         park.run_seconds(60);
-        thirst[hot] = r.get<Needs>(g).thirst;
+        thirst[hot] = r.get<Needs>(g).thirst.value;
     }
     CHECK(thirst[1] == doctest::Approx(thirst[0] * 2));
 }
@@ -81,7 +81,7 @@ TEST_CASE("the park's weather tells the guests whether it rains")
     const Weather w = guest_weather(state);
     CHECK(w.rain);
     CHECK(w.storm);
-    CHECK(w.temperature == 12);
+    CHECK(w.temperature.value == 12);
     state.weather = rct3::save::WeatherType::Cloudy;
     CHECK_FALSE(guest_weather(state).rain);
 }
@@ -103,8 +103,8 @@ TEST_CASE("in the rain a guest with no umbrella walks to cover and stays there; 
     CHECK(r.get<Stride>(bare).from == shelter);
     CHECK(r.get<Stride>(bare).to == shelter);
     // Under the roof they dry off.
-    CHECK(r.get<Mood>(bare).wet < 0.2f);
-    CHECK(r.get<Mood>(dry).wet == 0);
+    CHECK(r.get<Mood>(bare).wet.value < 0.2f);
+    CHECK(r.get<Mood>(dry).wet.value == 0);
 }
 
 TEST_CASE("guests queueing under cover stay in an open-air ride's queue in the rain")
@@ -159,7 +159,7 @@ TEST_CASE("on a hot day a thirsty guest goes for a cold drink over a nearer plai
     const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 0.5f });
     REQUIRE(park.run_until([&] { return r.get<Attraction>(cold).customers == 1; }, 60));
     CHECK(r.get<Attraction>(plain).customers == 0);
-    CHECK(r.get<Mood>(g).happiness > 0.5f + 0.05f);
+    CHECK(r.get<Mood>(g).happiness.value > 0.5f + 0.05f);
 }
 
 TEST_CASE("the sun heats guests out in it, not those in the shade, and a cold treat cools them")
@@ -173,12 +173,12 @@ TEST_CASE("the sun heats guests out in it, not those in the shade, and a cold tr
     const auto out = park.guest({ 0, 0 });
     const auto shaded = park.guest({ 4, 0 });
     park.run_seconds(600);
-    CHECK(r.get<Mood>(out).heat > 0.55f);
-    CHECK(r.get<Mood>(shaded).heat == 0);
+    CHECK(r.get<Mood>(out).heat.value > 0.55f);
+    CHECK(r.get<Mood>(shaded).heat.value == 0);
     // Cloud over the sun, and they cool down.
     r.ctx().get<Weather>().sunny = false;
     park.run_seconds(120);
-    CHECK(r.get<Mood>(out).heat == 0);
+    CHECK(r.get<Mood>(out).heat.value == 0);
 }
 
 TEST_CASE("a guest too hot buys an ice cream though not hungry, and it cools them")
@@ -190,9 +190,9 @@ TEST_CASE("a guest too hot buys an ice cream though not hungry, and it cools the
     r.get<Shop>(stand).serve = Serve::Cold;
     r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = 32 });
     const auto g = park.guest({ 0, 0 });
-    r.get<Mood>(g).heat = 0.9f;
+    r.get<Mood>(g).heat.value = 0.9f;
     REQUIRE(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
-    CHECK(r.get<Mood>(g).heat < 0.1f);
+    CHECK(r.get<Mood>(g).heat.value < 0.1f);
 }
 
 TEST_CASE("a splashing ride leaves its riders damp and cool")
@@ -203,11 +203,11 @@ TEST_CASE("a splashing ride leaves its riders damp and cool")
     auto& r = park.world().registry;
     r.get<CycleRide>(ride).splash = true;
     const auto g = park.guest({ 0, 0 });
-    r.get<Mood>(g).heat = 0.8f;
+    r.get<Mood>(g).heat.value = 0.8f;
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Attraction>(ride).customers == 1 && r.get<Errand>(g).kind != ErrandKind::Riding; }, 60));
-    CHECK(r.get<Mood>(g).wet > 0.2f);
-    CHECK(r.get<Mood>(g).heat == 0);
+    CHECK(r.get<Mood>(g).wet.value > 0.2f);
+    CHECK(r.get<Mood>(g).heat.value == 0);
 }
 
 TEST_CASE("a snowstorm keeps guests in as a thunderstorm does; sun is told apart from cloud")

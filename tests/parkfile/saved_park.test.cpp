@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/saved_park.hpp"
 
+#include "parkfile/binary.hpp"
+#include "simulation/units.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -97,6 +100,13 @@ TEST_CASE("a cut or changed saved park is refused")
     CHECK_FALSE(parkfile::is_park_file(std::vector<std::byte>(4)));
 }
 
+TEST_CASE("a unit is laid out as its bare number, so parks saved before it was wrapped still load")
+{
+    CHECK(parkfile::detail::layout_hash<simulation::Share>() == parkfile::detail::layout_hash<float>());
+    CHECK(parkfile::detail::layout_hash<simulation::Money>() == parkfile::detail::layout_hash<std::int64_t>());
+    CHECK(parkfile::detail::layout_hash<std::optional<simulation::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
+}
+
 TEST_CASE("a save keeps the park's objects and those the player built, not those loading makes")
 {
     std::vector<save::PlacedObject> objects(7);
@@ -188,10 +198,10 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     const entt::entity bob2 = guests[1 - first];
     CHECK(l.get<Visitor>(ann2).name == "Ann");
     CHECK(l.get<Pose>(ann2).position == glm::vec3 { 1, 0, 2 });
-    CHECK(l.get<Pose>(ann2).heading == 0.5f);
-    CHECK(l.get<Needs>(ann2).hunger == 0.25f);
-    CHECK(l.get<Wallet>(ann2).cash == 500);
-    CHECK(l.get<Taste>(ann2).most == 0.7f);
+    CHECK(l.get<Pose>(ann2).heading.value == 0.5f);
+    CHECK(l.get<Needs>(ann2).hunger.value == 0.25f);
+    CHECK(l.get<Wallet>(ann2).cash.value == 500);
+    CHECK(l.get<Taste>(ann2).most.value == 0.7f);
     CHECK(l.get<Visitor>(bob2).name == "Bob");
     CHECK(people.guests[1 - first].look == -1);
     // As start_guests leaves them, walking.

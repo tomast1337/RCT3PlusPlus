@@ -268,8 +268,8 @@ namespace rct3::scene
             saved.wage_level = staff.wage_level;
             saved.training = staff.training;
             saved.warnings = staff.warnings;
-            saved.happiness = staff.happiness;
-            saved.laziness = staff.laziness;
+            saved.happiness.value = staff.happiness.value;
+            saved.laziness.value = staff.laziness.value;
         }
 
         ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
@@ -560,7 +560,7 @@ namespace rct3::scene
                 ride->breakdown.inspection_interval = change.value;
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
-                        upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
+                        upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every.value;
             }
             else if (change.id == ui::control_id(Mechanic))
             {
@@ -1249,7 +1249,7 @@ namespace rct3::scene
                 std::int64_t rides_taken = 0;
                 std::int64_t shops_taken = 0;
                 for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
-                    (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income;
+                    (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income.value;
                 simulation::count_takings(scene.takings, scene.park.time, rides_taken, shops_taken);
                 std::vector<simulation::GoalRide> goal_rides;
                 for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
@@ -1283,8 +1283,8 @@ namespace rct3::scene
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
-                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
-                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = fee, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
+                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee.value : 0;
+                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
@@ -1362,7 +1362,7 @@ namespace rct3::scene
                     if (upkeep == nullptr)
                         continue;
                     save::Ride& ride = scene.rides.rides[i];
-                    ride.breakdown.reliability = upkeep->reliability * 100;
+                    ride.breakdown.reliability.value = upkeep->reliability * 100;
                     ride.breakdown.current = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->kind));
                     ride.breakdown.last = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->last));
                     ride.base.time_since_inspection = upkeep->since_inspection;

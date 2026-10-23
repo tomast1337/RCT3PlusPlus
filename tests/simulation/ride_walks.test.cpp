@@ -33,12 +33,12 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     // Pays, walks to the ticket spot and stands there facing the way given, the ride waiting.
     REQUIRE(park.run_until([&] { return r.all_of<RideWalk>(g) && r.get<RideWalk>(g).next == 1; }, 30));
     CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
-    CHECK(r.get<Wallet>(g).cash == 900);
+    CHECK(r.get<Wallet>(g).cash.value == 900);
     CHECK(near(r.get<Pose>(g).position, ticket));
     const std::uint64_t at_ticket = park.world().tick;
     park.run(2);
     CHECK(r.get<CycleRide>(ride).phase == RidePhase::Loading);
-    CHECK(r.get<Pose>(g).heading == doctest::Approx(1.0f));
+    CHECK(r.get<Pose>(g).heading.value == doctest::Approx(1.0f));
     CHECK(near(r.get<Pose>(g).position, ticket));
 
     // On to the seat, and only then off it goes.
@@ -75,7 +75,7 @@ TEST_CASE("the next rider steps up to the ticket spot once the one ahead has han
     const auto second = first == a ? b : a;
     CHECK(r.get<Errand>(second).kind == ErrandKind::Queueing);
     // Still queueing while the first hands over their ticket; boards as the first walks on.
-    REQUIRE(park.run_until([&] { return r.get<RideWalk>(first).pause <= 0; }, 10));
+    REQUIRE(park.run_until([&] { return r.get<RideWalk>(first).pause.value <= 0; }, 10));
     CHECK(park.run_until([&] { return r.all_of<RideWalk>(second); }, 1));
     CHECK(r.get<RideWalk>(first).next >= 1);
     // Both seated, in seats of their own, before it goes.

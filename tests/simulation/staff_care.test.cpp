@@ -23,8 +23,8 @@ TEST_CASE("training and pay make staff content")
     set_wage_level(trained, kMostWageLevel);
     live(untrained, 0.5f, 10);
     live(trained, 0.5f, 10);
-    CHECK(trained.happiness > untrained.happiness + 0.3f);
-    CHECK(trained.wage > untrained.wage);
+    CHECK(trained.happiness.value > untrained.happiness.value + 0.3f);
+    CHECK(trained.wage.value > untrained.wage.value);
 }
 
 TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow lazy")
@@ -35,9 +35,9 @@ TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow
     live(steady, 0.5f, 10);
     live(overworked, 1.0f, 10);
     live(idle, 0.0f, 10);
-    CHECK(overworked.happiness < steady.happiness);
-    CHECK(idle.happiness < steady.happiness);
-    CHECK(idle.laziness > steady.laziness);
+    CHECK(overworked.happiness.value < steady.happiness.value);
+    CHECK(idle.happiness.value < steady.happiness.value);
+    CHECK(idle.laziness.value > steady.laziness.value);
 
     SUBCASE("training slows how fast laziness grows")
     {
@@ -45,7 +45,7 @@ TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow
         Staff schooled { .training = kMostTraining, .happiness = 0.2f };
         care_for(raw, false, 60);
         care_for(schooled, false, 60);
-        CHECK(raw.laziness > schooled.laziness);
+        CHECK(raw.laziness.value > schooled.laziness.value);
     }
 }
 
@@ -78,10 +78,10 @@ TEST_CASE("a warning shakes off laziness, but upsets a worker who was not lazy")
 {
     Staff lazy { .happiness = 0.4f, .laziness = 0.6f };
     warn(lazy);
-    CHECK(lazy.laziness == 0);
-    CHECK(lazy.happiness == doctest::Approx(0.4f));
+    CHECK(lazy.laziness.value == 0);
+    CHECK(lazy.happiness.value == doctest::Approx(0.4f));
     Staff good { .happiness = 0.9f };
     warn(good);
-    CHECK(good.happiness < 0.9f);
+    CHECK(good.happiness.value < 0.9f);
     CHECK(good.warnings == 1);
 }

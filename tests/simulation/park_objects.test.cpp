@@ -17,9 +17,9 @@ TEST_CASE("guests use toilets, cash machines and first aid when they need them")
         const auto toilet = park.shop("Toilet", Product::Toilet, { 6, 0 }, 20);
         const auto g = park.guest({ 0, 0 }, { .bladder = 0.9f });
         auto& r = park.world().registry;
-        CHECK(park.run_until([&] { return r.get<Needs>(g).bladder < 0.1f; }, 60));
+        CHECK(park.run_until([&] { return r.get<Needs>(g).bladder.value < 0.1f; }, 60));
         CHECK(r.get<Attraction>(toilet).customers == 1);
-        CHECK(r.get<Wallet>(g).cash == 5000 - 20);
+        CHECK(r.get<Wallet>(g).cash.value == 5000 - 20);
         CHECK_FALSE(r.all_of<Rubbish>(g)); // Nothing to throw away
     }
     {
@@ -27,14 +27,14 @@ TEST_CASE("guests use toilets, cash machines and first aid when they need them")
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
         const auto g = park.guest({ 0, 0 }, { .cash = 100 });
-        CHECK(park.run_until([&] { return park.world().registry.get<Wallet>(g).cash > 100; }, 60));
+        CHECK(park.run_until([&] { return park.world().registry.get<Wallet>(g).cash.value > 100; }, 60));
     }
     {
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("First aid", Product::FirstAid, { 6, 0 }, 0);
         const auto g = park.guest({ 0, 0 }, { .nausea = 0.9f });
-        CHECK(park.run_until([&] { return park.world().registry.get<Mood>(g).nausea == 0; }, 60));
+        CHECK(park.run_until([&] { return park.world().registry.get<Mood>(g).nausea.value == 0; }, 60));
     }
 }
 
@@ -55,7 +55,7 @@ TEST_CASE("tired guests sit on the benches they pass, as many as there are seats
     }
     CHECK(most > 0);
     CHECK(most <= 3);
-    CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return r.get<Mood>(g).energy > 0.2f; }));
+    CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return r.get<Mood>(g).energy.value > 0.2f; }));
 }
 
 TEST_CASE("guests stop to watch a sight, cheered by it, and vandals leave it be")
@@ -67,10 +67,10 @@ TEST_CASE("guests stop to watch a sight, cheered by it, and vandals leave it be"
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.all_of<Linger>(g); }, 120));
     CHECK(r.get<Linger>(g).at == PathItemKind::Sight);
-    const float before = r.get<Mood>(g).happiness;
+    const float before = r.get<Mood>(g).happiness.value;
     park.run_seconds(10);
-    CHECK(r.get<Mood>(g).happiness > before);
-    r.get<Mood>(g).happiness = 0;
+    CHECK(r.get<Mood>(g).happiness.value > before);
+    r.get<Mood>(g).happiness.value = 0;
     park.run_seconds(600);
     CHECK_FALSE(r.get<PathItem>(fountain).broken);
 }

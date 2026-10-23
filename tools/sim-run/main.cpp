@@ -313,7 +313,7 @@ int main(int argc, char** argv)
         std::size_t coasters = 0;
         for (const auto [e, ride, trains] : world.registry.view<const simulation::CycleRide, const simulation::Trains>().each())
         {
-            rated += ride.excitement;
+            rated += ride.excitement.value;
             ++coasters;
         }
         if (coasters > 0)
@@ -328,12 +328,12 @@ int main(int argc, char** argv)
     const simulation::ParkState state = simulation::park_state(park_model ? &*park_model : nullptr, *world_model);
     auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(state));
     const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
-    const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = fee, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating });
+    const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating });
     if (weather == "rain" || weather == "storm")
         sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")
         sky = { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
-    out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature), simulation::arrivals_per_second(sky) * 3600);
+    out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature.value), simulation::arrivals_per_second(sky) * 3600);
     const std::uint32_t ideal = simulation::ideal_guests(world);
     const std::int64_t fair = simulation::fair_entrance_fee(world);
     out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<long long>(fee), static_cast<long long>(fair), simulation::drawn(draw, 0, ideal, fair));
@@ -462,10 +462,10 @@ int main(int argc, char** argv)
         }
         for (const auto [e, upkeep] : world.registry.view<const simulation::Upkeep>().each())
         {
-            const auto [since, broken] = ride_was.try_emplace(e, upkeep.since_inspection, upkeep.broken).first->second;
+            const auto [since, broken] = ride_was.try_emplace(e, upkeep.since_inspection.value, upkeep.broken).first->second;
             tally.repaired += broken && !upkeep.broken;
-            tally.inspected += !broken && upkeep.since_inspection < since;
-            ride_was[e] = { upkeep.since_inspection, upkeep.broken };
+            tally.inspected += !broken && upkeep.since_inspection.value < since;
+            ride_was[e] = { upkeep.since_inspection.value, upkeep.broken };
         }
         for (auto& [e, fleet] : fleets)
         {
@@ -505,8 +505,8 @@ int main(int argc, char** argv)
         const auto* ride = r.try_get<simulation::CycleRide>(e);
         if (ride)
             for (const auto [_, taste] : r.view<const simulation::Taste>(entt::exclude<simulation::Left>).each())
-                suits += taste.least <= ride->intensity && ride->intensity <= taste.most;
-        std::string line = std::format("  {:<28} {:<6} customers {:5}  income {:8.2f}  suits {}", a.name, sells, a.customers, static_cast<double>(a.income) / 100, suits);
+                suits += taste.least.value <= ride->intensity.value && ride->intensity.value <= taste.most.value;
+        std::string line = std::format("  {:<28} {:<6} customers {:5}  income {:8.2f}  suits {}", a.name, sells, a.customers, static_cast<double>(a.income.value) / 100, suits);
         if (ride)
             line += std::format("  queue {} on {} tiles{}", ride->queue.size(), ride->line.size(), a.open ? "" : "  closed");
         out.info("{}", line);
@@ -532,7 +532,7 @@ int main(int argc, char** argv)
         {
             breakdowns += upkeep.breakdowns;
             down += upkeep.broken;
-            reliability += upkeep.reliability;
+            reliability += upkeep.reliability.value;
         }
         const auto ride_count = r.view<const simulation::Upkeep>().size();
         const std::size_t mechanics = static_cast<std::size_t>(std::ranges::count_if(r.view<const simulation::Staff>(), [&](entt::entity e) { return r.get<simulation::Staff>(e).role == simulation::StaffRole::Mechanic; }));
@@ -549,8 +549,8 @@ int main(int argc, char** argv)
         std::size_t hot = 0;
         for (const auto [_, mood] : r.view<const simulation::Mood>().each())
         {
-            wet += mood.wet >= 0.5f;
-            hot += mood.heat >= 0.5f;
+            wet += mood.wet.value >= 0.5f;
+            hot += mood.heat.value >= 0.5f;
         }
         // Walking guests by what is over the tile they are on.
         std::size_t roofed = 0;
@@ -565,8 +565,8 @@ int main(int argc, char** argv)
         std::size_t rides[2] { };
         for (const auto [_, ride] : r.view<const simulation::CycleRide>().each())
         {
-            queued[ride.cover >= 0.5f] += ride.queue.size();
-            ++rides[ride.cover >= 0.5f];
+            queued[ride.cover.value >= 0.5f] += ride.queue.size();
+            ++rides[ride.cover.value >= 0.5f];
         }
         std::uint32_t drinks = 0;
         std::uint32_t umbrellas = 0;
@@ -602,7 +602,7 @@ int main(int argc, char** argv)
         out.info("{}", line);
         out.info("guests sat on benches {:d} times and stopped at sights {:d} times", tally.sat, tally.watched);
         const auto vomit_lying = std::ranges::count_if(r.view<const simulation::Litter>(), [&](entt::entity e) { return r.get<simulation::Litter>(e).vomit; });
-        const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea >= 0.6f; });
+        const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea.value >= 0.6f; });
         out.info("sickness: guests sick {:d} times, {:d} by a ride's exit; {:d} lying now; {:d} guests too sick to ride", tally.sick, tally.sick_by_exit, vomit_lying, queasy);
         out.info("breakdowns going on, by kind:{}", breakdown_kinds(r).c_str());
         {
@@ -634,15 +634,15 @@ int main(int argc, char** argv)
                 away += !area.covers(world.paths.nodes()[stride.to].tile);
             out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }
-        out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid : 0) / 100);
+        out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
         {
             float happy = 0, lazy = 0, load = 0;
             std::size_t count = 0, resting = 0;
             for (const auto [_, staff] : world.registry.view<const simulation::Staff>().each())
             {
-                happy += staff.happiness;
-                lazy += staff.laziness;
-                load += staff.load;
+                happy += staff.happiness.value;
+                lazy += staff.laziness.value;
+                load += staff.load.value;
                 resting += staff.resting;
                 ++count;
             }
@@ -658,9 +658,9 @@ int main(int argc, char** argv)
     for (const auto [e, errand, mood, needs] : r.view<const simulation::Errand, const simulation::Mood, const simulation::Needs>().each())
     {
         ++doing[static_cast<std::size_t>(errand.kind)];
-        happiness += mood.happiness;
-        thirst += needs.thirst;
-        hunger += needs.hunger;
+        happiness += mood.happiness.value;
+        thirst += needs.thirst.value;
+        hunger += needs.hunger.value;
         ++count;
     }
     if (count > 0)

@@ -26,8 +26,8 @@ TEST_CASE("nausea fades, slower while the guest is still eating")
     auto& r = park.world().registry;
     r.emplace<Rubbish>(eating, Rubbish { .kind = 0, .held = -1000 }); // Eating all along
     park.run_seconds(60);
-    CHECK(r.get<Mood>(fasting).nausea < 0.5f);
-    CHECK(r.get<Mood>(eating).nausea > r.get<Mood>(fasting).nausea);
+    CHECK(r.get<Mood>(fasting).nausea.value < 0.5f);
+    CHECK(r.get<Mood>(eating).nausea.value > r.get<Mood>(fasting).nausea.value);
 }
 
 TEST_CASE("guests keep off rides wilder than their stomachs take")
@@ -38,7 +38,7 @@ TEST_CASE("guests keep off rides wilder than their stomachs take")
         park.path({ 0, 0 }, { 3, 0 });
         const auto ride = park.flat_ride("Top Spin", { 3, 0 }, 0, { .intensity = 0.9f });
         const auto g = park.guest({ 0, 0 });
-        park.world().registry.get<Mood>(g).tolerance = tolerance;
+        park.world().registry.get<Mood>(g).tolerance.value = tolerance;
         park.run_seconds(300);
         CHECK((park.world().registry.get<Attraction>(ride).customers > 0) == (tolerance > 0.5f));
     }
@@ -55,7 +55,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     for (int i = 0; i < 20; ++i)
     {
         riders.push_back(park.guest({ 4, 0 }, { .nausea = 0.7f }));
-        r.get<Mood>(riders.back()).tolerance = 0;
+        r.get<Mood>(riders.back()).tolerance.value = 0;
         r.get<Errand>(riders.back()) = { ErrandKind::Riding, ride, 0 };
         r.get<CycleRide>(ride).riders.push_back(riders.back());
     }
@@ -66,10 +66,10 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     // A guest standing in it feels queasier.
     const auto passer = park.guest({ 3, 0 });
     r.get<Errand>(passer).rest = 1000;
-    r.get<Stride>(passer).progress = 1;
-    const float before = r.get<Mood>(passer).nausea;
+    r.get<Stride>(passer).progress.value = 1;
+    const float before = r.get<Mood>(passer).nausea.value;
     park.run(1);
-    CHECK(r.get<Mood>(passer).nausea > before);
+    CHECK(r.get<Mood>(passer).nausea.value > before);
     park.staff(StaffRole::Handyman, { 0, 0 });
     CHECK(park.run_until([&] { return vomit(park) == 0; }, 300));
 }
@@ -83,7 +83,7 @@ TEST_CASE("a sick guest sits down on a bench and settles before riding again")
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.all_of<Linger>(g); }, 60));
     CHECK(r.get<Linger>(g).at == PathItemKind::Bench);
-    const float before = r.get<Mood>(g).nausea;
+    const float before = r.get<Mood>(g).nausea.value;
     park.run_seconds(20);
-    CHECK(r.get<Mood>(g).nausea < before - 0.1f);
+    CHECK(r.get<Mood>(g).nausea.value < before - 0.1f);
 }

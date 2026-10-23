@@ -35,7 +35,7 @@ TEST_CASE("cheaper rides make a higher entrance fee fair")
     park.path({ 0, 0 }, { 3, 0 });
     const auto ride = park.flat_ride("Spinner", { 1, 0 }, 300, { .excitement = 0.8f });
     const std::int64_t dear = fair_entrance_fee(park.world());
-    park.world().registry.get<Attraction>(ride).price = 0;
+    park.world().registry.get<Attraction>(ride).price.value = 0;
     CHECK(fair_entrance_fee(park.world()) > dear);
 }
 

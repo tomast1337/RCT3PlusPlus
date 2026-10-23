@@ -13,7 +13,6 @@
 
 namespace rct3::simulation::tuning
 {
-    using namespace units;
 
     /// Needs and moods while walking about.
     struct Needs

@@ -17,9 +17,9 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     auto& r = park.world().registry;
 
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 120));
-    CHECK(r.get<Needs>(guest).thirst < 0.05f);
-    CHECK(r.get<Wallet>(guest).cash == 850);
-    CHECK(r.get<Attraction>(stand).income == 150);
+    CHECK(r.get<Needs>(guest).thirst.value < 0.05f);
+    CHECK(r.get<Wallet>(guest).cash.value == 850);
+    CHECK(r.get<Attraction>(stand).income.value == 150);
     // On the stand's tile, wherever on it they walked.
     const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
     CHECK(std::max(std::abs(off.x), std::abs(off.z)) <= kLaneReach + 0.01f);
@@ -37,7 +37,7 @@ TEST_CASE("a guest goes for what they need most")
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Attraction>(food).customers == 1; }, 60));
     CHECK(r.get<Attraction>(drinks).customers == 0);
-    CHECK(r.get<Needs>(guest).hunger < 0.05f);
+    CHECK(r.get<Needs>(guest).hunger.value < 0.05f);
 }
 
 TEST_CASE("a guest picks the nearer of two stands")
@@ -65,7 +65,7 @@ TEST_CASE("a guest who cannot pay does not go, and stays on the paths")
         REQUIRE(park.world().paths.nearest(r.get<Pose>(guest).position).has_value());
     }
     CHECK(r.get<Attraction>(stand).customers == 0);
-    CHECK(r.get<Wallet>(guest).cash == 100);
+    CHECK(r.get<Wallet>(guest).cash.value == 100);
 }
 
 TEST_CASE("needs grow and a pressing need spoils the mood")
@@ -75,9 +75,9 @@ TEST_CASE("needs grow and a pressing need spoils the mood")
     const auto guest = park.guest({ 0, 0 }, { .thirst = 0.69f, .happiness = 0.5f, .cash = 0 });
     park.run_seconds(120);
     auto& r = park.world().registry;
-    CHECK(r.get<Needs>(guest).thirst > 0.9f);
-    CHECK(r.get<Needs>(guest).hunger > 0.1f);
-    CHECK(r.get<Mood>(guest).happiness < 0.5f);
+    CHECK(r.get<Needs>(guest).thirst.value > 0.9f);
+    CHECK(r.get<Needs>(guest).hunger.value > 0.1f);
+    CHECK(r.get<Mood>(guest).happiness.value < 0.5f);
 }
 
 TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
@@ -102,11 +102,11 @@ TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
     CHECK(r.get<Errand>(guests[2]).kind == ErrandKind::Queueing);
 
     CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers == 3; }, 30));
-    CHECK(r.get<Mood>(guests[0]).happiness > 0.5f);
-    CHECK(r.get<Mood>(guests[0]).nausea > 0);
+    CHECK(r.get<Mood>(guests[0]).happiness.value > 0.5f);
+    CHECK(r.get<Mood>(guests[0]).nausea.value > 0);
     CHECK(r.get<Errand>(guests[0]).kind == ErrandKind::Wandering);
-    CHECK(r.get<Wallet>(guests[0]).cash == 800);
-    CHECK(r.get<Attraction>(ride).income == 600);
+    CHECK(r.get<Wallet>(guests[0]).cash.value == 800);
+    CHECK(r.get<Attraction>(ride).income.value == 600);
 }
 
 TEST_CASE("guests stand a moment at a ride's exit to show how it left them, then walk on")
@@ -147,11 +147,11 @@ TEST_CASE("children walk slower than grown-ups, and every step is counted toward
     const auto child = park.guest({ 0, 0 });
     r.get<Visitor>(child).age = AgeGroup::Child;
     start_walking(park.world(), child, r.get<Stride>(child).from);
-    CHECK(r.get<Stride>(child).speed < r.get<Stride>(adult).speed);
+    CHECK(r.get<Stride>(child).speed.value < r.get<Stride>(adult).speed.value);
     park.run_seconds(5);
     const Pose& pose = r.get<Pose>(adult);
-    CHECK(pose.walked > 0);
-    CHECK(pose.walked <= 5 * r.get<Stride>(adult).speed + 0.01f);
+    CHECK(pose.walked.value > 0);
+    CHECK(pose.walked.value <= 5 * r.get<Stride>(adult).speed.value + 0.01f);
 }
 
 TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for them to reach the front")
@@ -175,7 +175,7 @@ TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for th
     REQUIRE(park.run_until([&] { return !r.get<CycleRide>(ride).riders.empty(); }, 30));
     CHECK(r.get<CycleRide>(ride).riders.front() == guests[0]);
     // The rest, who walked in side by side, end up standing behind in order.
-    CHECK(park.run_until([&] { return r.get<Stride>(guests[1]).along < r.get<Stride>(guests[2]).along; }, 5));
+    CHECK(park.run_until([&] { return r.get<Stride>(guests[1]).along.value < r.get<Stride>(guests[2]).along.value; }, 5));
 
     REQUIRE(park.run_until([&] { return r.get<Errand>(guests[0]).kind == ErrandKind::Wandering; }, 30));
     CHECK(r.get<Stride>(guests[0]).from == *park.world().paths.find({ 4, 1, 0 }));
@@ -231,12 +231,12 @@ TEST_CASE("guests a save put in a queue stand off its middle, to each side in tu
     {
         const auto g = park.guest({ 3, 1 }, { .cash = 1000 });
         r.get<Errand>(g) = { ErrandKind::Queueing, ride, 0 };
-        r.get<Stride>(g).along = 2;
+        r.get<Stride>(g).along.value = 2;
         cycle.queue.push_back(g);
     }
     park.run_seconds(1);
-    const float a = r.get<Stride>(cycle.queue[0]).side;
-    const float b = r.get<Stride>(cycle.queue[1]).side;
+    const float a = r.get<Stride>(cycle.queue[0]).side.value;
+    const float b = r.get<Stride>(cycle.queue[1]).side.value;
     CHECK(a != 0);
     CHECK(a * b < 0);
 }
@@ -251,8 +251,8 @@ TEST_CASE("an unhappy guest who has queued very long gives up and walks off")
     const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 1; }, 30));
-    r.get<Errand>(g).queued = 1000;
-    r.get<Mood>(g).happiness = 0.1f;
+    r.get<Errand>(g).queued.value = 1000;
+    r.get<Mood>(g).happiness.value = 0.1f;
     CHECK(park.run_until([&] { return r.get<CycleRide>(ride).queue.empty(); }, 600));
     CHECK(std::ranges::count(r.get<Thoughts>(g).recent, ThoughtKind::GaveUpQueue, &Thought::kind) == 1);
     CHECK(r.get<Errand>(g).kind != ErrandKind::Queueing);
@@ -292,14 +292,14 @@ TEST_CASE("a park steps the same however many workers share the work")
     for (const auto e : a.view<Pose>())
     {
         CHECK(a.get<Pose>(e).position == b.get<Pose>(e).position);
-        CHECK(a.get<Wallet>(e).cash == b.get<Wallet>(e).cash);
-        CHECK(a.get<Needs>(e).thirst == b.get<Needs>(e).thirst);
+        CHECK(a.get<Wallet>(e).cash.value == b.get<Wallet>(e).cash.value);
+        CHECK(a.get<Needs>(e).thirst.value == b.get<Needs>(e).thirst.value);
     }
     std::int64_t income = 0;
     for (const auto [e, at] : a.view<Attraction>().each())
     {
-        CHECK(at.income == b.get<Attraction>(e).income);
-        income += at.income;
+        CHECK(at.income.value == b.get<Attraction>(e).income.value);
+        income += at.income.value;
     }
     CHECK(income > 0);
 }
@@ -427,7 +427,7 @@ TEST_CASE("between steps a pose is drawn part way, turning the short way round")
     const Pose pose { .position = { 4, 0, 0 }, .heading = 3.0f, .was = { 0, 0, 0 }, .was_heading = -3.0f };
     const Pose half = between_steps(pose, 0.5f);
     CHECK(half.position.x == doctest::Approx(2));
-    CHECK(std::cos(half.heading) == doctest::Approx(-1).epsilon(0.01)); // Through pi, not through 0
+    CHECK(std::cos(half.heading.value) == doctest::Approx(-1).epsilon(0.01)); // Through pi, not through 0
 }
 
 TEST_CASE("a party walks together, goes where its neediest wants, and each buys for themselves")
@@ -446,9 +446,9 @@ TEST_CASE("a party walks together, goes where its neediest wants, and each buys 
         CHECK((r.get<Stride>(child).to == r.get<Stride>(parent).to || r.get<Stride>(child).to == r.get<Stride>(parent).from));
     }
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
-    CHECK(r.get<Needs>(child).thirst < 0.05f);
-    CHECK(r.get<Wallet>(child).cash == 900);
-    CHECK(r.get<Wallet>(parent).cash == 1000); // Not thirsty, so bought nothing
+    CHECK(r.get<Needs>(child).thirst.value < 0.05f);
+    CHECK(r.get<Wallet>(child).cash.value == 900);
+    CHECK(r.get<Wallet>(parent).cash.value == 1000); // Not thirsty, so bought nothing
 }
 
 TEST_CASE("a follower far from their leader walks back to them rather than jumping")
@@ -576,7 +576,7 @@ TEST_CASE("a party stops now and then to stand in a ring facing in, then walks o
     {
         CHECK(glm::distance(at[k], centre) == doctest::Approx(0.7f).epsilon(0.05));
         const glm::vec3 in = centre - at[k];
-        const float facing = std::atan2(in.x, in.z) - r.get<Pose>(std::array { a, b, c }[k]).heading;
+        const float facing = std::atan2(in.x, in.z) - r.get<Pose>(std::array { a, b, c }[k]).heading.value;
         CHECK(std::cos(facing) > 0.99f); // Facing the middle
     }
     CHECK(park.run_until([&] { return r.get<Stride>(a).from != r.get<Stride>(a).to; }, 15)); // On their way again
@@ -598,7 +598,7 @@ TEST_CASE("a train leaves when its wait is over and its load is in, or after its
 
 TEST_CASE("a flat ride starts, runs its loops and stops, and its riders get off only once it has stopped")
 {
-    CycleRide ride { .start_seconds = 2, .run_seconds = 3, .stop_seconds = 1, .loops = 2 };
+    CycleRide ride { .start = { 2 }, .run = { 3 }, .stop = { 1 }, .loops = 2 };
     CHECK(cycle_seconds(ride) == 9);
     CHECK_FALSE(advance_cycle(ride, 5, false)); // Loading stands still
     CHECK(seconds_into_cycle(ride) == std::nullopt);
@@ -688,7 +688,7 @@ TEST_CASE("walkers keep an even pace and a steady way through tiles, their party
             const float step = glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
             CHECK(step > 0.25f); // Never stopping at a tile, nor waiting on the leader
             CHECK(step < 0.4f);
-            CHECK(std::abs(std::remainder(pose.heading - pose.was_heading, 2 * glm::pi<float>())) < 0.3f);
+            CHECK(std::abs(std::remainder(pose.heading.value - pose.was_heading.value, 2 * glm::pi<float>())) < 0.3f);
         }
     }
 }

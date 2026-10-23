@@ -43,20 +43,16 @@ namespace rct3::profiling
             }
 
             const std::string name;
-            // Only the owning thread touches the path stack. Everything else is shared with readers.
-            std::vector<std::string> path_stack;
+            // Only the owning thread touches the path of the scopes open now. Everything else is shared with
+            // readers. A scope adds its name and cuts it off again, so opening one copies no string.
+            std::string path;
             std::mutex gate;
             std::unordered_map<std::string, ScopeData> scopes;
             double period_timer = 0;
 
             std::string current_path(std::string_view leaf) const
             {
-                if (path_stack.empty())
-                    return std::string(leaf);
-                std::string path = path_stack.back();
-                path += '/';
-                path += leaf;
-                return path;
+                return path.empty() ? std::string(leaf) : std::format("{}/{}", path, leaf);
             }
 
             void add(const std::string& path, double ms)
@@ -193,8 +189,10 @@ namespace rct3::profiling
         if (t_context == nullptr || !enabled())
             return;
         context_ = t_context;
-        path_ = context_->current_path(name);
-        context_->path_stack.push_back(path_);
+        mark_ = context_->path.size();
+        if (mark_ > 0)
+            context_->path += '/';
+        context_->path += name;
         start_ = std::chrono::steady_clock::now();
     }
 
@@ -204,8 +202,8 @@ namespace rct3::profiling
             return;
         const auto elapsed = std::chrono::steady_clock::now() - start_;
         const double ms = std::chrono::duration<double, std::milli>(elapsed).count();
-        context_->path_stack.pop_back();
-        context_->add(path_, ms);
+        context_->add(context_->path, ms);
+        context_->path.resize(mark_);
     }
 
     std::vector<ScopeStats> stats()

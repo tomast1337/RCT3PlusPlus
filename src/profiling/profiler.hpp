@@ -67,7 +67,7 @@ namespace rct3::profiling
 
     private:
         detail::Context* context_ = nullptr;
-        std::string path_;
+        std::size_t mark_ = 0; ///< How long the context's path was before this scope opened
         std::chrono::steady_clock::time_point start_ { };
     };
 

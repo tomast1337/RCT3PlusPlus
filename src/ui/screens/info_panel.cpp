@@ -641,7 +641,7 @@ namespace rct3::ui
         const float dx = p.x - (d.x0 + d.x1) / 2;
         const float dy = p.y - (d.y0 + d.y1) / 2;
         const float radius = info_panel::kDisc / 2;
-        return dx * dx + dy * dy <= radius * radius || ((!style_.left || body_width_ > 0) && contains(strip(), p));
+        return dx * dx + dy * dy <= radius * radius || (body_width_ > 0 && contains(strip(), p));
     }
 
     void InfoPanel::update(const UpdateContext& context)
@@ -765,18 +765,17 @@ namespace rct3::ui
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
         }
 
-        // The disc: flat where it meets the strip, round on the right.
+        // The disc: while the strip shows, flat where it meets it with the strip's band running on into it;
+        // round all over otherwise.
         const Rect d = disc();
         const float half = d.width() / 2;
-        // Turned the other way, round on the left and flat on the right only while the strip shows.
-        const Corners flat = style_.left ? (body_width_ > 0 ? Corners { half, 0, 0, half } : round_corners(half)) : Corners { 0, half, half, 0 };
+        const bool joined = body_width_ > 0;
+        const Corners flat = !joined ? round_corners(half) : style_.left ? Corners { half, 0, 0, half } : Corners { 0, half, half, 0 };
         plain(shifted(d, info_panel::kShadowOffset), flat, c.shadow);
         plain(shifted(d, info_panel::kShadowOffset), round_corners(half), c.shadow);
         plain(d, flat, c.disc);
-        if (!style_.left)
-            plain({ d.x0, d.y0, d.x0 + half, d.y0 + c.band_height }, { }, c.band);
-        else if (body_width_ > 0)
-            plain({ d.x0 + half, d.y0, d.x1, d.y0 + c.band_height }, { }, c.band);
+        if (joined)
+            plain(style_.left ? Rect { d.x0 + half, d.y0, d.x1, d.y0 + c.band_height } : Rect { d.x0, d.y0, d.x0 + half, d.y0 + c.band_height }, { }, c.band);
         Shape rim = shape(d, round_corners(half), c.disc, c.disc);
         rim.ring = c.rim;
         list.shape(rim);

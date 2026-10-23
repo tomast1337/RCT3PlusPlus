@@ -46,6 +46,11 @@ namespace rct3::ui
         float corner = 11;      ///< Of the strip's top corners
         float rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
         float strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom
+        /// Behind a page of lines, below the band and in from the strip's open end, with every other line striped.
+        Color paper = hex("#ffffff");
+        Color stripe = hex("#efe8ef");
+        float paper_inset = 6;   ///< From the strip's open end and bottom
+        float paper_corner = 20; ///< Of its bottom corner by the disc
     };
 
     struct InfoPanelStyle
@@ -78,6 +83,11 @@ namespace rct3::ui
         bool left = false;
         float raise = 0; ///< Of the disc and its close button, clear of what stands below them
         Color text_colour = hex("#ffffff");
+        Color paper_text_colour = hex("#000000"); ///< Of a page on paper
+        /// On the button in the band that puts the strip away, pointing at the disc: the right-hand panel's and the
+        /// left-hand one's.
+        std::string hide_icon;
+        std::string hide_icon_left;
         /// The colours of a graph's series, in turn.
         std::vector<Color> series_colours { hex("#ffe14a"), hex("#6be36b"), hex("#ff7a5c"), hex("#7ac8ff") };
     };
@@ -127,6 +137,9 @@ namespace rct3::ui
         inline constexpr float kTabGrown = 40;   ///< Under the pointer
         inline constexpr float kIconSize = 40;   ///< Of the tab icons' own pictures
         inline constexpr float kCloseSize = 14;
+        inline constexpr float kHideSize = 12;     ///< The button that puts the strip away
+        inline constexpr float kHideInset = 4;     ///< From the strip's open end and the band's top
+        inline constexpr float kTitleLeft = 20;    ///< Of the title, clear of that button
         inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
         inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
         inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
@@ -346,8 +359,8 @@ namespace rct3::ui
         /// The size of the open tab's content; the strip fits round it.
         void set_body_size(float width, float height);
         /// Fills the body with `page`: its title in the band along the strip's top, its lines in two columns, the
-        /// values clear of the widest label, its note and its controls, each clear of its label. An empty page
-        /// hides the strip.
+        /// values clear of the widest label, its note and its controls, each clear of its label. A page of lines or a
+        /// note without a graph sits on striped paper, in dark text. An empty page hides the strip.
         void show_page(const InfoPage& page);
 
         /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.
@@ -359,6 +372,12 @@ namespace rct3::ui
         /// The square the round view fits in.
         [[nodiscard]] Rect view() const;
         [[nodiscard]] Rect strip() const;
+        /// Whether the strip is out: the page has content and the player has not put it away with the arrow in its
+        /// band. Picking a tab brings it back.
+        [[nodiscard]] bool strip_shown() const
+        {
+            return body_width_ > 0 && !tucked_;
+        }
         [[nodiscard]] Button& tab(std::size_t i) const
         {
             return *tabs_.at(i);
@@ -438,6 +457,9 @@ namespace rct3::ui
         bool measured_ = false; ///< Whether place_page has run with the fonts since the page was shown
         std::optional<std::size_t> section_now_;
         Button* close_ = nullptr;
+        Button* hide_ = nullptr;
+        bool tucked_ = false; ///< The strip put away by the player
+        bool paper_ = false;  ///< The page sits on paper
         Widget* body_ = nullptr;
         Label* title_ = nullptr; ///< The page's, in the band
 

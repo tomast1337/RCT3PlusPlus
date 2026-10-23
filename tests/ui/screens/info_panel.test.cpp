@@ -110,6 +110,28 @@ TEST_CASE("picking a tab is told once, and the close button hides the panel")
     CHECK_FALSE(f.panel->take_closed());
 }
 
+TEST_CASE("the arrow in the band puts the strip away until a tab is picked, and a page of lines is dark")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    page.title = u"Title";
+    page.lines = { { u"One", u"1", false, "one" } };
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    CHECK(static_cast<Label&>(*f.panel->body().find("one_label")).style.colour == kGamePalette.text);
+    const Rect strip = f.panel->strip();
+    const Point beside { strip.x0 + 40, (strip.y0 + strip.y1) / 2 };
+    CHECK(f.panel->covers(beside));
+    f.click(Fixture::middle(f.panel->find("hide")->rect()));
+    CHECK_FALSE(f.panel->strip_shown());
+    CHECK_FALSE(f.panel->covers(beside));
+    CHECK_FALSE(f.panel->body().visible);
+    f.click(Fixture::middle(f.panel->tab(0).rect()));
+    CHECK(f.panel->strip_shown());
+    CHECK(f.panel->body().visible);
+}
+
 TEST_CASE("the strip fits round the page's width beside the disc, and stands full height behind it")
 {
     Fixture f;

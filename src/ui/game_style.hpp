@@ -635,6 +635,11 @@ namespace rct3::ui::game_skins
         s.coded.body = p.strip;
         s.coded.band = p.accent;
         s.coded.disc = p.patch;
+        s.coded.paper = p.paper;
+        s.coded.stripe = p.stripe;
+        s.paper_text_colour = p.text;
+        s.hide_icon = "WhiteArrow_Right";
+        s.hide_icon_left = "WhiteArrow_Left";
         s.picked_section_colour = p.text_on_band;
         s.text_colour = p.text_on_band;
         s.look = PanelLook::Coded;

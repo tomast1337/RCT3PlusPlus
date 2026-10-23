@@ -15,6 +15,7 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include "logging/log.hpp"
 #include "particles/display.hpp"
 #include "particles/effect.hpp"
 #include "particles/simulation.hpp"
@@ -43,69 +44,74 @@
 
 namespace
 {
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("save-dump");
+} // namespace
+
+namespace
+{
 
     using rct3::save::Value;
     using rct3::save::ValueKind;
 
     void print_value(const Value& v, int indent, const char* name)
     {
-        std::printf("%*s", indent, "");
-        if (name)
-            std::printf("%s = ", name);
+        // Each value takes one line, after its indent and name.
+        const std::string head = std::string(static_cast<std::size_t>(indent), ' ') + (name ? std::format("{} = ", name) : "");
         switch (v.kind())
         {
             case ValueKind::Raw:
             {
                 const auto raw = v.raw();
-                std::printf("raw[%zu]", raw.size());
+                std::string line = std::format("{}raw[{}]", head, raw.size());
                 for (std::size_t i = 0; i < raw.size() && i < 16; ++i)
-                    std::printf(" %02x", static_cast<unsigned>(raw[i]));
+                    line += std::format(" {:02x}", static_cast<unsigned>(raw[i]));
                 if (raw.size() > 16)
-                    std::printf(" ...");
-                std::printf("\n");
+                    line += " ...";
+                out.info("{}", line);
                 return;
             }
             case ValueKind::Bool:
-                std::printf("%s\n", v.as_bool() ? "true" : "false");
+                out.info("{}{}", head, v.as_bool() ? "true" : "false");
                 return;
             case ValueKind::Integer:
-                std::printf("%lld\n", static_cast<long long>(v.as_integer()));
+                out.info("{}{}", head, v.as_integer());
                 return;
             case ValueKind::Float:
-                std::printf("%g\n", static_cast<double>(v.as_float()));
+                out.info("{}{:g}", head, static_cast<double>(v.as_float()));
                 return;
             case ValueKind::String:
-                std::printf("\"%.*s\"\n", static_cast<int>(v.text().size()), v.text().data());
+                out.info("{}\"{}\"", head, v.text());
                 return;
             case ValueKind::Reference:
                 if (v.as_reference() == 0)
-                    std::printf("null\n");
+                    out.info("{}null", head);
                 else
-                    std::printf("ref %llu\n", static_cast<unsigned long long>(v.as_reference()));
+                    out.info("{}ref {}", head, v.as_reference());
                 return;
             case ValueKind::Vector3:
             case ValueKind::Orientation:
             case ValueKind::Matrix44:
             case ValueKind::FloatArray:
             {
-                std::printf("%s[", rct3::save::to_string(v.kind()));
+                std::string line = std::format("{}{}[", head, rct3::save::to_string(v.kind()));
                 const auto f = v.floats();
                 for (std::size_t i = 0; i < f.size() && i < 24; ++i)
-                    std::printf("%s%g", i ? " " : "", static_cast<double>(f[i]));
+                    line += std::format("{}{:g}", i ? " " : "", static_cast<double>(f[i]));
                 if (f.size() > 24)
-                    std::printf(" ... (%zu)", f.size());
-                std::printf("]\n");
+                    line += std::format(" ... ({})", f.size());
+                out.info("{}]", line);
                 return;
             }
             case ValueKind::List:
             {
-                std::printf("list[%zu]\n", v.items().size());
+                out.info("{}list[{}]", head, v.items().size());
                 std::size_t shown = 0;
                 for (const auto& item : v.items())
                 {
                     if (++shown > 8)
                     {
-                        std::printf("%*s...\n", indent + 2, "");
+                        out.info("{:{}}...", "", indent + 2);
                         break;
                     }
                     print_value(item, indent + 2, nullptr);
@@ -114,13 +120,13 @@ namespace
             }
             case ValueKind::Struct:
             {
-                std::printf("{\n");
+                out.info("{}{{", head);
                 for (std::size_t i = 0; i < v.items().size(); ++i)
                 {
                     const auto n = std::string(v.names()[i]);
                     print_value(v.items()[i], indent + 2, n.c_str());
                 }
-                std::printf("%*s}\n", indent, "");
+                out.info("{:{}}}}", "", indent);
                 return;
             }
         }
@@ -244,15 +250,15 @@ namespace
         const auto world = load_world(file, index);
         if (!world)
         {
-            std::printf("world %s: load failed: %s\n", path, to_string(world.error()));
+            out.info("world {}: load failed: {}", path, to_string(world.error()));
             return false;
         }
         const WorldModel& w = *world;
         const TerrainGrid& g = w.terrain;
-        std::printf("world %s\n", path);
+        out.info("world {}", path);
         if (g.empty())
         {
-            std::printf("  terrain      none\n");
+            out.info("  terrain      none");
         }
         else
         {
@@ -272,22 +278,23 @@ namespace
                     ++flat;
                 ++flag_values[c.flags];
             }
-            std::printf("  terrain      %dx%d cells, %s layout, trailing %zu, tile %g x %g, origin (%g, %g)\n", g.width, g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes, static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x), static_cast<double>(g.origin_z));
-            std::printf("  heights      %g .. %g, flat tiles %zu, surfaces %zu distinct, cliff styles %zu distinct\n", static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
-            std::printf("  ownership   ");
+            out.info("  terrain      {:d}x{:d} cells, {} layout, trailing {:d}, tile {:g} x {:g}, origin ({:g}, {:g})", g.width, g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes, static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x), static_cast<double>(g.origin_z));
+            out.info("  heights      {:g} .. {:g}, flat tiles {:d}, surfaces {:d} distinct, cliff styles {:d} distinct", static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
+            std::string owned = "  ownership   ";
             for (std::size_t i = 0; i < own.size(); ++i)
             {
-                std::printf(" %s=%zu", to_string(static_cast<Ownership>(i)), own[i]);
+                owned += std::format(" {}={}", to_string(static_cast<Ownership>(i)), own[i]);
             }
-            std::printf("\n  flag bytes  ");
+            out.info("{}", owned);
+            std::string flags = "  flag bytes  ";
             for (const auto& [v, n] : flag_values)
-                std::printf(" %02x:%zu", static_cast<unsigned>(v), n);
-            std::printf("\n");
+                flags += std::format(" {:02x}:{}", static_cast<unsigned>(v), n);
+            out.info("{}", flags);
         }
-        std::printf("  water        %zu bodies, %zu triangles, map %dx%d", w.water.bodies.size(), w.water.triangle_count(), w.water.width, w.water.height);
+        std::string water = std::format("  water        {} bodies, {} triangles, map {}x{}", w.water.bodies.size(), w.water.triangle_count(), w.water.width, w.water.height);
         for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
-            std::printf(" [level %g, %zu tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
-        std::printf("\n");
+            water += std::format(" [level {:g}, {} tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
+        out.info("{}", water);
         if (!w.pool_water.empty())
         {
             // How the pools' surfaces stand against the ground under them, highest corner.
@@ -295,10 +302,10 @@ namespace
             for (const PoolWater& p : w.pool_water)
                 if (w.terrain.contains(p.col, p.row))
                     ++above[p.surface - static_cast<int>(std::ceil(w.terrain.at(p.col, p.row).max_height()))];
-            std::printf("  pools        %zu squares of water; surface minus ground:", w.pool_water.size());
+            std::string pools = std::format("  pools        {} squares of water; surface minus ground:", w.pool_water.size());
             for (const auto& [d, n] : above)
-                std::printf(" %d x%zu", d, n);
-            std::printf("\n");
+                pools += std::format(" {} x{}", d, n);
+            out.info("{}", pools);
         }
 
         std::array<std::size_t, 4> kinds { };
@@ -314,9 +321,9 @@ namespace
         std::size_t stacked = 0;
         for (const auto& [_, n] : per_tile)
             stacked += n > 1;
-        std::printf(
-            "  paths        %zu tiles (ground %zu, flying %zu, queue %zu, unknown %zu), %zu distinct positions, "
-            "%zu positions with several, %zu queue lines, %zu underground\n",
+        out.info(
+            "  paths        {:d} tiles (ground {:d}, flying {:d}, queue {:d}, unknown {:d}), {:d} distinct positions, "
+            "{:d} positions with several, {:d} queue lines, {:d} underground",
             w.paths.size(), kinds[0], kinds[1], kinds[2], kinds[3], per_tile.size(), stacked, w.queue_lines.size(), with_underground);
         std::size_t free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
         std::set<std::string> symbols;
@@ -329,9 +336,9 @@ namespace
             named += !o.symbol.empty();
             symbols.insert(o.symbol);
         }
-        std::printf(
-            "  scenery      %zu placed (free-standing %zu, hidden %zu, height unset %zu, with adjust %zu, "
-            "symbol resolved %zu, %zu distinct symbols), skirt trees %zu, blocking blob %zu bytes\n",
+        out.info(
+            "  scenery      {:d} placed (free-standing {:d}, hidden {:d}, height unset {:d}, with adjust {:d}, "
+            "symbol resolved {:d}, {:d} distinct symbols), skirt trees {:d}, blocking blob {:d} bytes",
             w.objects.size(), free_standing, hidden, unset, adjust, named, symbols.size(), w.skirt_trees.size(), w.blocking_scenery.size());
         if (!g.empty())
         {
@@ -356,23 +363,23 @@ namespace
                 max_col = std::max(max_col, o.col);
                 max_row = std::max(max_row, o.row);
             }
-            std::printf("  orientation  paths+scenery on owned tiles: (col,row) %zu, (row,col) %zu of %zu; max col %d, max row %d\n", direct, swapped, total, max_col, max_row);
+            out.info("  orientation  paths+scenery on owned tiles: (col,row) {:d}, (row,col) {:d} of {:d}; max col {:d}, max row {:d}", direct, swapped, total, max_col, max_row);
         }
         if (w.weather)
         {
             const Weather& k = *w.weather;
-            std::printf("  weather      %s (raw %d), forecast %s, climate %d, %g degC, wind %g\n", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature), static_cast<double>(k.wind_speed));
+            out.info("  weather      {} (raw {:d}), forecast {}, climate {:d}, {:g} degC, wind {:g}", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature), static_cast<double>(k.wind_speed));
         }
         if (w.sky_background)
-            std::printf("  sky          background %d\n", *w.sky_background);
+            out.info("  sky          background {:d}", *w.sky_background);
         if (w.time)
-            std::printf("  time         day fraction %g, time %g\n", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time));
+            out.info("  time         day fraction {:g}, time {:g}", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time));
         if (w.camera)
-            std::printf("  camera       pos (%g, %g, %g) orientation (%g, %g, %g)\n", static_cast<double>(w.camera->position.x), static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z), static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y), static_cast<double>(w.camera->orientation.z));
+            out.info("  camera       pos ({:g}, {:g}, {:g}) orientation ({:g}, {:g}, {:g})", static_cast<double>(w.camera->position.x), static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z), static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y), static_cast<double>(w.camera->orientation.z));
         bool ok = true;
         for (const auto& i : w.issues)
         {
-            std::printf("  ISSUE        %s x%zu (first object %llu)\n", to_string(i.kind), i.count, static_cast<unsigned long long>(i.first_object));
+            out.info("  ISSUE        {} x{:d} (first object {:d})", to_string(i.kind), i.count, static_cast<unsigned long long>(i.first_object));
             ok = false;
         }
         if (png_path && !g.empty())
@@ -396,9 +403,9 @@ namespace
                 }
             }
             if (write_gray_png(png_path, pw, ph, px))
-                std::printf("  png          wrote %s (row 0 at the top)\n", png_path);
+                out.info("  png          wrote {} (row 0 at the top)", png_path);
             else
-                std::printf("  png          cannot write %s\n", png_path);
+                out.info("  png          cannot write {}", png_path);
         }
         return ok;
     }
@@ -408,6 +415,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     // `save-dump --effect FILE...`: each particle effect read as the game shows it, or why it could not be.
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--effect") == 0; }))
     {
@@ -421,7 +429,7 @@ int main(int argc, char** argv)
             const auto effect = rct3::particles::read_effect(std::as_bytes(std::span(chars)));
             if (!effect)
             {
-                std::printf("%s: %s\n", argv[i], rct3::particles::to_string(effect.error()));
+                out.info("{}: {}", argv[i], rct3::particles::to_string(effect.error()));
                 ++bad;
                 continue;
             }
@@ -436,7 +444,7 @@ int main(int argc, char** argv)
                 run.advance(1 / 60.0f);
                 peak = std::max(peak, run.particles().count());
             }
-            std::printf("%s: life %.2f, %zu roots, %zu emitters, %zu particles, peak %zu live:%s\n", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
+            out.info("{}: life {:.2f}, {:d} roots, {:d} emitters, {:d} particles, peak {:d} live:{}", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
         }
         return bad == 0 ? 0 : 1;
     }
@@ -454,7 +462,7 @@ int main(int argc, char** argv)
             const auto display = rct3::particles::read_display(std::as_bytes(std::span(chars)));
             if (!display)
             {
-                std::printf("%s: %s\n", argv[i], rct3::particles::to_string(display.error()));
+                out.info("{}: {}", argv[i], rct3::particles::to_string(display.error()));
                 ++bad;
                 continue;
             }
@@ -466,11 +474,11 @@ int main(int argc, char** argv)
                 lanes = std::max(lanes, shot.lane + 1);
                 tubes = std::max(tubes, shot.tube + 1);
             }
-            std::printf("%s: \"%s\" to %s, months %04x, at %02d:%02d, %zu launchers, %zu shots over %.1f s, %d lanes, %d tubes\n", argv[i], display->name.c_str(), display->music.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
+            out.info("{}: \"{}\" to {}, months {:04x}, at {:02d}:{:02d}, {:d} launchers, {:d} shots over {:.1f} s, {:d} lanes, {:d} tubes", argv[i], display->name.c_str(), display->music.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
             for (const auto& l : display->launchers)
-                std::printf("  launcher %s at %d,%d corner %d turned %d\n", l.item.c_str(), l.col, l.row, l.corner, l.direction);
+                out.info("  launcher {} at {:d},{:d} corner {:d} turned {:d}", l.item.c_str(), l.col, l.row, l.corner, l.direction);
             for (const auto& [name, count] : effects)
-                std::printf("  %4d %s\n", count, name.c_str());
+                out.info("  {:4d} {}", count, name.c_str());
         }
         return bad == 0 ? 0 : 1;
     }
@@ -500,7 +508,7 @@ int main(int argc, char** argv)
             const auto file = rct3::save::read_save(bytes, { .verify_checksum = false });
             if (!file)
             {
-                std::printf("%s: read error %s\n", argv[i], rct3::save::to_string(file.error()));
+                out.info("{}: read error {}", argv[i], rct3::save::to_string(file.error()));
                 ++bad;
                 continue;
             }
@@ -508,32 +516,32 @@ int main(int argc, char** argv)
             const auto model = rct3::save::load_park(*file, index);
             if (!model)
             {
-                std::printf("%s: park load error %s\n", argv[i], rct3::save::to_string(model.error()));
+                out.info("{}: park load error {}", argv[i], rct3::save::to_string(model.error()));
                 ++bad;
                 continue;
             }
             const auto& m = *model;
             const auto date = m.clock.date();
-            std::printf("%s\n", argv[i]);
-            std::printf("  park       rating %g guests %g flags %x open %d..%d\n", static_cast<double>(m.park.rating().value_or(-1.0f)), static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
-            std::printf("  clock      time %g year %lld month %d week %d\n", static_cast<double>(m.clock.time), static_cast<long long>(date.year), date.month, date.week);
-            std::printf("  finance    cash %d loan %d/%d ledger periods %zu sum0 %lld\n", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger_periods_loaded, static_cast<long long>(m.finance.ledger[0].raw_sum()));
-            std::printf(
-                "  scenario   objectives %zu conditions %zu challenges %zu categories %zu messages %zu/%zu"
-                " particles %zu\n",
+            out.info("{}", argv[i]);
+            out.info("  park       rating {:g} guests {:g} flags {:x} open {:d}..{:d}", static_cast<double>(m.park.rating().value_or(-1.0f)), static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
+            out.info("  clock      time {:g} year {:d} month {:d} week {:d}", static_cast<double>(m.clock.time), static_cast<long long>(date.year), date.month, date.week);
+            out.info("  finance    cash {:d} loan {:d}/{:d} ledger periods {:d} sum0 {:d}", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger_periods_loaded, static_cast<long long>(m.finance.ledger[0].raw_sum()));
+            out.info(
+                "  scenario   objectives {:d} conditions {:d} challenges {:d} categories {:d} messages {:d}/{:d}"
+                " particles {:d}",
                 m.objectives.objectives.size(), m.objectives.conditions.size(), m.objectives.challenges.size(), m.research.categories.size(), m.messages.ordered.size(), m.messages.ring_size, m.particle_objects);
-            std::printf("  content    requirements %zu without overlay %zu invented %zu\n", m.content.entries.size(), m.content.entries_without_overlay, m.content.invented_count());
+            out.info("  content    requirements {:d} without overlay {:d} invented {:d}", m.content.entries.size(), m.content.entries_without_overlay, m.content.invented_count());
             if (root)
             {
                 const auto rep = rct3::save::check_content(m.content, root);
-                std::printf(
-                    "  install    resolved %zu (exact %zu, other case %zu, with unique %zu) missing %zu"
-                    " (%zu distinct stems)\n",
+                out.info(
+                    "  install    resolved {:d} (exact {:d}, other case {:d}, with unique {:d}) missing {:d}"
+                    " ({:d} distinct stems)",
                     rep.resolved, rep.exact_case, rep.resolved - rep.exact_case, rep.with_unique, rep.missing, rep.missing_stems.size());
             }
             for (const auto& v : rct3::save::validate(m))
             {
-                std::printf("  VIOLATION  %s\n", v.c_str());
+                out.info("  VIOLATION  {}", v.c_str());
                 ++bad;
             }
         }
@@ -568,10 +576,10 @@ int main(int argc, char** argv)
             const float saved = *park->park.rating();
             error_sum += std::abs(static_cast<double>(p.total) - static_cast<double>(saved));
             ++compared;
-            std::printf("%-44s saved %4.0f ours %4d  happy %3d rides %3d up %3d guests %3d litter %4d harder %4d  (%d guests, %zu rides)\n", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.harder, input.guests, input.rides.size());
+            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.harder, input.guests, input.rides.size());
         }
         if (compared > 0)
-            std::printf("mean difference %.0f over %zu saves\n", error_sum / static_cast<double>(compared), compared);
+            out.info("mean difference {:.0f} over {:d} saves", error_sum / static_cast<double>(compared), compared);
         return 0;
     }
     // `save-dump --trains FILE...`: every saved train and car, grouped by the state number it holds, with what
@@ -651,22 +659,23 @@ int main(int argc, char** argv)
             }
         }
         const auto print = [](const char* what, const char* other, const std::map<int, Seen>& seen) {
-            std::printf("%s states\n", what);
+            out.info("{} states", what);
             for (const auto& [state, s] : seen)
             {
                 const auto n = static_cast<double>(s.count);
-                std::printf("  %3d  %5zu in %3zu files  still %3.0f%%  platform %3.0f%%  riders %3.0f%%  speed %5.1f  accel %6.2f  time %6.1f\n", state, s.count, s.files, 100 * static_cast<double>(s.still) / n, 100 * static_cast<double>(s.platform) / n, 100 * static_cast<double>(s.riders) / n, s.speed / n, s.accel / n, s.time / n);
+                out.info("  {:3d}  {:5d} in {:3d} files  still {:3.0f}%  platform {:3.0f}%  riders {:3.0f}%  speed {:5.1f}  accel {:6.2f}  time {:6.1f}", state, s.count, s.files, 100 * static_cast<double>(s.still) / n, 100 * static_cast<double>(s.platform) / n, 100 * static_cast<double>(s.riders) / n, s.speed / n, s.accel / n, s.time / n);
                 std::vector<std::pair<std::size_t, std::string>> top;
                 for (const auto& [name, k] : s.pieces)
                     top.emplace_back(k, name);
                 std::ranges::sort(top, std::greater { });
-                std::printf("       pieces");
+                std::string pieces = "       pieces";
                 for (std::size_t k = 0; k < top.size() && k < 4; ++k)
-                    std::printf(" %s %.0f%%", top[k].second.c_str(), 100 * static_cast<double>(top[k].first) / n);
-                std::printf("\n       %s", other);
+                    pieces += std::format(" {} {:.0f}%", top[k].second, 100 * static_cast<double>(top[k].first) / n);
+                out.info("{}", pieces);
+                std::string others = std::format("       {}", other);
                 for (const auto& [o, k] : s.others)
-                    std::printf(" %d:%zu", o, k);
-                std::printf("\n");
+                    others += std::format(" {}:{}", o, k);
+                out.info("{}", others);
             }
         };
         print("train", "front car states", trains);
@@ -704,7 +713,7 @@ int main(int argc, char** argv)
             if (std::getenv("PATHS_ALL") != nullptr)
             {
                 for (const QueueLine& q : world->queue_lines)
-                    std::printf("line %s %llu %llu %d %llu %d\n", argv[i], static_cast<unsigned long long>(q.id), static_cast<unsigned long long>(q.head_ref), q.length, static_cast<unsigned long long>(q.ride_ref), q.station_index);
+                    out.info("line {} {:d} {:d} {:d} {:d} {:d}", argv[i], static_cast<unsigned long long>(q.id), static_cast<unsigned long long>(q.head_ref), q.length, static_cast<unsigned long long>(q.ride_ref), q.station_index);
                 if (const auto rides = load_rides(*file, index))
                 {
                     for (const Ride& ride : rides->rides)
@@ -712,7 +721,7 @@ int main(int argc, char** argv)
                         for (const Station& st : ride.stations)
                         {
                             if (st.entrance_spot)
-                                std::printf("entrance %s %d %d %d %d %llu\n", argv[i], st.entrance_spot->col, st.entrance_spot->row, st.entrance_spot->height, st.entrance_spot->direction, static_cast<unsigned long long>(st.queue_line));
+                                out.info("entrance {} {:d} {:d} {:d} {:d} {:d}", argv[i], st.entrance_spot->col, st.entrance_spot->row, st.entrance_spot->height, st.entrance_spot->direction, static_cast<unsigned long long>(st.queue_line));
                         }
                     }
                 }
@@ -723,17 +732,17 @@ int main(int argc, char** argv)
                 {
                     const auto& c = world->terrain.at(p.col, p.row).corners;
                     const auto o = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
-                    std::printf("tile %s %s%s %d %d %d %d %d %.2f %.2f %.2f %.2f %s %d\n", argv[i], to_string(p.kind), p.elevation && p.elevation->underground ? "-under" : "", p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
+                    out.info("tile {} {}{} {:d} {:d} {:d} {:d} {:d} {:.2f} {:.2f} {:.2f} {:.2f} {} {:d}", argv[i], to_string(p.kind), p.elevation && p.elevation->underground ? "-under" : "", p.elevation ? p.elevation->slope : -1, p.direction, p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, c[0], c[1], c[2], c[3], o != objects.end() ? o->second->symbol.c_str() : "-", o != objects.end() ? o->second->rotation : -1);
                 }
                 if (std::getenv("PATHS_ALL") != nullptr && p.queue)
                 {
                     const auto deck = p.elevation ? objects.find(p.elevation->scenery_ref) : objects.end();
                     if (deck != objects.end())
-                        std::printf("qdeck %s|%d %d %d %d %d %s %d %d\n", argv[i], p.elevation->slope, p.direction, p.queue->start_direction, p.queue->end_direction, p.elevation->quantised_height, deck->second->symbol.c_str(), deck->second->rotation, deck->second->base_height.value_or(-999));
+                        out.info("qdeck {}|{:d} {:d} {:d} {:d} {:d} {} {:d} {:d}", argv[i], p.elevation->slope, p.direction, p.queue->start_direction, p.queue->end_direction, p.elevation->quantised_height, deck->second->symbol.c_str(), deck->second->rotation, deck->second->base_height.value_or(-999));
                 }
                 if (std::getenv("PATHS_ALL") != nullptr && p.queue)
-                    std::printf(
-                        "queue %s %llu %d %d %d %d %d %d %llu %s %s %s %d,%d,%d %d,%d,%d\n", argv[i], static_cast<unsigned long long>(p.id), p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, p.elevation ? p.elevation->slope : -1, p.queue->start_direction, p.queue->end_direction, static_cast<unsigned long long>(p.queue->queue_line_ref), p.surface_name.c_str(), p.queue->fence_symbol.c_str(), p.queue->fence_overlay.c_str(), p.surface_colours ? (*p.surface_colours)[0] : -1,
+                    out.info(
+                        "queue {} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {} {} {} {:d},{:d},{:d} {:d},{:d},{:d}", argv[i], static_cast<unsigned long long>(p.id), p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, p.elevation ? p.elevation->slope : -1, p.queue->start_direction, p.queue->end_direction, static_cast<unsigned long long>(p.queue->queue_line_ref), p.surface_name.c_str(), p.queue->fence_symbol.c_str(), p.queue->fence_overlay.c_str(), p.surface_colours ? (*p.surface_colours)[0] : -1,
                         p.surface_colours ? (*p.surface_colours)[1] : -1, p.surface_colours ? (*p.surface_colours)[2] : -1, p.queue->fence_colours[0], p.queue->fence_colours[1], p.queue->fence_colours[2]);
                 if (!p.elevation)
                     continue;
@@ -754,9 +763,9 @@ int main(int argc, char** argv)
                         symbol = symbol.substr(at + 1);
                     ++s.pieces[symbol];
                     if (std::getenv("PATHS_RAW") != nullptr && s.count <= 4)
-                        std::printf(
-                            "raw %s slope %d dir %d tile %d,%d corners %.2f %.2f %.2f %.2f quant %d | %s @%s base %d rot %d adjust %.2f absolute %d offset %d\n", to_string(p.kind), p.elevation->slope, p.direction, p.col, p.row, world->terrain.at(p.col, p.row).corners[0], world->terrain.at(p.col, p.row).corners[1], world->terrain.at(p.col, p.row).corners[2], world->terrain.at(p.col, p.row).corners[3], quantised, o->second->symbol.c_str(), o->second->overlay.c_str(), o->second->base_height.value_or(-999),
-                            o->second->rotation, o->second->height_adjust.value_or(-9), o->second->force_absolute_height, o->second->height_offset);
+                        out.info(
+                            "raw {} slope {:d} dir {:d} tile {:d},{:d} corners {:.2f} {:.2f} {:.2f} {:.2f} quant {:d} | {} @{} base {:d} rot {:d} adjust {:.2f} absolute {:d} offset {:d}", to_string(p.kind), p.elevation->slope, p.direction, p.col, p.row, world->terrain.at(p.col, p.row).corners[0], world->terrain.at(p.col, p.row).corners[1], world->terrain.at(p.col, p.row).corners[2], world->terrain.at(p.col, p.row).corners[3], quantised, o->second->symbol.c_str(), o->second->overlay.c_str(),
+                            o->second->base_height.value_or(-999), o->second->rotation, o->second->height_adjust.value_or(-9), o->second->force_absolute_height, o->second->height_offset);
                     if (o->second->base_height)
                         ++s.piece_minus_base[*o->second->base_height * 4 - quantised];
                 }
@@ -778,12 +787,12 @@ int main(int argc, char** argv)
         };
         for (const auto& [key, s] : seen)
         {
-            std::printf("%s slope %d: %zu (underground %zu, no base %zu)\n", key.first.c_str(), key.second, s.count, s.underground, s.no_base);
-            std::printf("  pieces            %s\n", top(s.pieces, 8).c_str());
-            std::printf("  quantised %% 4     %s\n", top(s.quantised_minus_4base, 6).c_str());
-            std::printf("  quantised - 4*grnd%s\n", top(s.base_minus_ground, 6).c_str());
-            std::printf("  4*piece - quant   %s\n", top(s.piece_minus_base, 6).c_str());
-            std::printf("  direction         %s\n", top(s.direction, 5).c_str());
+            out.info("{} slope {:d}: {:d} (underground {:d}, no base {:d})", key.first.c_str(), key.second, s.count, s.underground, s.no_base);
+            out.info("  pieces            {}", top(s.pieces, 8).c_str());
+            out.info("  quantised % 4     {}", top(s.quantised_minus_4base, 6).c_str());
+            out.info("  quantised - 4*grnd{}", top(s.base_minus_ground, 6).c_str());
+            out.info("  4*piece - quant   {}", top(s.piece_minus_base, 6).c_str());
+            out.info("  direction         {}", top(s.direction, 5).c_str());
         }
         return 0;
     }
@@ -804,7 +813,7 @@ int main(int argc, char** argv)
             const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
             if (!file)
             {
-                std::printf("%s: container error %s\n", argv[i], to_string(file.error()));
+                out.info("{}: container error {}", argv[i], to_string(file.error()));
                 ++failed;
                 continue;
             }
@@ -812,7 +821,7 @@ int main(int argc, char** argv)
             auto model = load_people(*file, index);
             if (!model)
             {
-                std::printf("%s: people load error %s\n", argv[i], to_string(model.error()));
+                out.info("{}: people load error {}", argv[i], to_string(model.error()));
                 ++failed;
                 continue;
             }
@@ -820,9 +829,9 @@ int main(int argc, char** argv)
             const auto issues = validate(*model);
             for (const auto& is : issues)
                 ++issue_counts[to_string(is.kind)];
-            std::printf(
-                "%-40s guests %5zu staff %3zu animals %5zu zoo %3zu groups %5zu holders %5zu carried %4zu shop %4zu"
-                " litter %5zu issues %zu\n",
+            out.info(
+                "{:<40} guests {:5d} staff {:3d} animals {:5d} zoo {:3d} groups {:5d} holders {:5d} carried {:4d} shop {:4d}"
+                " litter {:5d} issues {:d}",
                 std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), model->guests.size(), model->staff.size(), model->animals.size(), model->zoo_animals.size(), model->groups.size(), model->holders.size(), model->carried_items.size(), model->shop_items.size(), model->litter.size(), issues.size());
             for (const auto& s : model->staff)
                 ++kinds[to_string(s.kind)];
@@ -831,8 +840,9 @@ int main(int argc, char** argv)
             if (shown < 2 && !model->guests.empty())
             {
                 const auto& g = model->guests.front();
-                std::printf(
-                    "  e.g. guest %llu %s at (%.1f %.1f %.1f) state %d/%d cash %d food %.2f happy %.2f group %llu\n", static_cast<unsigned long long>(g.person.id), to_string(g.person.type), static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y), static_cast<double>(g.person.position.z), static_cast<int>(g.person.state), g.person.sub_state, g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness), static_cast<unsigned long long>(g.group.id));
+                out.info(
+                    "  e.g. guest {:d} {} at ({:.1f} {:.1f} {:.1f}) state {:d}/{:d} cash {:d} food {:.2f} happy {:.2f} group {:d}", static_cast<unsigned long long>(g.person.id), to_string(g.person.type), static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y), static_cast<double>(g.person.position.z), static_cast<int>(g.person.state), g.person.sub_state, g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness),
+                    static_cast<unsigned long long>(g.group.id));
                 ++shown;
             }
             const auto add = [](auto& dst, auto& src) { std::move(src.begin(), src.end(), std::back_inserter(dst)); };
@@ -846,14 +856,14 @@ int main(int argc, char** argv)
             add(total.shop_items, model->shop_items);
             add(total.litter, model->litter);
         }
-        std::printf(
-            "TOTAL files %zu failed %zu guests %zu staff %zu animals %zu zoo %zu groups %zu holders %zu carried %zu"
-            " shop %zu litter %zu\n",
+        out.info(
+            "TOTAL files {:d} failed {:d} guests {:d} staff {:d} animals {:d} zoo {:d} groups {:d} holders {:d} carried {:d}"
+            " shop {:d} litter {:d}",
             files, failed, total.guests.size(), total.staff.size(), total.animals.size(), total.zoo_animals.size(), total.groups.size(), total.holders.size(), total.carried_items.size(), total.shop_items.size(), total.litter.size());
         for (const auto& [k, n] : kinds)
-            std::printf("  kind %-16s %zu\n", k.c_str(), n);
+            out.info("  kind {:<16} {:d}", k.c_str(), n);
         for (const auto& [k, n] : issue_counts)
-            std::printf("  issue %-30s %zu\n", k.c_str(), n);
+            out.info("  issue {:<30} {:d}", k.c_str(), n);
         return failed ? 1 : 0;
     }
     // --- people sweep (end) ---
@@ -889,14 +899,14 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--world] [--world-png FILE] PATH\n");
+        out.error("usage: save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--world] [--world-png FILE] PATH");
         return 2;
     }
 
     std::ifstream in(path, std::ios::binary);
     if (!in)
     {
-        std::fprintf(stderr, "cannot open %s\n", path);
+        out.error("cannot open {}", path);
         return 2;
     }
     const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -905,35 +915,35 @@ int main(int argc, char** argv)
     const auto file = rct3::save::read_save(bytes, { .verify_checksum = false });
     if (!file)
     {
-        std::printf("error: %s\n", rct3::save::to_string(file.error()));
+        out.info("error: {}", rct3::save::to_string(file.error()));
         return 1;
     }
 
     if (world || world_png)
         return world_report(*file, path, world_png) ? 0 : 1; // world report option
 
-    std::printf("size           %zu\n", raw.size());
-    std::printf("header         %s\n", file->has_header ? "yes" : "no");
+    out.info("size           {:d}", raw.size());
+    out.info("header         {}", file->has_header ? "yes" : "no");
     if (file->has_header)
     {
-        std::printf("version        %u\n", file->header.version());
-        std::printf("header words  ");
+        out.info("version        {:d}", file->header.version());
+        std::string words = "header words  ";
         for (const auto w : file->header.words)
-            std::printf(" %x", w);
-        std::printf("\n");
+            words += std::format(" {:x}", w);
+        out.info("{}", words);
     }
-    std::printf("sections\n");
+    out.info("sections");
     for (const auto& s : file->sections)
     {
-        std::printf("  %-13s offset %-9zu size %zu\n", rct3::save::to_string(s.kind), s.offset, s.size);
+        out.info("  {:<13} offset {:<9d} size {:d}", rct3::save::to_string(s.kind), s.offset, s.size);
     }
-    std::printf("classes        %zu\n", file->classes.size());
-    std::printf("objects        %zu\n", file->objects.size());
+    out.info("classes        {:d}", file->classes.size());
+    out.info("objects        {:d}", file->objects.size());
     bool ok = true;
     if (file->has_checksum)
     {
         ok = file->stored_checksum == file->computed_checksum;
-        std::printf("checksum       stored %08x computed %08x %s\n", file->stored_checksum, file->computed_checksum, ok ? "ok" : "MISMATCH");
+        out.info("checksum       stored {:08x} computed {:08x} {}", file->stored_checksum, file->computed_checksum, ok ? "ok" : "MISMATCH");
     }
 
     std::vector<std::size_t> count(file->classes.size());
@@ -945,21 +955,21 @@ int main(int argc, char** argv)
     }
     if (classes)
     {
-        std::printf("class table\n");
-        std::printf("  %-4s %-34s %-6s %-8s %s\n", "idx", "name", "attrs", "objects", "bytes");
+        out.info("class table");
+        out.info("  {:<4} {:<34} {:<6} {:<8} {}", "idx", "name", "attrs", "objects", "bytes");
         for (std::size_t i = 0; i < file->classes.size(); ++i)
         {
             const auto& c = file->classes[i];
-            std::printf("  %-4zu %-34.*s %-6zu %-8zu %zu\n", i, static_cast<int>(c.name.size()), c.name.data(), c.attributes.size(), count[i], size[i]);
+            out.info("  {:<4} {:<34} {:<6} {:<8} {}", i, c.name, c.attributes.size(), count[i], size[i]);
         }
     }
     if (objects)
     {
-        std::printf("objects\n");
+        out.info("objects");
         for (const auto& o : file->objects)
         {
             const auto& name = file->classes[o.class_index].name;
-            std::printf("  id %-10llu class %-4u %-30.*s offset %-9zu size %zu\n", static_cast<unsigned long long>(o.id), o.class_index, static_cast<int>(name.size()), name.data(), o.offset, o.bytes.size());
+            out.info("  id {:<10} class {:<4} {:<30} offset {:<9} size {}", o.id, o.class_index, name, o.offset, o.bytes.size());
         }
     }
 
@@ -967,10 +977,10 @@ int main(int argc, char** argv)
         const auto decoded = rct3::save::decode_object(*file, o);
         if (!decoded)
         {
-            std::printf("object %llu: %s\n", static_cast<unsigned long long>(o.id), rct3::save::to_string(decoded.error()));
+            out.info("object {:d}: {}", static_cast<unsigned long long>(o.id), rct3::save::to_string(decoded.error()));
             return;
         }
-        std::printf("object %llu class %.*s (%zu values, %zu opaque, %zu fallbacks)\n", static_cast<unsigned long long>(decoded->id), static_cast<int>(decoded->class_name.size()), decoded->class_name.data(), decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
+        out.info("object {} class {} ({} values, {} opaque, {} fallbacks)", decoded->id, decoded->class_name, decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
         print_value(decoded->fields, 2, nullptr);
     };
     if (value_class)
@@ -987,7 +997,7 @@ int main(int argc, char** argv)
         if (const auto o = index.find(std::strtoull(object_id, nullptr, 10)))
             print_object(*o);
         else
-            std::printf("no object with id %s\n", object_id);
+            out.info("no object with id {}", object_id);
     }
     if (check)
     {
@@ -1007,11 +1017,11 @@ int main(int argc, char** argv)
             total.opaque += decoded->stats.opaque;
             total.fallbacks += decoded->stats.fallbacks;
             if (decoded->stats.fallbacks)
-                std::printf("fallbacks in %.*s id %llu: %zu\n", static_cast<int>(decoded->class_name.size()), decoded->class_name.data(), static_cast<unsigned long long>(decoded->id), decoded->stats.fallbacks);
+                out.info("fallbacks in {} id {}: {}", decoded->class_name, decoded->id, decoded->stats.fallbacks);
             count_refs(decoded->fields, index, refs);
         }
-        std::printf("check          objects %zu failed %zu values %zu opaque %zu fallbacks %zu\n", file->objects.size(), failed, total.values, total.opaque, total.fallbacks);
-        std::printf("references     total %zu null %zu resolved %zu unresolved %zu\n", refs.total, refs.null, refs.resolved, refs.total - refs.null - refs.resolved);
+        out.info("check          objects {:d} failed {:d} values {:d} opaque {:d} fallbacks {:d}", file->objects.size(), failed, total.values, total.opaque, total.fallbacks);
+        out.info("references     total {:d} null {:d} resolved {:d} unresolved {:d}", refs.total, refs.null, refs.resolved, refs.total - refs.null - refs.resolved);
         if (failed || total.fallbacks)
             ok = false;
     }
@@ -1023,7 +1033,7 @@ int main(int argc, char** argv)
         const auto model = rct3::save::load_rides(*file, index);
         if (!model)
         {
-            std::printf("rides          error: %s\n", rct3::save::to_string(model.error()));
+            out.info("rides          error: {}", rct3::save::to_string(model.error()));
             return 1;
         }
         std::size_t tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
@@ -1050,19 +1060,19 @@ int main(int argc, char** argv)
             items += s.items.size();
             extras += s.extras.size();
         }
-        std::printf("rides          tracked %zu flat %zu special %zu stalls %zu\n", tracked, flat, special, model->stalls.size());
-        std::printf("tracks         %zu circuit %zu open %zu segments %zu pieces %zu orphan_pieces %zu\n", tracks, circuits, tracks - circuits, segments, pieces, model->orphan_pieces);
-        std::printf("trains         %zu cars %zu stations %zu shop_items %zu shop_extras %zu\n", trains, cars, stations, items, extras);
+        out.info("rides          tracked {:d} flat {:d} special {:d} stalls {:d}", tracked, flat, special, model->stalls.size());
+        out.info("tracks         {:d} circuit {:d} open {:d} segments {:d} pieces {:d} orphan_pieces {:d}", tracks, circuits, tracks - circuits, segments, pieces, model->orphan_pieces);
+        out.info("trains         {:d} cars {:d} stations {:d} shop_items {:d} shop_extras {:d}", trains, cars, stations, items, extras);
         const auto& g = model->diagnostics;
-        std::printf(
-            "invariants     track_back %zu unresolved_tracks %zu truncated %zu segment_pieces %zu piece_segment %zu "
-            "platform_back %zu open_live_ends %zu train_back %zu train_index %zu car_back %zu car_index %zu "
-            "car_count %zu unresolved_trains %zu unresolved_cars %zu dup_refs %zu queue_size %zu item_back %zu "
-            "unresolved_items %zu\n",
+        out.info(
+            "invariants     track_back {:d} unresolved_tracks {:d} truncated {:d} segment_pieces {:d} piece_segment {:d} "
+            "platform_back {:d} open_live_ends {:d} train_back {:d} train_index {:d} car_back {:d} car_index {:d} "
+            "car_count {:d} unresolved_trains {:d} unresolved_cars {:d} dup_refs {:d} queue_size {:d} item_back {:d} "
+            "unresolved_items {:d}",
             g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch, g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link, g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch, g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch, g.item_back_link_mismatch, g.unresolved_items);
         for (const auto& r : model->rides)
         {
-            std::printf("  ride %-10llu kind %u state %d mode %d ticket %lld stations %zu trains %zu pieces %zu%s\n", static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind), static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
+            out.info("  ride {:<10d} kind {:d} state {:d} mode {:d} ticket {:d} stations {:d} trains {:d} pieces {:d}{}", static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind), static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
         }
     }
     // --- rides: end -----------------------------------------------------------------------------------

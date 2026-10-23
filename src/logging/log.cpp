@@ -268,7 +268,7 @@ namespace rct3::logging
         {
             const bool to_err = level >= Level::Warning;
             std::FILE* stream = to_err ? stderr : stdout;
-            const std::string line = format_entry(entry, to_err ? color_stderr_ : color_stdout_);
+            const std::string line = config_.plain ? entry.message : format_entry(entry, to_err ? color_stderr_ : color_stdout_);
             std::fputs(line.c_str(), stream);
             std::fputc('\n', stream);
             std::fflush(stream);

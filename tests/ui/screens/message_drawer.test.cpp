@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/message_drawer.hpp"
 
+#include "simulation/awards.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/park_bar.hpp"
@@ -71,6 +72,20 @@ TEST_CASE("a message's text fills in its subject's name, or leaves the name out"
     CHECK(message_text(m, strings) == u"Soon the test is due");
     m.text_key = "Plain";
     CHECK(message_text(m, strings) == u"100% fun");
+}
+
+TEST_CASE("an award's message is named by the award, a fine's too")
+{
+    StringTable strings;
+    strings.add("Award_Award", u"Won: %NAME%");
+    strings.add("Award_Fine", u"Fined: %NAME%");
+    strings.add("Award_Best_Toilets", u"Best Toilets");
+    strings.add("Award_Most_Untidy", u"Most Untidy");
+    const simulation::ParkMessage won { .text_key = std::string(simulation::award_message(11)), .award = 11 };
+    CHECK(message_text(won, strings) == u"Won: Best Toilets");
+    const simulation::ParkMessage fined { .text_key = std::string(simulation::award_message(1)), .award = 1 };
+    CHECK(message_text(fined, strings) == u"Fined: Most Untidy");
+    CHECK(simulation::award_name(simulation::kAwardKinds).empty());
 }
 
 TEST_CASE("the drawer hides behind the bar, reached through the notch in its middle")

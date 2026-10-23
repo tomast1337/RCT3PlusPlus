@@ -116,7 +116,7 @@ namespace rct3::park
             return std::ranges::any_of(tiles.at(tile[0], tile[1]), [&](const save::PathTile* p) { return flat_at(*p, grid, height); });
         }
 
-        Deck choose(const save::PathTile& path, const TilePaths& tiles, const save::TerrainGrid& grid)
+        Deck choose(const save::PathTile& path, const TilePaths& tiles, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
         {
             const save::PathElevation& e = *path.elevation;
             const auto height = static_cast<float>(e.quantised_height);
@@ -137,7 +137,7 @@ namespace rct3::park
                 const std::uint8_t facing = next_side(side, 2);
                 const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) {
                     const auto edge = edge_height(*p, grid, facing);
-                    return edge && meets(*edge, height);
+                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, { path.col, path.row }, side, height));
                 });
                 if (joined)
                     sides = static_cast<std::uint8_t>(sides | 1u << side);
@@ -257,14 +257,14 @@ namespace rct3::park
         return { deck_symbol(style, deck.piece), deck.turns };
     }
 
-    Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
     {
         if (!path.elevation)
             return { };
-        return choose(path, TilePaths(paths), grid);
+        return choose(path, TilePaths(paths), grid, walls);
     }
 
-    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row)
+    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls)
     {
         const TilePaths tiles(paths);
         std::unordered_map<std::uint64_t, save::PlacedObject*> by_id;
@@ -290,7 +290,7 @@ namespace rct3::park
                         std::tie(symbol, turns) = deck_for(*style, *p, paths, grid);
                     else
                     {
-                        const Deck deck = choose(*p, tiles, grid);
+                        const Deck deck = choose(*p, tiles, grid, walls);
                         symbol = deck_symbol(*style, deck.piece);
                         turns = deck.turns;
                     }

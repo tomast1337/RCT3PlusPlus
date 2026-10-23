@@ -178,3 +178,36 @@ TEST_CASE("a walk down a ramp onto a sunken tile bends at the edge, not above th
     CHECK(p.height_between(floor, ramp, 0.25f) == doctest::Approx(-2.0f));
     CHECK(p.height_between(top, floor, 0.5f) == doctest::Approx(-1.0f)); // Two flat tiles: a straight line
 }
+
+TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and taking it away joins them again")
+{
+    PathNetwork p;
+    // A square of four tiles, and a queue beside it.
+    const NodeId a = p.add({ 0, 0, 0 });
+    const NodeId b = p.add({ 1, 0, 0 });
+    const NodeId c = p.add({ 0, 1, 0 });
+    const NodeId d = p.add({ 1, 1, 0 });
+    const NodeId q = p.add({ 2, 0, 0 }, true);
+    REQUIRE(p.nodes()[a].corner[0] == d);
+    p.add_wall(0, 0, 0, -0.5f, 2); // Between a and b
+    p.add_wall(1, 0, 0, -0.5f, 2); // Between b and the queue
+    CHECK(p.nodes()[a].next[0] == kNoNode);
+    CHECK(p.nodes()[b].next[2] == kNoNode);
+    CHECK(p.nodes()[a].corner[0] == kNoNode); // The square is broken, so no crossing
+    CHECK(p.nodes()[b].next[0] == q);
+    const auto around = p.route(a, b);
+    REQUIRE(around);
+    CHECK(*around == std::vector<NodeId> { c, d, b });
+    // A wall low on the ground does not part a deck far above it.
+    p.add_wall(0, 0, 1, -0.5f, 2);
+    CHECK(p.nodes()[a].next[1] == kNoNode);
+    p.remove_wall(0, 0, 1, -0.5f, 2);
+    p.remove_wall(0, 0, 0, -0.5f, 2);
+    CHECK(p.nodes()[a].next[0] == b);
+    CHECK(p.nodes()[a].next[1] == c);
+    CHECK(p.nodes()[a].corner[0] == d);
+    PathNetwork high;
+    const NodeId low = high.add({ 0, 0, 6 });
+    high.add_wall(0, 0, 0, -0.5f, 2);
+    CHECK(high.nodes()[low].next[0] == high.add({ 1, 0, 6 }));
+}

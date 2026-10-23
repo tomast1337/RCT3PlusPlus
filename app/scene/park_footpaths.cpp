@@ -347,6 +347,7 @@ namespace rct3::scene
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
         park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
         park::GroundPathMap paths = park::ground_path_map(f.paths, scene.grid);
+        paths.walls = f.walls;
         park::pave_ride_floors(paths, f.floors);
         // shortcut: reads the path styles again while the panel has not, each time they are needed; keep them once read when that shows.
         std::vector<park::PathStyle> read;
@@ -579,6 +580,7 @@ namespace rct3::scene
         park::TerrainMesh ground_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::PathTile> with, std::span<const save::Tile> spots, glm::vec4 tint)
         {
             park::GroundPathMap map = park::ground_path_map(with, scene.grid);
+            map.walls = scene.footpaths.walls;
             park::pave_ride_floors(map, scene.footpaths.floors);
             picture_styles(device, scene, assets, map.styles);
             park::TerrainMesh mesh = park::ground_path_mesh(map, scene.grid);
@@ -798,7 +800,7 @@ namespace rct3::scene
         void refresh_area(ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile low, save::Tile high)
         {
             ParkFootpaths& f = scene.footpaths;
-            if (park::refresh_decks(f.paths, scene.objects, scene.grid, f.styles, low.col - 1, low.row - 1, high.col + 1, high.row + 1) == 0)
+            if (park::refresh_decks(f.paths, scene.objects, scene.grid, f.styles, low.col - 1, low.row - 1, high.col + 1, high.row + 1, f.walls) == 0)
                 return;
             for (const save::PlacedObject& o : scene.objects)
             {
@@ -1173,6 +1175,15 @@ namespace rct3::scene
         }
 
     } // namespace
+
+    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const park::EdgeWall& wall, bool standing)
+    {
+        scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
+        simulation::set_wall(scene.sim, wall, standing);
+        refresh_around(scene, assets, wall.tile);
+        objects_changed(scene);
+        rebuild_ground(device, scene, assets);
+    }
 
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options)
     {

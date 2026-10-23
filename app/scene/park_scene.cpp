@@ -3,6 +3,7 @@
 
 #include "core/maybe.hpp"
 #include "park/daylight.hpp"
+#include "park/edge_walls.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
@@ -484,9 +485,12 @@ namespace rct3::scene
         }
 
         /// Takes the prop `index` out of the park.
-        void destroy_prop(render::Device& device, ParkScene& scene, std::size_t index)
+        void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t index)
         {
+            const auto wall = index < scene.objects.size() ? park::edge_wall(scene.objects[index], scene.models, scene.grid) : std::nullopt;
             change_object(device, scene, index, [](save::PlacedObject& o) { o.hidden = true; });
+            if (wall)
+                wall_changed(device, scene, assets, *wall, false);
         }
 
         /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
@@ -1071,7 +1075,7 @@ namespace rct3::scene
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {
                 // Pulled down at once, as in the game; the panel goes with it.
-                destroy_prop(device, scene, *scene.shown_prop);
+                destroy_prop(device, scene, assets, *scene.shown_prop);
                 scene.shown_prop.reset();
                 info->hide();
             }

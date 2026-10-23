@@ -6,6 +6,7 @@
 // again.
 #pragma once
 
+#include "park/edge_walls.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
 #include "park/track_course.hpp"
@@ -97,6 +98,9 @@ namespace rct3::simulation
     /// shortcut: lamps carry nothing in saves that marks them out, so vandals leave them be; upgrade when path
     /// items are told apart by their models.
     std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
+    /// Stands `wall` between the path tiles either side of it, or takes it away again when not `standing`.
+    void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing);
+
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
     /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths.
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& object, PathItemKind kind);

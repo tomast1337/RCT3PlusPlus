@@ -5,6 +5,7 @@
 #include "ovl/overlay.hpp"
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
+#include "park/edge_walls.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
@@ -663,6 +664,8 @@ namespace rct3::scene
             const park::ObjectModel& model = scene.models.at(park::model_key(*o));
             const auto category = model.category;
             const auto kind = category == std::to_underlying(park::ItemCategory::LitterBin) ? std::optional(simulation::PathItemKind::Bin) : category == std::to_underlying(park::ItemCategory::Bench) ? std::optional(simulation::PathItemKind::Bench) : category == std::to_underlying(park::ItemCategory::Sign) ? std::optional(simulation::PathItemKind::Sign) : park::is_sight(category) ? std::optional(model.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight) : std::nullopt;
+            if (const auto wall = park::edge_wall(scene.objects.back(), scene.models, scene.grid))
+                wall_changed(device, scene, assets, *wall, true);
             // Bins and signs are kept with the park; benches are found again by their kind when it loads.
             if (kind && simulation::add_path_item(scene.sim, scene.objects.back(), *kind) != entt::null)
             {

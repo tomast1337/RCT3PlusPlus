@@ -225,10 +225,17 @@ namespace rct3::park
     bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr)
     {
         const auto [col, row] = tile;
-        if (has_ground_path(map, { col + dc, row + dr }))
-            return true;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
-            return false;
+            return has_ground_path(map, { col + dc, row + dr });
+        // This tile's two corners on the shared edge, and the side it is as path_decks numbers them.
+        const auto& corners = grid.at(col, row).corners;
+        const std::size_t a = dc > 0 ? 1 : dr > 0 ? 2 : 0;
+        const std::size_t b = dc != 0 ? a + 2 : a + 1;
+        const float edge = (corners[a] + corners[b]) / 2;
+        const std::uint8_t side = dc > 0 ? 1 : dc < 0 ? 3 : dr > 0 ? 0 : 2;
+        const bool wall = walled(map.walls, tile, side, edge);
+        if (has_ground_path(map, { col + dc, row + dr }))
+            return !wall;
         const std::size_t there = static_cast<std::size_t>(row + dr) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col + dc);
         if (const auto queue = map.queues.find(there); queue != map.queues.end())
         {
@@ -238,13 +245,8 @@ namespace rct3::park
                 return true;
         }
         const auto found = map.raised.find(there);
-        if (found == map.raised.end())
+        if (found == map.raised.end() || wall)
             return false;
-        // This tile's two corners on the shared edge.
-        const auto& corners = grid.at(col, row).corners;
-        const std::size_t a = dc > 0 ? 1 : dr > 0 ? 2 : 0;
-        const std::size_t b = dc != 0 ? a + 2 : a + 1;
-        const float edge = (corners[a] + corners[b]) / 2;
         return std::ranges::any_of(found->second, [&](float h) { return std::abs(h - edge) <= kPathMeets; });
     }
 

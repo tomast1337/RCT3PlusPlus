@@ -29,6 +29,7 @@
 // joins the path.
 #pragma once
 
+#include "park/edge_walls.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -81,6 +82,7 @@ namespace rct3::park
         std::vector<std::int16_t> tiles;                  ///< Row by row: index into styles, or kNoPath
         std::map<std::size_t, std::vector<float>> raised; ///< By tile index: heights the raised paths there end at
         std::map<std::size_t, std::uint8_t> queues;       ///< By tile index: ground queue's open sides, bit per TileSide
+        EdgeWalls walls;                                  ///< That paths do not join across; set by the caller
     };
 
     inline constexpr std::int16_t kNoPath = -1;
@@ -124,7 +126,7 @@ namespace rct3::park
 
     /// True when the path on tile (col, row) carries on onto the tile (dc, dr) beside it (one step along x
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
-    /// ends level with this tile's ground at their shared edge.
+    /// ends level with this tile's ground at their shared edge; and no wall of `map` stands between them.
     [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.

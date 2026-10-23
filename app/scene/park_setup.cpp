@@ -13,6 +13,7 @@
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/overhead.hpp"
+#include "park/path_decks.hpp"
 #include "park/path_supports.hpp"
 #include "park/path_tunnels.hpp"
 #include "park/person_motions.hpp"
@@ -877,6 +878,14 @@ namespace rct3::scene
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
         begin(ParkLoadStage::Scene);
+        // The ground was drawn before the fences and walls were known; drawn again if one parts two paths.
+        scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
+        scene.footpaths.floors_stale = scene.footpaths.floors_stale || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+                                           return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
+                                               const auto edge = park::edge_height(p, scene.grid, side);
+                                               return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
+                                           });
+                                       });
         scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
@@ -1053,6 +1062,9 @@ namespace rct3::scene
                         benches.push_back(o.id);
                 }
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
+                for (const save::PlacedObject& o : scene.objects)
+                    if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
+                        simulation::set_wall(scene.sim, *wall, true);
                 simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
                 // Each kind's rules read once, however many of its rides the park has.
                 std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;

@@ -3,6 +3,7 @@
 
 #include "logging/log.hpp"
 #include "park/object_models.hpp"
+#include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride_cars.hpp"
 #include "profiling/profiler.hpp"
@@ -506,18 +507,27 @@ namespace rct3::scene
         constexpr float kBehindHeight = 1.2f; ///< The point followed from behind, over their feet
         constexpr float kBehindPitch = 0.4f;  ///< How far down that view looks, radians
         constexpr float kBehindDistance = 3;  ///< How far back from that point
-        const float pulled = scene.ride_pull * scene.ride_pull;
         if (scene.riding_person && *scene.riding_person < scene.shown_people.size())
         {
             const glm::mat4 place = person_place(scene, scene.shown_people[*scene.riding_person]);
             if (scene.person_behind)
-                scene.seat = glm::translate(park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn), glm::vec3(0, 0, -kBehindDistance - pulled));
+                scene.seat = park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn);
             else
                 scene.seat = park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
         }
-        // The wheel pulls the view back off its mount, the farther the more it is turned.
-        if (scene.seat && !(scene.riding_person && scene.person_behind))
-            scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -pulled));
+        // The wheel pulls the view back off its mount, the farther the more it is turned. Pulled back, it stays
+        // over the ground, unless the mount itself is under it, as in a tunnel.
+        constexpr float kOverGround = 0.5f; ///< The least a pulled back view keeps over the ground
+        constexpr float kGroundLook = 1000; ///< How far up and down the ground is looked for
+        if (const float back = scene.ride_pull * scene.ride_pull + (scene.riding_person && scene.person_behind ? kBehindDistance : 0); scene.seat && back > 0)
+        {
+            const glm::vec3 mount((*scene.seat)[3]);
+            scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -back));
+            glm::vec3 eye((*scene.seat)[3]);
+            const auto down = [&](glm::vec3 from) { return park::ground_hit(park::Ray { from, glm::vec3(0, -1, 0) }, scene.grid, kGroundLook); };
+            if (const auto under = down(glm::vec3(eye.x, eye.y + kGroundLook / 2, eye.z)); under && down(mount))
+                (*scene.seat)[3].y = std::max(eye.y, eye.y + kGroundLook / 2 - *under + kOverGround);
+        }
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)

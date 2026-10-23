@@ -268,8 +268,8 @@ namespace rct3::scene
             saved.wage_level = staff.wage_level;
             saved.training = staff.training;
             saved.warnings = staff.warnings;
-            saved.happiness.value = staff.happiness.value;
-            saved.laziness.value = staff.laziness.value;
+            saved.happiness = staff.happiness.value;
+            saved.laziness = staff.laziness.value;
         }
 
         ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
@@ -560,7 +560,7 @@ namespace rct3::scene
                 ride->breakdown.inspection_interval = change.value;
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
-                        upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every.value;
+                        upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
             }
             else if (change.id == ui::control_id(Mechanic))
             {
@@ -1283,7 +1283,7 @@ namespace rct3::scene
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
-                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee.value : 0;
+                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
@@ -1322,7 +1322,7 @@ namespace rct3::scene
                             std::ranges::for_each(r.get<simulation::Party>(member->party).members, frame);
                         else
                             frame(photo.guest);
-                        const float yaw = r.get<simulation::Pose>(photo.guest).heading + glm::pi<float>();
+                        const float yaw = r.get<simulation::Pose>(photo.guest).heading.value + glm::pi<float>();
                         const std::string& name = r.get<simulation::Visitor>(photo.guest).name;
                         scene.photos.push_back({ park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
@@ -1348,8 +1348,8 @@ namespace rct3::scene
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
                     if (scene.park.cash)
-                        *scene.park.cash -= payroll->paid - scene.wages_seen;
-                    scene.wages_seen = payroll->paid;
+                        *scene.park.cash -= payroll->paid.value - scene.wages_seen;
+                    scene.wages_seen = payroll->paid.value;
                 }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
@@ -1362,10 +1362,10 @@ namespace rct3::scene
                     if (upkeep == nullptr)
                         continue;
                     save::Ride& ride = scene.rides.rides[i];
-                    ride.breakdown.reliability.value = upkeep->reliability * 100;
+                    ride.breakdown.reliability = upkeep->reliability.value * 100;
                     ride.breakdown.current = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->kind));
                     ride.breakdown.last = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->last));
-                    ride.base.time_since_inspection = upkeep->since_inspection;
+                    ride.base.time_since_inspection = upkeep->since_inspection.value;
                     ride.breakdown.downtime_windows = upkeep->downtime;
                     ride.breakdown.saved_downtime_percent.reset();
                     using enum save::RepairStatus;

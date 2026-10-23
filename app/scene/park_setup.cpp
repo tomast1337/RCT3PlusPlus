@@ -381,10 +381,10 @@ namespace rct3::scene
             const glm::mat4 out = park::placed_transform(*exit, model_of(*exit), scene.grid, scene.fitted);
             park::RideWays ways = ways_of(in, out);
             ways.ticket = glm::vec3(in * glm::vec4(kTicketSpot, 0, 0, 1));
-            ways.ticket_heading.value = std::atan2(in[0].x, in[0].z);
+            ways.ticket_heading = std::atan2(in[0].x, in[0].z);
             if (model_of(*entrance) != nullptr && !model_of(*entrance)->seat_places.empty())
                 park::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
-            scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading.value, .on = std::move(ways.on), .off = std::move(ways.off) });
+            scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
             // The entrance's and exit's gates, by the motions the buildings name ...Close, ...Open, and those ending
             // Idle that hold them there.
             for (const auto& [door, is_exit] : { std::pair { entrance, false }, std::pair { exit, true } })

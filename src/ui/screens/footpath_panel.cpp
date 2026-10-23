@@ -62,10 +62,10 @@ namespace rct3::ui
         }
         usable_.fill(true);
         text_ = &body_->add<Label>("text", std::u16string { }, FontRole::Small);
-        text_->style.colour = style_.text_colour;
+        text_->style.colour = style_.page_text_colour;
         text_->style.vertical = Align::Centre;
         style_name_ = &body_->add<Label>("style_name", std::u16string { }, FontRole::Small);
-        style_name_->style.colour = style_.text_colour;
+        style_name_->style.colour = style_.page_text_colour;
         status_line_ = &add<Label>("status", std::u16string { }, FontRole::Small);
         status_line_->style.colour = style_.text_colour;
         status_line_->style.vertical = Align::Centre;
@@ -333,6 +333,8 @@ namespace rct3::ui
             plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
+            // The page's paper, clear of the ring's tabs on its left.
+            plain({ slab.x0 + footpath_panel::kBodyLeft - c.paper_inset, slab.y0 + c.band_height, slab.x1 - c.paper_inset, slab.y1 - c.paper_inset }, { }, c.paper);
             // Behind the picked slope and the chosen style.
             const auto mark_behind = [&](const Button& b) {
                 const Rect r = b.rect();

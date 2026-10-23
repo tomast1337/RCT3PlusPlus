@@ -57,8 +57,9 @@ namespace rct3::ui
         std::string cut_on_icon;
         std::string cut_off_icon;
         std::array<std::string, kFootpathControls> control_help; ///< Strings keys
-        Color text_colour = hex("#ffffff");
-        Color chosen = hex("#ffffff60"); ///< Behind the chosen style on a style page
+        Color text_colour = hex("#ffffff");                      ///< In the band
+        Color page_text_colour = hex("#000000");                 ///< On the page's paper
+        Color chosen = hex("#efe8ef");                           ///< Behind the chosen style on a style page
     };
 
     namespace footpath_panel

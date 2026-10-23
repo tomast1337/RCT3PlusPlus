@@ -1013,6 +1013,7 @@ namespace rct3::scene
                 }
                 const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
+                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies);
                 for (const save::RideShow& show : scene.shows)
                     stage_show(scene, show);
                 for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)

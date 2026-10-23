@@ -140,6 +140,7 @@ int main(int argc, char** argv)
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
+    std::vector<std::optional<park::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<std::uint32_t>> guests_room;
     std::map<std::uint64_t, simulation::PathItemKind> sights; // Placed objects guests stop at
     std::set<std::uint64_t> gates;                            // Park entrances
@@ -229,6 +230,7 @@ int main(int argc, char** argv)
                     }
             std::printf("course %s closed %d: %.1f m (lap tested %.1f m), %zu points; %zu cars, farthest %.2f m off\n", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));
             coasters[index] = simulation::coaster_of(*course, ride);
+            courses[index] = *course;
             const auto lap = coasters[index] ? simulation::lap_seconds(*coasters[index]) : std::nullopt;
             if (ride.stats.last_lap)
             {
@@ -244,6 +246,7 @@ int main(int argc, char** argv)
                 std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->start + static_cast<float>(timings[i]->loops) * timings[i]->run + timings[i]->stop));
     }
     const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
+    simulation::import_boats(world, *rides, ride_entities, courses, world_model->terrain, world_model->water.bodies);
     const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));
     {
         // How far the paths' heights are from where the save stands its guests, as a check on both.

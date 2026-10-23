@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
+#include "simulation/components.hpp"
+#include "simulation/sandbox.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -61,4 +64,22 @@ TEST_CASE("a boat roams the lake, keeps to the water and docks once its time is 
     CHECK(seconds < 120);
     CHECK(boat.state == simulation::Sailing::Docked);
     CHECK(boat.at == dock.enter);
+}
+
+TEST_CASE("a boat ride lets its riders off only once its boats are back at the dock")
+{
+    simulation::Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto ride = park.flat_ride("Rowing boats", { 3, 0 }, 0, { .capacity = 2, .cycle_seconds = 20 });
+    auto& r = park.world().registry;
+    r.ctx().emplace<simulation::WaterTiles>(lake(12, 12));
+    const simulation::Dock dock { .leave = { 30, 2 }, .heading = { 0, 1 }, .enter = { 26, 2 } };
+    r.emplace<simulation::Boats>(ride, simulation::Boats { .boats = { simulation::Boat { .at = dock.enter } }, .dock = dock });
+    park.guest({ 0, 0 });
+    const auto& boat = r.get<simulation::Boats>(ride).boats.front();
+    REQUIRE(park.run_until([&] { return boat.state != simulation::Sailing::Docked; }, 600));
+    const auto& riders = r.get<simulation::CycleRide>(ride).riders;
+    CHECK(riders.size() == 1);
+    CHECK(park.run_until([&] { return riders.empty(); }, 3000));
+    CHECK(boat.state == simulation::Sailing::Docked);
 }

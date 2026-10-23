@@ -409,7 +409,18 @@ namespace rct3::scene
             glm::mat4 place = scene.saved_cars.at(id);
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
-            if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
+            const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
+            if (boats && spot.train < boats->boats.size() && boats->boats[spot.train].state != simulation::Sailing::Docked)
+            {
+                // Out on the water: turned from the way the park kept it to the boat's heading, at its height.
+                const simulation::Boat& boat = boats->boats[spot.train];
+                const glm::vec2 at = boat.at + boat.heading * boat.speed * scene.sim_time;
+                const glm::vec3 kept(place[3]);
+                const glm::vec2 kept_way = glm::vec2(place[2].x, place[2].z);
+                const float turn = glm::length(kept_way) > 0 ? std::atan2(kept_way.x, kept_way.y) - std::atan2(boat.heading.x, boat.heading.y) : 0.0f;
+                place = glm::translate(glm::mat4(1.0f), glm::vec3(at.x, kept.y, at.y)) * glm::rotate(glm::mat4(1.0f), -turn, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1.0f), -kept) * place;
+            }
+            else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
             {
                 const simulation::Coaster& train = fleet->trains[spot.train];
                 // Between ticks, on as far as the train's speed takes it, from where the park kept it.

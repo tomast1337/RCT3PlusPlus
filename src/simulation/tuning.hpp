@@ -292,7 +292,8 @@ namespace rct3::simulation::tuning
     /// Boats that leave their dock for open water.
     struct Boats
     {
-        float trip_seconds = 75; ///< From the dock round the water and back, rowed or driven
+        float trip_seconds = 75; ///< Out on the water before they turn for home
+        float top_speed = 2.5f;  ///< m/s, rowed or driven
     };
 
     struct Tuning

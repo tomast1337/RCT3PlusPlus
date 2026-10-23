@@ -1891,8 +1891,24 @@ namespace rct3::simulation
             {
                 // Done, but with its restraints or doors stuck shut, its riders cannot get off till it is fixed.
                 const bool held = upkeep.broken && (upkeep.kind == Breakdown::RestraintsFailToOpen || upkeep.kind == Breakdown::DoorsFailToOpen);
-                if (advance_cycle(ride, dt, held))
+                // Boats out on the water keep their riders till the last is back at the dock.
+                auto* boats = r.try_get<Boats>(e);
+                const auto* water = r.ctx().find<WaterTiles>();
+                bool sailing = false;
+                if (boats != nullptr && water != nullptr)
+                    for (Boat& boat : boats->boats)
+                    {
+                        sail(boat, *water, boats->dock, kTuning.boats.top_speed, ride.run_seconds, dt, r.get<Dice>(e).state);
+                        sailing = sailing || boat.state != Sailing::Docked;
+                    }
+                const RidePhase was = ride.phase;
+                if (advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders);
+                if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
+                    // shortcut: every boat casts off at once from one spot, empty ones too; upgrade when each boat
+                    // loads and leaves on its own.
+                    for (Boat& boat : boats->boats)
+                        cast_off(boat, boats->dock);
             }
             // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
             // its departure settings say.

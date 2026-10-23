@@ -216,6 +216,7 @@ namespace rct3::scene
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
                 f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
+                f.seats = flat_seat(scene, ref.index, 0).has_value();
                 f.music = scene.tunes;
                 if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                     f.tune = tune->second;
@@ -579,29 +580,63 @@ namespace rct3::scene
             return stops;
         }
 
-        /// Rides along in `car`: everything else on screen is put away, the ride camera panel shows, and a park
+        /// Unless already riding: everything else on screen is put away, the ride camera panel shows, and a park
         /// that was paused is set going so the ride moves.
+        void start_riding(ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            if (scene.riding || scene.riding_flat)
+                return;
+            ui::Widget& root = scene.desktop->root();
+            scene.hidden_for_ride.clear();
+            for (const auto& child : root.children())
+                if (child->visible && child->name() != kGuideName)
+                {
+                    child->visible = false;
+                    scene.hidden_for_ride.emplace_back(child->name());
+                }
+            root.add<ui::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
+            scene.paused_for_ride = scene.park.speed.paused;
+            scene.park.speed.paused = false;
+        }
+
+        /// The flat rides with rider seats to look out from, in the park's order.
+        std::vector<std::size_t> flat_rides(const ParkScene& scene)
+        {
+            std::vector<std::size_t> rides;
+            for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
+                if (flat_seat(scene, ride, 0))
+                    rides.push_back(ride);
+            return rides;
+        }
+
+        /// Looks out from rider seat `seat` of flat ride `ride`, as ride_along does from a car.
+        /// shortcut: only from the riders' seats, not the rides' own fixed cameras, and the train buttons step
+        /// the rides under the trains' names; upgrade when those cameras are read from the models.
+        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t seat)
+        {
+            start_riding(scene, assets);
+            if (scene.riding_flat != std::pair { ride, seat })
+                scene.ride_turn = { };
+            scene.riding.reset();
+            scene.riding_flat = { ride, seat };
+            const ui::StringTable& strings = *assets.strings;
+            std::u16string info = ui::attraction_name(scene.rides.rides[ride].base, strings);
+            info += u"  " + std::u16string(strings.get("RidecamGUI_TypePeep")) + u" " + strings::to_utf16(std::format("{}", seat + 1));
+            if (auto panel = scene.desktop->root().find_as<ui::RideCameraPanel>(kRideCameraName))
+                panel->show(std::move(info), flat_seat(scene, ride, 1).has_value(), flat_rides(scene).size() > 1);
+        }
+
+        /// Rides along in `car`, from its camera of kind `eye`.
         void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, park::RideEye eye)
         {
             ui::Widget& root = scene.desktop->root();
-            if (!scene.riding)
-            {
-                scene.hidden_for_ride.clear();
-                for (const auto& child : root.children())
-                    if (child->visible && child->name() != kGuideName)
-                    {
-                        child->visible = false;
-                        scene.hidden_for_ride.emplace_back(child->name());
-                    }
-                root.add<ui::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
-                scene.paused_for_ride = scene.park.speed.paused;
-                scene.park.speed.paused = false;
-            }
+            start_riding(scene, assets);
             if (scene.riding != car || scene.riding_eye != eye)
             {
                 scene.ride_view = { };
                 scene.ride_turn = { };
             }
+            scene.riding_flat.reset();
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
@@ -629,13 +664,29 @@ namespace rct3::scene
         void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::RideCameraAction action)
         {
             using enum ui::RideCameraAction;
-            if (!scene.riding)
-                return;
             if (action == Leave)
             {
                 stop_riding(scene);
                 return;
             }
+            const bool next = action == NextCamera || action == NextTrain;
+            const auto step = [&](std::size_t at, std::size_t count) { return (at + (next ? 1 : count - 1)) % count; };
+            // On a flat ride, the cameras are its seats and the trains are the park's other flat rides.
+            if (scene.riding_flat)
+            {
+                const auto [ride, seat] = *scene.riding_flat;
+                std::size_t seats = 0;
+                while (flat_seat(scene, ride, seats))
+                    ++seats;
+                const std::vector<std::size_t> rides = flat_rides(scene);
+                if ((action == PreviousCamera || action == NextCamera) && seats > 0)
+                    ride_flat(scene, assets, ride, step(seat, seats));
+                else if (const auto at = std::ranges::find(rides, ride); (action == PreviousTrain || action == NextTrain) && at != rides.end())
+                    ride_flat(scene, assets, rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())], 0);
+                return;
+            }
+            if (!scene.riding)
+                return;
             const park::CarSpot spot = scene.car_spots[*scene.riding];
             if (action == ChangeType)
             {
@@ -648,8 +699,6 @@ namespace rct3::scene
                         }
                 return;
             }
-            const bool next = action == NextCamera || action == NextTrain;
-            const auto step = [&](std::size_t at, std::size_t count) { return (at + (next ? 1 : count - 1)) % count; };
             if (action == PreviousCamera || action == NextCamera)
             {
                 std::vector<std::size_t> stops = ride_seats(scene, spot.ride, scene.riding_eye);
@@ -670,7 +719,7 @@ namespace rct3::scene
         /// Back to the overhead view, with what was on screen before.
         void stop_riding(ParkScene& scene)
         {
-            if (!scene.riding)
+            if (!scene.riding && !scene.riding_flat)
                 return;
             ui::Widget& root = scene.desktop->root();
             for (const std::string& name : scene.hidden_for_ride)
@@ -681,6 +730,7 @@ namespace rct3::scene
             if (scene.paused_for_ride)
                 scene.park.speed.paused = true;
             scene.riding.reset();
+            scene.riding_flat.reset();
             scene.seat.reset();
         }
 
@@ -736,8 +786,10 @@ namespace rct3::scene
             }
             else if (change.id == ui::control_id(RideCam) && ride != nullptr)
             {
-                // The first front seat camera of a train under way, else of the first train; the rear or nose camera
-                // where the cars have no front one.
+                // A flat ride's first rider seat; on a tracked ride the first front seat camera of a train under
+                // way, else of the first train, the rear or nose camera where the cars have no front one.
+                if (flat_seat(scene, ref.index, 0))
+                    ride_flat(scene, assets, ref.index, 0);
                 const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
                 const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
                 for (const park::RideEye eye : { park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
@@ -1200,7 +1252,7 @@ namespace rct3::scene
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
             auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
-            if (!escape.empty() && scene.riding)
+            if (!escape.empty() && (scene.riding || scene.riding_flat))
                 stop_riding(scene);
             else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
@@ -1214,8 +1266,8 @@ namespace rct3::scene
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         // Riding along, the park takes no clicks: the whole screen counts as interface.
-        const bool over = over_interface || scene.riding.has_value();
-        if (auto panel = scene.riding ? desktop.root().find_as<ui::RideCameraPanel>(kRideCameraName) : std::nullopt)
+        const bool over = over_interface || scene.riding || scene.riding_flat;
+        if (auto panel = scene.riding || scene.riding_flat ? desktop.root().find_as<ui::RideCameraPanel>(kRideCameraName) : std::nullopt)
         {
             const glm::vec2 moved(input.pointer.position.x - scene.last_pointer.x, input.pointer.position.y - scene.last_pointer.y);
             panel->pointer_moved(glm::length(moved) / scale);
@@ -1235,7 +1287,7 @@ namespace rct3::scene
             if (const auto action = panel->take_action())
                 ride_action(scene, assets, *action);
         }
-        if (!scene.riding)
+        if (!scene.riding && !scene.riding_flat)
             profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
         auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName);

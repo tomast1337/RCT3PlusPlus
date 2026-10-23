@@ -348,10 +348,17 @@ namespace rct3::scene
         });
         engine_.define("camera.riding", [this](const Json&) -> Json {
             const ParkScene& park = park_of(park_);
-            if (!park.riding || *park.riding >= park.car_spots.size())
+            Json out;
+            if (park.riding_flat)
+                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", "seat" } };
+            else if (park.riding && *park.riding < park.car_spots.size())
+            {
+                constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };
+                out = { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding }, { "kind", kEyes[std::to_underlying(park.riding_eye)] } };
+            }
+            else
                 return nullptr;
-            constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };
-            Json out { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding }, { "kind", kEyes[std::to_underlying(park.riding_eye)] }, { "turn", { park.ride_turn.x, park.ride_turn.y } } };
+            out["turn"] = { park.ride_turn.x, park.ride_turn.y };
             if (park.seat)
             {
                 const glm::vec3 at((*park.seat)[3]);

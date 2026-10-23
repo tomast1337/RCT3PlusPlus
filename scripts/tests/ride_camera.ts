@@ -3,7 +3,7 @@
 // Riding along: a ride with trains in the game's Vanilla Hills is opened, its window's ride camera clicked, and
 // the view looks out from one of its cars, moving with it as it goes round. Everything else on screen is put
 // away for the ride camera's panel, which slides out of sight while the pointer is still and back when it
-// moves; leaving brings the rest back.
+// moves; leaving brings the rest back. A flat ride is then looked out from its riders' seats.
 //
 //   ./nob script scripts/tests/ride_camera.ts -- --no-audio
 
@@ -79,4 +79,24 @@ expect(camera.riding() === undefined, "the overhead view again");
 expect(ui.find("bar") !== undefined && ui.find("tools") !== undefined, "the bar and tools back");
 expect(ui.find("ride_camera") === undefined, "the panel gone");
 await screenshot("overhead again");
+
+// A flat ride is looked out from its riders' seats; the camera buttons step from seat to seat.
+const flat = rides.list().findIndex((r) => r.flat && r.joined);
+expect(flat >= 0, "a flat ride");
+rides.show(flat);
+await frames(30);
+await ui.click("info/body/RideCamGUI_Enabled");
+await until(() => camera.riding()?.eye !== undefined, 60, "the view from a seat");
+const sitting = camera.riding()!;
+log("seat", JSON.stringify(sitting));
+expect(sitting.ride === flat && sitting.kind === "seat" && sitting.car === 0, "the flat ride's first seat");
+await screenshot("seat");
+await ui.click("ride_camera/RidecamGUI_NextCam");
+await frames(2);
+log("next seat", JSON.stringify(camera.riding()));
+expect(camera.riding()!.car === 1, "the next seat");
+await screenshot("next seat");
+await ui.click(exit);
+await frames(5);
+expect(camera.riding() === undefined, "the overhead view after the flat ride");
 quit(0);

@@ -147,6 +147,8 @@ namespace rct3::ui
         std::span<const save::Guest> guests { };
         /// Of a ride, whether signs stand over its queues.
         std::optional<bool> queue_signs { };
+        /// Of a flat ride, whether it has rider seats the view can look out from.
+        bool seats = false;
         /// Of a show ride, what it puts on.
         const save::RideShow* show = nullptr;
         /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside.

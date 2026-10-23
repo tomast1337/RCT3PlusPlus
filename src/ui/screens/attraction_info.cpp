@@ -885,8 +885,8 @@ namespace rct3::ui
                 button(AttractionControl::Locate, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton");
                 if (f.ride)
                 {
-                    // A ride's cars can be ridden along in once it has some.
-                    const bool cars = attraction_kind(*f.ride) == AttractionKind::Tracked && !f.ride->trains.empty();
+                    // A ride's cars can be ridden along in once it has some, and a flat ride's seats looked out from.
+                    const bool cars = (attraction_kind(*f.ride) == AttractionKind::Tracked && !f.ride->trains.empty()) || f.seats;
                     button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", cars ? "RideCamButton_Enabled" : "RideCamButton_Disabled", cars);
                 }
                 // A ride is painted from its vehicles page, as in the game.

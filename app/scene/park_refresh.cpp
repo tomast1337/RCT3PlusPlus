@@ -410,6 +410,20 @@ namespace rct3::scene
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
 
+    std::optional<glm::mat4> flat_seat(const ParkScene& scene, std::size_t ride, std::size_t seat)
+    {
+        const auto object = scene.ride_seats.find(ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null);
+        if (object == scene.ride_seats.end())
+            return std::nullopt;
+        const save::PlacedObject& o = scene.objects[object->second];
+        const auto model = scene.models.find(park::model_ref(o));
+        if (model == scene.models.end() || seat >= model->second.seat_places.size())
+            return std::nullopt;
+        if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
+            return scene.seat_carriers[boned->first_seat + seat] * model->second.seat_places[seat];
+        return park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat];
+    }
+
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
     {
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
@@ -459,6 +473,12 @@ namespace rct3::scene
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
             scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
         }
+        // On a flat ride, from a rider's head over their seat, as the seat moves. A seat has +Z up and faces +Y,
+        // so the eyes, which look along +Z with +Y up, are turned to that.
+        constexpr float kSeatEyeHeight = 0.7f; ///< How far over the seat a rider's eyes are
+        constexpr glm::mat4 kSeatEyes { { -1, 0, 0, 0 }, { 0, 0, 1, 0 }, { 0, 1, 0, 0 }, { 0, 0, kSeatEyeHeight, 1 } };
+        if (const auto seat = scene.riding_flat ? flat_seat(scene, scene.riding_flat->first, scene.riding_flat->second) : std::nullopt)
+            scene.seat = park::looked_round(*seat * kSeatEyes, scene.ride_turn);
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)

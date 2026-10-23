@@ -46,11 +46,17 @@ namespace rct3::ui
         float corner = 11;      ///< Of the strip's top corners
         float rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
         float strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom
-        /// Behind a page of lines, below the band and in from the strip's open end, with every other line striped.
+        /// Behind a page of lines, a line below the band and from the strip's open end to the ring's tabs: a
+        /// notebook's margin at the open end, then the lines in a box ruled on its margin side and below, every other
+        /// one striped.
         Color paper = hex("#ffffff");
         Color stripe = hex("#efe8ef");
-        float paper_inset = 6;   ///< From the strip's open end and bottom
-        float paper_corner = 20; ///< Of its bottom corner by the disc
+        Color margin = hex("#fff7ff");
+        Color rule = hex("#d6d6d6");    ///< The box's lines, two on the margin's side
+        Color divider = hex("#a3a3a3"); ///< Between the parts of a page of tools
+        float paper_margin = 16;
+        float paper_bottom = 9;  ///< Of the strip left below the paper
+        float paper_corner = 16; ///< Of its bottom corner by the tabs
     };
 
     struct InfoPanelStyle
@@ -143,10 +149,10 @@ namespace rct3::ui
         inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
         inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
         inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
-        inline constexpr float kStripExtra = 32;   ///< Of the strip's width beyond its content's
+        inline constexpr float kStripExtra = 40;   ///< Of the strip's width beyond its content's
         inline constexpr float kStripNarrowest = 136;
         inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content
-        inline constexpr float kBodyLeft = 16;     ///< Of the content, from the strip's left edge
+        inline constexpr float kBodyLeft = 24;     ///< Of the content, from the strip's left edge, past the paper's margin
         inline constexpr float kBodyTop = 22;      ///< From the strip's top edge, below its band
         inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
         inline constexpr float kPageWidth = 360;   ///< Of a page of lines

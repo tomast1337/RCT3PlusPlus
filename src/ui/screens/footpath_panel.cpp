@@ -333,8 +333,18 @@ namespace rct3::ui
             plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
-            // The page's paper, clear of the ring's tabs on its left.
-            plain({ slab.x0 + footpath_panel::kBodyLeft - c.paper_inset, slab.y0 + c.band_height, slab.x1 - c.paper_inset, slab.y1 - c.paper_inset }, { }, c.paper);
+            // The page's paper, clear of the ring's tabs on its left and round its corner there, with a notebook's
+            // margin behind a line at the open end; on the controls page a line parts the arrows from the tools below.
+            const Rect paper { slab.x0 + footpath_panel::kBodyLeft - footpath_panel::kPaperLeft, slab.y0 + c.band_height + 1, slab.x1, slab.y1 - c.paper_bottom };
+            plain(paper, { 0, 0, 0, c.paper_corner }, c.stripe);
+            const float rule = paper.x1 - c.paper_margin - 2;
+            plain({ rule + 2, paper.y0, paper.x1, paper.y1 }, { }, c.margin);
+            plain({ rule, paper.y0, rule + 1, paper.y1 }, { }, c.divider);
+            if (page_ == FootpathPage::Controls)
+            {
+                const float y = body_->rect().y0 + footpath_panel::kDividerY;
+                plain({ paper.x0, y, rule, y + 1 }, { }, c.divider);
+            }
             // Behind the picked slope and the chosen style.
             const auto mark_behind = [&](const Button& b) {
                 const Rect r = b.rect();

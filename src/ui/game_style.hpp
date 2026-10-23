@@ -637,6 +637,7 @@ namespace rct3::ui::game_skins
         s.coded.disc = p.patch;
         s.coded.paper = p.paper;
         s.coded.stripe = p.stripe;
+        s.coded.margin = p.paper_line;
         s.paper_text_colour = p.text;
         s.hide_icon = "WhiteArrow_Right";
         s.hide_icon_left = "WhiteArrow_Left";
@@ -708,7 +709,7 @@ namespace rct3::ui::game_skins
         FootpathPanelStyle s;
         s.text_colour = p.text_on_band;
         s.page_text_colour = p.text;
-        s.chosen = p.stripe;
+        s.chosen = p.paper;
         s.look = PanelLook::Coded;
         s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;

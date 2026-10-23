@@ -80,6 +80,8 @@ namespace rct3::ui
         /// left before it, as they do in the game's own panel.
         inline constexpr float kBodyLeft = 40;
         inline constexpr float kBodyRight = 16; ///< After the page
+        inline constexpr float kPaperLeft = 12; ///< Of the paper, before the page
+        inline constexpr float kDividerY = 65;  ///< Of the line under the arrows, down the controls page
         inline constexpr float kBodyTop = 22;   ///< From the strip's top edge, below its band
         inline constexpr float kStatusGap = 8;  ///< Between the disc and the band's text
         /// The controls page and the rectangle of each control on it, in the order of the controls.

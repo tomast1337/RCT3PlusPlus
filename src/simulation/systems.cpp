@@ -1993,9 +1993,11 @@ namespace rct3::simulation
                 }
                 ride.queue.clear();
             }
-            // A train left standing at the start goes, empty if need be, once another is held up behind it (within
-            // a centimetre: positions far round a long track lose that much to rounding).
-            if (fleet != nullptr && loading && !fleet->trains[*loading].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*loading], on_their_way))
+            // When the player asks, a train standing at the start goes, empty if need be, once it has waited its least
+            // and another is held up behind it (within a centimetre: positions far round a long track lose that much
+            // to rounding).
+            const auto* leaving = r.try_get<Departure>(e);
+            if (fleet != nullptr && loading && leaving != nullptr && leaving->leave_on_arrival && ride.loading >= static_cast<float>(leaving->min_wait) && !fleet->trains[*loading].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*loading], on_their_way))
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                     if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)

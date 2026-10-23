@@ -356,7 +356,12 @@ TEST_CASE("a coaster's trains run on their own, each waiting behind the one in f
     r.emplace<Trains>(ride, Trains { { waiting, coming }, { { }, { } } });
     const auto& fleet = r.get<Trains>(ride);
     const auto gap = [&] { return std::fmod(fleet.trains[0].at - fleet.trains[1].at + 100.0f, 100.0f) - track.train_length; };
-    // Held back behind the standing train, which then goes round empty to make way.
+    // Unasked, the standing train waits for a rider however long the one behind is held.
+    park.run(10);
+    CHECK_FALSE(fleet.trains[0].running);
+    CHECK(gap() >= kBlockGap - 1e-3f);
+    // Asked to leave when another comes in, it goes round empty to make way.
+    r.emplace_or_replace<Departure>(ride, Departure { .leave_on_arrival = true });
     CHECK(park.run_until(
         [&] {
             CHECK(gap() >= kBlockGap - 1e-3f);

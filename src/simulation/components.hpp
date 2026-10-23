@@ -386,8 +386,9 @@ namespace rct3::simulation
     struct Departure
     {
         LoadWait wait_for = LoadWait::Any;
-        std::int32_t min_wait = -1; ///< Seconds it waits before it looks at its load; -1 none
-        std::int32_t max_wait = -1; ///< Seconds after which it leaves whatever its load, even empty; -1 none
+        std::int32_t min_wait = -1;    ///< Seconds it waits before it looks at its load; -1 none
+        std::int32_t max_wait = -1;    ///< Seconds after which it leaves whatever its load, even empty; -1 none
+        bool leave_on_arrival = false; ///< Leaves, after its least wait, once the next train is held up behind it
     };
 
     /// The trains of a ride whose trains go round a track, each a Coaster of its own on the same track.

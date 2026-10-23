@@ -623,7 +623,7 @@ namespace rct3::scene
             else if (change.id == ui::control_id(SyncStations))
                 ride->options.sync_trains = change.value != 0; // shortcut: stored, stations do not wait for each other yet
             else if (change.id == ui::control_id(LeaveOnArrival))
-                ride->options.leave_if_other_train_enters_station = change.value != 0; // shortcut: stored, not yet obeyed
+                ride->options.leave_if_other_train_enters_station = change.value != 0;
             else if (change.id == ui::control_id(LowFriction))
             {
                 if (change.value != 0)

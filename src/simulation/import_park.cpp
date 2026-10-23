@@ -570,7 +570,7 @@ namespace rct3::simulation
                 continue;
             if (const auto at = path_by(world.paths, o))
             {
-                world.registry.emplace<PathItem>(world.registry.create(), PathItem { *at, *kind });
+                world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id });
                 ++added;
             }
         }
@@ -767,13 +767,15 @@ namespace rct3::simulation
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& o, PathItemKind kind)
     {
         const PathNetwork& paths = world.paths;
+        if (o.hidden)
+            return entt::null;
         const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f) * paths.tile_size };
         const auto at = paths.nearest(middle);
         if (!at)
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        r.emplace<PathItem>(e, PathItem { *at, kind });
+        r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id });
         if (kind == PathItemKind::Bin)
             r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });
         return e;

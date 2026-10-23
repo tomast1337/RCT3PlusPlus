@@ -447,7 +447,8 @@ namespace rct3::simulation
     {
         NodeId node = kNoNode;
         PathItemKind kind = PathItemKind::Bin;
-        bool broken = false; ///< Of no use until a handyman or mechanic mends it
+        bool broken = false;      ///< Of no use until a handyman or mechanic mends it
+        std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
     };
 
     /// A guest stopped on the path a while: sitting on a bench, or watching a sight.

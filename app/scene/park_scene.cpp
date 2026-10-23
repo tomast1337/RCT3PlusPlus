@@ -487,8 +487,20 @@ namespace rct3::scene
         /// Takes the prop `index` out of the park.
         void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t index)
         {
-            const auto wall = index < scene.objects.size() ? park::edge_wall(scene.objects[index], scene.models, scene.grid) : std::nullopt;
+            if (index >= scene.objects.size())
+                return;
+            const auto wall = park::edge_wall(scene.objects[index], scene.models, scene.grid);
             change_object(device, scene, index, [](save::PlacedObject& o) { o.hidden = true; });
+            // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
+            const std::uint64_t id = scene.objects[index].id;
+            auto& r = scene.sim.registry;
+            std::vector<entt::entity> gone;
+            for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                if (item.object == id)
+                    gone.push_back(e);
+            r.destroy(gone.begin(), gone.end());
+            std::erase_if(scene.bins, [&](const save::BinState& b) { return b.object_ref == id; });
+            std::erase_if(scene.signs, [&](const save::SignState& s) { return s.object_ref == id; });
             if (wall)
                 wall_changed(device, scene, assets, *wall, false);
         }

@@ -92,7 +92,7 @@ namespace rct3::ui
         constexpr int kMostTrackCircuits = 20;
         constexpr int kAxisNumbers = 5;
         constexpr float kMaintenancePageWidth = 440;
-        constexpr float kModePageWidth = 600;
+        constexpr float kModePageWidth = 680;
         constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
 
@@ -368,9 +368,10 @@ namespace rct3::ui
             {
                 add(page, strings, "AttractionResultsDialogLabel_Excitement", rating(ride.assessment.excitement, strings));
                 add(page, strings, "AttractionResultsDialogLabel_Intensity", rating(ride.assessment.intensity, strings));
+                add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(ride.assessment.nausea, strings));
+                // Ours, under the game's three ratings.
                 if (const GuestsSuited s = guests_suited(ride.assessment.intensity, guests); s.in_park > 0)
                     add(page, strings, "Rct3pp_GuestsSuited", ascii(std::format("{} / {}", s.suited, s.in_park)));
-                add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(ride.assessment.nausea, strings));
             }
         }
 

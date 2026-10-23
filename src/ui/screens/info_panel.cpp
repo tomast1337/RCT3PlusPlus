@@ -201,7 +201,7 @@ namespace rct3::ui
             Dropdown& d = body_->add<Dropdown>("sections", style_.dropdown);
             d.items = page.sections;
             d.select(page.section);
-            d.placement = top_left(0, y, info_panel::kChoiceWidth, info_panel::kControlHeight);
+            d.placement = top_left(0, y, page.width > 0 ? page.width : info_panel::kPageWidth, info_panel::kControlHeight); // Across the page
             section_list_ = &d;
             y += info_panel::kControlHeight + 2;
         }

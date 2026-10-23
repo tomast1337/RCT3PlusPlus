@@ -3,7 +3,8 @@
 // Places every flat ride the install offers on the game's blank landscape the way a player would: the ride,
 // its entrance and its exit, a queue from the entrance and a path from the exit to a road, all roads joined
 // to the park's entrance. Then lets the park run and reports each ride that would not place, never joined the
-// paths, or carried nobody, to find the rides that need more building or do not work yet.
+// paths, or carried nobody, to find the rides that need more building or do not work yet. Last, the pirate
+// ship is looked out from, from a seat and from its own fixed cameras.
 //
 //   ./nob script scripts/tests/flat_rides.ts -- --no-audio
 //
@@ -151,7 +152,7 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
     await pointer.click(...on_view(a[0], a[1]));
     await ui.toggle("footpaths/route", true);
     // The route shows once the pointer rests on the goal, which can take a few frames after the camera moved.
-    for (let wait = 3; wait <= 24 && !laid().has(`${b[0]},${b[1]}`); wait *= 2) {
+    for (let wait = 3; wait <= 96 && !laid().has(`${b[0]},${b[1]}`); wait *= 2) {
         pointer.move(...on_view(b[0], b[1]));
         await frames(wait);
         await pointer.click(...on_view(b[0], b[1]));
@@ -290,3 +291,25 @@ for (const o of bad)
 log(`${outcomes.length - bad.length} of ${outcomes.length} flat rides placed, joined and carried guests`);
 await look(width >> 1, (topRoad + roads[roads.length - 1]) >> 1, 300);
 await screenshot("park");
+
+// A ride with fixed cameras of its own, such as the pirate ship, is looked out from a rider's seat first, and
+// the type button changes to its fixed cameras, which the camera buttons step through.
+const ship = all.findIndex((r) => r.symbol.toLowerCase().startsWith("pirateship"));
+expect(ship >= 0, "a pirate ship among the rides");
+rides.show(ship);
+await frames(30);
+await ui.click("info/body/RideCamGUI_Enabled");
+await until(() => camera.riding()?.eye !== undefined, 60, "the view from the ship");
+expect(camera.riding()!.kind === "seat", "a rider's seat first");
+await screenshot("ship seat");
+await ui.click("ride_camera/RidecamGUI_Type");
+await frames(2);
+log("ship", JSON.stringify(camera.riding()));
+expect(camera.riding()!.kind === "fixed" && camera.riding()!.car === 0, "the ship's first fixed camera");
+await screenshot("ship camera");
+await ui.click("ride_camera/RidecamGUI_NextCam");
+await frames(2);
+expect(camera.riding()!.car === 1, "the ship's second fixed camera");
+await screenshot("ship camera 2");
+await ui.click("ride_camera/RidecamGUI_Exit");
+await frames(5);

@@ -19,7 +19,8 @@ namespace
 
         Fixture()
         {
-            strings.add("RidecamGUI_DisabledTrain", u"Nur ein Zug");
+            strings.add("RidecamGUI_DisabledTrain", u"Nur ein #");
+            strings.add("RidecamGUI_NextRide", u"Nächster #");
             strings.add("RidecamGUI_Type", u"Zur #-Kamera");
             panel = &desktop.root().add<RideCameraPanel>("ride_camera", game_skins::ride_camera_panel_style(kGamePalette), strings);
             frame();
@@ -65,7 +66,7 @@ TEST_CASE("the ride camera panel hides once the pointer is still, and comes back
 TEST_CASE("the ride camera panel's buttons ask for steps, greyed out where there is nowhere to go")
 {
     Fixture f;
-    f.panel->show(u"High Flier", true, false);
+    f.panel->show(u"High Flier", true, false, u"Zug");
     CHECK(f.panel->info().text == u"High Flier");
     CHECK(f.panel->button(RideCameraAction::NextCamera).enabled);
     CHECK_FALSE(f.panel->button(RideCameraAction::NextTrain).enabled);
@@ -74,7 +75,8 @@ TEST_CASE("the ride camera panel's buttons ask for steps, greyed out where there
     CHECK(f.panel->take_action() == RideCameraAction::NextCamera);
     CHECK_FALSE(f.panel->take_action());
     CHECK_FALSE(f.panel->button(RideCameraAction::ChangeType).enabled);
-    f.panel->show(u"High Flier", true, false, 2, u"Heck");
+    f.panel->show(u"High Flier", true, true, u"Zug", 2, u"Heck");
+    CHECK(f.panel->button(RideCameraAction::NextTrain).tooltip == u"Nächster Zug");
     CHECK(f.panel->button(RideCameraAction::ChangeType).tooltip == u"Zur Heck-Kamera");
     CHECK(f.panel->button(RideCameraAction::ChangeType).icon == "RideCamGUI_Rear");
     f.click(f.panel->button(RideCameraAction::ChangeType));

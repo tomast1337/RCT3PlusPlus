@@ -624,7 +624,7 @@ namespace rct3::ui::game_skins
         s.pin = "RideCamGUI_Pin";
         s.unpin = "RideCamGUI_UnPin";
         s.leave = "RideCamGUI_Exit";
-        s.types = { "RideCamGUI_Nose", "RideCamGUI_Peep", "RideCamGUI_Rear" };
+        s.types = { "RideCamGUI_Nose", "RideCamGUI_Peep", "RideCamGUI_Rear", "RideCamGUI_FlatPeep", "RideCamGUI_FlatStatic" };
         s.steps = { "RideCamGUI_PrvCam", "RideCamGUI_NxtCam", "RideCamGUI_PrvRide", "RideCamGUI_NxtRide" };
         s.no_steps = { "RideCamGUI_PrvCamDis", "RideCamGUI_NxtCamDis", "RideCamGUI_PrvRideDis", "RideCamGUI_NxtRideDis" };
         return s;

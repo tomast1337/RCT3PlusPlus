@@ -88,8 +88,6 @@ namespace rct3::park
         }
         view.axes = glm::mat3(x, y, z);
 
-        // shortcut: the lift chain's own shake is never used, as the cars do not know where the chain is; take
-        // it once they do.
         if (const float speed = view.velocity ? glm::length(*view.velocity) : 0.0f; speed > tuning.shake_from)
         {
             const float amount = (speed - tuning.shake_from) * (speed - tuning.shake_from) * tuning.shake;

@@ -203,37 +203,42 @@ namespace rct3::park
             return lookup(entries(f.anims, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::BoneAnim>(ovl::read_bone_anims(o, p), &ovl::BoneAnimItem::anim); }), name);
         }
 
-        /// Whether `bone` is named "peep" and a number: where a rider sits.
-        bool is_seat(const ovl::Bone& b)
+        constexpr std::string_view kSeat = "peep";   ///< A bone so named and numbered is where a rider sits
+        constexpr std::string_view kView = "camera"; ///< And so a fixed camera on a ride
+
+        /// Whether `bone` is named `kind` and a number.
+        bool is_numbered(const ovl::Bone& b, std::string_view kind)
         {
-            constexpr std::string_view kSeat = "peep";
-            return b.name.size() > kSeat.size() && strings::equals_ignoring_case(b.name.substr(0, kSeat.size()), kSeat) && std::ranges::all_of(b.name.substr(kSeat.size()), [](char c) { return c >= '0' && c <= '9'; });
+            return b.name.size() > kind.size() && strings::equals_ignoring_case(b.name.substr(0, kind.size()), kind) && std::ranges::all_of(b.name.substr(kind.size()), [](char c) { return c >= '0' && c <= '9'; });
         }
 
-        std::uint32_t seats_of(const ovl::BoneShape& shape)
+        /// The bones named `kind` and a number, by their place in the shape, in number order.
+        std::vector<std::int32_t> numbered_bones(const ovl::BoneShape& shape, std::string_view kind)
         {
-            return static_cast<std::uint32_t>(std::ranges::count_if(shape.bones, is_seat));
+            std::vector<std::pair<int, std::int32_t>> found;
+            for (std::size_t b = 0; b < shape.bones.size(); ++b)
+                if (is_numbered(shape.bones[b], kind))
+                    found.emplace_back(std::stoi(std::string(shape.bones[b].name.substr(kind.size()))), static_cast<std::int32_t>(b));
+            std::ranges::sort(found);
+            std::vector<std::int32_t> out;
+            for (const auto& f : found)
+                out.push_back(f.second);
+            return out;
         }
 
-        /// The seats' places, model space, in seat-number order.
-        std::vector<glm::mat4> seat_places(const ovl::BoneShape& shape)
+        /// The places of the bones named `kind` and a number, model space, in number order.
+        std::vector<glm::mat4> numbered_places(const ovl::BoneShape& shape, std::string_view kind)
         {
-            std::vector<std::pair<int, glm::mat4>> seats;
-            for (const ovl::Bone& b : shape.bones)
+            std::vector<glm::mat4> out;
+            for (const std::int32_t b : numbered_bones(shape, kind))
             {
-                if (!is_seat(b))
-                    continue;
                 // Row vectors in rows read as glm's columns: the same transform, for column vectors.
                 glm::mat4 place { 1.0f };
                 for (glm::length_t c = 0; c < 4; ++c)
                     for (glm::length_t r = 0; r < 4; ++r)
-                        place[c][r] = b.world[static_cast<std::size_t>(c * 4 + r)];
-                seats.emplace_back(std::stoi(std::string(b.name.substr(4))), place);
+                        place[c][r] = shape.bones[static_cast<std::size_t>(b)].world[static_cast<std::size_t>(c * 4 + r)];
+                out.push_back(place);
             }
-            std::ranges::sort(seats, { }, &std::pair<int, glm::mat4>::first);
-            std::vector<glm::mat4> out;
-            for (const auto& s : seats)
-                out.push_back(s.second);
             return out;
         }
 
@@ -610,11 +615,13 @@ namespace rct3::park
                 const ovl::BoneShape* shape = file ? bone_in(*file->second, lod.bone_shape) : nullptr;
                 if (shape == nullptr)
                     continue;
-                model.seats = std::max(model.seats, seats_of(*shape));
+                model.seats = std::max(model.seats, static_cast<std::uint32_t>(numbered_bones(*shape, kSeat).size()));
                 if (model.walkways.loop.empty() && model.seats > 0)
                     model.walkways = walkways_in(*file->second);
                 if (model.seat_places.empty())
-                    model.seat_places = seat_places(*shape);
+                    model.seat_places = numbered_places(*shape, kSeat);
+                if (model.view_places.empty())
+                    model.view_places = numbered_places(*shape, kView);
                 // A car on an arm: each bone is carried by the nearest of the arm's joints it hangs from.
                 constexpr std::array<std::string_view, 4> kArmJoints { "ik_robotjoint01", "ik_robotjoint02", "ik_robotjoint03", "ik_robotjoint04" };
                 std::array<std::int32_t, 4> joint_bones;
@@ -656,14 +663,9 @@ namespace rct3::park
                 {
                     model.rig = rig_of(*shape);
                     model.rig_level = model.levels.size();
-                    // In seat-number order, as the seats' places are.
-                    std::vector<std::pair<int, std::int32_t>> seats;
-                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
-                        if (is_seat(shape->bones[b]))
-                            seats.emplace_back(std::stoi(std::string(shape->bones[b].name.substr(4))), static_cast<std::int32_t>(b));
-                    std::ranges::sort(seats);
-                    for (const auto& seat : seats)
-                        model.seat_bones.push_back(seat.second);
+                    // In number order, as the seats' and cameras' places are.
+                    model.seat_bones = numbered_bones(*shape, kSeat);
+                    model.view_bones = numbered_bones(*shape, kView);
                 }
                 for (const std::string_view name : lod.animations)
                 {

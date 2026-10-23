@@ -32,12 +32,17 @@ namespace rct3::ui
         std::string pin;    ///< To pin it
         std::string unpin;  ///< Pinned, to let it hide again
         std::string leave;
-        std::array<std::string, 3> types; ///< By park::RideEye: the nose, front seat and rear seat cameras
+        /// By park::RideEye the nose, front seat and rear seat cameras, then a flat ride's seats and its fixed
+        /// cameras (kFlatSeatType, kFlatFixedType).
+        std::array<std::string, 5> types;
         /// Previous camera, next camera, previous train, next train; and the same with nowhere to go.
         std::array<std::string, 4> steps;
         std::array<std::string, 4> no_steps;
         Color text_colour = hex("#ffffff");
     };
+
+    inline constexpr std::size_t kFlatSeatType = 3;  ///< Of RideCameraPanelStyle::types, a flat ride's seats
+    inline constexpr std::size_t kFlatFixedType = 4; ///< And its fixed cameras
 
     enum class RideCameraAction : std::uint8_t
     {
@@ -61,10 +66,11 @@ namespace rct3::ui
     public:
         RideCameraPanel(std::string name, RideCameraPanelStyle style, const StringTable& strings);
 
-        /// What its line says, and whether there are other cameras on the train and other trains to step to.
-        /// `next_type` is the kind of camera the type button changes to, by park::RideEye, named `next_name`;
-        /// nothing when the train has one kind.
-        void show(std::u16string info, bool cameras, bool trains, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
+        /// What its line says, and whether there are other cameras on the train and other trains to step to; the
+        /// train buttons name what they step to as `noun` (a train, or on a flat ride a ride). `next_type` is the
+        /// kind of camera the type button changes to, by park::RideEye, named `next_name`; nothing when the train
+        /// has one kind.
+        void show(std::u16string info, bool cameras, bool trains, std::u16string_view noun, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
         /// The pointer moved `distance` units since the last update.
         void pointer_moved(float distance);
         /// What a button asked for since the last call.

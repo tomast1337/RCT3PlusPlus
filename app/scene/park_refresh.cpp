@@ -328,6 +328,10 @@ namespace rct3::scene
                 for (std::size_t seat = 0; seat < std::min(boned.seats, seat_bones.size()); ++seat)
                     if (seat_bones[seat] >= 0 && static_cast<std::size_t>(seat_bones[seat]) < moves.size())
                         scene.seat_carriers[boned.first_seat + seat] = boned.placed * moves[static_cast<std::size_t>(seat_bones[seat])];
+                const auto& view_bones = model->second.view_bones;
+                for (std::size_t view = 0; view < std::min(boned.views.size(), view_bones.size()); ++view)
+                    if (view_bones[view] >= 0 && static_cast<std::size_t>(view_bones[view]) < moves.size())
+                        boned.views[view] = moves[static_cast<std::size_t>(view_bones[view])];
             }
         }
 
@@ -410,18 +414,22 @@ namespace rct3::scene
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
 
-    std::optional<glm::mat4> flat_seat(const ParkScene& scene, std::size_t ride, std::size_t seat)
+    std::optional<glm::mat4> flat_view(const ParkScene& scene, std::size_t ride, bool fixed, std::size_t at)
     {
         const auto object = scene.ride_seats.find(ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null);
         if (object == scene.ride_seats.end())
             return std::nullopt;
         const save::PlacedObject& o = scene.objects[object->second];
         const auto model = scene.models.find(park::model_ref(o));
-        if (model == scene.models.end() || seat >= model->second.seat_places.size())
+        const std::vector<glm::mat4>* places = model == scene.models.end() ? nullptr : fixed ? &model->second.view_places : &model->second.seat_places;
+        if (places == nullptr || at >= places->size())
             return std::nullopt;
-        if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
-            return scene.seat_carriers[boned->first_seat + seat] * model->second.seat_places[seat];
-        return park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat];
+        const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object);
+        if (boned != scene.boned_rides.end() && fixed && at < boned->views.size())
+            return boned->placed * boned->views[at] * (*places)[at];
+        if (boned != scene.boned_rides.end() && !fixed && at < boned->seats)
+            return scene.seat_carriers[boned->first_seat + at] * (*places)[at];
+        return park::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
     }
 
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
@@ -462,7 +470,15 @@ namespace rct3::scene
         {
             const std::size_t i = *scene.riding;
             const park::CarSpot spot = scene.car_spots[i];
-            const ovl::RideCameraTuning& tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
+            ovl::RideCameraTuning tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
+            // On a lift chain the view shakes as the train sets for the chain.
+            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            if (const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr; fleet && spot.train < fleet->trains.size() && simulation::on_chain(fleet->trains[spot.train]))
+            {
+                tuning.shake = tuning.chain_shake;
+                tuning.shake_across = tuning.chain_shake_across;
+                tuning.shake_up = tuning.chain_shake_up;
+            }
             // The nose and front seat look at the track ahead rather than straight out, so a curve stays in view;
             // the nose does not sway.
             // shortcut: a train running backwards still looks the way the car faces; look behind once the
@@ -473,12 +489,11 @@ namespace rct3::scene
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
             scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
         }
-        // On a flat ride, from a rider's head over their seat, as the seat moves. A seat has +Z up and faces +Y,
-        // so the eyes, which look along +Z with +Y up, are turned to that.
-        constexpr float kSeatEyeHeight = 0.7f; ///< How far over the seat a rider's eyes are
-        constexpr glm::mat4 kSeatEyes { { -1, 0, 0, 0 }, { 0, 0, 1, 0 }, { 0, 1, 0, 0 }, { 0, 0, kSeatEyeHeight, 1 } };
-        if (const auto seat = scene.riding_flat ? flat_seat(scene, scene.riding_flat->first, scene.riding_flat->second) : std::nullopt)
-            scene.seat = park::looked_round(*seat * kSeatEyes, scene.ride_turn);
+        // On a flat ride, from one of its fixed cameras, or from a rider's eyes over their seat, as they move. A
+        // seat faces +Z with +Y up, as the people sat on it are modelled.
+        constexpr glm::vec3 kSeatEyes { 0, 0.75f, 0.2f }; ///< Where a sitting rider's eyes are, just before their face
+        if (const auto seat = scene.riding_flat ? flat_view(scene, scene.riding_flat->first, scene.riding_fixed, scene.riding_flat->second) : std::nullopt)
+            scene.seat = park::looked_round(scene.riding_fixed ? *seat : glm::translate(*seat, kSeatEyes), scene.ride_turn);
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)

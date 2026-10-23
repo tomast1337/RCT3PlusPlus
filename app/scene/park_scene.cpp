@@ -216,7 +216,7 @@ namespace rct3::scene
                 f.ride = &scene.rides.rides[ref.index];
                 f.common = &f.ride->base;
                 f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
-                f.seats = flat_seat(scene, ref.index, 0).has_value();
+                f.seats = flat_view(scene, ref.index, false, 0) || flat_view(scene, ref.index, true, 0);
                 f.music = scene.tunes;
                 if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                     f.tune = tune->second;
@@ -599,31 +599,44 @@ namespace rct3::scene
             scene.park.speed.paused = false;
         }
 
-        /// The flat rides with rider seats to look out from, in the park's order.
+        /// How many rider seats flat ride `ride` has to look out from, or with `fixed` fixed cameras.
+        std::size_t flat_views(const ParkScene& scene, std::size_t ride, bool fixed)
+        {
+            std::size_t count = 0;
+            while (flat_view(scene, ride, fixed, count))
+                ++count;
+            return count;
+        }
+
+        /// The flat rides with rider seats or fixed cameras to look out from, in the park's order.
         std::vector<std::size_t> flat_rides(const ParkScene& scene)
         {
             std::vector<std::size_t> rides;
             for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                if (flat_seat(scene, ride, 0))
+                if (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0))
                     rides.push_back(ride);
             return rides;
         }
 
-        /// Looks out from rider seat `seat` of flat ride `ride`, as ride_along does from a car.
-        /// shortcut: only from the riders' seats, not the rides' own fixed cameras, and the train buttons step
-        /// the rides under the trains' names; upgrade when those cameras are read from the models.
-        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t seat)
+        /// Looks out from rider seat `at` of flat ride `ride`, or with `fixed` from its fixed camera `at`, as
+        /// ride_along does from a car. The type button changes between seats and fixed cameras, the train
+        /// buttons go from flat ride to flat ride.
+        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, bool fixed, std::size_t at)
         {
             start_riding(scene, assets);
-            if (scene.riding_flat != std::pair { ride, seat })
+            if (scene.riding_flat != std::pair { ride, at } || scene.riding_fixed != fixed)
                 scene.ride_turn = { };
             scene.riding.reset();
-            scene.riding_flat = { ride, seat };
+            scene.riding_flat = { ride, at };
+            scene.riding_fixed = fixed;
             const ui::StringTable& strings = *assets.strings;
+            constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
             std::u16string info = ui::attraction_name(scene.rides.rides[ride].base, strings);
-            info += u"  " + std::u16string(strings.get("RidecamGUI_TypePeep")) + u" " + strings::to_utf16(std::format("{}", seat + 1));
+            info += u"  " + std::u16string(strings.get(kNames[fixed])) + u" " + strings::to_utf16(std::format("{}", at + 1));
+            const bool other = flat_views(scene, ride, !fixed) > 0;
+            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::kFlatSeatType : ui::kFlatFixedType) : std::nullopt;
             if (auto panel = scene.desktop->root().find_as<ui::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), flat_seat(scene, ride, 1).has_value(), flat_rides(scene).size() > 1);
+                panel->show(std::move(info), flat_views(scene, ride, fixed) > 1, flat_rides(scene).size() > 1, strings.get("RidecamGUI_Ride"), next, other ? strings.get(kNames[!fixed]) : std::u16string_view { });
         }
 
         /// Rides along in `car`, from its camera of kind `eye`.
@@ -653,10 +666,31 @@ namespace rct3::scene
             const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
             const std::optional<park::RideEye> next = next_eye(scene, car, eye);
             if (auto panel = root.find_as<ui::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, next.transform([](park::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
+                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](park::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
         void stop_riding(ParkScene& scene);
+
+        /// Rides along on ride `ride` (of the park's rides): a flat ride from its first rider seat; a tracked ride
+        /// from the first front seat camera of a train under way, else of the first train, the rear or nose
+        /// camera where the cars have no front one. Nothing when it has neither.
+        void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
+        {
+            if (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0))
+            {
+                ride_flat(scene, assets, ride, !flat_view(scene, ride, false, 0), 0);
+                return;
+            }
+            const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
+            const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
+            for (const park::RideEye eye : { park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
+                if (const std::vector<std::size_t> seats = ride_seats(scene, ride, eye); !seats.empty())
+                {
+                    const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
+                    ride_along(scene, assets, running != seats.end() ? *running : seats.front(), eye);
+                    return;
+                }
+        }
 
         /// Leaves, or changes to the train's first camera of the next kind it has, or steps to the previous or next
         /// camera of the same kind on the train (round from the last to the first), or to the previous or next
@@ -671,18 +705,23 @@ namespace rct3::scene
             }
             const bool next = action == NextCamera || action == NextTrain;
             const auto step = [&](std::size_t at, std::size_t count) { return (at + (next ? 1 : count - 1)) % count; };
-            // On a flat ride, the cameras are its seats and the trains are the park's other flat rides.
+            // On a flat ride, the cameras are its seats or its fixed cameras, the type changes between them, and the
+            // trains are the park's other flat rides, entered as ride_cam does.
             if (scene.riding_flat)
             {
-                const auto [ride, seat] = *scene.riding_flat;
-                std::size_t seats = 0;
-                while (flat_seat(scene, ride, seats))
-                    ++seats;
+                const auto [ride, view] = *scene.riding_flat;
+                const bool fixed = scene.riding_fixed;
+                const std::size_t views = flat_views(scene, ride, fixed);
                 const std::vector<std::size_t> rides = flat_rides(scene);
-                if ((action == PreviousCamera || action == NextCamera) && seats > 0)
-                    ride_flat(scene, assets, ride, step(seat, seats));
+                if ((action == PreviousCamera || action == NextCamera) && views > 0)
+                    ride_flat(scene, assets, ride, fixed, step(view, views));
+                else if (action == ChangeType && flat_views(scene, ride, !fixed) > 0)
+                    ride_flat(scene, assets, ride, !fixed, 0);
                 else if (const auto at = std::ranges::find(rides, ride); (action == PreviousTrain || action == NextTrain) && at != rides.end())
-                    ride_flat(scene, assets, rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())], 0);
+                {
+                    const std::size_t to = rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())];
+                    ride_flat(scene, assets, to, !flat_view(scene, to, false, 0), 0);
+                }
                 return;
             }
             if (!scene.riding)
@@ -785,21 +824,7 @@ namespace rct3::scene
                     scene.camera.target = sum / static_cast<float>(count);
             }
             else if (change.id == ui::control_id(RideCam) && ride != nullptr)
-            {
-                // A flat ride's first rider seat; on a tracked ride the first front seat camera of a train under
-                // way, else of the first train, the rear or nose camera where the cars have no front one.
-                if (flat_seat(scene, ref.index, 0))
-                    ride_flat(scene, assets, ref.index, 0);
-                const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
-                const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
-                for (const park::RideEye eye : { park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
-                    if (const std::vector<std::size_t> seats = ride_seats(scene, ref.index, eye); !seats.empty())
-                    {
-                        const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
-                        ride_along(scene, assets, running != seats.end() ? *running : seats.front(), eye);
-                        break;
-                    }
-            }
+                ride_cam(scene, assets, ref.index);
             else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
             {
                 if (const auto item = static_cast<std::size_t>(change.id - ui::control_id(ItemPrice)); item < stall->items.size())
@@ -1534,12 +1559,21 @@ namespace rct3::scene
         {
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
-            else if (c == ui::PlayCommand::ToggleRideCamera)
+            // The ride camera key leaves, or rides along on the ride whose window is open.
+            else if (c == ui::PlayCommand::ToggleRideCamera && (scene.riding || scene.riding_flat))
                 stop_riding(scene);
+            else if (c == ui::PlayCommand::ToggleRideCamera && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride)
+                ride_cam(scene, assets, scene.shown->index);
             else if (c == ui::PlayCommand::NextRideCamera)
                 ride_action(scene, assets, ui::RideCameraAction::NextCamera);
             else if (c == ui::PlayCommand::PreviousRideCamera)
                 ride_action(scene, assets, ui::RideCameraAction::PreviousCamera);
+            else if (c == ui::PlayCommand::NextRide)
+                ride_action(scene, assets, ui::RideCameraAction::NextTrain);
+            else if (c == ui::PlayCommand::PreviousRide)
+                ride_action(scene, assets, ui::RideCameraAction::PreviousTrain);
+            else if (c == ui::PlayCommand::NextCoasterCamType)
+                ride_action(scene, assets, ui::RideCameraAction::ChangeType);
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.

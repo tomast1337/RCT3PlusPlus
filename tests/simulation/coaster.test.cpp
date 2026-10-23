@@ -36,6 +36,22 @@ TEST_CASE("a train at fixed speed takes the track's length over that speed")
     CHECK(*lap == doctest::Approx(25).epsilon(0.02));
 }
 
+TEST_CASE("a launched train reaches its launch speed as its tail leaves the platform")
+{
+    Coaster c = hill();
+    c.kinds[1] = Stretch::Plain; // No chain: the launch alone takes it on
+    c.launch_speed = 20;
+    c.running = true;
+    for (int i = 0; i < 10000 && c.travelled < c.train_length; ++i)
+        drive(c, 0.01f);
+    CHECK(c.speed == doctest::Approx(20).epsilon(0.05));
+    // Unlaunched, it only creeps off.
+    Coaster slow = hill();
+    slow.running = true;
+    drive(slow, 1);
+    CHECK(slow.speed < 5);
+}
+
 TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes round to the station")
 {
     const Coaster c = hill();

@@ -11,10 +11,11 @@ namespace rct3::simulation
     {
         constexpr float kGravity = 9.81f;
         // Our model's losses, picked so the laps of saved parks' tested coasters come out near their test times.
-        constexpr float kRolling = 0.003f; ///< Of the train's weight
-        constexpr float kAir = 0.0004f;    ///< Times speed squared, per metre of the train's mass
-        constexpr float kStep = 0.05f;     ///< Seconds per part step, short enough for the steepest drops
-        constexpr float kStuck = 4;        ///< Seconds all but stopped before the track's tyres take over
+        constexpr float kRolling = 0.003f;   ///< Of the train's weight
+        constexpr float kAir = 0.0004f;      ///< Times speed squared, per metre of the train's mass
+        constexpr float kStep = 0.05f;       ///< Seconds per part step, short enough for the steepest drops
+        constexpr float kStuck = 4;          ///< Seconds all but stopped before the track's tyres take over
+        constexpr float kLaunchLeast = 0.5f; ///< Metres of platform left that a launch is still sized over
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -79,6 +80,14 @@ namespace rct3::simulation
                     if (c.speed > c.station_speed)
                         c.slow = 0;
                 }
+            }
+            // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on.
+            // shortcut: launch-assist pieces past the platform and the launch modes that run back and forth are
+            // not pushed, upgrade with shuttle running.
+            if (c.launch_speed && !c.fixed_speed && c.travelled < c.train_length && c.speed < *c.launch_speed)
+            {
+                const float left = std::max(c.train_length - c.travelled, kLaunchLeast);
+                c.speed = std::min(c.speed + (*c.launch_speed * *c.launch_speed - c.speed * c.speed) / (2 * left) * dt, *c.launch_speed);
             }
             // shortcut: with other trains on the track a train never rolls back, as if held by anti-rollback
             // dogs everywhere, so it cannot run into the one behind; upgrade when the train behind gives room too.

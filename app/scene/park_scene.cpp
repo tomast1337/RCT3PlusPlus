@@ -644,7 +644,13 @@ namespace rct3::scene
                 // The page shows hundredths of the player's unit.
                 const float speed = static_cast<float>(change.value) / 100 / ui::speed_scale(info_units(assets, options).distance);
                 if (change.id == ui::control_id(LaunchSpeed))
-                    ride->options.launch_speed = speed; // shortcut: stored, launches run at the track's own speed yet
+                {
+                    ride->options.launch_speed = speed;
+                    if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                        if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
+                            for (simulation::Coaster& c : fleet->trains)
+                                c.launch_speed = simulation::launch_of(*ride);
+                }
                 else
                 {
                     ride->options.lift_speed = speed;

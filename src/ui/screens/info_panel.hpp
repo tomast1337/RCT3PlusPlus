@@ -136,12 +136,13 @@ namespace rct3::ui
         inline constexpr float kShadowOffset = 3; ///< Of the shadows, right and down
         /// Across the round view of the thing, centred on the disc, within the disc's plain middle.
         inline constexpr float kView = 106;
-        inline constexpr float kRingRadius = 72; ///< From the disc's middle to the tabs' middles
-        inline constexpr float kFirstAngle = 42; ///< Degrees up from the right, of slot 0
-        inline constexpr float kSlotAngle = 32;  ///< Between neighbouring slots, going round to the left
-        inline constexpr float kTabSize = 28;    ///< A tab's face at rest
-        inline constexpr float kTabGrown = 40;   ///< Under the pointer
-        inline constexpr float kIconSize = 40;   ///< Of the tab icons' own pictures
+        inline constexpr float kDoubleClickSeconds = 0.4f; ///< Between two presses on the view that make a double click
+        inline constexpr float kRingRadius = 72;           ///< From the disc's middle to the tabs' middles
+        inline constexpr float kFirstAngle = 42;           ///< Degrees up from the right, of slot 0
+        inline constexpr float kSlotAngle = 32;            ///< Between neighbouring slots, going round to the left
+        inline constexpr float kTabSize = 28;              ///< A tab's face at rest
+        inline constexpr float kTabGrown = 40;             ///< Under the pointer
+        inline constexpr float kIconSize = 40;             ///< Of the tab icons' own pictures
         inline constexpr float kCloseSize = 14;
         inline constexpr float kHideSize = 12;     ///< The button that puts the strip away
         inline constexpr float kHideInset = 4;     ///< From the strip's open end and the band's top
@@ -314,6 +315,12 @@ namespace rct3::ui
         {
             return std::exchange(choice_now_, std::nullopt);
         }
+        /// Whether the round view was pressed twice in quick succession (a double click) since the last call.
+        [[nodiscard]] bool take_view_double_click()
+        {
+            return std::exchange(view_double_, false);
+        }
+        void on_press(Point p) override;
         /// A change the player made to a control on the page since the last call.
         [[nodiscard]] std::optional<InfoChange> take_change()
         {
@@ -437,6 +444,8 @@ namespace rct3::ui
         std::vector<std::pair<InfoControl, Widget*>> controls_;
         std::optional<std::size_t> painting_page_;
         std::optional<InfoChange> change_now_;
+        float since_view_press_ = info_panel::kDoubleClickSeconds; ///< Since the round view was last pressed
+        bool view_double_ = false;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::vector<Button*> sections_;
         Dropdown* section_list_ = nullptr; ///< When the page picks its sections from a list

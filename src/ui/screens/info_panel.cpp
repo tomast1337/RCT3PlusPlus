@@ -654,8 +654,20 @@ namespace rct3::ui
         return dx * dx + dy * dy <= radius * radius || (strip_shown() && contains(strip(), p));
     }
 
+    void InfoPanel::on_press(Point p)
+    {
+        const Rect v = view();
+        const float dx = p.x - (v.x0 + v.x1) / 2;
+        const float dy = p.y - (v.y0 + v.y1) / 2;
+        if (dx * dx + dy * dy > info_panel::kView * info_panel::kView / 4)
+            return;
+        view_double_ = since_view_press_ < info_panel::kDoubleClickSeconds;
+        since_view_press_ = view_double_ ? info_panel::kDoubleClickSeconds : 0;
+    }
+
     void InfoPanel::update(const UpdateContext& context)
     {
+        since_view_press_ += context.elapsed;
         // The parts follow the screen's corner.
         place();
         if (const auto f = context.fonts && !measured_ ? context.fonts->get(FontRole::Small) : std::nullopt)

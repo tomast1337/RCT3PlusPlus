@@ -81,6 +81,21 @@ expect(ui.find("bar") !== undefined && ui.find("tools") !== undefined, "the bar 
 expect(ui.find("ride_camera") === undefined, "the panel gone");
 await screenshot("overhead again");
 
+// A double click on the ride window's round view rides along again. The view is the disc in the screen's
+// corner, 18 + 64 interface units in from it; the close button, 14 across, gives the unit.
+const panel = ui.find("info")!;
+const close = ui.find("info/close")!;
+const across = (close.right - close.left) / 14;
+const down = (close.bottom - close.top) / 14;
+const disc: [number, number] = [panel.right - 82 * across, panel.bottom - 82 * down];
+await pointer.click(...disc);
+await pointer.click(...disc);
+await frames(5);
+expect(camera.riding() !== undefined, "riding along from a double click on the round view");
+await ui.click(exit);
+await frames(5);
+expect(camera.riding() === undefined, "the overhead view after the double click");
+
 // A flat ride is looked out from its riders' seats; the camera buttons step from seat to seat.
 const flat = rides.list().findIndex((r) => r.flat && r.joined);
 expect(flat >= 0, "a flat ride");

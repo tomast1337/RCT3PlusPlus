@@ -4,6 +4,7 @@
 #include "simulation/park_state.hpp"
 
 #include <doctest/doctest.h>
+#include <utility>
 
 using namespace rct3;
 
@@ -84,15 +85,19 @@ TEST_CASE("takings count the last whole month, and prizes pay out")
     park.cash = 0;
     park.rating = 0.99f;
     save::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
-    simulation::give_prize(park, finance, 1);
-    simulation::give_prize(park, finance, 2);
+    save::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::TileFlag::NeverPurchasable) }, { } } };
+    simulation::give_prize(park, finance, land, 1);
+    simulation::give_prize(park, finance, land, 2);
     CHECK(park.cash > 0);
-    simulation::give_prize(park, finance, 4);
+    simulation::give_prize(park, finance, land, 4);
     CHECK(park.rating == 1.0f);
-    simulation::give_prize(park, finance, 5);
-    simulation::give_prize(park, finance, 6);
+    simulation::give_prize(park, finance, land, 5);
+    simulation::give_prize(park, finance, land, 6);
     CHECK(finance.interest_rate_percent == 4);
     CHECK(finance.max_loan == 2000);
+    simulation::give_prize(park, finance, land, 7);
+    CHECK(land.cells[0].has(save::TileFlag::ForSale));
+    CHECK_FALSE(land.cells[1].has(save::TileFlag::ForSale));
     CHECK(simulation::prize_message(12) == "Prize_TycoonAward");
     CHECK(simulation::prize_name(0) == "Prize_Invalid");
 }

@@ -438,7 +438,7 @@ namespace rct3::scene
                     if (const auto* a = registry.try_get<simulation::Attraction>(e))
                     {
                         one["customers"] = a->customers;
-                        one["price"] = a->price;
+                        one["price"] = a->price.value;
                         one["open"] = a->open;
                         one["onPaths"] = a->entrance != simulation::kNoNode;
                         // Where the guests walking to it are now.
@@ -460,7 +460,7 @@ namespace rct3::scene
                             for (const auto& aboard : fleet->riders)
                                 riders += aboard.size();
                         one["riders"] = riders;
-                        one["ratings"] = { c->excitement, c->intensity, c->nausea };
+                        one["ratings"] = { c->excitement.value, c->intensity.value, c->nausea.value };
                     }
                 }
                 rides.push_back(std::move(one));

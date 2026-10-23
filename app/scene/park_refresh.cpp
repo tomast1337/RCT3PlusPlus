@@ -159,8 +159,8 @@ namespace rct3::scene
         std::pair<std::int32_t, float> vendor_motion(const ParkScene& scene, const ShownPerson& shown, const glm::vec3& at)
         {
             for (const auto [g, walk, pose] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Pose>().each())
-                if (!walk.off && walk.next == 1 && walk.pause > 0 && glm::distance(pose.position, at) < kServeReach)
-                    return { kTakeMoneyMotion, simulation::kTuning.queues.ticket.value - walk.pause };
+                if (!walk.off && walk.next == 1 && walk.pause.value > 0 && glm::distance(pose.position, at) < kServeReach)
+                    return { kTakeMoneyMotion, simulation::kTuning.queues.ticket.value - walk.pause.value };
             const float turn = scene.clock / kVendorTurnSeconds + static_cast<float>(entt::to_integral(shown.guest));
             const auto whole = static_cast<std::size_t>(turn);
             return { whole % kShelvesEvery == 0 ? kShelvesMotion : kBoredMotion, (turn - static_cast<float>(whole)) * kVendorTurnSeconds };
@@ -202,26 +202,26 @@ namespace rct3::scene
                     if (kind == simulation::ErrandKind::Riding && ride_walk == nullptr)
                         continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
                     const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
-                    const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause > 0;
+                    const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause.value > 0;
                     const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
                     // The walk goes as far into its motion as the ground covered allows, so the feet stay put
                     // however fast the guest goes.
                     if (walking && shown.pace > 0)
                         pose.time = at.walked.value / shown.pace;
                     // People are modelled facing +z, which the heading turns towards the way they go.
-                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
                     if (at_ticket)
                     {
                         pose.motion = kTicketMotion;
-                        pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause;
+                        pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause.value;
                     }
                     if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
                     {
                         // By the names the people's meshes give these motions, in GestureKind's order.
                         constexpr std::array<std::string_view, 6> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit" };
                         pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
-                        pose.time = simulation::kTuning.gestures.shown.value - gesture->left + scene.sim_time;
+                        pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                     }
                     // An umbrella held up in the rain.
                     // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
@@ -508,7 +508,7 @@ namespace rct3::scene
                     continue;
                 save::Guest& kept = scene.people.guests.emplace_back();
                 kept.in_park = true;
-                kept.mood_now.happiness.value = mood.happiness.value;
+                kept.mood_now.happiness = mood.happiness.value;
                 kept.person.type = type;
                 kept.person.sub_type = std::to_underlying(sex);
                 kept.person.name = visitor.name.empty() ? std::format("Guest {}", scene.people.guests.size()) : visitor.name;

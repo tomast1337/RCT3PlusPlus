@@ -23,6 +23,7 @@
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/screens/tutorial_picker.hpp"
@@ -610,6 +611,21 @@ namespace rct3::ui::game_skins
         s.thumb_up = "Top_ThumbsUp";
         s.weather_icons = { "IconSun", "IconCloudWithSun", "IconCloud", "IconLightRain", "IconHeavyRain", "IconThunderstorm", "IconSnow" };
         s.forecast_arrow = "IconWeatherArrow";
+        return s;
+    }
+
+    /// The panel shown while riding along in a car.
+    [[nodiscard]] inline RideCameraPanelStyle ride_camera_panel_style(const Palette& p)
+    {
+        RideCameraPanelStyle s;
+        s.text_colour = p.text_on_band;
+        s.back = "CircularPanelDialog";
+        s.button = kMenuButtonSmall;
+        s.pin = "RideCamGUI_Pin";
+        s.unpin = "RideCamGUI_UnPin";
+        s.leave = "RideCamGUI_Exit";
+        s.steps = { "RideCamGUI_PrvCam", "RideCamGUI_NxtCam", "RideCamGUI_PrvRide", "RideCamGUI_NxtRide" };
+        s.no_steps = { "RideCamGUI_PrvCamDis", "RideCamGUI_NxtCamDis", "RideCamGUI_PrvRideDis", "RideCamGUI_NxtRideDis" };
         return s;
     }
 

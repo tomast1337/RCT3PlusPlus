@@ -887,7 +887,7 @@ namespace rct3::ui
                 {
                     // A ride's cars can be ridden along in once it has some.
                     const bool cars = attraction_kind(*f.ride) == AttractionKind::Tracked && !f.ride->trains.empty();
-                    button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", "KeySetting_ToggleRideCam", cars);
+                    button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", cars ? "RideCamButton_Enabled" : "RideCamButton_Disabled", cars);
                 }
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)

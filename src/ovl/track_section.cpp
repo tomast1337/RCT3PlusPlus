@@ -58,6 +58,7 @@ namespace rct3::ovl
                 s.scenery_item = record->ref(0x04, "sid");
                 s.join_a = record->u32(0x08);
                 s.join_b = record->u32(0x0C);
+                s.role = record->u32(0x10);
                 s.flags = { record->u32(0x18), record->u32(0x1C) };
                 for (std::size_t i = 0; i < s.splines.size(); ++i)
                     s.splines[i] = record->ref(0x20 + i * 4, "spl");

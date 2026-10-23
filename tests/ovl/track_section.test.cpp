@@ -20,6 +20,7 @@ namespace
         w[0] = pool.add("Curve");
         w[2] = 3;
         w[3] = 6;
+        w[4] = 2;
         w[6] = 0x400004;
         w[7] = 0x400002;
         w[0x88 / 4] = bits(1.0f);
@@ -59,6 +60,7 @@ TEST_CASE("track sections are read in every file version")
         CHECK(s.scenery_item == "Curve");
         CHECK(s.join_a == 3);
         CHECK(s.join_b == 6);
+        CHECK(s.role == 2);
         CHECK(s.flags[0] == 0x400004);
         CHECK(s.flags[1] == 0x400002);
         CHECK(s.splines[0] == "CurveL");

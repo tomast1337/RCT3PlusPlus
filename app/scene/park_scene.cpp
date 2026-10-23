@@ -627,7 +627,15 @@ namespace rct3::scene
                 stage_show(scene, *show);
             }
             else if (change.id == ui::control_id(BlockSection))
-                ride->options.block_sectioned = change.value != 0; // shortcut: stored, the trains do not keep blocks yet
+            {
+                // shortcut: the game also caps the trains at one fewer than the blocks; upgrade with the trains'
+                // limits counting blocks.
+                ride->options.block_sectioned = change.value != 0;
+                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                    if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
+                        for (simulation::Coaster& c : fleet->trains)
+                            c.blocks = ride->options.block_sectioned;
+            }
             else if (change.id == ui::control_id(SyncStations))
                 ride->options.sync_trains = change.value != 0; // shortcut: stored, stations do not wait for each other yet
             else if (change.id == ui::control_id(LeaveOnArrival))

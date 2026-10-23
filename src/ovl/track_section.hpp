@@ -36,6 +36,9 @@ namespace rct3::ovl
         /// value three steps on (1 and 4, 2 and 5, 3 and 6, then back). Meaning unconfirmed.
         std::uint32_t join_a = 0;
         std::uint32_t join_b = 0;
+        /// What the piece does on its ride: 1 brakes, 2 block brakes, 3 a station platform; other values name
+        /// the piece within its own file.
+        std::uint32_t role = 0;
         /// Bit sets. Version 1 files use small numbers, later files have 0x400000 set in nearly all items.
         /// Bits of the first: 0x1 the piece may start a track, 0x2000 laid backwards too; 0x2 it has a lift
         /// chain; 0x40 it is a station; 0x80 a station platform ends at it, whatever its neighbours; 0x4 a

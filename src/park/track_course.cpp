@@ -58,6 +58,8 @@ namespace rct3::park
                 CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;
+                else if (kind == CourseKind::Plain && shape->record.role == kRoleBlockBrake)
+                    kind = CourseKind::BlockBrake;
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
                 std::vector<glm::vec3> path = shape->line.path;
                 std::vector<glm::vec3> ups = shape->line.ups;

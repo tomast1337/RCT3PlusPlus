@@ -24,9 +24,10 @@ namespace rct3::park
     enum class CourseKind : std::uint8_t
     {
         Plain,
-        Chain,   ///< A lift chain pulls the cars up
-        Station, ///< Riders get on and off
-        Cable,   ///< A cable pulls the cars up, as a chain does
+        Chain,      ///< A lift chain pulls the cars up
+        Station,    ///< Riders get on and off
+        Cable,      ///< A cable pulls the cars up, as a chain does
+        BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear
     };
 
     struct TrackCourse

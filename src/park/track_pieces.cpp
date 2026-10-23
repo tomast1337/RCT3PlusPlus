@@ -220,6 +220,7 @@ namespace rct3::park
             r.join_a = section.join_a;
             r.join_b = section.join_b;
             r.flags = section.flags[0];
+            r.role = section.role;
             r.squares = { static_cast<std::int32_t>(item->second.x_squares), static_cast<std::int32_t>(item->second.z_squares) };
             r.positioning = static_cast<Positioning>(item->second.positioning);
             r.cost = item->second.cost;

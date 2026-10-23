@@ -380,6 +380,31 @@ TEST_CASE("a coaster's trains run on their own, each waiting behind the one in f
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 30));
 }
 
+TEST_CASE("with blocks, a train waits at a block brake while the block beyond holds another")
+{
+    // A 100 m circuit: a station, track, a block brake at 50 to 55, and track home.
+    Coaster track;
+    track.distance = { 0, 10, 50, 55, 100 };
+    track.height = { 0, 0, 0, 0, 0 };
+    track.kinds = { Stretch::Station, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.train_length = 5;
+    Coaster stopped = track;
+    stopped.at = 70; // In the block past the brake
+    Coaster coming = track;
+    coming.at = 30;
+    coming.running = true;
+    std::vector<Coaster> trains { stopped, coming };
+    CHECK(room_ahead(trains, 1) == doctest::Approx(70 - 5 - 30 - kBlockGap)); // Without blocks, up to the gap
+    for (Coaster& c : trains)
+        c.blocks = true;
+    CHECK(room_ahead(trains, 1) == doctest::Approx(55 - 30)); // To the brake's end
+    trains[1].at = 55;
+    CHECK(room_ahead(trains, 1) == doctest::Approx(0)); // Waiting on it
+    trains[0].at = 30;                                  // Gone round past the station into the next block: this one is clear
+    CHECK(room_ahead(trains, 1) > 0);
+}
+
 TEST_CASE("guests spread over the path but keep on it")
 {
     Sandbox park;

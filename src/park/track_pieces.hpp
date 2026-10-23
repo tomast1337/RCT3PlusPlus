@@ -50,6 +50,7 @@ namespace rct3::park
 
     // Bits of a section's flags, as seen across the game's track overlays: lift chain pieces all have the
     // first, station pieces the second, and nearly every piece of later files the third.
+    inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
@@ -117,6 +118,7 @@ namespace rct3::park
         std::uint32_t join_a = 0;
         std::uint32_t join_b = 0;
         std::uint32_t flags = 0;
+        std::uint32_t role = 0; ///< As ovl::TrackSection::role
         std::array<std::int32_t, 2> squares { 1, 1 };
         Positioning positioning = Positioning::Tile;
         std::int32_t cost = 0;          ///< As the scenery item stores it

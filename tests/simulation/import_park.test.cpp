@@ -353,3 +353,25 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     CHECK_FALSE(r.valid(litter));
     CHECK_FALSE(world.paths.route(at(1), at(3)));
 }
+
+TEST_CASE("rides whose stations stand side by side on one level are linked, others not")
+{
+    simulation::SimWorld world;
+    auto& r = world.registry;
+    const std::array<entt::entity, 4> rides { r.create(), r.create(), r.create(), r.create() };
+    const save::TerrainGrid grid { .tile_size_x = 4, .tile_size_z = 4 };
+    // A station two tiles long running along the rows, in column `col`, at height `up`.
+    const auto station = [](float col, float up) {
+        park::TrackCourse c;
+        c.points = { { col * 4 + 2, up, 0 }, { col * 4 + 2, up, 8 }, { col * 4 + 2, up, 20 } };
+        c.kinds = { park::CourseKind::Station, park::CourseKind::Plain, park::CourseKind::Plain };
+        return std::optional(c);
+    };
+    const std::array courses { station(0, 0), station(1, 0), station(3, 0), station(1, 5) }; // Beside, apart, above
+    simulation::link_stations(world, rides, courses, grid);
+    REQUIRE(r.all_of<simulation::StationNeighbours>(rides[0]));
+    CHECK(r.get<simulation::StationNeighbours>(rides[0]).rides == std::vector { rides[1] });
+    CHECK(r.get<simulation::StationNeighbours>(rides[1]).rides == std::vector { rides[0] });
+    CHECK_FALSE(r.all_of<simulation::StationNeighbours>(rides[2]));
+    CHECK_FALSE(r.all_of<simulation::StationNeighbours>(rides[3]));
+}

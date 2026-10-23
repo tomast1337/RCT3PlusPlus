@@ -2043,8 +2043,28 @@ namespace rct3::simulation
             {
                 const auto* departure = r.try_get<Departure>(e);
                 // It waits for those still walking to their seats.
-                if (std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading.value)))
+                bool go = std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading.value));
+                // Told to, a ready train waits for one ready at each station beside it told the same; then all go.
+                // shortcut: only the stations right beside count, not those beside them in turn; upgrade if a row of
+                // three or more synced stations turns up in a park.
+                const auto* beside = r.try_get<StationNeighbours>(e);
+                if (go && fleet != nullptr && !attraction.testing && departure != nullptr && departure->sync && beside != nullptr)
                 {
+                    const auto told = [&](entt::entity b) {
+                        const auto* d = r.valid(b) ? r.try_get<Departure>(b) : nullptr;
+                        return d != nullptr && d->sync && r.all_of<CycleRide>(b);
+                    };
+                    ride.synced = true;
+                    go = ride.released || std::ranges::all_of(beside->rides, [&](entt::entity b) { return !told(b) || r.get<CycleRide>(b).synced; });
+                    if (go && !ride.released)
+                        for (const entt::entity b : beside->rides)
+                            if (told(b))
+                                r.get<CycleRide>(b).released = true;
+                }
+                if (go)
+                {
+                    ride.synced = false;
+                    ride.released = false;
                     depart(riders->size());
                     if (fleet != nullptr)
                         fleet->trains[*loading].running = true;

@@ -359,6 +359,8 @@ namespace rct3::simulation
         Seconds loading { };                  ///< The train at the start, or the loading ride, has been loading
         Seconds since_departure { -1 };       ///< Since a train or go last left; -1 before the first
         float per_hour = 0;                   ///< Riders an hour, smoothed over the last departures; 0 before two
+        bool synced = false;                  ///< Its train is ready and waits for those at the stations beside it
+        bool released = false;                ///< Those are ready too: it leaves with them
     };
 
     /// The ways riders walk on and off a ride, in the park's space, worked out from the ride's models where it
@@ -391,6 +393,13 @@ namespace rct3::simulation
         std::int32_t min_wait = -1;    ///< Seconds it waits before it looks at its load; -1 none
         std::int32_t max_wait = -1;    ///< Seconds after which it leaves whatever its load, even empty; -1 none
         bool leave_on_arrival = false; ///< Leaves, after its least wait, once the next train is held up behind it
+        bool sync = false;             ///< Waits, ready, to leave with the trains at the stations beside it that do the same
+    };
+
+    /// The rides with a station on a tile beside one of this ride's, on the same level.
+    struct StationNeighbours
+    {
+        std::vector<entt::entity> rides { };
     };
 
     /// The trains of a ride whose trains go round a track, each a Coaster of its own on the same track.

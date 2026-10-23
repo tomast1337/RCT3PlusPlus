@@ -1038,6 +1038,7 @@ namespace rct3::scene
                         scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
                 }
                 simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies);
+                simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
                 for (const save::RideShow& show : scene.shows)
                     stage_show(scene, show);
                 for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)

@@ -7,7 +7,8 @@
 //
 // Some items never block: fences, which stand along a tile's edges; path pieces, which paths check among themselves; the support columns, which are
 // built again round the paths; the park entrance, which paths run through; and what belongs on or along a path
-// (benches, bins, signs, lamps and the like, litter, where guests walk in).
+// (benches, bins, signs, lamps and the like, litter, where guests walk in), by their category or by being
+// positioned on a path.
 #pragma once
 
 #include "park/footpath_builder.hpp"

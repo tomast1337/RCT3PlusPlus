@@ -3,6 +3,7 @@
 
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
+#include "park/path_furniture.hpp"
 #include "park/track_supports.hpp"
 
 #include <algorithm>
@@ -33,7 +34,7 @@ namespace rct3::park
             if (o.hidden)
                 continue;
             const auto model = models.find(model_ref(o));
-            if (model == models.end() || model->second.solid.empty() || !blocks_paths(model->second.category))
+            if (model == models.end() || model->second.solid.empty() || !blocks_paths(model->second.category) || on_paths(static_cast<Positioning>(model->second.positioning)))
                 continue;
             const ObjectModel& m = model->second;
             const float base = object_transform(o, static_cast<Positioning>(m.positioning), grid, m.squares, m.ground_height)[3].y;

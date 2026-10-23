@@ -97,6 +97,15 @@ namespace rct3::simulation
     /// shortcut: lamps carry nothing in saves that marks them out, so vandals leave them be; upgrade when path
     /// items are told apart by their models.
     std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
+    /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
+    /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths.
+    entt::entity add_path_item(SimWorld& world, const save::PlacedObject& object, PathItemKind kind);
+    /// What a bin the player places holds, in pieces of rubbish, as the bins saved in the game's parks do.
+    inline constexpr float kNewBinPieces = 40;
+    /// A piece of rubbish in a saved bin's measure.
+    /// Approximation: Fun Valley's saved bins hold 0.4 and fill in steps of a hundredth, so a piece of rubbish is
+    /// taken to be one.
+    inline constexpr float kSavedBinPiece = 0.01f;
 
     /// The park's staff, walking the paths at their work from where they stand; each one's entity by their
     /// place in `people.staff`; one off the paths or on a queue starts from the nearest walkway, null only when the

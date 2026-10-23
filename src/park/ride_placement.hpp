@@ -61,6 +61,7 @@ namespace rct3::park
         Blocked,    ///< Something solid stands there above the base
         OffWater,   ///< A ride that stands only on water, on a tile that holds none
         UnderWater, ///< Any other ride, below the water on a tile
+        OffPath,    ///< Scenery that stands only on paths, away from them
     };
 
     /// What keeps a ride from `site` for the water of `bodies`, if anything: one `water_only` needs water under

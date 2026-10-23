@@ -1044,7 +1044,15 @@ namespace rct3::scene
                     simulation::import_parties(scene.sim, scene.people, guests);
                 }
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
-                simulation::import_path_items(scene.sim, scene.objects, scene.bins, world->benches, scene.signs);
+                // The benches the game's park lists, and those placed in ours, which it does not.
+                std::vector<std::uint64_t> benches = world->benches;
+                for (const save::PlacedObject& o : scene.objects)
+                {
+                    const auto model = scene.models.find(park::model_ref(o));
+                    if (!o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::Bench) && !std::ranges::contains(benches, o.id))
+                        benches.push_back(o.id);
+                }
+                simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
                 simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
                 // Each kind's rules read once, however many of its rides the park has.
                 std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;

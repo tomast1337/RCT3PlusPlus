@@ -66,6 +66,10 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
 
     const auto [bench, bench_models] = one_item(ItemCategory::Bench);
     CHECK(solid_tiles(bench, bench_models, g).tiles.empty());
+    // Nor does a lamp, of the lights' category, for standing against a path's side.
+    auto [lamp, lamp_models] = one_item(ItemCategory::Stall);
+    lamp_models.begin()->second.positioning = std::to_underlying(Positioning::PathSide);
+    CHECK(solid_tiles(lamp, lamp_models, g).tiles.empty());
 }
 
 TEST_CASE("a route goes round a stall in its way")

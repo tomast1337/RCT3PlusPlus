@@ -237,6 +237,20 @@ namespace rct3::scene
                         f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
                         f.trains->most_trains = course ? park::trains_fitting(*course, fits->second) : 1;
+                        // Kept a block apart, it takes one train fewer than it has blocks: each ends at a station,
+                        // lift or block brake.
+                        if (course && f.ride->options.block_sectioned && course->kinds.size() > 1)
+                        {
+                            const auto ends_block = [](park::CourseKind k) { return k != park::CourseKind::Plain && k != park::CourseKind::Launch; };
+                            const std::size_t last = course->kinds.size() - 1; // The last kind is past the track's end
+                            int blocks = 0;
+                            for (std::size_t i = 0; i < last; ++i)
+                            {
+                                const park::CourseKind next = i + 1 < last ? course->kinds[i + 1] : course->kinds.front();
+                                blocks += ends_block(course->kinds[i]) && next != course->kinds[i] ? 1 : 0;
+                            }
+                            f.trains->most_trains = std::min(f.trains->most_trains, std::max(blocks - 1, 1));
+                        }
                     }
                 }
             }

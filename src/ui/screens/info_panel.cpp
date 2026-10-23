@@ -48,6 +48,8 @@ namespace rct3::ui
         title_->style.colour = style_.text_colour;
         title_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);
+        hide_ = &add<Button>("hide", std::string { }, style_.left ? style_.hide_icon_left : style_.hide_icon);
+        hide_->icon_scale = 0.5f; // The arrow's picture is twice the band's room
         const float close_bottom = info_panel::kCloseBottom + style_.raise;
         close_->placement = style_.left ? bottom_left(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize) : bottom_right(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize);
         visible = false;
@@ -183,11 +185,13 @@ namespace rct3::ui
         value_rows_.clear();
         control_rows_.clear();
         measured_ = false;
+        paper_ = (!page.lines.empty() || !page.note.empty()) && page.graph.empty();
+        const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;
         const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
             Label& l = body_->add<Label>(std::move(name), text, font);
             l.placement = top_left(x, y, width, info_panel::kLineHeight);
-            l.style.colour = style_.text_colour;
+            l.style.colour = ink;
             return l;
         };
         title_->text = page.title;
@@ -219,7 +223,10 @@ namespace rct3::ui
                 Button& b = body_->add<Button>(std::format("section{}", i), std::string { });
                 b.text = page.sections[i];
                 b.font = FontRole::Tiny;
-                b.text_colour = i == page.section ? style_.picked_section_colour : style_.section_colour;
+                if (paper_)
+                    b.text_colour = i == page.section ? ink : style_.coded.band;
+                else
+                    b.text_colour = i == page.section ? style_.picked_section_colour : style_.section_colour;
                 b.placement = top_left(x, y, width, info_panel::kSectionHeight);
                 x += width;
                 sections_.push_back(&b);
@@ -625,8 +632,10 @@ namespace rct3::ui
         }
         const Rect s = strip();
         body_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0 + info_panel::kBodyTop, body_width_, std::min(body_height_, info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom));
-        title_->placement = top_left(s.x0 - r.x0 + info_panel::kBodyLeft, s.y0 - r.y0, body_width_, std::min(style_.coded.band_height, info_panel::kBodyTop));
-        title_->visible = body_width_ > 0;
+        title_->placement = top_left(s.x0 - r.x0 + info_panel::kTitleLeft, s.y0 - r.y0, body_width_, std::min(style_.coded.band_height, info_panel::kBodyTop));
+        const float hide_x = style_.left ? s.x1 - style_.coded.strip_shadow - info_panel::kHideInset - info_panel::kHideSize : s.x0 + info_panel::kHideInset;
+        hide_->placement = top_left(hide_x - r.x0, s.y0 - r.y0 + (style_.coded.band_height - info_panel::kHideSize) / 2, info_panel::kHideSize, info_panel::kHideSize);
+        title_->visible = body_->visible = hide_->visible = strip_shown();
     }
 
     void InfoPanel::mark_picked()
@@ -641,7 +650,7 @@ namespace rct3::ui
         const float dx = p.x - (d.x0 + d.x1) / 2;
         const float dy = p.y - (d.y0 + d.y1) / 2;
         const float radius = info_panel::kDisc / 2;
-        return dx * dx + dy * dy <= radius * radius || (body_width_ > 0 && contains(strip(), p));
+        return dx * dx + dy * dy <= radius * radius || (strip_shown() && contains(strip(), p));
     }
 
     void InfoPanel::update(const UpdateContext& context)
@@ -658,6 +667,11 @@ namespace rct3::ui
             hide();
             closed_ = true;
             return;
+        }
+        if (hide_->take_click())
+        {
+            tucked_ = true;
+            place();
         }
         for (std::size_t i = 0; i < choices_.size(); ++i)
         {
@@ -706,6 +720,8 @@ namespace rct3::ui
             if (!tabs_[i]->take_click())
                 continue;
             close_palette();
+            if (std::exchange(tucked_, false))
+                place();
             if (!tab_choices_[i].empty())
             {
                 if (choosing_ == i)
@@ -755,7 +771,7 @@ namespace rct3::ui
         };
         const auto plain = [&](Rect r, Corners corners, Color colour) { list.shape(shape(r, corners, colour, colour)); };
 
-        if (body_width_ > 0)
+        if (strip_shown())
         {
             const Rect s = strip();
             const Rect slab { s.x0, s.y0, s.x1 - c.strip_shadow, s.y1 - c.strip_shadow };
@@ -763,13 +779,24 @@ namespace rct3::ui
             plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
+            if (paper_)
+            {
+                // Its far end runs on under the disc; the corner rounds by the disc.
+                const Rect paper = style_.left ? Rect { slab.x0, slab.y0 + c.band_height, slab.x1 - c.paper_inset, slab.y1 - c.paper_inset } : Rect { slab.x0 + c.paper_inset, slab.y0 + c.band_height, slab.x1, slab.y1 - c.paper_inset };
+                plain(paper, style_.left ? Corners { 0, 0, 0, c.paper_corner } : Corners { 0, 0, c.paper_corner, 0 }, c.paper);
+                // Every other line, from the body's second, short of the round corner.
+                const float x0 = style_.left ? paper.x0 + c.paper_corner : paper.x0;
+                const float x1 = style_.left ? paper.x1 : paper.x1 - c.paper_corner;
+                for (float y = s.y0 + info_panel::kBodyTop + info_panel::kLineHeight; y < paper.y1; y += 2 * info_panel::kLineHeight)
+                    plain({ x0, y, x1, std::min(y + info_panel::kLineHeight, paper.y1) }, { }, c.stripe);
+            }
         }
 
         // The disc: while the strip shows, flat where it meets it with the strip's band running on into it;
         // round all over otherwise.
         const Rect d = disc();
         const float half = d.width() / 2;
-        const bool joined = body_width_ > 0;
+        const bool joined = strip_shown();
         const Corners flat = !joined ? round_corners(half) : style_.left ? Corners { half, 0, 0, half } : Corners { 0, half, half, 0 };
         plain(shifted(d, info_panel::kShadowOffset), flat, c.shadow);
         plain(shifted(d, info_panel::kShadowOffset), round_corners(half), c.shadow);
@@ -788,7 +815,7 @@ namespace rct3::ui
     void InfoPanel::draw_skins(DrawContext& context) const
     {
         const auto skin = [&](const std::string& name) { return name.empty() ? std::nullopt : context.skins.find(name); };
-        if (body_width_ > 0)
+        if (strip_shown())
             draw_skin(context.list, skin(style_.strip), strip());
         const Rect d = disc();
         const Rect shade { d.x0 + info_panel::kShadowOffset, d.y0 + info_panel::kShadowOffset, d.x1 + info_panel::kShadowOffset, d.y1 + info_panel::kShadowOffset };

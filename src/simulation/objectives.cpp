@@ -127,6 +127,8 @@ namespace rct3::simulation
                 return RideGroup::Coaster;
             case 19:
                 return RideGroup::PoolSlide;
+            case 2:
+                return RideGroup::Water;
             default:
                 return RideGroup::Other;
         }

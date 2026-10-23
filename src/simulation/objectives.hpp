@@ -29,6 +29,7 @@ namespace rct3::simulation
         Other,
         Coaster,
         PoolSlide,
+        Water, ///< Boats, flumes and the like, for the awards
     };
 
     /// The group of a ride by its attraction kind.

@@ -1032,11 +1032,8 @@ namespace rct3::scene
                 }
                 const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
-                if (std::ranges::any_of(scene.park_model.objectives.conditions, [](const save::Condition& c) { return c.kind == save::ConditionKind::Coaster; }))
-                {
-                    for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
-                        scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
-                }
+                for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
+                    scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
                 simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies);
                 simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
                 for (const save::RideShow& show : scene.shows)

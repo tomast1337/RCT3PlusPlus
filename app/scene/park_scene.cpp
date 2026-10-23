@@ -25,6 +25,7 @@
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
 #include "scene/track_building.hpp"
+#include "simulation/awards.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/staff_care.hpp"
@@ -1338,6 +1339,76 @@ namespace rct3::scene
                             for (const entt::entity guest : scene.sim.registry.view<simulation::Stride, simulation::Mood>())
                                 scene.sim.registry.emplace_or_replace<simulation::Gesture>(guest, simulation::GestureKind::Cheer, simulation::kTuning.gestures.shown);
                         }
+                    }
+                }
+                // Awards, as each month begins, from the park as it runs. The month the park opens in is not judged.
+                const bool new_month = scene.awards_month >= 0 && scene.park.date.month != scene.awards_month;
+                scene.awards_month = scene.park.date.month;
+                if (new_month && scene.simulate && scene.park_model.has_awards)
+                {
+                    const entt::registry& r = scene.sim.registry;
+                    const save::Finance& money = scene.park_model.finance;
+                    simulation::AwardFigures f {
+                        .guests = scene.park.guests,
+                        .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                        .money = scene.park.cash.has_value(),
+                        .fee_charged = scene.park.cash.has_value() && !money.unlimited() && !money.entrance_fee_fixed(),
+                        .entrance_fee = money.entrance_fee,
+                        .fair_fee = simulation::fair_entrance_fee(scene.sim),
+                        .old_litter = simulation::old_litter(scene.sim),
+                    };
+                    for (const entt::entity guest : r.view<const simulation::Thoughts, const simulation::Mood>())
+                    {
+                        std::vector<std::int32_t> had;
+                        for (const simulation::Thought& t : r.get<const simulation::Thoughts>(guest).recent)
+                            if (!std::ranges::contains(had, std::to_underlying(t.kind)))
+                                had.push_back(std::to_underlying(t.kind));
+                        for (const std::int32_t kind : had)
+                            ++f.thoughts[kind];
+                    }
+                    std::vector<std::string_view> foods;
+                    for (const auto [e, attraction, shop] : r.view<const simulation::Attraction, const simulation::Shop>().each())
+                    {
+                        ++f.stalls;
+                        f.toilets += shop.product == simulation::Product::Toilet ? 1 : 0;
+                        if (shop.product != simulation::Product::Food)
+                            continue;
+                        ++f.food_stalls;
+                        // Kinds of food by the kind of stall selling it.
+                        const auto stall = std::ranges::find(scene.rides.stalls, attraction.saved, [](const save::Stall& s) { return s.base.id; });
+                        if (stall != scene.rides.stalls.end() && !std::ranges::contains(foods, std::string_view(stall->base.symbol)))
+                            foods.push_back(stall->base.symbol);
+                    }
+                    f.food_kinds = static_cast<std::int32_t>(foods.size());
+                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    {
+                        const save::Assessment& a = scene.rides.rides[i].assessment;
+                        f.thrilling += a.valid && a.excitement > 5 && a.intensity > 5 ? 1 : 0;
+                        const simulation::RideGroup group = i < scene.ride_groups.size() ? scene.ride_groups[i] : simulation::RideGroup::Other;
+                        f.coasters += group == simulation::RideGroup::Coaster ? 1 : 0;
+                        f.water_rides += group == simulation::RideGroup::Water ? 1 : 0;
+                    }
+                    for (const auto [e, upkeep] : r.view<const simulation::Upkeep>().each())
+                    {
+                        f.downtime.push_back(upkeep.downtime_share() * 100);
+                        f.reliability += upkeep.reliability.value * 100;
+                    }
+                    if (!f.downtime.empty())
+                        f.reliability /= static_cast<float>(f.downtime.size());
+                    std::array<bool, 4> kinds { };
+                    for (const auto [e, staff] : r.view<const simulation::Staff>().each())
+                    {
+                        ++f.staff;
+                        if (const auto role = std::to_underlying(staff.role); role < kinds.size())
+                            kinds[role] = true;
+                    }
+                    f.every_staff_kind = std::ranges::all_of(kinds, std::identity { });
+                    for (const std::int32_t kind : simulation::award_month(scene.park_model.awards, f, scene.gameplay))
+                    {
+                        const auto slot = static_cast<std::size_t>(kind);
+                        if (scene.park.cash && slot < scene.park_model.awards.prize_money.size())
+                            *scene.park.cash += scene.park_model.awards.prize_money[slot];
+                        simulation::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
             }

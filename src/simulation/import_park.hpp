@@ -125,6 +125,9 @@ namespace rct3::simulation
     /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
     [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
 
+    /// The speed a ride's trains are launched to, in the launch modes that run round a circuit.
+    [[nodiscard]] std::optional<float> launch_of(const save::Ride& ride);
+
     /// `ride`'s trains on `coaster`'s track, each where the park kept it.
     [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::Ride& ride);
 

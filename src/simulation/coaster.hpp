@@ -34,6 +34,8 @@ namespace rct3::simulation
         float lift_speed = 2;
         float station_speed = 2;
         std::optional<float> fixed_speed;
+        /// In a launch mode, the speed the train is pushed up to by the time its last car leaves the platform.
+        std::optional<float> launch_speed;
         float train_length = 10;
         float start = 0; ///< Where the train's front waits to set off, at the station's end
         // The train

@@ -440,6 +440,14 @@ namespace rct3::simulation
         return added;
     }
 
+    std::optional<float> launch_of(const save::Ride& ride)
+    {
+        using enum save::OperatingMode;
+        if ((ride.mode != PoweredLaunch && ride.mode != MultiplePoweredLaunch) || ride.options.launch_speed <= 0)
+            return std::nullopt;
+        return ride.options.launch_speed;
+    }
+
     std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride)
     {
         if (!course.closed || !std::ranges::contains(course.kinds, park::CourseKind::Station))
@@ -463,6 +471,7 @@ namespace rct3::simulation
         c.station_speed = ride.options.lift_speed;
         if (ride.options.fixed_speed > 0)
             c.fixed_speed = ride.options.fixed_speed;
+        c.launch_speed = launch_of(ride);
         if (!ride.trains.empty() && ride.trains[0].length > 0)
             c.train_length = ride.trains[0].length;
         return c;

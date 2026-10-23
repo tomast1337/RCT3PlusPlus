@@ -53,6 +53,11 @@ for (let i = 0; i < 3 && (i === 0 || camera.riding()!.kind !== first.kind); ++i)
 }
 log("kinds", kinds.join(" "));
 expect(kinds.length === 2 ? kinds[1] === first.kind : kinds[kinds.length - 1] === first.kind && new Set(kinds).size === kinds.length - 1, "each kind once, then the first again");
+// Dragging over the view turns the rider's head the way the pointer goes: to the left, and up.
+await pointer.drag([0.6, 0.6], [0.4, 0.4], 10);
+const turn = camera.riding()!.turn;
+log("turn", JSON.stringify(turn));
+expect(turn[0] > 0.1 && turn[1] > 0.1, "the head turned left and up");
 await ui.click(exit);
 await frames(5);
 expect(camera.riding() === undefined, "the overhead view again");

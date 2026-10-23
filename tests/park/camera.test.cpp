@@ -218,3 +218,17 @@ TEST_CASE("riding along looks at the track ahead, sways against the pull and sha
     slow.last = glm::vec3(0, 2, 0);
     CHECK(ride_look(slow, glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0.05f)), std::nullopt, true, tuning, 0.1f, { 1, 1 })[2].x == doctest::Approx(0));
 }
+
+TEST_CASE("a rider looks round from their seat, the way the seat is turned")
+{
+    // Banked a quarter turn, its up the world's -X.
+    const glm::mat4 seat = glm::rotate(glm::mat4(1.0f), glm::half_pi<float>(), glm::vec3(0, 0, 1));
+    const glm::mat4 left = looked_round(seat, { glm::half_pi<float>(), 0 });
+    // A quarter turn about the seat's up, from looking along +Z.
+    CHECK(std::abs(left[2].z) < 1e-5f);
+    CHECK(glm::length(glm::vec3(left[1]) - glm::vec3(seat[1])) < 1e-5f);
+    const glm::mat4 up = looked_round(glm::mat4(1.0f), { 0, 0.5f });
+    CHECK(up[2].y > 0.4f); // Pitching up looks up
+    CHECK(look_round_limited({ 7, 3 }).y == doctest::Approx(kRideLookMostPitch));
+    CHECK(look_round_limited({ 7, 0 }).x == doctest::Approx(7 - glm::two_pi<float>()));
+}

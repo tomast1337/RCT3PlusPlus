@@ -102,6 +102,18 @@ namespace rct3::park
         return { glm::vec4(x, 0), glm::vec4(y, 0), glm::vec4(z, 0), glm::vec4(at + view.sway, 1) };
     }
 
+    glm::mat4 looked_round(const glm::mat4& seat, glm::vec2 turn)
+    {
+        // About the seat's own up, then its own sideways, so the head turns as the rider's would however the
+        // car is banked.
+        return seat * glm::rotate(glm::mat4(1.0f), turn.x, glm::vec3(0, 1, 0)) * glm::rotate(glm::mat4(1.0f), -turn.y, glm::vec3(1, 0, 0));
+    }
+
+    glm::vec2 look_round_limited(glm::vec2 turn)
+    {
+        return { std::remainder(turn.x, glm::two_pi<float>()), std::clamp(turn.y, -kRideLookMostPitch, kRideLookMostPitch) };
+    }
+
     glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat)
     {
         if (seat)

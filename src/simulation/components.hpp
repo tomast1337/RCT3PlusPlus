@@ -401,6 +401,8 @@ namespace rct3::simulation
     {
         std::vector<Boat> boats { };
         Dock dock { };
+        bool roams = true;                ///< Hired boats roam; transport boats go from dock to dock
+        std::vector<glm::vec2> calls { }; ///< The ride's other docks, in the order its boats call at them
     };
 
     struct Trains

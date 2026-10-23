@@ -692,6 +692,9 @@ namespace rct3::simulation
             const glm::vec3 leave = course->points.back();
             const glm::vec3 heading = park::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
+            boats.roams = ride.mode == save::OperatingMode::Boat;
+            for (const glm::vec3& stop : course->other_stations)
+                boats.calls.emplace_back(stop.x, stop.z);
             boats.boats.resize(ride.trains.size());
             for (Boat& boat : boats.boats)
                 boat.at = boats.dock.enter;

@@ -124,13 +124,17 @@ namespace rct3::simulation
         return way;
     }
 
-    void cast_off(Boat& boat, const Dock& dock)
+    void cast_off(Boat& boat, const Dock& dock, bool roams, std::span<const glm::vec2> calls)
     {
         boat.at = dock.leave;
         boat.heading = glm::length(dock.heading) > 0 ? glm::normalize(dock.heading) : glm::vec2 { 0, 1 };
         boat.speed = kSlowest;
-        boat.state = Sailing::Out;
+        boat.state = roams ? Sailing::Out : Sailing::Home;
         boat.marks.clear();
+        boat.calls.clear();
+        if (!roams)
+            boat.calls.assign(calls.begin(), calls.end());
+        boat.calls.push_back(dock.enter);
         boat.out = 0;
         boat.on_mark = 0;
     }
@@ -147,16 +151,21 @@ namespace rct3::simulation
             boat.on_mark += dt;
             if (boat.state == Sailing::Out && boat.out >= roam)
             {
-                // Time's up: home by water, or straight for the dock when the water does not join it.
                 boat.state = Sailing::Home;
-                boat.marks = marks_to(water, boat.at, dock.enter);
-                if (boat.marks.empty())
-                    boat.marks = { dock.enter };
-                boat.on_mark = 0;
+                boat.marks.clear();
             }
             while (!boat.marks.empty() && glm::distance(boat.at, boat.marks.front()) < kReached)
             {
                 boat.marks.erase(boat.marks.begin());
+                boat.on_mark = 0;
+            }
+            if (boat.state == Sailing::Home && boat.marks.empty() && !boat.calls.empty())
+            {
+                // On to the next dock by water, or straight for it when the water does not join them.
+                boat.marks = marks_to(water, boat.at, boat.calls.front());
+                if (boat.marks.empty())
+                    boat.marks = { boat.calls.front() };
+                boat.calls.erase(boat.calls.begin());
                 boat.on_mark = 0;
             }
             if (boat.state == Sailing::Home && boat.marks.empty())

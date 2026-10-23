@@ -364,7 +364,8 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Button:
                 {
-                    Button& b = body_->add<Button>(name, c.icon.empty() ? style_.button : std::string { }, c.icon);
+                    // An icon sits on a bubble, as the tabs' do.
+                    Button& b = body_->add<Button>(name, c.icon.empty() ? style_.button : style_.tab_face, c.icon);
                     b.text = c.text;
                     b.font = FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;

@@ -193,6 +193,8 @@ namespace rct3::ui
         LateralSeries,  ///< Its lateral forces
         CarKind,        ///< Moves a tracked ride on to the next kind of train it may run
         Mechanic,       ///< Calls a mechanic to it
+        SceneryPick,    ///< Picks scenery to keep with a tracked ride's design
+        SceneryClear,   ///< Forgets the scenery picked
         ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
     };
 

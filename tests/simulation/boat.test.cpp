@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/sandbox.hpp"
 
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -82,4 +83,30 @@ TEST_CASE("a boat ride lets its riders off only once its boats are back at the d
     CHECK(riders.size() == 1);
     CHECK(park.run_until([&] { return riders.empty(); }, 3000));
     CHECK(boat.state == simulation::Sailing::Docked);
+}
+
+TEST_CASE("a transport boat makes straight for each dock in turn and home, without roaming")
+{
+    const auto water = lake(12, 12, { { 5, 5 }, { 5, 6 }, { 6, 5 }, { 6, 6 } });
+    const simulation::Dock dock { .leave = { 6, 2 }, .heading = { 1, 0 }, .enter = { 2, 2 } };
+    const std::array<glm::vec2, 2> calls { glm::vec2 { 42, 42 }, glm::vec2 { 42, 6 } };
+    simulation::Boat boat;
+    simulation::cast_off(boat, dock, false, calls);
+    CHECK(boat.state == simulation::Sailing::Home);
+    auto dice = random::seeded(random::Seed { 3 });
+    std::array<float, 2> nearest { 1e9f, 1e9f };
+    bool docked = false;
+    float seconds = 0;
+    for (; seconds < 600 && !docked; seconds += 0.5f)
+    {
+        docked = simulation::sail(boat, water, dock, 3, 1e9f, 0.5f, dice);
+        for (std::size_t k = 0; k < calls.size(); ++k)
+            nearest[k] = std::min(nearest[k], glm::distance(boat.at, calls[k]));
+        // Round the island, not over it, though a wide turn may graze a corner.
+        CHECK(glm::distance(boat.at, glm::vec2 { 24, 24 }) > 4);
+    }
+    CHECK(docked);
+    CHECK(nearest[0] < 3);
+    CHECK(nearest[1] < 3);
+    CHECK(seconds < 120); // Some 110 m of water at up to 3 m/s
 }

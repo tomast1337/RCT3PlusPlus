@@ -1905,10 +1905,11 @@ namespace rct3::simulation
                 if (advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders);
                 if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
-                    // shortcut: every boat casts off at once from one spot, empty ones too; upgrade when each boat
-                    // loads and leaves on its own.
+                    // shortcut: every boat casts off at once from one spot, empty ones too, and a transport boat's
+                    // riders stay on past its other docks back to the one they boarded at; upgrade when each boat
+                    // loads and leaves on its own and riders get off where they choose.
                     for (Boat& boat : boats->boats)
-                        cast_off(boat, boats->dock);
+                        cast_off(boat, boats->dock, boats->roams, boats->calls);
             }
             // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
             // its departure settings say.

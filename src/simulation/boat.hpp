@@ -56,6 +56,7 @@ namespace rct3::simulation
         float speed = 0;            ///< m/s
         Sailing state = Sailing::Docked;
         std::vector<glm::vec2> marks { }; ///< Still to pass, nearest first
+        std::vector<glm::vec2> calls { }; ///< Heading home: the docks still to make for, its own last
         float out = 0;                    ///< Seconds since it left the dock
         float on_mark = 0;                ///< Seconds spent making for the nearest mark
     };
@@ -68,8 +69,8 @@ namespace rct3::simulation
         glm::vec2 enter { };
     };
 
-    /// Sends a docked boat out from `dock`.
-    void cast_off(Boat& boat, const Dock& dock);
+    /// Sends a docked boat out from `dock`: to roam, or else straight past each of `calls` in turn and home.
+    void cast_off(Boat& boat, const Dock& dock, bool roams = true, std::span<const glm::vec2> calls = { });
 
     /// Sails `boat` for `seconds` at up to `top` m/s; after `roam` seconds out it heads home. True once it docks.
     bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, float top, float roam, float seconds, random::RandomState& dice);

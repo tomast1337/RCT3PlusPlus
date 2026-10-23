@@ -33,13 +33,14 @@ namespace rct3::park
     struct TrackCourse
     {
         std::vector<glm::vec3> points;
-        std::vector<glm::vec3> ups;      ///< Up for the track at each point, leaning with its bank; none is straight up
-        std::vector<float> distance;     ///< From the start to each point
-        std::vector<CourseKind> kinds;   ///< Of the stretch from each point to the next; the last is unused
-        std::vector<float> piece_starts; ///< Distance at the start of each of the track's pieces
-        bool closed = false;             ///< The end joins the start, so cars go round
-        bool reverse_lift = false;       ///< Has the hill a reverse cable lift pulls the train up
-        std::size_t first_piece = 0;     ///< Of the track's pieces, the one the course starts on
+        std::vector<glm::vec3> ups;                ///< Up for the track at each point, leaning with its bank; none is straight up
+        std::vector<float> distance;               ///< From the start to each point
+        std::vector<CourseKind> kinds;             ///< Of the stretch from each point to the next; the last is unused
+        std::vector<float> piece_starts;           ///< Distance at the start of each of the track's pieces
+        bool closed = false;                       ///< The end joins the start, so cars go round
+        bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up
+        std::size_t first_piece = 0;               ///< Of the track's pieces, the one the course starts on
+        std::vector<glm::vec3> other_stations { }; ///< Where the track's other stretches with a station start, in their order
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();
@@ -50,7 +51,8 @@ namespace rct3::park
     using PieceShapeOf = std::function<std::optional<const PieceShape&>(const save::TrackPiece& piece, const save::PlacedObject& object)>;
 
     /// The course of `ride`'s track, its pieces standing as `objects` place them: of a track in several stretches,
-    /// the first stretch with a station, or the first stretch when none has one. Nothing when the ride has no
+    /// the first stretch with a station, or the first stretch when none has one, knowing where the other stretches
+    /// with a station are. Nothing when the ride has no
     /// track, or a piece's object or shape is missing.
     [[nodiscard]] std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const PieceShapeOf& shape_of);
 

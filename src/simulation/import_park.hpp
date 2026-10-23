@@ -82,8 +82,9 @@ namespace rct3::simulation
     [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
 
     /// Boats for the boat-hire and water-transport rides of `added` (the entities import_rides gave `rides`),
-    /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts,
-    /// and the park's water for them to float on. Rides without a course keep their timing alone.
+    /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts
+    /// (transport boats calling at the course's other stations on the way), and the park's water for them to
+    /// float on. Rides without a course keep their timing alone.
     void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water);
 
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped

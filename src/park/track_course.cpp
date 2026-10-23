@@ -35,6 +35,8 @@ namespace rct3::park
         const auto& segments = ride.track->segments;
         // A track in one stretch runs along all its pieces; one in several, along each stretch on its own.
         std::optional<TrackCourse> first;
+        std::optional<TrackCourse> stopping;
+        std::vector<glm::vec3> others;
         for (std::size_t s = 0; s < std::max<std::size_t>(segments.size(), 1); ++s)
         {
             const bool whole = segments.size() <= 1;
@@ -44,15 +46,22 @@ namespace rct3::park
                 continue;
             TrackCourse course;
             course.first_piece = from;
+            bool whole_stretch = true;
             for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(from, to - from))
             {
                 const auto found = by_id.find(piece.scenery);
                 if (found == by_id.end())
-                    return std::nullopt;
+                {
+                    whole_stretch = false;
+                    break;
+                }
                 const save::PlacedObject& object = *found->second;
                 const auto shape = shape_of(piece, object);
                 if (!shape || shape->line.path.size() < 2)
-                    return std::nullopt;
+                {
+                    whole_stretch = false;
+                    break;
+                }
                 const auto model = models.find(model_key(object));
                 const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
                 CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
@@ -82,15 +91,28 @@ namespace rct3::park
                     course.kinds.push_back(kind);
                 }
             }
+            // Missing a piece, the track has no course; past the stretch trains run on, that stretch is left out.
+            if (!whole_stretch && !stopping)
+                return std::nullopt;
+            if (!whole_stretch)
+                continue;
             course.closed = whole ? ride.track->circuit : segments[s].closed;
             // shortcut: trains run only on the first stretch with a station, the others stand empty; upgrade when
             // a ride's trains are kept by stretch.
-            if (std::ranges::contains(course.kinds, CourseKind::Station))
-                return course;
-            if (!first)
+            if (std::ranges::contains(course.kinds, CourseKind::Station) && !course.points.empty())
+            {
+                if (stopping)
+                    others.push_back(course.points.front());
+                else
+                    stopping = std::move(course);
+            }
+            else if (!first)
                 first = std::move(course);
         }
-        return first;
+        if (!stopping)
+            return first;
+        stopping->other_stations = std::move(others);
+        return stopping;
     }
 
     std::vector<float> station_runs(const TrackCourse& course)

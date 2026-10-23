@@ -13,8 +13,10 @@ namespace rct3::park
         constexpr float kOverviewShare = 0.5f; ///< Of the map's longer side, as the distance
     } // namespace
 
-    glm::vec3 eye(const ParkCamera& camera)
+    glm::vec3 eye(const ParkCamera& camera, const Seat& seat)
     {
+        if (seat)
+            return glm::vec3((*seat)[3]);
         const glm::vec3 forward { std::sin(camera.yaw) * std::cos(camera.pitch), -std::sin(camera.pitch), std::cos(camera.yaw) * std::cos(camera.pitch) };
         return camera.target - forward * camera.distance;
     }
@@ -42,14 +44,19 @@ namespace rct3::park
         return { from, glm::normalize(glm::vec3(far) / far.w - from) };
     }
 
-    glm::mat4 view_projection(const ParkCamera& camera, float aspect)
+    glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat)
     {
+        if (seat)
+        {
+            const glm::vec3 from((*seat)[3]);
+            return projection(aspect, seat) * glm::lookAt(from, from + glm::normalize(glm::vec3((*seat)[2])), glm::normalize(glm::vec3((*seat)[1])));
+        }
         return projection(aspect) * glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
     }
 
-    glm::mat4 projection(float aspect)
+    glm::mat4 projection(float aspect, const Seat& seat)
     {
-        return glm::perspective(kFieldOfView, aspect > 0 ? aspect : 1.0f, kNear, kFar);
+        return glm::perspective(seat ? kRideFieldOfView : kFieldOfView, aspect > 0 ? aspect : 1.0f, seat ? kRideNear : kNear, kFar);
     }
 
     ParkCamera overview(const save::TerrainGrid& grid)

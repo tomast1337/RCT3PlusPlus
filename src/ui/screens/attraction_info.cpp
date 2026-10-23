@@ -884,7 +884,11 @@ namespace rct3::ui
                     button(AttractionControl::QueueSigns, "Attraction_General_ToggleQueueSigns", "TT_AttractionDialogIconToggleQueueSigns");
                 button(AttractionControl::Locate, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton");
                 if (f.ride)
-                    button(AttractionControl::RideCam, "RideCamGUI_Disabled", "KeySetting_ToggleRideCam", false);
+                {
+                    // A ride's cars can be ridden along in once it has some.
+                    const bool cars = attraction_kind(*f.ride) == AttractionKind::Tracked && !f.ride->trains.empty();
+                    button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", "KeySetting_ToggleRideCam", cars);
+                }
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
                     paints(page, f, strings);

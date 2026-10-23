@@ -305,9 +305,12 @@ namespace rct3::scene
             }
             ShadowDrawing& before = scene.shadow_drawings[1 - scene.shadow_now];
             const bool blend = scene.blend_shadows && before.drawn != glm::mat4(0.0f);
-            const float centre_radius = park::shadow_radius(scene.camera.distance);
-            const park::SunView sun = park::sun_view(now->sun, scene.camera.target, centre_radius, kShadowTexels);
-            const park::SunView sun_before = park::sun_view(before.sun, scene.camera.target, centre_radius, kShadowTexels);
+            // Riding along, round the rider, as far as an overhead view from a middling height shadows.
+            constexpr float kRideShadowDistance = 60;
+            const float centre_radius = park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
+            const glm::vec3 centre = scene.seat ? glm::vec3((*scene.seat)[3]) : scene.camera.target;
+            const park::SunView sun = park::sun_view(now->sun, centre, centre_radius, kShadowTexels);
+            const park::SunView sun_before = park::sun_view(before.sun, centre, centre_radius, kShadowTexels);
             // Static shadows redraw when the view moves, or every two seconds to catch what changed in the park;
             // the older drawing then too, so both cover the same ground and show the same park. A step alone
             // draws only the new one: the older is the one drawn before it.
@@ -434,8 +437,8 @@ namespace rct3::scene
             profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)
             profiling::section("Photo", [&] { draw_photo(device, scene); });
-        const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device));
-        const glm::vec3 eye = park::eye(scene.camera);
+        const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device), scene.seat);
+        const glm::vec3 eye = park::eye(scene.camera, scene.seat);
         profiling::section("Shadows", [&] { draw_shadow_map(device, scene); });
         profiling::section("Lamps", [&] {
             // Lamps come on as the sky darkens, packed again when the strength has moved enough to see.
@@ -493,7 +496,7 @@ namespace rct3::scene
             device.set_wireframe(false);
         });
         if (scene.ambient_occlusion)
-            profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, park::projection(aspect(device))); });
+            profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, park::projection(aspect(device), scene.seat)); });
         else
             scene.occlusion.before = false;
         if (scene.show_scenery)

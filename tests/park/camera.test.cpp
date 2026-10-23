@@ -159,3 +159,21 @@ TEST_CASE("a camera set from an eye and a point looks from that eye")
     // Straight down is past the tilt's limit.
     CHECK(looking({ 0, 50, 0 }, { 0, 0, 0 }).pitch == doctest::Approx(kMaxPitch));
 }
+
+TEST_CASE("riding a car looks out ahead of it and leans as it banks")
+{
+    const ParkCamera c;
+    // Its eyes at (5, 3, 0), facing +Z, banked a quarter turn so its up is the world's -X.
+    const Seat seat = glm::translate(glm::mat4(1.0f), glm::vec3(5, 3, 0)) * glm::rotate(glm::mat4(1.0f), glm::half_pi<float>(), glm::vec3(0, 0, 1));
+    CHECK(eye(c, seat) == glm::vec3(5, 3, 0));
+    const glm::mat4 view = view_projection(c, 1, seat);
+    const auto screen = [&](glm::vec3 p) {
+        const glm::vec4 clip = view * glm::vec4(p, 1);
+        return glm::vec3(clip) / clip.w;
+    };
+    const glm::vec3 ahead = screen({ 5, 3, 10 });
+    CHECK(ahead.x == doctest::Approx(0).epsilon(1e-4));
+    CHECK(ahead.y == doctest::Approx(0).epsilon(1e-4));
+    CHECK(screen({ 4, 3, 10 }).y > 0.05f); // Over the rider's head is up the screen
+    CHECK(screen({ 5, 3, -10 }).z > 1);    // Behind is not seen
+}

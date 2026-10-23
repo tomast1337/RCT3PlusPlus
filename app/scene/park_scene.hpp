@@ -322,6 +322,8 @@ namespace rct3::scene
         std::vector<park::CarSpot> car_spots; ///< By car, as the park kept them
         park::Fitted saved_cars;              ///< Where the park kept each car, by id
         std::vector<glm::mat4> car_places;    ///< Where each car stands now, by car
+        std::optional<std::size_t> riding;    ///< The car the view rides along in, of `cars`
+        park::Seat seat;                      ///< Its rider's eyes, while riding
         park::MovingMeshes car_meshes;        ///< At car_mesh_places
         /// A car whose riders sit on an arm: its place in `cars`, its arm's joints at rest, and how the last
         /// joint, the riders' seat, is moved now in the car's own space.

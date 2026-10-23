@@ -38,11 +38,10 @@ await screenshot("riding on");
 expect(ui.find("bar") === undefined && ui.find("tools") === undefined && ui.find("info") === undefined, "the rest put away");
 const exit = "ride_camera/RidecamGUI_Exit";
 expect(ui.find(exit) !== undefined, "the ride camera panel");
-// Left still, the panel slides below the screen.
+// Left still, away from the panel, it slides below the screen.
+pointer.move(0.4, 0.4);
 await until(() => (ui.find(exit)?.top ?? 1) >= 1, 600, "the panel to hide");
 await screenshot("panel hidden");
-pointer.move(0.5, 0.5);
-await frames(2);
 pointer.move(0.6, 0.6);
 await until(() => (ui.find(exit)?.bottom ?? 2) < 1, 120, "the panel back on a move");
 await ui.click(exit);

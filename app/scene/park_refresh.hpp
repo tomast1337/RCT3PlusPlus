@@ -31,8 +31,9 @@ namespace rct3::scene
     [[nodiscard]] bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach = 2.0f);
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
-    /// while it does not run; and the scenery moving on its own near `eye` in `view`.
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view);
+    /// while it does not run; and the scenery moving on its own near `eye` in `view`. Riding along, it also
+    /// sets the rider's eyes, `elapsed` seconds on from the last frame's.
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed);
 
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail

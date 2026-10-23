@@ -12,6 +12,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "ovl/ride_train.hpp"
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
@@ -145,6 +146,8 @@ namespace rct3::park
         /// Of a car a rider can look out of: their eyes, model space, looking along +Z with +Y up, as its front
         /// seat's camera bone or else its nose's has them. A car hung under its track has them turned over.
         std::optional<glm::mat4> ride_eye;
+        bool ride_nose = false;          ///< The eyes are the nose's, which neither sway nor look ahead
+        ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone

@@ -44,6 +44,64 @@ namespace rct3::park
         return { from, glm::normalize(glm::vec3(far) / far.w - from) };
     }
 
+    glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, float elapsed, glm::vec2 dice)
+    {
+        constexpr float kGravity = 9.81f;
+        const glm::vec3 at(eye[3]);
+        glm::vec3 x = glm::normalize(glm::vec3(eye[0]));
+        glm::vec3 y = glm::normalize(glm::vec3(eye[1]));
+        glm::vec3 z = glm::normalize(glm::vec3(eye[2]));
+        // The way a time-to-settle `seconds` long moves on toward where it is going in this frame.
+        const auto settling = [&](float seconds) { return seconds > 0 ? std::min(1.0f, elapsed / seconds) : 1.0f; };
+
+        // The car's pull from how its eyes moved over the last frames.
+        glm::vec3 pull { };
+        if (view.last && elapsed > 0)
+        {
+            const glm::vec3 velocity = (at - *view.last) / elapsed;
+            if (view.velocity)
+                pull = (velocity - *view.velocity) / elapsed;
+            view.velocity = velocity;
+        }
+        view.last = at;
+        glm::vec3 sway = sways ? -pull * (tuning.sway_per_g / kGravity) : glm::vec3 { };
+        if (const float length = glm::length(sway); length > tuning.sway_most)
+            sway *= tuning.sway_most / length;
+        view.sway += (sway - view.sway) * settling(tuning.sway_settle);
+
+        // Looking at the track ahead, unless it lies behind; looking into a turn leans the view into it.
+        if (ahead && glm::length(*ahead - at) > 0)
+            if (const glm::vec3 look = glm::normalize(*ahead - at); glm::dot(look, z) > 0)
+            {
+                const glm::vec3 up = y + glm::dot(look, x) * x * tuning.look_tilt;
+                z = look;
+                x = glm::normalize(glm::cross(up, z));
+                y = glm::cross(z, x);
+            }
+        if (view.axes)
+        {
+            const float a = settling(tuning.turn_settle);
+            z = glm::normalize(glm::mix((*view.axes)[2], z, a));
+            x = glm::normalize(glm::mix((*view.axes)[0], x, a));
+            y = glm::normalize(glm::cross(z, x));
+            x = glm::cross(y, z);
+        }
+        view.axes = glm::mat3(x, y, z);
+
+        // shortcut: the lift chain's own shake is never used, as the cars do not know where the chain is; take
+        // it once they do.
+        if (const float speed = view.velocity ? glm::length(*view.velocity) : 0.0f; speed > tuning.shake_from)
+        {
+            const float amount = (speed - tuning.shake_from) * (speed - tuning.shake_from) * tuning.shake;
+            const float across = std::clamp(dice.x * amount, -tuning.shake_across, tuning.shake_across);
+            const float up = std::clamp(dice.y * amount, -tuning.shake_up, tuning.shake_up);
+            z = glm::normalize(z + across * x + up * y);
+            x = glm::normalize(glm::cross(y, z));
+            y = glm::cross(z, x);
+        }
+        return { glm::vec4(x, 0), glm::vec4(y, 0), glm::vec4(z, 0), glm::vec4(at + view.sway, 1) };
+    }
+
     glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat)
     {
         if (seat)

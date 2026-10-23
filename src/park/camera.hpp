@@ -7,6 +7,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "ovl/ride_train.hpp"
 #include "save/model/world.hpp"
 
 #include <optional>
@@ -38,6 +39,21 @@ namespace rct3::park
     inline constexpr float kMaxPitch = 1.5f;
 
     [[nodiscard]] glm::vec3 eye(const ParkCamera& camera, const Seat& seat = std::nullopt);
+
+    /// What riding along keeps from frame to frame; started afresh in each car.
+    struct RideView
+    {
+        std::optional<glm::vec3> last; ///< The car's eyes a frame ago
+        std::optional<glm::vec3> velocity;
+        glm::vec3 sway { };            ///< Of the head, against the car's pull
+        std::optional<glm::mat3> axes; ///< The way the view looked, following the car's turns
+    };
+
+    /// The rider's eyes this frame, as a seat: `eye` is the car's camera bone in the park, `ahead` the same
+    /// bone as far along the track as the train looks ahead (nothing not to look ahead), and `dice` two
+    /// numbers in -1..1 for the shake. The view looks at the track ahead, leaning into its turns, follows the
+    /// car's turns a little late, sways against the car's pull, and shakes faster the faster the car goes.
+    [[nodiscard]] glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, float elapsed, glm::vec2 dice);
     /// The camera with its eye at `from` looking at `at`, within the tilt's and distance's limits.
     [[nodiscard]] ParkCamera looking(glm::vec3 from, glm::vec3 at);
 

@@ -1235,6 +1235,27 @@ namespace rct3::simulation
             const float ahead = std::fmod(std::fmod(trains[k].at - train.at, length) + length, length);
             room = std::min(room, std::max(ahead - trains[k].train_length - kBlockGap, 0.0f));
         }
+        if (!train.blocks || length <= 0)
+            return room;
+        // Block ends: where a run of station, lift or block brake gives way to other track. A train stopped on one
+        // (within a centimetre) still counts it as ahead.
+        constexpr float kOn = 0.01f;
+        std::vector<float> ends;
+        for (std::size_t i = 0; i + 2 < train.kinds.size(); ++i) // The last kind is past the track's end
+            if (const Stretch k = train.kinds[i]; k != Stretch::Plain && train.kinds[i + 1] != k)
+                ends.push_back(train.distance[i + 1]);
+        if (const Stretch last = train.kinds[train.kinds.size() - 2]; last != Stretch::Plain && train.kinds.front() != last)
+            ends.push_back(0); // The track's end runs into its start
+        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kOn, length) + length, length) - kOn; };
+        std::ranges::sort(ends, { }, ahead);
+        if (ends.size() < 2)
+            return room;
+        // The block beyond the next end must hold no other train, not even a car of one.
+        const float end = ends[0];
+        const float block = std::fmod(std::fmod(ends[1] - end, length) + length, length);
+        for (std::size_t k = 0; k < trains.size(); ++k)
+            if (k != t && std::fmod(std::fmod(trains[k].at - end, length) + length, length) - trains[k].train_length < block)
+                return std::min(room, std::max(ahead(end), 0.0f));
         return room;
     }
 

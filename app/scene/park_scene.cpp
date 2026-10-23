@@ -33,6 +33,7 @@
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
+#include "ui/screens/attraction_info.hpp"
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
@@ -869,6 +870,17 @@ namespace rct3::scene
             return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost };
         }
 
+        /// The attraction whose saved id is `id`, as messages name their subject.
+        std::optional<park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
+        {
+            using Kind = park::AttractionRef::Kind;
+            if (const auto ride = std::ranges::find(scene.rides.rides, id, [](const save::Ride& r) { return r.base.id; }); ride != scene.rides.rides.end())
+                return park::AttractionRef { Kind::Ride, static_cast<std::size_t>(ride - scene.rides.rides.begin()) };
+            if (const auto stall = std::ranges::find(scene.rides.stalls, id, [](const save::Stall& s) { return s.base.id; }); stall != scene.rides.stalls.end())
+                return park::AttractionRef { Kind::Stall, static_cast<std::size_t>(stall - scene.rides.stalls.begin()) };
+            return std::nullopt;
+        }
+
         /// Opens the info panel on what a management window's row is about, if the park shows it.
         void open_row(ParkScene& scene, ui::InfoPanel& panel, ui::ManagementRow row, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
@@ -1422,13 +1434,14 @@ namespace rct3::scene
                         scene.broken_rides.push_back(e);
                     else
                         scene.broken_rides.erase(told);
-                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject_name = attraction.name });
+                    const auto at = std::ranges::find(scene.ride_entities, e);
+                    const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
+                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name });
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
-                    const auto at = std::ranges::find(scene.ride_entities, e);
-                    if (at == scene.ride_entities.end() || static_cast<std::size_t>(at - scene.ride_entities.begin()) >= scene.rides.rides.size())
+                    if (index >= scene.rides.rides.size())
                         continue;
-                    save::Ride& ride = scene.rides.rides[static_cast<std::size_t>(at - scene.ride_entities.begin())];
+                    save::Ride& ride = scene.rides.rides[index];
                     const park::ObjectModel* item = nullptr;
                     for (const save::PlacedObject& o : scene.objects)
                     {
@@ -1478,8 +1491,31 @@ namespace rct3::scene
         }
         if (auto messages = desktop.root().find_as<ui::MessageDrawer>(kMessagesName))
         {
-            messages->show(ui::drawer_messages(scene.park.messages, *assets.strings));
+            // shortcut: only rides and stalls can be gone to, not people or path items; add them when a message names one.
+            // Saved parks keep messages without their subject's name, so it is filled in from the attraction.
+            for (simulation::ParkMessage& m : scene.park.messages.list)
+            {
+                const auto ref = m.subject && m.subject_name.empty() ? attraction_with(scene, *m.subject) : std::nullopt;
+                if (ref)
+                    m.subject_name = strings::to_utf8(ui::attraction_name(ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
+            }
+            std::vector<ui::DrawerMessage> shown = ui::drawer_messages(scene.park.messages, *assets.strings);
+            for (std::size_t i = 0; i < shown.size(); ++i)
+            {
+                const auto& subject = scene.park.messages.list[i].subject;
+                shown[i].located = subject && attraction_with(scene, *subject);
+            }
+            messages->show(shown);
             scene.message_alert = scene.message_alert || messages->take_alert();
+            // A message's camera takes the view to its subject and opens the info panel on it, as the game does.
+            const auto serial = messages->take_located();
+            const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
+            if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
+            {
+                open_info(scene, *info, *ref, assets, options);
+                scene.camera.target = { scene.view_camera.target.x, scene.camera.target.y, scene.view_camera.target.z };
+                scene.camera = park::on_ground(scene.camera, scene.grid);
+            }
         }
         if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName))
         {

@@ -156,3 +156,27 @@ TEST_CASE("the arrows step through the messages when they do not all fit")
     f.run(0.2f);
     CHECK(f.drawer->skipped() == 0);
 }
+
+TEST_CASE("a message about something the park can show has a camera to click; others do not")
+{
+    Fixture f;
+    f.messages = { { .serial = 1, .text = u"about nothing" }, { .serial = 2, .text = u"about a ride", .located = true } };
+    f.drawer->show(f.messages);
+    f.run(1);
+    const Rect b = f.bar->rect();
+    const Point notch { b.x0 + park_bar::kLeftWidth + 19, b.y1 - 4 };
+    f.press(notch);
+    f.press(notch);
+    REQUIRE(f.drawer->height() == message_drawer::kOpen);
+    f.run(1);
+
+    // Rows without a font are the empty row's height, the newest at the bottom.
+    const Rect r = f.drawer->rect();
+    f.press({ r.x0 + 27, r.y1 - 53 });
+    CHECK_FALSE(f.drawer->take_located());
+    f.run(1);
+    f.press({ r.x0 + 27, r.y1 - 35 });
+    CHECK(f.drawer->take_located() == 2u);
+    CHECK_FALSE(f.drawer->take_located());
+    CHECK(f.drawer->height() == message_drawer::kOpen);
+}

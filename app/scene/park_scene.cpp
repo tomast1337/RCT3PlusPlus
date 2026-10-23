@@ -67,6 +67,7 @@ namespace rct3::scene
         constexpr float kViewPitch = 0.5f;          ///< Radians down, of the info panel's round view
         constexpr float kViewTurn = 0.15f;          ///< Radians a second the round view turns round its attraction
         constexpr float kFocusZoomOut = 2;          ///< A message's camera looks from this many times the round view's distance (ours)
+        constexpr float kFocusClosest = 20;         ///< But no closer, so a small stall shows with what is round it (ours)
         constexpr float kPersonViewDistance = 4.5f; ///< Of the round view's eye from the person it shows
         constexpr float kPersonViewHeight = 0.9f;   ///< Of the point it looks at, above the person's feet
         // Values for photos at photo spots.
@@ -388,6 +389,19 @@ namespace rct3::scene
             show_info_page(scene, panel, assets, options);
         }
 
+        /// Where each of the attraction `ref`'s objects stands: the ride and its entrance and exit, or the stall.
+        std::vector<glm::vec3> attraction_parts(const ParkScene& scene, park::AttractionRef ref)
+        {
+            std::vector<glm::vec3> points;
+            for (std::size_t i = 0; i < scene.objects.size() && i < scene.anchors.size(); ++i)
+            {
+                const auto owner = scene.attractions.find(scene.objects[i].id);
+                if (owner != scene.attractions.end() && owner->second == ref)
+                    points.push_back(scene.anchors[i]);
+            }
+            return points;
+        }
+
         /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
         void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
@@ -424,14 +438,7 @@ namespace rct3::scene
             if (scene.shown != ref || scene.shown_person)
             {
                 // The view starts from where the player looks from, and turns from there.
-                std::vector<glm::vec3> points;
-                for (std::size_t i = 0; i < scene.objects.size() && i < scene.anchors.size(); ++i)
-                {
-                    const auto owner = scene.attractions.find(scene.objects[i].id);
-                    if (owner != scene.attractions.end() && owner->second == ref)
-                        points.push_back(scene.anchors[i]);
-                }
-                scene.view_camera = park::framed(points, scene.camera.yaw, kViewPitch);
+                scene.view_camera = park::framed(attraction_parts(scene, ref), scene.camera.yaw, kViewPitch);
             }
             scene.shown_person.reset();
             scene.shown_prop.reset();
@@ -1437,7 +1444,7 @@ namespace rct3::scene
                         scene.broken_rides.erase(told);
                     const auto at = std::ranges::find(scene.ride_entities, e);
                     const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
-                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = std::to_underlying(ui::AttractionTab::Maintenance) });
+                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance) });
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
                     if (index >= scene.rides.rides.size())
@@ -1513,14 +1520,38 @@ namespace rct3::scene
             const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
             if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {
-                // At the tab the message names, when a ride's; stalls number theirs otherwise.
-                if (ref->kind == park::AttractionRef::Kind::Ride && message->panel && *message->panel >= 0 && *message->panel <= std::to_underlying(ui::AttractionTab::Maintenance))
-                    scene.info_tab = static_cast<ui::AttractionTab>(*message->panel);
+                // At the tab the message names; one the attraction lacks opens its view.
+                if (const auto tab = ui::message_tab(message->panel.value_or(-1)))
+                    scene.info_tab = *tab;
                 open_info(scene, *info, *ref, assets, options);
+                // The whole attraction first, then each click on the same camera one of its parts in turn, round again.
+                scene.message_focus = { .serial = *serial, .step = scene.message_focus.serial == *serial ? scene.message_focus.step + 1 : 0 };
+                const std::vector<glm::vec3> parts = attraction_parts(scene, *ref);
+                const std::size_t step = scene.message_focus.step % (parts.size() + 1);
+                const glm::vec3 at = step == 0 ? scene.view_camera.target : parts[step - 1];
                 // Close enough to make it out, never further out than the player was.
-                scene.camera.target = { scene.view_camera.target.x, scene.camera.target.y, scene.view_camera.target.z };
-                scene.camera.distance = std::min(scene.camera.distance, scene.view_camera.distance * kFocusZoomOut);
+                scene.camera.target = { at.x, scene.camera.target.y, at.z };
+                scene.camera.distance = std::min(scene.camera.distance, std::max(scene.view_camera.distance * kFocusZoomOut, kFocusClosest));
                 scene.camera = park::on_ground(scene.camera, scene.grid);
+                // It shows in the middle of what the drawer leaves of the screen, not behind the drawer: the view
+                // slides on along the ground until it does, found by the secant method from no slide.
+                const ui::Rect screen = desktop.root().rect();
+                const float want = (messages->rect().y1 + screen.y1) / 2;
+                const auto off = [&](float slide) {
+                    const glm::vec4 clip = park::view_projection(park::panned(scene.camera, 0, slide), screen.width() / screen.height()) * glm::vec4(at, 1.0f);
+                    return clip.w > 0 ? (1 - clip.y / clip.w) / 2 * screen.height() - want : 0.0f;
+                };
+                float before = 0;
+                float slide = 1;
+                for (int i = 0; i < 4 && screen.height() > 0; ++i)
+                {
+                    const float a = off(before);
+                    const float b = off(slide);
+                    if (std::abs(b - a) < 1e-3f)
+                        break;
+                    before = std::exchange(slide, slide - b * (slide - before) / (b - a));
+                }
+                scene.camera = park::on_ground(park::panned(scene.camera, 0, slide), scene.grid);
             }
         }
         if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName))

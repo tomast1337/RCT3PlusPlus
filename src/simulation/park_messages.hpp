@@ -31,7 +31,7 @@ namespace rct3::simulation
         float age = 0;                        ///< Game seconds since it was posted
         std::optional<std::uint64_t> subject; ///< The object the message is about
         std::string subject_name;             ///< Its name when the message was posted; may be empty
-        std::optional<std::int32_t> panel;    ///< The info panel's tab its subject opens at, for a ride as ui::AttractionTab; none or negative keeps the last
+        std::optional<std::int32_t> panel;    ///< The info panel's tab its subject opens at, by number (ui::kMessageTabs); none or negative keeps the last
         std::optional<std::int32_t> award;    ///< Award messages: which award
     };
 

@@ -443,3 +443,15 @@ TEST_CASE("a running ride shows its riders an hour, the wait its queue now has a
     f.flow->queued = 0;
     CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == u"0:00");
 }
+
+TEST_CASE("saved messages name tabs by number: a breakdown opens maintenance, a long queue the operating mode")
+{
+    CHECK(message_tab(8) == AttractionTab::Maintenance);
+    CHECK(message_tab(6) == AttractionTab::Mode);
+    CHECK(message_tab(4) == AttractionTab::Items);
+    CHECK(message_tab(0) == AttractionTab::View);
+    CHECK_FALSE(message_tab(-1));
+    CHECK_FALSE(message_tab(99));
+    CHECK(message_panel(AttractionTab::Maintenance) == 8);
+    CHECK(message_panel(AttractionTab::Thoughts) == 10);
+}

@@ -24,6 +24,7 @@ TEST_CASE("a park's messages start from its save, oldest first")
     older.time = 300;
     older.object = 77;
     older.object_name = "Big Wheel";
+    older.panel = 8;
     save::Message newer;
     newer.text_key = "Won_Prize";
     newer.time = 20;
@@ -36,6 +37,7 @@ TEST_CASE("a park's messages start from its save, oldest first")
     CHECK(messages.list[0].age == 300);
     CHECK(messages.list[0].subject == 77u);
     CHECK(messages.list[0].subject_name == "Big Wheel");
+    CHECK(messages.list[0].panel == 8);
     CHECK(messages.list[1].text_key == "Won_Prize");
     CHECK(messages.list[1].award == 4);
     CHECK(messages.list[1].serial > messages.list[0].serial);

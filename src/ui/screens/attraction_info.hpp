@@ -35,6 +35,7 @@ namespace rct3::ui
         Stall,
     };
 
+    /// Up to Maintenance, numbered as saved messages about a ride name the tab it opens at; keep the order.
     enum class AttractionTab : std::uint8_t
     {
         View,

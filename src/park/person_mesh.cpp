@@ -253,24 +253,32 @@ namespace rct3::park
         return { static_cast<float>(colour & 3) * kCell, -static_cast<float>((colour >> 2) & 3) * kCell };
     }
 
+    namespace
+    {
+        /// Empties `runs`, then fills them with `people`.
+        void gather_people(Runs& runs, const PersonLibrary& library, std::span<const PlacedPerson> people)
+        {
+            for (auto& [texture, run] : runs)
+            {
+                run.vertices.clear();
+                run.indices.clear();
+            }
+            for (const PlacedPerson& person : people)
+            {
+                add_set(runs, library, person.look.head, person, 0);
+                add_set(runs, library, person.look.body, person, 1);
+                add_set(runs, library, person.look.legs, person, 2);
+                if (person.held != nullptr)
+                    if (const auto hand = left_hand(library, person))
+                        add_held(runs, *person.held, glm::translate(person.world, *hand));
+            }
+        }
+    } // namespace
+
     ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs)
     {
-        for (auto& [texture, run] : runs)
-        {
-            run.vertices.clear();
-            run.indices.clear();
-        }
-        ObjectMesh mesh;
-        for (const PlacedPerson& person : people)
-        {
-            add_set(runs, library, person.look.head, person, 0);
-            add_set(runs, library, person.look.body, person, 1);
-            add_set(runs, library, person.look.legs, person, 2);
-            if (person.held != nullptr)
-                if (const auto hand = left_hand(library, person))
-                    add_held(runs, *person.held, glm::translate(person.world, *hand));
-            ++mesh.placed;
-        }
+        gather_people(runs, library, people);
+        ObjectMesh mesh { .placed = people.size() };
         for (auto& [texture, run] : runs)
         {
             if (run.vertices.empty())
@@ -282,6 +290,39 @@ namespace rct3::park
                 mesh.indices.push_back(base + i);
         }
         return mesh;
+    }
+
+    MovingMeshes carried_people_meshes(const PersonLibrary& library, std::span<const std::span<const PlacedPerson>> groups, PersonRuns& runs, PersonRuns& gathered)
+    {
+        for (auto& [texture, run] : gathered)
+            run.indices.clear();
+        MovingMeshes out;
+        for (const std::span<const PlacedPerson> people : groups)
+        {
+            // The group's vertices stay together, as one piece to move; its triangles join those of the same
+            // picture from every group.
+            gather_people(runs, library, people);
+            for (const auto& [texture, run] : runs)
+            {
+                const auto base = static_cast<std::uint32_t>(out.own.size());
+                out.own.insert(out.own.end(), run.vertices.begin(), run.vertices.end());
+                auto& indices = gathered[texture].indices;
+                for (const std::uint32_t i : run.indices)
+                    indices.push_back(base + i);
+            }
+            out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
+            out.mesh.placed += people.size();
+        }
+        for (const auto& [texture, run] : gathered)
+        {
+            if (run.indices.empty())
+                continue;
+            out.mesh.batches.push_back({ texture, texture, { }, PartBlend::Opaque, static_cast<std::uint32_t>(out.mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
+            out.mesh.indices.insert(out.mesh.indices.end(), run.indices.begin(), run.indices.end());
+        }
+        out.mesh.vertices = out.own;
+        out.places.assign(groups.size(), glm::mat4(1.0f));
+        return out;
     }
 
 } // namespace rct3::park

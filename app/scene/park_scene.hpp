@@ -389,6 +389,8 @@ namespace rct3::scene
         /// outlives a build still running when the scene goes.
         park::PersonRuns moving_runs { };
         std::future<park::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
+        park::PersonRuns rider_runs { };            ///< Kept for riders_build, like moving_runs
+        park::PersonRuns rider_gathered { };        ///< Kept for riders_build, like moving_runs
         std::future<RidersBuild> riders_build;      ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
         park::MovingMeshes riders;

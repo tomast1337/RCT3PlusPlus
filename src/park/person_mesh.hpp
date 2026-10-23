@@ -12,6 +12,7 @@
 // left-hand socket reaches in the person's motion, turned with the person.
 #pragma once
 
+#include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/person_models.hpp"
 
@@ -75,5 +76,11 @@ namespace rct3::park
 
     /// The mesh of `people`, gathered in `runs`, which is emptied first.
     [[nodiscard]] ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs);
+
+    /// Groups of people that move together, such as the riders of each car: each group one piece of the
+    /// result, in the group's own space, and triangles of the same picture drawn together whatever their
+    /// group. `runs` and `gathered` are emptied first; a caller building again and again keeps them, so their
+    /// memory is reused.
+    [[nodiscard]] MovingMeshes carried_people_meshes(const PersonLibrary& library, std::span<const std::span<const PlacedPerson>> groups, PersonRuns& runs, PersonRuns& gathered);
 
 } // namespace rct3::park

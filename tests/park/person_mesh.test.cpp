@@ -27,6 +27,20 @@ TEST_CASE("nobody to draw makes an empty mesh")
     CHECK(mesh.batches.empty());
 }
 
+TEST_CASE("groups of people carried together are each one piece, standing where their carrier puts them")
+{
+    const std::array<std::string_view, 1> folders { "Characters" };
+    const park::PersonLibrary library("/nonexistent", folders);
+    const std::array<park::PlacedPerson, 3> riders { };
+    const std::array<std::span<const park::PlacedPerson>, 2> cars { std::span(riders).first(1), std::span(riders).subspan(1) };
+    park::PersonRuns runs, gathered;
+    const park::MovingMeshes meshes = park::carried_people_meshes(library, cars, runs, gathered);
+    CHECK(meshes.ends.size() == 2);
+    CHECK(meshes.places.size() == 2);
+    CHECK(meshes.mesh.placed == 3);
+    CHECK(meshes.mesh.batches.empty()); // A library without models draws nobody
+}
+
 TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses it")
 {
     // One key: three points a step of 0.01 apart, packed eleven bits across, ten up, eleven along.

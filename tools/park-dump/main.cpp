@@ -65,13 +65,13 @@ namespace
             if (const auto* v = r.try_get<simulation::Visitor>(e))
                 j["visitor"] = { { "age", std::to_underlying(v->age) }, { "female", v->female }, { "name", v->name }, { "arrived", v->arrived } };
             if (const auto* p = r.try_get<simulation::Pose>(e))
-                j["pose"] = { { "position", vec3(p->position) }, { "heading", p->heading } };
+                j["pose"] = { { "position", vec3(p->position) }, { "heading", p->heading.value } };
             if (const auto* n = r.try_get<simulation::Needs>(e))
-                j["needs"] = { { "hunger", n->hunger }, { "thirst", n->thirst }, { "bladder", n->bladder } };
+                j["needs"] = { { "hunger", n->hunger.value }, { "thirst", n->thirst.value }, { "bladder", n->bladder.value } };
             if (const auto* m = r.try_get<simulation::Mood>(e))
-                j["mood"] = { { "happiness", m->happiness }, { "energy", m->energy }, { "nausea", m->nausea } };
+                j["mood"] = { { "happiness", m->happiness.value }, { "energy", m->energy.value }, { "nausea", m->nausea.value } };
             if (const auto* w = r.try_get<simulation::Wallet>(e))
-                j["wallet"] = { { "cash", w->cash } };
+                j["wallet"] = { { "cash", w->cash.value } };
             entities.push_back(std::move(j));
         }
         return { { "tick", world.tick }, { "seed", world.seed.value }, { "entities", std::move(entities) } };

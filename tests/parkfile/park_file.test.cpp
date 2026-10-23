@@ -74,9 +74,9 @@ TEST_CASE("a park read back from its file is the park that was written")
     CHECK(v.name == "Ada Example");
     CHECK(v.arrived == 7);
     CHECK(r.get<simulation::Pose>(a).position == glm::vec3 { 1.5f, 2.0f, -3.25f });
-    CHECK(r.get<simulation::Needs>(a).thirst == 0.9f);
-    CHECK(r.get<simulation::Mood>(a).happiness == 0.8f);
-    CHECK(r.get<simulation::Wallet>(a).cash == 2550);
+    CHECK(r.get<simulation::Needs>(a).thirst.value == 0.9f);
+    CHECK(r.get<simulation::Mood>(a).happiness.value == 0.8f);
+    CHECK(r.get<simulation::Wallet>(a).cash.value == 2550);
     CHECK(r.all_of<simulation::Visitor, simulation::Needs>(b));
     CHECK_FALSE(r.any_of<simulation::Pose, simulation::Mood, simulation::Wallet>(b));
 }
@@ -185,7 +185,7 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     simulation::Upkeep upkeep { .reliability = 0.4f, .broken = true, .since_inspection = 90, .inspect_every = -1, .breakdowns = 3, .kind = simulation::Breakdown::DoorsFailToOpen, .last = simulation::Breakdown::DoorsFailToOpen };
     upkeep.downtime = { 20, 4, 0, 0, 0, 0, 0, 7 };
     upkeep.samples = 11;
-    upkeep.sample_clock = 0.75f;
+    upkeep.sample_clock.value = 0.75f;
     r.emplace<simulation::Upkeep>(ride, upkeep);
     const auto handyman = r.create();
     r.emplace<simulation::Patrol>(handyman, simulation::Patrol { { { 3, 4 }, { -1, 200 } }, 2 });
@@ -195,7 +195,7 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     const auto& back = read->registry.get<simulation::Upkeep>(ride);
     CHECK(back.broken);
     CHECK(back.kind == simulation::Breakdown::DoorsFailToOpen);
-    CHECK(back.reliability == 0.4f);
+    CHECK(back.reliability.value == 0.4f);
     CHECK(back.downtime == upkeep.downtime);
     CHECK(back.downtime_share() == doctest::Approx(31.0 / 160));
     CHECK(back.samples == 11);

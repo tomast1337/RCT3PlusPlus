@@ -82,7 +82,7 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
     // Three broken lately: the player is told, once.
     CHECK(r.ctx().get<Vandalism>().broken == 3);
     CHECK(r.ctx().get<Vandalism>().warnings == 1);
-    r.get<Mood>(vandal).happiness = 1;
+    r.get<Mood>(vandal).happiness.value = 1;
     park.staff(StaffRole::Handyman, { 0, 0 });
     CHECK(park.run_until([&] { return std::ranges::none_of(benches, broken); }, 60));
 }
@@ -94,7 +94,7 @@ TEST_CASE("a dirty path spoils the mood of the guests on it")
     park.litter({ 0, 0 }, 5);
     const auto g = park.guest({ 0, 0 }, { .happiness = 0.5f });
     park.run_seconds(60);
-    CHECK(park.world().registry.get<Mood>(g).happiness < 0.5f);
+    CHECK(park.world().registry.get<Mood>(g).happiness.value < 0.5f);
 }
 
 TEST_CASE("litter counts against the rating once it has lain a while")
@@ -104,7 +104,7 @@ TEST_CASE("litter counts against the rating once it has lain a while")
     park.litter({ 0, 0 }, 2);
     auto& r = park.world().registry;
     CHECK(old_litter(park.world()) == 0);
-    r.get<Litter>(r.view<Litter>().front()).age = 1000;
+    r.get<Litter>(r.view<Litter>().front()).age.value = 1000;
     CHECK(old_litter(park.world()) == 1);
 }
 

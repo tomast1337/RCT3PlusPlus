@@ -13,7 +13,7 @@ using namespace rct3;
 
 TEST_CASE("a show ride's go lasts as long as the tricks of its show")
 {
-    simulation::CycleRide ride { .start_seconds = 3, .run_seconds = 10, .stop_seconds = 2, .loops = 4 };
+    simulation::CycleRide ride { .start = { 3 }, .run = { 10 }, .stop = { 2 }, .loops = 4 };
     const save::RideShow show { .ride = 1, .tricks = { { .name = "a", .seconds = 5 }, { .name = "b", .seconds = 20 }, { .name = "c", .seconds = 7 } }, .order = { 1, 2, 1, 9 } }; // 9: no such trick
     simulation::stage_show(ride, show);
     CHECK(simulation::cycle_seconds(ride) == 47);
@@ -68,7 +68,7 @@ TEST_CASE("a stall sells what its items are named, or their kinds are, or its ow
     for (const auto [e, shop, attraction] : world.registry.view<const simulation::Shop, const simulation::Attraction>().each())
     {
         sold.push_back(shop.product);
-        CHECK(attraction.price == 120);
+        CHECK(attraction.price.value == 120);
     }
     std::ranges::sort(sold);
     CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Drink, simulation::Product::Food });
@@ -129,8 +129,8 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     CHECK(world.registry.get<simulation::Attraction>(e).entrance == at(3, 0));
     CHECK(cycle.exit == at(4, 2));
     CHECK(cycle.capacity == 12);
-    CHECK(cycle.excitement == doctest::Approx(0.5f));
-    CHECK(cycle.nausea == 1);                                     // Ratings past 10 count as 10
+    CHECK(cycle.excitement.value == doctest::Approx(0.5f));
+    CHECK(cycle.nausea.value == 1);                               // Ratings past 10 count as 10
     CHECK_FALSE(world.registry.all_of<simulation::Departure>(e)); // A flat ride's saved settings are not its own
 }
 
@@ -163,7 +163,7 @@ TEST_CASE("boats for hire carry their riders out and back, though their dock is 
     REQUIRE(world.registry.valid(added[0]));
     const auto& cycle = world.registry.get<simulation::CycleRide>(added[0]);
     CHECK(cycle.capacity == 8);
-    CHECK(cycle.run_seconds == simulation::kTuning.boats.trip.value);
+    CHECK(cycle.run.value == simulation::kTuning.boats.trip.value);
     CHECK_FALSE(world.registry.all_of<simulation::Trains>(added[0]));
 }
 
@@ -242,7 +242,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     const auto& piece = world.registry.get<simulation::Litter>(pieces.front());
     CHECK(piece.node == tile);
     CHECK(piece.kind == 3);
-    CHECK(piece.age == doctest::Approx(40)); // A game hour of the calendar
+    CHECK(piece.age.value == doctest::Approx(40)); // A game hour of the calendar
 
     save::WorldModel w;
     for (std::uint64_t id = 1; id <= 4; ++id)

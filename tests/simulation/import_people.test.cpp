@@ -39,11 +39,11 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     CHECK(v.name == "Test Guest");
     CHECK(made[0] == e);
     CHECK(world.registry.get<simulation::Pose>(e).position == glm::vec3 { 10, 2, 30 });
-    CHECK(world.registry.get<simulation::Pose>(e).heading == -1.25f);
+    CHECK(world.registry.get<simulation::Pose>(e).heading.value == -1.25f);
     const auto& n = world.registry.get<simulation::Needs>(e);
-    CHECK(n.hunger == doctest::Approx(0.25f));
-    CHECK(n.thirst == doctest::Approx(0.75f));
-    CHECK(n.bladder == doctest::Approx(0.5f));
-    CHECK(world.registry.get<simulation::Mood>(e).happiness == doctest::Approx(0.9f));
-    CHECK(world.registry.get<simulation::Wallet>(e).cash == 1500);
+    CHECK(n.hunger.value == doctest::Approx(0.25f));
+    CHECK(n.thirst.value == doctest::Approx(0.75f));
+    CHECK(n.bladder.value == doctest::Approx(0.5f));
+    CHECK(world.registry.get<simulation::Mood>(e).happiness.value == doctest::Approx(0.9f));
+    CHECK(world.registry.get<simulation::Wallet>(e).cash.value == 1500);
 }

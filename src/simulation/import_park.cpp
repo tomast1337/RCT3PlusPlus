@@ -254,8 +254,8 @@ namespace rct3::simulation
                 seconds += show.tricks[t].seconds;
         if (seconds <= 0)
             return; // Nothing to put on: the ride keeps its own timing
-        ride.start_seconds = ride.stop_seconds = 0;
-        ride.run_seconds = seconds;
+        ride.start.value = ride.stop.value = 0;
+        ride.run.value = seconds;
         ride.loops = 1;
     }
 
@@ -389,7 +389,7 @@ namespace rct3::simulation
                 stride.from = other.value_or(*gone);
             }
             stride.to = stride.from;
-            stride.progress = 1;
+            stride.progress.value = 1;
             stride.route.clear();
             if (auto* errand = r.try_get<Errand>(e); errand != nullptr && errand->kind == ErrandKind::Heading)
                 *errand = { };
@@ -609,10 +609,10 @@ namespace rct3::simulation
         // status on some fixed ones.
         const bool broken = (ride.base.flags & save::AttractionCommon::kBrokenDown) != 0;
         return {
-            .reliability = std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f),
+            .reliability = { std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f) },
             .broken = broken,
-            .since_inspection = std::max(ride.base.time_since_inspection, 0.0f),
-            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? kIntervals[static_cast<std::size_t>(interval)] : Upkeep { }.inspect_every,
+            .since_inspection = { std::max(ride.base.time_since_inspection, 0.0f) },
+            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
             .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
             .downtime = ride.breakdown.downtime_windows,
@@ -666,15 +666,15 @@ namespace rct3::simulation
                 rated = rate(world.ratings, ride.base.symbol, *ride.stats.last_lap);
             else if (const auto test = coaster ? test_lap(*coaster) : std::nullopt)
                 rated = rate(world.ratings, ride.base.symbol, *test);
-            CycleRide cycle { .capacity = timing->seats, .start_seconds = timing->start, .run_seconds = timing->run, .stop_seconds = timing->stop, .loops = timing->loops, .line = std::move(line), .exit = exit };
+            CycleRide cycle { .capacity = timing->seats, .start = { timing->start }, .run = { timing->run }, .stop = { timing->stop }, .loops = timing->loops, .line = std::move(line), .exit = exit };
             if (rated)
             {
-                cycle.excitement = rating(rated->excitement);
-                cycle.intensity = rating(rated->intensity);
-                cycle.nausea = rating(rated->nausea);
+                cycle.excitement.value = rating(rated->excitement);
+                cycle.intensity.value = rating(rated->intensity);
+                cycle.nausea.value = rating(rated->nausea);
             }
             if (ride.assessment.valid)
-                cycle.cover = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
+                cycle.cover.value = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
             cycle.splash = splashes(ride.base.symbol);
             if (i < guests.size() && guests[i])
                 cycle.room = *guests[i];
@@ -880,7 +880,7 @@ namespace rct3::simulation
             {
                 start_walking(world, e, *at);
                 auto& stride = r.get<Stride>(e);
-                stride.along = static_cast<float>(on->second.second);
+                stride.along.value = static_cast<float>(on->second.second);
                 r.get<Errand>(e) = { ErrandKind::Queueing, on->second.first, 0 };
                 waiting.emplace_back(on->second.second, e);
             }

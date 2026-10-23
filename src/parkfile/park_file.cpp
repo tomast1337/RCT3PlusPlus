@@ -79,16 +79,16 @@ namespace rct3::parkfile
             static constexpr std::size_t kMinRecord = 4 + 12;
             static void write(Writer& w, const simulation::Needs& n)
             {
-                w.number(n.hunger);
-                w.number(n.thirst);
-                w.number(n.bladder);
+                w.number(n.hunger.value);
+                w.number(n.thirst.value);
+                w.number(n.bladder.value);
             }
             static std::expected<simulation::Needs, std::string> read(Reader& r)
             {
                 simulation::Needs n;
-                n.hunger = r.number<float>();
-                n.thirst = r.number<float>();
-                n.bladder = r.number<float>();
+                n.hunger.value = r.number<float>();
+                n.thirst.value = r.number<float>();
+                n.bladder.value = r.number<float>();
                 return n;
             }
         };
@@ -100,16 +100,16 @@ namespace rct3::parkfile
             static constexpr std::size_t kMinRecord = 4 + 12;
             static void write(Writer& w, const simulation::Mood& m)
             {
-                w.number(m.happiness);
-                w.number(m.energy);
-                w.number(m.nausea);
+                w.number(m.happiness.value);
+                w.number(m.energy.value);
+                w.number(m.nausea.value);
             }
             static std::expected<simulation::Mood, std::string> read(Reader& r)
             {
                 simulation::Mood m;
-                m.happiness = r.number<float>();
-                m.energy = r.number<float>();
-                m.nausea = r.number<float>();
+                m.happiness.value = r.number<float>();
+                m.energy.value = r.number<float>();
+                m.nausea.value = r.number<float>();
                 return m;
             }
         };
@@ -159,22 +159,22 @@ namespace rct3::parkfile
             static constexpr std::size_t kMinRecord = 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 1 + 4;
             static void write(Writer& w, const simulation::Upkeep& u)
             {
-                w.number(u.reliability);
+                w.number(u.reliability.value);
                 w.number(std::uint8_t { u.broken });
                 w.number(std::to_underlying(u.kind));
                 w.number(std::to_underlying(u.last));
-                w.number(u.since_inspection);
-                w.number(u.inspect_every);
+                w.number(u.since_inspection.value);
+                w.number(u.inspect_every.value);
                 w.number(u.breakdowns);
                 for (const std::uint8_t d : u.downtime)
                     w.number(d);
                 w.number(u.samples);
-                w.number(u.sample_clock);
+                w.number(u.sample_clock.value);
             }
             static std::expected<simulation::Upkeep, std::string> read(Reader& r)
             {
                 simulation::Upkeep u;
-                u.reliability = r.number<float>();
+                u.reliability.value = r.number<float>();
                 u.broken = r.number<std::uint8_t>() != 0;
                 const auto kind = r.number<std::int32_t>();
                 const auto last = r.number<std::int32_t>();
@@ -183,13 +183,13 @@ namespace rct3::parkfile
                     return std::unexpected(std::format("unknown breakdown {} or {}", kind, last));
                 u.kind = static_cast<simulation::Breakdown>(kind);
                 u.last = static_cast<simulation::Breakdown>(last);
-                u.since_inspection = r.number<float>();
-                u.inspect_every = r.number<float>();
+                u.since_inspection.value = r.number<float>();
+                u.inspect_every.value = r.number<float>();
                 u.breakdowns = r.number<std::uint32_t>();
                 for (std::uint8_t& d : u.downtime)
                     d = r.number<std::uint8_t>();
                 u.samples = r.number<std::uint8_t>();
-                u.sample_clock = r.number<float>();
+                u.sample_clock.value = r.number<float>();
                 return u;
             }
         };

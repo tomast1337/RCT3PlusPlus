@@ -79,7 +79,7 @@ namespace rct3::parkfile
             // Those off the paths (on a ride) where they were going on them, so they walk again on loading.
             const auto* stride = r.try_get<Stride>(e);
             const bool off = !world.paths.nearest(pose.position) && stride != nullptr && stride->to < world.paths.nodes().size();
-            SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading, .needs = needs, .mood = mood, .cash = wallet.cash });
+            SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading.value, .needs = needs, .mood = mood, .cash = wallet.cash.value });
             if (const auto* taste = r.try_get<Taste>(e))
                 g.taste = *taste;
             if (const auto* member = r.try_get<Member>(e); member != nullptr && r.valid(member->party))
@@ -94,7 +94,7 @@ namespace rct3::parkfile
             model.guests[i].in_park = in_park[i];
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
-            SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness, .laziness = staff.laziness, .position = pose.position, .heading = pose.heading });
+            SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value });
             if (const auto* patrol = r.try_get<Patrol>(e))
                 w.patrol = *patrol;
         }

@@ -138,12 +138,12 @@ namespace rct3::scene
         for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
         {
             std::int64_t& seen = scene.income_seen[e];
-            const std::int64_t paid = std::exchange(seen, attraction.income);
+            const std::int64_t paid = std::exchange(seen, attraction.income.value);
             const auto& nodes = scene.sim.paths.nodes();
-            if (!scene.show_guest_payments || attraction.income <= paid || attraction.entrance >= nodes.size())
+            if (!scene.show_guest_payments || attraction.income.value <= paid || attraction.entrance >= nodes.size())
                 continue;
             const simulation::PathNode& n = nodes[attraction.entrance];
-            float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income - paid);
+            float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income.value - paid);
         }
         for (FloatingMoney& m : scene.money)
             m.age += elapsed;

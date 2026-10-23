@@ -138,7 +138,7 @@ namespace rct3::scene
             const auto& r = scene.sim.registry;
             // Each by turns, offset by who they are so they do not all move at once.
             const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
-            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued >= simulation::kLongQueue)
+            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue)
                 return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
             if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
@@ -207,7 +207,7 @@ namespace rct3::scene
                     // The walk goes as far into its motion as the ground covered allows, so the feet stay put
                     // however fast the guest goes.
                     if (walking && shown.pace > 0)
-                        pose.time = at.walked / shown.pace;
+                        pose.time = at.walked.value / shown.pace;
                     // People are modelled facing +z, which the heading turns towards the way they go.
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
@@ -508,7 +508,7 @@ namespace rct3::scene
                     continue;
                 save::Guest& kept = scene.people.guests.emplace_back();
                 kept.in_park = true;
-                kept.mood_now.happiness = mood.happiness;
+                kept.mood_now.happiness.value = mood.happiness.value;
                 kept.person.type = type;
                 kept.person.sub_type = std::to_underlying(sex);
                 kept.person.name = visitor.name.empty() ? std::format("Guest {}", scene.people.guests.size()) : visitor.name;

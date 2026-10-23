@@ -46,7 +46,7 @@ TEST_CASE("the nearest free mechanic walks to a broken ride, repairs it and it o
     CHECK(r.get<Staff>(far).ride == entt::null);
     CHECK(park.run_until([&] { return r.get<Attraction>(ride).open; }, 120));
     CHECK_FALSE(r.get<Upkeep>(ride).broken);
-    CHECK(r.get<Upkeep>(ride).reliability > 0.5f);
+    CHECK(r.get<Upkeep>(ride).reliability.value > 0.5f);
     CHECK(r.get<Staff>(near).ride == entt::null);
 }
 
@@ -60,8 +60,8 @@ TEST_CASE("a mechanic inspects a ride when it is due, winning back reliability")
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
     park.run_seconds(50);
     CHECK(r.get<Staff>(mechanic).ride == entt::null); // Not due yet
-    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).reliability > 0.5f; }, 60));
-    CHECK(r.get<Upkeep>(ride).since_inspection < 1);
+    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).reliability.value > 0.5f; }, 60));
+    CHECK(r.get<Upkeep>(ride).since_inspection.value < 1);
 }
 
 TEST_CASE("a mechanic the player calls inspects the ride before it is due")
@@ -72,7 +72,7 @@ TEST_CASE("a mechanic the player calls inspects the ride before it is due")
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .reliability = 0.5f, .since_inspection = 0, .inspect_every = -1, .called = true });
     park.staff(StaffRole::Mechanic, { 0, 0 });
-    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).reliability > 0.5f; }, 60));
+    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).reliability.value > 0.5f; }, 60));
     CHECK_FALSE(r.get<Upkeep>(ride).called);
 }
 
@@ -81,9 +81,9 @@ TEST_CASE("staff are paid their wage by the game hour")
     Sandbox park;
     park.path({ 0, 0 }, { 2, 0 });
     for (int i = 0; i < 2; ++i)
-        park.world().registry.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })).wage = 100;
+        park.world().registry.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })).wage.value = 100;
     park.run_seconds(kSecondsPerHour);
-    CHECK(park.world().registry.ctx().get<Payroll>().paid == doctest::Approx(200).epsilon(0.02));
+    CHECK(park.world().registry.ctx().get<Payroll>().paid.value == doctest::Approx(200).epsilon(0.02));
 }
 
 TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
@@ -93,17 +93,17 @@ TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
     ride.breakdown.inspection_interval = 4; // Every hour
     ride.base.time_since_inspection = 90;
     Upkeep upkeep = upkeep_of(ride);
-    CHECK(upkeep.reliability == doctest::Approx(0.8f));
+    CHECK(upkeep.reliability.value == doctest::Approx(0.8f));
     CHECK_FALSE(upkeep.broken);
-    CHECK(upkeep.inspect_every == 3600);
-    CHECK(upkeep.since_inspection == 90);
+    CHECK(upkeep.inspect_every.value == 3600);
+    CHECK(upkeep.since_inspection.value == 90);
     ride.base.repair_status = rct3::save::RepairStatus::MechanicCalled; // Kept on some fixed rides too
     CHECK_FALSE(upkeep_of(ride).broken);
     ride.base.flags |= rct3::save::AttractionCommon::kBrokenDown;
     ride.breakdown.inspection_interval = 6; // Never
     upkeep = upkeep_of(ride);
     CHECK(upkeep.broken);
-    CHECK(upkeep.inspect_every < 0);
+    CHECK(upkeep.inspect_every.value < 0);
 }
 
 TEST_CASE("an emergency stop halts a coaster's train on the track till a mechanic fixes it")

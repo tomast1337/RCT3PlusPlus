@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
+#include "simulation/objectives.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -690,8 +691,8 @@ namespace rct3::ui
             if (objective != set.objectives.end() && objective->success)
                 state = text(strings, "Objectives_Completed");
             page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), state, false, "AttractionListDialogParameterStatus" });
-            // Which prize each saved number stands for is not known yet.
-            page.lines.push_back({ text(strings, "Objectives_Prize"), std::u16string(kDash), false, "Objectives_Prize" });
+            const bool prize = objective != set.objectives.end() && objective->prize_id > 0 && objective->prize_id < simulation::kApprenticePrize;
+            page.lines.push_back({ text(strings, "Objectives_Prize"), prize ? text(strings, simulation::prize_name(objective->prize_id)) : std::u16string(kDash), false, "Objectives_Prize" });
             const std::vector<const save::Condition*> conditions = set.conditions_for(level, 0);
             if (conditions.empty())
                 page.note = text(strings, kNotRead);

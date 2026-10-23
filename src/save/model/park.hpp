@@ -298,6 +298,23 @@ namespace rct3::save
         WarnedTwice = 1u << 4,
     };
 
+    /// What a coaster condition asks of the park's rides, as the file keeps it.
+    struct CoasterTarget
+    {
+        float value = 0; ///< The figure a ride must reach
+        /// The low four bits pick the figure: excitement, intensity, nausea, length, most negative and most
+        /// positive vertical G, most lateral G, top speed, height span, air time, inversions, highest drop.
+        /// kAtMost asks for at most the value rather than at least; kEveryRide that every ride of the group
+        /// reaches it; kPoolSlides counts the pools' slides rather than the coasters.
+        std::uint32_t flags = 0;
+        std::int32_t rides = 0; ///< How many rides must reach it
+
+        static constexpr std::uint32_t kFigure = 0xf;
+        static constexpr std::uint32_t kAtMost = 1u << 4;
+        static constexpr std::uint32_t kEveryRide = 1u << 5;
+        static constexpr std::uint32_t kPoolSlides = 1u << 6;
+    };
+
     struct Condition
     {
         ConditionKind kind = ConditionKind::Other;
@@ -311,8 +328,9 @@ namespace rct3::save
         float start_time = 0.0f;         ///< Game time units
         float next_check_time = 0.0f;    ///< Game time units; the deadline when HasDeadline is set
         std::uint32_t consistency_flags = 0;
-        std::optional<std::int64_t> value { }; ///< Threshold, for the families that have one
-        std::optional<bool> greater_than { };  ///< Comparison direction, newer generations only
+        std::optional<std::int64_t> value { };    ///< Threshold, for the families that have one
+        std::optional<bool> greater_than { };     ///< Comparison direction, newer generations only
+        std::optional<CoasterTarget> coaster { }; ///< Coaster conditions only
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept
         {

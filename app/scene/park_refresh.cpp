@@ -449,11 +449,12 @@ namespace rct3::scene
             const std::size_t i = *scene.riding;
             const park::CarSpot spot = scene.car_spots[i];
             const ovl::RideCameraTuning& tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
-            // Only the front seat looks along the track ahead; the nose does not sway either.
+            // The nose and front seat look at the track ahead rather than straight out, so a curve stays in view;
+            // the nose does not sway.
             // shortcut: a train running backwards still looks the way the car faces; look behind once the
             // trains know which way they run.
             std::optional<glm::vec3> ahead;
-            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye == park::RideEye::Front)
+            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != park::RideEye::Rear)
                 ahead = glm::vec3(park::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
             scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);

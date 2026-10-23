@@ -40,7 +40,7 @@ const exit = "ride_camera/RidecamGUI_Exit";
 expect(ui.find(exit) !== undefined, "the ride camera panel");
 // Left still, away from the panel, it slides below the screen.
 pointer.move(0.4, 0.4);
-await until(() => (ui.find(exit)?.top ?? 1) >= 1, 600, "the panel to hide");
+await until(() => (ui.find(exit)?.top ?? 1) >= 1, 3000, "the panel to hide"); // Its few seconds, at any frame rate
 await screenshot("panel hidden");
 pointer.move(0.6, 0.6);
 await until(() => (ui.find(exit)?.bottom ?? 2) < 1, 120, "the panel back on a move");

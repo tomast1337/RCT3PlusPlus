@@ -8,6 +8,7 @@
 //                                       and with --write also store them as our park file
 //
 // Exit status is 0 when everything read and wrote.
+#include "logging/log.hpp"
 #include "nlohmann/json.hpp"
 #include "parkfile/park_file.hpp"
 #include "save/model/people.hpp"
@@ -24,6 +25,12 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace
+{
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("park-dump");
+} // namespace
 
 namespace
 {
@@ -73,6 +80,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     const char* import = nullptr;
     const char* write = nullptr;
     const char* park = nullptr;
@@ -87,7 +95,7 @@ int main(int argc, char** argv)
     }
     if ((import == nullptr) == (park == nullptr))
     {
-        std::fprintf(stderr, "usage: park-dump PARK | park-dump --import SAVE [--write PARK]\n");
+        out.error("usage: park-dump PARK | park-dump --import SAVE [--write PARK]");
         return 2;
     }
 
@@ -96,7 +104,7 @@ int main(int argc, char** argv)
     const auto bytes = read_bytes(path);
     if (!bytes)
     {
-        std::fprintf(stderr, "%s: cannot read\n", path);
+        out.error("{}: cannot read", path);
         return 1;
     }
     if (import)
@@ -104,14 +112,14 @@ int main(int argc, char** argv)
         const auto file = save::read_save(*bytes, { .verify_checksum = false });
         if (!file)
         {
-            std::fprintf(stderr, "%s: %s\n", path, save::to_string(file.error()));
+            out.error("{}: {}", path, save::to_string(file.error()));
             return 1;
         }
         const save::ObjectIndex index(*file);
         const auto people = save::load_people(*file, index);
         if (!people)
         {
-            std::fprintf(stderr, "%s: people: %s\n", path, save::to_string(people.error()));
+            out.error("{}: people: {}", path, save::to_string(people.error()));
             return 1;
         }
         simulation::import_guests(world, *people);
@@ -121,21 +129,21 @@ int main(int argc, char** argv)
         auto read = parkfile::read_park_file(*bytes);
         if (!read)
         {
-            std::fprintf(stderr, "%s: %s\n", path, read.error().c_str());
+            out.error("{}: {}", path, read.error().c_str());
             return 1;
         }
         world = std::move(*read);
     }
 
-    std::puts(park_json(world).dump(2).c_str());
+    out.info("{}", park_json(world).dump(2));
     if (write)
     {
-        const auto out = parkfile::write_park_file(world);
+        const auto bytes = parkfile::write_park_file(world);
         std::ofstream file(write, std::ios::binary);
-        file.write(reinterpret_cast<const char*>(out.data()), static_cast<std::streamsize>(out.size()));
+        file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
         if (!file)
         {
-            std::fprintf(stderr, "%s: cannot write\n", write);
+            out.error("{}: cannot write", write);
             return 1;
         }
     }

@@ -10,6 +10,7 @@
 // null backend (no device needed, nothing audible). Without it the default playback device is used, and
 // the null backend takes over when there is none. Prints the sound's format, length and the backend used.
 #include "audio/audio.hpp"
+#include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 
@@ -26,15 +27,20 @@
 
 namespace
 {
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("sound-play");
+} // namespace
+
+namespace
+{
 
     using rct3::audio::SoundBuffer;
 
     int usage(const char* argv0)
     {
-        std::fprintf(
-            stderr,
-            "usage: %s [--null] [--volume V] [--pan P] [--pitch P] PATH [NAME]\n"
-            "       %s [--null] [--volume V] [--pan P] [--pitch P] --tone HZ\n",
+        out.error(
+            "usage: {} [--null] [--volume V] [--pan P] [--pitch P] PATH [NAME]\n"
+            "       {} [--null] [--volume V] [--pan P] [--pitch P] --tone HZ",
             argv0, argv0);
         return 2;
     }
@@ -69,6 +75,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     bool use_null = false;
     bool tone = false;
     float tone_hz = 440.0f;
@@ -98,7 +105,7 @@ int main(int argc, char** argv)
     }
     if (!rct3::audio::is_valid(params))
     {
-        std::fprintf(stderr, "volume must be 0..%g, pan -1..1, pitch above 0 and at most %g\n", static_cast<double>(rct3::audio::kMaxVolume), static_cast<double>(rct3::audio::kMaxPitch));
+        out.error("volume must be 0..{:g}, pan -1..1, pitch above 0 and at most {:g}", static_cast<double>(rct3::audio::kMaxVolume), static_cast<double>(rct3::audio::kMaxPitch));
         return 2;
     }
 
@@ -116,7 +123,7 @@ int main(int argc, char** argv)
         auto overlay = rct3::ovl::Overlay::load(positional[0]);
         if (!overlay)
         {
-            std::fprintf(stderr, "%s: %s\n", positional[0], rct3::ovl::to_string(overlay.error()));
+            out.error("{}: {}", positional[0], rct3::ovl::to_string(overlay.error()));
             return 1;
         }
 
@@ -133,9 +140,9 @@ int main(int argc, char** argv)
             {
                 const std::string name(item.name);
                 if (!item.info)
-                    std::printf("%-32s <unreadable>\n", name.c_str());
+                    out.info("{:<32} <unreadable>", name.c_str());
                 else
-                    std::printf("%-32s %u ch %u Hz %u bit %u bytes\n", name.c_str(), item.info->channels, item.info->sample_rate, item.info->bits_per_sample, item.info->data_size);
+                    out.info("{:<32} {:d} ch {:d} Hz {:d} bit {:d} bytes", name.c_str(), item.info->channels, item.info->sample_rate, item.info->bits_per_sample, item.info->data_size);
             }
             return 0;
         }
@@ -152,13 +159,13 @@ int main(int argc, char** argv)
         }
         if (found == nullptr || !found->info)
         {
-            std::fprintf(stderr, "no readable sound item named '%s'\n", positional[1]);
+            out.error("no readable sound item named '{}'", positional[1]);
             return 1;
         }
         auto converted = rct3::audio::from_ovl_sound(*found->info);
         if (!converted)
         {
-            std::fprintf(stderr, "%s: %s\n", positional[1], rct3::audio::to_string(converted.error()));
+            out.error("{}: {}", positional[1], rct3::audio::to_string(converted.error()));
             return 1;
         }
         buffer = std::move(*converted);
@@ -169,18 +176,18 @@ int main(int argc, char** argv)
     auto engine = rct3::audio::AudioEngine::create(config);
     if (!engine)
     {
-        std::fprintf(stderr, "audio: %s\n", rct3::audio::to_string(engine.error()));
+        out.error("audio: {}", rct3::audio::to_string(engine.error()));
         return 1;
     }
 
     auto voice = engine->play(buffer, params);
     if (!voice)
     {
-        std::fprintf(stderr, "play: %s\n", rct3::audio::to_string(voice.error()));
+        out.error("play: {}", rct3::audio::to_string(voice.error()));
         return 1;
     }
     const double seconds = buffer.duration_seconds() / static_cast<double>(params.pitch);
-    std::printf("playing %zu frames, %u ch, %u Hz, %.3f s on the %s (%u Hz mix)\n", buffer.frame_count(), buffer.channels, buffer.sample_rate, seconds, backend_name(engine->backend()), engine->sample_rate());
+    out.info("playing {:d} frames, {:d} ch, {:d} Hz, {:.3f} s on the {} ({:d} Hz mix)", buffer.frame_count(), buffer.channels, buffer.sample_rate, seconds, backend_name(engine->backend()), engine->sample_rate());
 
     while (engine->is_playing(*voice))
         std::this_thread::sleep_for(std::chrono::milliseconds(10));

@@ -17,6 +17,7 @@
 // T (default 12) is flagged, and the tool then exits with 1. The pictures hold game art: keep them out of git.
 #include "config/game_install.hpp"
 #include "image/png_encoder.hpp"
+#include "logging/log.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list_painter.hpp"
 #include "ui/game_style.hpp"
@@ -39,6 +40,12 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+namespace
+{
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("panel-look");
+} // namespace
 
 namespace
 {
@@ -151,7 +158,7 @@ namespace
             const auto skin = context.skins.find(name);
             if (!skin)
             {
-                std::println(stderr, "small-parts: no skin {}", name);
+                out.error("small-parts: no skin {}", name);
                 continue;
             }
             const auto [w, h] = skin->size();
@@ -386,7 +393,7 @@ namespace
 
     int usage(const char* argv0)
     {
-        std::fprintf(stderr, "usage: %s [--out DIR] [--scale S] [--threshold T] [--game PATH] [--list] [PANEL...]\n", argv0);
+        out.error("usage: {} [--out DIR] [--scale S] [--threshold T] [--game PATH] [--list] [PANEL...]", argv0);
         return 2;
     }
 
@@ -394,7 +401,8 @@ namespace
 
 int main(int argc, char** argv)
 {
-    std::filesystem::path out = "build/panel-look";
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
+    std::filesystem::path out_dir = "build/panel-look";
     float scale = 1;
     float threshold = 12;
     std::optional<std::filesystem::path> game;
@@ -406,7 +414,7 @@ int main(int argc, char** argv)
         const std::string_view arg = argv[i];
         const bool has_value = i + 1 < argc;
         if (arg == "--out" && has_value)
-            out = argv[++i];
+            out_dir = argv[++i];
         else if (arg == "--scale" && has_value)
         {
             if (!parse_float(argv[++i], scale))
@@ -422,7 +430,7 @@ int main(int argc, char** argv)
         else if (arg == "--list")
         {
             for (const PanelCase& c : cases)
-                std::printf("%.*s\n", static_cast<int>(c.name.size()), c.name.data());
+                out.info("{}", c.name);
             return 0;
         }
         else if (arg.starts_with("-"))
@@ -434,7 +442,7 @@ int main(int argc, char** argv)
     {
         if (!std::ranges::contains(cases, name, &PanelCase::name))
         {
-            std::fprintf(stderr, "no panel named %.*s; --list shows them\n", static_cast<int>(name.size()), name.data());
+            out.error("no panel named {}; --list shows them", name);
             return 2;
         }
     }
@@ -442,20 +450,20 @@ int main(int argc, char** argv)
     const auto install = game ? config::open_game_install(*game) : config::find_game_install(config::Environment::from_process());
     if (!install)
     {
-        std::fprintf(stderr, "%s\n", config::describe(install.error()).c_str());
+        out.error("{}", config::describe(install.error()).c_str());
         return 2;
     }
     const auto assets = load_assets(*install);
     if (!assets)
     {
-        std::fprintf(stderr, "skins: %s\n", assets.error().c_str());
+        out.error("skins: {}", assets.error().c_str());
         return 2;
     }
     std::error_code error;
-    std::filesystem::create_directories(out, error);
+    std::filesystem::create_directories(out_dir, error);
     if (error)
     {
-        std::fprintf(stderr, "%s: %s\n", out.string().c_str(), error.message().c_str());
+        out.error("{}: {}", out_dir.string().c_str(), error.message().c_str());
         return 2;
     }
 
@@ -471,14 +479,14 @@ int main(int argc, char** argv)
         const std::string stem = std::string(panel.name);
         for (const auto& [suffix, picture] : { std::pair { "texture", &texture }, { "coded", &coded }, { "diff", &diff } })
         {
-            const auto path = out / std::format("{}.{}.png", stem, suffix);
+            const auto path = out_dir / std::format("{}.{}.png", stem, suffix);
             if (auto saved = image::save_png(path, *picture); !saved)
-                std::fprintf(stderr, "%s\n", saved.error().c_str());
+                out.error("{}", saved.error().c_str());
         }
         const bool over = score.mean > threshold;
         flagged = flagged || over;
-        std::printf("%-15s score %6.2f  far %5.1f%%  over %zu px%s\n", stem.c_str(), score.mean, score.far * 100, score.pixels, over ? "  FLAGGED: keep it on the texture" : "");
+        out.info("{:<15} score {:6.2f}  far {:5.1f}%  over {:d} px{}", stem.c_str(), score.mean, score.far * 100, score.pixels, over ? "  FLAGGED: keep it on the texture" : "");
     }
-    std::printf("pictures in %s (game art: do not commit)\n", out.string().c_str());
+    out.info("pictures in {} (game art: do not commit)", out_dir.string().c_str());
     return flagged ? 1 : 0;
 }

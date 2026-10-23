@@ -5,6 +5,8 @@
 //   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
+#include "logging/log.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -57,6 +59,12 @@
 
 namespace
 {
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("ovl-dump");
+} // namespace
+
+namespace
+{
 
     using rct3::ovl::Part;
 
@@ -98,40 +106,40 @@ namespace
     {
         const auto& file = part.file;
         const auto& header = file.header;
-        std::printf("== %s\n", title);
+        out.info("== {}", title);
 
-        std::printf("version        %u\n", header.version);
-        std::printf("flags          0x%02x\n", header.flags);
-        std::printf("header end     0x%zx\n", header.end_offset);
+        out.info("version        {:d}", header.version);
+        out.info("flags          0x{:02x}", header.flags);
+        out.info("header end     0x{:x}", header.end_offset);
 
-        std::printf("external refs  %zu\n", header.external_refs.size());
+        out.info("external refs  {:d}", header.external_refs.size());
         for (const auto& r : header.external_refs)
-            std::printf("  %s\n", r.c_str());
-        std::printf("secondary refs %zu\n", header.secondary_refs.size());
+            out.info("  {}", r.c_str());
+        out.info("secondary refs {:d}", header.secondary_refs.size());
         for (const auto& r : header.secondary_refs)
-            std::printf("  %s\n", r.c_str());
+            out.info("  {}", r.c_str());
 
-        std::printf("loaders        %zu\n", header.loaders.size());
-        std::printf("  %-6s %-14s %-4s %-5s %s\n", "loader", "name", "type", "tag", "symbols");
+        out.info("loaders        {:d}", header.loaders.size());
+        out.info("  {:<6} {:<14} {:<4} {:<5} {}", "loader", "name", "type", "tag", "symbols");
         for (const auto& l : header.loaders)
         {
-            std::printf("  %-6s %-14s %-4u %-5s %u\n", l.loader.c_str(), l.name.c_str(), l.loader_type, l.tag.c_str(), l.symbol_count);
+            out.info("  {:<6} {:<14} {:<4d} {:<5} {:d}", l.loader.c_str(), l.name.c_str(), l.loader_type, l.tag.c_str(), l.symbol_count);
         }
 
-        std::printf("block types\n");
-        std::printf("  %-4s %-7s %-10s %-10s %s\n", "type", "blocks", "bytes", "unknown", "extra");
+        out.info("block types");
+        out.info("  {:<4} {:<7} {:<10} {:<10} {}", "type", "blocks", "bytes", "unknown", "extra");
         for (std::size_t t = 0; t < file.block_types.size(); ++t)
         {
             const auto& type = file.block_types[t];
             std::uint64_t bytes = 0;
             for (const auto& b : type.blocks)
                 bytes += b.size;
-            std::printf("  %-4zu %-7zu %-10llu %-10u %u\n", t, type.blocks.size(), static_cast<unsigned long long>(bytes), type.unknown, type.extra);
+            out.info("  {:<4d} {:<7d} {:<10d} {:<10d} {:d}", t, type.blocks.size(), static_cast<unsigned long long>(bytes), type.unknown, type.extra);
         }
-        std::printf("data size      %u\n", file.data_size);
-        std::printf("base           %u\n", part.base);
-        std::printf("unknown bytes  %zu\n", file.unknown_bytes.size());
-        std::printf("unknown words  %zu\n", file.unknown_words.size());
+        out.info("data size      {:d}", file.data_size);
+        out.info("base           {:d}", part.base);
+        out.info("unknown bytes  {:d}", file.unknown_bytes.size());
+        out.info("unknown words  {:d}", file.unknown_words.size());
 
         // A relocation names the location of a 32-bit pointer, so all four bytes must lie in one block.
         std::size_t misplaced = 0;
@@ -149,11 +157,11 @@ namespace
             if (value >= part.base + file.data_size)
                 ++leaving;
         }
-        std::printf("relocations    %zu (%zu outside blocks, %zu pointing past own data)\n", file.relocations.size(), misplaced, leaving);
+        out.info("relocations    {:d} ({:d} outside blocks, {:d} pointing past own data)", file.relocations.size(), misplaced, leaving);
         std::size_t stream_pairs = 0;
         for (const auto& table : file.stream_relocations)
             stream_pairs += table.size();
-        std::printf("streams        %zu (%zu relocation pairs)\n", file.stream_relocations.size(), stream_pairs);
+        out.info("streams        {:d} ({:d} relocation pairs)", file.stream_relocations.size(), stream_pairs);
 
         std::size_t unresolved = 0;
         std::size_t untagged = 0;
@@ -167,7 +175,7 @@ namespace
         std::uint64_t loader_symbols = 0;
         for (const auto& l : header.loaders)
             loader_symbols += l.symbol_count;
-        std::printf("symbols        %zu (%zu unresolved names, %zu without a tag, %llu counted by loaders)\n", part.symbols.size(), unresolved, untagged, static_cast<unsigned long long>(loader_symbols));
+        out.info("symbols        {:d} ({:d} unresolved names, {:d} without a tag, {:d} counted by loaders)", part.symbols.size(), unresolved, untagged, static_cast<unsigned long long>(loader_symbols));
 
         std::size_t chunks = 0;
         std::uint64_t chunk_bytes = 0;
@@ -190,16 +198,16 @@ namespace
             if (!at || at->type != 2 || at->index != 0 || at->offset % stride != 0)
                 ++unlinked;
         }
-        std::printf("loader rows    %zu (%zu bad type, %zu with an unusable symbol address)\n", part.loaders.entries.size(), bad_type, unlinked);
-        std::printf("extra chunks   %zu (%llu bytes)\n", chunks, static_cast<unsigned long long>(chunk_bytes));
-        std::printf("trailing       %zu bytes after relocations\n", part.bytes.size() - file.end_offset);
-        std::printf("unparsed tail  %zu bytes\n", part.bytes.size() - part.loaders.end_offset);
+        out.info("loader rows    {:d} ({:d} bad type, {:d} with an unusable symbol address)", part.loaders.entries.size(), bad_type, unlinked);
+        out.info("extra chunks   {:d} ({:d} bytes)", chunks, static_cast<unsigned long long>(chunk_bytes));
+        out.info("trailing       {:d} bytes after relocations", part.bytes.size() - file.end_offset);
+        out.info("unparsed tail  {:d} bytes", part.bytes.size() - part.loaders.end_offset);
 
         if (opt.symbols)
         {
             for (const auto& sym : part.symbols)
             {
-                std::printf("  %-8s %08x %s\n", sym.is_pointer ? "pointer" : "value", sym.data, sym.name.empty() ? "<unresolved>" : std::string(sym.name).c_str());
+                out.info("  {:<8} {:08x} {}", sym.is_pointer ? "pointer" : "value", sym.data, sym.name.empty() ? "<unresolved>" : std::string(sym.name).c_str());
             }
         }
         if (opt.ftx)
@@ -211,20 +219,20 @@ namespace
                 if (!item.texture)
                     ++bad;
             }
-            std::printf("flexi textures %zu (%zu unreadable)\n", textures.size(), bad);
+            out.info("flexi textures {:d} ({:d} unreadable)", textures.size(), bad);
             for (const auto& item : textures)
             {
                 const std::string name(item.name);
                 if (!item.texture)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& t = *item.texture;
                 std::size_t alpha = 0;
                 for (const auto& f : t.frames)
                     alpha += f.alpha.has_value();
-                std::printf("  %-32s %ux%u frames %zu sequence %zu alpha %zu animation %u flags %u\n", name.c_str(), t.width, t.height, t.frames.size(), t.sequence.size(), alpha, t.animation, t.flags);
+                out.info("  {:<32} {:d}x{:d} frames {:d} sequence {:d} alpha {:d} animation {:d} flags {:d}", name.c_str(), t.width, t.height, t.frames.size(), t.sequence.size(), alpha, t.animation, t.flags);
             }
         }
         if (opt.shs)
@@ -236,22 +244,22 @@ namespace
                 if (!item.shape)
                     ++bad;
             }
-            std::printf("static shapes  %zu (%zu unreadable)\n", shapes.size(), bad);
+            out.info("static shapes  {:d} ({:d} unreadable)", shapes.size(), bad);
             for (const auto& item : shapes)
             {
                 const std::string name(item.name);
                 if (!item.shape)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& sh = *item.shape;
                 std::size_t untextured = 0;
                 for (const auto& m : sh.meshes)
                     untextured += m.texture.empty();
-                std::printf("  %-32s meshes %zu vertices %u indices %u effects %zu untextured %zu\n", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.effects.size(), untextured);
+                out.info("  {:<32} meshes {:d} vertices {:d} indices {:d} effects {:d} untextured {:d}", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.effects.size(), untextured);
                 for (const auto& e : sh.effects)
-                    std::printf("    effect %.*s at %.2f %.2f %.2f\n", static_cast<int>(e.name.size()), e.name.data(), e.transform[12], e.transform[13], e.transform[14]);
+                    out.info("    effect {} at {:.2f} {:.2f} {:.2f}", e.name, e.transform[12], e.transform[13], e.transform[14]);
             }
         }
         if (opt.svd)
@@ -263,23 +271,23 @@ namespace
                 if (!item.visual)
                     ++bad;
             }
-            std::printf("scenery visuals %zu (%zu unreadable)\n", visuals.size(), bad);
+            out.info("scenery visuals {:d} ({:d} unreadable)", visuals.size(), bad);
             for (const auto& item : visuals)
             {
                 const std::string name(item.name);
                 if (!item.visual)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& v = *item.visual;
-                std::printf("  %-32s flags %08x sway %g lods %zu\n", name.c_str(), v.flags, v.sway, v.lods.size());
+                out.info("  {:<32} flags {:08x} sway {:g} lods {:d}", name.c_str(), v.flags, v.sway, v.lods.size());
                 for (const auto& lod : v.lods)
                 {
                     const std::string_view target = lod.mesh_type == 0 ? lod.static_shape : lod.mesh_type == 3 ? lod.bone_shape : lod.texture;
-                    std::printf("    type %u %-24s distance %g animations %zu\n", lod.mesh_type, std::string(target).c_str(), lod.distance, lod.animations.size());
+                    out.info("    type {:d} {:<24} distance {:g} animations {:d}", lod.mesh_type, std::string(target).c_str(), lod.distance, lod.animations.size());
                     for (const std::string_view anim : lod.animations)
-                        std::printf("      animation %.*s\n", static_cast<int>(anim.size()), anim.data());
+                        out.info("      animation {}", anim);
                 }
             }
         }
@@ -292,19 +300,19 @@ namespace
                 if (!item.anim)
                     ++bad;
             }
-            std::printf("bone anims     %zu (%zu unreadable)\n", anims.size(), bad);
+            out.info("bone anims     {:d} ({:d} unreadable)", anims.size(), bad);
             for (const auto& item : anims)
             {
                 const std::string name(item.name);
                 if (!item.anim)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 std::size_t keys = 0;
                 for (const auto& b : item.anim->bones)
                     keys += b.positions.size() + b.rotations.size();
-                std::printf("  %-32s bones %zu keyframes %zu duration %g\n", name.c_str(), item.anim->bones.size(), keys, item.anim->duration);
+                out.info("  {:<32} bones {:d} keyframes {:d} duration {:g}", name.c_str(), item.anim->bones.size(), keys, item.anim->duration);
             }
         }
         if (opt.bsh)
@@ -316,40 +324,40 @@ namespace
                 if (!item.shape)
                     ++bad;
             }
-            std::printf("bone shapes    %zu (%zu unreadable)\n", shapes.size(), bad);
+            out.info("bone shapes    {:d} ({:d} unreadable)", shapes.size(), bad);
             for (const auto& item : shapes)
             {
                 const std::string name(item.name);
                 if (!item.shape)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& sh = *item.shape;
                 std::size_t untextured = 0;
                 for (const auto& m : sh.meshes)
                     untextured += m.texture.empty();
-                std::printf("  %-32s meshes %zu vertices %u indices %u bones %zu untextured %zu\n", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
+                out.info("  {:<32} meshes {:d} vertices {:d} indices {:d} bones {:d} untextured {:d}", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
                 for (const auto& b : sh.bones)
-                    std::printf("    bone %-24s parent %d at %g %g %g\n", std::string(b.name).c_str(), b.parent, b.world[12], b.world[13], b.world[14]);
+                    out.info("    bone {:<24} parent {:d} at {:g} {:g} {:g}", std::string(b.name).c_str(), b.parent, b.world[12], b.world[13], b.world[14]);
             }
         }
         if (opt.flt)
         {
             const auto floats = rct3::ovl::read_floats(overlay, part);
-            std::printf("float values   %zu\n", floats.size());
+            out.info("float values   {:d}", floats.size());
             for (const auto& item : floats)
             {
-                std::printf("  %-32s %g\n", std::string(item.name).c_str(), item.value);
+                out.info("  {:<32} {:g}", std::string(item.name).c_str(), item.value);
             }
         }
         if (opt.int_values)
         {
             const auto values = rct3::ovl::read_integers(overlay, part);
-            std::printf("integer values %zu\n", values.size());
+            out.info("integer values {:d}", values.size());
             for (const auto& item : values)
             {
-                std::printf("  %-32s %d\n", std::string(item.name).c_str(), item.value);
+                out.info("  {:<32} {:d}", std::string(item.name).c_str(), item.value);
             }
         }
         if (opt.spl)
@@ -361,18 +369,18 @@ namespace
                 if (!item.spline)
                     ++bad;
             }
-            std::printf("splines        %zu (%zu unreadable)\n", splines.size(), bad);
+            out.info("splines        {:d} ({:d} unreadable)", splines.size(), bad);
             for (const auto& item : splines)
             {
                 const std::string name(item.name);
                 if (!item.spline)
                 {
-                    std::printf("  %-32s <unreadable>\n", name.c_str());
+                    out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s nodes %zu length %g%s\n", name.c_str(), item.spline->nodes.size(), item.spline->length, item.spline->closed ? " closed" : "");
+                out.info("  {:<32} nodes {:d} length {:g}{}", name.c_str(), item.spline->nodes.size(), item.spline->length, item.spline->closed ? " closed" : "");
                 for (const auto& node : item.spline->nodes)
-                    std::printf("    node %g %g %g in %g %g %g out %g %g %g\n", node.position[0], node.position[1], node.position[2], node.tangent_in[0], node.tangent_in[1], node.tangent_in[2], node.tangent_out[0], node.tangent_out[1], node.tangent_out[2]);
+                    out.info("    node {:g} {:g} {:g} in {:g} {:g} {:g} out {:g} {:g} {:g}", node.position[0], node.position[1], node.position[2], node.tangent_in[0], node.tangent_in[1], node.tangent_in[2], node.tangent_out[0], node.tangent_out[1], node.tangent_out[2]);
             }
         }
         if (opt.san)
@@ -384,16 +392,16 @@ namespace
                 if (!item.anim)
                     ++bad;
             }
-            std::printf("simple anims   %zu (%zu unreadable)\n", anims.size(), bad);
+            out.info("simple anims   {:d} ({:d} unreadable)", anims.size(), bad);
             for (const auto& item : anims)
             {
                 const std::string name(item.name);
                 if (!item.anim)
                 {
-                    std::printf("  %-32s <unreadable>\n", name.c_str());
+                    out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s keys %zu channels %u\n", name.c_str(), item.anim->times.size(), item.anim->channels);
+                out.info("  {:<32} keys {:d} channels {:d}", name.c_str(), item.anim->times.size(), item.anim->channels);
             }
         }
         if (opt.modelanim)
@@ -405,16 +413,16 @@ namespace
                 if (!item.anim)
                     ++bad;
             }
-            std::printf("model anims    %zu (%zu unreadable)\n", anims.size(), bad);
+            out.info("model anims    {:d} ({:d} unreadable)", anims.size(), bad);
             for (const auto& item : anims)
             {
                 const std::string name(item.name);
                 if (!item.anim)
                 {
-                    std::printf("  %-32s <unreadable>\n", name.c_str());
+                    out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s frames %u duration %g moving %zu turning %zu\n", name.c_str(), item.anim->frame_count, item.anim->duration, item.anim->position_bones.size(), item.anim->rotation_bones.size());
+                out.info("  {:<32} frames {:d} duration {:g} moving {:d} turning {:d}", name.c_str(), item.anim->frame_count, item.anim->duration, item.anim->position_bones.size(), item.anim->rotation_bones.size());
             }
         }
         if (opt.ssk)
@@ -426,13 +434,13 @@ namespace
                 if (!item.skin)
                     ++bad;
             }
-            std::printf("simple skins   %zu (%zu unreadable)\n", skins.size(), bad);
+            out.info("simple skins   {:d} ({:d} unreadable)", skins.size(), bad);
             for (const auto& item : skins)
             {
                 const std::string name(item.name);
                 if (!item.skin)
                 {
-                    std::printf("  %-32s <unreadable>\n", name.c_str());
+                    out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
                 std::size_t outside = 0;
@@ -441,7 +449,7 @@ namespace
                     if (index >= item.skin->vertices.size())
                         ++outside;
                 }
-                std::printf("  %-32s parts %zu vertices %zu triangles %zu outside %zu\n", name.c_str(), item.skin->part_ids.size(), item.skin->vertices.size(), item.skin->indices.size() / 3, outside);
+                out.info("  {:<32} parts {:d} vertices {:d} triangles {:d} outside {:d}", name.c_str(), item.skin->part_ids.size(), item.skin->vertices.size(), item.skin->indices.size() / 3, outside);
             }
         }
         if (opt.mam)
@@ -453,16 +461,16 @@ namespace
                 if (!item.mesh)
                     ++bad;
             }
-            std::printf("manifold meshes %zu (%zu unreadable)\n", meshes.size(), bad);
+            out.info("manifold meshes {:d} ({:d} unreadable)", meshes.size(), bad);
             for (const auto& item : meshes)
             {
                 const std::string name(item.name);
                 if (!item.mesh)
                 {
-                    std::printf("  %-32s <unreadable>\n", name.c_str());
+                    out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s vertices %zu triangles %zu\n", name.c_str(), item.mesh->vertices.size(), item.mesh->indices.size() / 3);
+                out.info("  {:<32} vertices {:d} triangles {:d}", name.c_str(), item.mesh->vertices.size(), item.mesh->indices.size() / 3);
             }
         }
         if (opt.tks)
@@ -471,19 +479,19 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.section;
-            std::printf("track sections %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("track sections {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.section)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& s = *item.section;
-                std::printf("  %-32s sid %-24s splines %s %s %s %s extra %s %s refs %zu\n", name.c_str(), std::string(s.scenery_item).c_str(), std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.extra_splines[0].empty() ? "-" : std::string(s.extra_splines[0]).c_str(), s.extra_splines[1].empty() ? "-" : std::string(s.extra_splines[1]).c_str(), s.references.size());
+                out.info("  {:<32} sid {:<24} splines {} {} {} {} extra {} {} refs {:d}", name.c_str(), std::string(s.scenery_item).c_str(), std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.extra_splines[0].empty() ? "-" : std::string(s.extra_splines[0]).c_str(), s.extra_splines[1].empty() ? "-" : std::string(s.extra_splines[1]).c_str(), s.references.size());
                 for (const auto& r : s.references)
-                    std::printf("    +0x%02x %s:%s\n", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
+                    out.info("    +0x{:02x} {}:{}", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
             }
         }
         if (opt.ric)
@@ -492,18 +500,18 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.car;
-            std::printf("ride cars      %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("ride cars      {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.car)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s kind %u visual %s refs %zu\n", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size());
+                out.info("  {:<32} kind {:d} visual {} refs {:d}", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size());
                 for (const auto& ref : item.car->references)
-                    std::printf("    ref +%u %s:%s\n", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
+                    out.info("    ref +{:d} {}:{}", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
             }
         }
         if (opt.rit)
@@ -512,22 +520,22 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.train;
-            std::printf("ride trains    %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("ride trains    {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.train)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
-                std::printf("  %-32s cars", name.c_str());
+                std::string line = std::format("  {:<32} cars", name);
                 for (const auto car : item.train->cars)
                 {
                     if (!car.empty())
-                        std::printf(" %s", std::string(car).c_str());
+                        line += std::format(" {}", car);
                 }
-                std::printf("\n");
+                out.info("{}", line);
             }
         }
         if (opt.trr)
@@ -536,24 +544,24 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.ride;
-            std::printf("tracked rides  %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("tracked rides  {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.ride)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& r = *item.ride;
-                std::printf("  %-32s type %u name %s text %s splines %s sections %s\n", name.c_str(), r.info.type_id, std::string(r.name).c_str(), std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
+                out.info("  {:<32} type {:d} name {} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.name).c_str(), std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 if (const auto& d = r.operating)
-                    std::printf("    mode %u allowed 0x%x launch %g [%g, %g] lift %g [%g, %g] brake %g block %g fixed %g cost %d\n", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->block_brake_speed, d->fixed_speed.value_or(-1), d->cost);
+                    out.info("    mode {:d} allowed 0x{:x} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} block {:g} fixed {:g} cost {:d}", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->block_brake_speed, d->fixed_speed.value_or(-1), d->cost);
                 if (const auto& d = r.operating)
                     for (const std::string_view train : d->trains)
-                        std::printf("    train %.*s\n", static_cast<int>(train.size()), train.data());
+                        out.info("    train {}", train);
                 if (const auto& d = r.operating)
-                    std::printf("    platform %.*s\n", static_cast<int>(d->platform.size()), d->platform.data());
+                    out.info("    platform {}", d->platform);
             }
         }
         if (opt.anr)
@@ -562,17 +570,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.ride;
-            std::printf("animated rides %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("animated rides {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.ride)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& i = item.ride->info;
-                std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
             }
         }
         if (opt.sta)
@@ -581,17 +589,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.stall;
-            std::printf("stalls         %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("stalls         {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.stall)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& i = item.stall->info;
-                std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
             }
         }
         if (opt.sat)
@@ -600,17 +608,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& item : items)
                 bad += !item.attraction;
-            std::printf("special attrs  %zu (%zu unreadable)\n", items.size(), bad);
+            out.info("special attrs  {:d} ({:d} unreadable)", items.size(), bad);
             for (const auto& item : items)
             {
                 const std::string name(item.name);
                 if (!item.attraction)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& i = item.attraction->info;
-                std::printf("  %-32s type %u text %s icon %s sid %s\n", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
             }
         }
         if (opt.btbl)
@@ -622,18 +630,18 @@ namespace
                 if (!item.table)
                     ++bad;
             }
-            std::printf("bitmap tables  %zu (%zu unreadable)\n", tables.size(), bad);
+            out.info("bitmap tables  {:d} ({:d} unreadable)", tables.size(), bad);
             for (const auto& item : tables)
             {
                 if (!item.table)
                 {
-                    std::printf("  row %zu <unreadable>\n", item.row);
+                    out.info("  row {:d} <unreadable>", item.row);
                     continue;
                 }
                 std::size_t bytes = 0;
                 for (const auto& b : item.table->bitmaps)
                     bytes += b.data.size();
-                std::printf("  row %-6zu bitmaps %zu bytes %zu\n", item.row, item.table->bitmaps.size(), bytes);
+                out.info("  row {:<6d} bitmaps {:d} bytes {:d}", item.row, item.table->bitmaps.size(), bytes);
             }
         }
         if (opt.gsi)
@@ -645,17 +653,17 @@ namespace
                 if (!item.skin)
                     ++bad;
             }
-            std::printf("gui skins      %zu (%zu unreadable)\n", skins.size(), bad);
+            out.info("gui skins      {:d} ({:d} unreadable)", skins.size(), bad);
             for (const auto& item : skins)
             {
                 const std::string name(item.name);
                 if (!item.skin)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& s = *item.skin;
-                std::printf("  %-40s kind %u values %zu texture %s\n", name.c_str(), s.kind, s.coordinates.size(), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+                out.info("  {:<40} kind {:d} values {:d} texture {}", name.c_str(), s.kind, s.coordinates.size(), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
             }
         }
         if (opt.psi)
@@ -665,11 +673,11 @@ namespace
                 const std::string name(item.name);
                 if (!item.skin)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& s = *item.skin;
-                std::printf("  %-24s frames %-3zu %s %s loop %.2f texture %s\n", name.c_str(), s.frames.size(), s.blended ? "blended " : "additive", s.animated ? "animated" : "single  ", static_cast<double>(s.loop_time), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+                out.info("  {:<24} frames {:<3d} {} {} loop {:.2f} texture {}", name.c_str(), s.frames.size(), s.blended ? "blended " : "additive", s.animated ? "animated" : "single  ", static_cast<double>(s.loop_time), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
             }
         }
         if (opt.tex)
@@ -681,18 +689,18 @@ namespace
                 if (!item.texture)
                     ++bad;
             }
-            std::printf("textures       %zu (%zu unreadable)\n", textures.size(), bad);
+            out.info("textures       {:d} ({:d} unreadable)", textures.size(), bad);
             for (const auto& item : textures)
             {
                 const std::string name(item.name);
                 if (!item.texture)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& t = *item.texture;
                 const std::string style(t.style);
-                std::printf("  %-32s style %-24s params %u %u %u first %u count %u node %s\n", name.c_str(), style.c_str(), t.parameters[0], t.parameters[1], t.parameters[2], t.first, t.count, t.node ? "yes" : "no");
+                out.info("  {:<32} style {:<24} params {:d} {:d} {:d} first {:d} count {:d} node {}", name.c_str(), style.c_str(), t.parameters[0], t.parameters[1], t.parameters[2], t.first, t.count, t.node ? "yes" : "no");
             }
         }
         if (opt.fct)
@@ -704,17 +712,17 @@ namespace
                 if (!item.font)
                     ++bad;
             }
-            std::printf("fonts          %zu (%zu unreadable)\n", fonts.size(), bad);
+            out.info("fonts          {:d} ({:d} unreadable)", fonts.size(), bad);
             for (const auto& item : fonts)
             {
                 const std::string name(item.name);
                 if (!item.font)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& f = *item.font;
-                std::printf("  %-28s face %-20s texture %-24s weight %u glyphs %zu\n", name.c_str(), std::string(f.face).c_str(), std::string(f.texture).c_str(), f.weight, f.glyphs.size());
+                out.info("  {:<28} face {:<20} texture {:<24} weight {:d} glyphs {:d}", name.c_str(), std::string(f.face).c_str(), std::string(f.texture).c_str(), f.weight, f.glyphs.size());
             }
         }
         if (opt.flic)
@@ -726,21 +734,21 @@ namespace
                 if (!item.flic)
                     ++bad;
             }
-            std::printf("flics          %zu (%zu unreadable)\n", flics.size(), bad);
+            out.info("flics          {:d} ({:d} unreadable)", flics.size(), bad);
             for (const auto& item : flics)
             {
                 if (!item.flic)
                 {
-                    std::printf("  %08x <unreadable>\n", item.address);
+                    out.info("  {:08x} <unreadable>", item.address);
                     continue;
                 }
                 const auto& f = *item.flic;
-                std::printf("  %08x rev %u frames %u rate %g data %zu", item.address, f.revision, f.frame_count, f.rate, f.data.size());
+                std::string line = std::format("  {:08x} rev {:d} frames {:d} rate {:g} data {:d}", item.address, f.revision, f.frame_count, f.rate, f.data.size());
                 if (f.image)
                 {
-                    std::printf(" image %ux%u format %u levels %u", f.image->width, f.image->height, f.image->format, f.image->level_count);
+                    line += std::format(" image {:d}x{:d} format {:d} levels {:d}", f.image->width, f.image->height, f.image->format, f.image->level_count);
                 }
-                std::printf("\n");
+                out.info("{}", line);
             }
         }
         if (opt.sound)
@@ -755,17 +763,17 @@ namespace
                 else if (!item.info->samples)
                     ++no_samples;
             }
-            std::printf("sounds         %zu (%zu unreadable, %zu without samples)\n", sounds.size(), bad, no_samples);
+            out.info("sounds         {:d} ({:d} unreadable, {:d} without samples)", sounds.size(), bad, no_samples);
             for (const auto& item : sounds)
             {
                 const std::string name(item.name);
                 if (!item.info)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& s = *item.info;
-                std::printf("  %-32s fmt %u ch %u rate %u bits %u size %u addr %08x flag %u\n", name.c_str(), s.format_tag, s.channels, s.sample_rate, s.bits_per_sample, s.data_size, s.data_address, s.flag);
+                out.info("  {:<32} fmt {:d} ch {:d} rate {:d} bits {:d} size {:d} addr {:08x} flag {:d}", name.c_str(), s.format_tag, s.channels, s.sample_rate, s.bits_per_sample, s.data_size, s.data_address, s.flag);
             }
         }
         if (opt.text)
@@ -777,7 +785,7 @@ namespace
                 if (!item.value)
                     ++bad;
             }
-            std::printf("texts          %zu (%zu unreadable)\n", texts.size(), bad);
+            out.info("texts          {:d} ({:d} unreadable)", texts.size(), bad);
             for (const auto& item : texts)
             {
                 const std::string name(item.name);
@@ -787,10 +795,10 @@ namespace
                     std::string text;
                     for (const char c : rct3::strings::to_utf8(*item.value))
                         text += c == '\n' ? "\\n" : c == '\r' ? "\\r" : c == '\t' ? "\\t" : c == '\\' ? "\\\\" : std::string(1, c);
-                    std::printf("  %s = %s\n", name.c_str(), text.c_str());
+                    out.info("  {} = {}", name.c_str(), text.c_str());
                 }
                 else
-                    std::printf("  %s = <unreadable>\n", name.c_str());
+                    out.info("  {} = <unreadable>", name.c_str());
             }
         }
         if (opt.loaders)
@@ -798,7 +806,7 @@ namespace
             for (std::size_t i = 0; i < part.loaders.entries.size(); ++i)
             {
                 const auto& e = part.loaders.entries[i];
-                std::printf("  type %-3u data %08x symbol %08x resolve %-3u chunks %zu\n", e.loader_type, e.data, e.symbol_address, e.symbols_to_resolve, part.loaders.extra[i].size());
+                out.info("  type {:<3d} data {:08x} symbol {:08x} resolve {:<3d} chunks {:d}", e.loader_type, e.data, e.symbol_address, e.symbols_to_resolve, part.loaders.extra[i].size());
             }
         }
     }
@@ -858,18 +866,18 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : items)
                 bad += entry.item ? 0 : 1;
-            std::printf("carried items (%s) %zu (%zu unreadable)\n", title, items.size(), bad);
+            out.info("carried items ({}) {:d} ({:d} unreadable)", title, items.size(), bad);
             for (const auto& entry : items)
             {
                 const std::string name(entry.name);
                 if (!entry.item)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& it = *entry.item;
                 const std::string text(it.name_text), remains(it.remains);
-                std::printf("  %-28s flags %08x extras %zu text %s remains '%s'\n", name.c_str(), it.flags, it.extras.size(), text.c_str(), remains.c_str());
+                out.info("  {:<28} flags {:08x} extras {:d} text {} remains '{}'", name.c_str(), it.flags, it.extras.size(), text.c_str(), remains.c_str());
             }
         }
         if (g_scenery.ced)
@@ -878,17 +886,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : extras)
                 bad += entry.extra ? 0 : 1;
-            std::printf("carried item extras (%s) %zu (%zu unreadable)\n", title, extras.size(), bad);
+            out.info("carried item extras ({}) {:d} ({:d} unreadable)", title, extras.size(), bad);
             for (const auto& entry : extras)
             {
                 const std::string name(entry.name);
                 if (!entry.extra)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.extra->name_text), icon(entry.extra->icon);
-                std::printf("  %-28s text %s icon %s\n", name.c_str(), text.c_str(), icon.c_str());
+                out.info("  {:<28} text {} icon {}", name.c_str(), text.c_str(), icon.c_str());
             }
         }
     }
@@ -901,18 +909,18 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : categories)
                 bad += entry.category ? 0 : 1;
-            std::printf("research categories (%s) %zu (%zu unreadable)\n", title, categories.size(), bad);
+            out.info("research categories ({}) {:d} ({:d} unreadable)", title, categories.size(), bad);
             for (const auto& entry : categories)
             {
                 const std::string name(entry.name);
                 if (!entry.category)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& c = *entry.category;
                 const std::string text(c.name_text);
-                std::printf("  %-28s kind %u prerequisites %zu text %s\n", name.c_str(), c.kind, c.prerequisites.size(), text.c_str());
+                out.info("  {:<28} kind {:d} prerequisites {:d} text {}", name.c_str(), c.kind, c.prerequisites.size(), text.c_str());
             }
         }
         if (g_scenery.ter)
@@ -921,17 +929,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : types)
                 bad += entry.terrain ? 0 : 1;
-            std::printf("terrain types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+            out.info("terrain types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
             for (const auto& entry : types)
             {
                 const std::string name(entry.name);
                 if (!entry.terrain)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string texture(entry.terrain->texture), label(entry.terrain->label_name);
-                std::printf("  %-28s index %u texture %s label %s\n", name.c_str(), entry.terrain->index, texture.c_str(), label.c_str());
+                out.info("  {:<28} index {:d} texture {} label {}", name.c_str(), entry.terrain->index, texture.c_str(), label.c_str());
             }
         }
     }
@@ -942,7 +950,7 @@ namespace
         for (const auto& it : items)
         {
             const std::string text(it.name_text), group(it.group);
-            std::printf("    item v%u type %u flags %08x squares %ux%u visuals %zu text %s group %s\n", it.version, it.type, it.flags, it.x_squares, it.z_squares, it.visuals.size(), text.c_str(), group.c_str());
+            out.info("    item v{:d} type {:d} flags {:08x} squares {:d}x{:d} visuals {:d} text {} group {}", it.version, it.type, it.flags, it.x_squares, it.z_squares, it.visuals.size(), text.c_str(), group.c_str());
         }
     }
 
@@ -954,21 +962,21 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : types)
                 bad += entry.path ? 0 : 1;
-            std::printf("path types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+            out.info("path types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
             for (const auto& entry : types)
             {
                 const std::string name(entry.name);
                 if (!entry.path)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.path->name_text);
-                std::printf("  %-20s header %08x names %zu research %zu items %zu text %s\n", name.c_str(), entry.path->header_word, entry.path->piece_names.size(), entry.path->research.size(), entry.path->items.size(), text.c_str());
-                std::printf("    names");
+                out.info("  {:<20} header {:08x} names {:d} research {:d} items {:d} text {}", name.c_str(), entry.path->header_word, entry.path->piece_names.size(), entry.path->research.size(), entry.path->items.size(), text.c_str());
+                std::string line = "    names";
                 for (const std::string_view n : entry.path->piece_names)
-                    std::printf(" %.*s", static_cast<int>(n.size()), n.empty() ? "-" : n.data());
-                std::printf("\n");
+                    line += std::format(" {}", n);
+                out.info("{}", line);
                 print_piece_items(entry.path->items);
             }
         }
@@ -978,21 +986,21 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : types)
                 bad += entry.queue ? 0 : 1;
-            std::printf("queue types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+            out.info("queue types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
             for (const auto& entry : types)
             {
                 const std::string name(entry.name);
                 if (!entry.queue)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.queue->name_text), ground(entry.queue->ground);
-                std::printf("  %-20s research %zu items %zu text %s ground %s\n", name.c_str(), entry.queue->research.size(), entry.queue->items.size(), text.c_str(), ground.c_str());
-                std::printf("    names");
+                out.info("  {:<20} research {:d} items {:d} text {} ground {}", name.c_str(), entry.queue->research.size(), entry.queue->items.size(), text.c_str(), ground.c_str());
+                std::string line = "    names";
                 for (const std::string_view n : entry.queue->piece_names)
-                    std::printf(" %.*s", static_cast<int>(n.size()), n.empty() ? "-" : n.data());
-                std::printf("\n");
+                    line += std::format(" {}", n);
+                out.info("{}", line);
                 print_piece_items(entry.queue->items);
             }
         }
@@ -1002,17 +1010,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : types)
                 bad += entry.pool ? 0 : 1;
-            std::printf("pool types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+            out.info("pool types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
             for (const auto& entry : types)
             {
                 const std::string name(entry.name);
                 if (!entry.pool)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.pool->name_text);
-                std::printf("  %-20s names %zu splines %zu items %zu text %s\n", name.c_str(), entry.pool->piece_names.size(), entry.pool->splines.size(), entry.pool->items.size(), text.c_str());
+                out.info("  {:<20} names {:d} splines {:d} items {:d} text {}", name.c_str(), entry.pool->piece_names.size(), entry.pool->splines.size(), entry.pool->items.size(), text.c_str());
                 print_piece_items(entry.pool->items);
             }
         }
@@ -1022,17 +1030,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : types)
                 bad += entry.enclosure ? 0 : 1;
-            std::printf("enclosure types (%s) %zu (%zu unreadable)\n", title, types.size(), bad);
+            out.info("enclosure types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
             for (const auto& entry : types)
             {
                 const std::string name(entry.name);
                 if (!entry.enclosure)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.enclosure->name_text);
-                std::printf("  %-20s items %zu text %s\n", name.c_str(), entry.enclosure->items.size(), text.c_str());
+                out.info("  {:<20} items {:d} text {}", name.c_str(), entry.enclosure->items.size(), text.c_str());
                 print_piece_items(entry.enclosure->items);
             }
         }
@@ -1046,17 +1054,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : rooms)
                 bad += entry.room ? 0 : 1;
-            std::printf("changing rooms (%s) %zu (%zu unreadable)\n", title, rooms.size(), bad);
+            out.info("changing rooms ({}) {:d} ({:d} unreadable)", title, rooms.size(), bad);
             for (const auto& entry : rooms)
             {
                 const std::string name(entry.name);
                 if (!entry.room)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string item(entry.room->scenery_item), text(entry.room->name_text);
-                std::printf("  %-20s item %s text %s\n", name.c_str(), item.c_str(), text.c_str());
+                out.info("  {:<20} item {} text {}", name.c_str(), item.c_str(), text.c_str());
             }
         }
         if (g_scenery.vwg)
@@ -1065,17 +1073,17 @@ namespace
             std::size_t bad = 0;
             for (const auto& entry : galleries)
                 bad += entry.gallery ? 0 : 1;
-            std::printf("viewing galleries (%s) %zu (%zu unreadable)\n", title, galleries.size(), bad);
+            out.info("viewing galleries ({}) {:d} ({:d} unreadable)", title, galleries.size(), bad);
             for (const auto& entry : galleries)
             {
                 const std::string name(entry.name);
                 if (!entry.gallery)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const std::string text(entry.gallery->name_text);
-                std::printf("  %-20s text %s\n", name.c_str(), text.c_str());
+                out.info("  {:<20} text {}", name.c_str(), text.c_str());
             }
         }
     }
@@ -1095,13 +1103,13 @@ namespace
                 if (!item.item)
                     ++bad;
             }
-            std::printf("scenery items (%s) %zu (%zu unreadable)\n", title, items.size(), bad);
+            out.info("scenery items ({}) {:d} ({:d} unreadable)", title, items.size(), bad);
             for (const auto& entry : items)
             {
                 const std::string name(entry.name);
                 if (!entry.item)
                 {
-                    std::printf("  %s <unreadable>\n", name.c_str());
+                    out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
                 const auto& it = *entry.item;
@@ -1112,14 +1120,14 @@ namespace
                     if (sq.height_masks.empty())
                         ++without_masks;
                 }
-                std::printf(
-                    "  %-32s v%u%s type %u positioning %u flags %08x squares %ux%u (%zu without masks) masks %zu cost %d visuals %zu "
-                    "sounds %zu params %zu nodes %zu\n",
+                out.info(
+                    "  {:<32} v{:d}{} type {:d} positioning {:d} flags {:08x} squares {:d}x{:d} ({:d} without masks) masks {:d} cost {:d} visuals {:d} "
+                    "sounds {:d} params {:d} nodes {:d}",
                     name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<unsigned>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
                 for (const auto& sq : it.squares)
-                    std::printf("    square flags %03x levels %d..%d\n", sq.flags, sq.min_height, sq.max_height);
+                    out.info("    square flags {:03x} levels {:d}..{:d}", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)
-                    std::printf("    param %.*s = %.*s\n", static_cast<int>(p.name.size()), p.name.data(), static_cast<int>(p.value.size()), p.value.data());
+                    out.info("    param {} = {}", p.name, p.value);
             }
         }
     }
@@ -1212,11 +1220,11 @@ namespace
                 ++by_format[item.flic->image->format];
             save_levels(levels, std::format("flic{}", item.address));
         }
-        std::printf("tex export     %s: frames %zu (%zu failed) bitmaps %zu (%zu failed) flics %zu (%zu failed) images %zu\n", title, frames, frames_bad, bitmaps, bitmaps_bad, flics, flics_bad, images);
+        out.info("tex export     {}: frames {:d} ({:d} failed) bitmaps {:d} ({:d} failed) flics {:d} ({:d} failed) images {:d}", title, frames, frames_bad, bitmaps, bitmaps_bad, flics, flics_bad, images);
         for (std::size_t f = 0; f < 32; ++f)
         {
             if (by_format[f])
-                std::printf("tex format     %s: %zu x format %zu\n", title, by_format[f], f);
+                out.info("tex format     {}: {:d} x format {:d}", title, by_format[f], f);
         }
     }
     // --- end texture decoding export ---
@@ -1260,7 +1268,7 @@ namespace
             if (!item.shape)
             {
                 ++failed;
-                std::fprintf(stderr, "  %s <unreadable static shape>\n", std::string(item.name).c_str());
+                out.error("  {} <unreadable static shape>", std::string(item.name).c_str());
                 continue;
             }
             if (export_mesh(dir, prefix, item.name, "shs", rct3::ovl::mesh_from_static_shape(*item.shape)))
@@ -1273,7 +1281,7 @@ namespace
             if (!item.shape)
             {
                 ++failed;
-                std::fprintf(stderr, "  %s <unreadable bone shape>\n", std::string(item.name).c_str());
+                out.error("  {} <unreadable bone shape>", std::string(item.name).c_str());
                 continue;
             }
             if (export_mesh(dir, prefix, item.name, "bsh", rct3::ovl::mesh_from_bone_shape(*item.shape)))
@@ -1289,6 +1297,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     Options opt;
     const char* path = nullptr;
     const char* obj_dir = nullptr; // mesh export directory
@@ -1368,15 +1377,15 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: %s [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH\n", argv[0]);
-        std::fprintf(stderr, "scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]\n");
+        out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
+        out.error("scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]");
         return 2;
     }
 
     auto overlay = rct3::ovl::Overlay::load(path);
     if (!overlay)
     {
-        std::fprintf(stderr, "%s: %s\n", path, rct3::ovl::to_string(overlay.error()));
+        out.error("{}: {}", path, rct3::ovl::to_string(overlay.error()));
         return 1;
     }
 
@@ -1391,7 +1400,7 @@ int main(int argc, char** argv)
     if (const auto unique = overlay->unique())
         print_part("unique", *overlay, *unique, opt);
     else
-        std::printf("== unique\n(none)\n");
+        out.info("== unique\n(none)");
     if (g_tex_export_dir)
     {
         export_textures("common", *overlay, overlay->common());
@@ -1408,7 +1417,7 @@ int main(int argc, char** argv)
         std::filesystem::create_directories(obj_dir, ec);
         if (ec)
         {
-            std::fprintf(stderr, "%s: %s\n", obj_dir, ec.message().c_str());
+            out.error("{}: {}", obj_dir, ec.message().c_str());
             return 1;
         }
         const std::string prefix = std::filesystem::path(path).filename().string();
@@ -1426,7 +1435,7 @@ int main(int argc, char** argv)
         bool ok = export_part_meshes(obj_dir, std::format("{}_c", stem), *overlay, overlay->common(), written, failed);
         if (const auto unique = overlay->unique())
             ok = export_part_meshes(obj_dir, std::format("{}_u", stem), *overlay, *unique, written, failed) && ok;
-        std::printf("exported meshes %zu (%zu failed)\n", written, failed);
+        out.info("exported meshes {:d} ({:d} failed)", written, failed);
         if (!ok || failed != 0)
             return 1;
     }

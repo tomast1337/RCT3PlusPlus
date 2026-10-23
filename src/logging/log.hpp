@@ -62,6 +62,8 @@ namespace rct3::logging
         std::size_t memory_capacity = 1000;
         bool console_enabled = true;
         ColorMode color = ColorMode::Auto;
+        /// Console lines carry the message alone, as a command-line tool's report wants; the file keeps all.
+        bool plain = false;
     };
 
     class Log;

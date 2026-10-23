@@ -10,6 +10,7 @@
 // their timing from their models, so they come over only with --game, the game's folder.
 #include "config/game_install.hpp"
 #include "logging/crash.hpp"
+#include "logging/log.hpp"
 #include "park/asset_index.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/item_category.hpp"
@@ -57,6 +58,12 @@
 
 namespace
 {
+    // Reports go out as plain lines, problems to standard error.
+    const rct3::logging::Logger out = rct3::logging::logger("sim-run");
+} // namespace
+
+namespace
+{
     /// How many rides are down with each kind of breakdown, as "kind:count ...".
     std::string breakdown_kinds(const entt::registry& r)
     {
@@ -73,6 +80,7 @@ namespace
 
 int main(int argc, char** argv)
 {
+    rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     using namespace rct3;
     logging::install_crash_report();
     const char* path = nullptr;
@@ -107,20 +115,20 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        std::fprintf(stderr, "usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]\n");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
     const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     if (!in && raw.empty())
     {
-        std::fprintf(stderr, "%s: cannot read\n", path);
+        out.error("{}: cannot read", path);
         return 1;
     }
     const auto file = save::read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
     if (!file)
     {
-        std::fprintf(stderr, "%s: %s\n", path, save::to_string(file.error()));
+        out.error("{}: {}", path, save::to_string(file.error()));
         return 1;
     }
     const save::ObjectIndex index(*file);
@@ -129,7 +137,7 @@ int main(int argc, char** argv)
     const auto rides = save::load_rides(*file, index);
     if (!people || !world_model || !rides)
     {
-        std::fprintf(stderr, "%s: cannot load people, world or rides\n", path);
+        out.error("{}: cannot load people, world or rides", path);
         return 1;
     }
 
@@ -150,7 +158,7 @@ int main(int argc, char** argv)
         const auto install = config::open_game_install(game);
         if (!install)
         {
-            std::fprintf(stderr, "%s: not the game's folder\n", game);
+            out.error("{}: not the game's folder", game);
             return 1;
         }
         // The folders the park's objects come from, as the game's folder spells them, and the overlays those
@@ -202,7 +210,7 @@ int main(int argc, char** argv)
                 if (auto model = loader.load(o.symbol, o.overlay))
                     piece_models.emplace(park::model_key(o), std::move(*model));
         const std::size_t roofed = simulation::import_cover(world, [&](std::span<const glm::vec3> points) { return park::overheads(points, world_model->objects, piece_models, world_model->terrain, { }); });
-        std::printf("paths under a roof %zu, in the shade %zu of %zu\n", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
+        out.info("paths under a roof {:d}, in the shade {:d} of {:d}", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
         std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
@@ -228,22 +236,22 @@ int main(int argc, char** argv)
                         worst = std::max(worst, glm::distance(park::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
                         ++cars;
                     }
-            std::printf("course %s closed %d: %.1f m (lap tested %.1f m), %zu points; %zu cars, farthest %.2f m off\n", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));
+            out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));
             coasters[index] = simulation::coaster_of(*course, ride);
             courses[index] = *course;
             const auto lap = coasters[index] ? simulation::lap_seconds(*coasters[index]) : std::nullopt;
             if (ride.stats.last_lap)
             {
                 const simulation::Ratings ours = simulation::rate(simulation::builtin_rating_model(), ride.base.symbol, *ride.stats.last_lap);
-                std::printf("  rated %.1f/%.1f/%.1f from its test, saved %.1f/%.1f/%.1f\n", static_cast<double>(ours.excitement), static_cast<double>(ours.intensity), static_cast<double>(ours.nausea), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea));
+                out.info("  rated {:.1f}/{:.1f}/{:.1f} from its test, saved {:.1f}/{:.1f}/{:.1f}", static_cast<double>(ours.excitement), static_cast<double>(ours.intensity), static_cast<double>(ours.nausea), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea));
             }
-            std::printf(
-                "  lap %.1f s (tested %.1f s); train %.1f m mass %.0f friction %.3f / %.3f\n", static_cast<double>(lap.value_or(-1)), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0), static_cast<double>(coasters[index] ? coasters[index]->train_length : 0), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].mass), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].static_friction),
+            out.info(
+                "  lap {:.1f} s (tested {:.1f} s); train {:.1f} m mass {:.0f} friction {:.3f} / {:.3f}", static_cast<double>(lap.value_or(-1)), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0), static_cast<double>(coasters[index] ? coasters[index]->train_length : 0), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].mass), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].static_friction),
                 static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].dynamic_friction));
         }
         for (std::size_t i = 0; i < timings.size(); ++i)
             if (timings[i])
-                std::printf("flat ride %s: %u seats, %.1f s\n", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->start + static_cast<float>(timings[i]->loops) * timings[i]->run + timings[i]->stop));
+                out.info("flat ride {}: {:d} seats, {:.1f} s", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->start + static_cast<float>(timings[i]->loops) * timings[i]->run + timings[i]->stop));
     }
     const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
     simulation::import_boats(world, *rides, ride_entities, courses, world_model->terrain, world_model->water.bodies);
@@ -256,7 +264,7 @@ int main(int argc, char** argv)
                 gaps.push_back(std::abs(world.paths.centre(*at).y - pose.position.y));
         std::ranges::sort(gaps);
         if (!gaps.empty())
-            std::printf("height gap to saved guests: median %.3f, 90%% %.3f, max %.3f\n", gaps[gaps.size() / 2], gaps[gaps.size() * 9 / 10], gaps.back());
+            out.info("height gap to saved guests: median {:.3f}, 90% {:.3f}, max {:.3f}", gaps[gaps.size() / 2], gaps[gaps.size() * 9 / 10], gaps.back());
     }
     const std::size_t walking = simulation::start_guests(world);
     const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
@@ -276,7 +284,7 @@ int main(int argc, char** argv)
     const bool gate = simulation::import_gate(world, world_model->objects, [&](const save::PlacedObject& o) { return gates.contains(o.id); }) != entt::null;
     if (park_model && park_model->group_mix)
         simulation::import_party_mix(world, *park_model->group_mix);
-    std::printf("facilities %zu  sights %zu  gate %s\n", facilities, sight_count, gate ? "yes" : "none");
+    out.info("facilities {:d}  sights {:d}  gate {}", facilities, sight_count, gate ? "yes" : "none");
     // The park's time of day, as its file left it, run through every hour.
     simulation::DayWindow hours;
     if (park_model && park_model->has_park)
@@ -312,7 +320,7 @@ int main(int argc, char** argv)
         {
             using enum simulation::AgeGroup;
             rated /= static_cast<float>(coasters);
-            std::printf("coasters' excitement: by day %.2f; at night %.2f to teens, %.2f to families\n", static_cast<double>(rated), static_cast<double>(simulation::felt_excitement(rated, true, Teen, true)), static_cast<double>(simulation::felt_excitement(rated, true, Adult, true)));
+            out.info("coasters' excitement: by day {:.2f}; at night {:.2f} to teens, {:.2f} to families", static_cast<double>(rated), static_cast<double>(simulation::felt_excitement(rated, true, Teen, true)), static_cast<double>(simulation::felt_excitement(rated, true, Adult, true)));
         }
     }
     world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
@@ -325,17 +333,17 @@ int main(int argc, char** argv)
         sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")
         sky = { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
-    std::printf("weather: %s%s%s, %.0f degrees; %.1f guests an hour come in\n", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature), simulation::arrivals_per_second(sky) * 3600);
+    out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature), simulation::arrivals_per_second(sky) * 3600);
     const std::uint32_t ideal = simulation::ideal_guests(world);
     const std::int64_t fair = simulation::fair_entrance_fee(world);
-    std::printf("room for %u guests; entrance fee %lld against %lld fair; arrivals x%.2f with the park empty\n", ideal, static_cast<long long>(fee), static_cast<long long>(fair), simulation::drawn(draw, 0, ideal, fair));
+    out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<long long>(fee), static_cast<long long>(fair), simulation::drawn(draw, 0, ideal, fair));
     const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
-    std::printf("breakdowns going on, by kind:%s\n", breakdown_kinds(world.registry).c_str());
-    std::printf("litter %zu  path items %zu  rides broken down %td  staff on the paths %zu of %zu\n", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
+    out.info("breakdowns going on, by kind:{}", breakdown_kinds(world.registry).c_str());
+    out.info("litter {:d}  path items {:d}  rides broken down {:d}  staff on the paths {:d} of {:d}", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
-            std::printf("stall %s [%s] sells %s (%s)\n", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
-    std::printf("paths %zu  shops %zu  rides %zu  guests walking %zu  seated %zu  parties %zu\n", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
+            out.info("stall {} [{}] sells {} ({})", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
+    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();
@@ -362,10 +370,10 @@ int main(int argc, char** argv)
             }
         }
         std::ranges::sort(sizes, std::greater { });
-        std::printf("path groups %zu, largest", sizes.size());
+        std::string line = std::format("path groups {}, largest", sizes.size());
         for (std::size_t i = 0; i < std::min<std::size_t>(sizes.size(), 8); ++i)
-            std::printf(" %zu", sizes[i]);
-        std::printf("\n");
+            line += std::format(" {}", sizes[i]);
+        out.info("{}", line);
     }
 
     const auto workers = threads > 0 ? std::make_unique<simulation::Workers>(threads) : nullptr;
@@ -440,7 +448,7 @@ int main(int argc, char** argv)
             for (const auto [_, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                 ++in[static_cast<std::size_t>(visitor.age)];
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
-            std::printf("%02d:00%s in the park: %zu children, %zu teens, %zu adults; came %u/%u/%u, went %u/%u/%u\n", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
+            out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
         }
         profiling::section("Step", [&] { simulation::step(world, maybe(workers.get())); });
         profiling::capture_frame();
@@ -471,17 +479,22 @@ int main(int argc, char** argv)
         }
     }
     const double took = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-    std::printf("ran %u ticks (%.0f s of park time) in %.3f s, %.1f us a tick\n", steps, seconds, took, took * 1e6 / std::max(steps, 1u));
+    out.info("ran {:d} ticks ({:.0f} s of park time) in {:.3f} s, {:.1f} us a tick", steps, seconds, took, took * 1e6 / std::max(steps, 1u));
     if (profile)
-        std::printf("%s", profiling::tsv_snapshot().c_str());
+    {
+        std::string tsv = profiling::tsv_snapshot();
+        if (tsv.ends_with('\n'))
+            tsv.pop_back(); // The log ends the line
+        out.info("{}", tsv);
+    }
 
     auto& r = world.registry;
     for (const auto& [e, fleet] : fleets)
     {
-        std::printf("  %-28s %zu trains, closest %.2f m, laps", r.get<simulation::Attraction>(e).name.c_str(), fleet.laps.size(), static_cast<double>(fleet.closest));
+        std::string line = std::format("  {:<28} {} trains, closest {:.2f} m, laps", r.get<simulation::Attraction>(e).name, fleet.laps.size(), fleet.closest);
         for (const std::uint32_t d : fleet.laps)
-            std::printf(" %u", d);
-        std::printf("\n");
+            line += std::format(" {}", d);
+        out.info("{}", line);
     }
     for (const auto [e, a] : r.view<const simulation::Attraction>().each())
     {
@@ -493,10 +506,10 @@ int main(int argc, char** argv)
         if (ride)
             for (const auto [_, taste] : r.view<const simulation::Taste>(entt::exclude<simulation::Left>).each())
                 suits += taste.least <= ride->intensity && ride->intensity <= taste.most;
-        std::printf("  %-28s %-6s customers %5u  income %8.2f  suits %zu", a.name.c_str(), sells, a.customers, static_cast<double>(a.income) / 100, suits);
+        std::string line = std::format("  {:<28} {:<6} customers {:5}  income {:8.2f}  suits {}", a.name, sells, a.customers, static_cast<double>(a.income) / 100, suits);
         if (ride)
-            std::printf("  queue %zu on %zu tiles%s", ride->queue.size(), ride->line.size(), a.open ? "" : "  closed");
-        std::printf("\n");
+            line += std::format("  queue {} on {} tiles{}", ride->queue.size(), ride->line.size(), a.open ? "" : "  closed");
+        out.info("{}", line);
     }
     {
         std::map<simulation::NodeId, std::size_t> lying;
@@ -510,8 +523,8 @@ int main(int argc, char** argv)
             room += bin.capacity;
         }
         const auto* vandalism = r.ctx().find<simulation::Vandalism>();
-        std::printf("litter: %zu lying on %zu tiles (most %zu), %zu dropped, %zu swept; bins %.0f of %.0f full, emptied %zu times\n", r.view<const simulation::Litter>().size(), lying.size(), lying.empty() ? 0 : std::ranges::max(lying | std::views::values), tally.dropped, tally.swept, static_cast<double>(held), static_cast<double>(room), tally.emptied);
-        std::printf("vandalism: %u broken, %zu mended, %u warnings; old litter for the rating %d\n", vandalism ? vandalism->broken : 0, tally.mended, vandalism ? vandalism->warnings : 0, simulation::old_litter(world));
+        out.info("litter: {:d} lying on {:d} tiles (most {:d}), {:d} dropped, {:d} swept; bins {:.0f} of {:.0f} full, emptied {:d} times", r.view<const simulation::Litter>().size(), lying.size(), lying.empty() ? 0 : std::ranges::max(lying | std::views::values), tally.dropped, tally.swept, static_cast<double>(held), static_cast<double>(room), tally.emptied);
+        out.info("vandalism: {:d} broken, {:d} mended, {:d} warnings; old litter for the rating {:d}", vandalism ? vandalism->broken : 0, tally.mended, vandalism ? vandalism->warnings : 0, simulation::old_litter(world));
         std::uint32_t breakdowns = 0;
         std::size_t down = 0;
         float reliability = 0;
@@ -565,7 +578,7 @@ int main(int argc, char** argv)
             if (shop.product == simulation::Product::Drink || shop.product == simulation::Product::Food)
                 served[std::to_underlying(shop.serve)] += a.customers;
         }
-        std::printf("weather: %zu wet, %zu too hot, %zu with umbrellas (%u sold); walking under a roof %zu, in the shade %zu; queueing for %zu open-air rides %zu, for %zu covered %zu; drinks sold %u; food and drink sold plain %u, cold %u, hot %u\n", wet, hot, r.view<const simulation::Umbrella>().size(), umbrellas, roofed, shaded, rides[0], queued[0], rides[1], queued[1], drinks, served[0], served[1], served[2]);
+        out.info("weather: {:d} wet, {:d} too hot, {:d} with umbrellas ({:d} sold); walking under a roof {:d}, in the shade {:d}; queueing for {:d} open-air rides {:d}, for {:d} covered {:d}; drinks sold {:d}; food and drink sold plain {:d}, cold {:d}, hot {:d}", wet, hot, r.view<const simulation::Umbrella>().size(), umbrellas, roofed, shaded, rides[0], queued[0], rides[1], queued[1], drinks, served[0], served[1], served[2]);
         {
             // Parties waiting by rides: how many stand on an exit tile, and how many share a spot.
             std::size_t waiting = 0;
@@ -580,18 +593,18 @@ int main(int argc, char** argv)
                 ++spots[{ static_cast<int>(pose.position.x * 10), static_cast<int>(pose.position.z * 10) }];
             }
             const auto* boarding = r.ctx().find<simulation::PartyBoarding>();
-            std::printf("parties: held back to ride together %u, split over two loads %u; waiting by rides %zu, on exit tiles %zu, most on one spot %zu\n", boarding ? boarding->held : 0, boarding ? boarding->split : 0, waiting, on_exits, spots.empty() ? 0 : std::ranges::max(spots | std::views::values));
+            out.info("parties: held back to ride together {:d}, split over two loads {:d}; waiting by rides {:d}, on exit tiles {:d}, most on one spot {:d}", boarding ? boarding->held : 0, boarding ? boarding->split : 0, waiting, on_exits, spots.empty() ? 0 : std::ranges::max(spots | std::views::values));
         }
-        std::printf("paths: %zu diagonals across squares; %.1f%% of guests' walking on them\n", squares / 2, stepping > 0 ? 100.0 * static_cast<double>(across) / static_cast<double>(stepping) : 0.0);
-        std::printf("thoughts held by %zu guests:", thinkers);
+        out.info("paths: {:d} diagonals across squares; {:.1f}% of guests' walking on them", squares / 2, stepping > 0 ? 100.0 * static_cast<double>(across) / static_cast<double>(stepping) : 0.0);
+        std::string line = std::format("thoughts held by {} guests:", thinkers);
         for (const auto [kind, n] : thought)
-            std::printf(" %d:%zu", std::to_underlying(kind), n);
-        std::printf("\n");
-        std::printf("guests sat on benches %zu times and stopped at sights %zu times\n", tally.sat, tally.watched);
+            line += std::format(" {:d}:{}", std::to_underlying(kind), n);
+        out.info("{}", line);
+        out.info("guests sat on benches {:d} times and stopped at sights {:d} times", tally.sat, tally.watched);
         const auto vomit_lying = std::ranges::count_if(r.view<const simulation::Litter>(), [&](entt::entity e) { return r.get<simulation::Litter>(e).vomit; });
         const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea >= 0.6f; });
-        std::printf("sickness: guests sick %zu times, %zu by a ride's exit; %td lying now; %td guests too sick to ride\n", tally.sick, tally.sick_by_exit, vomit_lying, queasy);
-        std::printf("breakdowns going on, by kind:%s\n", breakdown_kinds(r).c_str());
+        out.info("sickness: guests sick {:d} times, {:d} by a ride's exit; {:d} lying now; {:d} guests too sick to ride", tally.sick, tally.sick_by_exit, vomit_lying, queasy);
+        out.info("breakdowns going on, by kind:{}", breakdown_kinds(r).c_str());
         {
             float total = 0;
             float worst = 0;
@@ -602,7 +615,7 @@ int main(int argc, char** argv)
                 worst = std::max(worst, upkeep.downtime_share());
                 ++counted;
             }
-            std::printf("downtime: %.1f%% on average, %.1f%% at worst\n", counted > 0 ? 100.0 * total / static_cast<double>(counted) : 0.0, 100.0 * static_cast<double>(worst));
+            out.info("downtime: {:.1f}% on average, {:.1f}% at worst", counted > 0 ? 100.0 * total / static_cast<double>(counted) : 0.0, 100.0 * static_cast<double>(worst));
         }
         if (patrol)
         {
@@ -619,9 +632,9 @@ int main(int argc, char** argv)
             std::size_t away = 0; // Patrolled staff outside their area now
             for (const auto [s, stride, area] : r.view<const simulation::Stride, const simulation::Patrol>().each())
                 away += !area.covers(world.paths.nodes()[stride.to].tile);
-            std::printf("patrols: %zu staff on 9x9 areas; %zu ticks walking outside on no job; litter %zu on handymen's areas, %zu off them; %zu outside their area now; paths no handyman patrols %zu, no mechanic %zu\n", patrolled, strays, on, off, away, simulation::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::uncovered_paths(world, simulation::StaffRole::Mechanic));
+            out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }
-        std::printf("rides: %u breakdowns, %zu repaired, %zu inspections, %zu down now, reliability %.2f on average; %zu mechanics; wages paid %.2f\n", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid : 0) / 100);
+        out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid : 0) / 100);
         {
             float happy = 0, lazy = 0, load = 0;
             std::size_t count = 0, resting = 0;
@@ -634,7 +647,7 @@ int main(int argc, char** argv)
                 ++count;
             }
             const auto mean = [&](float sum) { return static_cast<double>(count > 0 ? sum / static_cast<float>(count) : 0); };
-            std::printf("staff: %zu, happiness %.2f, laziness %.2f, at work %.2f of the time on average; %zu resting now\n", count, mean(happy), mean(lazy), mean(load), resting);
+            out.info("staff: {:d}, happiness {:.2f}, laziness {:.2f}, at work {:.2f} of the time on average; {:d} resting now", count, mean(happy), mean(lazy), mean(load), resting);
         }
     }
     std::array<std::size_t, 6> doing { };
@@ -651,7 +664,7 @@ int main(int argc, char** argv)
         ++count;
     }
     if (count > 0)
-        std::printf("guests: wandering %zu heading %zu queueing %zu riding %zu following %zu waiting %zu  happiness %.2f thirst %.2f hunger %.2f\n", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
+        out.info("guests: wandering {:d} heading {:d} queueing {:d} riding {:d} following {:d} waiting {:d}  happiness {:.2f} thirst {:.2f} hunger {:.2f}", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
     // How well parties keep together: followers' distance from their leader, and how far waiting members stand
     // from the exit of the ride their party is on.
     std::vector<float> apart;
@@ -673,7 +686,7 @@ int main(int argc, char** argv)
         if (v->empty())
             continue;
         std::ranges::sort(*v);
-        std::printf("%s: %zu, median %.2f, 90%% %.2f, max %.2f\n", name, v->size(), static_cast<double>((*v)[v->size() / 2]), static_cast<double>((*v)[v->size() * 9 / 10]), static_cast<double>(v->back()));
+        out.info("{}: {:d}, median {:.2f}, 90% {:.2f}, max {:.2f}", name, v->size(), static_cast<double>((*v)[v->size() / 2]), static_cast<double>((*v)[v->size() * 9 / 10]), static_cast<double>(v->back()));
     }
     return 0;
 }

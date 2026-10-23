@@ -84,6 +84,7 @@ namespace rct3::scene
         std::vector<save::PoolWater> pools;     ///< The same
         std::vector<park::RideFloor> floors;    ///< The rides' floors, paved with the ground's paths
         bool floors_stale = false;              ///< The ground was built without the floors as they are now
+        park::EdgeWalls walls;                  ///< The fences and walls paths do not join across
         std::vector<std::uint64_t> floor_decks; ///< Objects drawing the raised rides' floors
         std::vector<std::uint64_t> door_pieces; ///< Decks and supports under raised doors a path joins
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
@@ -150,6 +151,10 @@ namespace rct3::scene
 
     /// Builds the ground again from the scene's grid, with the paths and the rides' floors as they are now.
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// Stands the fence or wall `wall` between the paths either side of it, or takes it away when not
+    /// `standing`, once the scene's objects show it: the paths' looks and the walks guests take change.
+    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const park::EdgeWall& wall, bool standing);
 
     /// Works out the rides' floors again from the scene's rides and the models of what they are placed as, and
     /// marks the ground for building again.

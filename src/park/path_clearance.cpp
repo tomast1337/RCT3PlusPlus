@@ -71,7 +71,8 @@ namespace rct3::park
         const auto found = solids.tiles.find(key_of(spot.col, spot.row));
         if (found == solids.tiles.end())
             return false;
-        return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return s.low < high + kPathHeadroom && low < s.high; });
+        // A wall along an edge parts paths there instead (edge_walls.hpp).
+        return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return (s.room & kWholeTile) != 0 && s.low < high + kPathHeadroom && low < s.high; });
     }
 
 } // namespace rct3::park

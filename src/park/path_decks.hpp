@@ -35,6 +35,7 @@
 // parks store.
 #pragma once
 
+#include "park/edge_walls.hpp"
 #include "park/path_styles.hpp"
 #include "save/model/world.hpp"
 
@@ -123,10 +124,11 @@ namespace rct3::park
 
     /// Gives each raised path and queue on the tiles from `low` to `high` (inclusive) the piece and turn
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come
-    /// from the path's style among `styles`. Returns how many objects changed.
-    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row);
+    /// from the path's style among `styles`. A path does not join one across a wall of `walls`. Returns how many
+    /// objects changed.
+    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
 
-    /// The piece a raised path should have now, given the other paths.
-    [[nodiscard]] Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    /// The piece a raised path should have now, given the other paths and the walls between them.
+    [[nodiscard]] Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);
 
 } // namespace rct3::park

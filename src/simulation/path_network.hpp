@@ -7,6 +7,10 @@
 // Where four footpath tiles at one level make a full 2 by 2 square, each joined to the two beside it, a walk
 // may also cut across it from corner to opposite corner, at its true length. Queues never take part.
 //
+// A wall along a tile's edge keeps the tiles either side of it apart, unless one is a queue: a queue's own
+// sides decide what it joins. A wall stands from one height to another; the lower of two tiles' middles must
+// be within it to be kept apart.
+//
 // A tile taken away keeps its node, so the nodes walkers and attractions hold stay valid, but the node is
 // joined to nothing and found by nothing; a tile laid there later gets a new node.
 //
@@ -70,6 +74,12 @@ namespace rct3::simulation
         /// crossings.
         void remove(NodeId node);
 
+        /// Stands a wall along `side` (as `next` numbers them) of tile (`col`, `row`), from world height `low` to
+        /// `high`, and parts the tiles it stands between.
+        void add_wall(int col, int row, std::size_t side, float low, float high);
+        /// Takes such a wall away again, and joins what it kept apart.
+        void remove_wall(int col, int row, std::size_t side, float low, float high);
+
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
             return nodes_;
@@ -107,8 +117,20 @@ namespace rct3::simulation
 
     private:
         static std::uint64_t key(int col, int row);
+        /// Joins a node to the tiles beside it that nothing keeps apart.
+        void join_sides(NodeId id);
         void join_corners(NodeId id);
-        bool corners_ = false; ///< Whether any square of paths has been found
+        /// Unjoins the nodes on a tile and joins them again, and the squares round it.
+        void rejoin(int col, int row);
+        struct Wall
+        {
+            std::size_t side = 0;
+            float low = 0;
+            float high = 0;
+            bool operator==(const Wall&) const = default;
+        };
+        std::unordered_multimap<std::uint64_t, Wall> walls_; ///< By tile, listed on both tiles of each
+        bool corners_ = false;                               ///< Whether any square of paths has been found
         std::vector<PathNode> nodes_;
         std::unordered_multimap<std::uint64_t, NodeId> by_tile_;
     };

@@ -39,22 +39,7 @@ namespace rct3::simulation
         const auto id = static_cast<NodeId>(nodes_.size());
         nodes_.push_back({ .tile = tile, .queue = queue, .height = height.value_or(static_cast<float>(tile.level) * level_height), .line = line });
         by_tile_.emplace(key(tile.col, tile.row), id);
-        for (std::size_t side = 0; side < kSides.size(); ++side)
-        {
-            const auto [first, last] = by_tile_.equal_range(key(tile.col + kSides[side][0], tile.row + kSides[side][1]));
-            // The closest level within max_step, lowest first when two are as close.
-            NodeId best = kNoNode;
-            for (auto it = first; it != last; ++it)
-            {
-                const int gap = std::abs(nodes_[it->second].tile.level - tile.level);
-                if (gap <= max_step && (best == kNoNode || gap < std::abs(nodes_[best].tile.level - tile.level)))
-                    best = it->second;
-            }
-            if (best == kNoNode || nodes_[best].next[(side + 2) % 4] != kNoNode)
-                continue;
-            nodes_[id].next[side] = best;
-            nodes_[best].next[(side + 2) % 4] = id;
-        }
+        join_sides(id);
         // The squares the new tile closes, seen from each tile round it.
         for (int dc = -1; dc <= 1; ++dc)
             for (int dr = -1; dr <= 1; ++dr)
@@ -90,6 +75,74 @@ namespace rct3::simulation
                 for (auto it = near_first; it != near_last; ++it)
                     join_corners(it->second);
             }
+    }
+
+    void PathNetwork::join_sides(NodeId id)
+    {
+        const PathTileSpot tile = nodes_[id].tile;
+        const auto [walls_first, walls_last] = walls_.equal_range(key(tile.col, tile.row));
+        for (std::size_t side = 0; side < kSides.size(); ++side)
+        {
+            const auto [first, last] = by_tile_.equal_range(key(tile.col + kSides[side][0], tile.row + kSides[side][1]));
+            // The closest level within max_step, lowest first when two are as close.
+            NodeId best = kNoNode;
+            for (auto it = first; it != last; ++it)
+            {
+                const int gap = std::abs(nodes_[it->second].tile.level - tile.level);
+                if (gap <= max_step && (best == kNoNode || gap < std::abs(nodes_[best].tile.level - tile.level)))
+                    best = it->second;
+            }
+            if (best == kNoNode || nodes_[best].next[(side + 2) % 4] != kNoNode)
+                continue;
+            const float low = std::min(nodes_[id].height, nodes_[best].height);
+            const bool walled = !nodes_[id].queue && !nodes_[best].queue && std::any_of(walls_first, walls_last, [&](const auto& w) { return w.second.side == side && low >= w.second.low && low < w.second.high; });
+            if (walled)
+                continue;
+            nodes_[id].next[side] = best;
+            nodes_[best].next[(side + 2) % 4] = id;
+        }
+    }
+
+    void PathNetwork::rejoin(int col, int row)
+    {
+        const auto [first, last] = by_tile_.equal_range(key(col, row));
+        for (auto it = first; it != last; ++it)
+            for (std::size_t side = 0; side < 4; ++side)
+                if (const NodeId other = std::exchange(nodes_[it->second].next[side], kNoNode); other != kNoNode)
+                    nodes_[other].next[(side + 2) % 4] = kNoNode;
+        for (auto it = first; it != last; ++it)
+            join_sides(it->second);
+        for (int dc = -1; dc <= 1; ++dc)
+            for (int dr = -1; dr <= 1; ++dr)
+            {
+                const auto [near_first, near_last] = by_tile_.equal_range(key(col + dc, row + dr));
+                for (auto it = near_first; it != near_last; ++it)
+                    join_corners(it->second);
+            }
+    }
+
+    void PathNetwork::add_wall(int col, int row, std::size_t side, float low, float high)
+    {
+        const int across_col = col + kSides[side % 4][0];
+        const int across_row = row + kSides[side % 4][1];
+        walls_.emplace(key(col, row), Wall { side % 4, low, high });
+        walls_.emplace(key(across_col, across_row), Wall { (side + 2) % 4, low, high });
+        rejoin(col, row);
+        rejoin(across_col, across_row);
+    }
+
+    void PathNetwork::remove_wall(int col, int row, std::size_t side, float low, float high)
+    {
+        const int across_col = col + kSides[side % 4][0];
+        const int across_row = row + kSides[side % 4][1];
+        for (const auto& [at, wall] : { std::pair { key(col, row), Wall { side % 4, low, high } }, std::pair { key(across_col, across_row), Wall { (side + 2) % 4, low, high } } })
+        {
+            const auto [first, last] = walls_.equal_range(at);
+            if (const auto found = std::find_if(first, last, [&](const auto& w) { return w.second == wall; }); found != last)
+                walls_.erase(found);
+        }
+        rejoin(col, row);
+        rejoin(across_col, across_row);
     }
 
     void PathNetwork::join_corners(NodeId id)

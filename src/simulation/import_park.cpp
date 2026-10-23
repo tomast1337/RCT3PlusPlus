@@ -754,6 +754,16 @@ namespace rct3::simulation
         return added;
     }
 
+    void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing)
+    {
+        // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
+        const std::size_t side = wall.side ^ 1U;
+        if (standing)
+            world.paths.add_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+        else
+            world.paths.remove_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+    }
+
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& o, PathItemKind kind)
     {
         const PathNetwork& paths = world.paths;

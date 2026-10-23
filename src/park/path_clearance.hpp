@@ -63,7 +63,8 @@ namespace rct3::park
     /// The solid squares of `objects` that are shown and block paths, by the tile under each.
     [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
-    /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it.
+    /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it. What
+    /// stands only along the tile's edges never does.
     [[nodiscard]] bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high);
 
 } // namespace rct3::park

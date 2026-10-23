@@ -37,6 +37,7 @@
 #include "ui/language.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/message_drawer.hpp"
+#include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
@@ -544,6 +545,103 @@ namespace rct3::scene
             return seats;
         }
 
+        /// The cameras of the train car `car` is on, and the trains of its ride that have a camera.
+        std::pair<std::size_t, std::size_t> camera_choices(const ParkScene& scene, std::size_t car)
+        {
+            std::vector<std::size_t> trains;
+            std::size_t cameras = 0;
+            for (const std::size_t seat : ride_seats(scene, scene.car_spots[car].ride))
+            {
+                cameras += scene.car_spots[seat].train == scene.car_spots[car].train ? 1 : 0;
+                if (!std::ranges::contains(trains, scene.car_spots[seat].train))
+                    trains.push_back(scene.car_spots[seat].train);
+            }
+            return { cameras, trains.size() };
+        }
+
+        /// Rides along in `car`: everything else on screen is put away, the ride camera panel shows, and a park
+        /// that was paused is set going so the ride moves.
+        void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car)
+        {
+            ui::Widget& root = scene.desktop->root();
+            if (!scene.riding)
+            {
+                scene.hidden_for_ride.clear();
+                for (const auto& child : root.children())
+                    if (child->visible && child->name() != kGuideName)
+                    {
+                        child->visible = false;
+                        scene.hidden_for_ride.emplace_back(child->name());
+                    }
+                root.add<ui::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
+                scene.paused_for_ride = scene.park.speed.paused;
+                scene.park.speed.paused = false;
+            }
+            scene.riding = car;
+            // Named as the game names them: the ride, then the train and the car counting from 1.
+            const park::CarSpot spot = scene.car_spots[car];
+            std::size_t place = 1;
+            for (std::size_t c = 0; c < car; ++c)
+                place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
+            const ui::StringTable& strings = *assets.strings;
+            std::u16string info = ui::attraction_name(scene.rides.rides[spot.ride].base, strings);
+            info += u"  " + std::u16string(strings.get("RidecamGUI_Train")) + u" " + strings::to_utf16(std::format("{}", spot.train + 1));
+            info += u"  " + std::u16string(strings.get("RidecamGUI_Car")) + u" " + strings::to_utf16(std::format("{}", place));
+            info += u"  " + std::u16string(strings.get("RidecamGUI_TypeFront"));
+            const auto [cameras, trains] = camera_choices(scene, car);
+            if (auto panel = root.find_as<ui::RideCameraPanel>(kRideCameraName))
+                panel->show(std::move(info), cameras > 1, trains > 1);
+        }
+
+        void stop_riding(ParkScene& scene);
+
+        /// Leaves, or steps to the previous or next camera on the train (round from the last to the first), or to
+        /// the first camera of the previous or next train.
+        void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::RideCameraAction action)
+        {
+            using enum ui::RideCameraAction;
+            if (!scene.riding)
+                return;
+            if (action == Leave)
+            {
+                stop_riding(scene);
+                return;
+            }
+            const park::CarSpot spot = scene.car_spots[*scene.riding];
+            const bool cameras = action == PreviousCamera || action == NextCamera;
+            const bool next = action == NextCamera || action == NextTrain;
+            // The cameras to step through: the train's own, or the first of each train.
+            std::vector<std::size_t> stops;
+            std::vector<std::size_t> trains;
+            for (const std::size_t seat : ride_seats(scene, spot.ride))
+            {
+                const std::size_t train = scene.car_spots[seat].train;
+                if (cameras ? train == spot.train : !std::ranges::contains(trains, train))
+                    stops.push_back(seat);
+                trains.push_back(train);
+            }
+            const auto at = std::ranges::find_if(stops, [&](std::size_t seat) { return cameras ? seat == *scene.riding : scene.car_spots[seat].train == spot.train; });
+            if (at != stops.end())
+                ride_along(scene, assets, stops[(static_cast<std::size_t>(at - stops.begin()) + (next ? 1 : stops.size() - 1)) % stops.size()]);
+        }
+
+        /// Back to the overhead view, with what was on screen before.
+        void stop_riding(ParkScene& scene)
+        {
+            if (!scene.riding)
+                return;
+            ui::Widget& root = scene.desktop->root();
+            for (const std::string& name : scene.hidden_for_ride)
+                if (auto w = root.find(name))
+                    w->visible = true;
+            if (auto panel = root.find(kRideCameraName))
+                panel->close();
+            if (scene.paused_for_ride)
+                scene.park.speed.paused = true;
+            scene.riding.reset();
+            scene.seat.reset();
+        }
+
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
         void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
@@ -604,7 +702,7 @@ namespace rct3::scene
                 const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
                 const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
                 if (!seats.empty())
-                    scene.riding = running != seats.end() ? *running : seats.front();
+                    ride_along(scene, assets, running != seats.end() ? *running : seats.front());
             }
             else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
             {
@@ -1059,7 +1157,7 @@ namespace rct3::scene
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
             auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
             if (!escape.empty() && scene.riding)
-                scene.riding.reset();
+                stop_riding(scene);
             else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
@@ -1070,7 +1168,15 @@ namespace rct3::scene
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
-        const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
+        // Riding along, the park takes no clicks: the whole screen counts as interface.
+        const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); }) || scene.riding.has_value();
+        if (auto panel = scene.riding ? desktop.root().find_as<ui::RideCameraPanel>(kRideCameraName) : std::nullopt)
+        {
+            panel->pointer_moved(glm::distance(glm::vec2(input.pointer.position.x, input.pointer.position.y), glm::vec2(scene.last_pointer.x, scene.last_pointer.y)) / scale);
+            scene.last_pointer = input.pointer.position;
+            if (const auto action = panel->take_action())
+                ride_action(scene, assets, *action);
+        }
         if (!scene.riding)
             profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
@@ -1319,15 +1425,11 @@ namespace rct3::scene
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
             else if (c == ui::PlayCommand::ToggleRideCamera)
-                scene.riding.reset();
-            else if (scene.riding && (c == ui::PlayCommand::NextRideCamera || c == ui::PlayCommand::PreviousRideCamera))
-            {
-                // On to the next car of the ride a rider can look out of, round to the first after the last.
-                const std::vector<std::size_t> seats = ride_seats(scene, scene.car_spots[*scene.riding].ride);
-                const auto at = std::ranges::find(seats, *scene.riding);
-                if (at != seats.end())
-                    scene.riding = seats[(static_cast<std::size_t>(at - seats.begin()) + (c == ui::PlayCommand::NextRideCamera ? 1 : seats.size() - 1)) % seats.size()];
-            }
+                stop_riding(scene);
+            else if (c == ui::PlayCommand::NextRideCamera)
+                ride_action(scene, assets, ui::RideCameraAction::NextCamera);
+            else if (c == ui::PlayCommand::PreviousRideCamera)
+                ride_action(scene, assets, ui::RideCameraAction::PreviousCamera);
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.

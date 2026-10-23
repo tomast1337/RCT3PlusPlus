@@ -29,7 +29,8 @@ namespace rct3::scene
     inline constexpr std::string_view kMoneyName = "money";
     inline constexpr std::uint8_t kColourCells = 16; ///< Colours a person's clothes and skin pick from
     inline constexpr std::string_view kInfoName = "info";
-    inline constexpr std::string_view kPlacingName = "placing"; ///< The round panel of the scenery being placed
+    inline constexpr std::string_view kRideCameraName = "ride_camera"; ///< The panel shown while riding along
+    inline constexpr std::string_view kPlacingName = "placing";        ///< The round panel of the scenery being placed
 
     template<typename T> std::expected<render::BufferHandle, std::string> upload(render::Device& device, render::BufferUsage usage, const std::vector<T>& items, std::string_view label)
     {

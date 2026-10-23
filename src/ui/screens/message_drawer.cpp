@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/message_drawer.hpp"
 
+#include "simulation/awards.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
@@ -62,7 +63,8 @@ namespace rct3::ui
     std::u16string message_text(const simulation::ParkMessage& message, const StringTable& strings)
     {
         std::u16string text(strings.get(message.text_key));
-        const std::u16string name = strings::to_utf16(message.subject_name);
+        // An award's message is named by the award.
+        const std::u16string name = message.award ? std::u16string(strings.get(simulation::award_name(*message.award))) : strings::to_utf16(message.subject_name);
         // Fields are words between percent signs. The subject's name fills %NAME%; the rest are not known yet.
         std::size_t from = 0;
         while (from < text.size())

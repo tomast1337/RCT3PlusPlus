@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
+#include "simulation/awards.hpp"
 #include "simulation/objectives.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
@@ -235,16 +236,15 @@ namespace rct3::ui
                 page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), std::u16string(kDash), false, "PID_TT_AwardTabPopUp" });
                 return;
             }
-            std::size_t held = 0;
-            for (const auto& category : f.park->awards.earned)
-                held += category.size();
-            if (held == 0)
-            {
+            // The awards of the last months, a list a month.
+            for (const auto& month : f.park->awards.earned)
+                for (const std::int32_t kind : month)
+                {
+                    if (const std::string_view name = simulation::award_name(kind); !name.empty())
+                        page.lines.push_back({ text(strings, name), std::u16string(), false, std::string(name) });
+                }
+            if (page.lines.empty())
                 page.note = text(strings, "Award_No_Awards");
-                return;
-            }
-            // Which award each held number is is not known yet: only how many there are.
-            page.lines.push_back({ text(strings, "PID_TT_AwardTabPopUp"), whole(static_cast<std::int64_t>(held)), false, "PID_TT_AwardTabPopUp" });
         }
 
         // ----- finances -----

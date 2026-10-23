@@ -250,7 +250,7 @@ namespace rct3::save
     {
         std::uint32_t available_mask = 0; ///< Bit per award type
         std::int32_t months_before_start = 0;
-        std::vector<std::vector<std::int32_t>> earned { }; ///< Per award category: the award type ids held
+        std::vector<std::vector<std::int32_t>> earned { }; ///< A list a month, of the last six: the kinds of award given that month
         std::vector<std::int32_t> prize_money { };         ///< Per award slot; negative for the penalty slots
         std::optional<std::int32_t> dangerous_coaster_events { };
         std::optional<std::int32_t> dangerous_pool_events { };

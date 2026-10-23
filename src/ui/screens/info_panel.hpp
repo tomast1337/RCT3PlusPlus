@@ -138,7 +138,7 @@ namespace rct3::ui
         inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
         inline constexpr float kPageWidth = 360;   ///< Of a page of lines
         inline constexpr float kLineHeight = 15;
-        inline constexpr float kBarWidth = 100;     ///< Of a line's bar
+        inline constexpr float kBarWidth = 130;     ///< Of a line's bar
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
         inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
         inline constexpr float kPlotHeight = 64;
@@ -243,9 +243,9 @@ namespace rct3::ui
         /// Numbers up the graph's left, top first, evenly apart from its top to its bottom; with them, the names
         /// under the graph are left to the controls.
         std::vector<std::u16string> graph_axis;
-        std::vector<InfoControl> controls; ///< Under the note
-        bool controls_first = false;       ///< Over the lines instead
-        float width = 0;                   ///< Of the page; 0 for info_panel::kPageWidth
+        std::vector<InfoControl> controls;             ///< Under the note
+        std::optional<std::size_t> controls_after { }; ///< How many lines go over the controls; all when empty
+        float width = 0;                               ///< Of the page; 0 for info_panel::kPageWidth
     };
 
     /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search

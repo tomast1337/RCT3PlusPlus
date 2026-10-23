@@ -215,6 +215,14 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
 
     const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });
     CHECK(vehicles.heading == u"Spinner");
+    // Named after its cars where they have a name.
+    {
+        StringTable named = s;
+        named.add("TeacupCarName", u"Teacup car");
+        save::Ride cups = ride;
+        cups.trains[0].symbol = "Teacup:rit";
+        CHECK(attraction_page(AttractionTab::Vehicles, { &cups.base, &cups, nullptr }, named, { }).heading == u"Teacup car");
+    }
     // Number boxes even once its trains are fixed, greyed then; the car button greyed too.
     const auto trains = std::ranges::find(vehicles.controls, control_id(AttractionControl::Trains), &InfoControl::id);
     REQUIRE(trains != vehicles.controls.end());
@@ -272,10 +280,11 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     CHECK(graphs.graph_axis.front() == u"10.80 km/h");
     CHECK(graphs.graph_axis.back() == u"3.60 km/h");
     REQUIRE(graphs.controls.size() == 4);
-    CHECK(graphs.controls[1].id == control_id(AttractionControl::AltitudeSeries));
-    CHECK(graphs.controls[1].series == 1u);
-    CHECK(graphs.controls[1].column == 1);
-    CHECK(graphs.controls[0].value == 1);
+    CHECK(graphs.controls[0].id == control_id(AttractionControl::AltitudeSeries));
+    CHECK(graphs.controls[0].series == 1u);
+    CHECK(graphs.controls[2].id == control_id(AttractionControl::LateralSeries));
+    CHECK(graphs.controls[2].column == 1);
+    CHECK(graphs.controls[1].value == 1); // Speed, ticked
     AttractionFacts heights = f;
     heights.graph_series = 0b10;
     ride.graphs.altitude = { 2, 4 };
@@ -360,7 +369,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(money.controls[0].value == 150);
     CHECK(money.controls[0].decimals == 2);
     CHECK(money.controls[0].maximum == kMostRidePrice);
-    CHECK(money.controls_first);
+    CHECK(money.controls_after == 0u);
 
     const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
     CHECK(std::ranges::find(people.lines, std::u16string(u"Per hour"), &InfoLine::label)->value == kMissingValue);

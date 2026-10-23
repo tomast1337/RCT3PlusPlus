@@ -226,9 +226,9 @@ namespace rct3::ui
             }
             y += info_panel::kSectionHeight + 2;
         }
-        const auto lines = [&] {
+        const auto lines = [&](std::size_t from, std::size_t to) {
             bool right = false; // Whether the row has a half line on its left, waiting for one on its right
-            for (std::size_t i = 0; i < page.lines.size(); ++i)
+            for (std::size_t i = from; i < to; ++i)
             {
                 const InfoLine& l = page.lines[i];
                 if (l.half)
@@ -269,14 +269,14 @@ namespace rct3::ui
             }
             if (right)
                 y += info_panel::kLineHeight;
-            if (!page.note.empty())
+            if (!page.note.empty() && to == page.lines.size())
             {
                 line("note", page.note, 0, info_panel::kPageWidth, FontRole::Small);
                 y += info_panel::kLineHeight;
             }
         };
-        if (!page.controls_first)
-            lines();
+        const std::size_t split = std::min(page.controls_after.value_or(page.lines.size()), page.lines.size());
+        lines(0, split);
         if (!page.graph.empty())
         {
             LinePlot& plot = body_->add<LinePlot>("graph");
@@ -401,8 +401,8 @@ namespace rct3::ui
             control_rows_.push_back({ &label, column, top, height });
         }
         y = std::max(bottom[0], bottom[1]);
-        if (page.controls_first)
-            lines();
+        if (split < page.lines.size())
+            lines(split, page.lines.size());
         page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;
         place_page(std::nullopt);
         // An empty page has no strip.
@@ -434,8 +434,8 @@ namespace rct3::ui
             r.value->placement.offsets.x1 = std::max(page_width_, aligned[0]);
             if (r.bar == nullptr)
                 continue;
-            // The value written on its bar.
-            r.value->placement.offsets.x0 = aligned[0] + gap;
+            // The value after its bar.
+            r.value->placement.offsets.x0 = aligned[0] + info_panel::kBarWidth + 2 * gap;
             r.bar->placement.offsets.x0 = aligned[0];
             r.bar->placement.offsets.x1 = aligned[0] + info_panel::kBarWidth;
             r.filled->placement.offsets.x0 = aligned[0];

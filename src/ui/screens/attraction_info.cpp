@@ -91,7 +91,7 @@ namespace rct3::ui
         constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
         constexpr int kMostTrackCircuits = 20;
         constexpr int kAxisNumbers = 5;
-        constexpr float kMaintenancePageWidth = 420;
+        constexpr float kMaintenancePageWidth = 440;
         constexpr float kModePageWidth = 600;
         constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
@@ -258,18 +258,18 @@ namespace rct3::ui
         void finances(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             // The projections are the game's own reckoning per hour, which the save does not keep.
+            // Income, cost and profit, then the total apart under them.
             add(page, strings, "AttractionFinancesDialogLabel_Income", missing());
+            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
             add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
+            page.lines.push_back({ });
             add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
-            add(page, strings, f.ride ? "AttractionFinancesDialogLabel_ProjectedRunningCost" : "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
             if (f.ride == nullptr)
                 return;
             const bool ride = f.ride->kind != save::RideKind::Special;
-            if (ride)
-                add(page, strings, "AttractionFinancesDialogLabel_CostPerInspection", missing());
             page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
             // The price over the sums, as the player sets it first.
-            page.controls_first = true;
+            page.controls_after = 0;
         }
 
         std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings)
@@ -378,7 +378,11 @@ namespace rct3::ui
         {
             const save::Ride& ride = *f.ride;
             // The kind of car it runs, else the kind of ride it is.
-            page.heading = ride.trains.empty() ? std::u16string { } : kind_name(ride.trains.front().symbol, strings);
+            if (!ride.trains.empty())
+            {
+                const std::string_view train = ride.trains.front().symbol;
+                page.heading = std::u16string(strings.get_ignoring_case(std::format("{}CarName", train.substr(0, train.find(':')))));
+            }
             if (page.heading.empty())
                 page.heading = kind_name(ride.base.symbol, strings);
             // A tracked ride's seats in a car, from its first car's; a flat ride's how many it takes each go.
@@ -601,6 +605,7 @@ namespace rct3::ui
                 { "Graph_VerticalG", &g.vertical_g, 1 / kGravity, u"g", AttractionControl::VerticalSeries },
                 { "Graph_LateralG", &g.lateral_g, 1 / kGravity, u"g", AttractionControl::LateralSeries },
             } };
+            std::array<InfoControl, 4> ticks;
             for (std::size_t i = 0; i < all.size(); ++i)
             {
                 const auto& [key, values, scale, unit, id] = all[i];
@@ -614,13 +619,14 @@ namespace rct3::ui
                     for (int k = 0; k < kAxisNumbers; ++k)
                         page.graph_axis.push_back(ascii(std::format("{:.2f} ", high - (high - low) * static_cast<float>(k) / (kAxisNumbers - 1))) + unit);
                 }
-                // A tick for each, two to a row.
-                InfoControl c = tick(id, key, series.name, series.shown);
-                c.series = i;
-                c.column = static_cast<int>(i % 2);
-                page.controls.push_back(std::move(c));
+                ticks[i] = tick(id, key, series.name, series.shown);
+                ticks[i].series = i;
+                ticks[i].column = i < 2 ? 0 : 1; // Speed and altitude down the left, the forces down the right
                 page.graph.push_back(std::move(series));
             }
+            // In each column by name, as the game lists them: altitude over speed, lateral over vertical.
+            for (const std::size_t i : { 1, 0, 3, 2 })
+                page.controls.push_back(std::move(ticks[i]));
             // With none ticked, the left holds no numbers but the names still go to the ticks.
             if (page.graph_axis.empty())
                 page.graph_axis.assign(kAxisNumbers, std::u16string { });
@@ -651,6 +657,8 @@ namespace rct3::ui
             page.lines.back().bar = ride.breakdown.downtime_percent() / 100;
             page.lines.back().bar_colour = hex("#d04030");
             page.width = kMaintenancePageWidth;
+            // The interval's list under the bars, how long since and what last broke under it.
+            page.controls_after = 2;
             const float since = ride.base.time_since_inspection;
             add(page, strings, "RideMaintenanceDialogLabel_TimeSinceLastInspection", since < 0 ? std::u16string(u"-") : ascii(std::to_string(std::lround(since / kSecondsPerMinute))));
             add(page, strings, "RideMaintenanceDialogLabel_LastBreakdownType", breakdown(ride.breakdown.last, strings));

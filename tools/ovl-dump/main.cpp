@@ -1128,6 +1128,8 @@ namespace
                     out.info("    square flags {:03x} levels {:d}..{:d}", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)
                     out.info("    param {} = {}", p.name, p.value);
+                for (const auto& v : it.visuals)
+                    out.info("    visual {}", v);
             }
         }
     }

@@ -161,7 +161,7 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
 
 /** A road along `row` from column 1 to the last, in pieces short enough to be in sight. */
 async function road(row: number): Promise<void> {
-    const piece = 10;
+    const piece = 32;
     for (let c = 1; c <= lastCol; c += piece)
         await route([c, row], [Math.min(c + piece - 1, lastCol), row]);
 }

@@ -1297,9 +1297,9 @@ namespace rct3::simulation
             }
         };
         for (std::size_t i = 0; i + 2 < train.kinds.size(); ++i) // The last kind is past the track's end
-            if (const Stretch k = train.kinds[i]; k != Stretch::Plain && train.kinds[i + 1] != k)
+            if (const Stretch k = train.kinds[i]; k != Stretch::Plain && k != Stretch::Launch && train.kinds[i + 1] != k)
                 end_at(train.distance[i + 1]);
-        if (const Stretch last = train.kinds[train.kinds.size() - 2]; last != Stretch::Plain && train.kinds.front() != last)
+        if (const Stretch last = train.kinds[train.kinds.size() - 2]; last != Stretch::Plain && last != Stretch::Launch && train.kinds.front() != last)
             end_at(0); // The track's end runs into its start
         if (std::isinf(ends_ahead[1]))
             return room;

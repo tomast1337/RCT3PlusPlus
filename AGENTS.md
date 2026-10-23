@@ -82,6 +82,31 @@ they check. Tests live in `tests/`, tools in `tools/`, library code in `src/`.
 another file. Plain `0`, `1`, `0.5f`, and format offsets and sizes with a comment naming the format and
 field, are fine. A new duplicate of an existing constant needs a reason in its commit message or PR.
 
+**Heap allocations: none again and again on hot paths.** What costs time is allocating on every frame or
+tick, not the heap itself. Data loaded once (game data, meshes, textures, save trees), EnTT's pools, the
+widget tree (it needs stable addresses), pimpl objects and the render device stay on the heap. Do not move
+things to the stack for its own sake: the main thread has 8 MB, worker threads less, and emscripten 64 KB.
+On a per-frame or per-tick path, in this order:
+
+1. Reuse buffers. Keep the list in its owner (a member, or a buffers struct passed down like
+   `simulation::StepBuffers`), `clear()` it each time, which keeps its memory, and fill it again. Do not
+   return a fresh `std::vector` each frame. A per-node flag or count is a vector indexed by node, not a hash
+   set or map.
+2. Keep only what is used. If the code reads the nearest two, track two; do not collect and sort them all.
+3. `std::array` for a count with a fixed maximum (wheels per car, corners of a tile), and
+   `std::inplace_vector<T, N>` for a short list with a hard maximum.
+4. `std::string_view` for a string that is only compared or looked up. Strings up to 15 characters do not
+   allocate anyway.
+5. A template parameter or `std::function_ref` for a callback that does not outlive the call. A
+   `std::function` allocates once its captures are big.
+6. A per-frame arena (`std::pmr::monotonic_buffer_resource` and `std::pmr` containers) only on a hot path
+   shown by measurement; it adds noise everywhere it is used.
+
+Measure before and after, with the same park and length: count allocations by call site (heaptrack, or a
+sampling `malloc` preloaded into a debug build) and fix the top few. Compare a short run with a long one, so
+loading drops out and only the steady cost per tick or frame is left. A rewrite for allocations keeps
+behaviour identical: `sim-run` output must not change.
+
 ## Code style
 
 - Parsing untrusted bytes (all game files) is bounds-checked and returns `std::expected`, never reads out of

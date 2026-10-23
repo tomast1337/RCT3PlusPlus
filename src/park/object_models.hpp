@@ -146,6 +146,10 @@ namespace rct3::park
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
+        /// Of a flat ride, its own fixed cameras, bones named "camera" and a number: model space, by number,
+        /// looking along +Z with +Y up, and the rig's bone each is, when it has one.
+        std::vector<glm::mat4> view_places;
+        std::vector<std::int32_t> view_bones;
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;

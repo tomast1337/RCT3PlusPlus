@@ -481,6 +481,7 @@ namespace rct3::scene
                     boned.first_seat = scene.seat_carriers.size();
                     boned.seats = model->second.seat_bones.size();
                     scene.seat_carriers.resize(scene.seat_carriers.size() + boned.seats, boned.placed);
+                    boned.views.assign(model->second.view_bones.size(), glm::mat4(1.0f));
                     add_textures(device, scene, boned.mesh.mesh.batches);
                 }
                 return;

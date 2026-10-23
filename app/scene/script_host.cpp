@@ -350,7 +350,7 @@ namespace rct3::scene
             const ParkScene& park = park_of(park_);
             Json out;
             if (park.riding_flat)
-                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", "seat" } };
+                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", park.riding_fixed ? "fixed" : "seat" } };
             else if (park.riding && *park.riding < park.car_spots.size())
             {
                 constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };

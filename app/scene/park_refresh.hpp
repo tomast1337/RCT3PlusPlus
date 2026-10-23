@@ -34,9 +34,9 @@ namespace rct3::scene
     /// on the first car of its train.
     [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::RideEye eye);
 
-    /// Where rider seat `seat` of flat ride `ride` (of the park's rides) is in the park now, as it is drawn;
-    /// nothing when the ride has no such seat.
-    [[nodiscard]] std::optional<glm::mat4> flat_seat(const ParkScene& scene, std::size_t ride, std::size_t seat);
+    /// Where rider seat `at` of flat ride `ride` (of the park's rides), or with `fixed` its fixed camera `at`, is
+    /// in the park now, as it is drawn; nothing when the ride has no such seat or camera.
+    [[nodiscard]] std::optional<glm::mat4> flat_view(const ParkScene& scene, std::size_t ride, bool fixed, std::size_t at);
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run; and the scenery moving on its own near `eye` in `view`. Riding along, it also

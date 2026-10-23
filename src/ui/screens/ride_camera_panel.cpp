@@ -49,26 +49,32 @@ namespace rct3::ui
         buttons_[5]->enabled = false;
     }
 
-    void RideCameraPanel::show(std::u16string info, bool cameras, bool trains, std::optional<std::size_t> next_type, std::u16string_view next_name)
+    void RideCameraPanel::show(std::u16string info, bool cameras, bool trains, std::u16string_view noun, std::optional<std::size_t> next_type, std::u16string_view next_name)
     {
+        // The text of `key` with `with` in place of its mark, as in "Change to # camera".
+        const auto marked = [&](std::string_view key, std::u16string_view with) {
+            std::u16string help(strings_.get(key));
+            if (const auto mark = help.find(u'#'); mark != std::u16string::npos)
+                help.replace(mark, 1, with);
+            return help;
+        };
         info_->text = std::move(info);
         Button& type = *buttons_[5];
         type.enabled = next_type && *next_type < style_.types.size();
         if (type.enabled)
         {
             type.icon = style_.types[*next_type];
-            // "Change to # camera", the kind's name in place of the mark.
-            std::u16string help(strings_.get(kHelp[5]));
-            if (const auto mark = help.find(u'#'); mark != std::u16string::npos)
-                help.replace(mark, 1, next_name);
-            type.tooltip = std::move(help);
+            type.tooltip = marked(kHelp[5], next_name);
         }
         for (std::size_t step = 0; step < style_.steps.size(); ++step)
         {
             Button& b = *buttons_[step + 1];
             b.enabled = step < 2 ? cameras : trains;
             b.icon = b.enabled ? style_.steps[step] : style_.no_steps[step];
-            b.tooltip = strings_.get(b.enabled ? kHelp[step + 1] : step < 2 ? "RidecamGUI_DisabledCamera" : "RidecamGUI_DisabledTrain");
+            if (step < 2)
+                b.tooltip = strings_.get(b.enabled ? kHelp[step + 1] : "RidecamGUI_DisabledCamera");
+            else
+                b.tooltip = marked(b.enabled ? (step == 2 ? "RidecamGUI_PrevRide" : "RidecamGUI_NextRide") : "RidecamGUI_DisabledTrain", noun);
         }
     }
 

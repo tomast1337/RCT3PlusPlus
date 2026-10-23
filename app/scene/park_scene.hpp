@@ -323,8 +323,10 @@ namespace rct3::scene
         park::Fitted saved_cars;              ///< Where the park kept each car, by id
         std::vector<glm::mat4> car_places;    ///< Where each car stands now, by car
         std::optional<std::size_t> riding;    ///< The car the view rides along in, of `cars`
-        /// The flat ride (of the park's rides) and the rider seat on it the view looks out from; never with `riding`.
+        /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
+        /// never with `riding`.
         std::optional<std::pair<std::size_t, std::size_t>> riding_flat;
+        bool riding_fixed = false;                           ///< On a flat ride, from one of its own fixed cameras rather than a seat
         park::Seat seat;                                     ///< Its rider's eyes, while riding
         park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden
         glm::vec2 ride_turn { };                             ///< How far the rider looks round from ahead, yaw and pitch
@@ -373,6 +375,7 @@ namespace rct3::scene
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
             std::size_t first_seat = 0;      ///< Its first seat's place in seat_carriers
             std::size_t seats = 0;           ///< Of seat_carriers it owns; none for gates and scenery
+            std::vector<glm::mat4> views;    ///< Of a ride, how its fixed cameras' bones have moved, by number
             float reach = 0;                 ///< Of scenery, about how far it reaches from its place
             /// Of a ride's entrance or exit, its motions shut, opening, open and shutting (park::kGateShut...): it
             /// opens while the ride's riders walk through, on or off as `exit` says.

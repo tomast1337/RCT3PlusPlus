@@ -678,6 +678,27 @@ namespace rct3::simulation
         return added;
     }
 
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water)
+    {
+        auto& r = world.registry;
+        for (std::size_t i = 0; i < std::min({ rides.rides.size(), added.size(), courses.size() }); ++i)
+        {
+            const save::Ride& ride = rides.rides[i];
+            const auto& course = courses[i];
+            if ((ride.mode != save::OperatingMode::Boat && ride.mode != save::OperatingMode::WaterTransport) || !r.valid(added[i]) || !course || course->points.empty() || ride.trains.empty())
+                continue;
+            if (!r.ctx().contains<WaterTiles>())
+                r.ctx().emplace<WaterTiles>(water_tiles(grid, water));
+            const glm::vec3 leave = course->points.back();
+            const glm::vec3 heading = park::course_direction(*course, course->length());
+            Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
+            boats.boats.resize(ride.trains.size());
+            for (Boat& boat : boats.boats)
+                boat.at = boats.dock.enter;
+            r.emplace<Boats>(added[i], std::move(boats));
+        }
+    }
+
     std::size_t import_litter(SimWorld& world, const save::PeopleModel& people, float now)
     {
         std::size_t added = 0;

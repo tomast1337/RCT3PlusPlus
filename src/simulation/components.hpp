@@ -14,6 +14,7 @@
 
 #include "math/glm.hpp"
 #include "random/generator.hpp"
+#include "simulation/boat.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
@@ -393,6 +394,15 @@ namespace rct3::simulation
 
     /// The trains of a ride whose trains go round a track, each a Coaster of its own on the same track.
     /// The one standing at the start loads; the others run, or wait behind the train in front.
+    /// The boats of a ride whose boats leave their dock for open water; they sail while its cycle runs, and it
+    /// lets its riders off once every boat is back. The water they float on is a WaterTiles in the registry's
+    /// context.
+    struct Boats
+    {
+        std::vector<Boat> boats { };
+        Dock dock { };
+    };
+
     struct Trains
     {
         std::vector<Coaster> trains;

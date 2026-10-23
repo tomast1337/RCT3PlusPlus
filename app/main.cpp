@@ -1015,6 +1015,7 @@ int main(int argc, char** argv)
                 p.left = held->down;
                 p.shift = held->shift;
                 p.control = held->control;
+                p.wheel_y = held->wheel;
                 p.inside = true;
                 return p;
             }

@@ -33,6 +33,7 @@ namespace rct3::simulation
             message.age = std::max(m.time, 0.0f);
             message.subject = m.object;
             message.subject_name = m.object_name;
+            message.panel = m.panel;
             message.award = m.award;
             post(messages, std::move(message));
         }

@@ -66,6 +66,7 @@ namespace rct3::scene
         constexpr float kPropViewClosest = 1.5f;    ///< Small props fill the round view
         constexpr float kViewPitch = 0.5f;          ///< Radians down, of the info panel's round view
         constexpr float kViewTurn = 0.15f;          ///< Radians a second the round view turns round its attraction
+        constexpr float kFocusZoomOut = 2;          ///< A message's camera looks from this many times the round view's distance (ours)
         constexpr float kPersonViewDistance = 4.5f; ///< Of the round view's eye from the person it shows
         constexpr float kPersonViewHeight = 0.9f;   ///< Of the point it looks at, above the person's feet
         // Values for photos at photo spots.
@@ -1436,7 +1437,7 @@ namespace rct3::scene
                         scene.broken_rides.erase(told);
                     const auto at = std::ranges::find(scene.ride_entities, e);
                     const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
-                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name });
+                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = std::to_underlying(ui::AttractionTab::Maintenance) });
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
                     if (index >= scene.rides.rides.size())
@@ -1512,8 +1513,13 @@ namespace rct3::scene
             const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
             if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {
+                // At the tab the message names, when a ride's; stalls number theirs otherwise.
+                if (ref->kind == park::AttractionRef::Kind::Ride && message->panel && *message->panel >= 0 && *message->panel <= std::to_underlying(ui::AttractionTab::Maintenance))
+                    scene.info_tab = static_cast<ui::AttractionTab>(*message->panel);
                 open_info(scene, *info, *ref, assets, options);
+                // Close enough to make it out, never further out than the player was.
                 scene.camera.target = { scene.view_camera.target.x, scene.camera.target.y, scene.view_camera.target.z };
+                scene.camera.distance = std::min(scene.camera.distance, scene.view_camera.distance * kFocusZoomOut);
                 scene.camera = park::on_ground(scene.camera, scene.grid);
             }
         }

@@ -84,7 +84,7 @@ namespace rct3::simulation
     /// Boats for the boat-hire and water-transport rides of `added` (the entities import_rides gave `rides`),
     /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts
     /// (transport boats calling at the course's other stations on the way), and the park's water for them to
-    /// float on. Rides without a course keep their timing alone.
+    /// float on. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water);
 
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped

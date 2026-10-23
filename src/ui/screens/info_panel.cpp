@@ -186,6 +186,7 @@ namespace rct3::ui
         control_rows_.clear();
         measured_ = false;
         paper_ = (!page.lines.empty() || !page.note.empty()) && page.graph.empty();
+        striped_ = !page.lines.empty();
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;
         const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
@@ -792,11 +793,11 @@ namespace rct3::ui
                 const float m = c.paper_margin;
                 const auto across = [&](float from, float width) { return style_.left ? Rect { paper.x1 - from - width, paper.y0, paper.x1 - from, paper.y1 } : Rect { paper.x0 + from, paper.y0, paper.x0 + from + width, paper.y1 }; };
                 plain(across(0, m), { }, c.margin);
-                const float box = std::min(s.y0 + info_panel::kBodyTop + body_height_, paper.y1 - 1);
+                const float box = striped_ ? std::min(s.y0 + info_panel::kBodyTop + body_height_, paper.y1 - 1) : paper.y1 - info_panel::kLineHeight;
                 Rect inside = across(m + 4, paper.width() - m - 4);
                 inside.y1 = box;
                 // Every other line, the first included, short of the round corner.
-                for (float y = s.y0 + info_panel::kBodyTop; y < box; y += 2 * info_panel::kLineHeight)
+                for (float y = s.y0 + info_panel::kBodyTop; striped_ && y < box; y += 2 * info_panel::kLineHeight)
                 {
                     const float y1 = std::min(y + info_panel::kLineHeight, box);
                     const bool corner = y1 > paper.y1 - c.paper_corner;

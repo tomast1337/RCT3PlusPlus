@@ -464,8 +464,9 @@ namespace rct3::ui
         std::optional<std::size_t> section_now_;
         Button* close_ = nullptr;
         Button* hide_ = nullptr;
-        bool tucked_ = false; ///< The strip put away by the player
-        bool paper_ = false;  ///< The page sits on paper
+        bool tucked_ = false;  ///< The strip put away by the player
+        bool paper_ = false;   ///< The page sits on paper
+        bool striped_ = false; ///< Its lines are striped; a note alone sits in a plain box down the paper
         Widget* body_ = nullptr;
         Label* title_ = nullptr; ///< The page's, in the band
 

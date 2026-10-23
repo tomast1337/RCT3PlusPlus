@@ -733,37 +733,40 @@ namespace rct3::simulation
 
     std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> placed, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs)
     {
-        // Approximation: Fun Valley's saved bins hold 0.4 and fill in steps of a hundredth, so a piece of rubbish
-        // is taken to be one.
-        constexpr float kSavedPiece = 0.01f;
         std::unordered_map<std::uint64_t, const save::PlacedObject*> objects;
         for (const save::PlacedObject& o : placed)
             objects.emplace(o.id, &o);
-        const PathNetwork& paths = world.paths;
         auto& r = world.registry;
         std::size_t added = 0;
         const auto add = [&](std::uint64_t object, PathItemKind kind) -> entt::entity {
             const auto found = objects.find(object);
-            if (found == objects.end())
-                return entt::null;
-            const save::PlacedObject& o = *found->second;
-            const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f) * paths.tile_size };
-            const auto at = paths.nearest(middle);
-            if (!at)
-                return entt::null;
-            const entt::entity e = r.create();
-            r.emplace<PathItem>(e, PathItem { *at, kind });
-            ++added;
+            const entt::entity e = found == objects.end() ? entt::null : add_path_item(world, *found->second, kind);
+            added += e != entt::null ? 1 : 0;
             return e;
         };
         for (const save::BinState& b : bins)
             if (const entt::entity e = add(b.object_ref, PathItemKind::Bin); e != entt::null)
-                r.emplace<Bin>(e, Bin { b.capacity / kSavedPiece, std::round(b.contents / kSavedPiece) });
+                r.replace<Bin>(e, Bin { b.capacity / kSavedBinPiece, std::round(b.contents / kSavedBinPiece) });
         for (const std::uint64_t bench : benches)
             add(bench, PathItemKind::Bench);
         for (const save::SignState& s : signs)
             add(s.object_ref, PathItemKind::Sign);
         return added;
+    }
+
+    entt::entity add_path_item(SimWorld& world, const save::PlacedObject& o, PathItemKind kind)
+    {
+        const PathNetwork& paths = world.paths;
+        const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f) * paths.tile_size };
+        const auto at = paths.nearest(middle);
+        if (!at)
+            return entt::null;
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        r.emplace<PathItem>(e, PathItem { *at, kind });
+        if (kind == PathItemKind::Bin)
+            r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });
+        return e;
     }
 
     std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people)

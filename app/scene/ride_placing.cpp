@@ -5,8 +5,10 @@
 #include "ovl/overlay.hpp"
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
+#include "park/item_category.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
+#include "park/path_furniture.hpp"
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/track_supports.hpp"
@@ -97,6 +99,7 @@ namespace rct3::scene
                 o.rotation = p.site->turns;
                 o.quadrant = p.quadrant;
                 o.height_offset = p.site->height - p.ground;
+                o.force_absolute_height = p.absolute;
                 o.colours = p.colours;
                 return o;
             }
@@ -465,6 +468,34 @@ namespace rct3::scene
                     hit = ray->origin + ray->direction * *distance;
             }
             const std::array squares { std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->width)), std::max<std::int32_t>(1, static_cast<std::int32_t>(p.item->length)) };
+            // Benches, bins, lamps and signs go only on paths, against the side or in the middle the path offers.
+            save::PlacedObject probe;
+            probe.overlay = p.item->overlay;
+            probe.symbol = p.item->symbol;
+            const auto model = load_object_model(scene, p.models, assets, probe) ? scene.models.find(park::model_ref(probe)) : scene.models.end();
+            const auto positioning = model != scene.models.end() ? static_cast<park::Positioning>(model->second.positioning) : park::Positioning::Tile;
+            p.absolute = false;
+            if (park::on_paths(positioning))
+            {
+                p.lift.reset();
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns) : std::nullopt;
+                if (!spot)
+                {
+                    p.site.reset();
+                    p.problem = park::SiteProblem::OffPath;
+                    p.ghost_mesh = { };
+                    return;
+                }
+                p.site = park::RideSite { spot->tile.col, spot->tile.row, spot->turns, spot->height, { 1, 1 } };
+                // On the ground it follows the land; on a deck it keeps the deck's height.
+                p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, 0, scene.grid).height : spot->height;
+                p.absolute = spot->raised;
+                const save::PlacedObject o = *ghost_object(p);
+                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
+                p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+                show_ghost();
+                return;
+            }
             if (shift && p.site && p.lift)
             {
                 if (ray)
@@ -627,7 +658,19 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Scenery)
         {
             // The tool stays out for the next one, as in the game.
-            add_object(scene, assets, *o);
+            const std::uint64_t id = add_object(scene, assets, *o);
+            // What guests use on the paths is theirs at once.
+            const park::ObjectModel& model = scene.models.at(park::model_key(*o));
+            const auto category = model.category;
+            const auto kind = category == std::to_underlying(park::ItemCategory::LitterBin) ? std::optional(simulation::PathItemKind::Bin) : category == std::to_underlying(park::ItemCategory::Bench) ? std::optional(simulation::PathItemKind::Bench) : category == std::to_underlying(park::ItemCategory::Sign) ? std::optional(simulation::PathItemKind::Sign) : park::is_sight(category) ? std::optional(model.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight) : std::nullopt;
+            // Bins and signs are kept with the park; benches are found again by their kind when it loads.
+            if (kind && simulation::add_path_item(scene.sim, scene.objects.back(), *kind) != entt::null)
+            {
+                if (*kind == simulation::PathItemKind::Bin)
+                    scene.bins.push_back({ .object_ref = id, .capacity = simulation::kNewBinPieces * simulation::kSavedBinPiece });
+                else if (*kind == simulation::PathItemKind::Sign)
+                    scene.signs.push_back({ .object_ref = id });
+            }
             animate_scenery(device, scene, scene.objects.size() - 1);
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;

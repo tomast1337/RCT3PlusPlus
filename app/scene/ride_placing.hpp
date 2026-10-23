@@ -61,6 +61,7 @@ namespace rct3::scene
         std::optional<park::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
         std::int32_t quadrant = 0;              ///< Of the tile, for scenery that takes a quarter of one
         std::int32_t ground = 0;                ///< Height of the ground under the site, of scenery or a ride
+        bool absolute = false;                  ///< Scenery on a raised path, at the deck's height
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {

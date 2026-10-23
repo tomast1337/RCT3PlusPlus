@@ -882,7 +882,7 @@ namespace rct3::simulation
                 for (const entt::entity ride : rides)
                 {
                     auto& upkeep = r.get<Upkeep>(ride);
-                    const bool due = broken ? upkeep.broken : upkeep.inspect_every >= 0 && upkeep.since_inspection >= upkeep.inspect_every;
+                    const bool due = broken ? upkeep.broken : upkeep.called || (upkeep.inspect_every >= 0 && upkeep.since_inspection >= upkeep.inspect_every);
                     if (!free.empty() && due && upkeep.mechanic == entt::null)
                         send(ride, upkeep);
                 }
@@ -916,6 +916,7 @@ namespace rct3::simulation
                         upkeep.broken = false;
                         upkeep.kind = Breakdown::None;
                         upkeep.since_inspection = 0;
+                        upkeep.called = false;
                         upkeep.mechanic = entt::null;
                         staff.ride = entt::null;
                     }

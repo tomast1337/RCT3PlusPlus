@@ -562,6 +562,14 @@ namespace rct3::scene
                     if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
                         upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
             }
+            else if (change.id == ui::control_id(Mechanic))
+            {
+                // shortcut: the game also opens the mechanic's window and puts this job first on a busy one's list;
+                // add both with the staff window's job list.
+                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
+                    if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
+                        upkeep->called = true;
+            }
             else if (change.id == ui::control_id(MinWaitOn))
                 wait_on(ride->options.min_wait, MinWait);
             else if (change.id == ui::control_id(MaxWaitOn))

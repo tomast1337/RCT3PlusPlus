@@ -540,6 +540,7 @@ namespace rct3::simulation
         float since_inspection = 0;         ///< Seconds
         float inspect_every = 600;          ///< Seconds; negative never
         entt::entity mechanic = entt::null; ///< Sent to it, or at work on it
+        bool called = false;                ///< The player asked for a mechanic, who inspects it as if due
         std::uint32_t breakdowns = 0;       ///< Since the run began
         Breakdown kind = Breakdown::None;   ///< The breakdown going on
         Breakdown last = Breakdown::None;   ///< The latest one, going on or fixed

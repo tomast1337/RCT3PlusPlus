@@ -64,6 +64,18 @@ TEST_CASE("a mechanic inspects a ride when it is due, winning back reliability")
     CHECK(r.get<Upkeep>(ride).since_inspection < 1);
 }
 
+TEST_CASE("a mechanic the player calls inspects the ride before it is due")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto ride = park.flat_ride("Twister", { 3, 0 }, 0);
+    auto& r = park.world().registry;
+    r.emplace<Upkeep>(ride, Upkeep { .reliability = 0.5f, .since_inspection = 0, .inspect_every = -1, .called = true });
+    park.staff(StaffRole::Mechanic, { 0, 0 });
+    CHECK(park.run_until([&] { return r.get<Upkeep>(ride).reliability > 0.5f; }, 60));
+    CHECK_FALSE(r.get<Upkeep>(ride).called);
+}
+
 TEST_CASE("staff are paid their wage by the game hour")
 {
     Sandbox park;

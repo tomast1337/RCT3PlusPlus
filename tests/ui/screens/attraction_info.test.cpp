@@ -451,7 +451,9 @@ TEST_CASE("saved messages name tabs by number: a breakdown opens maintenance, a 
     CHECK(message_tab(4) == AttractionTab::Items);
     CHECK(message_tab(0) == AttractionTab::View);
     CHECK_FALSE(message_tab(-1));
+    CHECK(message_tab(11) == AttractionTab::Items);
     CHECK_FALSE(message_tab(99));
     CHECK(message_panel(AttractionTab::Maintenance) == 8);
+    CHECK(message_panel(AttractionTab::Items) == 4);
     CHECK(message_panel(AttractionTab::Thoughts) == 10);
 }

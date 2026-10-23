@@ -55,9 +55,10 @@ namespace rct3::ui
         Extras,
     };
 
-    /// The tabs saved messages name by number for their subject to open at, at their number.
-    inline constexpr std::array<AttractionTab, 11> kMessageTabs {
-        AttractionTab::View, AttractionTab::Vehicles, AttractionTab::Tests, AttractionTab::Finances, AttractionTab::Items, AttractionTab::Extras, AttractionTab::Mode, AttractionTab::Graphs, AttractionTab::Maintenance, AttractionTab::Customers, AttractionTab::Thoughts,
+    /// The tabs saved messages name by number for their subject to open at, at their number. Two name the items:
+    /// a stall's, and a pool changing room's.
+    inline constexpr std::array<AttractionTab, 12> kMessageTabs {
+        AttractionTab::View, AttractionTab::Vehicles, AttractionTab::Tests, AttractionTab::Finances, AttractionTab::Items, AttractionTab::Extras, AttractionTab::Mode, AttractionTab::Graphs, AttractionTab::Maintenance, AttractionTab::Customers, AttractionTab::Thoughts, AttractionTab::Items,
     };
 
     /// The tab a message's number names, if any.

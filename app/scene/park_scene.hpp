@@ -485,12 +485,6 @@ namespace rct3::scene
         float since_hover_pick = 0;  ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
-        /// The message whose camera was clicked last, and how many times in a row.
-        struct MessageFocus
-        {
-            std::uint64_t serial = 0;
-            std::size_t step = 0;
-        } message_focus;
         std::vector<ui::ToolItem> window_requests;         ///< Files menu items that open a window the owner opens (park_windows.hpp)
         std::unique_ptr<ui::OptionsSession> options;       ///< The options window over the park, once opened
         std::filesystem::path file;                        ///< The park file loaded, whose name saving offers

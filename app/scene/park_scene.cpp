@@ -557,6 +557,28 @@ namespace rct3::scene
             return std::nullopt;
         }
 
+        /// Every train of the park a view can ride along in, ride by ride in the park's order: the first car of
+        /// each with a camera of kind `eye`, or on a ride with none of that kind, of the first kind it has of the
+        /// front seat, rear seat and nose.
+        std::vector<std::pair<std::size_t, park::RideEye>> train_stops(const ParkScene& scene, park::RideEye eye)
+        {
+            std::vector<std::pair<std::size_t, park::RideEye>> stops;
+            for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
+                for (const park::RideEye kind : { eye, park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
+                    if (const std::vector<std::size_t> seats = ride_seats(scene, ride, kind); !seats.empty())
+                    {
+                        std::vector<std::size_t> trains;
+                        for (const std::size_t seat : seats)
+                            if (!std::ranges::contains(trains, scene.car_spots[seat].train))
+                            {
+                                trains.push_back(scene.car_spots[seat].train);
+                                stops.emplace_back(seat, kind);
+                            }
+                        break;
+                    }
+            return stops;
+        }
+
         /// Rides along in `car`: everything else on screen is put away, the ride camera panel shows, and a park
         /// that was paused is set going so the ride moves.
         void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, park::RideEye eye)
@@ -593,24 +615,17 @@ namespace rct3::scene
             info += u"  " + std::u16string(strings.get("RidecamGUI_Car")) + u" " + strings::to_utf16(std::format("{}", place));
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
             info += u"  " + std::u16string(strings.get(kEyeNames[std::to_underlying(eye)]));
-            std::size_t cameras = 0;
-            std::vector<std::size_t> trains;
-            for (const std::size_t seat : ride_seats(scene, spot.ride, eye))
-            {
-                cameras += scene.car_spots[seat].train == spot.train ? 1 : 0;
-                if (!std::ranges::contains(trains, scene.car_spots[seat].train))
-                    trains.push_back(scene.car_spots[seat].train);
-            }
+            const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
             const std::optional<park::RideEye> next = next_eye(scene, car, eye);
             if (auto panel = root.find_as<ui::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), cameras > 1, trains.size() > 1, next.transform([](park::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
+                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, next.transform([](park::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
         void stop_riding(ParkScene& scene);
 
         /// Leaves, or changes to the train's first camera of the next kind it has, or steps to the previous or next
-        /// camera of the same kind on the train (round from the last to the first), or to the first camera of that
-        /// kind on the previous or next train.
+        /// camera of the same kind on the train (round from the last to the first), or to the previous or next
+        /// train, on from a ride's last train to the next ride's first, round the park.
         void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::RideCameraAction action)
         {
             using enum ui::RideCameraAction;
@@ -633,21 +648,23 @@ namespace rct3::scene
                         }
                 return;
             }
-            const bool cameras = action == PreviousCamera || action == NextCamera;
             const bool next = action == NextCamera || action == NextTrain;
-            // The cameras to step through: the train's own, or the first of each train.
-            std::vector<std::size_t> stops;
-            std::vector<std::size_t> trains;
-            for (const std::size_t seat : ride_seats(scene, spot.ride, scene.riding_eye))
+            const auto step = [&](std::size_t at, std::size_t count) { return (at + (next ? 1 : count - 1)) % count; };
+            if (action == PreviousCamera || action == NextCamera)
             {
-                const std::size_t train = scene.car_spots[seat].train;
-                if (cameras ? train == spot.train : !std::ranges::contains(trains, train))
-                    stops.push_back(seat);
-                trains.push_back(train);
+                std::vector<std::size_t> stops = ride_seats(scene, spot.ride, scene.riding_eye);
+                std::erase_if(stops, [&](std::size_t seat) { return scene.car_spots[seat].train != spot.train; });
+                if (const auto at = std::ranges::find(stops, *scene.riding); at != stops.end())
+                    ride_along(scene, assets, stops[step(static_cast<std::size_t>(at - stops.begin()), stops.size())], scene.riding_eye);
+                return;
             }
-            const auto at = std::ranges::find_if(stops, [&](std::size_t seat) { return cameras ? seat == *scene.riding : scene.car_spots[seat].train == spot.train; });
+            const std::vector<std::pair<std::size_t, park::RideEye>> stops = train_stops(scene, scene.riding_eye);
+            const auto at = std::ranges::find_if(stops, [&](const auto& stop) { return scene.car_spots[stop.first].ride == spot.ride && scene.car_spots[stop.first].train == spot.train; });
             if (at != stops.end())
-                ride_along(scene, assets, stops[(static_cast<std::size_t>(at - stops.begin()) + (next ? 1 : stops.size() - 1)) % stops.size()], scene.riding_eye);
+            {
+                const auto [car, eye] = stops[step(static_cast<std::size_t>(at - stops.begin()), stops.size())];
+                ride_along(scene, assets, car, eye);
+            }
         }
 
         /// Back to the overhead view, with what was on screen before.

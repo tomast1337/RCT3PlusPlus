@@ -75,6 +75,9 @@ interface MapPoint {
 declare namespace camera {
     /** Looks at `at` from `from`; without `from`, keeps the way it faces and how far back it is. */
     function look(at: MapPoint, from?: MapPoint): void;
+    /** Riding along in a car: its ride's place in rides.list(), the car, and once it is seen from, the rider's
+     *  eyes in world units and the way they look. Undefined while the view is overhead. */
+    function riding(): { ride: number; car: number; eye?: [number, number, number]; ahead?: [number, number, number] } | undefined;
 }
 
 interface Tile {

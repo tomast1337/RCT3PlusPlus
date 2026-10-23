@@ -534,6 +534,16 @@ namespace rct3::scene
                 change_object(device, scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
         }
 
+        /// Of the cars of ride `ride`, those a rider can look out of, in the order the park keeps them.
+        std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride)
+        {
+            std::vector<std::size_t> seats;
+            for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size(); ++i)
+                if (const auto model = scene.models.find(park::model_ref(scene.cars[i])); scene.car_spots[i].ride == ride && model != scene.models.end() && model->second.ride_eye)
+                    seats.push_back(i);
+            return seats;
+        }
+
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
         void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
@@ -583,6 +593,18 @@ namespace rct3::scene
                 }
                 if (count > 0)
                     scene.camera.target = sum / static_cast<float>(count);
+            }
+            else if (change.id == ui::control_id(RideCam) && ride != nullptr)
+            {
+                // The first car with a camera of a train under way, else of the first train.
+                // shortcut: looking straight out along the car; the game's look along the track ahead, sway, shake
+                // and other camera kinds wait for the cars' own camera settings.
+                const std::vector<std::size_t> seats = ride_seats(scene, ref.index);
+                const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
+                const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
+                const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
+                if (!seats.empty())
+                    scene.riding = running != seats.end() ? *running : seats.front();
             }
             else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
             {
@@ -1036,7 +1058,9 @@ namespace rct3::scene
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
             auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
-            if (!escape.empty() && tools && tools->open_menu())
+            if (!escape.empty() && scene.riding)
+                scene.riding.reset();
+            else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings, assets.palette);
@@ -1047,7 +1071,8 @@ namespace rct3::scene
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
         const bool over = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
-        profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
+        if (!scene.riding)
+            profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
         auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName);
         // What a click would open, for the pointer's look; not looked at every frame, as picking walks the park.
@@ -1262,7 +1287,7 @@ namespace rct3::scene
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
-        const glm::vec3 viewer = park::eye(scene.camera);
+        const glm::vec3 viewer = park::eye(scene.camera, scene.seat);
         profiling::section("Objects", [&] { refresh_objects(device, scene, viewer, elapsed); });
         if (scene.billboards_eye != viewer)
         {
@@ -1282,7 +1307,7 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);
-        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device)), elapsed); });
+        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat), elapsed); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
         if (bar)
         {
@@ -1293,6 +1318,16 @@ namespace rct3::scene
         {
             if (c == ui::PlayCommand::TogglePause)
                 scene.park.speed = simulation::pause_toggled(scene.park.speed);
+            else if (c == ui::PlayCommand::ToggleRideCamera)
+                scene.riding.reset();
+            else if (scene.riding && (c == ui::PlayCommand::NextRideCamera || c == ui::PlayCommand::PreviousRideCamera))
+            {
+                // On to the next car of the ride a rider can look out of, round to the first after the last.
+                const std::vector<std::size_t> seats = ride_seats(scene, scene.car_spots[*scene.riding].ride);
+                const auto at = std::ranges::find(seats, *scene.riding);
+                if (at != seats.end())
+                    scene.riding = seats[(static_cast<std::size_t>(at - seats.begin()) + (c == ui::PlayCommand::NextRideCamera ? 1 : seats.size() - 1)) % seats.size()];
+            }
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
@@ -1569,7 +1604,12 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device))); });
+            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat)); });
+            // Riding along, the view looks out from the rider's eyes in the car where it is now.
+            scene.seat.reset();
+            if (scene.riding && *scene.riding < scene.cars.size())
+                if (const auto model = scene.models.find(park::model_ref(scene.cars[*scene.riding])); model != scene.models.end() && model->second.ride_eye)
+                    scene.seat = scene.car_places[*scene.riding] * *model->second.ride_eye;
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 

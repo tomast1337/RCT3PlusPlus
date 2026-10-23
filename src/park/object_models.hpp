@@ -142,6 +142,9 @@ namespace rct3::park
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;
+        /// Of a car a rider can look out of: their eyes, model space, looking along +Z with +Y up, as its front
+        /// seat's camera bone or else its nose's has them. A car hung under its track has them turned over.
+        std::optional<glm::mat4> ride_eye;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone

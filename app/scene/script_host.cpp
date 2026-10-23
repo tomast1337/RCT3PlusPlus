@@ -346,6 +346,20 @@ namespace rct3::scene
             park_->camera = park::looking(world_point(g, a[1]), at);
             return Json(nullptr);
         });
+        engine_.define("camera.riding", [this](const Json&) -> Json {
+            const ParkScene& park = park_of(park_);
+            if (!park.riding || *park.riding >= park.car_spots.size())
+                return nullptr;
+            Json out { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding } };
+            if (park.seat)
+            {
+                const glm::vec3 at((*park.seat)[3]);
+                const glm::vec3 ahead((*park.seat)[2]);
+                out["eye"] = { at.x, at.y, at.z };
+                out["ahead"] = { ahead.x, ahead.y, ahead.z };
+            }
+            return out;
+        });
         engine_.define("map.effects", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             Json effects = Json::array();

@@ -2,12 +2,14 @@
 //
 // The camera over the park: it looks at a point on the ground from some distance, turned round the vertical
 // (yaw) and tilted down (pitch). Moving it slides that point over the ground, keeping the same height above
-// the surface; turning and zooming happen round it.
+// the surface; turning and zooming happen round it. Riding along in a ride's car, it looks out from the
+// rider's eyes instead, turning and leaning with the car.
 #pragma once
 
 #include "math/glm.hpp"
 #include "save/model/world.hpp"
 
+#include <optional>
 #include <span>
 
 namespace rct3::park
@@ -21,15 +23,21 @@ namespace rct3::park
         float distance = 60;       ///< From the eye to the target, in world units
     };
 
-    inline constexpr float kFieldOfView = 0.9f; ///< Radians, vertical
+    /// Riding a car: where the rider's eyes are, looking along its +Z with its +Y up. Given to the functions
+    /// below, it takes the camera's place.
+    using Seat = std::optional<glm::mat4>;
+
+    inline constexpr float kFieldOfView = 0.9f;     ///< Radians, vertical
+    inline constexpr float kRideFieldOfView = 1.5f; ///< Riding along: wider, to take in the track ahead
     inline constexpr float kNear = 0.5f;
+    inline constexpr float kRideNear = 0.1f; ///< Riding along: the car's front is close by
     inline constexpr float kFar = 3000;
     inline constexpr float kMinDistance = 6;
     inline constexpr float kMaxDistance = 400;
     inline constexpr float kMinPitch = 0.1f;
     inline constexpr float kMaxPitch = 1.5f;
 
-    [[nodiscard]] glm::vec3 eye(const ParkCamera& camera);
+    [[nodiscard]] glm::vec3 eye(const ParkCamera& camera, const Seat& seat = std::nullopt);
     /// The camera with its eye at `from` looking at `at`, within the tilt's and distance's limits.
     [[nodiscard]] ParkCamera looking(glm::vec3 from, glm::vec3 at);
 
@@ -44,9 +52,9 @@ namespace rct3::park
     /// `aspect` times as wide as it is tall.
     [[nodiscard]] Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at);
     /// World to clip space for a view `aspect` times as wide as it is tall.
-    [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect);
+    [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat = std::nullopt);
     /// The part of view_projection after the camera's turn and place: from the eye's space, looking along +z.
-    [[nodiscard]] glm::mat4 projection(float aspect);
+    [[nodiscard]] glm::mat4 projection(float aspect, const Seat& seat = std::nullopt);
 
     /// Looking at the middle of the map from the south-west, far enough to see much of it.
     [[nodiscard]] ParkCamera overview(const save::TerrainGrid& grid);

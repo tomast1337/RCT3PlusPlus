@@ -515,19 +515,28 @@ namespace rct3::park
             return std::nullopt;
         const std::string near = item_file->first;
 
-        // The visuals that can be read, with the file each is in.
+        // The visuals that can be read, with the file each is in; a broken look apart.
+        constexpr std::string_view kBroken = "_Broken";
         std::vector<std::pair<const ovl::SceneryVisual*, std::string>> visuals;
+        std::optional<std::pair<const ovl::SceneryVisual*, std::string>> broken;
         for (const std::string_view visual_name : item->visuals)
         {
             const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near);
             if (!visual_file)
                 continue;
             if (const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name))
-                visuals.emplace_back(visual, visual_file->first);
+            {
+                if (visual_name.size() > kBroken.size() && strings::equals_ignoring_case(visual_name.substr(visual_name.size() - kBroken.size()), kBroken))
+                    broken.emplace(visual, visual_file->first);
+                else
+                    visuals.emplace_back(visual, visual_file->first);
+            }
         }
         if (visuals.empty())
             return std::nullopt;
-        const auto& [visual, visual_path] = modelled_plants ? visuals.back() : visuals.front();
+        // Only plants list a modelled look after their flat one; other items' later visuals are something else.
+        const bool plant = item->type <= std::to_underlying(ItemCategory::Flowers);
+        const auto& [visual, visual_path] = modelled_plants && plant ? visuals.back() : visuals.front();
 
         ObjectModel model;
         model.positioning = item->positioning;
@@ -561,6 +570,14 @@ namespace rct3::park
         add_levels(model, *visual, visual_path);
         if (model.levels.empty())
             return std::nullopt;
+        if (broken)
+        {
+            ObjectModel worn;
+            add_levels(worn, *broken->first, broken->second);
+            if (worn.levels.size() == model.levels.size())
+                model.broken_levels = std::move(worn.levels);
+        }
+        model.price = item->cost;
         add_flow(model, symbol, near);
         return model;
     }

@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <map>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -79,6 +80,8 @@ namespace rct3::park
     /// The whole transform from model to park of some objects, by object id, for built pieces placed off
     /// the tile grid, turned any way or stretched (see track_supports.hpp). Others stand by their tile.
     using Fitted = std::map<std::uint64_t, glm::mat4>;
+    /// The objects vandals have broken, by id; those with a broken look are drawn with it.
+    using Broken = std::set<std::uint64_t>;
 
     /// The level each object is drawn at, by its index; kNotDrawn for hidden objects, objects without a model
     /// and objects too far away.
@@ -142,7 +145,7 @@ namespace rct3::park
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { });
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { });
 
     /// Where a billboard stands and how big it is. Its four corners are the next four vertices of the mesh.
     struct BillboardStand

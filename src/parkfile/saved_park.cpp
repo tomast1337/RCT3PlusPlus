@@ -165,7 +165,9 @@ namespace rct3::parkfile
             if (w.role != StaffRole::Vendor && (!at || world.paths.nodes()[*at].queue))
                 continue;
             const entt::entity e = r.create();
-            r.emplace<Staff>(e, Staff { .role = w.role, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness });
+            // The tasks the player set are on the worker's page.
+            const std::int32_t tasks = w.look >= 0 && static_cast<std::size_t>(w.look) < people.model.staff.size() ? people.model.staff[static_cast<std::size_t>(w.look)].task_flags : kEveryTask;
+            r.emplace<Staff>(e, Staff { .role = w.role, .tasks = tasks, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness });
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
                 r.emplace<Patrol>(e, *w.patrol);
@@ -180,7 +182,7 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
@@ -190,6 +192,8 @@ namespace rct3::parkfile
             put_chunk(w, "SHOW", 1, *park.shows);
         if (park.goals)
             put_chunk(w, "GOAL", 1, *park.goals);
+        if (!park.broken_items.empty())
+            put_chunk(w, "BRKN", 1, park.broken_items);
         return w.take();
     }
 
@@ -226,6 +230,12 @@ namespace rct3::parkfile
                 if (park.goals || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.goals.emplace());
+            }
+            if (tag == "BRKN")
+            {
+                if (!park.broken_items.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.broken_items);
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

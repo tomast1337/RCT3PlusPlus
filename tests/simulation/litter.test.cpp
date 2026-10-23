@@ -83,8 +83,55 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
     CHECK(r.ctx().get<Vandalism>().broken == 3);
     CHECK(r.ctx().get<Vandalism>().warnings == 1);
     r.get<Mood>(vandal).happiness.value = 1;
-    park.staff(StaffRole::Handyman, { 0, 0 });
+    // A mechanic leaves them be; a handyman mends them, and counts each.
+    park.staff(StaffRole::Mechanic, { 0, 0 });
+    park.run_seconds(60);
+    CHECK(std::ranges::all_of(benches, broken));
+    const auto handyman = park.staff(StaffRole::Handyman, { 0, 0 });
     CHECK(park.run_until([&] { return std::ranges::none_of(benches, broken); }, 60));
+    CHECK(r.get<Staff>(handyman).mended == 3);
+}
+
+TEST_CASE("a handyman steps over to a broken bench beside them, whichever side")
+{
+    for (const int side : { -1, 1 })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        auto& r = park.world().registry;
+        const auto bench = park.item(PathItemKind::Bench, { 3 + side, 0 });
+        r.get<PathItem>(bench).broken = true;
+        park.staff(StaffRole::Handyman, { 3, 0 });
+        CHECK(park.run_until([&] { return !r.get<PathItem>(bench).broken; }, 15));
+    }
+}
+
+TEST_CASE("a handyman told to leave broken things does, and still sweeps; replacing puts all back at their price")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 0, 0 });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> benches;
+    for (std::uint64_t i = 1; i <= 3; ++i)
+    {
+        benches.push_back(park.item(PathItemKind::Bench, { 0, 0 }));
+        r.get<PathItem>(benches.back()).broken = true;
+        r.get<PathItem>(benches.back()).object = i;
+    }
+    park.litter({ 0, 0 }, 2);
+    const auto handyman = park.staff(StaffRole::Handyman, { 0, 0 });
+    r.get<Staff>(handyman).tasks |= kLeaveBrokenTask;
+    CHECK(park.run_until([&] { return litter(park) == 0; }, 60));
+    park.run_seconds(60);
+    CHECK(std::ranges::all_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
+    CHECK(r.get<Staff>(handyman).mended == 0);
+
+    const Replacement due = replacement(park.world(), [](std::uint64_t object) { return static_cast<std::int64_t>(object) * 100; });
+    CHECK(due.items == 3);
+    CHECK(due.cost == 600);
+    replace_broken(park.world());
+    CHECK(std::ranges::none_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
+    CHECK(replacement(park.world(), [](std::uint64_t) { return 1; }).items == 0);
 }
 
 TEST_CASE("a dirty path spoils the mood of the guests on it")

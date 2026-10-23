@@ -292,7 +292,10 @@ namespace rct3::scene
                 f.painting_patrol = scene.painting_patrol;
                 f.patrol_brush = scene.patrol_brush;
                 f.patrol_zone = patrol != nullptr ? patrol->zone : 0;
-                f.uncovered_paths = simulation::uncovered_paths(scene.sim, scene.sim.registry.get<simulation::Staff>(e).role);
+                const auto& staff = scene.sim.registry.get<simulation::Staff>(e);
+                f.uncovered_paths = simulation::uncovered_paths(scene.sim, staff.role);
+                if (staff.role == simulation::StaffRole::Handyman)
+                    f.items_mended = staff.mended;
             }
             return f;
         }
@@ -823,7 +826,10 @@ namespace rct3::scene
             else if (change.id == ui::person_control(Costume))
                 person->sub_type = static_cast<std::uint8_t>(change.value);
             else if (change.id >= ui::person_control(Task))
+            {
                 staff->task_flags ^= 1 << (change.id - ui::person_control(Task));
+                care.tasks = staff->task_flags;
+            }
             return false;
         }
 
@@ -849,9 +855,18 @@ namespace rct3::scene
             return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
         }
 
+        /// What putting a broken path item back new costs: the price of the object it stands as.
+        std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
+        {
+            const auto o = std::ranges::find(scene.objects, object, &save::PlacedObject::id);
+            const auto model = o != scene.objects.end() ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            return model != scene.models.end() ? model->second.price : 0;
+        }
+
         ui::ManagementFacts management_facts(const ParkScene& scene)
         {
-            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides };
+            const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
+            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost };
         }
 
         /// Opens the info panel on what a management window's row is about, if the park shows it.
@@ -1318,6 +1333,16 @@ namespace rct3::scene
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
                 }
+                // What is broken looks it, and looks whole again once mended.
+                park::Broken broken;
+                for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
+                    if (item.broken && item.object != 0)
+                        broken.insert(item.object);
+                if (broken != scene.broken_objects)
+                {
+                    scene.broken_objects = std::move(broken);
+                    objects_changed(scene);
+                }
                 // Photos of the player's guests at photo spots: from in front of them, framing their party.
                 if (auto* photos = scene.sim.registry.ctx().find<simulation::Photos>())
                 {
@@ -1557,8 +1582,17 @@ namespace rct3::scene
             scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
             scene.camera = park::on_ground(scene.camera, scene.grid);
         }
-        if (const auto row = update_management_windows(desktop, management_facts(scene), *assets.strings, info_units(assets, options)); row && info)
-            open_row(scene, *info, *row, assets, options);
+        const ui::ManagementFacts facts = management_facts(scene);
+        const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
+        if (asks.row && info)
+            open_row(scene, *info, *asks.row, assets, options);
+        // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
+        if (asks.replace_broken && facts.broken_items > 0 && (!scene.park.cash || *scene.park.cash >= facts.replace_cost))
+        {
+            simulation::replace_broken(scene.sim);
+            if (scene.park.cash)
+                *scene.park.cash -= facts.replace_cost;
+        }
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         follow_footpaths(scene, elapsed);
         if (auto guide = desktop.root().find_as<ui::TutorialGuide>(kGuideName); guide && guide->take_quit())
@@ -1630,6 +1664,9 @@ namespace rct3::scene
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
+        for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
+            if (item.broken && item.object != 0)
+                saved.broken_items.push_back(item.object);
         if (!scene.park_model.objectives.objectives.empty())
             saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives, .max_loan = scene.park_model.finance.max_loan, .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
         return parkfile::write_saved_park(saved);

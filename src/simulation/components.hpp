@@ -447,7 +447,7 @@ namespace rct3::simulation
     {
         NodeId node = kNoNode;
         PathItemKind kind = PathItemKind::Bin;
-        bool broken = false;      ///< Of no use until a handyman or mechanic mends it
+        bool broken = false;      ///< Of no use until a handyman mends it, or the player replaces it
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
     };
 
@@ -503,19 +503,30 @@ namespace rct3::simulation
         Vendor,   ///< Sells at a stall or a ride's entrance, standing at their post off the paths
     };
 
+    /// A handyman's tasks among the task flags, numbered as saved parks number them.
+    inline constexpr std::int32_t kSweepTask = 1 << 0;
+    inline constexpr std::int32_t kEmptyBinsTask = 1 << 2;
+    /// Our own task, kept the other way round: set, a handyman leaves broken path items alone. Parks the game
+    /// saved never set it, so their handymen mend.
+    inline constexpr std::int32_t kLeaveBrokenTask = 1 << 3;
+    /// What a handyman does when the park says nothing: every task of the game's.
+    inline constexpr std::int32_t kEveryTask = 0b111;
+
     struct Staff
     {
         StaffRole role = StaffRole::Other;
-        Seconds busy { };               ///< Left at the job in hand
-        entt::entity ride = entt::null; ///< The ride a mechanic is going to, or working on, to repair or inspect
-        Money wage { };                 ///< A game hour
-        std::int32_t wage_level = 2;    ///< 0 to 2, what `wage` follows (staff_care.hpp)
-        std::int32_t training = 3;      ///< 0 untrained to 3; new staff come fully trained until hiring costs money
+        std::int32_t tasks = kEveryTask; ///< Task flags, as save::Staff keeps them
+        Seconds busy { };                ///< Left at the job in hand
+        entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
+        Money wage { };                  ///< A game hour
+        std::int32_t wage_level = 2;     ///< 0 to 2, what `wage` follows (staff_care.hpp)
+        std::int32_t training = 3;       ///< 0 untrained to 3; new staff come fully trained until hiring costs money
         std::int32_t warnings = 0;
         Share happiness { 1 };
-        Share laziness { };   ///< How much longer each job takes, and how often they stop to rest
-        Share load { };       ///< Of the recent past, spent at work
-        bool resting = false; ///< `busy` is a rest, not a job
+        Share laziness { };       ///< How much longer each job takes, and how often they stop to rest
+        Share load { };           ///< Of the recent past, spent at work
+        bool resting = false;     ///< `busy` is a rest, not a job
+        std::uint32_t mended = 0; ///< Broken path items mended since the run began
     };
 
     /// How a ride has broken down, numbered as saved parks number breakdowns.

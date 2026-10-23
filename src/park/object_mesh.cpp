@@ -233,7 +233,7 @@ namespace rct3::park
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -252,7 +252,8 @@ namespace rct3::park
             const std::int8_t level = finest ? 0 : levels[index];
             if (level < 0 || static_cast<std::size_t>(level) >= model->second.levels.size())
                 continue;
-            const ModelLevel& shown = model->second.levels[static_cast<std::size_t>(level)];
+            const bool worn = !model->second.broken_levels.empty() && broken.contains(object.id);
+            const ModelLevel& shown = (worn ? model->second.broken_levels : model->second.levels)[static_cast<std::size_t>(level)];
             if (shown.parts.empty())
                 continue;
             ++mesh.placed;

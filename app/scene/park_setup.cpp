@@ -766,6 +766,7 @@ namespace rct3::scene
         {
             scene.rides = std::move(saved->rides);
             scene.led_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
+            scene.broken_objects.insert(saved->broken_items.begin(), saved->broken_items.end());
         }
         else if (auto rides = save::load_rides(*file, index))
             scene.rides = std::move(*rides);
@@ -1062,6 +1063,9 @@ namespace rct3::scene
                         benches.push_back(o.id);
                 }
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
+                // What vandals broke stays broken until mended.
+                for (auto [e, item] : scene.sim.registry.view<simulation::PathItem>().each())
+                    item.broken = scene.broken_objects.contains(item.object);
                 for (const save::PlacedObject& o : scene.objects)
                     if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
                         simulation::set_wall(scene.sim, *wall, true);

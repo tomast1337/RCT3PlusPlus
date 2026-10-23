@@ -24,6 +24,8 @@
 //              shows are read again from the original park.
 //   "GOAL" v1  SavedGoals: how far the scenario's goals have got. Only for parks that set goals; without it,
 //              they start again from the original park.
+//   "BRKN" v1  std::vector<std::uint64_t>: the path items vandals have broken, by object id. Only when there
+//              are any.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -128,6 +130,7 @@ namespace rct3::parkfile
         std::vector<save::ObjectId> no_queue_signs; ///< Rides whose queues have no signs
         std::optional<std::vector<save::RideShow>> shows;
         std::optional<SavedGoals> goals;
+        std::vector<std::uint64_t> broken_items; ///< Path items vandals have broken, by object id
     };
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one

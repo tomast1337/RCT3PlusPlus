@@ -196,6 +196,12 @@ namespace rct3::ui
             page.buttons.push_back(stub("ParkInfoIcon_PointCameraAtEntrance", { }, text(strings, "Park_CentreViewHelp")));
             page.buttons.push_back(stub("ParkInfoIcon_BuyLand", { }, text(strings, "Park_BuyLandHelp")));
             page.buttons.push_back(stub("ParkInfoIcon_BuyConstructionRites", { }, text(strings, "Park_BuyConstructionRitesHelp")));
+            std::u16string broken = whole(f.broken_items);
+            if (f.broken_items > 0)
+                broken += u" (" + money(units, f.replace_cost) + u")";
+            page.lines.push_back({ text(strings, "Rct3pp_BrokenItems"), std::move(broken), false, "Rct3pp_BrokenItems" });
+            const bool affordable = f.state == nullptr || !f.state->cash || *f.state->cash >= f.replace_cost;
+            page.buttons.push_back({ "Staff_JobIsMaintenanceIcon", { }, text(strings, "Rct3pp_ReplaceBrokenHelp"), f.broken_items > 0 && affordable });
         }
 
         void park_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)

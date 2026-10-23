@@ -885,9 +885,8 @@ namespace rct3::park
             fit.rear_wheels = front_z - rear_wheels.z;
             fit.on_track = (front_wheels + rear_wheels) / 2.0f;
         }
-        model.ride_eye = bone_of(car->visual, "camerafront");
-        if (!model.ride_eye && (model.ride_eye = bone_of(car->visual, "nosecamera")))
-            model.ride_nose = true;
+        const std::optional<glm::mat4> front = bone_of(car->visual, "camerafront");
+        model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         if (model.levels.empty())
             return std::nullopt;

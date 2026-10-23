@@ -30,6 +30,10 @@ namespace rct3::scene
     /// not pop in at the edges while the view turns; `reach` is about its size, in clip units.
     [[nodiscard]] bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach = 2.0f);
 
+    /// The eyes of car `car`'s camera of kind `eye`, in its own space, when it has one; the nose camera only
+    /// on the first car of its train.
+    [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::RideEye eye);
+
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run; and the scenery moving on its own near `eye` in `view`. Riding along, it also
     /// sets the rider's eyes, `elapsed` seconds on from the last frame's.

@@ -350,7 +350,8 @@ namespace rct3::scene
             const ParkScene& park = park_of(park_);
             if (!park.riding || *park.riding >= park.car_spots.size())
                 return nullptr;
-            Json out { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding } };
+            constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };
+            Json out { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding }, { "kind", kEyes[std::to_underlying(park.riding_eye)] } };
             if (park.seat)
             {
                 const glm::vec3 at((*park.seat)[3]);

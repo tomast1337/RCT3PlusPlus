@@ -25,8 +25,15 @@ namespace rct3::scene
     /// Closes the management window on top of the others, if any is open; returns whether it closed one.
     bool close_top_management_window(ui::Desktop& desktop);
 
+    /// What the player asked of the management windows this frame.
+    struct ManagementAsks
+    {
+        std::optional<ui::ManagementRow> row; ///< The row activated
+        bool replace_broken = false;          ///< Replace every broken path item (ui::kReplaceBrokenButton)
+    };
+
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns
-    /// the row the player activated, if any.
-    [[nodiscard]] std::optional<ui::ManagementRow> update_management_windows(ui::Desktop& desktop, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units);
+    /// what the player asked.
+    [[nodiscard]] ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units);
 
 } // namespace rct3::scene

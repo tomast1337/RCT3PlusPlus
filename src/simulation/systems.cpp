@@ -975,9 +975,11 @@ namespace rct3::simulation
                 };
                 const bool inside = patrol == nullptr || patrol->covers(paths.nodes()[at].tile);
                 const bool tidies = staff.role == StaffRole::Handyman && inside;
-                const bool mends = tidies || (staff.role == StaffRole::Mechanic && inside);
+                const bool sweeps = tidies && (staff.tasks & kSweepTask) != 0;
+                const bool mends = tidies && (staff.tasks & kLeaveBrokenTask) == 0;
+                const bool empties = tidies && (staff.tasks & kEmptyBinsTask) != 0;
                 const auto job = [&] {
-                    if (tidies && litter_on(at) > 0)
+                    if (sweeps && litter_on(at) > 0)
                     {
                         auto& here = litter_at[at];
                         r.destroy(here.back());
@@ -990,9 +992,10 @@ namespace rct3::simulation
                         if (mends && item.broken)
                         {
                             item.broken = false;
+                            ++staff.mended;
                             return kTuning.handymen.mend.value;
                         }
-                        if (auto* bin = r.try_get<Bin>(i); tidies && bin != nullptr && bin->contents > 0 && bin->contents >= kTuning.handymen.empty_at.value * bin->capacity)
+                        if (auto* bin = r.try_get<Bin>(i); empties && bin != nullptr && bin->contents > 0 && bin->contents >= kTuning.handymen.empty_at.value * bin->capacity)
                         {
                             bin->contents = 0;
                             return kTuning.handymen.empty.value;
@@ -1035,13 +1038,15 @@ namespace rct3::simulation
                 else
                 {
                     stride.route.clear();
-                    // A handyman makes for the dirtiest tile beside them; the rest of the time staff wander.
-                    // No way back to a patrol off the paths: wander the park as if they had none.
+                    // A handyman makes for the tile beside them with the most to do, litter or broken things; the
+                    // rest of the time staff wander. No way back to a patrol off the paths: wander the park as if
+                    // they had none.
                     const Patrol* keep_to = inside ? patrol : nullptr;
                     NodeId next = wander(paths, at, came != at ? came : kNoNode, dice, keep_to);
-                    if (tidies)
+                    const auto work_on = [&](NodeId n) { return (sweeps ? litter_on(n) : 0) + (mends ? static_cast<std::size_t>(std::ranges::count_if(items(n), [&](entt::entity i) { return r.get<PathItem>(i).broken; })) : 0); };
+                    if (sweeps || mends)
                         for (const NodeId n : paths.nodes()[at].next)
-                            if (n != kNoNode && !paths.nodes()[n].queue && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && litter_on(n) > litter_on(next))
+                            if (n != kNoNode && !paths.nodes()[n].queue && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && work_on(n) > work_on(next))
                                 next = n;
                     stride.to = next;
                     stride.progress.value = 0;
@@ -1150,6 +1155,24 @@ namespace rct3::simulation
         patrol.zone = zone;
         if (tiles)
             patrol.tiles = std::move(*tiles);
+    }
+
+    Replacement replacement(const SimWorld& world, const std::function<std::int64_t(std::uint64_t object)>& price)
+    {
+        Replacement out;
+        for (const auto [e, item] : world.registry.view<const PathItem>().each())
+            if (item.broken)
+            {
+                ++out.items;
+                out.cost += price(item.object);
+            }
+        return out;
+    }
+
+    void replace_broken(SimWorld& world)
+    {
+        for (const auto [e, item] : world.registry.view<PathItem>().each())
+            item.broken = false;
     }
 
     std::size_t uncovered_paths(const SimWorld& world, StaffRole role)

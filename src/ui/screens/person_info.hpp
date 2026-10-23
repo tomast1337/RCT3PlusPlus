@@ -64,6 +64,8 @@ namespace rct3::ui
         int patrol_brush = 0;            ///< Of kPatrolBrushes
         std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none
         std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
+        /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
+        std::optional<std::uint32_t> items_mended { };
 
         [[nodiscard]] std::optional<const save::Person&> person() const
         {

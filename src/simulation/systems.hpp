@@ -23,6 +23,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 
@@ -68,6 +69,19 @@ namespace rct3::simulation
 
     /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
+
+    /// The broken path items, and what putting each back new comes to at `price` (by its object id, the placed
+    /// object it stands as). Our own design, as replace_broken.
+    struct Replacement
+    {
+        std::uint32_t items = 0;
+        std::int64_t cost = 0; ///< Hundredths
+    };
+    [[nodiscard]] Replacement replacement(const SimWorld& world, const std::function<std::int64_t(std::uint64_t object)>& price);
+
+    /// Puts every broken path item back new at once. The player pays the whole price of each (replacement), the
+    /// quick and dear way; a handyman mends one for nothing, given time.
+    void replace_broken(SimWorld& world);
 
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has
     /// no patrol, as they walk the whole park, or when there is no one in the role.

@@ -263,6 +263,7 @@ namespace rct3::scene
         park::ModelPictures pictures; ///< For painting the batches new levels bring
         park::Leans leans;            ///< Of the built pieces that follow a slope
         park::Fitted fitted;          ///< Of the built pieces placed off the tile grid
+        park::Broken broken_objects;  ///< Path items vandals have broken, drawn so
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;

@@ -64,7 +64,13 @@ namespace rct3::ui
         const simulation::ParkState* state = nullptr;
         const save::PeopleModel* people = nullptr;
         const save::RideModel* rides = nullptr;
+        std::uint32_t broken_items = 0; ///< Path items vandals have broken
+        std::int64_t replace_cost = 0;  ///< To replace them all at once, hundredths
     };
+
+    /// The button on the park operations window's first page that replaces every broken path item at its full
+    /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
+    inline constexpr std::size_t kReplaceBrokenButton = 4;
 
     /// The page of tab `tab` of `topic`'s window.
     [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);

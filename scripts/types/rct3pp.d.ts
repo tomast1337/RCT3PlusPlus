@@ -54,6 +54,12 @@ declare namespace park {
     /** Brings `parties` parties of guests in at once, each on a path tile of the park picked at random from
      *  `seed` (1 by default), as if they had walked there from the gate. Where each landed and how many it holds. */
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
+    /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
+    function pathItems(): { object: number; kind: "bin" | "bench" | "sign" | "sight" | "photo spot"; broken: boolean }[];
+    /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
+    function breakPathItems(): number;
+    /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
+    function addHandyman(col: number, row: number): boolean;
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */

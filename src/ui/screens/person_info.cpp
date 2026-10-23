@@ -39,11 +39,14 @@ namespace rct3::ui
             int bit = 0;
             std::string_view label;
             std::string_view help;
+            bool inverted = false; ///< The bit is set when the task is off
         };
-        constexpr std::array<Task, 3> kHandymanTasks { {
+        // Mending is our own task (simulation::kLeaveBrokenTask), on in every park the game saved.
+        constexpr std::array<Task, 4> kHandymanTasks { {
             { 0, "StaffTasks_SweepPaths", "StaffTasks_SweepPathsHelp" },
             { 1, "StaffTasks_WaterGardens", "StaffTasks_WaterGardensHelp" },
             { 2, "StaffTasks_EmptyBins", "StaffTasks_EmptyBinsHelp" },
+            { 3, "Rct3pp_MendPathItems", "Rct3pp_MendPathItemsHelp", true },
         } };
         constexpr std::array<Task, 2> kMechanicTasks { {
             { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp" },
@@ -345,7 +348,7 @@ namespace rct3::ui
             add(page, strings, "Guest_TimeInPark", time_in_park(g.counters.minutes_in_park));
         }
 
-        void staff_stats(InfoPage& page, const save::Staff& s, const StringTable& strings)
+        void staff_stats(InfoPage& page, const save::Staff& s, std::optional<std::uint32_t> items_mended, const StringTable& strings)
         {
             // The day they were hired is not in the save as read.
             add(page, strings, "Employee_DateHired", std::u16string(kMissingValue));
@@ -357,6 +360,8 @@ namespace rct3::ui
                 add_half(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
                 add_half(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
                 add_half(page, strings, "Handyman_GrassMown", count(w->grass_mown));
+                if (items_mended)
+                    add_half(page, strings, "Rct3pp_ItemsMended", count(static_cast<std::int32_t>(*items_mended)));
             }
             else if (const auto* m = std::get_if<save::MechanicWork>(&s.work))
             {
@@ -430,7 +435,7 @@ namespace rct3::ui
                 tick.name = t.label;
                 tick.kind = InfoControlKind::Tick;
                 tick.label = text(strings, t.label);
-                tick.value = (s.task_flags >> t.bit) & 1;
+                tick.value = ((s.task_flags >> t.bit) & 1) != (t.inverted ? 1 : 0);
                 page.controls.push_back(std::move(tick));
             }
         }
@@ -594,7 +599,7 @@ namespace rct3::ui
                 if (facts.guest != nullptr)
                     guest_stats(page, *facts.guest, strings);
                 else if (facts.staff != nullptr)
-                    staff_stats(page, *facts.staff, strings);
+                    staff_stats(page, *facts.staff, facts.items_mended, strings);
                 break;
             case PersonTab::Cash:
                 if (facts.guest != nullptr)

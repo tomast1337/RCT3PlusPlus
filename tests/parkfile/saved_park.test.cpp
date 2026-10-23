@@ -88,6 +88,12 @@ TEST_CASE("a saved park reads back as written")
     CHECK(goals->goals->objectives.objectives.at(0).success);
     CHECK(goals->goals->objectives.conditions.at(0).value == 250);
     CHECK(goals->goals->interest_rate_percent == 2.5f);
+    CHECK(goals->broken_items.empty());
+
+    hidden.broken_items = { 42, 43 };
+    const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(broken);
+    CHECK(broken->broken_items == std::vector<std::uint64_t> { 42, 43 });
 }
 
 TEST_CASE("a cut or changed saved park is refused")

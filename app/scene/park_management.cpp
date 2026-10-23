@@ -70,9 +70,9 @@ namespace rct3::scene
         return false;
     }
 
-    std::optional<ui::ManagementRow> update_management_windows(ui::Desktop& desktop, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units)
+    ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units)
     {
-        std::optional<ui::ManagementRow> activated;
+        ManagementAsks asks;
         for (std::size_t t = 0; t < ui::kManagementTopicCount; ++t)
         {
             const auto topic = static_cast<ui::ManagementTopic>(t);
@@ -82,11 +82,13 @@ namespace rct3::scene
             const bool picked = window->take_tab().has_value();
             if (picked || window->page_age() >= kRefresh)
                 show(*window, topic, facts, strings, units);
-            (void)window->take_button(); // Hiring and the other buttons do nothing yet
+            // Hiring and the other buttons do nothing yet.
+            if (const auto button = window->take_button(); button && topic == ui::ManagementTopic::ParkOperations && window->tab() == 0 && *button == ui::kReplaceBrokenButton)
+                asks.replace_broken = true;
             if (const auto row = window->take_row())
-                activated = ui::management_row(*row);
+                asks.row = ui::management_row(*row);
         }
-        return activated;
+        return asks;
     }
 
 } // namespace rct3::scene

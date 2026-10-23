@@ -249,6 +249,41 @@ namespace rct3::scene
             }
             return dropped;
         });
+        engine_.define("park.pathItems", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            constexpr std::array kKinds { "bin", "bench", "sign", "sight", "photo spot" };
+            Json items = Json::array();
+            for (const auto [e, item] : park_->sim.registry.view<const simulation::PathItem>().each())
+                items.push_back({ { "object", item.object }, { "kind", kKinds.at(std::to_underlying(item.kind)) }, { "broken", item.broken } });
+            return items;
+        });
+        engine_.define("park.breakPathItems", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            std::size_t broke = 0;
+            for (auto [e, item] : park_->sim.registry.view<simulation::PathItem>().each())
+                if (!item.broken && item.kind != simulation::PathItemKind::Sight && item.kind != simulation::PathItemKind::PhotoSpot)
+                {
+                    item.broken = true;
+                    ++broke;
+                }
+            return Json(broke);
+        });
+        engine_.define("park.addHandyman", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const simulation::PathNetwork& paths = park_->sim.paths;
+            const glm::vec3 middle { paths.origin.x + (static_cast<float>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<float>(number(a, 1)) + 0.5f) * paths.tile_size };
+            const auto at = paths.nearest(middle);
+            if (!at)
+                return Json(false);
+            auto& r = park_->sim.registry;
+            const entt::entity e = r.create();
+            r.emplace<simulation::Staff>(e, simulation::StaffRole::Handyman);
+            simulation::start_walking(park_->sim, e, *at);
+            return Json(true);
+        });
         engine_.define("map.size", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             return Json { { "width", g.width }, { "height", g.height } };

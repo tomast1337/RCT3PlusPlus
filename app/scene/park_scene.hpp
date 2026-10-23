@@ -48,6 +48,7 @@
 #include "scene/save_browser.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/objectives.hpp"
 #include "simulation/park_state.hpp"
 #include "simulation/sim_world.hpp"
 #include "ui/desktop.hpp"
@@ -334,6 +335,8 @@ namespace rct3::scene
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
         std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
+        std::vector<simulation::RideGroup> ride_groups; ///< By ride, for the scenario's coaster goals; empty when it sets none
+        simulation::Takings takings;                    ///< Last month's, for the scenario's goals on money
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
         /// Of rides built here whose train has not yet stood on its track, by ride (of rides): how each car of

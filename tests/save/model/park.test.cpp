@@ -487,6 +487,7 @@ TEST_CASE("park: awards, objectives, research")
             { "ParkValueCondition", 3, { fint("Difficulty", 1), fint("ObjectiveId", 0), fint("ConditionId", 1), fbool("Completed", false), fint("Consistant", 3), fint("ConsistantFlags", 0x15), ffloat("StartTime", 10), ffloat("NextCheckTime", 500), fint("Value", 750000) } },
             { "MadeUpCondition", 4, { fint("Difficulty", 1), fint("ObjectiveId", 0), fint("ConditionId", 0), fbool("GT", true) } },
             { "ParkRatingCondition", 5, { fint("Difficulty", 2), fint("ObjectiveId", 0), fint("ConditionId", 0) } },
+            { "CoasterCondition", 8, { fint("Difficulty", 2), fint("ObjectiveId", 0), fint("ConditionId", 1), ffloat("CmpVal", 42), fint("Flags", 0x17), fint("NumRequired", 3) } },
             { "ResearchCategoryInstance", 6, { fstr("CategoryName", "Cat"), ffloat("Budget", 2), fbool("IsAvailable", true), fbool("IsHidden", false) } },
             { "ResearchCategoryInstance", 7, { fstr("CategoryName", "Cat2"), fbool("IsInvented", true) } },
         });
@@ -503,7 +504,7 @@ TEST_CASE("park: awards, objectives, research")
     REQUIRE(m.objectives.objectives.size() == 1);
     CHECK(m.objectives.objectives[0].prize_id == 12); // out-of-range ids stay representable
     CHECK_FALSE(m.objectives.objectives[0].prize_in_range());
-    REQUIRE(m.objectives.conditions.size() == 3);
+    REQUIRE(m.objectives.conditions.size() == 4);
     const auto set = m.objectives.conditions_for(1, 0);
     REQUIRE(set.size() == 2);
     CHECK(set[0]->slot == 0); // slot order, regardless of file order
@@ -517,7 +518,14 @@ TEST_CASE("park: awards, objectives, research")
     CHECK_FALSE(set[1]->has(ConditionFlag::Satisfied));
     CHECK(set[1]->has(ConditionFlag::HasDeadline));
     CHECK(set[1]->next_check_time == 500.0f);
-    CHECK(m.objectives.conditions_for(2, 0).size() == 1);
+    const auto tycoon = m.objectives.conditions_for(2, 0);
+    REQUIRE(tycoon.size() == 2);
+    CHECK_FALSE(tycoon[0]->coaster.has_value());
+    REQUIRE(tycoon[1]->coaster.has_value());
+    CHECK(tycoon[1]->coaster->value == 42.0f);
+    CHECK((tycoon[1]->coaster->flags & CoasterTarget::kFigure) == 7);
+    CHECK((tycoon[1]->coaster->flags & CoasterTarget::kAtMost) != 0);
+    CHECK(tycoon[1]->coaster->rides == 3);
     CHECK(m.objectives.conditions_for(0, 0).empty());
 
     REQUIRE(m.research.categories.size() == 2);

@@ -296,6 +296,14 @@ namespace rct3::simulation::tuning
         float top_speed = 2.5f;  ///< m/s, rowed or driven
     };
 
+    /// What the prizes for winning a scenario level give.
+    struct Prizes
+    {
+        std::int64_t large_cash = 1'500'000; ///< Hundredths
+        std::int64_t small_cash = 250'000;   ///< Hundredths
+        float rating_bonus = 0.05f;          ///< Added to the park's rating, 0 to 1
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -317,6 +325,7 @@ namespace rct3::simulation::tuning
         Staff staff;
         Rating rating;
         Boats boats;
+        Prizes prizes;
     };
 
 } // namespace rct3::simulation::tuning

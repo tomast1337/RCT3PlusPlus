@@ -138,6 +138,9 @@ namespace rct3::save
             constexpr std::string_view kNextCheckTime = "NextCheckTime";
             constexpr std::string_view kValue = "Value";
             constexpr std::string_view kGreaterThan = "GT";
+            constexpr std::string_view kCompareValue = "CmpVal";
+            constexpr std::string_view kConditionFlags = "Flags";
+            constexpr std::string_view kRidesRequired = "NumRequired";
 
             // Challenge attributes
             constexpr std::string_view kChallengeName = "Name";
@@ -561,6 +564,8 @@ namespace rct3::save
                 c.value = v->as_integer();
             if (const auto v = o.find(kGreaterThan); v && v->kind() == ValueKind::Bool)
                 c.greater_than = v->as_bool();
+            if (c.kind == ConditionKind::Coaster)
+                c.coaster = CoasterTarget { .value = float_of(o.find(kCompareValue), 0.0f), .flags = static_cast<std::uint32_t>(i32_of(o.find(kConditionFlags), 0)), .rides = i32_of(o.find(kRidesRequired), 0) };
             set.conditions.push_back(std::move(c));
         }
 

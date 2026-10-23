@@ -280,34 +280,48 @@ namespace rct3::simulation
         return out;
     }
 
+    namespace
+    {
+        /// What `pick` reads from each ride's item in its overlay, by the ride's place in `rides.rides`.
+        template<typename Pick> std::vector<std::optional<std::uint32_t>> from_ride_items(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find, Pick pick)
+        {
+            // Each overlay's rides by symbol (tag included), read once.
+            std::unordered_map<std::string, std::map<std::string, std::uint32_t, strings::LessIgnoringCase>> loaded;
+            std::vector<std::optional<std::uint32_t>> out(rides.rides.size());
+            for (std::size_t i = 0; i < rides.rides.size(); ++i)
+            {
+                const save::Ride& ride = rides.rides[i];
+                auto [at, added] = loaded.try_emplace(ride.base.overlay_path);
+                const auto file = added ? find(std::format("{}.common.ovl", ride.base.overlay_path)) : std::nullopt;
+                if (auto overlay = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error::MissingFile))
+                {
+                    for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                    {
+                        if (!part)
+                            continue;
+                        for (const auto& item : ovl::read_tracked_rides(*overlay, *part))
+                            if (const std::optional<std::uint32_t> v = item.ride ? pick(*item.ride) : std::nullopt)
+                                at->second[std::format("{}:trr", item.name)] = *v;
+                        for (const auto& item : ovl::read_animated_rides(*overlay, *part))
+                            if (const std::optional<std::uint32_t> v = item.ride ? pick(*item.ride) : std::nullopt)
+                                at->second[std::format("{}:anr", item.name)] = *v;
+                    }
+                }
+                if (const auto found = at->second.find(ride.base.symbol); found != at->second.end())
+                    out[i] = found->second;
+            }
+            return out;
+        }
+    } // namespace
+
     std::vector<std::optional<std::uint32_t>> ride_guests(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find)
     {
-        // Each overlay's rides by symbol (tag included), read once.
-        std::unordered_map<std::string, std::map<std::string, std::uint32_t, strings::LessIgnoringCase>> loaded;
-        std::vector<std::optional<std::uint32_t>> out(rides.rides.size());
-        for (std::size_t i = 0; i < rides.rides.size(); ++i)
-        {
-            const save::Ride& ride = rides.rides[i];
-            auto [at, added] = loaded.try_emplace(ride.base.overlay_path);
-            const auto file = added ? find(std::format("{}.common.ovl", ride.base.overlay_path)) : std::nullopt;
-            if (auto overlay = file ? ovl::Overlay::load(*file) : std::unexpected(ovl::Error::MissingFile))
-            {
-                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
-                {
-                    if (!part)
-                        continue;
-                    for (const auto& item : ovl::read_tracked_rides(*overlay, *part))
-                        if (item.ride && item.ride->guests)
-                            at->second[std::format("{}:trr", item.name)] = *item.ride->guests;
-                    for (const auto& item : ovl::read_animated_rides(*overlay, *part))
-                        if (item.ride && item.ride->guests)
-                            at->second[std::format("{}:anr", item.name)] = *item.ride->guests;
-                }
-            }
-            if (const auto found = at->second.find(ride.base.symbol); found != at->second.end())
-                out[i] = found->second;
-        }
-        return out;
+        return from_ride_items(rides, find, [](const auto& ride) { return ride.guests; });
+    }
+
+    std::vector<std::optional<std::uint32_t>> ride_kinds(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find)
+    {
+        return from_ride_items(rides, find, [](const auto& ride) { return std::optional(ride.info.type_id); });
     }
 
     std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead)

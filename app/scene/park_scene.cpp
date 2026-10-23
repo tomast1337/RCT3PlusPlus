@@ -1245,6 +1245,35 @@ namespace rct3::scene
                 profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides, old); });
                 if (old >= kLitterWarning)
                     simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
+                // The scenario's goals, checked as each week begins.
+                std::int64_t rides_taken = 0;
+                std::int64_t shops_taken = 0;
+                for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
+                    (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income;
+                simulation::count_takings(scene.takings, scene.park.time, rides_taken, shops_taken);
+                std::vector<simulation::GoalRide> goal_rides;
+                for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
+                    goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
+                // shortcut: the park's value stays as saved, as the simulation does not value the park yet; work it out once it does.
+                const simulation::ParkFigures figures {
+                    .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
+                    .guests = scene.park.guests,
+                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                    .loan = scene.park.loan,
+                    .ride_income = scene.takings.rides,
+                    .shop_profit = scene.takings.shops,
+                    .rides = goal_rides,
+                };
+                if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time))
+                {
+                    for (const std::int32_t prize : *won)
+                    {
+                        if (prize == 0)
+                            continue;
+                        simulation::give_prize(scene.park, scene.park_model.finance, prize);
+                        simulation::post(scene.park.messages, { .text_key = std::string(simulation::prize_message(prize)) });
+                    }
+                }
             }
             simulation::age(scene.park.messages, game_seconds);
             if (scene.simulate)

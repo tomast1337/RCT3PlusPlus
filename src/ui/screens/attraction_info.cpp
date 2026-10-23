@@ -862,11 +862,15 @@ namespace rct3::ui
                     c.beside = !std::exchange(first, false);
                     page.controls.push_back(std::move(c));
                 };
-                // shortcut: pulling a whole attraction down, keeping a design, picking a fence and riding along
-                // are not built yet, so their buttons are greyed; enable each as it lands.
+                // shortcut: pulling a whole attraction down, keeping a design with its scenery, picking a fence and
+                // riding along are not built yet, so their buttons are greyed; enable each as it lands.
                 button(AttractionControl::Demolish, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyButton", false);
                 if (f.ride && f.ride->kind == save::RideKind::Tracked)
+                {
+                    button(AttractionControl::SceneryPick, "ParkInfoIcon_PlaceOwned", "SavedSelection_Coaster_Button_TT", false);
+                    button(AttractionControl::SceneryClear, "SavedSelectionGrabber_ClearIcon", "SavedSelection_Coaster_Clear_TT", false);
                     button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton", false);
+                }
                 if (f.station)
                 {
                     button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);

@@ -55,6 +55,7 @@ namespace rct3::park
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
     inline constexpr std::uint32_t kPieceCableLift = 0x20;       ///< A cable pulls the cars up it
+    inline constexpr std::uint32_t kPieceLaunch = 0x4000;        ///< Pushes a launched train on, as launch sections do
     inline constexpr std::uint32_t kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
     inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
     /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.

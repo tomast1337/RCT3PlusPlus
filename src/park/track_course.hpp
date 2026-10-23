@@ -28,6 +28,7 @@ namespace rct3::park
         Station,    ///< Riders get on and off
         Cable,      ///< A cable pulls the cars up, as a chain does
         BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear
+        Launch,     ///< Pushes a launched train on, past its station
     };
 
     struct TrackCourse

@@ -81,13 +81,16 @@ namespace rct3::simulation
                         c.slow = 0;
                 }
             }
-            // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on.
-            // shortcut: launch-assist pieces past the platform and the launch modes that run back and forth are
-            // not pushed, upgrade with shuttle running.
-            if (c.launch_speed && !c.fixed_speed && c.travelled < c.train_length && c.speed < *c.launch_speed)
+            // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on,
+            // and on a launch stretch past it as hard as the push from a standing start.
+            // shortcut: the launch modes that run back and forth are not pushed, upgrade with shuttle running.
+            const bool platform = c.travelled < c.train_length;
+            const bool assisted = under == Stretch::Launch || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Launch;
+            if (c.launch_speed && !c.fixed_speed && (platform || assisted) && c.speed < *c.launch_speed)
             {
-                const float left = std::max(c.train_length - c.travelled, kLaunchLeast);
-                c.speed = std::min(c.speed + (*c.launch_speed * *c.launch_speed - c.speed * c.speed) / (2 * left) * dt, *c.launch_speed);
+                const float left = std::max(platform ? c.train_length - c.travelled : c.train_length, kLaunchLeast);
+                const float from = platform ? c.speed * c.speed : 0.0f;
+                c.speed = std::min(c.speed + (*c.launch_speed * *c.launch_speed - from) / (2 * left) * dt, *c.launch_speed);
             }
             // shortcut: with other trains on the track a train never rolls back, as if held by anti-rollback
             // dogs everywhere, so it cannot run into the one behind; upgrade when the train behind gives room too.

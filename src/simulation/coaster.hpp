@@ -25,6 +25,7 @@ namespace rct3::simulation
         Chain,
         Station,
         BlockBrake, ///< Rolled over as plain track; ends a block
+        Launch,     ///< Goes on pushing a launched train as hard as its platform began to
     };
 
     struct Coaster
@@ -35,7 +36,8 @@ namespace rct3::simulation
         float lift_speed = 2;
         float station_speed = 2;
         std::optional<float> fixed_speed;
-        /// In a launch mode, the speed the train is pushed up to by the time its last car leaves the platform.
+        /// In a launch mode, the speed the train is pushed up to by the time its last car leaves the platform,
+        /// and on along any launch stretches while it is still slower.
         std::optional<float> launch_speed;
         /// Trains keep a block apart: one waits at the end of a station, lift or block brake while the block
         /// beyond holds another.

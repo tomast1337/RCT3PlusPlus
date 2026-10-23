@@ -52,6 +52,23 @@ TEST_CASE("a launched train reaches its launch speed as its tail leaves the plat
     CHECK(slow.speed < 5);
 }
 
+TEST_CASE("a launch stretch past the platform goes on pushing the train up its slope")
+{
+    Coaster plain = hill();
+    plain.kinds[1] = Stretch::Plain;
+    plain.launch_speed = 20;
+    Coaster pushed = plain;
+    pushed.kinds[1] = Stretch::Launch;
+    for (Coaster* c : { &plain, &pushed })
+    {
+        c->running = true;
+        for (int i = 0; i < 10000 && c->at < 35; ++i)
+            drive(*c, 0.01f);
+    }
+    CHECK(pushed.speed > plain.speed + 2);
+    CHECK(pushed.speed <= 20);
+}
+
 TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes round to the station")
 {
     const Coaster c = hill();

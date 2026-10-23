@@ -474,7 +474,7 @@ namespace rct3::simulation
         for (const park::CourseKind k : course.kinds)
         {
             using enum park::CourseKind;
-            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : Stretch::Plain);
+            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : Stretch::Plain);
         }
         // Trains set off from where a station stretch ends.
         for (std::size_t i = 0; i + 1 < c.kinds.size(); ++i)

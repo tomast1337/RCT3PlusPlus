@@ -89,6 +89,8 @@ TEST_CASE("the panel sits in the bottom-right corner, hidden until shown")
     CHECK(f.panel->covers(Fixture::middle(disc)));
     CHECK_FALSE(f.panel->covers({ disc.x1 - 2, disc.y0 + 2 }));
     CHECK_FALSE(f.panel->covers({ 10, 10 }));
+    // With no page there is no strip to take the pointer, left of the disc either.
+    CHECK_FALSE(f.panel->covers({ disc.x0 - 40, (disc.y0 + disc.y1) / 2 }));
 }
 
 TEST_CASE("picking a tab is told once, and the close button hides the panel")

@@ -17,6 +17,9 @@
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -35,7 +38,6 @@ namespace rct3::ui
         Stall,
     };
 
-    /// Up to Maintenance, numbered as saved messages about a ride name the tab it opens at; keep the order.
     enum class AttractionTab : std::uint8_t
     {
         View,
@@ -52,6 +54,23 @@ namespace rct3::ui
         Items,
         Extras,
     };
+
+    /// The tabs saved messages name by number for their subject to open at, at their number.
+    inline constexpr std::array<AttractionTab, 11> kMessageTabs {
+        AttractionTab::View, AttractionTab::Vehicles, AttractionTab::Tests, AttractionTab::Finances, AttractionTab::Items, AttractionTab::Extras, AttractionTab::Mode, AttractionTab::Graphs, AttractionTab::Maintenance, AttractionTab::Customers, AttractionTab::Thoughts,
+    };
+
+    /// The tab a message's number names, if any.
+    [[nodiscard]] constexpr std::optional<AttractionTab> message_tab(std::int32_t panel)
+    {
+        return panel >= 0 && static_cast<std::size_t>(panel) < kMessageTabs.size() ? std::optional(kMessageTabs[static_cast<std::size_t>(panel)]) : std::nullopt;
+    }
+
+    /// The number a message names `tab` by.
+    [[nodiscard]] constexpr std::int32_t message_panel(AttractionTab tab)
+    {
+        return static_cast<std::int32_t>(std::ranges::find(kMessageTabs, tab) - kMessageTabs.begin());
+    }
 
     struct AttractionTabInfo
     {

@@ -85,6 +85,36 @@ namespace rct3::park
         return std::format("{}|{}", object.overlay, object.symbol);
     }
 
+    ModelRef model_ref(const save::PlacedObject& object)
+    {
+        return { object.overlay, object.symbol };
+    }
+
+    namespace
+    {
+        /// How the key `ref` stands for compares with `key`, part by part as if joined.
+        std::strong_ordering compare(ModelRef ref, std::string_view key)
+        {
+            for (const std::string_view part : { ref.overlay, std::string_view("|"), ref.symbol })
+            {
+                if (const int c = part.compare(key.substr(0, part.size())); c != 0)
+                    return c <=> 0;
+                key.remove_prefix(part.size());
+            }
+            return key.empty() ? std::strong_ordering::equal : std::strong_ordering::less;
+        }
+    } // namespace
+
+    bool ModelKeyOrder::operator()(ModelRef a, std::string_view b) const noexcept
+    {
+        return compare(a, b) < 0;
+    }
+
+    bool ModelKeyOrder::operator()(std::string_view a, ModelRef b) const noexcept
+    {
+        return compare(b, a) > 0;
+    }
+
     glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted)
     {
         const auto found = fitted.find(object.id);
@@ -101,7 +131,7 @@ namespace rct3::park
         anchors.reserve(objects.size());
         for (const save::PlacedObject& object : objects)
         {
-            const auto model = models.find(model_key(object));
+            const auto model = models.find(model_ref(object));
             anchors.emplace_back(placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted)[3]);
         }
         return anchors;
@@ -113,7 +143,7 @@ namespace rct3::park
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
             const save::PlacedObject& object = objects[i];
-            const auto model = models.find(model_key(object));
+            const auto model = models.find(model_ref(object));
             if (object.hidden || model == models.end() || model->second.lights.empty())
                 continue;
             const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(object, &model->second, grid, fitted);
@@ -136,7 +166,7 @@ namespace rct3::park
         std::vector<PlacedEffect> effects;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const auto model = models.find(model_key(objects[i]));
+            const auto model = models.find(model_ref(objects[i]));
             if (objects[i].hidden || model == models.end() || model->second.effects.empty())
                 continue;
             const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(objects[i], &model->second, grid, fitted);
@@ -157,7 +187,7 @@ namespace rct3::park
         {
             if (objects[i].hidden)
                 continue;
-            const auto model = models.find(model_key(objects[i]));
+            const auto model = models.find(model_ref(objects[i]));
             if (model == models.end() || model->second.levels.empty())
                 continue;
             const auto& levels = model->second.levels;
@@ -194,7 +224,7 @@ namespace rct3::park
         {
             if (objects[i].hidden)
                 continue;
-            const auto model = models.find(model_key(objects[i]));
+            const auto model = models.find(model_ref(objects[i]));
             if (model == models.end())
                 continue;
             if (const auto level = level_at(model->second, glm::distance(eye, anchors[i]), scale))
@@ -213,7 +243,7 @@ namespace rct3::park
             const save::PlacedObject& object = objects[index];
             if (object.hidden)
                 continue;
-            const auto model = models.find(model_key(object));
+            const auto model = models.find(model_ref(object));
             if (model == models.end())
             {
                 ++mesh.missing;
@@ -273,7 +303,7 @@ namespace rct3::park
         {
             if (levels[index] < 0)
                 continue;
-            const auto model = models.find(model_key(objects[index]));
+            const auto model = models.find(model_ref(objects[index]));
             if (model == models.end() || static_cast<std::size_t>(levels[index]) >= model->second.levels.size())
                 continue;
             const auto& board = model->second.levels[static_cast<std::size_t>(levels[index])].billboard;

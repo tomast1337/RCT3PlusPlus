@@ -50,7 +50,7 @@ namespace rct3::park
 
     bool is_plant(const save::PlacedObject& object, const ObjectModels& models)
     {
-        const auto model = models.find(model_key(object));
+        const auto model = models.find(model_ref(object));
         if (model == models.end())
             return false;
         return model->second.sway > 0;
@@ -75,7 +75,7 @@ namespace rct3::park
         {
             // Picking a park tree, not a kind, makes the commoner kinds commoner outside too.
             const save::PlacedObject& kind = *kinds[random::below(scenery, kinds.size())];
-            const auto model = models.find(model_key(kind));
+            const auto model = models.find(model_ref(kind));
             const auto positioning = static_cast<Positioning>(model->second.positioning);
             // Squaring a uniform draw puts more groves near the edge.
             const auto u = static_cast<float>(random::unit(scenery));

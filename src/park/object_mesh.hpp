@@ -23,6 +23,7 @@
 #include <map>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::park
@@ -50,7 +51,26 @@ namespace rct3::park
         std::size_t missing = 0;           ///< Visible objects without a model
     };
 
-    using ObjectModels = std::map<std::string, ObjectModel, std::less<>>;
+    /// A model's key, "overlay|symbol", as its two parts: finding a model by it builds no string.
+    struct ModelRef
+    {
+        std::string_view overlay { };
+        std::string_view symbol { };
+    };
+
+    /// Orders model keys as strings, and a ModelRef as the key it stands for.
+    struct ModelKeyOrder
+    {
+        using is_transparent = void;
+        bool operator()(std::string_view a, std::string_view b) const noexcept
+        {
+            return a < b;
+        }
+        bool operator()(ModelRef a, std::string_view b) const noexcept;
+        bool operator()(std::string_view a, ModelRef b) const noexcept;
+    };
+
+    using ObjectModels = std::map<std::string, ObjectModel, ModelKeyOrder>;
     /// Colours to paint some objects in instead of the ones they picked, by object id.
     using ColourOverrides = std::map<std::uint64_t, FlexiColours>;
     /// How much some objects' shapes rise per park unit along x and z away from their anchors, by object
@@ -67,6 +87,8 @@ namespace rct3::park
 
     /// The key `object`'s model is kept by: its overlay and its symbol.
     [[nodiscard]] std::string model_key(const save::PlacedObject& object);
+    /// The same key, to look a model up by without building it.
+    [[nodiscard]] ModelRef model_ref(const save::PlacedObject& object);
 
     /// Where `object` stands in the world, model to world: as `fitted` has it, else as its model places it.
     [[nodiscard]] glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted = { });

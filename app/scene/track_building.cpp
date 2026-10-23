@@ -207,7 +207,7 @@ namespace rct3::scene
             o.overlay = b.overlay;
             if (!load_object_model(scene, b.models, assets, o))
                 return false;
-            const auto model = scene.models.find(park::model_key(o));
+            const auto model = scene.models.find(park::model_ref(o));
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
             const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
@@ -276,7 +276,7 @@ namespace rct3::scene
                 on.overlay = b.overlay;
                 // A piece that goes only on water floats on it, not on the lake's floor.
                 const auto surface = park::water_surface(scene.footpaths.water.bodies, *b.aim);
-                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::model_key(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
+                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
                 {
                     on.base_height = *surface;
                     on.force_absolute_height = true;

@@ -250,7 +250,7 @@ namespace rct3::park
         {
             if (o.hidden || !o.base_height)
                 continue;
-            const auto model = models.find(model_key(o));
+            const auto model = models.find(model_ref(o));
             if (model == models.end() || !model->second.supports)
                 continue;
             const SupportFootprint& f = *model->second.supports;

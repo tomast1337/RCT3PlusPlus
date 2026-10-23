@@ -374,7 +374,7 @@ namespace rct3::scene
             if (entrance == scene.objects.end() || exit == scene.objects.end())
                 return;
             const auto model_of = [&](const save::PlacedObject& o) -> const park::ObjectModel* {
-                const auto model = scene.models.find(park::model_key(o));
+                const auto model = scene.models.find(park::model_ref(o));
                 return model != scene.models.end() ? &model->second : nullptr;
             };
             const glm::mat4 in = park::placed_transform(*entrance, model_of(*entrance), scene.grid, scene.fitted);
@@ -418,7 +418,10 @@ namespace rct3::scene
     /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
     render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name)
     {
-        const auto found = textures.find(std::string(name) + std::string(park::kReliefSuffix));
+        // Kept per thread, so building the key reuses its memory instead of allocating on every draw.
+        thread_local std::string key;
+        key.assign(name).append(park::kReliefSuffix);
+        const auto found = textures.find(key);
         return found != textures.end() ? found->second.handle : render::TextureHandle { };
     }
 
@@ -456,7 +459,7 @@ namespace rct3::scene
             return;
         for (std::size_t k = 0; k < scene.objects.size(); ++k)
         {
-            const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
+            const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(park::model_ref(scene.objects[k])) : scene.models.end();
             if (model != scene.models.end() && !model->second.seat_places.empty())
             {
                 scene.ride_seats[entity] = k;
@@ -503,11 +506,11 @@ namespace rct3::scene
             scene.car_places.push_back(scene.saved_cars.at(car.id));
         scene.car_meshes = park::moving_meshes(scene.cars, scene.models, scene.grid);
         scene.car_lamps = std::ranges::any_of(scene.cars, [&](const save::PlacedObject& car) {
-            const auto model = scene.models.find(park::model_key(car));
+            const auto model = scene.models.find(park::model_ref(car));
             return model != scene.models.end() && !model->second.lights.empty();
         });
         for (std::size_t i = first; i < scene.cars.size(); ++i)
-            if (const auto model = scene.models.find(park::model_key(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
+            if (const auto model = scene.models.find(park::model_ref(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
                 scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
         // Arms' joints follow the cars, each where its car stands until the cars are next placed.
         scene.car_mesh_places = scene.car_places;
@@ -548,7 +551,7 @@ namespace rct3::scene
                 const park::CarSpot& spot = scene.car_spots[car];
                 if (spot.train != 0)
                     continue;
-                const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                const auto model = scene.models.find(park::model_ref(scene.cars[car]));
                 const glm::mat4 place = park::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
                 if (model == scene.models.end())
                     seats.insert(seats.end(), share, glm::vec3(place[3]));
@@ -562,7 +565,7 @@ namespace rct3::scene
 
     void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k)
     {
-        const auto model = k < scene.objects.size() ? scene.models.find(park::model_key(scene.objects[k])) : scene.models.end();
+        const auto model = k < scene.objects.size() ? scene.models.find(park::model_ref(scene.objects[k])) : scene.models.end();
         // Attractions' parts move with their attractions (doors as guests pass, chains while the ride runs), so only
         // what the scenery lists hold moves on its own.
         if (model == scene.models.end() || !model->second.rig || scene.objects[k].hidden || !park::scenery_list(model->second.category) || scene.attractions.contains(scene.objects[k].id))
@@ -828,7 +831,7 @@ namespace rct3::scene
             std::unordered_map<std::uint64_t, const park::ObjectModel*> object_models;
             for (const save::PlacedObject& o : scene.objects)
             {
-                if (const auto found = scene.models.find(park::model_key(o)); found != scene.models.end())
+                if (const auto found = scene.models.find(park::model_ref(o)); found != scene.models.end())
                     object_models.emplace(o.id, &found->second);
             }
             std::size_t ride_fences = 0;
@@ -858,7 +861,7 @@ namespace rct3::scene
             // The park names only the fence, so its panels take the fence's own colours.
             for (std::size_t i = first_panel; i < first_panel + panels; ++i)
             {
-                if (const auto found = scene.models.find(park::model_key(built[i])); found != scene.models.end())
+                if (const auto found = scene.models.find(park::model_ref(built[i])); found != scene.models.end())
                     built[i].colours = found->second.default_colours;
             }
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
@@ -990,7 +993,7 @@ namespace rct3::scene
                 const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
                 simulation::import_stalls(scene.sim, scene.rides);
                 const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
-                    const auto found = scene.models.find(park::model_key(o));
+                    const auto found = scene.models.find(park::model_ref(o));
                     return found != scene.models.end() ? &found->second : nullptr;
                 });
                 // The courses of the rides whose trains go round, for the simulation to run them on.
@@ -1060,13 +1063,13 @@ namespace rct3::scene
                     return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
                 });
                 simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
-                    const auto model = scene.models.find(park::model_key(o));
+                    const auto model = scene.models.find(park::model_ref(o));
                     if (model == scene.models.end() || !park::is_sight(model->second.category))
                         return std::nullopt;
                     return model->second.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight;
                 });
                 simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
-                    const auto model = scene.models.find(park::model_key(o));
+                    const auto model = scene.models.find(park::model_ref(o));
                     return model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
                 });
                 if (park_model && park_model->group_mix)

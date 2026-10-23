@@ -183,7 +183,7 @@ namespace rct3::scene
                 const auto owner = scene.attractions.find(scene.objects[i].id);
                 if (owner == scene.attractions.end() || owner->second != ref)
                     continue;
-                const auto model = scene.models.find(park::model_key(scene.objects[i]));
+                const auto model = scene.models.find(park::model_ref(scene.objects[i]));
                 ui::SceneryFacts f;
                 f.colours = scene.objects[i].colours;
                 f.colour_slots = model == scene.models.end() ? 0 : park::colour_slots(model->second);
@@ -312,7 +312,7 @@ namespace rct3::scene
             const save::PlacedObject& o = scene.objects[index];
             f.symbol = o.symbol;
             f.colours = o.colours;
-            if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
+            if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
                 f.colour_slots = park::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
                 f.bin = &*bin;
@@ -539,7 +539,7 @@ namespace rct3::scene
                     const auto owner = scene.attractions.find(o.id);
                     if (owner == scene.attractions.end() || owner->second != ref)
                         continue;
-                    const auto model = scene.models.find(park::model_key(o));
+                    const auto model = scene.models.find(park::model_ref(o));
                     sum += glm::vec3(park::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
                     ++count;
                 }
@@ -829,7 +829,7 @@ namespace rct3::scene
         {
             if (scene.attractions.contains(o.id) || o.fixture)
                 return false;
-            const auto model = scene.models.find(park::model_key(o));
+            const auto model = scene.models.find(park::model_ref(o));
             return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
         }
 
@@ -1393,7 +1393,7 @@ namespace rct3::scene
                     {
                         if (ride.base.spot && o.id == ride.base.spot->object)
                         {
-                            const auto found = scene.models.find(park::model_key(o));
+                            const auto found = scene.models.find(park::model_ref(o));
                             item = found != scene.models.end() ? &found->second : nullptr;
                         }
                     }

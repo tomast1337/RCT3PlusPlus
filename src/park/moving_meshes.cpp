@@ -19,7 +19,7 @@ namespace rct3::park
         alone.reserve(objects.size());
         for (const save::PlacedObject& o : objects)
         {
-            const auto model = models.find(model_key(o));
+            const auto model = models.find(model_ref(o));
             if (model == models.end() || model->second.arm_joints.empty())
             {
                 alone.push_back(object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));

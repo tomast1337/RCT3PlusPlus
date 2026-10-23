@@ -384,7 +384,10 @@ namespace rct3::scene
         park::ObjectMesh still_people;
         park::ObjectMesh moving_people; ///< The people in motion in view, as last posed
         float since_people_levels = kObjectRebuildInterval;
-        std::future<PeopleBuild> people_build;      ///< Like object_build, for the still people
+        std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
+        /// Kept for moving_build, the only one to touch it, so its memory is reused. Declared first, so it
+        /// outlives a build still running when the scene goes.
+        park::PersonRuns moving_runs { };
         std::future<park::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
         std::future<RidersBuild> riders_build;      ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.

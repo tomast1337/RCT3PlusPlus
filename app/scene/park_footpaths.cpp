@@ -242,7 +242,7 @@ namespace rct3::scene
                 const auto o = placed.find(object);
                 if (o == placed.end())
                     return std::nullopt;
-                const auto model = scene.models.find(park::model_key(*o->second));
+                const auto model = scene.models.find(park::model_ref(*o->second));
                 return model != scene.models.end() ? std::optional(model->second.squares) : std::nullopt;
             },
             scene.grid);

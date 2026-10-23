@@ -66,7 +66,7 @@ namespace rct3::park
             const auto piece = by_id.find(p.elevation->scenery_ref);
             if (piece == by_id.end() || !piece->second->base_height)
                 continue;
-            const auto model = models.find(model_key(*piece->second));
+            const auto model = models.find(model_ref(*piece->second));
             if (model == models.end())
                 continue;
             const SupportSet* set = find_support_set(sets, model->second.support_group, kRoundSupport).set;

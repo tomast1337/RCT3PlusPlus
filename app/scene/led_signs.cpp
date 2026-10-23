@@ -165,7 +165,7 @@ namespace rct3::scene
                 placed.emplace(scene.signs[s].object_ref, s);
             for (const save::PlacedObject& o : scene.objects)
             {
-                const auto found = scene.models.find(park::model_key(o));
+                const auto found = scene.models.find(park::model_ref(o));
                 const auto written = placed.find(o.id);
                 if (found == scene.models.end() || (written == placed.end() && found->second.category != std::to_underlying(park::ItemCategory::ParkEntrance)))
                     continue;
@@ -259,7 +259,7 @@ namespace rct3::scene
             {
                 const save::SignState& placed = scene.signs[*sign.placed];
                 // A sign that cannot forbid entry shows its words whatever its kind says.
-                const auto model = scene.models.find(park::model_key(sign.object));
+                const auto model = scene.models.find(park::model_ref(sign.object));
                 const bool no_entry = placed.kind == 1 && model != scene.models.end() && model->second.no_entry;
                 words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }

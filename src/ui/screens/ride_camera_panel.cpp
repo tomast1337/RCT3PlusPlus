@@ -18,9 +18,11 @@ namespace rct3::ui
         constexpr float kPin = 16;
         constexpr float kGap = 6;
         constexpr float kHeight = kButtonsTop + kButton + kMargin;
-        constexpr float kWidth = kMargin * 2 + kPin + kGap + 5 * (kButton + kGap) - kGap;
+        constexpr float kWidth = kMargin * 2 + kPin + kGap + 6 * (kButton + kGap) - kGap;
 
-        constexpr std::array<std::string_view, 5> kHelp { "RidecamGUI_Exit", "RidecamGUI_PrevCam", "RidecamGUI_NextCam", "RidecamGUI_PrevTrain", "RidecamGUI_NextTrain" };
+        constexpr std::array<std::string_view, 6> kHelp { "RidecamGUI_Exit", "RidecamGUI_PrevCam", "RidecamGUI_NextCam", "RidecamGUI_PrevTrain", "RidecamGUI_NextTrain", "RidecamGUI_Type" };
+        /// Left to right, after the pin: leave, change the kind, then the steps.
+        constexpr std::array<std::size_t, 6> kSlot { 0, 2, 3, 4, 5, 1 };
     } // namespace
 
     RideCameraPanel::RideCameraPanel(std::string name, RideCameraPanelStyle style, const StringTable& strings)
@@ -37,19 +39,30 @@ namespace rct3::ui
         pin_->toggle = true;
         pin_->tooltip = strings_.get("RidecamGUI_Stick");
         pin_->placement = top_left(kMargin, kButtonsTop + (kButton - kPin) / 2, kPin, kPin);
-        float x = kMargin + kPin + kGap;
+        const float x = kMargin + kPin + kGap;
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
-            buttons_[i] = &add<Button>(std::string(kHelp[i]), style_.button, i == 0 ? style_.leave : style_.steps[i - 1]);
+            buttons_[i] = &add<Button>(std::string(kHelp[i]), style_.button, i == 0 ? style_.leave : i <= 4 ? style_.steps[i - 1] : style_.types[1]);
             buttons_[i]->tooltip = strings_.get(kHelp[i]);
-            buttons_[i]->placement = top_left(x, kButtonsTop, kButton, kButton);
-            x += kButton + kGap;
+            buttons_[i]->placement = top_left(x + static_cast<float>(kSlot[i]) * (kButton + kGap), kButtonsTop, kButton, kButton);
         }
+        buttons_[5]->enabled = false;
     }
 
-    void RideCameraPanel::show(std::u16string info, bool cameras, bool trains)
+    void RideCameraPanel::show(std::u16string info, bool cameras, bool trains, std::optional<std::size_t> next_type, std::u16string_view next_name)
     {
         info_->text = std::move(info);
+        Button& type = *buttons_[5];
+        type.enabled = next_type && *next_type < style_.types.size();
+        if (type.enabled)
+        {
+            type.icon = style_.types[*next_type];
+            // "Change to # camera", the kind's name in place of the mark.
+            std::u16string help(strings_.get(kHelp[5]));
+            if (const auto mark = help.find(u'#'); mark != std::u16string::npos)
+                help.replace(mark, 1, next_name);
+            type.tooltip = std::move(help);
+        }
         for (std::size_t step = 0; step < style_.steps.size(); ++step)
         {
             Button& b = *buttons_[step + 1];

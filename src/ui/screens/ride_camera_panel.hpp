@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The panel shown while the view rides along in a car, the only one on screen then: in the bottom-right
-// corner, a line naming the ride, the train and the car, and under it buttons to pin the panel, to leave, and
-// to step to the previous or next camera of the train and to the previous or next train. A step there is
+// corner, a line naming the ride, the train, the car and the kind of camera, and under it buttons to pin the
+// panel, to leave, to change to the next kind of camera, and to step to the previous or next camera of that
+// kind on the train and to the previous or next train. A step there is
 // nowhere to go to is greyed out.
 //
 // Once the pointer has been still a while the panel slides down out of sight, unless it is pinned or the
@@ -31,6 +32,7 @@ namespace rct3::ui
         std::string pin;    ///< To pin it
         std::string unpin;  ///< Pinned, to let it hide again
         std::string leave;
+        std::array<std::string, 3> types; ///< By park::RideEye: the nose, front seat and rear seat cameras
         /// Previous camera, next camera, previous train, next train; and the same with nowhere to go.
         std::array<std::string, 4> steps;
         std::array<std::string, 4> no_steps;
@@ -44,6 +46,7 @@ namespace rct3::ui
         NextCamera,
         PreviousTrain,
         NextTrain,
+        ChangeType, ///< To the next kind of camera
     };
 
     namespace ride_camera_panel
@@ -59,7 +62,9 @@ namespace rct3::ui
         RideCameraPanel(std::string name, RideCameraPanelStyle style, const StringTable& strings);
 
         /// What its line says, and whether there are other cameras on the train and other trains to step to.
-        void show(std::u16string info, bool cameras, bool trains);
+        /// `next_type` is the kind of camera the type button changes to, by park::RideEye, named `next_name`;
+        /// nothing when the train has one kind.
+        void show(std::u16string info, bool cameras, bool trains, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
         /// The pointer moved `distance` units since the last update.
         void pointer_moved(float distance);
         /// What a button asked for since the last call.
@@ -100,7 +105,7 @@ namespace rct3::ui
         const StringTable& strings_;
         Label* info_ = nullptr;
         Button* pin_ = nullptr;
-        std::array<Button*, 5> buttons_ { }; ///< By RideCameraAction
+        std::array<Button*, 6> buttons_ { }; ///< By RideCameraAction
         std::optional<RideCameraAction> asked_;
         float shown_ = 1;
         float still_ = 0; ///< Seconds the pointer has been still

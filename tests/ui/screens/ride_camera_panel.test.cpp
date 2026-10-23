@@ -20,6 +20,7 @@ namespace
         Fixture()
         {
             strings.add("RidecamGUI_DisabledTrain", u"Nur ein Zug");
+            strings.add("RidecamGUI_Type", u"Zur #-Kamera");
             panel = &desktop.root().add<RideCameraPanel>("ride_camera", game_skins::ride_camera_panel_style(kGamePalette), strings);
             frame();
         }
@@ -72,6 +73,12 @@ TEST_CASE("the ride camera panel's buttons ask for steps, greyed out where there
     f.click(f.panel->button(RideCameraAction::NextCamera));
     CHECK(f.panel->take_action() == RideCameraAction::NextCamera);
     CHECK_FALSE(f.panel->take_action());
+    CHECK_FALSE(f.panel->button(RideCameraAction::ChangeType).enabled);
+    f.panel->show(u"High Flier", true, false, 2, u"Heck");
+    CHECK(f.panel->button(RideCameraAction::ChangeType).tooltip == u"Zur Heck-Kamera");
+    CHECK(f.panel->button(RideCameraAction::ChangeType).icon == "RideCamGUI_Rear");
+    f.click(f.panel->button(RideCameraAction::ChangeType));
+    CHECK(f.panel->take_action() == RideCameraAction::ChangeType);
     f.click(f.panel->button(RideCameraAction::Leave));
     CHECK(f.panel->take_action() == RideCameraAction::Leave);
 }

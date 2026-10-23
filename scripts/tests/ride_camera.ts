@@ -44,6 +44,15 @@ await until(() => (ui.find(exit)?.top ?? 1) >= 1, 600, "the panel to hide");
 await screenshot("panel hidden");
 pointer.move(0.6, 0.6);
 await until(() => (ui.find(exit)?.bottom ?? 2) < 1, 120, "the panel back on a move");
+// The type button goes round the kinds of camera the train has, each once, back to the first.
+const kinds: string[] = [first.kind];
+for (let i = 0; i < 3 && (i === 0 || camera.riding()!.kind !== first.kind); ++i) {
+    await ui.click("ride_camera/RidecamGUI_Type");
+    await frames(2);
+    kinds.push(camera.riding()!.kind);
+}
+log("kinds", kinds.join(" "));
+expect(kinds.length === 2 ? kinds[1] === first.kind : kinds[kinds.length - 1] === first.kind && new Set(kinds).size === kinds.length - 1, "each kind once, then the first again");
 await ui.click(exit);
 await frames(5);
 expect(camera.riding() === undefined, "the overhead view again");

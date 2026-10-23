@@ -97,6 +97,15 @@ namespace rct3::park
         glm::vec3 on_track { 0.0f };
     };
 
+    /// The cameras a car may have: on its nose, which only the train's first car shows, at its front seat
+    /// and at its rear seat.
+    enum class RideEye : std::uint8_t
+    {
+        Nose,
+        Front,
+        Rear,
+    };
+
     struct ObjectModel
     {
         std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
@@ -143,10 +152,10 @@ namespace rct3::park
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;
-        /// Of a car a rider can look out of: their eyes, model space, looking along +Z with +Y up, as its front
-        /// seat's camera bone or else its nose's has them. A car hung under its track has them turned over.
-        std::optional<glm::mat4> ride_eye;
-        bool ride_nose = false;          ///< The eyes are the nose's, which neither sway nor look ahead
+        /// Of a car a rider can look out of: the eyes of each kind of camera it has, by RideEye, model space,
+        /// looking along +Z with +Y up, as its camera bones have them. A car hung under its track has them
+        /// turned over. Its nose's are the front seat's where it has no nose camera.
+        std::array<std::optional<glm::mat4>, 3> ride_eyes;
         ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;

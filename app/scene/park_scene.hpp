@@ -324,6 +324,7 @@ namespace rct3::scene
         std::vector<glm::mat4> car_places;                   ///< Where each car stands now, by car
         std::optional<std::size_t> riding;                   ///< The car the view rides along in, of `cars`
         park::Seat seat;                                     ///< Its rider's eyes, while riding
+        park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden
         park::RideView ride_view;                            ///< How the rider's view moved, while riding
         random::RandomState ride_dice = random::seeded({ }); ///< For the shake of the rider's view
         std::vector<std::string> hidden_for_ride;            ///< The windows put away while riding, to show again after

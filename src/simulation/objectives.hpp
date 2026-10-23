@@ -11,6 +11,7 @@
 
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
+#include "save/model/world.hpp"
 
 #include <array>
 #include <cstdint>
@@ -73,8 +74,9 @@ namespace rct3::simulation
     /// level's own.
     std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time);
 
-    /// Gives the park prize `id`'s reward.
-    void give_prize(ParkState& park, save::Finance& finance, std::int32_t id);
+    /// Gives the park prize `id`'s reward. The construction rights prize puts the land held back from the
+    /// park on sale.
+    void give_prize(ParkState& park, save::Finance& finance, save::TerrainGrid& land, std::int32_t id);
 
     /// Text keys of prize `id`'s name and of the message telling the player they have it.
     [[nodiscard]] std::string_view prize_name(std::int32_t id);

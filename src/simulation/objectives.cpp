@@ -204,7 +204,7 @@ namespace rct3::simulation
         return std::array { prize, kApprenticePrize + level };
     }
 
-    void give_prize(ParkState& park, save::Finance& finance, std::int32_t id)
+    void give_prize(ParkState& park, save::Finance& finance, save::TerrainGrid& land, std::int32_t id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
@@ -224,9 +224,17 @@ namespace rct3::simulation
             case 6:
                 finance.max_loan *= 2;
                 break;
+            case 7:
+                // shortcut: the land is only marked for sale, as there is no buying land yet; it shows once there is.
+                for (save::TerrainCell& cell : land.cells)
+                {
+                    if (cell.has(save::TileFlag::NeverPurchasable))
+                        cell.flags |= std::to_underlying(save::TileFlag::ForSale);
+                }
+                break;
             default:
-                // shortcut: land to buy, a coaster design and research boosts only tell the player for now; give them
-                // once the land, design and research windows can.
+                // shortcut: a coaster design and a research boost only tell the player for now; give them once
+                // designs can be locked and research runs.
                 break;
         }
     }

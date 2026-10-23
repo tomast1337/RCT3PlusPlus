@@ -29,6 +29,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
@@ -1315,8 +1316,14 @@ namespace rct3::scene
                     {
                         if (prize == 0)
                             continue;
-                        simulation::give_prize(scene.park, scene.park_model.finance, prize);
+                        simulation::give_prize(scene.park, scene.park_model.finance, scene.grid, prize);
                         simulation::post(scene.park.messages, { .text_key = std::string(simulation::prize_message(prize)) });
+                        // A level won, every guest out on the paths jumps for joy.
+                        if (prize >= simulation::kApprenticePrize)
+                        {
+                            for (const entt::entity guest : scene.sim.registry.view<simulation::Stride, simulation::Mood>())
+                                scene.sim.registry.emplace_or_replace<simulation::Gesture>(guest, simulation::GestureKind::Cheer, simulation::kTuning.gestures.shown);
+                        }
                     }
                 }
             }

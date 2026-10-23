@@ -289,6 +289,12 @@ namespace rct3::simulation::tuning
         float weekly_move = 0.5f;   ///< Share of the way the rating moves towards the week's score
     };
 
+    /// Boats that leave their dock for open water.
+    struct Boats
+    {
+        float trip_seconds = 75; ///< From the dock round the water and back, rowed or driven
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -309,6 +315,7 @@ namespace rct3::simulation::tuning
         Wear wear;
         Staff staff;
         Rating rating;
+        Boats boats;
     };
 
 } // namespace rct3::simulation::tuning

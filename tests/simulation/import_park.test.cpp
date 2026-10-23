@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_people.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
@@ -145,6 +146,25 @@ TEST_CASE("a tracked ride leaves the station as its saved operating settings say
     CHECK(d.max_wait == -1);
     o.wait_for_load = 9;
     CHECK(simulation::departure_of(o).wait_for == simulation::LoadWait::Any);
+}
+
+TEST_CASE("boats for hire carry their riders out and back, though their dock is no circuit")
+{
+    simulation::SimWorld world;
+    for (int c = 0; c <= 3; ++c)
+        world.paths.add({ c, 0, 0 });
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back();
+    ride.kind = save::RideKind::Tracked;
+    ride.mode = save::OperatingMode::Boat;
+    ride.seats.resize(8); // Four boats of two
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0 };
+    const auto added = simulation::import_rides(world, rides, { });
+    REQUIRE(world.registry.valid(added[0]));
+    const auto& cycle = world.registry.get<simulation::CycleRide>(added[0]);
+    CHECK(cycle.capacity == 8);
+    CHECK(cycle.run_seconds == simulation::kTuning.boats.trip_seconds);
+    CHECK_FALSE(world.registry.all_of<simulation::Trains>(added[0]));
 }
 
 TEST_CASE("guests the park had on a ride are put back on it, as many as it seats")

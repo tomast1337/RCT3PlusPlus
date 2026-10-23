@@ -160,7 +160,7 @@ namespace rct3::simulation
     };
 
     /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
-    /// slides, transport rides, rides with no timing): guests still come for them.
+    /// slides, lazy rivers, rides with no timing): guests still come for them.
     struct RoomElsewhere
     {
         std::uint32_t guests = 0;

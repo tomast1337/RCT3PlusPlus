@@ -781,14 +781,34 @@ namespace rct3::ui
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
             if (paper_)
             {
-                // Its far end runs on under the disc; the corner rounds by the disc.
-                const Rect paper = style_.left ? Rect { slab.x0, slab.y0 + c.band_height, slab.x1 - c.paper_inset, slab.y1 - c.paper_inset } : Rect { slab.x0 + c.paper_inset, slab.y0 + c.band_height, slab.x1, slab.y1 - c.paper_inset };
+                // On the right, it stops short of the ring's tabs and rounds its corner there; turned the other way, it
+                // runs on under the disc.
+                const float top = slab.y0 + c.band_height + 1;
+                const float bottom = slab.y1 - c.paper_bottom;
+                const float tabs = s.x0 + info_panel::kBodyLeft + body_width_ - info_panel::kRingReach;
+                const Rect paper = style_.left ? Rect { slab.x0, top, slab.x1, bottom } : Rect { slab.x0, top, tabs, bottom };
                 plain(paper, style_.left ? Corners { 0, 0, 0, c.paper_corner } : Corners { 0, 0, c.paper_corner, 0 }, c.paper);
-                // Every other line, from the body's second, short of the round corner.
-                const float x0 = style_.left ? paper.x0 + c.paper_corner : paper.x0;
-                const float x1 = style_.left ? paper.x1 : paper.x1 - c.paper_corner;
-                for (float y = s.y0 + info_panel::kBodyTop + info_panel::kLineHeight; y < paper.y1; y += 2 * info_panel::kLineHeight)
-                    plain({ x0, y, x1, std::min(y + info_panel::kLineHeight, paper.y1) }, { }, c.stripe);
+                // The margin, and the box's two lines beside it and its line under the page's lines.
+                const float m = c.paper_margin;
+                const auto across = [&](float from, float width) { return style_.left ? Rect { paper.x1 - from - width, paper.y0, paper.x1 - from, paper.y1 } : Rect { paper.x0 + from, paper.y0, paper.x0 + from + width, paper.y1 }; };
+                plain(across(0, m), { }, c.margin);
+                const float box = std::min(s.y0 + info_panel::kBodyTop + body_height_, paper.y1 - 1);
+                Rect inside = across(m + 4, paper.width() - m - 4);
+                inside.y1 = box;
+                // Every other line, the first included, short of the round corner.
+                for (float y = s.y0 + info_panel::kBodyTop; y < box; y += 2 * info_panel::kLineHeight)
+                {
+                    const float y1 = std::min(y + info_panel::kLineHeight, box);
+                    const bool corner = y1 > paper.y1 - c.paper_corner;
+                    plain({ inside.x0 + (style_.left && corner ? c.paper_corner : 0), y == s.y0 + info_panel::kBodyTop ? paper.y0 : y, inside.x1 - (!style_.left && corner ? c.paper_corner : 0), y1 }, { }, c.stripe);
+                }
+                for (const float from : { m + 1, m + 3 })
+                {
+                    Rect line = across(from, 1);
+                    line.y1 = box;
+                    plain(line, { }, c.rule);
+                }
+                plain(style_.left ? Rect { inside.x0 + c.paper_corner, box, inside.x1 + 3, box + 1 } : Rect { inside.x0 - 3, box, inside.x1 - c.paper_corner, box + 1 }, { }, c.rule);
             }
         }
 

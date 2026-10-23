@@ -673,7 +673,6 @@ namespace rct3::ui
             const std::int32_t interval = ride.breakdown.inspection_interval;
             c.value = interval >= 0 && std::cmp_less(interval, kInspectionIntervals.size()) ? interval : -1;
             page.controls.push_back(std::move(c));
-            // shortcut: the mechanic button is greyed, as no mechanic is sent anywhere yet; wire it with staff jobs.
             InfoControl mechanic;
             mechanic.id = control_id(AttractionControl::Mechanic);
             mechanic.name = "Staff_JobIsMechanicIcon";
@@ -681,7 +680,6 @@ namespace rct3::ui
             mechanic.icon = "Staff_JobIsMechanicIcon";
             mechanic.help = text(strings, "TT_RideMaintenanceDialog_MechanicButton");
             mechanic.beside = true;
-            mechanic.enabled = false;
             page.controls.push_back(std::move(mechanic));
         }
 

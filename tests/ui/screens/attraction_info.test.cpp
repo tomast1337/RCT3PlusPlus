@@ -376,7 +376,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
 
     const InfoPage care = attraction_page(AttractionTab::Maintenance, f, s, { });
     REQUIRE(care.controls.size() == 2); // The interval, and the mechanic's button beside it
-    CHECK_FALSE(care.controls[1].enabled);
+    CHECK(care.controls[1].enabled);    // Never greyed
     CHECK(care.controls[0].items.size() == 7);
     CHECK(care.controls[0].items[2] == u"Half hourly");
     CHECK(care.controls[0].value == 2);

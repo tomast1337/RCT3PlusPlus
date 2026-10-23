@@ -248,7 +248,7 @@ namespace rct3::scene
 
         /// Starts posing the riders seated in the ride cars away from the frame, each car's in the car's own
         /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
-        std::future<RidersBuild> pose_riders(const ParkScene& scene)
+        std::future<RidersBuild> pose_riders(ParkScene& scene)
         {
             std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
@@ -266,16 +266,15 @@ namespace rct3::scene
                 pose.motion = kRideMotion;
                 by_car[seat->first].push_back(pose);
             }
-            return std::async(std::launch::async, [&library = *scene.person_models, by_car = std::move(by_car)] {
-                std::vector<park::ObjectMesh> alone;
+            return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {
+                std::vector<std::span<const park::PlacedPerson>> groups;
                 RidersBuild built;
-                park::PersonRuns runs;
                 for (const auto& [car, riders] : by_car)
                 {
-                    alone.push_back(park::person_mesh(library, riders, runs));
+                    groups.emplace_back(riders);
                     built.cars.push_back(car);
                 }
-                built.riders = park::gathered_meshes(alone);
+                built.riders = park::carried_people_meshes(library, groups, runs, gathered);
                 return built;
             });
         }

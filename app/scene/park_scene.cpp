@@ -389,19 +389,6 @@ namespace rct3::scene
             show_info_page(scene, panel, assets, options);
         }
 
-        /// Where each of the attraction `ref`'s objects stands: the ride and its entrance and exit, or the stall.
-        std::vector<glm::vec3> attraction_parts(const ParkScene& scene, park::AttractionRef ref)
-        {
-            std::vector<glm::vec3> points;
-            for (std::size_t i = 0; i < scene.objects.size() && i < scene.anchors.size(); ++i)
-            {
-                const auto owner = scene.attractions.find(scene.objects[i].id);
-                if (owner != scene.attractions.end() && owner->second == ref)
-                    points.push_back(scene.anchors[i]);
-            }
-            return points;
-        }
-
         /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
         void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
@@ -438,7 +425,14 @@ namespace rct3::scene
             if (scene.shown != ref || scene.shown_person)
             {
                 // The view starts from where the player looks from, and turns from there.
-                scene.view_camera = park::framed(attraction_parts(scene, ref), scene.camera.yaw, kViewPitch);
+                std::vector<glm::vec3> points;
+                for (std::size_t i = 0; i < scene.objects.size() && i < scene.anchors.size(); ++i)
+                {
+                    const auto owner = scene.attractions.find(scene.objects[i].id);
+                    if (owner != scene.attractions.end() && owner->second == ref)
+                        points.push_back(scene.anchors[i]);
+                }
+                scene.view_camera = park::framed(points, scene.camera.yaw, kViewPitch);
             }
             scene.shown_person.reset();
             scene.shown_prop.reset();
@@ -1524,11 +1518,8 @@ namespace rct3::scene
                 if (const auto tab = ui::message_tab(message->panel.value_or(-1)))
                     scene.info_tab = *tab;
                 open_info(scene, *info, *ref, assets, options);
-                // The whole attraction first, then each click on the same camera one of its parts in turn, round again.
-                scene.message_focus = { .serial = *serial, .step = scene.message_focus.serial == *serial ? scene.message_focus.step + 1 : 0 };
-                const std::vector<glm::vec3> parts = attraction_parts(scene, *ref);
-                const std::size_t step = scene.message_focus.step % (parts.size() + 1);
-                const glm::vec3 at = step == 0 ? scene.view_camera.target : parts[step - 1];
+                // The middle of the whole attraction, the same on every click, as in the game.
+                const glm::vec3 at = scene.view_camera.target;
                 // Close enough to make it out, never further out than the player was.
                 scene.camera.target = { at.x, scene.camera.target.y, at.z };
                 scene.camera.distance = std::min(scene.camera.distance, std::max(scene.view_camera.distance * kFocusZoomOut, kFocusClosest));

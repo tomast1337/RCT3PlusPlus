@@ -9,7 +9,9 @@
 #include "random/generator.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
+#include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
+#include "ui/screens/attraction_info.hpp"
 #include "ui/widgets/button.hpp"
 
 #include <algorithm>
@@ -146,7 +148,9 @@ namespace rct3::scene
                 return nullptr;
             const float scale = park_interface_scale(*device_, *park_);
             const ui::Rect& r = w->rect();
-            Json found { { "x", (r.x0 + r.x1) / 2 * scale / static_cast<float>(view.width) }, { "y", (r.y0 + r.y1) / 2 * scale / static_cast<float>(view.height) } };
+            const float across = scale / static_cast<float>(view.width);
+            const float down = scale / static_cast<float>(view.height);
+            Json found { { "x", (r.x0 + r.x1) / 2 * across }, { "y", (r.y0 + r.y1) / 2 * down }, { "left", r.x0 * across }, { "top", r.y0 * down }, { "right", r.x1 * across }, { "bottom", r.y1 * down } };
             if (const auto* b = dynamic_cast<const ui::Button*>(as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
             return found;
@@ -284,6 +288,18 @@ namespace rct3::scene
             simulation::start_walking(park_->sim, e, *at);
             return Json(true);
         });
+        engine_.define("park.postMessage", [this](const Json& a) -> Json {
+            ParkScene& park = park_of(park_);
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("park.postMessage takes a text key, and may take a ride's place in rides.list() and a tab number");
+            simulation::ParkMessage message { .text_key = a[0].get<std::string>() };
+            if (a.size() > 1 && a[1].is_number_unsigned() && a[1].get<std::size_t>() < park.rides.rides.size())
+                message.subject = park.rides.rides[a[1].get<std::size_t>()].base.id;
+            if (a.size() > 2 && a[2].is_number_integer())
+                message.panel = a[2].get<std::int32_t>();
+            simulation::post(park.park.messages, std::move(message));
+            return Json(nullptr);
+        });
         engine_.define("map.size", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             return Json { { "width", g.width }, { "height", g.height } };
@@ -416,6 +432,18 @@ namespace rct3::scene
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
             park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
+        });
+        engine_.define("rides.shown", [this](const Json&) -> Json {
+            const ParkScene& park = park_of(park_);
+            if (!park.shown || park.shown->kind != park::AttractionRef::Kind::Ride || park.shown->index >= park.rides.rides.size())
+                return nullptr;
+            const save::Ride& ride = park.rides.rides[park.shown->index];
+            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::attraction_kind(ride), ride.base.state))
+            {
+                if (t.tab == park.info_tab)
+                    return Json { { "ride", park.shown->index }, { "tab", t.help } };
+            }
+            return Json { { "ride", park.shown->index } };
         });
         engine_.define("build.placing", [this](const Json&) -> Json {
             const RidePlacing& p = park_of(park_).placing;

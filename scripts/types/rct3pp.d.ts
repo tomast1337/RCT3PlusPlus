@@ -29,8 +29,8 @@ declare namespace pointer {
 }
 
 declare namespace ui {
-    /** The middle of the widget at `path` (such as "tools/Land/Land"), or undefined when it is not shown. */
-    function find(path: string): { x: number; y: number; on?: boolean } | undefined;
+    /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown. */
+    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */
@@ -60,6 +60,9 @@ declare namespace park {
     function breakPathItems(): number;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
     function addHandyman(col: number, row: number): boolean;
+    /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`
+     *  for its camera to open (as saved messages number them). */
+    function postMessage(key: string, ride?: number, tab?: number): void;
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */
@@ -200,4 +203,6 @@ declare namespace rides {
     function setState(i: number, state: "closed" | "testing" | "open"): string | null;
     /** Opens ride `i`'s window, as clicking the ride does, on the next frame. */
     function show(i: number): void;
+    /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
+    function shown(): { ride: number; tab?: string } | undefined;
 }

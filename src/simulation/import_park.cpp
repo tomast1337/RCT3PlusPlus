@@ -716,6 +716,45 @@ namespace rct3::simulation
         }
     }
 
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid)
+    {
+        if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
+            return;
+        constexpr float kSameLevel = 0.5f; // Metres apart that still count as one level
+        struct Tile
+        {
+            int col = 0;
+            int row = 0;
+            float up = 0;
+        };
+        // The tiles of each ride's stations, by the middle of each stretch of them.
+        const std::size_t count = std::min(added.size(), courses.size());
+        std::vector<std::vector<Tile>> stations(count);
+        auto& r = world.registry;
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            const auto& course = courses[i];
+            if (!r.valid(added[i]) || !course)
+                continue;
+            for (std::size_t k = 0; k + 1 < course->kinds.size() && k + 1 < course->points.size(); ++k)
+            {
+                if (course->kinds[k] != park::CourseKind::Station)
+                    continue;
+                const glm::vec3 middle = (course->points[k] + course->points[k + 1]) / 2.0f;
+                stations[i].push_back({ static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z)), middle.y });
+            }
+        }
+        for (std::size_t i = 0; i < count; ++i)
+            for (std::size_t j = i + 1; j < count; ++j)
+            {
+                const bool beside = std::ranges::any_of(stations[i], [&](const Tile& a) { return std::ranges::any_of(stations[j], [&](const Tile& b) { return std::abs(a.col - b.col) + std::abs(a.row - b.row) == 1 && std::abs(a.up - b.up) < kSameLevel; }); });
+                if (!beside)
+                    continue;
+                r.get_or_emplace<StationNeighbours>(added[i]).rides.push_back(added[j]);
+                r.get_or_emplace<StationNeighbours>(added[j]).rides.push_back(added[i]);
+            }
+    }
+
     std::size_t import_litter(SimWorld& world, const save::PeopleModel& people, float now)
     {
         std::size_t added = 0;
@@ -813,7 +852,7 @@ namespace rct3::simulation
     Departure departure_of(const save::OperatingOptions& options)
     {
         const bool listed = options.wait_for_load >= 0 && options.wait_for_load <= static_cast<std::int32_t>(LoadWait::Any);
-        return { .wait_for = listed ? static_cast<LoadWait>(options.wait_for_load) : LoadWait::Any, .min_wait = std::max(options.min_wait, -1), .max_wait = std::max(options.max_wait, -1), .leave_on_arrival = options.leave_if_other_train_enters_station };
+        return { .wait_for = listed ? static_cast<LoadWait>(options.wait_for_load) : LoadWait::Any, .min_wait = std::max(options.min_wait, -1), .max_wait = std::max(options.max_wait, -1), .leave_on_arrival = options.leave_if_other_train_enters_station, .sync = options.sync_trains };
     }
 
     std::size_t board_saved_riders(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests, const save::RideModel& saved, std::span<const entt::entity> rides)

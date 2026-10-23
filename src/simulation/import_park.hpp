@@ -88,6 +88,10 @@ namespace rct3::simulation
     /// float on. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water);
 
+    /// Links the rides of `added` whose stations, as their courses in `courses` run through them, stand on tiles
+    /// side by side on the same level, so trains told to may leave them together.
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid);
+
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped
     /// to `now` (calendar units, as the park keeps them). Returns how many pieces came over. Call after
     /// import_paths.

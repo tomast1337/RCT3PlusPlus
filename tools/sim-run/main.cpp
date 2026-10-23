@@ -255,6 +255,7 @@ int main(int argc, char** argv)
     }
     const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
     simulation::import_boats(world, *rides, ride_entities, courses, world_model->terrain, world_model->water.bodies);
+    simulation::link_stations(world, ride_entities, courses, world_model->terrain);
     const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));
     {
         // How far the paths' heights are from where the save stands its guests, as a check on both.

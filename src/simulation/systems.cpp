@@ -657,15 +657,20 @@ namespace rct3::simulation
             if (vandalism.since_warning.value >= 0)
                 vandalism.since_warning.value += dt;
 
-            // What lies and stands on each tile, in entity order.
-            std::unordered_map<NodeId, std::vector<entt::entity>> litter_at;
+            // What lies and stands on each tile, in entity order. Emptying a tile's list keeps its memory for the next tick.
+            StepBuffers& buffers = world.buffers;
+            auto& litter_at = buffers.litter_at;
+            auto& items_at = buffers.items_at;
+            for (auto& [node, list] : litter_at)
+                list.clear();
+            for (auto& [node, list] : items_at)
+                list.clear();
             for (const entt::entity e : sorted(r.view<Litter>()))
             {
                 auto& piece = r.get<Litter>(e);
                 piece.age.value += dt;
                 litter_at[piece.node].push_back(e);
             }
-            std::unordered_map<NodeId, std::vector<entt::entity>> items_at;
             for (const entt::entity e : sorted(r.view<const PathItem>()))
                 items_at[r.get<PathItem>(e).node].push_back(e);
             const auto items = [&](NodeId node) -> std::span<const entt::entity> {
@@ -682,29 +687,37 @@ namespace rct3::simulation
                 litter_at[node].push_back(e);
             };
             // The tiles guards keep vandals off: theirs and those a few steps along the paths from it.
-            std::unordered_set<NodeId> guarded;
+            auto& guarded = buffers.guarded;
+            guarded.assign(paths.nodes().size(), false);
             for (const auto [e, staff, stride] : r.view<const Staff, const Stride>().each())
             {
                 if (staff.role != StaffRole::Guard || stride.to >= paths.nodes().size())
                     continue;
-                std::vector<NodeId> ring { stride.to };
-                guarded.insert(stride.to);
+                auto& ring = buffers.ring;
+                auto& next = buffers.next;
+                ring.assign(1, stride.to);
+                guarded[stride.to] = true;
                 for (int step = 0; step < kTuning.vandals.guard_reach; ++step)
                 {
-                    std::vector<NodeId> next;
+                    next.clear();
                     for (const NodeId n : ring)
                         for (const NodeId m : paths.nodes()[n].next)
-                            if (m != kNoNode && guarded.insert(m).second)
+                            if (m != kNoNode && !guarded[m])
+                            {
+                                guarded[m] = true;
                                 next.push_back(m);
-                    ring = std::move(next);
+                            }
+                    std::swap(ring, next);
                 }
             }
 
             // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>();
-            std::unordered_map<NodeId, std::size_t> seated;
+            auto& seated = buffers.seated;
+            seated.assign(paths.nodes().size(), 0);
             for (const auto [g, linger, stride] : r.view<const Linger, const Stride>().each())
-                seated[stride.from] += linger.at == PathItemKind::Bench;
+                if (stride.from < seated.size())
+                    seated[stride.from] += linger.at == PathItemKind::Bench;
             for (const entt::entity g : sorted(guests_view))
             {
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
@@ -820,7 +833,7 @@ namespace rct3::simulation
                             r.remove<Rubbish>(g);
                     }
                 }
-                if (mood.happiness.value < kTuning.vandals.mood.value && !guarded.contains(at) && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
+                if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {
                     const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && r.get<PathItem>(i).kind != PathItemKind::Sight && r.get<PathItem>(i).kind != PathItemKind::PhotoSpot; });
                     if (whole != items(at).end())
@@ -1243,15 +1256,29 @@ namespace rct3::simulation
         // Block ends: where a run of station, lift or block brake gives way to other track. A train stopped on one
         // (within a centimetre) still counts it as ahead.
         constexpr float kOn = 0.01f;
-        std::vector<float> ends;
+        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kOn, length) + length, length) - kOn; };
+        // Only the nearest two ends ahead matter: the next, and the one closing the block beyond it.
+        std::array<float, 2> ends { };
+        std::array<float, 2> ends_ahead { std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity() };
+        const auto end_at = [&](float d) {
+            const float a = ahead(d);
+            if (a < ends_ahead[0])
+            {
+                ends = { d, ends[0] };
+                ends_ahead = { a, ends_ahead[0] };
+            }
+            else if (a < ends_ahead[1])
+            {
+                ends[1] = d;
+                ends_ahead[1] = a;
+            }
+        };
         for (std::size_t i = 0; i + 2 < train.kinds.size(); ++i) // The last kind is past the track's end
             if (const Stretch k = train.kinds[i]; k != Stretch::Plain && train.kinds[i + 1] != k)
-                ends.push_back(train.distance[i + 1]);
+                end_at(train.distance[i + 1]);
         if (const Stretch last = train.kinds[train.kinds.size() - 2]; last != Stretch::Plain && train.kinds.front() != last)
-            ends.push_back(0); // The track's end runs into its start
-        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kOn, length) + length, length) - kOn; };
-        std::ranges::sort(ends, { }, ahead);
-        if (ends.size() < 2)
+            end_at(0); // The track's end runs into its start
+        if (std::isinf(ends_ahead[1]))
             return room;
         // The block beyond the next end must hold no other train, not even a car of one.
         const float end = ends[0];

@@ -1614,6 +1614,8 @@ namespace rct3::scene
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
+        if (!scene.park_model.objectives.objectives.empty())
+            saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives, .max_loan = scene.park_model.finance.max_loan, .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
         return parkfile::write_saved_park(saved);
     }
 

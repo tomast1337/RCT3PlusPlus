@@ -180,7 +180,7 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
@@ -188,6 +188,8 @@ namespace rct3::parkfile
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
         if (shows)
             put_chunk(w, "SHOW", 1, *park.shows);
+        if (park.goals)
+            put_chunk(w, "GOAL", 1, *park.goals);
         return w.take();
     }
 
@@ -218,6 +220,12 @@ namespace rct3::parkfile
                 for (save::RideShow& show : *park.shows)
                     std::erase_if(show.order, [&](std::uint32_t t) { return t >= show.tricks.size(); });
                 return read;
+            }
+            if (tag == "GOAL")
+            {
+                if (park.goals || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.goals.emplace());
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

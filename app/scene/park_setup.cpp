@@ -916,6 +916,12 @@ namespace rct3::scene
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
             if (model)
                 scene.park_model = *model;
+            if (saved && saved->goals)
+            {
+                scene.park_model.objectives = std::move(saved->goals->objectives);
+                scene.park_model.finance.max_loan = saved->goals->max_loan;
+                scene.park_model.finance.interest_rate_percent = saved->goals->interest_rate_percent;
+            }
             if (saved)
             {
                 const parkfile::SavedProgress& p = saved->progress;

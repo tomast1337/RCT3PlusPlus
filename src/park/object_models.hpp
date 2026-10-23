@@ -98,7 +98,7 @@ namespace rct3::park
     };
 
     /// The cameras a car may have: on its nose, which only the train's first car shows, at its front seat
-    /// and at its rear seat.
+    /// and at its rear seat. The rear one never looks ahead.
     enum class RideEye : std::uint8_t
     {
         Nose,

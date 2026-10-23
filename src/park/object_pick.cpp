@@ -158,7 +158,7 @@ namespace rct3::park
 
     std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
     {
-        const auto model = models.find(model_key(object));
+        const auto model = models.find(model_ref(object));
         if (model == models.end() || model->second.levels.empty())
             return { };
         const auto box = shape_box(model->second);

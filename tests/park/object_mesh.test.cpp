@@ -86,6 +86,12 @@ TEST_CASE("objects are placed and batched by blending, then picture")
 TEST_CASE("a model is kept by its overlay and symbol")
 {
     CHECK(model_key(object("Tree", 0)) == "Things/Things|Tree");
+    // Found by its parts as by the joined key, among keys that share its start or sort right beside it.
+    ObjectModels models;
+    for (const char* key : { "Things/Things|Tre", "Things/Things|Tree", "Things/Things|Tree2", "Things/Things|Tref", "Things/Thing|Tree", "Things/Things0|Tree" })
+        models.emplace(key, ObjectModel { });
+    for (const char* symbol : { "Tree", "Tre", "Tree2", "Tref", "Tr", "Treee" })
+        CHECK(models.find(model_ref(object(symbol, 0))) == models.find(model_key(object(symbol, 0))));
 }
 
 TEST_CASE("objects in other colours get their own batches and paintings")

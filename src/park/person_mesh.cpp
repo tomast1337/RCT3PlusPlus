@@ -16,13 +16,8 @@ namespace rct3::park
 
         constexpr float kCell = 0.25f;
 
-        struct Run
-        {
-            std::vector<GroundVertex> vertices;
-            std::vector<std::uint32_t> indices;
-        };
-
-        using Runs = std::map<std::string, Run, std::less<>>;
+        using Run = PersonRun;
+        using Runs = PersonRuns;
 
         std::uint32_t word_at(const std::vector<std::byte>& bytes, std::size_t at)
         {
@@ -258,9 +253,13 @@ namespace rct3::park
         return { static_cast<float>(colour & 3) * kCell, -static_cast<float>((colour >> 2) & 3) * kCell };
     }
 
-    ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people)
+    ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs)
     {
-        Runs runs;
+        for (auto& [texture, run] : runs)
+        {
+            run.vertices.clear();
+            run.indices.clear();
+        }
         ObjectMesh mesh;
         for (const PlacedPerson& person : people)
         {
@@ -274,6 +273,8 @@ namespace rct3::park
         }
         for (auto& [texture, run] : runs)
         {
+            if (run.vertices.empty())
+                continue; // A picture only an earlier mesh had
             const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
             mesh.batches.push_back({ texture, texture, { }, PartBlend::Opaque, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
             mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());

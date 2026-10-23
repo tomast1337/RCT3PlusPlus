@@ -128,7 +128,7 @@ namespace rct3::scene
             // Scenery comes in the colours its ghost shows.
             if (scene.placing.step != RidePlacing::Step::Scenery)
             {
-                if (const auto model = scene.models.find(park::model_key(o)); model != scene.models.end())
+                if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
                     o.colours = model->second.default_colours;
                 scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
@@ -169,7 +169,7 @@ namespace rct3::scene
             {
                 if (ride.base.spot && o.id == ride.base.spot->object)
                 {
-                    const auto found = scene.models.find(park::model_key(o));
+                    const auto found = scene.models.find(park::model_ref(o));
                     item = found != scene.models.end() ? &found->second : nullptr;
                 }
             }
@@ -220,7 +220,7 @@ namespace rct3::scene
                 save::RideModel one;
                 one.rides.push_back(ride);
                 const auto timings = simulation::flat_ride_timings(one, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
-                    const auto found = scene.models.find(park::model_key(o));
+                    const auto found = scene.models.find(park::model_ref(o));
                     return found != scene.models.end() ? &found->second : nullptr;
                 });
                 const auto added = simulation::import_rides(scene.sim, one, timings, coaster);
@@ -664,7 +664,7 @@ namespace rct3::scene
                     if (const ovl::SymbolName n = ovl::split_symbol_name(symbol.name); n.tag == "txt" && n.name.contains("Show") && n.name.ends_with("Skin"))
                         p.trick_names->emplace_back(n.name.substr(0, n.name.size() - 4));
             }
-            if (const auto model = scene.models.find(park::model_key(*o)); model != scene.models.end() && p.trick_names)
+            if (const auto model = scene.models.find(park::model_ref(*o)); model != scene.models.end() && p.trick_names)
                 if (auto tricks = park::show_tricks(p.item->symbol, *p.trick_names, model->second.animation_names, model->second.animation_seconds); !tricks.empty())
                 {
                     save::RideShow& show = scene.shows.emplace_back(save::RideShow { .ride = ride.base.id, .tricks = std::move(tricks), .order = { } });

@@ -32,7 +32,7 @@ namespace rct3::park
         {
             if (o.hidden)
                 continue;
-            const auto model = models.find(model_key(o));
+            const auto model = models.find(model_ref(o));
             if (model == models.end() || model->second.solid.empty() || !blocks_paths(model->second.category))
                 continue;
             const ObjectModel& m = model->second;

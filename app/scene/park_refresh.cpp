@@ -85,7 +85,7 @@ namespace rct3::scene
             if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
             {
                 const save::PlacedObject& o = scene.objects[object->second];
-                const auto model = scene.models.find(park::model_key(o));
+                const auto model = scene.models.find(park::model_ref(o));
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
                 // On a ride its bones move, the seat's bone carries the seat.
@@ -100,7 +100,7 @@ namespace rct3::scene
             {
                 if (fleet != nullptr && scene.car_spots[car].train != train)
                     continue;
-                const auto model = scene.models.find(park::model_key(scene.cars[car]));
+                const auto model = scene.models.find(park::model_ref(scene.cars[car]));
                 const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
                 if (seat < seats)
                     return std::pair { car, model->second.seat_places[seat] };
@@ -269,9 +269,10 @@ namespace rct3::scene
             return std::async(std::launch::async, [&library = *scene.person_models, by_car = std::move(by_car)] {
                 std::vector<park::ObjectMesh> alone;
                 RidersBuild built;
+                park::PersonRuns runs;
                 for (const auto& [car, riders] : by_car)
                 {
-                    alone.push_back(park::person_mesh(library, riders));
+                    alone.push_back(park::person_mesh(library, riders, runs));
                     built.cars.push_back(car);
                 }
                 built.riders = park::gathered_meshes(alone);
@@ -290,7 +291,7 @@ namespace rct3::scene
                 const glm::vec3 at(boned.placed[3]);
                 if ((boned.ride == entt::null || boned.gate) && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
                     continue;
-                const auto model = scene.models.find(park::model_key(scene.objects[boned.object]));
+                const auto model = scene.models.find(park::model_ref(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto& seconds = model->second.animation_seconds;
@@ -556,7 +557,8 @@ namespace rct3::scene
                 scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {
                     profiling::register_thread("PeopleWorker");
                     PeopleBuild built;
-                    built.mesh = profiling::section("Still", [&] { return park::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate)); });
+                    park::PersonRuns runs;
+                    built.mesh = profiling::section("Still", [&] { return park::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate), runs); });
                     built.levels = levels;
                     built.simulate = simulate;
                     profiling::unregister_thread();
@@ -570,7 +572,7 @@ namespace rct3::scene
         if (!scene.moving_build.valid())
         {
             const profiling::Scope zone("Moving");
-            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, placed = place_people(scene, scene.people_levels, scene.clock, true, view, scene.simulate)] { return park::person_mesh(library, placed); });
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.clock, true, view, scene.simulate)] { return park::person_mesh(library, placed, runs); });
         }
         if (ready(scene.riders_build))
         {

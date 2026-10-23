@@ -81,7 +81,7 @@ namespace rct3::park
         for (std::size_t b = 0; b < boxes.size(); ++b)
         {
             const save::PlacedObject& o = objects[boxes[b].index];
-            const ObjectModel& model = models.find(model_key(o))->second;
+            const ObjectModel& model = models.find(model_ref(o))->second;
             const bool tree = model.category == static_cast<std::uint32_t>(ItemCategory::Tree);
             if (o.hidden || (!tree && !is_roof(model.category)))
                 continue;

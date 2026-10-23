@@ -17,8 +17,11 @@
 
 #include <array>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <span>
+#include <string>
+#include <vector>
 
 namespace rct3::park
 {
@@ -60,6 +63,17 @@ namespace rct3::park
     /// stay put. Nothing when the piece has no walk to measure.
     [[nodiscard]] std::optional<float> walk_pace(const PieceModel& legs);
 
-    [[nodiscard]] ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people);
+    /// The triangles of people gathered for one picture.
+    struct PersonRun
+    {
+        std::vector<GroundVertex> vertices { };
+        std::vector<std::uint32_t> indices { };
+    };
+    /// Those of every picture, by picture. Kept by a caller that builds mesh after mesh and passed to each, so
+    /// the lists' memory is reused.
+    using PersonRuns = std::map<std::string, PersonRun, std::less<>>;
+
+    /// The mesh of `people`, gathered in `runs`, which is emptied first.
+    [[nodiscard]] ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs);
 
 } // namespace rct3::park

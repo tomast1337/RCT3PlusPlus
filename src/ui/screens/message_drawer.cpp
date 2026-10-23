@@ -28,6 +28,8 @@ namespace rct3::ui
         constexpr float kFirstRow = 26;                  ///< Bottom of the newest row
         constexpr float kStripeLeft = 10;
         constexpr float kStripeRight = 470;
+        constexpr float kCameraLeft = 18;
+        constexpr float kCameraSize = 18;
         constexpr float kTextLeft = 42;
         constexpr float kTextRight = 468;
         constexpr float kRowPadding = 4; ///< Added to the text's height; the text starts half of it down
@@ -94,7 +96,7 @@ namespace rct3::ui
         std::vector<DrawerMessage> out;
         out.reserve(messages.list.size());
         for (const auto& m : messages.list)
-            out.push_back({ m.serial, message_text(m, strings) });
+            out.push_back({ .serial = m.serial, .text = message_text(m, strings) });
         return out;
     }
 
@@ -154,8 +156,29 @@ namespace rct3::ui
         skipped_ = static_cast<std::size_t>(std::clamp(static_cast<std::ptrdiff_t>(skipped_) + older, std::ptrdiff_t { 0 }, last));
     }
 
+    std::optional<std::uint64_t> MessageDrawer::camera_at(Point p) const
+    {
+        const Rect r = rect();
+        if (p.x < r.x0 + kCameraLeft || p.x >= r.x0 + kCameraLeft + kCameraSize)
+            return std::nullopt;
+        float bottom = r.y1 - kFirstRow;
+        for (std::size_t i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
+        {
+            const float top = bottom - row_heights_[i];
+            if (messages_[i].located && p.y >= std::max(top, r.y0) && p.y < top + kCameraSize)
+                return messages_[i].serial;
+            bottom = top;
+        }
+        return std::nullopt;
+    }
+
     void MessageDrawer::on_press(Point p)
     {
+        if (const auto serial = camera_at(p))
+        {
+            located_ = serial;
+            return;
+        }
         const bool twice = since_press_ <= style_.double_press;
         since_press_ = twice ? 1e9f : 0;
         slide_ = Slide::Resting;
@@ -289,6 +312,8 @@ namespace rct3::ui
             const float top = bottom - row_heights_[i];
             const bool even = (i - skipped_) % 2 == 0;
             context.list.fill({ r.x0 + kStripeLeft, top, r.x0 + kStripeRight, bottom }, even ? style_.stripe : style_.stripe_alt);
+            if (messages_[i].located)
+                draw_skin(context.list, context.skins.find(style_.locate), { r.x0 + kCameraLeft, top, r.x0 + kCameraLeft + kCameraSize, top + kCameraSize });
             if (font)
                 draw_text(context.list, *font, messages_[i].text, { r.x0 + kTextLeft, top + kRowPadding / 2, r.x0 + kTextRight, bottom }, { style_.text_colour, Align::Start, Align::Start, true });
             bottom = top;

@@ -624,6 +624,7 @@ namespace rct3::ui::game_skins
         s.back = kDrawerBack;
         s.older = "SquareArrowUp";
         s.newer = "SquareArrowDown";
+        s.locate = "Icon_PointCameraAt";
         return s;
     }
 

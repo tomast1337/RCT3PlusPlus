@@ -371,6 +371,12 @@ namespace rct3::ui
         }
         /// The size of the open tab's content; the strip fits round it.
         void set_body_size(float width, float height);
+        /// Lays plain paper behind the body the owner fills, from just before it to the strip's end, rounded on
+        /// the side towards the disc, as the game's tool pages sit on.
+        void set_paper(bool on)
+        {
+            plain_paper_ = on;
+        }
         /// Fills the body with `page`: its title in the band along the strip's top, its lines in two columns, the
         /// values clear of the widest label, its note and its controls, each clear of its label. A page of lines or a
         /// note without a graph sits on striped paper, in dark text. An empty page hides the strip.
@@ -475,8 +481,9 @@ namespace rct3::ui
         std::optional<std::size_t> section_now_;
         Button* close_ = nullptr;
         Button* hide_ = nullptr;
-        bool tucked_ = false;  ///< The strip put away by the player
-        bool paper_ = false;   ///< The page sits on paper
+        bool tucked_ = false; ///< The strip put away by the player
+        bool paper_ = false;  ///< The page sits on paper
+        bool plain_paper_ = false;
         bool striped_ = false; ///< Its lines are striped; a note alone sits in a plain box down the paper
         Widget* body_ = nullptr;
         Label* title_ = nullptr; ///< The page's, in the band

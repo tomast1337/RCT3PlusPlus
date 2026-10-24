@@ -41,6 +41,9 @@ namespace rct3::ui
         if (items.empty())
             return;
         index = std::min(index, items.size() - 1);
+        // shortcut: keys stop at a greyed row rather than pass it, upgrade if a list with greyed rows is used by keys.
+        if (is_greyed(index))
+            return;
         if (selected_ != index)
             ++changes_;
         selected_ = index;
@@ -88,7 +91,7 @@ namespace rct3::ui
     void ListBox::on_press(Point p)
     {
         const auto row = row_at(p);
-        if (!row)
+        if (!row || is_greyed(*row))
             return;
         const bool again = last_pressed_ == row && selected_ == row && since_press_ <= style.double_click;
         pick(*row);
@@ -212,6 +215,8 @@ namespace rct3::ui
                 if (y >= box.y1)
                     break;
                 const Rect row { box.x0, y, box.x1, y + style.row_height };
+                if (i % 2 == 0 && style.stripe.a > 0)
+                    context.list.fill(row, style.stripe);
                 if (selected_ == i)
                 {
                     if (const auto s = style.selection_skin.empty() ? std::nullopt : context.skins.find(style.selection_skin))
@@ -219,10 +224,19 @@ namespace rct3::ui
                     else
                         context.list.fill(row, style.selection_colour);
                 }
+                const bool faded = !enabled || is_greyed(i);
+                float x = row.x0 + style.text_indent;
+                for (const std::string& icon : i < icons.size() ? icons[i] : std::vector<std::string> { })
+                {
+                    const float top = std::round(row.y0 + (style.row_height - style.icon_size) / 2);
+                    if (!icon.empty())
+                        draw_skin(context.list, context.skins.find(icon), { x, top, x + style.icon_size, top + style.icon_size }, faded ? style.greyed_tint : kWhite);
+                    x += style.icon_size + 1;
+                }
                 if (f)
                 {
-                    const Rect text { row.x0 + style.text_indent, row.y0, row.x1, row.y1 };
-                    draw_text(context.list, *f, items[i], text, { enabled ? style.text_colour : style.disabled_text_colour, Align::Start, Align::Centre, false });
+                    const Rect text { x, row.y0, row.x1, row.y1 };
+                    draw_text(context.list, *f, items[i], text, { faded ? style.disabled_text_colour : style.text_colour, Align::Start, Align::Centre, false });
                 }
             }
         }

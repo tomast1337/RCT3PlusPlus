@@ -417,6 +417,36 @@ namespace rct3::scene
                     rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only }, { "fence", item.fence } });
             return rides;
         });
+        engine_.define("build.stalls", [this](const Json&) -> Json {
+            const auto items = build_items(park_of(park_));
+            if (!items)
+                return nullptr;
+            Json stalls = Json::array();
+            for (const park::BuildItem& item : *items)
+            {
+                if (!item.stall)
+                    continue;
+                Json goods = Json::array();
+                for (const park::BuildItem::Goods& g : item.goods)
+                    goods.push_back({ { "item", g.item }, { "price", g.price } });
+                stalls.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "goods", std::move(goods) } });
+            }
+            return stalls;
+        });
+        engine_.define("stalls.list", [this](const Json&) {
+            const ParkScene& park = park_of(park_);
+            Json stalls = Json::array();
+            for (std::size_t i = 0; i < park.rides.stalls.size(); ++i)
+            {
+                const save::Stall& stall = park.rides.stalls[i];
+                Json items = Json::array();
+                for (const save::StallItem& item : stall.items)
+                    items.push_back({ { "item", item.kind_symbol }, { "price", item.price } });
+                const bool shown = park.shown && park.shown->kind == park::AttractionRef::Kind::Stall && park.shown->index == i;
+                stalls.push_back({ { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "shown", shown } });
+            }
+            return stalls;
+        });
         engine_.define("build.pick", [this](const Json& a) -> Json {
             if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
                 throw std::invalid_argument("build.pick takes an overlay and a symbol");

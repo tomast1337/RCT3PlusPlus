@@ -41,6 +41,8 @@ namespace rct3::park
     /// The name a new ride of `symbol` takes: its kind's name and the lowest number no other ride of its kind
     /// has, in the form the park keeps such names ("%ME% 2").
     [[nodiscard]] std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol);
+    /// The same for a new stall, among the park's `stalls`.
+    [[nodiscard]] std::string numbered_name(std::span<const save::Stall> stalls, std::string_view symbol);
 
     /// The tricks a show ride of kind `kind` (its symbol without the tag, as "KillerWhaleShow") knows: of
     /// `names` (every show trick the game names, as "WhaleShowAnimTrick1" or "LionShowFireHoop"), those whose

@@ -111,11 +111,11 @@ TEST_CASE("painted names tell colourings apart only by the slots used")
     CHECK(used_colours(0b010, colours) == FlexiColours { Rgb { }, Rgb { 255, 16, 0 }, Rgb { } });
 }
 
-TEST_CASE("a new ride's colours come from its model's name, in any case")
+TEST_CASE("a new ride's colours are a scheme chosen by its model's name, in any case")
 {
     const auto twist = name_colours("Twist");
     CHECK(twist == name_colours("TWIST"));
-    CHECK(twist != name_colours("Tumbler"));
+    CHECK((twist[0] != twist[1] && twist[1] != twist[2]));
     for (const std::int32_t c : twist)
         CHECK((c >= 0 && c < static_cast<std::int32_t>(kFlexiColourCount)));
 }

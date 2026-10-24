@@ -55,8 +55,7 @@ namespace rct3::scene
         const auto list = ui::build_list(item);
         if (!list || !menus.items.valid())
             return false;
-        if (auto open = root.find(kListName))
-            root.remove(*open);
+        close_build_list(root);
         auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
         auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
@@ -75,6 +74,12 @@ namespace rct3::scene
         const float y = shown.y0 - ui::build_picker::kGap - size.y - r.y0;
         picker.placement = ui::top_left(x, y, size.x, size.y);
         return true;
+    }
+
+    void close_build_list(ui::Widget& root)
+    {
+        if (auto open = root.find(kListName))
+            root.remove(*open);
     }
 
     bool build_list_open(const ui::Widget& root)

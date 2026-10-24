@@ -47,6 +47,9 @@ namespace rct3::scene
     /// that has no list.
     bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency);
 
+    /// Closes the open list, if one is.
+    void close_build_list(ui::Widget& root);
+
     /// Whether a list is open.
     [[nodiscard]] bool build_list_open(const ui::Widget& root);
 

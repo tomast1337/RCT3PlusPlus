@@ -725,6 +725,8 @@ namespace rct3::scene
             p.fence.clear();
             fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
+            // Its window opens at once, on the tab last used, while its doors are placed.
+            scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, p.ride };
         }
         else
         {

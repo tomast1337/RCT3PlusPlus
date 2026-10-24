@@ -229,6 +229,9 @@ for (const slot of slots) {
             trouble.push(`${step}: the click did not place it (no model?)`);
             return false;
         }
+        // The ride's window opens as soon as it stands, while its doors are placed.
+        if (step === "ride" && ui.find("info") === undefined)
+            trouble.push("its window did not open when it was placed");
         return true;
     }
 

@@ -7,7 +7,8 @@
 //   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default) or null
-//   --headless        no window and no display needed: the null renderer, no sound, no vsync, no logos, 60 fps
+//   --headless        no window and no display needed: drawn off screen (with --renderer null, not at all), no
+//                     sound, no vsync, no logos, 60 fps
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
@@ -673,10 +674,7 @@ int main(int argc, char** argv)
     }
 
     if (headless)
-    {
-        backend = render::Backend::Null;
         vsync = false;
-    }
     // Without vsync or a window to show, a headless run would otherwise keep a core busy.
     const double frame_limit = max_fps.value_or(headless ? 60.0 : 0.0);
     const bool sound = !headless && sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));

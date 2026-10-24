@@ -49,10 +49,11 @@ namespace rct3::simulation
         float start = 0; ///< Where the train's front waits to set off, at the station's end
         // The train
         bool running = false;
-        float at = 0;        ///< Distance of the front of the train
-        float travelled = 0; ///< Since it set off
-        float speed = 0;     ///< Along the track
-        float slow = 0;      ///< Seconds it has been all but stopped away from a chain or station
+        float at = 0;          ///< Distance of the front of the train
+        float travelled = 0;   ///< Since it set off
+        float speed = 0;       ///< Along the track
+        float slow = 0;        ///< Seconds it has been all but stopped away from a chain or station
+        bool launched = false; ///< Its tail has left the platform since it set off, so it is pushed no more there
 
         [[nodiscard]] float length() const
         {

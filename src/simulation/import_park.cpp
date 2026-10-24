@@ -516,6 +516,7 @@ namespace rct3::simulation
                 train.travelled = 0;
             }
             train.running = train.travelled > 0;
+            train.launched = train.travelled >= train.train_length;
             train.speed = train.running ? saved.speed : 0;
             out.trains.push_back(train);
         }

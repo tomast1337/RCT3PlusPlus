@@ -473,6 +473,7 @@ namespace rct3::scene
         // Riding along, the view looks out from the rider's eyes in the car where it is now, at the track as far
         // ahead as its train looks.
         scene.seat.reset();
+        scene.seat_across = park::kRideWideView;
         if (const auto seat = scene.riding ? ride_eye(scene, *scene.riding, scene.riding_eye) : std::nullopt)
         {
             const std::size_t i = *scene.riding;
@@ -500,7 +501,10 @@ namespace rct3::scene
         // seat faces +Z with +Y up, as the people sat on it are modelled.
         constexpr glm::vec3 kSeatEyes { 0, 0.75f, 0.2f }; ///< Where a sitting rider's eyes are, just before their face
         if (const auto seat = scene.riding_flat ? flat_view(scene, scene.riding_flat->first, scene.riding_fixed, scene.riding_flat->second) : std::nullopt)
+        {
             scene.seat = park::looked_round(scene.riding_fixed ? *seat : glm::translate(*seat, kSeatEyes), scene.ride_turn);
+            scene.seat_across = scene.riding_fixed ? park::kRideWideView : park::kRideNarrowView;
+        }
         // With a person, from their eyes, or from behind and over them looking down a little; people are
         // modelled facing +Z with +Y up.
         constexpr float kEyeHeight = 1.6f;    ///< A standing person's eyes over their feet
@@ -510,6 +514,7 @@ namespace rct3::scene
         if (scene.riding_person && *scene.riding_person < scene.shown_people.size())
         {
             const glm::mat4 place = person_place(scene, scene.shown_people[*scene.riding_person]);
+            scene.seat_across = park::kRideNarrowView;
             if (scene.person_behind)
                 scene.seat = park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn);
             else

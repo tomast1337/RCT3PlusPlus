@@ -178,6 +178,18 @@ TEST_CASE("riding a car looks out ahead of it and leans as it banks")
     CHECK(screen({ 5, 3, -10 }).z > 1);    // Behind is not seen
 }
 
+TEST_CASE("riding, the view takes in the same width across any screen, and its height follows the screen's shape")
+{
+    const Seat seat = glm::mat4(1.0f);
+    for (const float aspect : { 1.0f, 16.0f / 9.0f, 0.5f })
+    {
+        const glm::mat4 p = projection(aspect, seat, kRideNarrowView);
+        CHECK(p[0][0] == doctest::Approx(1 / std::tan(kRideNarrowView / 2)));
+        CHECK(p[1][1] == doctest::Approx(aspect / std::tan(kRideNarrowView / 2)));
+    }
+    CHECK(projection(2, seat)[0][0] == doctest::Approx(1 / std::tan(kRideWideView / 2)));
+}
+
 TEST_CASE("riding along looks at the track ahead, sways against the pull and shakes with speed")
 {
     ovl::RideCameraTuning tuning { .look_ahead = 8, .sway_per_g = 0.5f, .sway_most = 0.4f, .shake_from = 1, .shake = 0.01f, .shake_across = 0.1f, .shake_up = 0.1f, .look_tilt = 0.5f };

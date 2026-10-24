@@ -335,6 +335,7 @@ namespace rct3::scene
         /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
         std::optional<std::pair<std::size_t, std::u16string>> rename_requested;
         park::Seat seat;                                     ///< Its rider's eyes, while riding
+        float seat_across = park::kRideWideView;             ///< How far across the screen the rider's view takes in
         park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden
         glm::vec2 ride_turn { };                             ///< How far the rider looks round from ahead, yaw and pitch
         bool ride_dragging = false;                          ///< A drag over the view is turning the rider's head

@@ -112,19 +112,20 @@ namespace rct3::park
         return { std::remainder(turn.x, glm::two_pi<float>()), std::clamp(turn.y, -kRideLookMostPitch, kRideLookMostPitch) };
     }
 
-    glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat)
+    glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat, float across)
     {
         if (seat)
         {
             const glm::vec3 from((*seat)[3]);
-            return projection(aspect, seat) * glm::lookAt(from, from + glm::normalize(glm::vec3((*seat)[2])), glm::normalize(glm::vec3((*seat)[1])));
+            return projection(aspect, seat, across) * glm::lookAt(from, from + glm::normalize(glm::vec3((*seat)[2])), glm::normalize(glm::vec3((*seat)[1])));
         }
         return projection(aspect) * glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
     }
 
-    glm::mat4 projection(float aspect, const Seat& seat)
+    glm::mat4 projection(float aspect, const Seat& seat, float across)
     {
-        return glm::perspective(seat ? kRideFieldOfView : kFieldOfView, aspect > 0 ? aspect : 1.0f, seat ? kRideNear : kNear, kFar);
+        aspect = aspect > 0 ? aspect : 1.0f;
+        return glm::perspective(seat ? 2 * std::atan(std::tan(across / 2) / aspect) : kFieldOfView, aspect, seat ? kRideNear : kNear, kFar);
     }
 
     ParkCamera overview(const save::TerrainGrid& grid)

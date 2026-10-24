@@ -617,55 +617,6 @@ namespace rct3::ui
 
         // ----- objectives -----
 
-        std::string_view condition_key(save::ConditionKind kind)
-        {
-            using enum save::ConditionKind;
-            switch (kind)
-            {
-                case ParkValue:
-                    return "ObjectiveCondition_ParkValue";
-                case ParkGuests:
-                    return "ObjectiveCondition_ParkGuests";
-                case ParkRating:
-                    return "ObjectiveCondition_ParkRating";
-                case RideIncome:
-                    return "ObjectiveCondition_RideIncome";
-                case ShopProfit:
-                    return "ObjectiveCondition_ShopProfit";
-                case RepayLoan:
-                    return "ObjectiveCondition_RepayLoan";
-                case Coaster:
-                    return "ObjectiveCondition_RollerCoasters";
-                case ItemsBought:
-                    return "ObjectiveCondition_ItemsBought";
-                case Vip:
-                    return "ObjectiveCondition_VIP";
-                case PoolGuests:
-                    return "ObjectiveCondition_PoolGuests";
-                case PoolIncome:
-                    return "ObjectiveCondition_PoolIncome";
-                case AnimalsOfSpecies:
-                    return "ObjectiveCondition_NumAnimalsOfSpecies";
-                case AnimalSalesProfit:
-                    return "ObjectiveCondition_AnimalSalesProfit";
-                case GalleryVisitors:
-                    return "ObjectiveCondition_EnclosureVisitors";
-                case GalleryIncome:
-                    return "ObjectiveCondition_EnclosureIncome";
-                case AnimalsReleased:
-                    return "ObjectiveCondition_ReleaseAnimals";
-                case AnimalHealth:
-                    return "ObjectiveCondition_MinAnimalHealth";
-                case Dung:
-                    return "ObjectiveCondition_DungTarget";
-                case ViewingGalleries:
-                    return "ObjectiveCondition_ViewingGalleries";
-                case Other:
-                    break;
-            }
-            return { };
-        }
-
         std::u16string condition_target(const save::Condition& c, const InfoUnits& units)
         {
             if (!c.value || c.kind == save::ConditionKind::RepayLoan)
@@ -734,7 +685,7 @@ namespace rct3::ui
             for (const save::Condition* c : conditions)
             {
                 // The condition and its target, then how long it must hold and whether it has been met.
-                const std::string_view key = condition_key(c->kind);
+                const std::string_view key = simulation::condition_name(c->kind);
                 page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), condition_target(*c, units), false, std::string(key) });
                 // A goal the simulation cannot judge yet says so, rather than looking merely unmet.
                 std::u16string met(kDash);

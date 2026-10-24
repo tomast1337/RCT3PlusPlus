@@ -114,3 +114,43 @@ TEST_CASE("takings count the last whole month, and prizes pay out")
     CHECK(simulation::prize_message(12) == "Prize_TycoonAward");
     CHECK(simulation::prize_name(0) == "Prize_Invalid");
 }
+
+TEST_CASE("a dated goal warns a month and a week before, is judged on its date, and a miss moves it a year on")
+{
+    constexpr float kWeek = save::GameClock::kUnitsPerWeek;
+    constexpr float kYear = save::GameClock::kUnitsPerYear;
+    save::ObjectiveSet set;
+    set.objectives = { { .difficulty = 0 } };
+    save::Condition dated = goal(0, save::ConditionKind::ParkGuests, 300);
+    dated.next_check_time = 6 * kMonth;
+    dated.consistency_flags = std::to_underlying(save::ConditionFlag::HasDeadline);
+    set.conditions = { dated };
+    simulation::ParkMessages messages;
+    const auto keys = [&] {
+        std::vector<std::string> out;
+        for (const simulation::ParkMessage& m : std::exchange(messages.list, { }))
+        {
+            CHECK(m.field_key == "ObjectiveCondition_ParkGuests");
+            out.push_back(m.text_key);
+        }
+        return out;
+    };
+
+    simulation::ParkFigures f { .guests = 500 };
+    CHECK_FALSE(simulation::check_goals(set, f, 0, messages)); // Met, but not judged before its date
+    CHECK(keys().empty());
+    CHECK_FALSE(simulation::check_goals(set, f, 5 * kMonth, messages));
+    CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_MonthWarning" });
+    CHECK_FALSE(simulation::check_goals(set, f, 5 * kMonth + 1, messages));
+    CHECK(keys().empty());
+    CHECK_FALSE(simulation::check_goals(set, f, 6 * kMonth - kWeek, messages));
+    CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_WeekWarning" });
+    f.guests = 10;
+    CHECK_FALSE(simulation::check_goals(set, f, 6 * kMonth, messages));
+    CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_TryAgainNextYear" });
+    CHECK(set.conditions[0].next_check_time == doctest::Approx(6 * kMonth + kYear));
+    CHECK_FALSE(set.conditions[0].completed);
+    f.guests = 500;
+    CHECK(simulation::check_goals(set, f, 6 * kMonth + kYear, messages));
+    CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_MetCondition" }); // No warnings once the date has come
+}

@@ -180,8 +180,13 @@ namespace rct3::simulation
         return kLevels - 1;
     }
 
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time)
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages)
     {
+        using enum save::ConditionFlag;
+        const auto tell = [&](const save::Condition& c, std::string_view key) {
+            if (messages)
+                post(*messages, { .text_key = std::string(key), .field_key = std::string(condition_name(c.kind)) });
+        };
         const std::int32_t level = level_playing(set);
         std::optional<save::Objective&> objective = objective_of(set, level);
         if (!objective || objective->success)
@@ -195,33 +200,105 @@ namespace rct3::simulation
             any = true;
             if (c.completed)
                 continue;
-            if (!met_now(c, figures))
+            const bool met = met_now(c, figures);
+            if (!met)
+                c.consistency_flags &= ~std::to_underlying(TimerRunning); // A break starts the count again.
+            else if (!c.has(TimerRunning))
             {
-                // A break starts the count again.
-                c.consistency_flags &= ~std::to_underlying(save::ConditionFlag::TimerRunning);
+                c.consistency_flags |= std::to_underlying(TimerRunning);
+                c.start_time = time;
+            }
+            const bool held = met && time - c.start_time >= static_cast<float>(std::max(c.months_to_hold, 0)) * save::GameClock::kUnitsPerMonth;
+            if (c.has(HasDeadline) && judged(c.kind))
+            {
+                const float deadline = c.next_check_time;
+                if (!c.has(WarnedOnce) && time >= deadline - save::GameClock::kUnitsPerMonth && time < deadline)
+                {
+                    c.consistency_flags |= std::to_underlying(WarnedOnce);
+                    tell(c, "ObjectiveMessage_MonthWarning");
+                }
+                if (!c.has(WarnedTwice) && time >= deadline - save::GameClock::kUnitsPerWeek && time < deadline)
+                {
+                    c.consistency_flags |= std::to_underlying(WarnedTwice);
+                    tell(c, "ObjectiveMessage_WeekWarning");
+                }
+                if (time < deadline)
+                {
+                    all = false;
+                    continue;
+                }
+                if (!held)
+                {
+                    c.next_check_time += save::GameClock::kUnitsPerYear;
+                    c.consistency_flags &= ~std::to_underlying(WarnedOnce) & ~std::to_underlying(WarnedTwice);
+                    tell(c, "ObjectiveMessage_TryAgainNextYear");
+                    all = false;
+                    continue;
+                }
+                tell(c, "ObjectiveMessage_MetCondition");
+            }
+            else if (!held)
+            {
                 all = false;
                 continue;
             }
-            if (!c.has(save::ConditionFlag::TimerRunning))
-            {
-                c.consistency_flags |= std::to_underlying(save::ConditionFlag::TimerRunning);
-                c.start_time = time;
-            }
-            // shortcut: goals with a date to be judged on are judged as soon as they have held, dates ignored; no
-            // scenario file sets one.
-            if (time - c.start_time >= static_cast<float>(std::max(c.months_to_hold, 0)) * save::GameClock::kUnitsPerMonth)
-            {
-                c.completed = true;
-                c.consistency_flags |= std::to_underlying(save::ConditionFlag::Satisfied);
-            }
-            else
-                all = false;
+            c.completed = true;
+            c.consistency_flags |= std::to_underlying(Satisfied);
         }
         if (!any || !all)
             return std::nullopt;
         objective->success = true;
         const std::int32_t prize = objective->prize_id > 0 && objective->prize_id < kApprenticePrize ? objective->prize_id : 0;
         return std::array { prize, kApprenticePrize + level };
+    }
+
+    std::string_view condition_name(save::ConditionKind kind) noexcept
+    {
+        using enum save::ConditionKind;
+        switch (kind)
+        {
+            case ParkValue:
+                return "ObjectiveCondition_ParkValue";
+            case ParkGuests:
+                return "ObjectiveCondition_ParkGuests";
+            case ParkRating:
+                return "ObjectiveCondition_ParkRating";
+            case RideIncome:
+                return "ObjectiveCondition_RideIncome";
+            case ShopProfit:
+                return "ObjectiveCondition_ShopProfit";
+            case RepayLoan:
+                return "ObjectiveCondition_RepayLoan";
+            case Coaster:
+                return "ObjectiveCondition_RollerCoasters";
+            case ItemsBought:
+                return "ObjectiveCondition_ItemsBought";
+            case Vip:
+                return "ObjectiveCondition_VIP";
+            case PoolGuests:
+                return "ObjectiveCondition_PoolGuests";
+            case PoolIncome:
+                return "ObjectiveCondition_PoolIncome";
+            case AnimalsOfSpecies:
+                return "ObjectiveCondition_NumAnimalsOfSpecies";
+            case AnimalSalesProfit:
+                return "ObjectiveCondition_AnimalSalesProfit";
+            case GalleryVisitors:
+                return "ObjectiveCondition_EnclosureVisitors";
+            case GalleryIncome:
+                return "ObjectiveCondition_EnclosureIncome";
+            case AnimalsReleased:
+                return "ObjectiveCondition_ReleaseAnimals";
+            case AnimalHealth:
+                return "ObjectiveCondition_MinAnimalHealth";
+            case Dung:
+                return "ObjectiveCondition_DungTarget";
+            case ViewingGalleries:
+                return "ObjectiveCondition_ViewingGalleries";
+            case Other:
+                break;
+        }
+        return { };
     }
 
     void give_prize(ParkState& park, save::Finance& finance, save::TerrainGrid& land, std::int32_t id)

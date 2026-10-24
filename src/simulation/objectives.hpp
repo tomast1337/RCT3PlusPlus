@@ -4,7 +4,8 @@
 // The goals a scenario sets, checked as the park runs. A scenario has up to three levels, apprentice,
 // entrepreneur and tycoon, won in that order: only the first level not yet won is looked at. A level is won once
 // every goal it sets has been met. A goal that must hold for some months is met once it has held that long
-// without a break; once met it stays met. Winning a level gives the scenario's prize for it, then the level's own.
+// without a break; once met it stays met. A goal with a date is judged only on that date: the player is warned a
+// month and a week before, told when it is met, and on a miss the date moves a year on. Winning a level gives the scenario's prize for it, then the level's own.
 //
 // The goals and how far each has got are kept in the park's own objective records, so the park file and the
 // objectives window always agree with what is checked here.
@@ -12,6 +13,7 @@
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/park_messages.hpp"
 
 #include <array>
 #include <cstdint>
@@ -73,10 +75,13 @@ namespace rct3::simulation
     /// The level being played: the first not yet won, 0 apprentice to 2 tycoon. It stays at tycoon once that is won.
     [[nodiscard]] std::int32_t level_playing(const save::ObjectiveSet& set);
 
-    /// Checks the goals of the level being played at calendar `time`, marking those met. When that makes the
-    /// level won, marks it and returns the prizes it gives: the scenario's for the level (0 when none), then the
-    /// level's own.
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time);
+    /// Checks the goals of the level being played at calendar `time`, marking those met, and posts what dated
+    /// goals tell the player to `messages`. When that makes the level won, marks it and returns the prizes it
+    /// gives: the scenario's for the level (0 when none), then the level's own.
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages = std::nullopt);
+
+    /// Text key naming a goal of `kind`; empty for kinds without one.
+    [[nodiscard]] std::string_view condition_name(save::ConditionKind kind) noexcept;
 
     /// Gives the park prize `id`'s reward. The construction rights prize puts the land held back from the
     /// park on sale.

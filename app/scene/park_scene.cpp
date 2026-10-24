@@ -1694,7 +1694,7 @@ namespace rct3::scene
                     .shop_profit = scene.takings.shops,
                     .rides = goal_rides,
                 };
-                if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time))
+                if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time, scene.park.messages))
                 {
                     for (const std::int32_t prize : *won)
                     {

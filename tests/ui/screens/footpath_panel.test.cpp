@@ -80,7 +80,7 @@ TEST_CASE("the panel sits in the bottom-left corner with its controls out")
     CHECK(f.panel->page() == FootpathPage::Controls);
     const Rect disc = f.panel->disc();
     CHECK(disc.x0 == info_panel::kDiscMargin);
-    CHECK(disc.y1 == 700 - info_panel::kDiscMargin);
+    CHECK(disc.y1 == 700 - game_skins::kOverToolRow); // Over the tool row, as the land panel stands
     const Rect strip = f.panel->strip();
     CHECK(strip.x0 < disc.x1);
     CHECK(strip.x1 > disc.x1);
@@ -173,7 +173,7 @@ TEST_CASE("the open page's tab folds the strip away, and the close button hides 
     CHECK(f.panel->routing());
     CHECK_FALSE(f.panel->removing());
 
-    f.click({ footpath_panel::kCloseLeft + info_panel::kCloseSize / 2, 700 - footpath_panel::kCloseBottom - info_panel::kCloseSize / 2 });
+    f.click({ footpath_panel::kCloseLeft + info_panel::kCloseSize / 2, 700 - (game_skins::kOverToolRow - info_panel::kDiscMargin) - footpath_panel::kCloseBottom - info_panel::kCloseSize / 2 });
     CHECK_FALSE(f.panel->showing());
     CHECK(f.panel->take_closed());
     CHECK_FALSE(f.panel->take_closed());

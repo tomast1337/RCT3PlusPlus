@@ -92,7 +92,7 @@ TEST_CASE("the rows of curves and slopes sit side by side in the strip")
     Fixture f;
     const Rect panel = f.panel->rect();
     CHECK(panel.x0 == 0);
-    CHECK(panel.y1 == 720);
+    CHECK(panel.y1 == 720 - game_skins::kOverToolRow); // Over the tool row
     for (std::size_t i = 0; i + 1 < cp::kCurves; ++i)
     {
         CHECK(f.panel->curve_button(i + 1).rect().x0 - f.panel->curve_button(i).rect().x0 == cp::kStep);

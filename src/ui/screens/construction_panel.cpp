@@ -64,7 +64,7 @@ namespace rct3::ui
         : Widget(std::move(name))
         , style_(style)
     {
-        placement = bottom_left(0, 0, cp::kWidth, cp::kHeight);
+        placement = bottom_left(0, style.bottom, cp::kWidth, cp::kHeight);
         const auto picture = [&](std::string widget) { return &add<Button>(std::move(widget), std::string { }); };
         for (std::size_t i = 0; i < cp::kCurves; ++i)
         {

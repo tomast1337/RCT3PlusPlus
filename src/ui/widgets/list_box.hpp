@@ -35,6 +35,7 @@ namespace rct3::ui
         Color stripe = hex("#00000000");      ///< Behind every other row, the first included
         Color greyed_tint = hex("#ffffff66"); ///< Over a greyed row's pictures
         float icon_size = 16;                 ///< Of the pictures before a row's text, each square
+        float icon_gap = 1;                   ///< Between the pictures, and after the last
         FontRole font = FontRole::Small;
         float row_height = 18;
         Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the rows and bar; fixed when the list is made

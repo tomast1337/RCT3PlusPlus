@@ -5,7 +5,15 @@
 // normals are in world space.
 import common;
 
-[[vk::push_constant]] ConstantBuffer<Transform> u_draw;
+// The start of lit.slang's push block: the fraction of sky.w moves the texture along v.
+struct CrossingDraw
+{
+    float4x4 transform;
+    float4 sun_direction;
+    float4 sun;
+    float4 sky;
+}
+[[vk::push_constant]] ConstantBuffer<CrossingDraw> u_draw;
 
 struct Corner
 {
@@ -21,7 +29,7 @@ struct Corner
 [shader("vertex")]
 LitVaryings vertex_main(Corner c)
 {
-    LitVaryings result = { mul(u_draw.transform, float4(c.position, 1.0)), c.color, c.uv, c.normal, c.position, float2(0.0), eye_of(u_draw.transform) };
+    LitVaryings result = { mul(u_draw.transform, float4(c.position, 1.0)), c.color, c.uv + float2(0.0, frac(u_draw.sky.w)), c.normal, c.position, float2(0.0), eye_of(u_draw.transform) };
     // A view without perspective draws both levels whole; side 0 draws the object whole.
     if (result.eye.w < 0.5)
         return result;

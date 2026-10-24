@@ -385,6 +385,7 @@ namespace rct3::render
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
         SceneLight light; ///< For the Lit shaders
+        float scroll = 0; ///< For the Lit shaders: added to the texture's v, from 0 up to 1
         /// For shaders that read more than one picture, bound after `texture` with the same sampler. A missing one
         /// reads as `texture`.
         std::array<TextureHandle, kExtraTextures> extra_textures { };

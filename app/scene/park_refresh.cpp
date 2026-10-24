@@ -2,6 +2,7 @@
 #include "scene/park_refresh.hpp"
 
 #include "logging/log.hpp"
+#include "park/chain_lifts.hpp"
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
@@ -693,7 +694,7 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, bool supports, const park::Broken& broken)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, bool supports, const park::Broken& broken, const park::Chains& chains)
     {
         ObjectBuild built;
         built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band); });
@@ -718,7 +719,7 @@ namespace rct3::scene
             return std::nullopt;
         for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
         {
-            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken); });
+            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains); });
             shapes->billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
         }
         return built;
@@ -758,9 +759,9 @@ namespace rct3::scene
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
             return;
         scene.since_rebuild = 0;
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, supports = scene.show_supports, broken = scene.broken_objects] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides)] {
             profiling::register_thread("ObjectWorker");
-            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, supports, broken); });
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, supports, broken, chains); });
             profiling::unregister_thread();
             return built;
         });

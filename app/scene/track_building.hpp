@@ -78,6 +78,10 @@ namespace rct3::scene
         /// The track is built on before its first piece, as a giant slide is from its bottom up to its top.
         bool backward = false;
         bool heights = false; ///< The track's heights are shown while it is built
+        /// Settings the next piece is built with, where it has them.
+        int holding_time = 5; ///< Seconds
+        int car_turn = 0;     ///< Degrees
+        std::uint8_t facing = 0;
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
         std::optional<save::Tile> aim;
         std::int32_t turns = 0;

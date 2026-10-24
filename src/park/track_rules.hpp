@@ -69,6 +69,8 @@ namespace rct3::park
         bool builds_back = false;
         /// One building set down whole: its first piece is all its track, and nothing goes on after it.
         bool one_piece = false;
+        bool car_rotation = false; ///< The player sets how far the cars turn on each piece
+        bool car_facing = false;   ///< The player sets which way the cars face on each piece, or lets them spin
     };
 
     /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces

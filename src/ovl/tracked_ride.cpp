@@ -96,6 +96,9 @@ namespace rct3::ovl
             if (const std::int32_t least = r->i32(0x17C); least >= 0)
                 rules.min_pieces = static_cast<std::uint32_t>(least);
             rules.circuit_only = r->u32(0x180) != 0;
+            rules.car_rotation = r->u32(0xB0) != 0;
+            if (const auto longer = ItemRecord::open(space, refs, address, 0x1A8))
+                rules.car_facing = longer->u32(0x1A4);
             // A list of (count, pointer) pairs, each pointing at that many 16-byte entries: the piece test,
             // then what the piece becomes.
             const std::uint32_t count = r->u32(0x148);

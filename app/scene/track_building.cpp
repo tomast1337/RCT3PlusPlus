@@ -87,7 +87,10 @@ namespace rct3::scene
             std::string_view skin;
         };
         constexpr std::uint32_t kBrakesRole = 1;
-        constexpr std::array<std::uint32_t, 3> kBrakeRoles { kBrakesRole, 2, 24 }; ///< Brakes, block brakes, holding brakes
+        constexpr std::uint32_t kHoldingRole = 24;
+        constexpr std::array<std::uint32_t, 3> kBrakeRoles { kBrakesRole, 2, kHoldingRole }; ///< Brakes, block brakes, holding brakes
+        constexpr int kMostHoldingTime = 30;                                                 ///< Seconds, as the game's box goes
+        constexpr int kMostCarTurn = 720;                                                    ///< Degrees either way, as the game's box goes
         /// Metres a piece must end off to a side, or up or down, to be marked as going that way.
         constexpr float kMarkedRun = 0.5f;
         constexpr std::array<RoleIcon, 4> kRoleIcons { {
@@ -422,8 +425,11 @@ namespace rct3::scene
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride);
             v.heights = b.heights;
             v.heights_locked = scene.show_ride_heights;
+            const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
+            if (rules.car_facing)
+                v.facing = b.facing;
             // A ride whose track may lie in several stretches, or a water transport, can begin another.
-            if (const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { }; rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
+            if (rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
                 v.new_segment = v.can_demolish && !opening(ride) && !b.backward;
             const park::PieceCatalogue* c = catalogue(b);
             if (c == nullptr || !b.tip)
@@ -469,15 +475,16 @@ namespace rct3::scene
                 }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
-                // Brakes slow trains to the ride's brake speed, shown in hundredths of the player's unit.
-                // shortcut: one speed for all of a ride's brakes and nothing slows to it yet, upgrade with
-                // a speed per piece once trains brake.
+                // The settings the piece is built with. A brake's speed, in hundredths of the player's unit, is
+                // the ride's: the last one set.
+                // shortcut: nothing slows to it or holds for the time yet, upgrade once trains brake.
+                using enum ui::PieceParam;
                 if (shape.record.role == kBrakesRole)
-                {
-                    v.speed = static_cast<int>(std::lround(ride.options.brake_speed * ui::speed_scale(units) * 100));
-                    v.speed_most = static_cast<int>(std::lround(kMostBrakeSpeed * ui::speed_scale(units) * 100));
-                    v.speed_unit = ui::speed_unit(units);
-                }
+                    v.params.at(std::to_underlying(Speed)) = ui::ParamBox { .value = static_cast<int>(std::lround(ride.options.brake_speed * ui::speed_scale(units) * 100)), .most = static_cast<int>(std::lround(kMostBrakeSpeed * ui::speed_scale(units) * 100)), .decimals = 2, .unit = std::u16string(ui::speed_unit(units)) };
+                if (shape.record.role == kHoldingRole)
+                    v.params.at(std::to_underlying(HoldingTime)) = ui::ParamBox { .value = b.holding_time, .most = kMostHoldingTime };
+                if (rules.car_rotation)
+                    v.params.at(std::to_underlying(CarTurn)) = ui::ParamBox { .value = b.car_turn, .least = -kMostCarTurn, .most = kMostCarTurn };
             }
             return v;
         }
@@ -599,6 +606,14 @@ namespace rct3::scene
             piece.height = object.base_height.value_or(0);
             piece.direction = static_cast<std::uint8_t>(object.rotation);
             piece.reversed = b.picked->reversed != b.backward;
+            // shortcut: brake speeds are stored in whole metres a second as the files do, upgrade if a finer
+            // speed matters once trains brake.
+            if (shape.record.role == kBrakesRole)
+                piece.brake_speed = static_cast<std::int32_t>(std::lround(ride.options.brake_speed));
+            if (shape.record.role == kHoldingRole)
+                piece.holding_time = b.holding_time;
+            piece.car_turn = static_cast<float>(b.car_turn);
+            piece.facing = b.facing;
             // The first piece down, the station, opens the ride's window, as in the game; a closed circuit goes on to
             // its doors.
             if (ride.track->pieces.empty())
@@ -1277,6 +1292,10 @@ namespace rct3::scene
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
             panel.heights_help = assets.strings->get("ATE_TT_HeightMarks");
+            panel.facing_button().tooltip = assets.strings->get("ATE_TT_SpinAngle");
+            using enum ui::PieceParam;
+            for (const auto& [param, help] : { std::pair { CarTurn, "TrackDesigner_CarSpin_TT" }, std::pair { HoldingTime, "TrackDesigner_HoldingTime_TT" }, std::pair { Speed, "TrackDesigner_BrakeSpeed_TT" } })
+                panel.param_spinner(param).tooltip = assets.strings->get(help);
             panel.heights_locked_help = assets.strings->get("ATE_TT_HeightMarksLocked");
         }
         // A ride that is one building is set down whole, as a flat ride is: the round panel shows no strip,
@@ -1574,8 +1593,22 @@ namespace rct3::scene
                 case Heights:
                     b.heights = !b.heights;
                     break;
-                case Speed:
-                    scene.rides.rides.at(*b.ride).options.brake_speed = static_cast<float>(event->index) / 100 / ui::speed_scale(units);
+                case Param:
+                    switch (static_cast<ui::PieceParam>(event->index))
+                    {
+                        case ui::PieceParam::CarTurn:
+                            b.car_turn = event->value;
+                            break;
+                        case ui::PieceParam::HoldingTime:
+                            b.holding_time = event->value;
+                            break;
+                        case ui::PieceParam::Speed:
+                            scene.rides.rides.at(*b.ride).options.brake_speed = static_cast<float>(event->value) / 100 / ui::speed_scale(units);
+                            break;
+                    }
+                    break;
+                case Facing:
+                    b.facing = static_cast<std::uint8_t>((b.facing + 1) % ui::construction_panel::kFacings);
                     break;
                 case NewSegment:
                 {

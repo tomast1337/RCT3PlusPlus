@@ -6,6 +6,7 @@
 
 #include <doctest/doctest.h>
 #include <string>
+#include <utility>
 
 using namespace rct3::ui;
 namespace cp = rct3::ui::construction_panel;
@@ -286,26 +287,54 @@ TEST_CASE("named pieces with a picture stand as picture buttons, out of the list
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Build, 0 });
 }
 
-TEST_CASE("a speed shows only for a piece that has one, and a step is heard")
+TEST_CASE("a setting shows only for a piece that has it, a step is heard, and the boxes end at the price's row's end")
 {
     Fixture f;
     ConstructionView v = straight();
     f.panel->show(v);
-    CHECK_FALSE(f.panel->speed_spinner().visible);
-    v.speed = 400;
-    v.speed_most = 3000;
-    v.speed_unit = u"m/s";
+    Spinner& speed = f.panel->param_spinner(PieceParam::Speed);
+    CHECK_FALSE(speed.visible);
+    v.params.at(std::to_underlying(PieceParam::Speed)) = ParamBox { .value = 400, .most = 3000, .decimals = 2, .unit = u"m/s" };
     f.panel->show(v);
     f.desktop.update({ });
-    CHECK(f.panel->speed_spinner().visible);
-    CHECK(f.panel->speed_spinner().value() == 400);
-    f.press(f.panel->speed_spinner()); // Not on an arrow: nothing moves
+    CHECK(speed.visible);
+    CHECK_FALSE(f.panel->param_spinner(PieceParam::CarTurn).visible);
+    CHECK(speed.value() == 400);
+    CHECK(speed.rect().x1 - f.panel->rect().x0 == doctest::Approx(cp::kParamsRight));
+    f.press(speed); // Not on an arrow: nothing moves
     CHECK_FALSE(f.panel->take_event());
-    const Rect up = f.panel->speed_spinner().up_arrow();
+    const Rect up = speed.up_arrow();
     const Point p { (up.x0 + up.x1) / 2, (up.y0 + up.y1) / 2 };
     f.desktop.update({ p, true });
     f.desktop.update({ p, false });
-    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Speed, 401 });
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Param, std::to_underlying(PieceParam::Speed), 401 });
+    // A car turn goes before it and may go below nothing; the price's label stops short of both.
+    v.params.at(std::to_underlying(PieceParam::CarTurn)) = ParamBox { .value = -90, .least = -720, .most = 720 };
+    f.panel->show(v);
+    f.desktop.update({ });
+    Spinner& turn = f.panel->param_spinner(PieceParam::CarTurn);
+    CHECK(turn.value() == -90);
+    CHECK(turn.rect().x1 < speed.rect().x0);
+    CHECK(f.panel->cost_label().rect().x1 < turn.rect().x0);
+}
+
+TEST_CASE("the cars' facing takes the next toggle slot and is heard")
+{
+    Fixture f;
+    const auto style = game_skins::construction_panel_style(kGamePalette);
+    ConstructionView v = straight();
+    v.toggles = { IconState::Off, std::nullopt, std::nullopt, std::nullopt, std::nullopt };
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK_FALSE(f.panel->facing_button().visible);
+    v.facing = 2;
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->facing_button().visible);
+    CHECK(f.panel->facing_button().icon == style.facing + "3");
+    CHECK(f.panel->facing_button().rect().x0 == f.panel->toggle_button(0).rect().x0); // The chain's column, the other row
+    f.press(f.panel->facing_button());
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Facing, 0 });
 }
 
 TEST_CASE("a piece that cannot go on is greyed in its place, its marks too, and is not heard")

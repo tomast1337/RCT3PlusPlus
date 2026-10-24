@@ -557,6 +557,7 @@ namespace
                 }
                 const auto& r = *item.ride;
                 out.info("  {:<32} type {:d} name {} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.name).c_str(), std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
+                out.info("    car rotation {} car facing {}", r.rules.car_rotation, r.rules.car_facing);
                 if (const auto& d = r.operating)
                     out.info("    mode {:d} allowed 0x{:x} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} block {:g} fixed {:g} cost {:d}", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->block_brake_speed, d->fixed_speed.value_or(-1), d->cost);
                 if (const auto& d = r.operating)

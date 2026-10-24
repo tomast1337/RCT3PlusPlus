@@ -68,6 +68,11 @@ namespace rct3::ovl
         /// least one, 4 none.
         std::uint32_t entrances = 3;
         std::uint32_t exits = 3;
+        /// The player sets how far the cars turn on each piece, as on the 4D coasters. Version 4 and 5 files only.
+        bool car_rotation = false;
+        /// The player sets which way the cars face on each piece, or lets them spin, as on the spinning coaster.
+        /// Version 5 files only.
+        std::uint32_t car_facing = 0;
         /// Runs of pieces swapped for others after every change to the track, so a station's ends or a
         /// waterfall's parts are the right pieces: each pattern takes consecutive pieces, one per entry.
         std::vector<std::vector<PatternEntry>> patterns;

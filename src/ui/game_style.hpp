@@ -813,8 +813,9 @@ namespace rct3::ui::game_skins
         s.list.text_indent = 2;
         s.list_bar = scroll_bar_style(p, Orientation::Vertical);
         s.divider = p.panel_edge;
-        s.speed_icon = "TrackPieceParam_Speed";
-        s.speed = spinner_style(p);
+        s.param_icons = { "TrackPieceParam_Angle", "TrackPieceParam_Time", "TrackPieceParam_Speed" };
+        s.param = spinner_style(p);
+        s.facing = named("SpinAngleState");
         return s;
     }
 

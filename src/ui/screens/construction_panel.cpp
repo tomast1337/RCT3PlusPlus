@@ -117,13 +117,15 @@ namespace rct3::ui
             b.toggle = true;
             specials_.at(i) = &b;
         }
-        speed_icon_ = picture("speed_icon");
-        speed_icon_->icon = style.speed_icon;
-        speed_icon_->inert = true;
-        speed_icon_->placement = top_left(cp::kSpeedAt.x, cp::kSpeedAt.y, cp::kSpeedIconSize, cp::kSpeedIconSize);
-        speed_ = &add<Spinner>("speed", style.speed);
-        speed_->decimals = 2;
-        speed_->placement = top_left(cp::kSpeedAt.x + cp::kSpeedIconSize + 2, cp::kSpeedAt.y, cp::kSpeedSize.x, cp::kSpeedSize.y);
+        constexpr std::array<std::string_view, cp::kParams> kParamNames { "car_turn", "holding_time", "speed" };
+        for (std::size_t i = 0; i < cp::kParams; ++i)
+        {
+            param_icons_.at(i) = picture(std::format("{}_icon", kParamNames.at(i)));
+            param_icons_.at(i)->icon = style.param_icons.at(i);
+            param_icons_.at(i)->inert = true;
+            params_.at(i) = &add<Spinner>(std::string(kParamNames.at(i)), style.param);
+        }
+        facing_ = picture("facing");
         show({ });
     }
 
@@ -154,6 +156,26 @@ namespace rct3::ui
             toggles_.at(i)->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<float>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
             ++toggles;
         }
+        // The cars' facing takes the next slot.
+        if (view_.facing)
+        {
+            const float top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
+            facing_->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<float>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
+            ++toggles;
+        }
+        // The setting boxes stand right of the price, the last ending where the price's row does; the price
+        // keeps what is left of the row.
+        float right = cp::kParamsRight;
+        for (std::size_t i = cp::kParams; i-- > 0;)
+        {
+            if (!view_.params.at(i))
+                continue;
+            const float left = right - cp::kParamWidths.at(i) - cp::kParamIconSize - 2;
+            param_icons_.at(i)->placement = top_left(left, cp::kParamsTop, cp::kParamIconSize, cp::kParamIconSize);
+            params_.at(i)->placement = top_left(left + cp::kParamIconSize + 2, cp::kParamsTop, cp::kParamWidths.at(i), cp::kParamHeight);
+            right = left - cp::kParamGap;
+        }
+        cost_->placement = top_left(cp::kLabelLeft, cp::kCostTop, std::min(cp::kLabelWidth, right - cp::kLabelLeft), cp::kLabelHeight);
         const float dial = dial_left(toggles);
         for (std::size_t i = 0; i < cp::kBanks; ++i)
             banks_.at(i)->placement = top_left(dial + kBankSpots.at(i).x, cp::kDialTop + kBankSpots.at(i).y, cp::kBankSize, cp::kBankSize);
@@ -227,12 +249,24 @@ namespace rct3::ui
             // With no face to light, the picked one shows by the others fading.
             b.icon_colour = b.on || !view_.named_on ? kWhite : hex("#ffffff66");
         }
-        speed_icon_->visible = speed_->visible = view_.speed.has_value();
-        speed_->maximum = view_.speed_most;
-        speed_->unit = u" " + view_.speed_unit;
-        // Set only when it moved, so a number being typed is not written over.
-        if (view_.speed && *view_.speed != speed_->value())
-            speed_->set_value(*view_.speed);
+        for (std::size_t i = 0; i < cp::kParams; ++i)
+        {
+            const std::optional<ParamBox>& box = view_.params.at(i);
+            Spinner& s = *params_.at(i);
+            param_icons_.at(i)->visible = s.visible = box.has_value();
+            if (!box)
+                continue;
+            s.minimum = box->least;
+            s.maximum = box->most;
+            s.decimals = box->decimals;
+            s.unit = box->unit.empty() ? std::u16string { } : u" " + box->unit;
+            // Set only when it moved, so a number being typed is not written over.
+            if (box->value != s.value())
+                s.set_value(box->value);
+        }
+        facing_->visible = view_.facing.has_value();
+        if (view_.facing)
+            facing_->icon = std::format("{}{}", style_.facing, *view_.facing + 1);
     }
 
     std::optional<ConstructionEvent> ConstructionPanel::take_event()
@@ -288,8 +322,13 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Named, listed_[*list_->selected()] });
         if (list_->take_activate())
             events_.push_back({ ConstructionAction::Build, 0 });
-        if (speed_->take_change() && view_.speed)
-            events_.push_back({ ConstructionAction::Speed, static_cast<std::size_t>(std::max(0, speed_->value())) });
+        for (std::size_t i = 0; i < cp::kParams; ++i)
+        {
+            if (params_.at(i)->take_change() && view_.params.at(i))
+                events_.push_back({ ConstructionAction::Param, i, params_.at(i)->value() });
+        }
+        if (facing_->take_click() && view_.facing)
+            events_.push_back({ ConstructionAction::Facing, 0 });
     }
 
     void ConstructionPanel::draw(DrawContext& context) const

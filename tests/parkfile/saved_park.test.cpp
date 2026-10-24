@@ -94,6 +94,19 @@ TEST_CASE("a saved park reads back as written")
     const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(broken);
     CHECK(broken->broken_items == std::vector<std::uint64_t> { 42, 43 });
+    CHECK_FALSE(broken->waterfalls); // None kept: read again from the original park
+
+    hidden.waterfalls.emplace(); // All the park's waterfalls deleted
+    const auto dry = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(dry);
+    REQUIRE(dry->waterfalls);
+    CHECK(dry->waterfalls->empty());
+    hidden.waterfalls->push_back({ .lip_left = { 1, 9, 2 }, .lip_right = { 1, 9, 6 }, .bottom = { 5, 3, 4 }, .flow = { 1, 0, 0 } });
+    const auto falls = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(falls);
+    REQUIRE(falls->waterfalls);
+    REQUIRE(falls->waterfalls->size() == 1);
+    CHECK(falls->waterfalls->front().bottom.y == 3.0f);
 }
 
 TEST_CASE("a cut or changed saved park is refused")

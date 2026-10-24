@@ -37,6 +37,10 @@
 // and takes in the lakes it meets. It only spreads over land the park owns outright without paths on the
 // ground; where it would go further it stops rising.
 //
+// Waterfalls: click one lake, then another; water pours from the higher over its nearest straight edge into the
+// lower (park/waterfall_making.hpp), or a message says why it cannot. A right click on a waterfall deletes it;
+// anywhere else it puts the tool away.
+//
 // While a tool is out, marks on the ground show what it would work on: the tiles under the brush, the tile
 // being poured on, or the one tile, edge or corner a tile tool picks.
 //
@@ -73,6 +77,7 @@ namespace rct3::scene
             Shape,
             Paint,
             Water,
+            Waterfall,
         };
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
@@ -100,12 +105,18 @@ namespace rct3::scene
         float target = 0;                        ///< Of a levelling stroke
         float held = 0;                          ///< Seconds of smoothing not yet applied
         std::uint64_t passes = 0;                ///< Of smoothing, the seed of each pass
+        std::optional<std::size_t> upper_lake;   ///< Of a waterfall: the lake picked first, of the park's water
+        save::Tile upper_tile;                   ///< Where it was picked
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.
     void toggle_land_tool(ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets);
     void stop_land_tools(ParkScene& scene);
     [[nodiscard]] bool land_tool(const ParkScene& scene);
+
+    /// A right click at `at` (of a view `size`) with the waterfall tool out: deletes the waterfall there; whether
+    /// there was one.
+    bool delete_waterfall(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
     /// button is `down`.

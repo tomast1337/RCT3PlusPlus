@@ -1449,7 +1449,10 @@ namespace rct3::scene
                 if (ride_placing(scene))
                     stop_ride_placing(scene); // A right click puts the placing away, as in the game
                 else if (land_tool(scene))
-                    stop_land_tools(scene);
+                {
+                    if (!delete_waterfall(scene, pointer.position, { screen.width(), screen.height() }))
+                        stop_land_tools(scene);
+                }
                 else if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
             }
@@ -2024,12 +2027,13 @@ namespace rct3::scene
             }
             if (const auto item = tools->take_item())
             {
-                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround || *item == ui::ToolItem::Water)
+                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround || *item == ui::ToolItem::Water || *item == ui::ToolItem::Waterfalls)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
-                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? LandTools::Tool::Shape : (*item == ui::ToolItem::PaintGround ? LandTools::Tool::Paint : LandTools::Tool::Water), assets);
+                    using enum LandTools::Tool;
+                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? Shape : (*item == ui::ToolItem::PaintGround ? Paint : (*item == ui::ToolItem::Water ? Water : Waterfall)), assets);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
@@ -2210,6 +2214,7 @@ namespace rct3::scene
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
+        saved.waterfalls = scene.footpaths.waterfalls;
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

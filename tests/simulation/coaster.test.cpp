@@ -216,7 +216,11 @@ TEST_CASE("a reverse launched shuttle goes back up one spike, through the statio
 TEST_CASE("a shuttle's chain carries the train up it going backwards too")
 {
     Coaster c = spikes(Shuttle::Back, 2);
-    c.kinds[0] = Stretch::Chain;
+    // The spike behind the station is longer, its chain stopping 10 m short of the top.
+    c.distance = { 0, 10, 40, 50, 70, 80, 110 };
+    c.height = { 25, 22, 0, 0, 0, 0, 25 };
+    c.kinds = { Stretch::Plain, Stretch::Chain, Stretch::Plain, Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+    c.start = c.at = 70;
     c.lift_speed = 3;
     c.launch_speed = 4; // Too slow to climb far up the spike on its own
     float lowest = c.at;
@@ -227,7 +231,8 @@ TEST_CASE("a shuttle's chain carries the train up it going backwards too")
         lowest = std::min(lowest, c.at);
     }
     CHECK(back);
-    CHECK(lowest < 5 + 2); // Carried all the way up
+    CHECK_FALSE(c.crashed);
+    CHECK(lowest < 15 + 2); // Carried all the way up the chain, its back past the chain's top
 }
 
 TEST_CASE("a swinging shuttle is pushed each pass, building up and dying down, and stops after its passes")
@@ -284,4 +289,67 @@ TEST_CASE("a drop tower's train is held at the top of its climb before it falls"
         plain_still += plain.speed == 0 && plain.at > 10 ? 0.05f : 0;
     }
     CHECK(plain_still < 0.2f);
+}
+
+namespace
+{
+    /// The hill circuit left unfinished: its track stops 10 m past the bottom of the drop.
+    Coaster unfinished()
+    {
+        Coaster c = hill();
+        c.distance = { 0, 10, 40, 70, 80 };
+        c.height = { 0, 0, 15, 0, 0 };
+        c.closed = false;
+        c.running = true;
+        return c;
+    }
+} // namespace
+
+TEST_CASE("a train going round an unfinished track runs off its end and crashes there, still going")
+{
+    Coaster c = unfinished();
+    bool back = false;
+    for (int i = 0; i < 4000 && c.running; ++i)
+        back = back || drive(c, 0.05f);
+    CHECK_FALSE(back);
+    CHECK(c.crashed);
+    CHECK(c.at == 80);
+    CHECK(c.speed > 5);
+}
+
+TEST_CASE("a shuttle's train pushed too hard runs off an end and crashes")
+{
+    Coaster c = spikes(Shuttle::Back, 2);
+    c.launch_speed = 40; // Far more than the spike behind the station takes
+    for (int i = 0; i < 4000 && c.running; ++i)
+        drive(c, 0.05f);
+    CHECK(c.crashed);
+    CHECK(c.at == 5); // Its back off the start of the track
+    CHECK(c.speed < 0);
+}
+
+TEST_CASE("a train on a finished circuit never crashes")
+{
+    Coaster c = hill();
+    c.running = true;
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+        back = drive(c, 0.05f);
+    CHECK(back);
+    CHECK_FALSE(c.crashed);
+    CHECK(lap_seconds(unfinished()) == std::nullopt);
+}
+
+TEST_CASE("a ghost train stops at the end of an unfinished track instead of crashing")
+{
+    Coaster c = unfinished();
+    c.ghost = true;
+    float end = 0;
+    for (int i = 0; i < 2000; ++i)
+    {
+        drive(c, 0.05f);
+        end = std::max(end, c.at);
+    }
+    CHECK_FALSE(c.crashed);
+    CHECK(end == 80);
 }

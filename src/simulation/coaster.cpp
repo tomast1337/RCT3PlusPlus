@@ -26,11 +26,16 @@ namespace rct3::simulation
             return static_cast<std::size_t>(std::clamp<std::ptrdiff_t>(after - c.distance.begin() - 1, 0, static_cast<std::ptrdiff_t>(c.distance.size()) - 2));
         }
 
+        bool two_ends(const Coaster& c)
+        {
+            return c.shuttle != Shuttle::None || !c.closed;
+        }
+
         /// `d` brought round onto the track, or held at its ends when it has two.
         float wrap(const Coaster& c, float d)
         {
             const float length = c.length();
-            if (c.shuttle != Shuttle::None)
+            if (two_ends(c))
                 return std::clamp(d, 0.0f, length);
             return std::fmod(std::fmod(d, length) + length, length);
         }
@@ -179,14 +184,29 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
+            // Run off either end of its track, the train crashes there, going as fast as it left; a ghost's is
+            // stopped dead instead, as if by buffers.
+            if (two_ends(c))
+            {
+                const float to = c.at + moved;
+                const float kept = std::clamp(to, std::min(c.train_length, c.length()), c.length());
+                if (kept != to)
+                {
+                    moved = kept - c.at;
+                    if (!c.ghost)
+                    {
+                        c.at = kept;
+                        c.crashed = true;
+                        c.running = false;
+                        return false;
+                    }
+                    c.speed = 0;
+                }
+            }
             if (open)
             {
                 const float from = c.at;
-                // shortcut: a track's ends stop the train dead, as buffers would, upgrade if a ride's train should
-                // reach them (its spikes and towers are built tall enough that it does not).
-                c.at = std::clamp(c.at + moved, std::min(c.train_length, c.length()), c.length());
-                if (c.at != from + moved)
-                    c.speed = 0;
+                c.at += moved;
                 c.travelled += std::abs(moved);
                 if (c.push != 0 && (c.pushed += std::abs(moved)) >= c.train_length)
                     c.push = 0;
@@ -244,7 +264,7 @@ namespace rct3::simulation
         c.travelled = 0;
         c.speed = 0;
         constexpr float kTick = 0.25f;
-        for (int tick = 1; static_cast<float>(tick) * kTick <= most; ++tick)
+        for (int tick = 1; static_cast<float>(tick) * kTick <= most && c.running; ++tick)
         {
             const float t = static_cast<float>(tick) * kTick;
             if (drive(c, kTick))

@@ -13,7 +13,7 @@
 //   pointer.shift(on)   holds Shift down with the pointer, or lets it go
 //   pointer.control(on) holds Control down with the pointer, or lets it go
 //   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch, or undefined
-//                       when it is not shown
+//                       when it is not shown; the park's widgets while a park is open, else the front end's
 //   ui.click(path)      moves there, presses and lets go, a frame each
 //   ui.toggle(path, on) clicks the switch at `path` when it is not already `on`
 //   ui.children(path)   the names of the shown widgets in the one at `path`, in order, or undefined when it is
@@ -22,6 +22,10 @@
 //                       one; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
 //   park.open(path)     opens the park at `path` in the game's folder and waits until it shows
+//   career.start(i, game)  starts scenario `i` of the first career of `game` (0 the original, the default),
+//                       made when there is none, as its map's New does; scripts start careers this way because
+//                       the front screen's menus fly in. park.ready() waits for the park
+//   career.map()        whether the career map is shown, with no park open
 //   park.loaded()       whether a park is open; park.ready() waits until one is
 //   park.cash()         hundredths of the currency, or undefined in a park without money
 //   camera.look(at, from)  looks at the map point `at` from `from`, or as now when `from` is left out; map
@@ -63,16 +67,19 @@
 
 #include "render/device.hpp"
 #include "scripting/script_engine.hpp"
+#include "ui/widget.hpp"
 
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace rct3::scene
 {
 
+    struct FrontEndScene;
     struct ParkScene;
 
     class ScriptHost
@@ -82,8 +89,9 @@ namespace rct3::scene
         /// reason logged when it cannot be read.
         [[nodiscard]] static std::unique_ptr<ScriptHost> start(const std::filesystem::path& file, std::optional<std::filesystem::path> report);
 
-        /// Moves the script on a frame, seeing `park` (none while no park is open) drawn by `device`.
-        void tick(const render::Device& device, ParkScene* park);
+        /// Moves the script on a frame, seeing `park` (none while no park is open) and the front end `front`
+        /// drawn by `device`.
+        void tick(const render::Device& device, ParkScene* park, FrontEndScene* front);
 
         /// The pointer the script holds, in the game view's pixels, and whether its button is down; none
         /// until the script first moves it.
@@ -97,6 +105,8 @@ namespace rct3::scene
             float wheel = 0; ///< Notches turned this frame, positive away from the user
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
+        /// The career scenario the script asked to start, once: the game and the scenario's place.
+        [[nodiscard]] std::optional<std::pair<int, std::size_t>> take_career();
         /// The park the script asked for, once: a path in the game's folder.
         [[nodiscard]] std::optional<std::string> take_park();
         /// Stops the script, as failed with `why`.
@@ -113,6 +123,8 @@ namespace rct3::scene
     private:
         ScriptHost() = default;
         void define();
+        /// The interface shown, the park's or else the front end's, and its scale.
+        [[nodiscard]] std::optional<std::pair<ui::Widget&, float>> shown_root() const;
         /// To the log, and to the report's when there is one.
         void write(const std::string& line, bool error);
 
@@ -127,9 +139,11 @@ namespace rct3::scene
         std::ofstream report_log_;
         int shots_ = 0;
         std::optional<std::string> open_;
+        std::optional<std::pair<int, std::size_t>> career_;
         std::optional<int> quit_;
         const render::Device* device_ = nullptr; ///< While a tick runs
         ParkScene* park_ = nullptr;
+        FrontEndScene* front_ = nullptr;
     };
 
 } // namespace rct3::scene

@@ -41,6 +41,16 @@ declare namespace ui {
     function children(path: string): string[] | undefined;
 }
 
+declare namespace career {
+    /**
+     * Starts scenario `index` of the first career of `game` (0 the original, the default), made when there is none,
+     * as its map's New does. park.ready() waits for the park.
+     */
+    function start(index: number, game?: number): void;
+    /** Whether the career map is shown, with no park open. */
+    function map(): boolean;
+}
+
 declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
     function open(path: string): Promise<void>;

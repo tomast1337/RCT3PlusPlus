@@ -1058,10 +1058,17 @@ int main(int argc, char** argv)
                 prof::section("Ui", [&] {
                     if (script)
                     {
-                        script->tick(*device, phase == Phase::Running && park ? &*park : nullptr);
+                        script->tick(*device, phase == Phase::Running && park ? &*park : nullptr, phase == Phase::Running && front ? &*front : nullptr);
+                        // Asked for before the front end is up, it waits for it.
+                        if (const auto wanted = phase == Phase::Running && front ? script->take_career() : std::nullopt)
+                        {
+                            if (!install || !rct3::scene::start_career_scenario(front->careers, *front->live->front, wanted->first, wanted->second, *front->assets.strings, *install))
+                                script->fail(std::format("career.start: scenario {} of game {} cannot be started", wanted->second, wanted->first));
+                        }
                         if (const auto wanted = script->take_park())
                         {
                             park_to_load = install ? install->find(*wanted) : std::nullopt;
+                            park_game = { };
                             if (!park_to_load)
                                 script->fail(std::format("park.open: no {} in the game's folder", *wanted));
                         }

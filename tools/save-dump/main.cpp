@@ -3,6 +3,7 @@
 // save-dump: print the container structure of a park or scenario save file.
 //
 //   save-dump --people PATH...   (people and animals model: counts and validation summary)
+//   save-dump --fences PATH...   (each ride's kind and the fence it has)
 //   save-dump --trains PATH...   (saved trains and cars grouped by state number, with what each shows)
 //   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
 //   save-dump --effect PATH...   (particle effects: emitters, particles, the pictures they use and the most alive at once)
@@ -584,6 +585,27 @@ int main(int argc, char** argv)
     }
     // `save-dump --trains FILE...`: every saved train and car, grouped by the state number it holds, with what
     // the save shows about them in that state, to tell what each number means.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--fences") == 0; }))
+    {
+        using namespace rct3::save;
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto file = read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+                continue;
+            const ObjectIndex index(*file);
+            const auto model = load_rides(*file, index);
+            if (!model)
+                continue;
+            for (const Ride& ride : model->rides)
+                out.info("fence {} | {} | {} | {} | {}", argv[i], ride.base.symbol, ride.base.overlay_path, ride.fence_symbol, ride.fence_overlay);
+        }
+        return 0;
+    }
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--trains") == 0; }))
     {
         using namespace rct3::save;

@@ -109,6 +109,9 @@ namespace rct3::park
         /// Rides placed whole or built along a track: the scenery items of their entrance and exit, and the
         /// overlay they are in: their own theme's, else the plain theme's; empty when neither has one.
         std::string entrance, exit, door_overlay;
+        /// Rides: the fence new ones take, as their theme's overlay names it, and the overlay that holds it;
+        /// the plain theme's for rides of no theme, empty when neither names one.
+        std::string fence, fence_overlay;
         std::string name_text;        ///< String key
         std::string description_text; ///< String key; empty when there is none
         std::string icon;             ///< Skin

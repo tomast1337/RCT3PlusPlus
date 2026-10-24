@@ -44,6 +44,8 @@ const dropped = 1200;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the tool row and the build lists");
+// Paused while building: the rides stand still, so each frame is quicker to work out.
+await ui.click("bar/Top_Pause");
 const { width, height } = map.size();
 const lastCol = width - 2;
 const entrancePaths = map.paths();
@@ -158,7 +160,7 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
     await pointer.click(...on_view(a[0], a[1]));
     await ui.toggle("footpaths/route", true);
     // The route shows once the pointer rests on the goal, which can take a few frames after the camera moved.
-    for (let wait = 3; wait <= 96 && !laid().has(`${b[0]},${b[1]}`); wait *= 2) {
+    for (let wait = 1; wait <= 96 && !laid().has(`${b[0]},${b[1]}`); wait *= 2) {
         pointer.move(...on_view(b[0], b[1]));
         await frames(wait);
         await pointer.click(...on_view(b[0], b[1]));
@@ -166,11 +168,9 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
     await ui.toggle("footpaths/route", false);
 }
 
-/** A road along `row` from column 1 to the last, in pieces short enough to be in sight. */
+/** A road along `row` from column 1 to the last, in one stroke. */
 async function road(row: number): Promise<void> {
-    const piece = 32;
-    for (let c = 1; c <= lastCol; c += piece)
-        await route([c, row], [Math.min(c + piece - 1, lastCol), row]);
+    await route([1, row], [lastCol, row]);
 }
 
 // From the entrance path to the top road, the roads, and a road down their west end joining them.
@@ -201,6 +201,7 @@ interface Outcome {
     trouble: string[];
 }
 const outcomes: Outcome[] = [];
+const standing: Outcome[] = []; // Placed with their entrance and exit
 for (const slot of slots) {
     const { ride, col } = slot;
     const trouble: string[] = [];
@@ -214,7 +215,7 @@ for (const slot of slots) {
     /** Clicks tile (c, r) for the placing step `step`; false, noting why, when it would not take. */
     async function place(step: string, c: number, r: number): Promise<boolean> {
         pointer.move(...on_view(c, r));
-        await frames(3);
+        await frames(1);
         const before = build.placing();
         if (before === undefined || before.step !== step) {
             trouble.push(`${step}: not placing it (${JSON.stringify(before)})`);
@@ -225,7 +226,7 @@ for (const slot of slots) {
             return false;
         }
         await pointer.click(...on_view(c, r));
-        await frames(2);
+        await frames(1);
         if (build.placing()?.step === step) {
             trouble.push(`${step}: the click did not place it (no model?)`);
             return false;
@@ -248,14 +249,28 @@ for (const slot of slots) {
         await frames(1);
         continue;
     }
-    await choose(true);
-    await route([col, last + 2], [col, road - 1]);
-    await choose(false);
-    await route([right + 2, last], [right + 2, road - 1]);
-    if (!map.paths().some((p) => p.col === col && p.row === last + 2 && p.queue))
-        trouble.push("no queue laid in front of the entrance");
-    if (!laid().has(`${right + 2},${road - 1}`))
-        trouble.push("no path laid from the exit");
+    // Its window draws the ride a second time each frame.
+    await ui.click("info/close");
+    standing.push(outcomes[outcomes.length - 1]);
+}
+// The queues, then the paths from the exits: each style picked once, not twice a ride.
+for (const queue of [true, false]) {
+    await choose(queue);
+    for (const { slot, trouble } of standing) {
+        const { ride, col } = slot;
+        const road = roads[slot.lane];
+        const last = road - toRoad;
+        const right = col + ride.width - 1;
+        if (queue) {
+            await route([col, last + 2], [col, road - 1]);
+            if (!map.paths().some((p) => p.col === col && p.row === last + 2 && p.queue))
+                trouble.push("no queue laid in front of the entrance");
+        } else {
+            await route([right + 2, last], [right + 2, road - 1]);
+            if (!laid().has(`${right + 2},${road - 1}`))
+                trouble.push("no path laid from the exit");
+        }
+    }
 }
 await screenshot("rides");
 

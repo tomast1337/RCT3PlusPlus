@@ -357,6 +357,21 @@ TEST_CASE("a page's graph is plotted with each series named under it")
     CHECK(f.panel->body().find("series1"));
 }
 
+TEST_CASE("a page of only controls sits on paper too, in dark text")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    InfoControl words;
+    words.name = "status";
+    words.kind = InfoControlKind::Words;
+    words.label = u"Open";
+    page.controls.push_back(words);
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    CHECK(static_cast<Label&>(*f.panel->body().find("status_label")).style.colour == kGamePalette.text);
+}
+
 TEST_CASE("the round view sits in the middle of the disc")
 {
     Fixture f;

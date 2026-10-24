@@ -70,7 +70,7 @@ namespace rct3::ui
         status_line_->style.colour = style_.text_colour;
         status_line_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);
-        close_->placement = bottom_left(footpath_panel::kCloseLeft, footpath_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
+        close_->placement = bottom_left(footpath_panel::kCloseLeft, style_.bottom - info_panel::kDiscMargin + footpath_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
         visible = false;
         mark();
     }
@@ -182,7 +182,7 @@ namespace rct3::ui
     {
         const Rect r = rect();
         const float left = r.x0 + info_panel::kDiscMargin;
-        const float bottom = r.y1 - info_panel::kDiscMargin;
+        const float bottom = r.y1 - style_.bottom;
         return { left, bottom - info_panel::kDisc, left + info_panel::kDisc, bottom };
     }
 

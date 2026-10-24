@@ -719,6 +719,9 @@ namespace rct3::ui::game_skins
         return s;
     }
 
+    /// From the screen's bottom edge to the bottom-left panels: over the tool row and its open menu.
+    inline constexpr float kOverToolRow = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
+
     /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
     /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable
     /// look.
@@ -732,6 +735,7 @@ namespace rct3::ui::game_skins
         s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;
         s.close_icon = kCloseIcon;
+        s.bottom = kOverToolRow;
         s.controls_icon = "RideCamGUI_Pin";
         s.follow_icon = "Guest_Camera";
         s.route_icon = "Map";
@@ -767,7 +771,7 @@ namespace rct3::ui::game_skins
         s.tab_face = kMenuButtonSmall;
         s.close_icon = kCloseIcon;
         s.size = spinner_style(p);
-        s.bottom = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
+        s.bottom = kOverToolRow;
         return s;
     }
 
@@ -788,6 +792,7 @@ namespace rct3::ui::game_skins
         ConstructionPanelStyle s;
         s.text_colour = p.text;
         s.strip = kCurvedStrip;
+        s.bottom = kOverToolRow;
         s.title_button = kTitleButton;
         s.close_icon = kCloseIcon;
         constexpr std::string_view kIcon = "AttractionEditor_Icon";

@@ -43,6 +43,8 @@ namespace rct3::ui
         std::string tab_face;   ///< Behind each tab's icon
         std::string close_icon; ///< On the close button
         std::string controls_icon;
+        /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
+        float bottom = info_panel::kDiscMargin;
         std::string follow_icon;
         std::string route_icon;
         std::string remove_icon;

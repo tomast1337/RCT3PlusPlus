@@ -98,6 +98,7 @@ namespace rct3::ui
     struct ConstructionPanelStyle
     {
         std::string strip;        ///< Behind everything right of the ring
+        float bottom = 0;         ///< From the screen's bottom edge: the tool row and its open menu stay clear below
         std::string title_button; ///< Skin family of the close button
         std::string close_icon;
         std::array<std::string, construction_panel::kCurves> curves; ///< Base names, leftmost first

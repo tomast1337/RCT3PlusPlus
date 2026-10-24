@@ -36,10 +36,11 @@ const toRoad = 4;
 /** Columns between the paths that run north to south across the lanes, joining the roads, so guests need not
  * walk round by the map's west edge to reach a lane. */
 const crossEvery = 32;
-/** Frames the park runs at its fastest before the rides are looked at. */
-const runFrames = 6000;
-/** Parties put straight onto the park's paths once the rides open, so riders need not walk in from the gate. */
-const dropped = 300;
+/** The most frames the park runs at its fastest before the rides are looked at. */
+const runFrames = 2400;
+/** Parties put straight onto the park's paths once the rides open: the crowd starts spread over the park, so
+ * the run need not wait for guests to walk in from the gate. */
+const dropped = 1200;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the tool row and the build lists");
@@ -267,11 +268,15 @@ for (const [i] of rides.list().entries())
     rides.setState(i, "open");
 log("dropped", park.dropParties(dropped).reduce((n, p) => n + p.guests, 0), "guests across the paths");
 
-// Run the park.
+// Run the park, until every ride has carried someone.
 for (let i = 0; i < runFrames; i += 60) {
     await frames(60);
     if (i % 600 === 0)
         log("running", i, "frames;", rides.list().filter((r) => (r.riders ?? 0) > 0).length, "rides carrying riders,", park.guests(), "guests");
+    if (rides.list().every((r) => (r.customers ?? 0) > 0)) {
+        log("every ride carried someone by frame", i + 60);
+        break;
+    }
 }
 await ui.click("bar/Top_Pause");
 await look(gate.col, topRoad + 4, 60);

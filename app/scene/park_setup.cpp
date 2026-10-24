@@ -1122,8 +1122,12 @@ namespace rct3::scene
                     simulation::import_party_mix(scene.sim, *park_model->group_mix);
                 const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);
                 for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
+                {
                     if (upkeep.broken)
-                        scene.broken_rides.push_back(e);
+                        scene.broken_rides.push_back({ e });
+                    if (upkeep.reliability.value < kLowReliability)
+                        scene.unreliable_rides.push_back(e);
+                }
                 scene.known_guests.insert(guests.begin(), guests.end());
                 for (ShownPerson& p : scene.shown_people)
                 {

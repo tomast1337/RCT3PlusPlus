@@ -68,7 +68,7 @@ namespace rct3::ui
         std::u16string text(strings.get(message.text_key));
         // An award's message is named by the award.
         const std::u16string name = message.award ? std::u16string(strings.get(simulation::award_name(*message.award))) : strings::to_utf16(message.subject_name);
-        // Fields are words between percent signs. The subject's name fills %NAME%; the rest are not known yet.
+        // Fields are words between percent signs. The subject's name fills %NAME%, the field key any other.
         std::size_t from = 0;
         while (from < text.size())
         {
@@ -88,6 +88,13 @@ namespace rct3::ui
             {
                 text.replace(open, close - open + 1, name);
                 from = open + name.size();
+                continue;
+            }
+            if (!message.field_key.empty())
+            {
+                const std::u16string_view value = strings.get(message.field_key);
+                text.replace(open, close - open + 1, value);
+                from = open + value.size();
                 continue;
             }
             drop_field(text, open, close - open + 1);

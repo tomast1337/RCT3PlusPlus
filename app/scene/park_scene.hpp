@@ -104,7 +104,16 @@ namespace rct3::scene
     inline constexpr float kObjectRebuildInterval = 0.25f;
     inline constexpr std::int32_t kVandalismPenalty = 10; ///< Of the rating for each thing broken.
     inline constexpr std::int32_t kLitterWarning = 20;    ///< Old pieces of litter that make the player be told.
-    inline constexpr float kLivePageInterval = 1.0f;      ///< Seconds between showings of a page that follows the running park
+    inline constexpr float kStillBrokenReminder = 300;    ///< Game seconds a ride stays broken between reminders.
+    inline constexpr float kLowReliability = 0.4f;        ///< Under it the player is told once, and again after it climbs back.
+
+    /// A ride the player has been told is broken down.
+    struct BrokenRide
+    {
+        entt::entity ride = entt::null;
+        float unrepaired = 0; ///< Game seconds since the player was last told
+    };
+    inline constexpr float kLivePageInterval = 1.0f; ///< Seconds between showings of a page that follows the running park
 
     /// Behind the ground when the sky cannot be read.
     inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
@@ -446,11 +455,12 @@ namespace rct3::scene
         /// Which series each ride's graph shows, by ride id, as ui::AttractionFacts::graph_series; speed alone
         /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
         std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
-        float since_info_page = 0;                 ///< Seconds since a live page was shown again
-        std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
-        std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages
-        std::int64_t wages_seen = 0;               ///< Of the staff's pay, what has come out of the park's cash
-        std::vector<entt::entity> broken_rides;    ///< Rides the player has been told are broken down
+        float since_info_page = 0;                  ///< Seconds since a live page was shown again
+        std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
+        std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
+        std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
+        std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
+        std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         /// Whether the view rides along in a car, on a flat ride or with a person.

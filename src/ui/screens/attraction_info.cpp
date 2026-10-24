@@ -191,11 +191,8 @@ namespace rct3::ui
 
         std::u16string breakdown(save::BreakdownKind kind, const StringTable& strings)
         {
-            constexpr std::array<std::string_view, 9> kKeys = {
-                "RideBreakdownTypeNone", "RideBreakdownTypeEmergencyStop", "RideBreakdownTypeCarRestraintsFailToOpen", "RideBreakdownTypeCarRestraintsFailToClose", "RideBreakdownTypeCarDoorsFailToOpen", "RideBreakdownTypeCarDoorsFailToClose", "RideBreakdownTypeTrainStuckLeavingStation", "RideBreakdownTypeStationBrakesFail", "RideBreakdownTypeControlFailure",
-            };
-            const auto i = static_cast<std::size_t>(kind);
-            return i < kKeys.size() ? text(strings, kKeys[i]) : std::u16string { };
+            const std::string_view key = breakdown_key(kind);
+            return key.empty() ? std::u16string { } : text(strings, key);
         }
 
         void add(InfoPage& page, const StringTable& strings, std::string_view label, std::u16string value)
@@ -690,6 +687,15 @@ namespace rct3::ui
         }
 
     } // namespace
+
+    std::string_view breakdown_key(save::BreakdownKind kind)
+    {
+        constexpr std::array<std::string_view, 9> kKeys = {
+            "RideBreakdownTypeNone", "RideBreakdownTypeEmergencyStop", "RideBreakdownTypeCarRestraintsFailToOpen", "RideBreakdownTypeCarRestraintsFailToClose", "RideBreakdownTypeCarDoorsFailToOpen", "RideBreakdownTypeCarDoorsFailToClose", "RideBreakdownTypeTrainStuckLeavingStation", "RideBreakdownTypeStationBrakesFail", "RideBreakdownTypeControlFailure",
+        };
+        const auto i = static_cast<std::size_t>(kind);
+        return i < kKeys.size() ? kKeys[i] : std::string_view { };
+    }
 
     std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::AttractionState state)
     {

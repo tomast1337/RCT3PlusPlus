@@ -26,6 +26,8 @@
 //              they start again from the original park.
 //   "BRKN" v1  std::vector<std::uint64_t>: the path items vandals have broken, by object id. Only when there
 //              are any.
+//   "FALL" v1  std::vector<save::Waterfall>: the park's waterfalls, with those the player made or deleted.
+//              Saves made before it lack it; their waterfalls are read again from the original park.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -130,7 +132,8 @@ namespace rct3::parkfile
         std::vector<save::ObjectId> no_queue_signs; ///< Rides whose queues have no signs
         std::optional<std::vector<save::RideShow>> shows;
         std::optional<SavedGoals> goals;
-        std::vector<std::uint64_t> broken_items; ///< Path items vandals have broken, by object id
+        std::vector<std::uint64_t> broken_items;                ///< Path items vandals have broken, by object id
+        std::optional<std::vector<save::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
     };
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one

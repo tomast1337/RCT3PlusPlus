@@ -7,10 +7,12 @@
 #include "park/ground_brush.hpp"
 #include "park/ride_placement.hpp"
 #include "park/water_fill.hpp"
+#include "park/waterfall_making.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
+#include "simulation/park_messages.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/land_panel.hpp"
 
@@ -19,6 +21,7 @@
 #include <cmath>
 #include <format>
 #include <string>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -171,9 +174,11 @@ namespace rct3::scene
                 std::optional<save::Tile> middle = l.tool == LandTools::Tool::Shape && l.shape ? l.tile : std::nullopt;
                 if (!middle && l.tool == LandTools::Tool::Water && l.tile)
                     middle = l.tile;
+                if (!middle && l.tool == LandTools::Tool::Waterfall && l.upper_lake && !spot)
+                    middle = l.upper_tile;
                 if (!middle && spot)
                     middle = save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
-                if (middle && l.tool == LandTools::Tool::Water && scene.grid.contains(middle->col, middle->row))
+                if (middle && (l.tool == LandTools::Tool::Water || l.tool == LandTools::Tool::Waterfall) && scene.grid.contains(middle->col, middle->row))
                     whole(*middle);
                 else if (middle)
                 {
@@ -335,6 +340,40 @@ namespace rct3::scene
                 rebuild_ground(device, scene, assets);
         }
 
+        void say(ParkScene& scene, std::string_view key)
+        {
+            simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(key) });
+        }
+
+        /// A click with the waterfall tool: picks the first lake, or makes the waterfall to the second.
+        void pick_lake(ParkScene& scene, ui::Point at, ui::Point size, bool over)
+        {
+            LandTools& l = scene.land;
+            if (l.tile)
+                return; // Once a press
+            const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
+            if (!spot)
+                return;
+            const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            l.tile = tile;
+            const auto& bodies = scene.footpaths.water.bodies;
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, tile); });
+            if (lake == bodies.end())
+                return;
+            const auto index = static_cast<std::size_t>(lake - bodies.begin());
+            if (!l.upper_lake)
+            {
+                l.upper_lake = index;
+                l.upper_tile = tile;
+                return;
+            }
+            const auto fall = park::make_waterfall(scene.grid, bodies, *std::exchange(l.upper_lake, std::nullopt), index, l.upper_tile);
+            if (!fall)
+                say(scene, fall.error());
+            else
+                scene.footpaths.waterfalls.push_back(*fall);
+        }
+
         void read_surfaces(LandTools& l, const ui::InterfaceAssets& assets)
         {
             if (std::exchange(l.surfaces_read, true) || !assets.install)
@@ -412,7 +451,7 @@ namespace rct3::scene
         scene.land.tool = tool;
         if (tool == LandTools::Tool::Paint)
             read_surfaces(scene.land, assets);
-        if (tool != LandTools::Tool::Water)
+        if (tool != LandTools::Tool::Water && tool != LandTools::Tool::Waterfall)
             open_panel(scene, assets);
     }
 
@@ -427,11 +466,34 @@ namespace rct3::scene
         l.before = { };
         l.water_before = { };
         l.stroke = { };
+        l.upper_lake.reset();
     }
 
     bool land_tool(const ParkScene& scene)
     {
         return scene.land.tool != LandTools::Tool::None;
+    }
+
+    bool delete_waterfall(ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        if (scene.land.tool != LandTools::Tool::Waterfall)
+            return false;
+        const auto spot = ground_spot(scene, at, size);
+        if (!spot)
+            return false;
+        const save::TerrainGrid& g = scene.grid;
+        auto& falls = scene.footpaths.waterfalls;
+        const auto fall = park::waterfall_at(falls, g.origin_x + spot->x * g.tile_size_x, g.origin_z + spot->y * g.tile_size_z);
+        if (!fall)
+            return false;
+        const save::Waterfall& f = falls[*fall];
+        const auto col = static_cast<int>(std::floor(((f.lip_left.x + f.lip_right.x) / 2 - g.origin_x) / g.tile_size_x - f.flow.x / 2));
+        const auto row = static_cast<int>(std::floor(((f.lip_left.z + f.lip_right.z) / 2 - g.origin_z) / g.tile_size_z - f.flow.z / 2));
+        if (g.contains(col, row) && !park::owned_outright(g.at(col, row)))
+            say(scene, park::kWaterfallDeleteNotOwned);
+        else
+            falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
+        return true;
     }
 
     void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
@@ -482,6 +544,8 @@ namespace rct3::scene
             shape(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Paint)
             paint(device, scene, assets, at, size, over);
+        else if (l.tool == LandTools::Tool::Waterfall)
+            pick_lake(scene, at, size, over);
         else
             pour(device, scene, assets, at, size, over);
         mark(device, scene, at, size, over);

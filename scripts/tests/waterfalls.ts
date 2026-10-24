@@ -30,3 +30,34 @@ await frames(10);
 await screenshot("tallest");
 await frames(30);
 await screenshot("tallest_later");
+
+// The waterfall tool: the same two lakes clicked again make a second fall over the same edge; one lake
+// clicked twice makes none.
+const first = falls[0];
+const upper = { col: Math.floor(first.col - 0.5 * Math.sign(first.landCol - first.col)), row: Math.floor(first.row - 0.5 * Math.sign(first.landRow - first.row)) };
+const lower = { col: Math.floor(first.landCol), row: Math.floor(first.landRow) };
+log("lakes", JSON.stringify(map.tile(upper.col, upper.row)), JSON.stringify(map.tile(lower.col, lower.row)));
+expect(Math.abs((map.tile(upper.col, upper.row)?.water ?? -1e9) - first.top) < 0.1 && map.tile(lower.col, lower.row)?.water !== undefined, "the first fall's lakes either side of it");
+camera.look({ col: (upper.col + lower.col) / 2 + 0.5, row: (upper.row + lower.row) / 2 + 0.5 }, { col: (upper.col + lower.col) / 2 - 2, row: (upper.row + lower.row) / 2 - 10, up: 120 });
+await frames(2);
+if (!ui.find("tools/Land/Land_Waterfall"))
+    await ui.click("tools/Land/Land");
+await ui.click("tools/Land/Land_Waterfall");
+function click_tile(col: number, row: number): Promise<void> {
+    const at = map.screen(col, row);
+    if (!at)
+        throw new Error(`tile ${col}, ${row} is not in sight`);
+    return pointer.click(at.x, at.y);
+}
+await click_tile(upper.col, upper.row);
+await click_tile(upper.col, upper.row);
+await frames(2);
+expect(map.waterfalls().length === falls.length, "no fall from a lake into itself");
+await click_tile(lower.col, lower.row); // Picked first this time; the fall still pours from the higher lake
+await click_tile(upper.col, upper.row);
+await frames(2);
+const made = map.waterfalls();
+log("made", JSON.stringify(made[made.length - 1]));
+expect(made.length === falls.length + 1, "a new waterfall");
+expect(Math.abs(made[made.length - 1].top - first.top) < 0.1 && Math.abs(made[made.length - 1].bottom - first.bottom) < 0.1, "it to join the same two lakes");
+await screenshot("made");

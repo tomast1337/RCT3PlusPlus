@@ -317,10 +317,13 @@ namespace rct3::scene
         std::vector<glm::vec4> horizon_band; ///< Of the sky's picture, for the horizon at each time of day
         park::ObjectMesh mountains;          ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
-        simulation::ParkState park;          ///< Money, guests, rating, weather, date and speed as they are now
-        BuildMenus build;                    ///< The lists of rides, shops and scenery to build
-        save::ParkModel park_model;          ///< As saved: finances, objectives, research; read by the management windows
-        simulation::DayClock day;            ///< The park's time of day
+        /// Park seconds the park has been shown: at the speed picked, stopped while paused. Everything in the
+        /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
+        float park_clock = 0;
+        simulation::ParkState park; ///< Money, guests, rating, weather, date and speed as they are now
+        BuildMenus build;           ///< The lists of rides, shops and scenery to build
+        save::ParkModel park_model; ///< As saved: finances, objectives, research; read by the management windows
+        simulation::DayClock day;   ///< The park's time of day
         save::RideModel rides;
         std::vector<save::RideShow> shows; ///< What the show rides put on, by ride id
         save::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
@@ -400,8 +403,8 @@ namespace rct3::scene
             std::optional<std::array<std::size_t, 4>> gate;
             bool exit = false;
             std::size_t step = park::kGateShut; ///< Which of the gate's motions plays
-            float since = 0;                    ///< scene.clock when that motion began
-            float open_until = 0;               ///< scene.clock till which the gate is to stay open
+            float since = 0;                    ///< scene.park_clock when that motion began
+            float open_until = 0;               ///< scene.park_clock till which the gate is to stay open
         };
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.

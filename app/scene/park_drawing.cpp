@@ -191,7 +191,7 @@ namespace rct3::scene
                         draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
             });
             if (parts.water)
-                profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.clock, parts.shaded_water); });
+                profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water); });
             if (parts.water && parts.see_through)
                 profiling::section("Waterfalls", [&] { draw_transient(device, scene, scene.waterfall_mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             if (scene.show_scenery && parts.scenery && parts.see_through)
@@ -229,7 +229,7 @@ namespace rct3::scene
             const auto texture = scene.object_textures.find(park::kFlowPicture);
             if (texture == scene.object_textures.end())
                 return;
-            const std::uint32_t shift = park::flow_shift(scene.flow_picture.height, scene.clock);
+            const std::uint32_t shift = park::flow_shift(scene.flow_picture.height, scene.park_clock);
             if (shift == scene.flow_shift)
                 return;
             scene.flow_shift = shift;

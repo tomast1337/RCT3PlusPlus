@@ -26,6 +26,7 @@
 #include "park/surrounding_land.hpp"
 #include "park/track_supports.hpp"
 #include "park/water_flow.hpp"
+#include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -659,6 +660,7 @@ namespace rct3::scene
         scene.footpaths.paths = world->paths;
         scene.footpaths.water = world->water;
         scene.footpaths.pools = world->pool_water;
+        scene.footpaths.waterfalls = world->waterfalls;
         scene.footpaths.pictured = paths.styles;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
@@ -762,6 +764,20 @@ namespace rct3::scene
             }
             else
                 logging::logger("park").warning("flowing water: {}", flow.error());
+        }
+        if (const auto falls_file = install.find(park::kWaterfallFile))
+        {
+            // The waterfalls' pictures; without them the falls are drawn as plain see-through water.
+            std::map<std::string, ovl::RgbaImage, std::less<>> pictures;
+            for (const park::WaterfallPicture& picture : park::kWaterfallPictures)
+            {
+                if (auto image = park::load_flow_picture(*falls_file, picture.texture))
+                    pictures.emplace(picture.key, std::move(*image));
+                else
+                    logging::logger("park").warning("waterfalls: {}", image.error());
+            }
+            if (auto uploaded = ui::upload_textures(device, pictures))
+                scene.object_textures.merge(*uploaded);
         }
         load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
         scene.objects = std::move(world->objects);

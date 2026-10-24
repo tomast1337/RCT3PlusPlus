@@ -120,6 +120,9 @@ declare namespace map {
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     function water(): Lake[];
+    /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
+     *  the lakes it joins and how wide it is in world units. */
+    function waterfalls(): { col: number; row: number; landCol: number; landRow: number; top: number; bottom: number; width: number }[];
 }
 
 interface FlatRideItem {

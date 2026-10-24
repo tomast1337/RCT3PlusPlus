@@ -2,6 +2,7 @@
 #include "park/waterfall_mesh.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace rct3::park
@@ -20,9 +21,11 @@ namespace rct3::park
         constexpr float kFoamRepeat = 8.0f;    ///< Park units the foam's picture covers.
         constexpr float kFoamSpeed = 1.0f;     ///< How fast the foam drifts away, units a second.
         constexpr float kFoamLift = 0.05f;     ///< Foam lies this high over the lower lake.
-        constexpr float kFrothHeight = 3.0f;   ///< Tallest the froth stands.
+        constexpr float kFrothHeight = 2.0f;   ///< Tallest the froth stands.
         constexpr float kFrothRepeat = 8.0f;   ///< Park units across the froth's picture covers.
         constexpr float kFrothPicture = 0.55f; ///< Part of the froth's picture, from the top, the quad shows.
+        constexpr float kFrothMargin = 1.0f;   ///< Froth reaches this far past each side of the sheet.
+        constexpr float kFade = 0.25f;         ///< Part of foam and froth at each edge that fades out.
         constexpr glm::vec3 kUp { 0.0f, 1.0f, 0.0f };
 
         glm::vec3 vec(const save::WorldPoint3& p)
@@ -93,6 +96,30 @@ namespace rct3::park
                 quad(mesh, first + r * 2);
         }
 
+        /// A flat patch from `corner` spanning `a` and `b`, cut in three along `a` (and along `b` when `fade_b`)
+        /// so it fades out to nothing at those edges; `uv_of` gives each point's picture coordinates.
+        void grid(ObjectMesh& mesh, glm::vec3 corner, glm::vec3 a, glm::vec3 b, bool fade_b, glm::vec3 normal, auto&& uv_of)
+        {
+            constexpr std::array<float, 4> kCuts { 0.0f, kFade, 1.0f - kFade, 1.0f };
+            constexpr std::array<float, 2> kEnds { 0.0f, 1.0f };
+            const std::span<const float> along_b = fade_b ? std::span<const float>(kCuts) : std::span<const float>(kEnds);
+            const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
+            for (std::size_t j = 0; j < along_b.size(); ++j)
+                for (std::size_t i = 0; i < kCuts.size(); ++i)
+                {
+                    const bool edge = i == 0 || i + 1 == kCuts.size() || (fade_b && (j == 0 || j + 1 == along_b.size()));
+                    const glm::vec3 p = corner + a * kCuts[i] + b * along_b[j];
+                    mesh.vertices.push_back({ .position = p, .colour = { 1.0f, 1.0f, 1.0f, edge ? 0.0f : 1.0f }, .uv = uv_of(p), .normal = normal });
+                }
+            const auto stride = static_cast<std::uint32_t>(kCuts.size());
+            for (std::uint32_t j = 0; j + 1 < along_b.size(); ++j)
+                for (std::uint32_t i = 0; i + 1 < stride; ++i)
+                {
+                    const std::uint32_t at = base + j * stride + i;
+                    mesh.indices.insert(mesh.indices.end(), { at, at + 1, at + stride, at + 1, at + stride + 1, at + stride });
+                }
+        }
+
     } // namespace
 
     glm::vec3 waterfall_point(const save::Waterfall& fall, float along)
@@ -116,8 +143,8 @@ namespace rct3::park
                 if (width <= 0)
                     continue;
                 const glm::vec3 half = s.across / 2.0f;
+                const glm::vec3 side = half / (width / 2.0f);
                 const glm::vec3 land = point(s, 1.0f);
-                const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
                 switch (picture)
                 {
                     case 0:
@@ -128,28 +155,24 @@ namespace rct3::park
                         break;
                     case 2:
                     {
-                        const glm::vec3 side = glm::normalize(half) * (width / 2.0f + kFoamMargin);
-                        const glm::vec3 out = s.flow * kFoamMargin * 2.0f;
-                        const glm::vec3 centre = land + kUp * kFoamLift;
-                        for (const glm::vec3 corner : { centre - side - out, centre + side - out, centre - side + out, centre + side + out })
-                        {
-                            const glm::vec3 d = corner - centre;
-                            const glm::vec2 uv { glm::dot(d, glm::normalize(half)) / kFoamRepeat, (glm::dot(d, s.flow) - seconds * kFoamSpeed) / kFoamRepeat };
-                            mesh.vertices.push_back({ .position = corner, .uv = uv, .normal = kUp });
-                        }
-                        quad(mesh, base);
+                        const glm::vec3 across = side * (width + 2 * kFoamMargin);
+                        const glm::vec3 out = s.flow * (4 * kFoamMargin);
+                        const glm::vec3 corner = land + kUp * kFoamLift - across / 2.0f - out / 2.0f;
+                        grid(mesh, corner, across, out, true, kUp, [&](glm::vec3 p) {
+                            const glm::vec3 d = p - land;
+                            return glm::vec2 { glm::dot(d, side) / kFoamRepeat, (glm::dot(d, s.flow) - seconds * kFoamSpeed) / kFoamRepeat };
+                        });
                         break;
                     }
                     default:
                     {
                         const float height = std::min(kFrothHeight, s.drop);
-                        const float across = std::max(1.0f, std::round(width / kFrothRepeat));
-                        mesh.vertices.push_back({ .position = land - half + kUp * height, .uv = { 0.0f, 0.0f }, .normal = -s.flow });
-                        mesh.vertices.push_back({ .position = land + half + kUp * height, .uv = { across, 0.0f }, .normal = -s.flow });
-                        mesh.vertices.push_back({ .position = land - half, .uv = { 0.0f, kFrothPicture }, .normal = -s.flow });
-                        mesh.vertices.push_back({ .position = land + half, .uv = { across, kFrothPicture }, .normal = -s.flow });
-                        if (height > 0)
-                            quad(mesh, base);
+                        if (height <= 0)
+                            break;
+                        const float repeats = std::max(1.0f, std::round(width / kFrothRepeat));
+                        const glm::vec3 across = s.across + side * (2 * kFrothMargin);
+                        const glm::vec3 corner = land - across / 2.0f + kUp * height;
+                        grid(mesh, corner, across, -kUp * height, false, -s.flow, [&](glm::vec3 p) { return glm::vec2 { glm::dot(p - corner, side) / glm::length(across) * repeats, (corner.y - p.y) / height * kFrothPicture }; });
                         break;
                     }
                 }

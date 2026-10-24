@@ -6,6 +6,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/water_fill.hpp"
+#include "park/waterfall_mesh.hpp"
 #include "random/generator.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
@@ -19,6 +20,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <format>
 #include <future>
 #include <span>
@@ -582,6 +584,18 @@ namespace rct3::scene
             for (const save::WaterBody& b : park_->footpaths.water.bodies)
                 lakes.push_back({ { "level", b.level }, { "triangles", b.tris.size() } });
             return lakes;
+        });
+        engine_.define("map.waterfalls", [this](const Json&) {
+            const save::TerrainGrid& g = grid_of(park_);
+            Json falls = Json::array();
+            for (const save::Waterfall& f : park_->footpaths.waterfalls)
+            {
+                const glm::vec3 land = park::waterfall_point(f, 1.0f);
+                const float x = (f.lip_left.x + f.lip_right.x) / 2;
+                const float z = (f.lip_left.z + f.lip_right.z) / 2;
+                falls.push_back({ { "col", (x - g.origin_x) / g.tile_size_x }, { "row", (z - g.origin_z) / g.tile_size_z }, { "landCol", (land.x - g.origin_x) / g.tile_size_x }, { "landRow", (land.z - g.origin_z) / g.tile_size_z }, { "top", f.top.y }, { "bottom", f.bottom.y }, { "width", std::hypot(f.lip_right.x - f.lip_left.x, f.lip_right.z - f.lip_left.z) } });
+            }
+            return falls;
         });
     }
 

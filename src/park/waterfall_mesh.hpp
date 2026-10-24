@@ -3,7 +3,7 @@
 // The water of the park's waterfalls. Each pours from the edge of a higher lake: it leaves the edge flowing
 // level and falls ever faster, so seen from the side its sheet is a parabola, flat at the edge and reaching
 // the lower lake where the park says it lands. Over the sheet lies a second sheet of streaks at its sides;
-// where it lands, foam lies on the lower lake and froth stands up from it. All the pictures scroll the way
+// where it lands, foam lies on the lower lake and froth stands up from it, both fading out at their edges. All the pictures scroll the way
 // the water runs, so the mesh is built again for the time it shows.
 #pragma once
 
@@ -29,6 +29,8 @@ namespace rct3::park
 
     /// The sheet, the streaks at its sides, the foam on the lower lake and the froth standing up from it, in the
     /// order the mesh's batches come in.
+    // shortcut: the overlay's "B" variant of each picture is left out (drawn plainly it shows black), use it once
+    // we know how it is meant to be laid over its partner.
     inline constexpr std::array<WaterfallPicture, 4> kWaterfallPictures { {
         { "Waterfall2", "rct3pp:waterfall-sheet" },
         { "WaterfallSides", "rct3pp:waterfall-sides" },

@@ -23,6 +23,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "ui/key_map.hpp"
+#include "ui/screens/attraction_info.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -146,7 +147,7 @@ namespace rct3::scene
 
     /// Handles the panel's events, and for a track with no pieces the ground tile `pointed` at (none while the
     /// pointer is off the ground) and the turn commands. Call once per update after the interface.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands);
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands);
 
     /// Draws the ghost of the picked piece with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

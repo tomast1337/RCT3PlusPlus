@@ -215,3 +215,52 @@ TEST_CASE("finishing the track is heard only while it has an open end")
     f.press(f.panel->complete_button());
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Complete, 0 });
 }
+
+TEST_CASE("named pieces with a picture stand as picture buttons, out of the list")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    v.named = { u"Station", u"Loop", u"Brakes" };
+    v.named_icons = { "StationIcon", "", "BrakesIcon" };
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->special_button(0).visible);
+    CHECK(f.panel->special_button(0).icon == "StationIcon");
+    CHECK(f.panel->special_button(1).icon == "BrakesIcon");
+    CHECK_FALSE(f.panel->special_button(2).visible);
+    CHECK(f.panel->named_button(0).text == u"Loop");
+    CHECK_FALSE(f.panel->named_button(1).visible);
+    f.press(f.panel->special_button(1));
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, 2 });
+    f.press(f.panel->named_button(0));
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, 1 });
+    v.named_on = 2;
+    f.panel->show(v);
+    CHECK(f.panel->special_button(1).on);
+    CHECK(f.panel->special_button(1).icon_colour == kWhite);
+    CHECK(f.panel->special_button(0).icon_colour != kWhite); // The others fade
+    f.press(f.panel->special_button(1));
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Build, 0 });
+}
+
+TEST_CASE("a speed shows only for a piece that has one, and a step is heard")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    f.panel->show(v);
+    CHECK_FALSE(f.panel->speed_spinner().visible);
+    v.speed = 400;
+    v.speed_most = 3000;
+    v.speed_unit = u"m/s";
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->speed_spinner().visible);
+    CHECK(f.panel->speed_spinner().value() == 400);
+    f.press(f.panel->speed_spinner()); // Not on an arrow: nothing moves
+    CHECK_FALSE(f.panel->take_event());
+    const Rect up = f.panel->speed_spinner().up_arrow();
+    const Point p { (up.x0 + up.x1) / 2, (up.y0 + up.y1) / 2 };
+    f.desktop.update({ p, true });
+    f.desktop.update({ p, false });
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Speed, 401 });
+}

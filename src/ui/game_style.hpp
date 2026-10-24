@@ -805,6 +805,8 @@ namespace rct3::ui::game_skins
         s.named_inset = kLozengeInset;
         s.page_up = "SquareArrowUp";
         s.page_down = "SquareArrowDown";
+        s.speed_icon = "TrackPieceParam_Speed";
+        s.speed = spinner_style(p);
         return s;
     }
 

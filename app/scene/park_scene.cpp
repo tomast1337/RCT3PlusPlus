@@ -1606,7 +1606,7 @@ namespace rct3::scene
         }
         profiling::section("TrackBuilding", [&] {
             const ui::Rect screen = desktop.root().rect();
-            update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), over ? std::nullopt : ground_tile(scene, pointer.position, { screen.width(), screen.height() }), input.commands);
+            update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), info_units(assets, options).distance, over ? std::nullopt : ground_tile(scene, pointer.position, { screen.width(), screen.height() }), input.commands);
         });
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())

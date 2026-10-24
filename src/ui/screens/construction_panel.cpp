@@ -118,13 +118,35 @@ namespace rct3::ui
         page_up_->placement = top_left(cp::kPagerLeft, cp::kNamedTop, cp::kPagerSize, cp::kPagerSize);
         page_down_ = &add<Button>("page_down", std::string { }, style.page_down);
         page_down_->placement = top_left(cp::kPagerLeft, cp::kNamedTop + cp::kNamedRowHeight * static_cast<float>(cp::kNamedRows) - cp::kPagerSize, cp::kPagerSize, cp::kPagerSize);
+        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+        {
+            Button& b = *picture(std::format("special{}", i));
+            b.toggle = true;
+            b.placement = top_left(cp::kSpecialAt.x + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
+            specials_.at(i) = &b;
+        }
+        speed_icon_ = picture("speed_icon");
+        speed_icon_->icon = style.speed_icon;
+        speed_icon_->inert = true;
+        speed_icon_->placement = top_left(cp::kSpeedAt.x, cp::kSpeedAt.y, cp::kSpeedIconSize, cp::kSpeedIconSize);
+        speed_ = &add<Spinner>("speed", style.speed);
+        speed_->decimals = 2;
+        speed_->placement = top_left(cp::kSpeedAt.x + cp::kSpeedIconSize + 2, cp::kSpeedAt.y, cp::kSpeedSize.x, cp::kSpeedSize.y);
         show({ });
     }
 
     void ConstructionPanel::show(ConstructionView view)
     {
         view_ = std::move(view);
-        const std::size_t pages = std::max<std::size_t>(1, (view_.named.size() + kNamedSlots - 1) / kNamedSlots);
+        // Pieces with a picture take the picture buttons while they last; the rest go in the list.
+        listed_.clear();
+        pictured_.clear();
+        for (std::size_t i = 0; i < view_.named.size(); ++i)
+        {
+            const bool pictured = i < view_.named_icons.size() && !view_.named_icons[i].empty() && pictured_.size() < cp::kSpecials;
+            (pictured ? pictured_ : listed_).push_back(i);
+        }
+        const std::size_t pages = std::max<std::size_t>(1, (listed_.size() + kNamedSlots - 1) / kNamedSlots);
         page_ = std::min(page_, pages - 1);
         lay_out();
         restyle();
@@ -171,20 +193,39 @@ namespace rct3::ui
         cost_->text = view_.cost;
         for (std::size_t i = 0; i < kNamedSlots; ++i)
         {
-            const std::size_t index = page_ * kNamedSlots + i;
+            const std::size_t row = page_ * kNamedSlots + i;
             Button& b = *named_.at(i);
-            b.visible = index < view_.named.size();
+            b.visible = row < listed_.size();
             if (!b.visible)
                 continue;
+            const std::size_t index = listed_[row];
             b.text = view_.named[index];
             b.tooltip = view_.named[index];
             b.on = view_.named_on == index;
         }
-        const bool paged = view_.named.size() > kNamedSlots;
+        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+        {
+            Button& b = *specials_.at(i);
+            b.visible = i < pictured_.size();
+            if (!b.visible)
+                continue;
+            b.icon = view_.named_icons[pictured_[i]];
+            b.tooltip = view_.named[pictured_[i]];
+            b.on = view_.named_on == pictured_[i];
+            // With no face to light, the picked one shows by the others fading.
+            b.icon_colour = b.on || !view_.named_on ? kWhite : hex("#ffffff66");
+        }
+        const bool paged = listed_.size() > kNamedSlots;
         page_up_->visible = paged;
         page_down_->visible = paged;
         page_up_->enabled = page_ > 0;
-        page_down_->enabled = (page_ + 1) * kNamedSlots < view_.named.size();
+        page_down_->enabled = (page_ + 1) * kNamedSlots < listed_.size();
+        speed_icon_->visible = speed_->visible = view_.speed.has_value();
+        speed_->maximum = view_.speed_most;
+        speed_->unit = u" " + view_.speed_unit;
+        // Set only when it moved, so a number being typed is not written over.
+        if (view_.speed && *view_.speed != speed_->value())
+            speed_->set_value(*view_.speed);
     }
 
     std::optional<ConstructionEvent> ConstructionPanel::take_event()
@@ -221,21 +262,29 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Complete, 0 });
         if (new_segment_->take_click() && view_.new_segment.value_or(false))
             events_.push_back({ ConstructionAction::NewSegment, 0 });
+        // A named piece clicked: picked, or built when it is picked already.
+        const auto named = [&](Button& b, std::optional<std::size_t> index) {
+            if (!b.take_click())
+                return;
+            if (index)
+                events_.push_back({ view_.named_on == index ? ConstructionAction::Build : ConstructionAction::Named, view_.named_on == index ? 0 : *index });
+            restyle(); // A toggle turns itself over; the view says what is picked
+        };
         for (std::size_t i = 0; i < kNamedSlots; ++i)
         {
-            if (!named_.at(i)->take_click())
-                continue;
-            const std::size_t index = page_ * kNamedSlots + i;
-            if (index < view_.named.size())
-                events_.push_back({ view_.named_on == index ? ConstructionAction::Build : ConstructionAction::Named, view_.named_on == index ? 0 : index });
-            restyle(); // A toggle turns itself over; the view says what is picked
+            const std::size_t row = page_ * kNamedSlots + i;
+            named(*named_.at(i), row < listed_.size() ? std::optional(listed_[row]) : std::nullopt);
         }
+        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+            named(*specials_.at(i), i < pictured_.size() ? std::optional(pictured_[i]) : std::nullopt);
+        if (speed_->take_change() && view_.speed)
+            events_.push_back({ ConstructionAction::Speed, static_cast<std::size_t>(std::max(0, speed_->value())) });
         if (page_up_->take_click() && page_ > 0)
         {
             --page_;
             restyle();
         }
-        if (page_down_->take_click() && (page_ + 1) * kNamedSlots < view_.named.size())
+        if (page_down_->take_click() && (page_ + 1) * kNamedSlots < listed_.size())
         {
             ++page_;
             restyle();

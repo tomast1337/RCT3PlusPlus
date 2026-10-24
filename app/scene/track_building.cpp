@@ -77,6 +77,21 @@ namespace rct3::scene
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
+        /// The roles track files give pieces (ovl::TrackSection::role) that have a picture of their own in the
+        /// construction panel, and the picture.
+        struct RoleIcon
+        {
+            std::uint32_t role = 0;
+            std::string_view skin;
+        };
+        constexpr std::uint32_t kBrakesRole = 1;
+        constexpr std::array<RoleIcon, 4> kRoleIcons { {
+            { 3, "TrackSpecialIcon_StationMiddle" },
+            { 4, "TrackSpecialIcon_PhotoSection" },
+            { kBrakesRole, "TrackSpecialIcon_StraightBrakes" },
+            { 2, "TrackSpecialIcon_StraightBlockBrakes" },
+        } };
+        constexpr float kMostBrakeSpeed = 30; ///< m/s, past the fastest coasters' top speeds
         constexpr std::string_view kCompleteHelp = "ATE_TT_Autocomplete";
         constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
         /// Ends tried before finishing a track gives up, a few seconds at most.
@@ -333,7 +348,7 @@ namespace rct3::scene
         }
 
         /// The panel's view of what the building offers now.
-        ui::ConstructionView panel_view(const ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency)
+        ui::ConstructionView panel_view(const ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units)
         {
             ui::ConstructionView v;
             v.curves.fill(ui::IconState::Dis);
@@ -363,7 +378,10 @@ namespace rct3::scene
                 v.chain = state_of(b.choice.chain && o.chain, o.chain);
             for (std::size_t i = 0; i < o.named.size(); ++i)
             {
-                v.named.push_back(piece_name(*assets.strings, c->pieces[o.named[i].index].record.name));
+                const park::PieceRecord& record = c->pieces[o.named[i].index].record;
+                v.named.push_back(piece_name(*assets.strings, record.name));
+                const auto icon = std::ranges::find(kRoleIcons, record.role, &RoleIcon::role);
+                v.named_icons.emplace_back(icon != kRoleIcons.end() ? icon->skin : std::string_view { });
                 if (b.choice.named == o.named[i])
                     v.named_on = i;
             }
@@ -385,6 +403,15 @@ namespace rct3::scene
                 }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
+                // Brakes slow trains to the ride's brake speed, shown in hundredths of the player's unit.
+                // shortcut: one speed for all of a ride's brakes and nothing slows to it yet, upgrade with
+                // a speed per piece once trains brake.
+                if (shape.record.role == kBrakesRole)
+                {
+                    v.speed = static_cast<int>(std::lround(ride.options.brake_speed * ui::speed_scale(units) * 100));
+                    v.speed_most = static_cast<int>(std::lround(kMostBrakeSpeed * ui::speed_scale(units) * 100));
+                    v.speed_unit = ui::speed_unit(units);
+                }
             }
             return v;
         }
@@ -1295,7 +1322,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands)
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands)
     {
         TrackBuilding& b = scene.building;
         auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
@@ -1421,6 +1448,9 @@ namespace rct3::scene
                 case Complete:
                     complete(scene, b, assets);
                     break;
+                case Speed:
+                    scene.rides.rides.at(*b.ride).options.brake_speed = static_cast<float>(event->index) / 100 / ui::speed_scale(units);
+                    break;
                 case NewSegment:
                 {
                     // shortcut: cars run the stretches as one course, jumping between them, upgrade when the course
@@ -1437,7 +1467,7 @@ namespace rct3::scene
         if (changed)
             refresh(scene, b, assets);
         ghost_textures(device, scene, b.ghost_mesh);
-        panel->show(panel_view(scene, b, assets, currency));
+        panel->show(panel_view(scene, b, assets, currency, units));
         // The disc shows the piece to lay alone, turning, with its price across it.
         std::u16string price;
         if (b.ghost && b.picked && c != nullptr)

@@ -39,8 +39,19 @@ namespace rct3::scene
             open->close();
             return;
         }
+        open_management_window(desktop, topic, 0, facts, strings, palette, units);
+    }
+
+    void open_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, std::size_t tab, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units)
+    {
+        if (auto open = find_window(desktop, topic))
+        {
+            open->open_tab(tab);
+            show(*open, topic, facts, strings, units);
+            return;
+        }
         const ui::ManagementLayout layout = ui::management_layout(topic);
-        auto& window = desktop.root().add<ui::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::management_tabs(topic, strings), 0);
+        auto& window = desktop.root().add<ui::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::management_tabs(topic, strings), tab);
         window.title = strings.get(layout.title);
         window.icon = layout.icon;
         show(window, topic, facts, strings, units);

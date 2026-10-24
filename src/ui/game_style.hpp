@@ -641,7 +641,10 @@ namespace rct3::ui::game_skins
         s.back = kDrawerBack;
         s.older = "SquareArrowUp";
         s.newer = "SquareArrowDown";
-        s.locate = "Icon_PointCameraAt";
+        s.locate = "Guest_Rides_Camera";
+        s.award = "ParkInfoDialogIcon_Awards";
+        s.objective = "ParkInfoDialogIcon_Objective";
+        s.inspector = "MessageConsole_ParkInspector";
         return s;
     }
 

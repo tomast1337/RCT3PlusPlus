@@ -88,6 +88,26 @@ TEST_CASE("an award's message is named by the award, a fine's too")
     CHECK(simulation::award_name(simulation::kAwardKinds).empty());
 }
 
+TEST_CASE("every message has an icon for its kind; only an award's leads somewhere by itself")
+{
+    StringTable strings;
+    const MessageDrawerStyle style = game_skins::message_drawer_style(kGamePalette);
+    simulation::ParkMessages messages;
+    simulation::post(messages, { .text_key = "Award_Award", .award = 11 });
+    simulation::post(messages, { .text_key = "ObjectiveMessage_WeekWarning" });
+    simulation::post(messages, { .text_key = "Thought_PI_Park_Litter1" });
+    simulation::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
+    const std::vector<DrawerMessage> shown = drawer_messages(messages, strings, style);
+    REQUIRE(shown.size() == 4);
+    CHECK(shown[0].icon == style.award);
+    CHECK(shown[0].clickable);
+    CHECK(shown[1].icon == style.objective);
+    CHECK(shown[2].icon == style.inspector);
+    CHECK(shown[3].icon == style.locate);
+    for (std::size_t i = 1; i < shown.size(); ++i)
+        CHECK_FALSE(shown[i].clickable);
+}
+
 TEST_CASE("the drawer hides behind the bar, reached through the notch in its middle")
 {
     Fixture f;
@@ -172,10 +192,10 @@ TEST_CASE("the arrows step through the messages when they do not all fit")
     CHECK(f.drawer->skipped() == 0);
 }
 
-TEST_CASE("a message about something the park can show has a camera to click; others do not")
+TEST_CASE("a clickable icon is heard when pressed; an icon that leads nowhere drags the drawer")
 {
     Fixture f;
-    f.messages = { { .serial = 1, .text = u"about nothing" }, { .serial = 2, .text = u"about a ride", .located = true } };
+    f.messages = { { .serial = 1, .text = u"about nothing", .icon = "camera" }, { .serial = 2, .text = u"about a ride", .icon = "ride", .clickable = true } };
     f.drawer->show(f.messages);
     f.run(1);
     const Rect b = f.bar->rect();
@@ -188,10 +208,10 @@ TEST_CASE("a message about something the park can show has a camera to click; ot
     // Rows without a font are the empty row's height, the newest at the bottom.
     const Rect r = f.drawer->rect();
     f.press({ r.x0 + 27, r.y1 - 53 });
-    CHECK_FALSE(f.drawer->take_located());
+    CHECK_FALSE(f.drawer->take_clicked());
     f.run(1);
     f.press({ r.x0 + 27, r.y1 - 35 });
-    CHECK(f.drawer->take_located() == 2u);
-    CHECK_FALSE(f.drawer->take_located());
+    CHECK(f.drawer->take_clicked() == 2u);
+    CHECK_FALSE(f.drawer->take_clicked());
     CHECK(f.drawer->height() == message_drawer::kOpen);
 }

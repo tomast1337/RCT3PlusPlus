@@ -20,6 +20,9 @@ namespace rct3::scene
     /// Opens the window of `topic`, or closes it when it is open: the menu item works as a switch.
     void toggle_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units);
 
+    /// Opens the window of `topic` at tab `tab`, or turns the open one to it.
+    void open_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, std::size_t tab, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units);
+
     /// Whether any management window is open.
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
 

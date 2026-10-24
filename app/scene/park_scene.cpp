@@ -1969,18 +1969,32 @@ namespace rct3::scene
                 if (ref)
                     m.subject_name = strings::to_utf8(ui::attraction_name(ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
             }
-            std::vector<ui::DrawerMessage> shown = ui::drawer_messages(scene.park.messages, *assets.strings);
+            std::vector<ui::DrawerMessage> shown = ui::drawer_messages(scene.park.messages, *assets.strings, messages->style());
+            // A message about an attraction shows the attraction's own icon, the one it has in the build lists, and
+            // the camera when it has none.
+            const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
             for (std::size_t i = 0; i < shown.size(); ++i)
             {
                 const auto& subject = scene.park.messages.list[i].subject;
-                shown[i].located = subject && attraction_with(scene, *subject);
+                const auto ref = subject ? attraction_with(scene, *subject) : std::nullopt;
+                if (!ref)
+                    continue;
+                std::string overlay = ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base.overlay_path : scene.rides.rides[ref->index].base.overlay_path;
+                std::ranges::replace(overlay, '\\', '/');
+                const auto item = std::ranges::find_if(items, [&](const park::BuildItem& it) { return !it.icon.empty() && strings::equals_ignoring_case(it.overlay, overlay); });
+                if (item != items.end())
+                    shown[i].icon = item->icon;
+                shown[i].clickable = true;
             }
             messages->show(shown);
             scene.message_alert = scene.message_alert || messages->take_alert();
-            // A message's camera takes the view to its subject and opens the info panel on it, as the game does.
-            const auto serial = messages->take_located();
+            const auto serial = messages->take_clicked();
             const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
-            if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
+            // An award's icon opens the park's awards, as the game does.
+            if (message != scene.park.messages.list.end() && message->award)
+                open_management_window(desktop, ui::ManagementTopic::ParkOperations, ui::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+            // An attraction's takes the view to it and opens the info panel on it.
+            else if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {
                 // At the tab the message names; one the attraction lacks opens its view.
                 open_info(scene, *info, *ref, assets, options, ui::message_tab(message->panel.value_or(-1)));

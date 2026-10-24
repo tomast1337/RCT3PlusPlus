@@ -1631,7 +1631,7 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, elapsed);
-        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat), elapsed); });
+        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
         if (bar)
         {
@@ -1942,7 +1942,7 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat), elapsed); });
+            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 

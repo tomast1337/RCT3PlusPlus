@@ -28,8 +28,10 @@ namespace rct3::park
     /// below, it takes the camera's place.
     using Seat = std::optional<glm::mat4>;
 
-    inline constexpr float kFieldOfView = 0.9f;     ///< Radians, vertical
-    inline constexpr float kRideFieldOfView = 1.5f; ///< Riding along: wider, to take in the track ahead
+    inline constexpr float kFieldOfView = 0.9f; ///< Radians, vertical
+    /// Riding along, how far the view takes in across the screen, in radians; the height follows the screen's shape.
+    inline constexpr float kRideWideView = 1.75f;  ///< From a car or a ride's fixed camera, to take in the track ahead
+    inline constexpr float kRideNarrowView = 1.4f; ///< From a flat ride's seat or a person's eyes
     inline constexpr float kNear = 0.5f;
     inline constexpr float kRideNear = 0.1f; ///< Riding along: the car's front is close by
     inline constexpr float kFar = 3000;
@@ -76,9 +78,10 @@ namespace rct3::park
     /// `aspect` times as wide as it is tall.
     [[nodiscard]] Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at);
     /// World to clip space for a view `aspect` times as wide as it is tall.
-    [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat = std::nullopt);
+    /// Riding, the view takes in `across` radians across the screen.
+    [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);
     /// The part of view_projection after the camera's turn and place: from the eye's space, looking along +z.
-    [[nodiscard]] glm::mat4 projection(float aspect, const Seat& seat = std::nullopt);
+    [[nodiscard]] glm::mat4 projection(float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);
 
     /// Looking at the middle of the map from the south-west, far enough to see much of it.
     [[nodiscard]] ParkCamera overview(const save::TerrainGrid& grid);

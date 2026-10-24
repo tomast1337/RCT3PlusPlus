@@ -103,6 +103,13 @@ namespace rct3::save
             constexpr std::string_view kPoolSurface = "SurfaceHeight";
             constexpr std::string_view kPoolDepth = "Depth";
             constexpr std::string_view kPoolPrototype = "Prototype";
+            // Waterfalls between two lakes.
+            constexpr std::string_view kWaterfallClass = "WaterfallBody";
+            constexpr std::string_view kWaterfallLipLeft = "StartPosLeft";
+            constexpr std::string_view kWaterfallLipRight = "StartPosRight";
+            constexpr std::string_view kWaterfallTop = "HiWaterPos";
+            constexpr std::string_view kWaterfallBottom = "LoWaterPos";
+            constexpr std::string_view kWaterfallFlow = "Dir";
             constexpr std::string_view kCameraPos = "Pos";
             constexpr std::string_view kCameraOr = "Or";
         } // namespace names
@@ -473,6 +480,7 @@ namespace rct3::save
             Time,
             Camera,
             Pool,
+            Waterfall,
         };
 
         // Typed reads over a decoded value. Missing attributes and attributes kept raw give empty results.
@@ -866,6 +874,8 @@ namespace rct3::save
                 kinds[i] = Kind::Camera;
             else if (name == names::kPoolClass)
                 kinds[i] = Kind::Pool;
+            else if (name == names::kWaterfallClass)
+                kinds[i] = Kind::Waterfall;
             else if (std::ranges::find(names::kPathClasses, name) != std::end(names::kPathClasses))
             {
                 kinds[i] = Kind::Path;
@@ -1029,6 +1039,16 @@ namespace rct3::save
                 case Kind::Pool:
                     if (int_or(o.find(names::kPoolType), -1) == 0 && !get_bool(o.find(names::kPoolPrototype)).value_or(false))
                         m.pool_water.push_back({ int_or(o.find(names::kPoolCol)), int_or(o.find(names::kPoolRow)), int_or(o.find(names::kPoolSurface)), int_or(o.find(names::kPoolDepth)) });
+                    break;
+                case Kind::Waterfall:
+                    m.waterfalls.push_back(
+                        {
+                            .lip_left = point_of(o.find(names::kWaterfallLipLeft)),
+                            .lip_right = point_of(o.find(names::kWaterfallLipRight)),
+                            .top = point_of(o.find(names::kWaterfallTop)),
+                            .bottom = point_of(o.find(names::kWaterfallBottom)),
+                            .flow = point_of(o.find(names::kWaterfallFlow)),
+                        });
                     break;
             }
         }

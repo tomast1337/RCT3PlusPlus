@@ -968,10 +968,12 @@ namespace rct3::scene
                         || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
-        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), skins::info_panel_style(palette));
-        ui::InfoPanelStyle placing = skins::info_panel_style(palette);
+        // Both round panels stand over the tool row, as the path and land panels do.
+        ui::InfoPanelStyle info = skins::info_panel_style(palette);
+        info.raise = skins::kOverToolRow - ui::info_panel::kDiscMargin;
+        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), info);
+        ui::InfoPanelStyle placing = std::move(info);
         placing.left = true;
-        placing.raise = skins::land_panel_style(palette).bottom - ui::info_panel::kDiscMargin; // Over the tool row, as the land panel stands
         scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
         scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);

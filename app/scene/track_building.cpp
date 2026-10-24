@@ -84,7 +84,7 @@ namespace rct3::scene
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
         constexpr std::string_view kSectionTag = ":tks";
         /// Above the tool row, so the two never overlap.
-        constexpr float kPanelBottom = ui::tool_row::kMargin + ui::tool_row::kButtonSize + 8;
+        constexpr float kPanelBottom = ui::game_skins::kOverToolRow; // As the path panel stands
         /// The ghost's tint and how much of what is behind it shows through.
 
         using park::kBankSteps;
@@ -1157,7 +1157,6 @@ namespace rct3::scene
             auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(assets.palette), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
-            panel.placement = ui::bottom_left(0, kPanelBottom, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
         }
         // A ride that is one building is set down whole, as a flat ride is: the round panel with its turn button
         // stands in for the construction panel, which keeps the building's state out of sight.

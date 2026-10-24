@@ -82,12 +82,13 @@ expect(ui.find("ride_camera") === undefined, "the panel gone");
 await screenshot("overhead again");
 
 // A double click on the ride window's round view rides along again. The view is the disc in the screen's
-// corner, 18 + 64 interface units in from it; the close button, 14 across, gives the unit.
+// corner, 18 + 64 interface units in from its side and 92 + 64 up from its bottom, over the tool row; the close
+// button, 14 across, gives the unit.
 const panel = ui.find("info")!;
 const close = ui.find("info/close")!;
 const across = (close.right - close.left) / 14;
 const down = (close.bottom - close.top) / 14;
-const disc: [number, number] = [panel.right - 82 * across, panel.bottom - 82 * down];
+const disc: [number, number] = [panel.right - 82 * across, panel.bottom - 156 * down];
 await pointer.click(...disc);
 await pointer.click(...disc);
 await frames(5);

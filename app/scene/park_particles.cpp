@@ -82,7 +82,8 @@ namespace rct3::scene
             else
                 ++missing;
         }
-        logging::logger("particles").info("{} particle effects{}", particles.shown.size(), missing > 0 ? std::format(", {} named effects not found", missing) : std::string { });
+        if (missing > 0)
+            logging::logger("particles").warning("{} named particle effects not found", missing);
     }
 
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up)

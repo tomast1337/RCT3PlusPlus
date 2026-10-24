@@ -477,7 +477,8 @@ namespace rct3::scene
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
                 // The settings the piece is built with. A brake's speed, in hundredths of the player's unit, is
                 // the ride's: the last one set.
-                // shortcut: nothing slows to it or holds for the time yet, upgrade once trains brake.
+                // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
+                // and turning cars.
                 using enum ui::PieceParam;
                 if (shape.record.role == kBrakesRole)
                     v.params.at(std::to_underlying(Speed)) = ui::ParamBox { .value = static_cast<int>(std::lround(ride.options.brake_speed * ui::speed_scale(units) * 100)), .most = static_cast<int>(std::lround(kMostBrakeSpeed * ui::speed_scale(units) * 100)), .decimals = 2, .unit = std::u16string(ui::speed_unit(units)) };

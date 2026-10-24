@@ -51,6 +51,7 @@ namespace rct3::park
 
     // Bits of a section's flags, as seen across the game's track overlays: lift chain pieces all have the
     // first, station pieces the second, and nearly every piece of later files the third.
+    inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track

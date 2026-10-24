@@ -69,6 +69,14 @@ namespace rct3::simulation
                     c.speed = std::max(c.speed, c.lift_speed);
                 else if (under == Stretch::Station)
                     c.speed = c.station_speed;
+                else if (under == Stretch::Brake)
+                {
+                    // shortcut: brakes take the speed down at once, upgrade if a train should slow along them.
+                    const std::size_t at = point_at(c, c.at);
+                    // A brake set to nothing would stop the train for good; it lets it through.
+                    if (at < c.brake_speeds.size() && c.brake_speeds[at] > 0)
+                        c.speed = std::min(c.speed, c.brake_speeds[at]);
+                }
                 else
                 {
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if

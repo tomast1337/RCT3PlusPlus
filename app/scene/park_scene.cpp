@@ -244,7 +244,7 @@ namespace rct3::scene
                         // lift or block brake.
                         if (course && f.ride->options.block_sectioned && course->kinds.size() > 1)
                         {
-                            const auto ends_block = [](park::CourseKind k) { return k != park::CourseKind::Plain && k != park::CourseKind::Launch; };
+                            const auto ends_block = [](park::CourseKind k) { return k != park::CourseKind::Plain && k != park::CourseKind::Launch && k != park::CourseKind::Brake; };
                             const std::size_t last = course->kinds.size() - 1; // The last kind is past the track's end
                             int blocks = 0;
                             for (std::size_t i = 0; i < last; ++i)

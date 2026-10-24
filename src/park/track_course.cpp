@@ -71,6 +71,9 @@ namespace rct3::park
                     kind = CourseKind::BlockBrake;
                 else if (kind == CourseKind::Plain && (shape->record.flags & kPieceLaunch) != 0)
                     kind = CourseKind::Launch;
+                else if (kind == CourseKind::Plain && shape->record.role == kRoleBrakes)
+                    kind = CourseKind::Brake;
+                const auto brake_speed = static_cast<float>(kind == CourseKind::Brake ? piece.brake_speed : -1);
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
                 std::vector<glm::vec3> path = shape->line.path;
                 std::vector<glm::vec3> ups = shape->line.ups;
@@ -82,7 +85,10 @@ namespace rct3::park
                 }
                 // Each piece starts where the last one ended; that point is taken once, and runs into this piece.
                 if (!course.kinds.empty())
+                {
                     course.kinds.back() = kind;
+                    course.brake_speeds.back() = brake_speed;
+                }
                 course.piece_starts.push_back(course.length());
                 for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
                 {
@@ -91,6 +97,7 @@ namespace rct3::park
                     course.points.push_back(at);
                     course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                     course.kinds.push_back(kind);
+                    course.brake_speeds.push_back(brake_speed);
                 }
             }
             // Missing a piece, the track has no course; past the stretch trains run on, that stretch is left out.

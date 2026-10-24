@@ -110,3 +110,15 @@ TEST_CASE("a test run finds the coaster's speed, time and drops")
     CHECK(test->max_speed > 10);
     CHECK(test->average_speed == doctest::Approx(100 / test->ride_time));
 }
+
+TEST_CASE("brakes slow a train down to their speed and no further")
+{
+    Coaster c = hill();
+    c.kinds[3] = Stretch::Brake;
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    while (c.at < 71)
+        drive(c, 0.1f);
+    CHECK(c.speed <= 4.01f);
+    CHECK(c.speed > 3);
+}

@@ -367,13 +367,15 @@ namespace rct3::scene
         {
             const auto shown_as = [&](const park::PieceShape& p) {
                 ui::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
-                if (const auto icon = std::ranges::find(kRoleIcons, p.record.role, &RoleIcon::role); icon != kRoleIcons.end())
-                    n.icon = icon->skin;
                 // Its kind, as its name says.
                 // shortcut: read from the section's name, upgrade if a ride names its pieces otherwise.
                 std::string name = p.record.name;
                 std::ranges::transform(name, name.begin(), strings::ascii_lower);
                 const auto has = [&](std::initializer_list<std::string_view> words) { return std::ranges::any_of(words, [&](std::string_view w) { return name.contains(w); }); };
+                if (const auto icon = std::ranges::find(kRoleIcons, p.record.role, &RoleIcon::role); icon != kRoleIcons.end())
+                    n.icon = icon->skin;
+                else if (has({ "tower" }))
+                    n.icon = has({ "cap" }) ? "TrackSpecialIcon_VerticalCap" : has({ "vertical" }) ? "TrackSpecialIcon_VerticalMiddle" : "";
                 n.marks[1] = std::ranges::contains(kBrakeRoles, p.record.role) || has({ "brake" }) ? "TrackSpecial_Block" : has({ "loop" }) ? "TrackSpecial_Loop" : has({ "helix" }) ? "TrackSpecial_Helix" : has({ "corkscrew", "roll", "twist" }) ? "TrackSpecial_Inverted" : has({ "curve", "turn", "bend" }) ? "TrackSpecial_Curve" : "TrackSpecial_Other";
                 // Its way: off to a side, else up or down, from its start to its end as drawn. The side is level,
                 // as the player sees it: an upside-down piece's rails swap sides.

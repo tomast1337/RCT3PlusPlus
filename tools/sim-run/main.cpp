@@ -2,12 +2,13 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
-// time each phase of a step took, as the profiler's table. Flat rides take
-// their timing from their models, so they come over only with --game, the game's folder.
+// time each phase of a step took, as the profiler's table. --awards (with --game) adds how many rides and stalls
+// carry each theme, as the theme awards count them. Flat rides take their timing from their models, so they come
+// over only with --game, the game's folder.
 #include "config/game_install.hpp"
 #include "logging/crash.hpp"
 #include "logging/log.hpp"
@@ -25,6 +26,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
+#include "simulation/awards.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
@@ -92,6 +94,7 @@ int main(int argc, char** argv)
     bool whole_day = false; // Run the clock through the night, whatever the park's day mode
     bool patrol = false;    // Give each handyman and mechanic a patrol: the tiles round where they start
     bool profile = false;   // Print the time each phase of a step took
+    bool awards = false;    // Print what the theme awards count
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -108,6 +111,8 @@ int main(int argc, char** argv)
             patrol = true;
         else if (std::strcmp(argv[i], "--profile") == 0)
             profile = true;
+        else if (std::strcmp(argv[i], "--awards") == 0)
+            awards = true;
         else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
             weather = argv[++i];
         else
@@ -115,7 +120,7 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -160,6 +165,13 @@ int main(int argc, char** argv)
         {
             out.error("{}: not the game's folder", game);
             return 1;
+        }
+        if (awards)
+        {
+            std::string line;
+            for (const auto& [theme, n] : simulation::themed_attractions(*rides, world_model->objects, park::read_build_catalogue(install->root())))
+                line += std::format(" {} {:d}", theme, n);
+            out.info("themes: rides and stalls carrying each:{}", line.empty() ? " none" : line);
         }
         // The folders the park's objects come from, as the game's folder spells them, and the overlays those
         // take assets from in turn.

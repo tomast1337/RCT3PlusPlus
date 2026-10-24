@@ -97,3 +97,23 @@ TEST_CASE("dangerous happenings bring fines, coasters weighing more than pools")
     CHECK(simulation::award_earned(25, park, 0, dice));
     CHECK(simulation::award_is_fine(25));
 }
+
+TEST_CASE("a ride or stall carries a theme when enough of its scenery stands round it")
+{
+    const std::vector<park::BuildItem> catalogue { { .symbol = "Grave", .overlay = "Style/Themed/Gloom/Style", .width = 4, .length = 4, .style_index = 9, .style = "Gloom" } };
+    save::RideModel rides;
+    for (const std::int32_t col : { 10, 90 })
+        rides.stalls.push_back({ .base = { .id = static_cast<save::ObjectId>(col), .overlay_path = "Style\\Themed\\Gloom\\Style", .spot = save::PlacementSpot { .col = col, .row = 10 } } });
+    std::vector<save::PlacedObject> objects;
+    for (std::int32_t i = 0; i < 6; ++i)
+        objects.push_back({ .id = 100 + static_cast<std::uint64_t>(i), .symbol = "Grave:svd", .overlay = "Style\\Themed\\Gloom\\Style", .col = 12 + i % 2, .row = 8 + i });
+    // Only the stall among the graves carries the theme.
+    CHECK(simulation::themed_attractions(rides, objects, catalogue) == std::map<std::string, std::int32_t, std::less<>> { { "Gloom", 1 } });
+    objects.pop_back();
+    CHECK(simulation::themed_attractions(rides, objects, catalogue).empty());
+
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures park { .themed = { { "Spooky", 9 } } };
+    CHECK(simulation::award_earned(17, park, 0, dice));
+    CHECK_FALSE(simulation::award_earned(16, park, 0, dice));
+}

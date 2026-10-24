@@ -64,7 +64,7 @@ namespace rct3::ui
         : Widget(std::move(name))
         , style_(style)
     {
-        placement = bottom_left(0, style.bottom, cp::kWidth, cp::kHeight);
+        placement = top_left(0, 0, cp::kWidth, cp::kHeight);
         const auto picture = [&](std::string widget) { return &add<Button>(std::move(widget), std::string { }); };
         for (std::size_t i = 0; i < cp::kCurves; ++i)
         {
@@ -91,8 +91,6 @@ namespace rct3::ui
         new_segment_->icon = style.new_segment;
         new_segment_->placement = top_left(cp::kNewSegmentAt.x, cp::kNewSegmentAt.y, cp::kNewSegmentSize.x, cp::kNewSegmentSize.y);
         new_segment_->visible = false;
-        close_ = &add<Button>("close", style.title_button, style.close_icon);
-        close_->placement = top_left(cp::kCloseAt.x, cp::kCloseAt.y, cp::kCloseSize, cp::kCloseSize);
 
         const auto label = [&](std::string widget, float top) {
             Label& l = add<Label>(std::move(widget), std::u16string { }, style.font);
@@ -198,11 +196,6 @@ namespace rct3::ui
         return e;
     }
 
-    bool ConstructionPanel::take_closed()
-    {
-        return std::exchange(closed_, false);
-    }
-
     void ConstructionPanel::update(const UpdateContext&)
     {
         // A picture button clicked: picking what is picked already builds; what is not offered does nothing.
@@ -247,14 +240,11 @@ namespace rct3::ui
             ++page_;
             restyle();
         }
-        if (close_->take_click())
-            closed_ = true;
     }
 
     void ConstructionPanel::draw(DrawContext& context) const
     {
         const Rect r = rect();
-        draw_skin(context.list, context.skins.find(style_.strip), { r.x0 + cp::kStripLeft, r.y0, r.x0 + cp::kStripRight, r.y1 });
         const float dial = dial_left(view_.chain ? 1 : 0);
         draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
     }

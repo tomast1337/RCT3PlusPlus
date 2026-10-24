@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The panel that builds a tracked ride piece by piece, as the game lays it out: a strip along the bottom-left
-// of the screen, 652 by 100 units. Its left part has two rows of seven buttons, the curve on top (tight,
+// The controls that build a tracked ride piece by piece, as the game lays them out in the strip of the round
+// panel in the bottom-left corner (info_panel.hpp), which they sit in: 652 by 100 units, the first 32 under
+// the disc. Their left part has two rows of seven buttons, the curve on top (tight,
 // medium and loose left, straight, then loose, medium and tight right) and below it the slope the piece ends
 // at (vertical, steep and gentle down, level, then gentle, steep and vertical up). Right of them are the
 // toggles (only the lift chain here) in a column, then the bank dial: eight small buttons round a disc,
@@ -14,7 +15,7 @@
 //
 // The panel does not know about track: its owner shows it what to offer (show()) and hears what the player
 // did (take_event()). Picking the picked curve, slope or bank again is the game's way to build the piece; the
-// owner hears that as a Build event. Closing goes through take_closed().
+// owner hears that as a Build event. The round panel closes them.
 #pragma once
 
 #include "ui/font_set.hpp"
@@ -69,8 +70,6 @@ namespace rct3::ui
         inline constexpr float kNamedRowHeight = 22;
         inline constexpr float kPagerLeft = 622; ///< Of the paging arrows, right of the names
         inline constexpr float kPagerSize = 16;
-        inline constexpr float kCloseSize = 14;
-        inline constexpr Point kCloseAt { 8, 8 };
 
         inline constexpr std::size_t kCurves = 7;
         inline constexpr std::size_t kSlopes = 7;
@@ -97,10 +96,6 @@ namespace rct3::ui
 
     struct ConstructionPanelStyle
     {
-        std::string strip;        ///< Behind everything right of the ring
-        float bottom = 0;         ///< From the screen's bottom edge: the tool row and its open menu stay clear below
-        std::string title_button; ///< Skin family of the close button
-        std::string close_icon;
         std::array<std::string, construction_panel::kCurves> curves; ///< Base names, leftmost first
         std::array<std::string, construction_panel::kSlopes> slopes; ///< Steepest down first
         std::array<std::string, construction_panel::kBanks> banks;   ///< In the panel's order
@@ -169,8 +164,6 @@ namespace rct3::ui
 
         /// What the player did since the last call, oldest first, once.
         [[nodiscard]] std::optional<ConstructionEvent> take_event();
-        /// True once after the close button was clicked.
-        [[nodiscard]] bool take_closed();
 
         [[nodiscard]] Button& curve_button(std::size_t i) const
         {
@@ -238,14 +231,12 @@ namespace rct3::ui
         Button* demolish_ = nullptr;
         Button* complete_ = nullptr;
         Button* new_segment_ = nullptr;
-        Button* close_ = nullptr;
         Button* page_up_ = nullptr;
         Button* page_down_ = nullptr;
         Label* piece_ = nullptr;
         Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;
         std::size_t page_ = 0;
-        bool closed_ = false;
     };
 
 } // namespace rct3::ui

@@ -21,6 +21,9 @@ const designs = build.construction()?.designs ?? [];
 expect(designs.length > 0, "a saved corkscrew design");
 expect(ui.find("placing/Attraction_Construction") !== undefined, "the construction crane on the ring");
 expect(ui.find("placing/Attraction_General_Closed") !== undefined, "the closed flag on the ring");
+const crane = ui.find("placing/Attraction_Construction")!;
+const list = ui.find("construction_design");
+expect(list !== undefined && (list.left >= crane.right || list.bottom <= crane.top), "the designs list clear of the crane");
 expect(ui.find("placing/Attraction_Button_Testing") === undefined && ui.find("placing/Attraction_Button_Testing_Disabled") === undefined, "no test light on the ring");
 
 // The designs list opens with the custom track first; the first saved design is the row below it.

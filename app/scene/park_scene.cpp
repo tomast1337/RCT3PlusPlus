@@ -2054,17 +2054,28 @@ namespace rct3::scene
             }
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {
+                bool building = false;
                 if (start_ride_placing(scene, *picked))
                 {
                     close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
+                    building = picked->kind != park::BuildKind::Scenery;
                 }
                 else if (new_tracked_ride(scene, *picked, assets))
                 {
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
+                    building = true;
+                }
+                // Building a ride puts the build menus away, as in the game; scenery keeps its list out for the
+                // next piece.
+                if (building)
+                {
+                    close_build_list(desktop.root());
+                    if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName); tools && tools->open_menu() && (*tools->open_menu() == ui::ParkTool::Rides || *tools->open_menu() == ui::ParkTool::Shops || *tools->open_menu() == ui::ParkTool::Scenery || *tools->open_menu() == ui::ParkTool::Paths))
+                        tools->close_menu();
                 }
             }
         }

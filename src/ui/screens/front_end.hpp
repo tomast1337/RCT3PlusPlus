@@ -77,6 +77,8 @@ namespace rct3::ui
         }
         /// The window loading a game, while it is open.
         [[nodiscard]] std::optional<FileDialog&> file_dialog() const;
+        /// Opens the window loading a game from `folder`, for `action`.
+        void open_files(FrontAction action, config::UserFolder folder);
         /// The folder the window loading a game shows.
         [[nodiscard]] config::UserFolder file_folder() const
         {
@@ -152,7 +154,6 @@ namespace rct3::ui
 
     private:
         void open_options();
-        void open_files(FrontAction action, config::UserFolder folder);
         void open_careers(int pack);
         void open_tutorials(int pack);
         void ask_quit();

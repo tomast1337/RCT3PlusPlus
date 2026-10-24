@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park_windows.hpp"
 
+#include "career/career_file.hpp"
+#include "logging/log.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/about_window.hpp"
 #include "ui/screens/file_dialog.hpp"
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
@@ -22,8 +25,6 @@ namespace rct3::scene
 
         constexpr std::string_view kAboutName = "about";
         constexpr std::string_view kFilesName = "park_files";
-        /// The folder the park's games are saved to and loaded from: the sandbox parks, as in the game.
-        constexpr config::UserFolder kFilesFolder = config::UserFolder::Parks;
         /// A new sandbox starts from the blank landscape in the game's folder; its first save is offered this name.
         constexpr std::string_view kBlankLandscape = "BlankLandscape";
         constexpr std::u16string_view kNewSandbox = u"New Sandbox";
@@ -98,9 +99,22 @@ namespace rct3::scene
             else if (item == ui::ToolItem::Load)
                 open_files(park, front, ui::FileDialogMode::Load);
         }
-        if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, kFilesFolder, [&park](const std::filesystem::path& path) {
+        if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, park.game, [&park](const std::filesystem::path& path) {
                 // Saved again, it is offered under this name.
                 park.file = path;
+                // In a career, the game the scenario resumes from.
+                if (!park.game.career.empty())
+                {
+                    const std::string last_save = path.lexically_relative(park.game.games.parent_path()).generic_string();
+                    if (auto changed = career::change_career(
+                            park.game.career,
+                            [&](career::Career& c) {
+                                if (const auto s = std::ranges::find(c.scenarios, park.game.scenario, &career::ScenarioProgress::id); s != c.scenarios.end())
+                                    s->last_save = last_save;
+                            });
+                        !changed)
+                        logging::logger("ui").warning("careers: {}", changed.error());
+                }
                 return save_park(park);
             }))
             park.park_to_load = std::move(picked);
@@ -120,6 +134,7 @@ namespace rct3::scene
     {
         FrontEndRequests r;
         r.park = std::exchange(park.park_to_load, std::nullopt);
+        r.game = park.game;
         if (park.options)
         {
             ui::OptionsChoices& shared = front.live->front->options().choices();

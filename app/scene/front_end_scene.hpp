@@ -67,6 +67,7 @@ namespace rct3::scene
         bool fullscreen = false;                           ///< As last applied
         std::size_t tutorials_seen = 0;                    ///< The front end's count of tutorial menus when last checked
         std::optional<std::filesystem::path> park_to_play; ///< A tutorial's park or a save picked to load, until taken
+        ParkGame game_to_play;                             ///< What that park is played as
     };
 
     /// Things the scene wants done to the window or the program.
@@ -77,7 +78,8 @@ namespace rct3::scene
         std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
         std::optional<ui::KeyMap> keys;
-        std::optional<std::filesystem::path> park; ///< A park to play: a tutorial's, or a save the user loaded
+        std::optional<std::filesystem::path> park; ///< A park to play: a tutorial's, a scenario's, or a save the user loaded
+        ParkGame game;                             ///< What that park is played as
     };
 
     [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);
@@ -85,6 +87,9 @@ namespace rct3::scene
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
     /// Returns whether the interface has the pointer.
     bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed);
+
+    /// The interface's scale on the device.
+    [[nodiscard]] float front_end_scale(const render::Device& device, const FrontEndScene& scene);
 
     /// What the user asked for since the last call.
     [[nodiscard]] FrontEndRequests take_front_end_requests(FrontEndScene& scene);

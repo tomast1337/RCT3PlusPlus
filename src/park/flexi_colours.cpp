@@ -97,14 +97,25 @@ namespace rct3::park
 
     std::array<std::int32_t, kFlexiSlotCount> name_colours(std::string_view name)
     {
-        // FNV-1a, then five bits of it for each slot.
-        std::uint32_t hash = 2166136261u;
+        // Our own schemes, as indices of kColours: main, accent, trim.
+        constexpr std::array<std::array<std::int32_t, kFlexiSlotCount>, 12> kSchemes { {
+            { 28, 17, 1 },  // bright red, yellow, grey
+            { 6, 18, 2 },   // royal blue, gold, pale grey
+            { 11, 17, 0 },  // green, yellow, charcoal
+            { 5, 30, 2 },   // purple, pink, pale grey
+            { 20, 0, 2 },   // orange, charcoal, pale grey
+            { 9, 31, 2 },   // teal, coral, pale grey
+            { 27, 18, 0 },  // deep red, gold, charcoal
+            { 7, 28, 2 },   // sky blue, bright red, pale grey
+            { 0, 28, 1 },   // charcoal, bright red, grey
+            { 23, 22, 16 }, // brown, tan, khaki
+            { 14, 3, 2 },   // bright green, indigo, pale grey
+            { 29, 8, 0 },   // crimson, pale blue, charcoal
+        } };
+        std::uint32_t hash = 2166136261u; // FNV-1a
         for (const char c : name)
             hash = (hash ^ static_cast<std::uint8_t>(strings::ascii_lower(c))) * 16777619u;
-        std::array<std::int32_t, kFlexiSlotCount> out { };
-        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
-            out[k] = static_cast<std::int32_t>((hash >> (5 * k)) % kFlexiColourCount);
-        return out;
+        return kSchemes[hash % kSchemes.size()];
     }
 
     std::optional<PaletteImage> palette_image(const ovl::FlexiFrame& frame, std::uint32_t slots)

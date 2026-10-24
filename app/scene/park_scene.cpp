@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park_scene.hpp"
 
+#include "career/career_file.hpp"
 #include "core/maybe.hpp"
+#include "logging/log.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
 #include "park/edge_walls.hpp"
@@ -1769,6 +1771,20 @@ namespace rct3::scene
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)
                         {
+                            // In a career, the scenario is done at that level.
+                            if (!scene.game.career.empty())
+                            {
+                                const auto status = static_cast<career::ScenarioStatus>(static_cast<int>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
+                                const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                                if (auto changed = career::change_career(
+                                        scene.game.career,
+                                        [&](career::Career& c) {
+                                            if (const auto s = std::ranges::find(c.scenarios, scene.game.scenario, &career::ScenarioProgress::id); s != c.scenarios.end())
+                                                career::complete(c, static_cast<std::size_t>(s - c.scenarios.begin()), status, now);
+                                        });
+                                    !changed)
+                                    logging::logger("park").warning("careers: {}", changed.error());
+                            }
                             for (const entt::entity guest : scene.sim.registry.view<simulation::Stride, simulation::Mood>())
                                 scene.sim.registry.emplace_or_replace<simulation::Gesture>(guest, simulation::GestureKind::Cheer, simulation::kTuning.gestures.shown);
                         }

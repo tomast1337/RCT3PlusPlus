@@ -458,16 +458,45 @@ namespace rct3::simulation
     std::optional<float> launch_of(const save::Ride& ride)
     {
         using enum save::OperatingMode;
-        if ((ride.mode != PoweredLaunch && ride.mode != MultiplePoweredLaunch) || ride.options.launch_speed <= 0)
+        constexpr std::array kLaunched { PoweredLaunch, MultiplePoweredLaunch, ReverseInclinedLaunch, UpwardsLaunch, FreefallDrop };
+        if (!std::ranges::contains(kLaunched, ride.mode) || ride.options.launch_speed <= 0)
             return std::nullopt;
         return ride.options.launch_speed;
     }
 
     std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride)
     {
-        if (!course.closed || !std::ranges::contains(course.kinds, park::CourseKind::Station))
+        if (!std::ranges::contains(course.kinds, park::CourseKind::Station))
             return std::nullopt;
         Coaster c;
+        if (!course.closed)
+        {
+            // A track with two ends runs back and forth: how depends on the ride's mode, how long on its circuits.
+            // shortcut: a drop tower's car is pushed up like a launched tower's, not hauled up; plain shuttle mode
+            // and other open tracks run no train; upgrade when a park has them.
+            using enum save::OperatingMode;
+            const int circuits = std::max(ride.options.circuits, 1);
+            switch (ride.mode)
+            {
+                case ReverseInclinedLaunch:
+                    c.shuttle = Shuttle::Back;
+                    c.passes = 2 * circuits; // In through the station and back into it, each circuit
+                    break;
+                case MultiplePoweredLaunch:
+                    c.shuttle = Shuttle::Swing;
+                    c.passes = 4 * circuits; // Two swings out and back, each circuit
+                    break;
+                case UpwardsLaunch:
+                case FreefallDrop:
+                    c.shuttle = ride.mode == FreefallDrop ? Shuttle::Drop : Shuttle::Tower;
+                    c.passes = circuits; // One fall back into the station, each circuit
+                    break;
+                default:
+                    return std::nullopt;
+            }
+            if (!launch_of(ride))
+                return std::nullopt;
+        }
         c.distance = course.distance;
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
@@ -490,7 +519,7 @@ namespace rct3::simulation
         c.lift_speed = ride.options.lift_speed;
         // shortcut: stations push at the lift speed, upgrade when the station's own speed is read.
         c.station_speed = ride.options.lift_speed;
-        if (ride.options.fixed_speed > 0)
+        if (ride.options.fixed_speed > 0 && c.shuttle == Shuttle::None)
             c.fixed_speed = ride.options.fixed_speed;
         c.launch_speed = launch_of(ride);
         c.blocks = ride.options.block_sectioned;
@@ -507,6 +536,20 @@ namespace rct3::simulation
             // Where the park kept it; a train away from the start runs on round to it, empty.
             Coaster train = coaster;
             const float length = train.length();
+            if (coaster.shuttle != Shuttle::None)
+            {
+                // shortcut: a shuttle runs its first train only, and one saved away from the station heads back to it
+                // on its next pass, upgrade if a park keeps more than one or its passes.
+                train.at = std::clamp(saved.distance, std::min(train.train_length, length), length);
+                train.travelled = std::abs(train.at - train.start);
+                train.running = train.travelled > 0.5f;
+                train.at = train.running ? train.at : train.start;
+                train.travelled = train.running ? train.travelled : 0;
+                train.passed = train.running ? train.passes : 0;
+                train.speed = train.running ? saved.speed : 0;
+                out.trains.push_back(train);
+                break;
+            }
             train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
             train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
             constexpr float kAtStart = 0.5f; // Metres off the start that still count as standing at it

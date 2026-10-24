@@ -6,8 +6,8 @@
 // Gravity pulls the train along the slope under its whole length; rolling and the air hold it back. A lift
 // chain carries it up at no less than the ride's lift speed, and the station's tyres push it at the ride's
 // station speed, slowing it there too when it comes back. Brakes slow it to their speed and no further. A ride
-// with a fixed speed moves at that speed
-// everywhere. The speeds are the ride's own, as its park keeps them.
+// with a fixed speed moves at that speed everywhere. On a shuttle the train runs back and forth between the
+// track's ends, counting its passes through the station. The speeds are the ride's own, as its park keeps them.
 //
 // Units are metres and seconds.
 #pragma once
@@ -30,6 +30,16 @@ namespace rct3::simulation
         Brake,      ///< Slows the train to the stretch's brake speed
     };
 
+    /// How a train on a track with two ends runs back and forth through its station.
+    enum class Shuttle : std::uint8_t
+    {
+        None,  ///< The track is a circuit, gone round once
+        Back,  ///< Pushed off backwards, through the station and back to it
+        Swing, ///< Pushed on each time through the station, the way it is going, harder and then softer
+        Tower, ///< Pushed up, braked as it falls back into the station and pushed up again, softer
+        Drop,  ///< As a tower, but held at the top of its first climb before it falls
+    };
+
     struct Coaster
     {
         std::vector<float> distance;     ///< Along the track to each point, from 0
@@ -47,6 +57,9 @@ namespace rct3::simulation
         bool blocks = false;
         float train_length = 10;
         float start = 0; ///< Where the train's front waits to set off, at the station's end
+        /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
+        Shuttle shuttle = Shuttle::None;
+        int passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
         // The train
         bool running = false;
         float at = 0;          ///< Distance of the front of the train
@@ -54,6 +67,11 @@ namespace rct3::simulation
         float speed = 0;       ///< Along the track
         float slow = 0;        ///< Seconds it has been all but stopped away from a chain or station
         bool launched = false; ///< Its tail has left the platform since it set off, so it is pushed no more there
+        // A shuttle's train
+        int passed = 0;   ///< Times it has come into the station since it set off
+        float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
+        float pushed = 0; ///< Metres it has moved under that push
+        float held = 0;   ///< Seconds it has been held at the top of its climb
 
         [[nodiscard]] float length() const
         {
@@ -68,8 +86,8 @@ namespace rct3::simulation
     [[nodiscard]] bool chain_at(const Coaster& coaster, float at);
 
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
-    /// up to the train in front), where it stops and waits; whether it has come round to its start, where it
-    /// stops.
+    /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
+    /// back to it for the last time), where it stops.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// How long a lap of `coaster` takes from a standing start, by driving a copy of it; nothing if the train

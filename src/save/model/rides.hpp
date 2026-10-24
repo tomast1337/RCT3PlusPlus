@@ -229,7 +229,8 @@ namespace rct3::save
         float lift_speed = 0;           ///< m/s
         float brake_speed = 0;          ///< m/s
         float block_brake_off_speed = 0;
-        float fixed_speed = -1; ///< m/s; -1 none
+        float fixed_speed = -1;    ///< m/s; -1 none
+        std::int32_t circuits = 1; ///< Times round the track, or through the station and back for a shuttle
     };
 
     struct RaceState

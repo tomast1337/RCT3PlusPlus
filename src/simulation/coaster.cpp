@@ -16,6 +16,9 @@ namespace rct3::simulation
         constexpr float kStep = 0.05f;       ///< Seconds per part step, short enough for the steepest drops
         constexpr float kStuck = 4;          ///< Seconds all but stopped before the track's tyres take over
         constexpr float kLaunchLeast = 0.5f; ///< Metres of platform left that a launch is still sized over
+        constexpr float kBuildUp = 3;        ///< Passes a swinging train's pushes take to build up to full, and to die down
+        constexpr float kBounce = 0.8f;      ///< Each push back up a tower is this much of the one before
+        constexpr float kTopHold = 3;        ///< Seconds a drop tower's train is held at the top
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -23,14 +26,16 @@ namespace rct3::simulation
             return static_cast<std::size_t>(std::clamp<std::ptrdiff_t>(after - c.distance.begin() - 1, 0, static_cast<std::ptrdiff_t>(c.distance.size()) - 2));
         }
 
-        /// `d` brought round onto the track.
+        /// `d` brought round onto the track, or held at its ends when it has two.
         float wrap(const Coaster& c, float d)
         {
             const float length = c.length();
+            if (c.shuttle != Shuttle::None)
+                return std::clamp(d, 0.0f, length);
             return std::fmod(std::fmod(d, length) + length, length);
         }
 
-        /// The track's height `d` along, round again past either end.
+        /// The track's height `d` along, round again past either end of a circuit.
         float height_at(const Coaster& c, float d)
         {
             d = wrap(c, d);
@@ -54,12 +59,43 @@ namespace rct3::simulation
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
             return false;
+        const bool open = c.shuttle != Shuttle::None;
+        const bool tower = c.shuttle == Shuttle::Tower || c.shuttle == Shuttle::Drop;
+        const auto station_at = [&](float d) { return c.kinds[point_at(c, wrap(c, d))] == Stretch::Station; };
+        // The push a shuttle's train gets as it sets off (pass 0) and on each pass after, before its last: going up
+        // for a tower, the way it is moving for a swing.
+        const auto push_on = [&](int pass, float way) {
+            const float full = c.launch_speed.value_or(0);
+            const auto k = static_cast<float>(pass);
+            switch (c.shuttle)
+            {
+                case Shuttle::Back:
+                    return pass == 0 ? -full : 0.0f;
+                case Shuttle::Swing:
+                    return std::copysign(full * std::min({ 1.0f, (k + 1) / kBuildUp, (static_cast<float>(c.passes) - k) / kBuildUp }), way);
+                case Shuttle::Tower:
+                case Shuttle::Drop:
+                    return full * std::pow(kBounce, k);
+                case Shuttle::None:
+                    break;
+            }
+            return 0.0f;
+        };
+        if (open && c.travelled == 0)
+        {
+            c.passed = 0;
+            c.push = push_on(0, 1);
+            c.pushed = 0;
+            c.held = 0;
+        }
         const int steps = static_cast<int>(std::ceil(seconds / kStep));
         for (int step = 0; step < steps; ++step)
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
             const Stretch under = c.kinds[point_at(c, c.at)];
             const bool chained = on_chain(c);
+            // Its last time in, a shuttle's train is taken by the station's tyres as soon as either end is on it.
+            const bool home = open && c.passed >= c.passes && (station_at(c.at) || station_at(c.at - c.train_length));
             if (c.fixed_speed)
                 c.speed = *c.fixed_speed;
             else
@@ -68,10 +104,17 @@ namespace rct3::simulation
                 const float back = c.at - c.train_length;
                 const float slope = (height_at(c, c.at) - height_at(c, back)) / c.train_length;
                 c.speed += (-kGravity * slope - kGravity * kRolling - kAir * c.speed * std::abs(c.speed)) * dt;
+                // A shuttle's chain carries the train either way, the way it is going.
                 if (chained)
-                    c.speed = std::max(c.speed, c.lift_speed);
+                    c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
+                else if (home)
+                    c.speed = std::copysign(c.station_speed, c.start - c.at);
                 else if (under == Stretch::Station)
-                    c.speed = c.station_speed;
+                {
+                    // A shuttle's train rolls through the station on its passes before the last.
+                    if (!open)
+                        c.speed = c.station_speed;
+                }
                 else if (under == Stretch::Brake)
                 {
                     // shortcut: brakes take the speed down at once, upgrade if a train should slow along them.
@@ -84,24 +127,45 @@ namespace rct3::simulation
                 {
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
                     // valleys should roll it back for good.
-                    if (c.speed < 0.1f)
+                    const float pace = open ? std::abs(c.speed) : c.speed;
+                    if (pace < 0.1f)
                         c.slow += dt;
                     if (c.slow > kStuck)
                         c.speed = std::max(c.speed, c.station_speed);
-                    if (c.speed > c.station_speed)
+                    if (pace > c.station_speed)
                         c.slow = 0;
+                }
+                // A drop tower's train is held where its first climb tops out, then let fall.
+                if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held < kTopHold)
+                {
+                    c.speed = 0;
+                    c.held += dt;
+                    continue;
                 }
             }
             // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on,
-            // and on a launch stretch past it as hard as the push from a standing start.
-            // shortcut: the launch modes that run back and forth are not pushed, upgrade with shuttle running.
+            // and on a launch stretch past it as hard as the push from a standing start. A shuttle's push is sized
+            // the same way, over a train's length from where it began.
             const bool platform = !c.launched && c.travelled < c.train_length;
             const bool assisted = under == Stretch::Launch || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Launch;
-            if (c.launch_speed && !c.fixed_speed && (platform || assisted) && c.speed < *c.launch_speed)
+            float target = 0;
+            float left = c.train_length;
+            if (open)
             {
-                const float left = std::max(platform ? c.train_length - c.travelled : c.train_length, kLaunchLeast);
-                const float from = platform ? c.speed * c.speed : 0.0f;
-                c.speed = std::min(c.speed + (*c.launch_speed * *c.launch_speed - from) / (2 * left) * dt, *c.launch_speed);
+                target = c.push;
+                left -= c.pushed;
+            }
+            else if (c.launch_speed && (platform || assisted))
+            {
+                target = *c.launch_speed;
+                left -= platform ? c.travelled : 0;
+            }
+            const float way = target < 0 ? -1.0f : 1.0f;
+            if (target != 0 && !c.fixed_speed && c.speed * way < std::abs(target))
+            {
+                const float along = c.speed * way;
+                const float from = open || platform ? std::max(along, 0.0f) * std::max(along, 0.0f) : 0.0f;
+                c.speed = way * std::min(along + (target * target - from) / (2 * std::max(left, kLaunchLeast)) * dt, std::abs(target));
             }
             // shortcut: with other trains on the track a train never rolls back, as if held by anti-rollback
             // dogs everywhere, so it cannot run into the one behind; upgrade when the train behind gives room too.
@@ -115,6 +179,39 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
+            if (open)
+            {
+                const float from = c.at;
+                // shortcut: a track's ends stop the train dead, as buffers would, upgrade if a ride's train should
+                // reach them (its spikes and towers are built tall enough that it does not).
+                c.at = std::clamp(c.at + moved, std::min(c.train_length, c.length()), c.length());
+                if (c.at != from + moved)
+                    c.speed = 0;
+                c.travelled += std::abs(moved);
+                if (c.push != 0 && (c.pushed += std::abs(moved)) >= c.train_length)
+                    c.push = 0;
+                // Coming into the station, its leading end first: on a tower, only falling back into it.
+                const float lead = moved < 0 ? -c.train_length : 0;
+                if (moved != 0 && !station_at(from + lead) && station_at(c.at + lead) && (!tower || moved < 0) && ++c.passed < c.passes)
+                {
+                    if (tower)
+                        c.speed = 0; // Braked to a stop on its base, as brakes stop a train here
+                    c.push = push_on(c.passed, moved);
+                    c.pushed = 0;
+                }
+                // Back where it set off for the last time, its run is over.
+                if (c.passed >= c.passes && (from - c.start) * (c.at - c.start) <= 0 && c.at != from)
+                {
+                    c.at = c.start;
+                    c.travelled = 0;
+                    c.speed = 0;
+                    c.slow = 0;
+                    c.push = 0;
+                    c.running = false;
+                    return true;
+                }
+                continue;
+            }
             c.at = wrap(c, c.at + moved);
             c.travelled += moved;
             c.launched = c.launched || c.travelled >= c.train_length;

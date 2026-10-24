@@ -560,10 +560,8 @@ namespace rct3::ui
                 page.columns.push_back({ text(strings, "AttractionFinancesDialogLabel_TotalProfit"), 92, Align::End, true });
             }
             page.sort = 0;
-            page.buttons = {
-                { { }, text(strings, "AttractionListDialogOpenAll"), text(strings, "TT_AttractionListDialogOpenAll"), false },
-                { { }, text(strings, "AttractionListDialogCloseAll"), text(strings, "TT_AttractionListDialogCloseAll"), false },
-            };
+            // shortcut: the open-or-close-all button does nothing yet; it should fan out the states as a ride's does.
+            page.buttons = { stub("Attraction_General_OpenClose", { }, text(strings, "TT_AttractionListDialogIconOpenCloseAll")) };
             if (f.rides == nullptr)
                 return;
             const auto common_row = [&](const save::AttractionCommon& a, ManagementRow ref) {

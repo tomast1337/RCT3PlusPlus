@@ -599,6 +599,9 @@ namespace rct3::scene
     /// without a kept place are left out.
     void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count);
 
+    /// Loads the models of `cars` the scene does not have yet, and their pictures.
+    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars);
+
     /// Has the simulated tracked ride `ride_index` (of scene.rides) carry riders in its scene cars, boarding its
     /// first train at the station. Nothing for a ride the simulation does not run.
     void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);

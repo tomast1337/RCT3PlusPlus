@@ -15,13 +15,16 @@
 
 #include "config/game_install.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
+#include "park/ride_cars.hpp"
 #include "park/track_choice.hpp"
 #include "park/track_pieces.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/coaster.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/attraction_info.hpp"
 
@@ -33,6 +36,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace rct3::park
@@ -102,10 +106,22 @@ namespace rct3::scene
         std::vector<DesignDoor> design_doors;
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
-        /// What the round panel's tabs were last shown for: whether the first piece was still to lay, and the
-        /// ride's state.
-        std::optional<std::pair<bool, save::AttractionState>> tabs_for;
+        /// What the round panel's tabs were last shown for: whether the first piece was still to lay, the
+        /// ride's state, and whether a test could run.
+        std::optional<std::tuple<bool, save::AttractionState, bool>> tabs_for;
         std::string preview_item; ///< The piece shown on the round panel's disc
+        /// A see-through copy of the ride's first train, run round the circuit on the clock's time rather than
+        /// the park's, so it runs while the park is paused.
+        struct GhostTrain
+        {
+            simulation::Coaster train;
+            std::vector<park::CarSpot> spots;
+            std::vector<glm::mat4> stood;    ///< Where each car stood, by car
+            float stood_at = 0;              ///< Where the train's front stood
+            park::MovingMeshes meshes;       ///< The cars, then the joints of those on arms
+            std::vector<std::size_t> joints; ///< The car each joint rides with, in the order of the meshes
+        };
+        std::optional<GhostTrain> test; ///< While a test runs
     };
 
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
@@ -147,9 +163,10 @@ namespace rct3::scene
 
     /// Handles the panel's events, and for a track with no pieces the ground tile `pointed` at (none while the
     /// pointer is off the ground) and the turn commands. Call once per update after the interface.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands);
+    /// A test train runs `elapsed` seconds on.
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed);
 
-    /// Draws the ghost of the picked piece with `transform` and `light`.
+    /// Draws the ghost of the picked piece, and any test train, with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     // Shared with path building, which places objects the same way.

@@ -169,3 +169,14 @@ TEST_CASE("wide is of the end a piece is laid to")
     CHECK(chosen_piece(all, both, picks(0, 0, 0, toggle_bit(PieceToggle::Wide))) == LaidPiece { 0, false });
     CHECK(chosen_piece(all, both, picks(0)) == LaidPiece { 0, true });
 }
+
+TEST_CASE("a piece already built is picked again by its shape, or by name when it has none to pick")
+{
+    const std::vector<PieceShape> all = pieces();
+    const TrackChoice climb = choice_of(all, { 3, false });
+    CHECK(climb == picks(0, 1, 0, kChain));
+    CHECK(chosen_piece(all, fitting(), climb) == LaidPiece { 3, false });
+    // A curve laid backwards turns the other way.
+    CHECK(choice_of(all, { 1, true }).curve == -2);
+    CHECK(choice_of(all, { 6, false }).named == LaidPiece { 6, false });
+}

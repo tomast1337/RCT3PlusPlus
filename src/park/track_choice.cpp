@@ -181,4 +181,12 @@ namespace rct3::park
         return nearest(all, choice, [](const Offer&) { return true; });
     }
 
+    TrackChoice choice_of(std::span<const PieceShape> pieces, LaidPiece laid)
+    {
+        const std::vector<Offer> one = offers(pieces, std::span(&laid, 1));
+        if (one.empty())
+            return { .named = laid };
+        return { .curve = one[0].curve, .slope = one[0].slope, .bank = one[0].bank, .toggles = one[0].toggles, .named = std::nullopt };
+    }
+
 } // namespace rct3::park

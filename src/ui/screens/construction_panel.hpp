@@ -10,7 +10,9 @@
 // for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
 // the pieces with a picture of their own (stations, photo sections, brakes) stand as picture buttons, two by
 // two; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
-// use of their own (loops, helices and the like) by name, a page at a time.
+// use of their own (loops, helices and the like) by name, each after two small marks for its kind and the way
+// it goes, a page at a time; the wheel moves it a row. Pieces that cannot go on where the track ends stay in
+// their place, greyed.
 //
 // Each picture button shows one of three pictures: picked, offered, or not offered (see IconState). The
 // curve, slope and bank buttons have no help text in the game; the toggles and the demolish button do.
@@ -73,6 +75,7 @@ namespace rct3::ui
         inline constexpr float kNamedRowHeight = 22;
         inline constexpr float kPagerLeft = 622; ///< Of the paging arrows, right of the names
         inline constexpr float kPagerSize = 16;
+        inline constexpr float kMarkSize = 16;        ///< Of a list row's marks, left of its name
         inline constexpr Point kSpecialAt { 344, 5 }; ///< The first picture piece; the rest go down, then right
         inline constexpr float kSpecialSize = 28;
         inline constexpr float kSpecialStep = 30;
@@ -124,6 +127,16 @@ namespace rct3::ui
         Color text_colour = hex("#000000");
     };
 
+    /// A piece with a use of its own, as the panel offers it.
+    struct NamedPiece
+    {
+        std::u16string name { };
+        std::string icon { }; ///< Skin of its picture: one with a picture stands as a picture button, not in the list
+        /// Skins of the small marks before its name in the list, its kind's then its way's; empty for none.
+        std::array<std::string, 2> marks { };
+        bool offered = true; ///< It can go on where the track ends; greyed otherwise
+    };
+
     /// What the panel shows: one state per button, the piece's name and price, the named pieces.
     struct ConstructionView
     {
@@ -136,11 +149,8 @@ namespace rct3::ui
         std::optional<bool> new_segment; ///< None when the track is one stretch; else whether another can begin now
         std::u16string piece;            ///< Name of the piece picked, empty when nothing fits
         std::u16string cost;
-        std::vector<std::u16string> named;   ///< Names of the pieces with a use of their own
+        std::vector<NamedPiece> named;
         std::optional<std::size_t> named_on; ///< The one picked
-        /// Skin of each named piece's picture, in the order of `named`: one with a picture stands as a
-        /// picture button, not in the list. Shorter than `named` when the last have none.
-        std::vector<std::string> named_icons;
         /// The picked piece's speed, in hundredths of `speed_unit`, when it has one to set.
         std::optional<int> speed;
         int speed_most = 0; ///< In hundredths, as `speed`
@@ -153,7 +163,7 @@ namespace rct3::ui
         Slope,
         Bank,
         Chain,
-        Named, ///< `index` of the view's named pieces
+        Named, ///< `index` of the view's named pieces; only offered ones
         Build, ///< The picked button clicked again
         Demolish,
         Complete,   ///< Finish the track
@@ -233,9 +243,14 @@ namespace rct3::ui
         {
             return *speed_;
         }
-        [[nodiscard]] std::size_t page() const
+        [[nodiscard]] Button& mark_button(std::size_t row, std::size_t i) const
         {
-            return page_;
+            return *marks_.at(row).at(i);
+        }
+        /// The first row shown, of the listed pieces.
+        [[nodiscard]] std::size_t top() const
+        {
+            return top_;
         }
 
         [[nodiscard]] bool takes_pointer() const override
@@ -244,6 +259,8 @@ namespace rct3::ui
         }
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
+        /// Moves the list a row.
+        bool on_wheel(Point notches) override;
 
     private:
         void lay_out();
@@ -255,6 +272,7 @@ namespace rct3::ui
         std::array<Button*, construction_panel::kSlopes> slopes_ { };
         std::array<Button*, construction_panel::kBanks> banks_ { };
         std::array<Button*, construction_panel::kNamedRows * construction_panel::kNamedColumns> named_ { };
+        std::array<std::array<Button*, 2>, construction_panel::kNamedRows * construction_panel::kNamedColumns> marks_ { };
         Button* chain_ = nullptr;
         Button* demolish_ = nullptr;
         Button* complete_ = nullptr;
@@ -269,7 +287,7 @@ namespace rct3::ui
         Label* piece_ = nullptr;
         Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;
-        std::size_t page_ = 0;
+        std::size_t top_ = 0;
     };
 
 } // namespace rct3::ui

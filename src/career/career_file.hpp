@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -74,6 +75,9 @@ namespace rct3::career
 
     /// Writes beside the old file first, so a failed write leaves the old one as it was.
     [[nodiscard]] std::expected<void, std::string> save_career(const std::filesystem::path& path, const CareerData& data);
+
+    /// Reads the career file at `path`, lets `change` change the career, and writes it back.
+    [[nodiscard]] std::expected<void, std::string> change_career(const std::filesystem::path& path, const std::function<void(Career&)>& change);
 
     /// Deletes the career's file and the folder of the same name beside it where its games are kept.
     [[nodiscard]] std::expected<void, std::string> delete_career(const std::filesystem::path& path);

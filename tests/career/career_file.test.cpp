@@ -146,3 +146,16 @@ TEST_CASE("careers are listed by game, numbered from the first free name and del
     CHECK_FALSE(fs::exists(folder.path / "career_0000"));
     CHECK(free_career_path(folder.path).filename() == "career_0000.rct3career");
 }
+
+TEST_CASE("a career is changed in its file")
+{
+    TempFolder folder;
+    const fs::path path = folder.path / "career_0000.rct3career";
+    REQUIRE(save_career(path, sample()));
+    REQUIRE(change_career(path, [](Career& c) { complete(c, 0, ScenarioStatus::Apprentice, 1'700'001'000); }));
+    const auto careers = list_careers(folder.path, 2, std::nullopt);
+    REQUIRE(careers.size() == 1);
+    CHECK(careers[0].data.career.scenarios[0].status == ScenarioStatus::Apprentice);
+    CHECK(careers[0].data.career.scenarios[1].last_save == "Scenario02/Sunny days.dat");
+    CHECK_FALSE(change_career(folder.path / "missing.rct3career", [](Career&) { }));
+}

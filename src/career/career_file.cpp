@@ -351,6 +351,16 @@ namespace rct3::career
         return config::write_text_file(path, std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
     }
 
+    std::expected<void, std::string> change_career(const fs::path& path, const std::function<void(Career&)>& change)
+    {
+        const auto bytes = read_bytes(path);
+        auto data = bytes ? read_career(*bytes) : std::unexpected(CareerFileError::Truncated);
+        if (!data)
+            return std::unexpected(std::format("{}: {}", path.filename().string(), bytes ? to_string(data.error()) : "cannot read"));
+        change(data->career);
+        return save_career(path, *data);
+    }
+
     std::expected<void, std::string> delete_career(const fs::path& path)
     {
         std::error_code error;

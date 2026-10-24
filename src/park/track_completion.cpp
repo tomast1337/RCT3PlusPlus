@@ -54,7 +54,7 @@ namespace rct3::park
             for (const LaidPiece next : pieces_after(pieces, steps[at].tip.end, steps[at].laid.piece))
             {
                 const PieceShape& shape = pieces[next.index];
-                if (shape.use != PieceUse::Plain || shape.chain)
+                if (shape.use != PieceUse::Plain || (shape.toggles & toggle_bit(PieceToggle::Chain)) != 0)
                     continue;
                 auto placed = place_after(steps[at].tip, shape, next.reversed, grid);
                 if (!placed || !allowed(placed->object) || !seen.insert(key(placed->next, next)).second)

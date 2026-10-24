@@ -19,7 +19,7 @@ namespace
 
         Fixture()
         {
-            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(kGamePalette), u"Chain", u"Demolish");
+            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(kGamePalette), std::array<std::u16string, cp::kToggles> { u"Chain", u"Enclosed", u"Water", u"Booster" }, u"Demolish");
             desktop.layout({ 0, 0, 1280, 720 });
             desktop.update({ });
         }
@@ -124,19 +124,54 @@ TEST_CASE("each button shows the picture of its state, banks not offered left ou
     CHECK(f.panel->cost_label().text == u"Cost: 2");
 }
 
-TEST_CASE("the chain toggle shows only when the track has chain pieces, and moves the dial on")
+TEST_CASE("a toggle shows only when the track has pieces with it, and moves the dial on")
 {
     Fixture f;
     ConstructionView v = straight();
     f.panel->show(v);
     f.desktop.update({ });
-    CHECK_FALSE(f.panel->chain_button().visible);
+    CHECK_FALSE(f.panel->toggle_button(0).visible);
     const float without = f.panel->bank_button(3).rect().x0;
-    v.chain = IconState::Off;
+    v.toggles[0] = IconState::Off;
     f.panel->show(v);
     f.desktop.update({ });
-    CHECK(f.panel->chain_button().visible);
+    CHECK(f.panel->toggle_button(0).visible);
     CHECK(f.panel->bank_button(3).rect().x0 - without == cp::kStep);
+}
+
+TEST_CASE("toggles fill two rows by columns, and three push the pictures and the list right")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    v.named = { { .name = u"Station", .icon = "StationIcon" }, { .name = u"Loop" } };
+    f.panel->show(v);
+    f.desktop.update({ });
+    const float pictures = f.panel->find("special0")->rect().x0;
+    const float list = f.panel->list().rect().x0;
+    v.toggles = { IconState::Off, IconState::On, std::nullopt, IconState::Off };
+    f.panel->show(v);
+    f.desktop.update({ });
+    const Rect chain = f.panel->toggle_button(0).rect();
+    const Rect tube = f.panel->toggle_button(1).rect();
+    const Rect booster = f.panel->toggle_button(3).rect();
+    CHECK(tube.x0 == chain.x0);
+    CHECK(tube.y0 < chain.y0);
+    CHECK(booster.x0 - chain.x0 == cp::kStep);
+    CHECK(booster.y0 == chain.y0);
+    CHECK(f.panel->find("special0")->rect().x0 - pictures == cp::kStep);
+    CHECK(f.panel->list().rect().x0 - list == cp::kStep);
+}
+
+TEST_CASE("a toggle the picked piece cannot have is hidden in its place, and a click on one is heard")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    v.toggles = { IconState::Dis, IconState::Off, std::nullopt, std::nullopt };
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK_FALSE(f.panel->toggle_button(0).visible);
+    f.press(f.panel->toggle_button(1));
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Toggle, 1 });
 }
 
 TEST_CASE("picking an offered value is heard; a value not offered is not")

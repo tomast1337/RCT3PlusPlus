@@ -2,8 +2,10 @@
 #include "park/track_choice.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cstdlib>
 #include <tuple>
+#include <utility>
 
 namespace rct3::park
 {
@@ -16,7 +18,7 @@ namespace rct3::park
             int curve = 0;
             int slope = 0;
             int bank = 0;
-            bool chain = false;
+            std::uint8_t toggles = 0;
             LaidPiece laid;
         };
 
@@ -31,7 +33,7 @@ namespace rct3::park
                 if (p.use != PieceUse::Plain)
                     continue;
                 const PieceEnd exit = laid_exit(p, c.reversed);
-                out.push_back({ laid_curve(p, c.reversed), exit.slope, exit.bank, p.chain, c });
+                out.push_back({ laid_curve(p, c.reversed), exit.slope, exit.bank, p.toggles, c });
             }
             return out;
         }
@@ -46,12 +48,18 @@ namespace rct3::park
             return o.curve == c.curve && o.slope == c.slope && o.bank == c.bank;
         }
 
-        /// How far an offer is from the picks: steps on each pick, a changed chain counting less than any step,
+        /// How many toggles an offer has other than asked.
+        int toggles_apart(const Offer& o, const TrackChoice& c)
+        {
+            return std::popcount(static_cast<unsigned>(o.toggles ^ c.toggles));
+        }
+
+        /// How far an offer is from the picks: steps on each pick, changed toggles counting less than any step,
         /// then picks nearer level and straight first.
         auto distance(const Offer& o, const TrackChoice& c)
         {
             const int steps = std::abs(o.curve - c.curve) + std::abs(o.slope - c.slope) + std::abs(o.bank - c.bank);
-            return std::make_tuple(steps, o.chain != c.chain, std::abs(o.curve) + std::abs(o.slope) + std::abs(o.bank));
+            return std::make_tuple(steps, toggles_apart(o, c), std::abs(o.curve) + std::abs(o.slope) + std::abs(o.bank));
         }
 
         /// `choice` moved onto the nearest of `all` that `keep` accepts; unchanged when there is none.
@@ -83,8 +91,9 @@ namespace rct3::park
             o.curves.at(curve_index(offer.curve)) = true;
             o.slopes.at(slope_index(offer.slope)) = true;
             o.banks.at(bank_index(offer.bank)) = true;
-            o.any_chain = o.any_chain || offer.chain;
-            o.chain = o.chain || (offer.chain && matches(offer, choice));
+            o.any_toggles |= offer.toggles;
+            if (matches(offer, choice))
+                o.toggles |= offer.toggles;
         }
         // Stations first, then the rest; a piece that fits both ways is offered as drawn.
         for (const PieceUse use : { PieceUse::Station, PieceUse::Special })
@@ -105,19 +114,13 @@ namespace rct3::park
     {
         if (choice.named)
             return contains(candidates, *choice.named) ? choice.named : std::nullopt;
-        const std::vector<Offer> all = offers(pieces, candidates);
-        for (const bool any_chain : { false, true })
+        const Offer* best = nullptr;
+        for (const Offer& o : offers(pieces, candidates))
         {
-            for (const bool reversed : { false, true })
-            {
-                for (const Offer& o : all)
-                {
-                    if (o.laid.reversed == reversed && matches(o, choice) && (any_chain || o.chain == choice.chain))
-                        return o.laid;
-                }
-            }
+            if (matches(o, choice) && (best == nullptr || std::pair { toggles_apart(o, choice), o.laid.reversed } < std::pair { toggles_apart(*best, choice), best->laid.reversed }))
+                best = &o;
         }
-        return std::nullopt;
+        return best != nullptr ? std::optional { best->laid } : std::nullopt;
     }
 
     TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, int value)
@@ -150,12 +153,13 @@ namespace rct3::park
         return nearest(offers(pieces, candidates), choice, [&](const Offer& o) { return on_axis(o) == value; });
     }
 
-    TrackChoice pick_chain(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice)
+    TrackChoice pick_toggle(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, PieceToggle toggle)
     {
-        const bool wanted = !choice.chain;
+        const std::uint8_t bit = toggle_bit(toggle);
+        const std::uint8_t wanted = choice.toggles ^ bit;
         const std::vector<Offer> all = offers(pieces, candidates);
-        if (std::ranges::any_of(all, [&](const Offer& o) { return matches(o, choice) && o.chain == wanted; }))
-            choice.chain = wanted;
+        if (std::ranges::any_of(all, [&](const Offer& o) { return matches(o, choice) && (o.toggles & bit) == (wanted & bit); }))
+            choice.toggles = wanted;
         return choice;
     }
 

@@ -8,45 +8,49 @@ using namespace rct3::park;
 
 namespace
 {
-    PieceShape piece(PieceEnd exit, int curve = 0, PieceUse use = PieceUse::Plain, bool chain = false)
+    constexpr std::uint8_t kChain = toggle_bit(PieceToggle::Chain);
+    constexpr std::uint8_t kEnclosed = toggle_bit(PieceToggle::Enclosed);
+
+    PieceShape piece(PieceEnd exit, int curve = 0, PieceUse use = PieceUse::Plain, std::uint8_t toggles = 0)
     {
         PieceShape s;
         s.exit = exit;
         s.curve = curve;
         s.use = use;
-        s.chain = chain;
+        s.toggles = toggles;
         return s;
     }
 
     /// A small track: straight, a medium right curve (left when laid backwards), a climb and the same with a
-    /// lift chain, a banked straight, a station and a loop.
+    /// lift chain, a banked straight, a station, a loop, and a climb in a tube with a lift chain.
     std::vector<PieceShape> pieces()
     {
         return {
-            piece({ 0, 0, 0 }),                           // 0
-            piece({ 0, 0, 2 }, 2),                        // 1
-            piece({ 1, 0, 0 }),                           // 2
-            piece({ 1, 0, 0 }, 0, PieceUse::Plain, true), // 3
-            piece({ 0, 1, 0 }),                           // 4
-            piece({ 0, 0, 0 }, 0, PieceUse::Special),     // 5
-            piece({ 0, 0, 0 }, 0, PieceUse::Station),     // 6
+            piece({ 0, 0, 0 }),                                         // 0
+            piece({ 0, 0, 2 }, 2),                                      // 1
+            piece({ 1, 0, 0 }),                                         // 2
+            piece({ 1, 0, 0 }, 0, PieceUse::Plain, kChain),             // 3
+            piece({ 0, 1, 0 }),                                         // 4
+            piece({ 0, 0, 0 }, 0, PieceUse::Special),                   // 5
+            piece({ 0, 0, 0 }, 0, PieceUse::Station),                   // 6
+            piece({ 1, 0, 0 }, 0, PieceUse::Plain, kChain | kEnclosed), // 7
         };
     }
 
-    TrackChoice picks(int curve, int slope = 0, int bank = 0, bool chain = false)
+    TrackChoice picks(int curve, int slope = 0, int bank = 0, std::uint8_t toggles = 0)
     {
         TrackChoice c;
         c.curve = curve;
         c.slope = slope;
         c.bank = bank;
-        c.chain = chain;
+        c.toggles = toggles;
         return c;
     }
 
     /// What fits a level, unbanked tip: everything above but the curve only fits backwards as well.
     std::vector<LaidPiece> fitting()
     {
-        return { { 0, false }, { 1, false }, { 1, true }, { 2, false }, { 3, false }, { 4, false }, { 5, false }, { 6, false } };
+        return { { 0, false }, { 1, false }, { 1, true }, { 2, false }, { 3, false }, { 4, false }, { 5, false }, { 6, false }, { 7, false } };
     }
 } // namespace
 
@@ -62,8 +66,9 @@ TEST_CASE("a value is offered when some fitting piece has it")
     CHECK_FALSE(o.slopes.at(slope_index(-1)));
     CHECK(o.banks.at(bank_index(1)));
     CHECK_FALSE(o.banks.at(bank_index(kUpsideDown)));
-    CHECK(o.any_chain);
-    CHECK_FALSE(o.chain);
+    CHECK(o.any_toggles == (kChain | kEnclosed));
+    CHECK(o.toggles == 0);
+    CHECK(choice_options(all, fitting(), picks(0, 1)).toggles == (kChain | kEnclosed));
 }
 
 TEST_CASE("pieces picked by name are listed stations first")
@@ -91,9 +96,11 @@ TEST_CASE("without the lift chain asked for, the piece without one is picked")
 {
     const auto all = pieces();
     CHECK(chosen_piece(all, fitting(), picks(0, 1)) == LaidPiece { 2, false });
-    CHECK(chosen_piece(all, fitting(), picks(0, 1, 0, true)) == LaidPiece { 3, false });
-    // A chain asked for where there is none falls back to the plain piece.
-    CHECK(chosen_piece(all, fitting(), picks(0, 0, 0, true)) == LaidPiece { 0, false });
+    CHECK(chosen_piece(all, fitting(), picks(0, 1, 0, kChain)) == LaidPiece { 3, false });
+    CHECK(chosen_piece(all, fitting(), picks(0, 1, 0, kChain | kEnclosed)) == LaidPiece { 7, false });
+    // A toggle asked for where no piece has it falls back to the piece with the fewest others.
+    CHECK(chosen_piece(all, fitting(), picks(0, 0, 0, kChain)) == LaidPiece { 0, false });
+    CHECK(chosen_piece(all, fitting(), picks(0, 1, 0, kEnclosed)) == LaidPiece { 2, false });
 }
 
 TEST_CASE("picking a value keeps it and moves the other picks to the nearest that have a piece")
@@ -118,12 +125,14 @@ TEST_CASE("picking a curve, slope or bank drops a piece picked by name")
     CHECK_FALSE(pick_value(all, fitting(), named, ChoiceAxis::Curve, 0).named);
 }
 
-TEST_CASE("the lift chain turns over only when the picked shape comes the other way")
+TEST_CASE("a toggle turns over only when the picked shape comes the other way")
 {
     const auto all = pieces();
-    CHECK(pick_chain(all, fitting(), picks(0, 1)).chain);
-    CHECK_FALSE(pick_chain(all, fitting(), picks(0, 1, 0, true)).chain);
-    CHECK_FALSE(pick_chain(all, fitting(), { }).chain);
+    CHECK(pick_toggle(all, fitting(), picks(0, 1), PieceToggle::Chain).toggles == kChain);
+    CHECK(pick_toggle(all, fitting(), picks(0, 1, 0, kChain), PieceToggle::Chain).toggles == 0);
+    CHECK(pick_toggle(all, fitting(), { }, PieceToggle::Chain).toggles == 0);
+    CHECK(pick_toggle(all, fitting(), picks(0, 1, 0, kChain), PieceToggle::Enclosed).toggles == (kChain | kEnclosed));
+    CHECK(pick_toggle(all, fitting(), picks(0, 1), PieceToggle::Water).toggles == 0);
 }
 
 TEST_CASE("after a new open end the picks settle on the nearest that have a piece")

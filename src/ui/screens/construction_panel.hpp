@@ -4,12 +4,13 @@
 // panel in the bottom-left corner (info_panel.hpp), which they sit in: 652 by 100 units, the first 32 under
 // the disc. Their left part has two rows of seven buttons, the curve on top (tight, medium and loose left,
 // straight, then loose, medium and tight right) and below it the slope the piece ends at (vertical, steep and
-// gentle down, level, then gentle, steep and vertical up). Right of them are the toggles (only the lift chain
-// here) in a column, then the bank dial: eight small buttons round a disc, upside down at the top, level at
-// the bottom. Under the rows go the picked piece's name and its price, and the buttons that finish the track
+// gentle down, level, then gentle, steep and vertical up). Right of them are the toggles (lift chain, tube,
+// water, booster: those the track has pieces with), two to a column, then the bank dial: eight small buttons
+// round a disc, upside down at the top, level at the bottom. A toggle the picked piece cannot have is hidden
+// in its place, not greyed. Under the rows go the picked piece's name and its price, and the buttons that finish the track
 // for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
 // the pieces with a picture of their own (stations, photo sections, brakes) stand as picture buttons, two by
-// two; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
+// two, moving right with the dial when it moves; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
 // use of their own (loops, helices and the like) in a list of striped rows, each its name after two small
 // marks for the way it goes and its kind. Pieces that cannot go on where the track ends stay in their place,
 // greyed. A line divides the rows of buttons from the name below them.
@@ -84,7 +85,8 @@ namespace rct3::ui
 
         inline constexpr std::size_t kCurves = 7;
         inline constexpr std::size_t kSlopes = 7;
-        inline constexpr std::size_t kBanks = 8; ///< From hardest left to upside down
+        inline constexpr std::size_t kBanks = 8;   ///< From hardest left to upside down
+        inline constexpr std::size_t kToggles = 4; ///< Lift chain, tube, water, booster
     } // namespace construction_panel
 
     /// What a picture button shows.
@@ -104,6 +106,8 @@ namespace rct3::ui
 
     /// Where the bank dial goes when `toggles` toggles stand before it.
     [[nodiscard]] float dial_left(std::size_t toggles);
+    /// Where the picture pieces start when `toggles` toggles stand before the dial; the list starts after them.
+    [[nodiscard]] float specials_left(std::size_t toggles);
 
     struct ConstructionPanelStyle
     {
@@ -111,7 +115,7 @@ namespace rct3::ui
         std::array<std::string, construction_panel::kSlopes> slopes; ///< Steepest down first
         std::array<std::string, construction_panel::kBanks> banks;   ///< In the panel's order
         std::string dial;
-        std::string chain; ///< Base name
+        std::array<std::string, construction_panel::kToggles> toggles; ///< Base names
         std::string demolish;
         std::string complete;    ///< Finishes the track
         std::string new_segment; ///< Begins another stretch of track
@@ -140,7 +144,8 @@ namespace rct3::ui
         std::array<IconState, construction_panel::kCurves> curves { };
         std::array<IconState, construction_panel::kSlopes> slopes { };
         std::array<IconState, construction_panel::kBanks> banks { };
-        std::optional<IconState> chain; ///< None when the track has no chain pieces at all
+        /// One per toggle; none for a toggle the track has no pieces with at all.
+        std::array<std::optional<IconState>, construction_panel::kToggles> toggles { };
         bool can_demolish = false;
         bool can_complete = false;       ///< The track has an open end to finish from
         std::optional<bool> new_segment; ///< None when the track is one stretch; else whether another can begin now
@@ -159,9 +164,9 @@ namespace rct3::ui
         Curve, ///< `index` of the curves
         Slope,
         Bank,
-        Chain,
-        Named, ///< `index` of the view's named pieces; only offered ones
-        Build, ///< The picked button clicked again
+        Toggle, ///< `index` of the toggles
+        Named,  ///< `index` of the view's named pieces; only offered ones
+        Build,  ///< The picked button clicked again
         Demolish,
         Complete,   ///< Finish the track
         NewSegment, ///< Begin another stretch of track
@@ -179,8 +184,8 @@ namespace rct3::ui
     class ConstructionPanel : public Widget
     {
     public:
-        /// Help texts come from `chain_help` and `demolish_help`, as the strings name them.
-        ConstructionPanel(std::string name, const ConstructionPanelStyle& style, std::u16string chain_help, std::u16string demolish_help);
+        /// Help texts come from `toggle_helps` and `demolish_help`, as the strings name them.
+        ConstructionPanel(std::string name, const ConstructionPanelStyle& style, std::array<std::u16string, construction_panel::kToggles> toggle_helps, std::u16string demolish_help);
 
         /// Shows `view` from now on.
         void show(ConstructionView view);
@@ -204,9 +209,9 @@ namespace rct3::ui
         {
             return *banks_.at(i);
         }
-        [[nodiscard]] Button& chain_button() const
+        [[nodiscard]] Button& toggle_button(std::size_t i) const
         {
-            return *chain_;
+            return *toggles_.at(i);
         }
         [[nodiscard]] Button& demolish_button() const
         {
@@ -259,7 +264,8 @@ namespace rct3::ui
         std::array<Button*, construction_panel::kSlopes> slopes_ { };
         std::array<Button*, construction_panel::kBanks> banks_ { };
         ListBox* list_ = nullptr;
-        Button* chain_ = nullptr;
+        std::array<Button*, construction_panel::kToggles> toggles_ { };
+        float list_left_ = construction_panel::kListLeft;
         Button* demolish_ = nullptr;
         Button* complete_ = nullptr;
         Button* new_segment_ = nullptr;

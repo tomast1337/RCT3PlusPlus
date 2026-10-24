@@ -478,9 +478,11 @@ namespace rct3::scene
             const std::size_t i = *scene.riding;
             const park::CarSpot spot = scene.car_spots[i];
             ovl::RideCameraTuning tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
-            // On a lift chain the view shakes as the train sets for the chain.
+            // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
-            if (const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr; fleet && spot.train < fleet->trains.size() && simulation::on_chain(fleet->trains[spot.train]))
+            const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
+            const simulation::Coaster* train = fleet && spot.train < fleet->trains.size() ? &fleet->trains[spot.train] : nullptr;
+            if (train && simulation::chain_at(*train, spot.front + moved[i]))
             {
                 tuning.shake = tuning.chain_shake;
                 tuning.shake_across = tuning.chain_shake_across;

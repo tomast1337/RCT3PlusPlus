@@ -93,6 +93,16 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
+TEST_CASE("a point on the track is on a chain only along the chain's stretch, round again past either end")
+{
+    const Coaster c = hill();
+    CHECK_FALSE(chain_at(c, 5));
+    CHECK(chain_at(c, 25));
+    CHECK_FALSE(chain_at(c, 50));
+    CHECK(chain_at(c, 125));
+    CHECK(chain_at(c, -75));
+}
+
 TEST_CASE("a train with no chain to lift it is pushed on rather than left stuck in a dip")
 {
     Coaster c = hill();

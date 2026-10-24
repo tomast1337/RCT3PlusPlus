@@ -10,6 +10,7 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/ride_fences.hpp"
+#include "park/ride_placement.hpp"
 #include "park/sky_look.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
@@ -203,6 +204,16 @@ namespace rct3::scene
             return std::nullopt;
         }
 
+        /// The kind `stall` is of in the build lists, once they are read.
+        const park::BuildItem* stall_kind(const ParkScene& scene, const save::Stall& stall)
+        {
+            const auto& items = scene.build.items;
+            if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return nullptr;
+            const auto kind = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.stall && i.overlay == stall.base.overlay_path && std::format("{}:sta", i.symbol) == stall.base.symbol; });
+            return kind == items.get().end() ? nullptr : &*kind;
+        }
+
         ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
         {
             ui::AttractionFacts f { .guests = scene.people.guests, .refusal = scene.refusal };
@@ -212,6 +223,9 @@ namespace rct3::scene
                 {
                     f.stall = &scene.rides.stalls[ref.index];
                     f.common = &f.stall->base;
+                    if (const park::BuildItem* kind = stall_kind(scene, *f.stall))
+                        for (const park::BuildItem::Goods& g : kind->goods)
+                            f.offers.push_back(std::format("{}:cid", g.item));
                 }
             }
             else if (ref.index < scene.rides.rides.size())
@@ -879,10 +893,45 @@ namespace rct3::scene
             }
             else if (change.id == ui::control_id(RideCam) && ride != nullptr)
                 ride_cam(scene, assets, ref.index);
-            else if (stall != nullptr && change.id >= ui::control_id(ItemPrice))
+            else if (stall != nullptr)
             {
-                if (const auto item = static_cast<std::size_t>(change.id - ui::control_id(ItemPrice)); item < stall->items.size())
-                    stall->items[item].price = change.value;
+                const std::size_t index = ref.index;
+                const std::size_t had = stall->items.size();
+                if (change.id == ui::control_id(SyncStalls))
+                    stall->sync = change.value != 0;
+                else if (const auto item = ui::listed(change.id, ItemPrice); item && *item < stall->items.size())
+                    stall->items[*item].price = change.value;
+                else if (const auto gone = ui::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
+                    stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
+                else if (const auto added = ui::listed(change.id, ItemAdd))
+                {
+                    const park::BuildItem* kind = stall_kind(scene, *stall);
+                    if (kind == nullptr || *added >= kind->goods.size())
+                        return;
+                    const park::BuildItem::Goods& g = kind->goods[*added];
+                    // shortcut: it goes on at its kind's own price, as a new stall's items do; upgrade alongside them.
+                    stall->items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                }
+                else if (const auto extra = ui::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
+                    stall->extras[*extra].level = change.value;
+                else
+                    return;
+                if (stall->sync)
+                    park::copy_menu(scene.rides.stalls, index);
+                for (std::size_t i = 0; i < scene.rides.stalls.size(); ++i)
+                {
+                    save::Stall& s = scene.rides.stalls[i];
+                    if (i != index && !(stall->sync && s.base.symbol == stall->base.symbol && s.base.overlay_path == stall->base.overlay_path))
+                        continue;
+                    // shortcut: a stall left with nothing to sell closes; the game's way with it is not known,
+                    // upgrade once it is.
+                    if (s.items.empty() && s.base.state == save::AttractionState::Open)
+                        set_attraction_state(scene, s.base, save::AttractionState::Closed);
+                    simulation::restock(scene.sim, s);
+                }
+                // Items on or off the menu change the page's rows.
+                if (stall->items.size() != had)
+                    show_info_page(scene, panel, assets, options);
             }
             else if (ride == nullptr)
                 return;
@@ -1299,6 +1348,15 @@ namespace rct3::scene
         return refused;
     }
 
+    std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::AttractionState state)
+    {
+        save::Stall& s = scene.rides.stalls.at(stall);
+        if (state == save::AttractionState::Open && s.items.empty())
+            return "CantOpenStallNoItems";
+        set_attraction_state(scene, s.base, state);
+        return std::nullopt;
+    }
+
     void stage_show(ParkScene& scene, const save::RideShow& show)
     {
         for (auto [_, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
@@ -1576,7 +1634,7 @@ namespace rct3::scene
                     if (f.ride != nullptr)
                         scene.refusal = change_ride_state(scene, scene.shown->index, state).value_or("");
                     else
-                        set_attraction_state(scene, *common, state);
+                        scene.refusal = change_stall_state(scene, scene.shown->index, state).value_or("");
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
             }

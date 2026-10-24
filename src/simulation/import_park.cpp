@@ -455,6 +455,17 @@ namespace rct3::simulation
         return added;
     }
 
+    void restock(SimWorld& world, const save::Stall& stall)
+    {
+        const auto sale = sale_of(stall);
+        for (const auto [e, a] : world.registry.view<Attraction>().each())
+            if (a.saved == stall.base.id && sale)
+            {
+                a.price = Money { sale->price };
+                world.registry.emplace_or_replace<Shop>(e, sale->shop);
+            }
+    }
+
     std::optional<float> launch_of(const save::Ride& ride)
     {
         using enum save::OperatingMode;

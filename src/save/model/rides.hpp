@@ -488,9 +488,9 @@ namespace rct3::save
     struct StallExtra
     {
         ObjectId id = 0;
-        ObjectId extra_asset = 0; ///< Extra-kind asset entry
-        /// Stored supply level. Known label order (none, little, some, more, loads, guest choice) is unconfirmed,
-        /// so only the raw integer is kept.
+        ObjectId extra_asset = 0;    ///< Extra-kind asset entry
+        std::string kind_symbol { }; ///< That entry's symbol, as `Ketchup:ced`; empty when unresolved
+        /// How much of it goes on: 0 none, then a little, some, lots, loads, and 5 as the guest picks.
         std::int32_t level = 0;
     };
 
@@ -501,6 +501,8 @@ namespace rct3::save
         std::vector<ThoughtEntry> thoughts { };
         std::vector<StallItem> items { };
         std::vector<StallExtra> extras { };
+        /// Whether a change to its menu or extras goes to every stall of its kind.
+        bool sync = false;
     };
 
     /// Consistency counts gathered while loading. All are zero in sound files.

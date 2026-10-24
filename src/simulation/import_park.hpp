@@ -51,6 +51,8 @@ namespace rct3::simulation
     /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
     /// many were added. Call after import_paths.
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides);
+    /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price.
+    void restock(SimWorld& world, const save::Stall& stall);
 
     /// How many a ride carries at once and how long one ride lasts: starting, `loops` of running, and stopping,
     /// in seconds. A ride timed by a whole lap runs one loop of it.

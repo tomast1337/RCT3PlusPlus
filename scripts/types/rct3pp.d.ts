@@ -247,6 +247,10 @@ interface StallInfo {
     open: boolean;
     /** What it sells: each item's symbol with its tag, as "Burger:cid", and its price in hundredths. */
     items: { item: string; price: number }[];
+    /** How much of each extra it puts on: 0 none up to 4 loads, 5 as the guest picks. */
+    extras: { extra: string; level: number }[];
+    /** Whether changes to its menu go to every stall of its kind. */
+    sync: boolean;
     /** Whether the info panel shows it. */
     shown: boolean;
     /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
@@ -258,6 +262,9 @@ interface StallInfo {
 
 declare namespace stalls {
     function list(): StallInfo[];
+    /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
+     *  string key of why it stays as it was (nothing on its menu). */
+    function setState(i: number, state: "closed" | "open"): string | null;
 }
 
 declare namespace people {

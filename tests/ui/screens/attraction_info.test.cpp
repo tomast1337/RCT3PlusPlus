@@ -406,14 +406,54 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     stall.items = { sweets, sweets };
     const AttractionFacts shop { &stall.base, nullptr, &stall, { 1 } };
     const InfoPage items = attraction_page(AttractionTab::Items, shop, s, { });
-    REQUIRE(items.controls.size() == 2);
-    CHECK(items.controls[1].id == control_id(AttractionControl::ItemPrice, 1));
-    CHECK(items.controls[1].label == u"Sweets");
-    CHECK(items.controls[1].value == 90);
+    // The synchronise tick, then a price and a button to take it off for each item.
+    REQUIRE(items.controls.size() == 5);
+    CHECK(items.controls[3].id == control_id(AttractionControl::ItemPrice, 1));
+    CHECK(items.controls[3].label == u"Sweets");
+    CHECK(items.controls[3].value == 90);
     const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
     CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
     // A stall has no tune; its name, state, two buttons and its paint.
     CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 5);
+}
+
+TEST_CASE("a stall's items page offers what its kind sells and is not yet on its menu")
+{
+    save::Stall stall;
+    stall.base.symbol = "BurgerStall:sta";
+    stall.sync = true;
+    stall.items = { save::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
+    AttractionFacts f { &stall.base, nullptr, &stall, { } };
+    f.offers = { "Burger:cid", "MedBurger:cid", "LrgBurger:cid" };
+    const InfoPage page = attraction_page(AttractionTab::Items, f, table(), { });
+    REQUIRE(page.controls.size() == 5);
+    CHECK(page.controls[0].id == control_id(AttractionControl::SyncStalls));
+    CHECK(page.controls[0].value == 1);
+    CHECK(page.controls[1].maximum == kMostRidePrice);
+    CHECK(page.controls[1].step == kItemPriceStep);
+    CHECK(page.controls[2].id == control_id(AttractionControl::ItemRemove, 0));
+    // Offers keep their places in the kind's list, so the first one left is the second.
+    CHECK(page.controls[3].id == control_id(AttractionControl::ItemAdd, 1));
+    CHECK(page.controls[3].label == u"MedBurger");
+    CHECK(listed(page.controls[4].id, AttractionControl::ItemAdd) == 2);
+    CHECK_FALSE(listed(page.controls[4].id, AttractionControl::ItemPrice));
+}
+
+TEST_CASE("a stall's extras page sets how much of each extra goes on")
+{
+    StringTable s = table();
+    s.add("GUITextSymbol_ShopExtraSetting_NotProvided", u"Not Provided");
+    s.add("GUITextSymbol_ShopExtraSetting_GuestChoice", u"Guest Choice");
+    save::Stall stall;
+    stall.extras = { save::StallExtra { .kind_symbol = "Ketchup:ced", .level = 5 } };
+    const InfoPage page = attraction_page(AttractionTab::Extras, AttractionFacts { &stall.base, nullptr, &stall, { } }, s, { });
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == control_id(AttractionControl::ExtraLevel, 0));
+    CHECK(page.controls[0].label == u"Ketchup");
+    REQUIRE(page.controls[0].items.size() == 6);
+    CHECK(page.controls[0].items.front() == u"Not Provided");
+    CHECK(page.controls[0].items[5] == u"Guest Choice");
+    CHECK(page.controls[0].value == 5);
 }
 
 TEST_CASE("a running ride shows its riders an hour, the wait its queue now has and its seats")

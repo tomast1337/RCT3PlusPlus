@@ -3,7 +3,7 @@
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
 // tab to face the road in from the park's entrance, refused on the road itself, then placed on the grass beside
 // it. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
-// the park must run it, as it faces the road.
+// the park must run it, as it faces the road. Its window then takes items off its menu and puts them back.
 //
 //   ./nob script scripts/tests/stall_placing.ts -- --no-audio
 
@@ -60,6 +60,30 @@ expect(stall.shown && ui.find("info") !== undefined, "its window open");
 await frames(2);
 const running = stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`)!;
 expect(running.joined && running.selling === false && running.price === kind.goods[0].price, `the park running it, closed, at its first item's price (${JSON.stringify(running)})`);
+
+// Its window's items page takes items off the menu and puts them back. Bare, it cannot open.
+const at = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
+const menu = () => stalls.list()[at];
+const opened = stalls.setState(at, "open");
+expect(opened == null && menu().selling === true, `it opened (${opened}, ${JSON.stringify(menu())})`);
+await ui.click("info/Stall_ItemsIcon");
+await frames(2);
+await ui.click("info/body/Stall_Synchronize");
+expect(menu().sync, "its synchronise tick on");
+for (let i = 0; i < kind.goods.length; ++i) {
+    await ui.click("info/body/ItemRemove0");
+    await frames(1);
+}
+expect(menu().items.length === 0 && !menu().open, `it emptied and closed (${JSON.stringify(menu())})`);
+expect(stalls.setState(at, "open") === "CantOpenStallNoItems", "a stall with nothing to sell refused opening");
+if (kind.goods.length > 1) {
+    await ui.click("info/body/ItemAdd1");
+    await frames(1);
+    const back = menu();
+    expect(back.items.length === 1 && back.items[0].item === `${kind.goods[1].item}:cid` && back.items[0].price === kind.goods[1].price, `its second item back on (${JSON.stringify(back)})`);
+    expect(back.price === kind.goods[1].price, "the park selling it at that item's price");
+}
+expect(stalls.setState(at, "open") == null && menu().selling === true, "it opened again");
 // The park's objects are built again a few times a second, beside the frame; a frame here takes far less.
 camera.look({ col: road!.col + 1.5, row: road!.row + 0.5 }, { col: road!.col + 1.5, row: road!.row + 4.5, up: 8 });
 await frames(300);

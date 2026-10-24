@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Lays the first saved design the install offers for a corkscrew coaster on the game's blank landscape, pauses
-// the park and runs a test train round it from the construction panel's ring, as a player checks a track before
-// opening it. The test may only start once the circuit is closed, must run while the park is paused, and must
-// stop at a second press.
+// Lays the first saved design the install offers for a corkscrew coaster on the game's blank landscape, from the
+// construction panel. The panel's ring carries the construction crane, which hides and shows the strip of
+// controls, and the ride's closed flag; no test light.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
 
@@ -20,7 +19,9 @@ expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew"), "a corksc
 await frames(5);
 const designs = build.construction()?.designs ?? [];
 expect(designs.length > 0, "a saved corkscrew design");
-expect(ui.find("placing/Attraction_Button_Testing_Disabled") !== undefined, "the test greyed before any track");
+expect(ui.find("placing/Attraction_Construction") !== undefined, "the construction crane on the ring");
+expect(ui.find("placing/Attraction_General_Closed") !== undefined, "the closed flag on the ring");
+expect(ui.find("placing/Attraction_Button_Testing") === undefined && ui.find("placing/Attraction_Button_Testing_Disabled") === undefined, "no test light on the ring");
 
 // The designs list opens with the custom track first; the first saved design is the row below it.
 await ui.click("construction_design");
@@ -34,14 +35,13 @@ pointer.move(0.5, 0.45);
 await frames(30);
 await pointer.click(0.5, 0.45);
 await frames(30);
-expect(ui.find("placing/Attraction_Button_Testing") !== undefined, "the test offered once the design is laid");
+expect(rides.list().some((r) => (r.pieces ?? 0) > 0), "the design laid");
 
-await ui.click("bar/Top_Pause");
-await frames(5);
-await ui.click("placing/Attraction_Button_Testing");
-await frames(60);
-expect(build.construction()?.testing === true, "a test train running while paused");
-await screenshot("testing");
-await ui.click("placing/Attraction_Button_Testing");
-await frames(5);
-expect(build.construction()?.testing === false, "the test stopped by a second press");
+// The crane hides the strip, and shows it again.
+await ui.click("placing/Attraction_Construction");
+await frames(3);
+expect(ui.find("placing/body/construction") === undefined, "the strip hidden by the crane");
+await ui.click("placing/Attraction_Construction");
+await frames(3);
+expect(ui.find("placing/body/construction") !== undefined, "the strip shown again by the crane");
+await screenshot("laid");

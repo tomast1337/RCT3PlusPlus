@@ -97,6 +97,7 @@ namespace rct3::ui
 
         // Ours, from our translations.
         constexpr std::string_view kNotRead = "Rct3pp_ManagementNotRead";
+        constexpr std::string_view kNotSimulated = "Rct3pp_GoalNotSimulated";
         constexpr std::string_view kFamiliesNote = "Rct3pp_ManagementFamiliesNote";
         constexpr std::string_view kLeader = "Rct3pp_ManagementLeader";
         constexpr std::string_view kMembers = "Rct3pp_ManagementMembers";
@@ -639,6 +640,26 @@ namespace rct3::ui
                     return "ObjectiveCondition_ItemsBought";
                 case Vip:
                     return "ObjectiveCondition_VIP";
+                case PoolGuests:
+                    return "ObjectiveCondition_PoolGuests";
+                case PoolIncome:
+                    return "ObjectiveCondition_PoolIncome";
+                case AnimalsOfSpecies:
+                    return "ObjectiveCondition_NumAnimalsOfSpecies";
+                case AnimalSalesProfit:
+                    return "ObjectiveCondition_AnimalSalesProfit";
+                case GalleryVisitors:
+                    return "ObjectiveCondition_EnclosureVisitors";
+                case GalleryIncome:
+                    return "ObjectiveCondition_EnclosureIncome";
+                case AnimalsReleased:
+                    return "ObjectiveCondition_ReleaseAnimals";
+                case AnimalHealth:
+                    return "ObjectiveCondition_MinAnimalHealth";
+                case Dung:
+                    return "ObjectiveCondition_DungTarget";
+                case ViewingGalleries:
+                    return "ObjectiveCondition_ViewingGalleries";
                 case Other:
                     break;
             }
@@ -654,10 +675,20 @@ namespace rct3::ui
                 case save::ConditionKind::ParkValue:
                 case save::ConditionKind::RideIncome:
                 case save::ConditionKind::ShopProfit:
+                case save::ConditionKind::PoolIncome:
+                case save::ConditionKind::AnimalSalesProfit:
+                case save::ConditionKind::GalleryIncome:
                     return money(units, *c.value);
                 case save::ConditionKind::ParkGuests:
                 case save::ConditionKind::ParkRating:
                 case save::ConditionKind::ItemsBought:
+                case save::ConditionKind::PoolGuests:
+                case save::ConditionKind::AnimalsOfSpecies:
+                case save::ConditionKind::GalleryVisitors:
+                case save::ConditionKind::AnimalsReleased:
+                case save::ConditionKind::AnimalHealth:
+                case save::ConditionKind::Dung:
+                case save::ConditionKind::ViewingGalleries:
                     return whole(*c.value);
                 default:
                     return std::u16string(kDash);
@@ -705,7 +736,13 @@ namespace rct3::ui
                 // The condition and its target, then how long it must hold and whether it has been met.
                 const std::string_view key = condition_key(c->kind);
                 page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), condition_target(*c, units), false, std::string(key) });
-                page.lines.push_back({ held_for(*c, strings), c->completed ? text(strings, "Objectives_Completed") : std::u16string(kDash) });
+                // A goal the simulation cannot judge yet says so, rather than looking merely unmet.
+                std::u16string met(kDash);
+                if (c->completed)
+                    met = text(strings, "Objectives_Completed");
+                else if (!simulation::judged(c->kind))
+                    met = text(strings, kNotSimulated);
+                page.lines.push_back({ held_for(*c, strings), met });
             }
             if (const std::u16string goal = text(strings, f.park->park.objective_text); !goal.empty() && page.note.empty())
                 page.note = goal;

@@ -286,6 +286,16 @@ namespace rct3::save
         Coaster,
         ItemsBought,
         Vip,
+        PoolGuests,
+        PoolIncome,
+        AnimalsOfSpecies,
+        AnimalSalesProfit,
+        GalleryVisitors, ///< Visitors to the animal viewing galleries
+        GalleryIncome,
+        AnimalsReleased,
+        AnimalHealth, ///< The animals' average health
+        Dung,         ///< Dung lying about, at most
+        ViewingGalleries,
     };
 
     /// Named bits of Condition::consistency_flags. Values beyond these bits are preserved in the raw word.

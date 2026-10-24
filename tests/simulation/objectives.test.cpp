@@ -48,6 +48,19 @@ TEST_CASE("a level is won once all its goals are met, and only then is the next 
     CHECK_FALSE(simulation::check_goals(set, f, 5 * kMonth));
 }
 
+TEST_CASE("a goal the simulation cannot judge is never met, so its level is not won")
+{
+    save::ObjectiveSet set;
+    set.objectives = { { .difficulty = 0 } };
+    set.conditions = { goal(0, save::ConditionKind::ParkGuests, 0), goal(0, save::ConditionKind::PoolGuests, 0) };
+    CHECK(simulation::judged(save::ConditionKind::ParkGuests));
+    CHECK_FALSE(simulation::judged(save::ConditionKind::PoolGuests));
+    CHECK_FALSE(simulation::judged(save::ConditionKind::Vip));
+    CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 0));
+    CHECK(set.conditions[0].completed);
+    CHECK_FALSE(set.conditions[1].completed);
+}
+
 TEST_CASE("a coaster goal counts the tested coasters reaching its figure")
 {
     save::Ride fast, slow, untested, wheel;

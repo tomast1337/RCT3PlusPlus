@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <format>
+#include <tuple>
 #include <utility>
 
 namespace rct3::ui
@@ -142,6 +143,12 @@ namespace rct3::ui
             const bool pictured = !view_.named[i].icon.empty() && pictured_.size() < cp::kSpecials;
             (pictured ? pictured_ : listed_).push_back(i);
         }
+        // The list as the game orders it: those that fit first, then by name, then by way.
+        std::ranges::stable_sort(listed_, [&](std::size_t a, std::size_t b) {
+            const NamedPiece& x = view_.named[a];
+            const NamedPiece& y = view_.named[b];
+            return std::tie(y.offered, x.name, x.marks[0]) < std::tie(x.offered, y.name, y.marks[0]);
+        });
         lay_out();
         restyle();
     }

@@ -832,7 +832,11 @@ namespace rct3::ui::game_skins
         s.list.stripe = p.stripe;
         s.list.row_height = construction_panel::kListRowHeight;
         s.list.padding = { };
-        s.list.text_indent = 2;
+        // The picked row is a flat light band, not a lozenge, and the marks sit flush before the name.
+        s.list.selection_skin.clear();
+        s.list.selection_colour = p.icon;
+        s.list.text_indent = 0;
+        s.list.icon_gap = 0;
         s.list_bar = scroll_bar_style(p, Orientation::Vertical);
         s.divider = p.panel_edge;
         s.param_icons = { "TrackPieceParam_Angle", "TrackPieceParam_Time", "TrackPieceParam_Speed" };

@@ -231,7 +231,7 @@ namespace rct3::ui
                     const float top = std::round(row.y0 + (style.row_height - style.icon_size) / 2);
                     if (!icon.empty())
                         draw_skin(context.list, context.skins.find(icon), { x, top, x + style.icon_size, top + style.icon_size }, faded ? style.greyed_tint : kWhite);
-                    x += style.icon_size + 1;
+                    x += style.icon_size + style.icon_gap;
                 }
                 if (f)
                 {

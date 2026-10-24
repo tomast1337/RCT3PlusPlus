@@ -204,17 +204,29 @@ TEST_CASE("named pieces are picked by a press on their row, and built by a secon
     v.named = { { .name = u"Station" }, { .name = u"Loop" } };
     f.panel->show(v);
     f.desktop.update({ });
-    CHECK(f.panel->list().items == std::vector<std::u16string> { u"Station", u"Loop" });
-    f.press_row(1);
+    CHECK(f.panel->list().items == std::vector<std::u16string> { u"Loop", u"Station" });
+    f.press_row(0);
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, 1 });
     v.named_on = 1;
     f.panel->show(v);
-    CHECK(f.panel->list().selected() == 1);
-    f.press_row(1);
+    CHECK(f.panel->list().selected() == 0);
+    f.press_row(0);
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Build, 0 });
     // With a named piece picked, the picked curve is no longer the piece to build.
     f.press(f.panel->curve_button(3));
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Curve, 3 });
+}
+
+TEST_CASE("the list shows the pieces that fit first, then by name, then by way")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    v.named = { { .name = u"Zero G Roll" }, { .name = u"Helix", .marks = { "Right", "" }, .offered = false }, { .name = u"Corkscrew", .marks = { "Right", "" } }, { .name = u"Corkscrew", .marks = { "Left", "" } } };
+    f.panel->show(v);
+    CHECK(f.panel->list().items == std::vector<std::u16string> { u"Corkscrew", u"Corkscrew", u"Zero G Roll", u"Helix" });
+    CHECK(f.panel->list().icons.at(0).front() == "Left");
+    f.press_row(0);
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, 3 });
 }
 
 TEST_CASE("the list scrolls when its pieces do not all fit")

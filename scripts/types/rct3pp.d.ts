@@ -136,6 +136,8 @@ interface FlatRideItem {
     doors: boolean;
     /** Whether it stands only on water. */
     water: boolean;
+    /** The fence it takes when placed, its theme's; empty when none is named. */
+    fence: string;
 }
 
 declare namespace build {
@@ -163,6 +165,8 @@ interface Spot {
 
 interface RideInfo {
     name: string;
+    /** The fence round it, without its tag; empty when it has none. */
+    fence: string;
     /** With its tag, as "Twist:anr". */
     symbol: string;
     overlay: string;

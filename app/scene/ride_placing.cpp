@@ -68,11 +68,6 @@ namespace rct3::scene
 
     namespace
     {
-        /// The fence new rides take, the plain scaffold most rides in the saves seen have.
-        // shortcut: the same for every theme; give themed rides their theme's fence once the ride window can
-        // change a ride's fence.
-        constexpr std::string_view kRideFence = "Van_Scaffold2";
-        constexpr std::string_view kRideFenceOverlay = "Style\\Vanilla\\style";
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
         /// The placing panel's round view: a whole turn every ten seconds, looking down a little, near enough for
@@ -166,8 +161,11 @@ namespace rct3::scene
                     o.hidden = true;
             }
             fence.clear();
-            ride.fence_symbol = kRideFence;
-            ride.fence_overlay = kRideFenceOverlay;
+            if (scene.placing.item)
+            {
+                ride.fence_symbol = scene.placing.item->fence;
+                ride.fence_overlay = scene.placing.item->fence_overlay;
+            }
             const park::ObjectModel* item = nullptr;
             for (const save::PlacedObject& o : scene.objects)
             {

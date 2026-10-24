@@ -34,6 +34,7 @@ namespace rct3::park
         constexpr std::string_view kStyleIndex = "StyleIndex";
         constexpr std::string_view kStyleName = "StyleInternalName";
         constexpr std::string_view kStyleTitle = "StyleName";
+        constexpr std::string_view kStyleFence = "FenceName"; ///< The fence new rides of the theme take
         constexpr std::array<std::string_view, 2> kRideFolders = { "Tracks/Coasters", "Tracks/TrackedRides" };
         /// Each folder below it holds one kind of enclosure fence, in the overlay named after the folder with
         /// this ending; the rest of its overlays are the pieces' shapes.
@@ -431,7 +432,7 @@ namespace rct3::park
         const std::string exit = first_of(ItemCategory::RideExit);
         // Everything a theme's overlay offers is of that theme.
         std::int32_t style_index = -1;
-        std::string style, style_title;
+        std::string style, style_title, fence;
         for (const ovl::Part* part : parts)
         {
             for (const ovl::IntegerItem& i : ovl::read_integers(overlay, *part))
@@ -445,6 +446,8 @@ namespace rct3::park
                     style = strings::to_utf8(*t.value);
                 else if (t.value && t.name == kStyleTitle)
                     style_title = strings::to_utf8(*t.value);
+                else if (t.value && t.name == kStyleFence)
+                    fence = strings::to_utf8(*t.value);
             }
         }
         for (std::size_t i = first; i < items.size(); ++i)
@@ -452,6 +455,10 @@ namespace rct3::park
             items[i].style_index = style_index;
             items[i].style = style;
             items[i].style_title = style_title;
+            items[i].fence = fence;
+            // Here when this overlay holds the fence; else found in the one that does, below.
+            if (!fence.empty() && std::ranges::any_of(scenery, [&](const ovl::SceneryItemEntry& e) { return strings::equals_ignoring_case(e.name, fence); }))
+                items[i].fence_overlay = path;
             if ((items[i].kind == BuildKind::FlatRide || items[i].kind == BuildKind::TrackedRide) && !entrance.empty() && !exit.empty())
             {
                 items[i].entrance = entrance;
@@ -539,16 +546,28 @@ namespace rct3::park
                 read_file(root, *file, items);
         }
         name_styles(items);
-        // Rides of a theme without an entrance and exit of its own take the plain theme's, as parks show.
+        // Rides of a theme without an entrance and exit of its own take the plain theme's, as parks show; so do
+        // rides of no theme for their fence. A theme may name a fence another theme's overlay holds.
         const auto plain = std::ranges::find_if(items, [](const BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.door_overlay, kPlainStyle); });
+        const auto plain_fence = std::ranges::find_if(items, [](const BuildItem& i) { return !i.fence.empty() && strings::equals_ignoring_case(i.overlay, kPlainStyle); });
+        std::map<std::int32_t, std::string> theme_fences;
+        for (const BuildItem& item : items)
+            if (item.style_index >= 0 && !item.fence.empty())
+                theme_fences.try_emplace(item.style_index, item.fence);
         for (BuildItem& item : items)
         {
+            if (const auto found = theme_fences.find(item.style_index); item.fence.empty() && found != theme_fences.end())
+                item.fence = found->second;
             if ((item.kind == BuildKind::FlatRide || item.kind == BuildKind::TrackedRide) && item.entrance.empty() && plain != items.end())
             {
                 item.entrance = plain->entrance;
                 item.exit = plain->exit;
                 item.door_overlay = plain->door_overlay;
             }
+            if ((item.kind == BuildKind::FlatRide || item.kind == BuildKind::TrackedRide) && item.fence.empty() && plain_fence != items.end())
+                item.fence = plain_fence->fence;
+            if (const auto holder = std::ranges::find_if(items, [&](const BuildItem& i) { return !i.fence_overlay.empty() && strings::equals_ignoring_case(i.fence, item.fence); }); !item.fence.empty() && item.fence_overlay.empty() && holder != items.end())
+                item.fence_overlay = holder->fence_overlay;
         }
         return items;
     }

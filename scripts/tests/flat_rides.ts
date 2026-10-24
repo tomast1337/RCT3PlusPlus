@@ -77,6 +77,11 @@ interface Slot {
     col: number; ///< Of the ride's first column
     lane: number;
 }
+// Each ride takes its theme's fence, the plain scaffold for the plain theme.
+const themeFence = (theme: string) => build.flatRides()!.find((i) => i.overlay.toLowerCase().includes(`/${theme}/`))?.fence.toLowerCase();
+log("fences", JSON.stringify([...new Set(build.flatRides()!.map((i) => i.fence))]));
+expect(themeFence("vanilla") === "van_scaffold2", "the plain theme's rides fenced with the scaffold");
+expect(themeFence("spooky") === "spiderwebfence" && themeFence("wildwest") === "corralbarbedwirefence", "themed rides fenced with their theme's fence");
 // Rides that stand on water need a lake, which this park has none of.
 const items = build.flatRides()!.filter((i) => !i.water).sort((a, b) => b.length - a.length || b.width - a.width);
 const slots: Slot[] = [];
@@ -270,6 +275,9 @@ await look(gate.col, topRoad + 4, 60);
 await screenshot("gate");
 
 const all = rides.list();
+const fenced = all.filter((r) => r.flat && /themed[\\/]spooky/i.test(r.overlay));
+log("spooky fences", JSON.stringify(fenced.map((r) => r.fence)));
+expect(fenced.length > 0 && fenced.every((r) => r.fence.toLowerCase() === "spiderwebfence"), "the spooky rides placed with spider web fences");
 for (const o of outcomes) {
     const { ride } = o.slot;
     const info = all.find((r) => r.overlay === ride.overlay && r.symbol.split(":")[0] === ride.symbol);

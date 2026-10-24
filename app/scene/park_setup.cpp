@@ -522,6 +522,11 @@ namespace rct3::scene
         add_textures(device, scene, scene.car_meshes.mesh.batches);
     }
 
+    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)
+    {
+        load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
+    }
+
     void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
     {
         const entt::entity entity = ride_index < scene.ride_entities.size() ? scene.ride_entities[ride_index] : entt::null;

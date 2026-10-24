@@ -148,8 +148,8 @@ declare namespace build {
     function pick(overlay: string, symbol: string): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
      * the one picked, whether it can be built there and the files of the saved designs offered for it (the
-     * install's, then the player's own); undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; designs: string[] } | undefined;
+     * install's, then the player's own), and whether a test train runs; undefined while the panel is shut. */
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; designs: string[]; testing: boolean } | undefined;
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */

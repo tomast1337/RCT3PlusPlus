@@ -19,6 +19,9 @@
 // items that take colours, one that paints them; the colours start as the item's own each time it is picked.
 // A ride placed whole gets the same panel, without the colours, and rises with Shift the same way; raised, it
 // and its doors leave the ground under them as it is.
+//
+// A stall is placed as a ride placed whole is, but has no doors and no fence: it serves the tile it faces, and
+// a click places one, puts the tool away and opens its window. It sells everything its kind offers.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -108,7 +111,7 @@ namespace rct3::scene
     [[nodiscard]] std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
-    /// whole and scenery are left alone; false for those.
+    /// whole, stalls and scenery are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);
 
     /// Starts placing the entrance, or the `exit`, of the tracked ride `ride` beside its `stations`, as `item`

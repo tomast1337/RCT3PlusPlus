@@ -182,6 +182,17 @@ TEST_CASE("a new ride is named after its kind with the lowest number its kind ha
     CHECK(numbered_name(rides, "Swings:anr") == "%ME% 1");
 }
 
+TEST_CASE("a new stall is numbered among the stalls of its kind")
+{
+    std::vector<save::Stall> stalls(2);
+    stalls[0].base.symbol = "BurgerStall:sta";
+    stalls[0].base.name = "%ME% 1";
+    stalls[1].base.symbol = "DrinksStall:sta";
+    stalls[1].base.name = "%ME% 2";
+    CHECK(numbered_name(stalls, "BurgerStall:sta") == "%ME% 2");
+    CHECK(numbered_name(stalls, "DrinksStall:sta") == "%ME% 1");
+}
+
 TEST_CASE("a show ride knows the tricks named for its kind, its idle first, each as long as its animation")
 {
     const std::vector<std::string> names { "SealShowAnimTrick2", "SealShowAnimIdle", "SealShowAnimTrick1", "BearShowJuggle", "BearShowIdleLoop", "BigSealShowAnimTrick1" };

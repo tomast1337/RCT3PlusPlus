@@ -143,9 +143,24 @@ interface FlatRideItem {
     fence: string;
 }
 
+interface StallItem {
+    overlay: string;
+    symbol: string;
+    /** String key of its name. */
+    name: string;
+    width: number;
+    length: number;
+    /** Hundredths of the currency. */
+    price: number;
+    /** What a new one sells: each carried item's name and the price it starts at, in hundredths. */
+    goods: { item: string; price: number }[];
+}
+
 declare namespace build {
     /** The install's rides placed whole; undefined while the lists are still being read. */
     function flatRides(): FlatRideItem[] | undefined;
+    /** The install's stalls; undefined while the lists are still being read. Picked as rides are. */
+    function stalls(): StallItem[] | undefined;
     /** Starts placing a ride, as picking it in its build list does; false when there is no such ride. A ride
      * built piece by piece opens its construction panel on the next frame. */
     function pick(overlay: string, symbol: string): boolean;
@@ -221,6 +236,23 @@ declare namespace rides {
     function show(i: number): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
     function shown(): { ride: number; tab?: string } | undefined;
+}
+
+interface StallInfo {
+    name: string;
+    /** With its tag, as "BurgerStall:sta". */
+    symbol: string;
+    overlay: string;
+    site: Spot | null;
+    open: boolean;
+    /** What it sells: each item's symbol with its tag, as "Burger:cid", and its price in hundredths. */
+    items: { item: string; price: number }[];
+    /** Whether the info panel shows it. */
+    shown: boolean;
+}
+
+declare namespace stalls {
+    function list(): StallInfo[];
 }
 
 declare namespace people {

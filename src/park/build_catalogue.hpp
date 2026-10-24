@@ -140,6 +140,16 @@ namespace rct3::park
         /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
         float strength = 0;
         float rarity = 0; ///< Animals: from 0, common, to 1, endangered
+        /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
+        bool stall = false;
+        /// Stalls: what a new one sells, each a carried item's name and the price it starts at, in hundredths;
+        /// empty when the stall's overlay does not give them.
+        struct Goods
+        {
+            std::string item;
+            std::int32_t price = 0;
+        };
+        std::vector<Goods> goods;
     };
 
     /// Names the theme of each item that has only its number, after another item of that number.

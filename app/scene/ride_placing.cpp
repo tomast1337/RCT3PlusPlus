@@ -124,7 +124,7 @@ namespace rct3::scene
             {
                 if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
                     o.colours = model->second.default_colours;
-                scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
+                scene.attractions[o.id] = { scene.placing.item->stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
             scene.objects.push_back(o);
             if (const park::SupportSets* sets = support_sets(scene, assets))
@@ -251,7 +251,9 @@ namespace rct3::scene
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item)
     {
         const bool scenery = item.kind == park::BuildKind::Scenery && !item.symbol.empty();
-        if (!scenery && (item.kind != park::BuildKind::FlatRide || item.scenery.empty() || item.width == 0 || item.length == 0))
+        // A stall is placed whole as a flat ride is, without doors.
+        const bool whole = item.kind == park::BuildKind::FlatRide || (item.kind == park::BuildKind::Shop && item.stall);
+        if (!scenery && (!whole || item.scenery.empty() || item.width == 0 || item.length == 0))
             return false;
         RidePlacing& p = scene.placing;
         p.item = item;
@@ -680,6 +682,36 @@ namespace rct3::scene
             // Raised with Shift, it stands over the ground as it is.
             if (p.site->height <= p.ground)
                 park::level_ground(scene.grid, *p.site);
+            if (p.item->stall)
+            {
+                p.ride = scene.rides.stalls.size();
+                const std::uint64_t object = add_object(scene, assets, *o);
+                save::Stall& stall = scene.rides.stalls.emplace_back();
+                stall.base.id = last_id(scene) + 1;
+                stall.base.symbol = std::format("{}:sta", p.item->symbol);
+                stall.base.overlay_path = p.item->overlay;
+                stall.base.name = park::numbered_name(scene.rides.stalls, stall.base.symbol);
+                // Built closed: the game sets no state when a stall goes down, so it opens from its window.
+                stall.base.state = save::AttractionState::Closed;
+                stall.base.placement = object;
+                stall.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
+                // It serves the tile it faces.
+                stall.base.facing = static_cast<std::uint8_t>(p.site->turns);
+                // Everything its kind sells, each named after its item.
+                // shortcut: at the stall's own price for it; the game lowers a price over what guests would pay,
+                // cap it so once carried items' price limits are read.
+                for (const park::BuildItem::Goods& g : p.item->goods)
+                    stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                if (scene.park.cash)
+                    *scene.park.cash -= p.item->price;
+                float_money(scene, site_point(scene, *p.site), -p.item->price);
+                logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
+                // One stall a pick: the tool goes away and the stall's window opens, as in the game.
+                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Stall, p.ride };
+                stop_ride_placing(scene);
+                rebuild_ground(device, scene, assets);
+                return true;
+            }
             p.ride = scene.rides.rides.size();
             save::Ride& ride = scene.rides.rides.emplace_back();
             ride.kind = save::RideKind::Flat;

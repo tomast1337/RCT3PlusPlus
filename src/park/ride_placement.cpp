@@ -39,19 +39,29 @@ namespace rct3::park
             }
             return SiteProblem::None;
         }
+
+        template<typename Attraction> std::string lowest_free_name(std::span<const Attraction> attractions, std::string_view symbol)
+        {
+            constexpr std::string_view kNumbered = "%ME% ";
+            std::vector<int> taken;
+            for (const Attraction& a : attractions)
+                if (strings::equals_ignoring_case(a.base.symbol, symbol) && a.base.name.starts_with(kNumbered))
+                    taken.push_back(std::atoi(a.base.name.c_str() + kNumbered.size()));
+            int number = 1;
+            while (std::ranges::contains(taken, number))
+                ++number;
+            return std::format("{}{}", kNumbered, number);
+        }
     } // namespace
 
     std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol)
     {
-        constexpr std::string_view kNumbered = "%ME% ";
-        std::vector<int> taken;
-        for (const save::Ride& r : rides)
-            if (strings::equals_ignoring_case(r.base.symbol, symbol) && r.base.name.starts_with(kNumbered))
-                taken.push_back(std::atoi(r.base.name.c_str() + kNumbered.size()));
-        int number = 1;
-        while (std::ranges::contains(taken, number))
-            ++number;
-        return std::format("{}{}", kNumbered, number);
+        return lowest_free_name(rides, symbol);
+    }
+
+    std::string numbered_name(std::span<const save::Stall> stalls, std::string_view symbol)
+    {
+        return lowest_free_name(stalls, symbol);
     }
 
     std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)

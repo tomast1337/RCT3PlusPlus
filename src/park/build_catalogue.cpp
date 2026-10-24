@@ -420,7 +420,12 @@ namespace rct3::park
                 if (!e.stall)
                     continue;
                 if (const auto list = shop_list(e.stall->info.type_id))
-                    items.push_back(attraction_item(*list, BuildKind::Shop, e.name, path, e.stall->info, placed_as(e.stall->info.style, e.name)));
+                {
+                    BuildItem& item = items.emplace_back(attraction_item(*list, BuildKind::Shop, e.name, path, e.stall->info, placed_as(e.stall->info.style, e.name)));
+                    item.stall = true;
+                    for (const ovl::StallGoods& g : e.stall->goods)
+                        item.goods.push_back({ .item = std::string(g.item), .price = g.price });
+                }
             }
         }
         // Rides take the first entrance and exit of their own theme.

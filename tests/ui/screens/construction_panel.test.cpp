@@ -156,7 +156,7 @@ TEST_CASE("named pieces are picked, then built, by their buttons")
 {
     Fixture f;
     ConstructionView v = straight();
-    v.named = { u"Station", u"Loop" };
+    v.named = { { .name = u"Station" }, { .name = u"Loop" } };
     f.panel->show(v);
     f.desktop.update({ });
     CHECK(f.panel->named_button(1).text == u"Loop");
@@ -176,15 +176,15 @@ TEST_CASE("named pieces come a page at a time")
     Fixture f;
     ConstructionView v = straight();
     for (std::size_t i = 0; i < cp::kNamedRows * cp::kNamedColumns + 1; ++i)
-        v.named.push_back(u"Piece " + std::u16string(1, static_cast<char16_t>(u'A' + i)));
+        v.named.push_back({ .name = u"Piece " + std::u16string(1, static_cast<char16_t>(u'A' + i)) });
     f.panel->show(v);
     f.desktop.update({ });
-    CHECK(f.panel->page() == 0);
+    CHECK(f.panel->top() == 0);
     CHECK_FALSE(f.panel->named_button(1).visible == false);
     f.press(*f.panel->find("page_down"));
-    CHECK(f.panel->page() == 1);
+    CHECK(f.panel->top() == cp::kNamedRows);
     CHECK(f.panel->named_button(0).visible);
-    CHECK(f.panel->named_button(0).text == v.named.back());
+    CHECK(f.panel->named_button(0).text == v.named.back().name);
     CHECK_FALSE(f.panel->named_button(1).visible);
     f.press(f.panel->named_button(0));
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, v.named.size() - 1 });
@@ -220,8 +220,7 @@ TEST_CASE("named pieces with a picture stand as picture buttons, out of the list
 {
     Fixture f;
     ConstructionView v = straight();
-    v.named = { u"Station", u"Loop", u"Brakes" };
-    v.named_icons = { "StationIcon", "", "BrakesIcon" };
+    v.named = { { .name = u"Station", .icon = "StationIcon" }, { .name = u"Loop" }, { .name = u"Brakes", .icon = "BrakesIcon" } };
     f.panel->show(v);
     f.desktop.update({ });
     CHECK(f.panel->special_button(0).visible);
@@ -263,4 +262,37 @@ TEST_CASE("a speed shows only for a piece that has one, and a step is heard")
     f.desktop.update({ p, true });
     f.desktop.update({ p, false });
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Speed, 401 });
+}
+
+TEST_CASE("a piece that cannot go on is greyed in its place, its marks too, and is not heard")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    v.named = { { .name = u"Loop", .marks = { "LoopMark", "LeftMark" } }, { .name = u"Helix", .marks = { "HelixMark", "" }, .offered = false } };
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->mark_button(0, 0).icon == "LoopMark");
+    CHECK(f.panel->mark_button(0, 1).visible);
+    CHECK_FALSE(f.panel->mark_button(1, 1).visible);
+    CHECK(f.panel->named_button(1).text == u"Helix");
+    CHECK_FALSE(f.panel->named_button(1).enabled);
+    CHECK_FALSE(f.panel->mark_button(1, 0).enabled);
+    f.press(f.panel->named_button(1));
+    CHECK_FALSE(f.panel->take_event());
+}
+
+TEST_CASE("the wheel moves the list a row, as far as its last row")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    for (std::size_t i = 0; i < cp::kNamedRows + 2; ++i)
+        v.named.push_back({ .name = u"Piece " + std::u16string(1, static_cast<char16_t>(u'A' + i)) });
+    f.panel->show(v);
+    CHECK(f.panel->on_wheel({ 0, -1 }));
+    CHECK(f.panel->top() == 1);
+    CHECK(f.panel->on_wheel({ 0, -1 }));
+    CHECK_FALSE(f.panel->on_wheel({ 0, -1 })); // The last row shows
+    CHECK(f.panel->top() == 2);
+    CHECK(f.panel->on_wheel({ 0, 1 }));
+    CHECK(f.panel->top() == 1);
 }

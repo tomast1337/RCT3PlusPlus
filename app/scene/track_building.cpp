@@ -85,6 +85,9 @@ namespace rct3::scene
             std::string_view skin;
         };
         constexpr std::uint32_t kBrakesRole = 1;
+        constexpr std::array<std::uint32_t, 3> kBrakeRoles { kBrakesRole, 2, 24 }; ///< Brakes, block brakes, holding brakes
+        /// Metres a piece must end off to a side, or up or down, to be marked as going that way.
+        constexpr float kMarkedRun = 0.5f;
         constexpr std::array<RoleIcon, 4> kRoleIcons { {
             { 3, "TrackSpecialIcon_StationMiddle" },
             { 4, "TrackSpecialIcon_PhotoSection" },
@@ -347,6 +350,61 @@ namespace rct3::scene
             return text.empty() ? strings::to_utf16(name) : std::u16string(text);
         }
 
+        /// A piece of the ride's list of pieces with a use of their own, and how it is laid where the track
+        /// ends, when it can be.
+        struct ListedPiece
+        {
+            ui::NamedPiece shown;
+            std::optional<park::LaidPiece> laid;
+        };
+
+        /// Every piece of `c` with a use of its own, stations first, then in the file's order, once for each
+        /// name and marks; those `o` offers where the track ends are offered.
+        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const park::PieceCatalogue& c, const park::ChoiceOptions& o)
+        {
+            const auto shown_as = [&](const park::PieceShape& p) {
+                ui::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
+                if (const auto icon = std::ranges::find(kRoleIcons, p.record.role, &RoleIcon::role); icon != kRoleIcons.end())
+                    n.icon = icon->skin;
+                // Its kind, as its name says.
+                // shortcut: read from the section's name, upgrade if a ride names its pieces otherwise.
+                std::string name = p.record.name;
+                std::ranges::transform(name, name.begin(), strings::ascii_lower);
+                const auto has = [&](std::initializer_list<std::string_view> words) { return std::ranges::any_of(words, [&](std::string_view w) { return name.contains(w); }); };
+                n.marks[0] = std::ranges::contains(kBrakeRoles, p.record.role) || has({ "brake" }) ? "TrackSpecial_Block" : has({ "loop" }) ? "TrackSpecial_Loop" : has({ "helix" }) ? "TrackSpecial_Helix" : has({ "corkscrew", "roll", "twist" }) ? "TrackSpecial_Inverted" : has({ "curve", "turn", "bend" }) ? "TrackSpecial_Curve" : "TrackSpecial_Other";
+                // Its way: off to a side, else up or down, from its start to its end as drawn. The side is level,
+                // as the player sees it: an upside-down piece's rails swap sides.
+                const glm::vec3 run = p.line.end - p.line.start;
+                const glm::vec3 level = glm::cross(glm::vec3(0, 1, 0), p.line.start_direction);
+                const float sideways = glm::dot(run, glm::length(level) > 0.1f ? glm::normalize(level) : p.line.start_side);
+                n.marks[1] = sideways > kMarkedRun ? "TrackSpecial_Right" : sideways < -kMarkedRun ? "TrackSpecial_Left" : run.y > kMarkedRun ? "TrackSpecial_Up" : run.y < -kMarkedRun ? "TrackSpecial_Down" : "";
+                return n;
+            };
+            const auto same = [](const ui::NamedPiece& a, const ui::NamedPiece& b) { return a.name == b.name && a.marks == b.marks; };
+            std::vector<ListedPiece> list;
+            for (const park::PieceUse use : { park::PieceUse::Station, park::PieceUse::Special })
+            {
+                for (const park::PieceShape& p : c.pieces)
+                {
+                    if (p.use != use)
+                        continue;
+                    ui::NamedPiece n = shown_as(p);
+                    if (std::ranges::none_of(list, [&](const ListedPiece& l) { return same(l.shown, n); }))
+                        list.push_back({ std::move(n), std::nullopt });
+                }
+            }
+            for (const park::LaidPiece& laid : o.named)
+            {
+                const ui::NamedPiece n = shown_as(c.pieces[laid.index]);
+                const auto found = std::ranges::find_if(list, [&](const ListedPiece& l) { return same(l.shown, n) && !l.laid; });
+                if (found == list.end())
+                    continue;
+                found->laid = laid;
+                found->shown.offered = true;
+            }
+            return list;
+        }
+
         /// The panel's view of what the building offers now.
         ui::ConstructionView panel_view(const ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units)
         {
@@ -376,14 +434,11 @@ namespace rct3::scene
             }
             if (o.any_chain)
                 v.chain = state_of(b.choice.chain && o.chain, o.chain);
-            for (std::size_t i = 0; i < o.named.size(); ++i)
+            for (ListedPiece& l : listed_pieces(*assets.strings, *c, o))
             {
-                const park::PieceRecord& record = c->pieces[o.named[i].index].record;
-                v.named.push_back(piece_name(*assets.strings, record.name));
-                const auto icon = std::ranges::find(kRoleIcons, record.role, &RoleIcon::role);
-                v.named_icons.emplace_back(icon != kRoleIcons.end() ? icon->skin : std::string_view { });
-                if (b.choice.named == o.named[i])
-                    v.named_on = i;
+                if (l.laid && b.choice.named == l.laid)
+                    v.named_on = v.named.size();
+                v.named.push_back(std::move(l.shown));
             }
             if (b.picked)
             {
@@ -1434,9 +1489,9 @@ namespace rct3::scene
                     break;
                 case Named:
                 {
-                    const park::ChoiceOptions o = park::choice_options(c->pieces, b.candidates, b.choice);
-                    if (event->index < o.named.size())
-                        b.choice.named = o.named[event->index];
+                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, park::choice_options(c->pieces, b.candidates, b.choice));
+                    if (event->index < list.size() && list[event->index].laid)
+                        b.choice.named = list[event->index].laid;
                     break;
                 }
                 case Build:

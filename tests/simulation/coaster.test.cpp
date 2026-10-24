@@ -132,3 +132,23 @@ TEST_CASE("brakes slow a train down to their speed and no further")
     CHECK(c.speed <= 4.01f);
     CHECK(c.speed > 3);
 }
+
+TEST_CASE("a launched train that rolls back into the station stops there and is not launched again")
+{
+    // Too slow a launch for the 15 m hill: it rolls back down.
+    Coaster c = hill();
+    c.kinds[1] = Stretch::Plain;
+    c.launch_speed = 8;
+    c.running = true;
+    float top = 0;
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+    {
+        back = drive(c, 0.05f);
+        top = std::max(top, c.speed);
+    }
+    CHECK(back);
+    CHECK(top < 8.5f);
+    CHECK_FALSE(c.running);
+    CHECK(c.at == 10);
+}

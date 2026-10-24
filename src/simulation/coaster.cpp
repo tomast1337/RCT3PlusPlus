@@ -95,7 +95,7 @@ namespace rct3::simulation
             // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on,
             // and on a launch stretch past it as hard as the push from a standing start.
             // shortcut: the launch modes that run back and forth are not pushed, upgrade with shuttle running.
-            const bool platform = c.travelled < c.train_length;
+            const bool platform = !c.launched && c.travelled < c.train_length;
             const bool assisted = under == Stretch::Launch || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Launch;
             if (c.launch_speed && !c.fixed_speed && (platform || assisted) && c.speed < *c.launch_speed)
             {
@@ -117,12 +117,22 @@ namespace rct3::simulation
             room -= moved;
             c.at = wrap(c, c.at + moved);
             c.travelled += moved;
-            if (c.travelled >= c.length())
+            c.launched = c.launched || c.travelled >= c.train_length;
+            // Not yet off the platform, the station holds it from rolling back.
+            if (c.travelled < 0 && !c.launched)
+            {
+                c.at = c.start;
+                c.travelled = 0;
+                c.speed = 0;
+            }
+            // Rolled back past where it set off, it is back in the station and stops there, its run over.
+            if (c.travelled >= c.length() || c.travelled < 0)
             {
                 c.at = c.start;
                 c.travelled = 0;
                 c.speed = 0;
                 c.slow = 0;
+                c.launched = false;
                 c.running = false;
                 return true;
             }

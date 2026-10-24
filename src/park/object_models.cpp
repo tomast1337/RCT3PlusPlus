@@ -14,6 +14,7 @@
 #include "ovl/track_section.hpp"
 #include "park/item_category.hpp"
 #include "park/terrain_mesh.hpp"
+#include "park/track_pieces.hpp"
 #include "park/water_flow.hpp"
 #include "strings/ascii.hpp"
 
@@ -721,11 +722,16 @@ namespace rct3::park
     void ModelLoader::add_flow(ObjectModel& model, std::string_view symbol, std::string_view path)
     {
         OpenFile* file = files_->get(path);
-        if (file == nullptr)
-            return;
         // shortcut: finds the piece's track section by the item's name, which nearly all sections share; upgrade
         // if a slide shows pieces left dry.
-        const ovl::TrackSection* section = section_in(*file, symbol);
+        const ovl::TrackSection* section = file != nullptr ? section_in(*file, symbol) : nullptr;
+        // Only lift pieces move the parts marked as chain; on other pieces those stay still.
+        // shortcut: marked parts of pieces that are no lift stay still; upgrade if such a piece is seen moving its
+        // picture in the game.
+        const bool lift = section != nullptr && (section->flags[0] & kPieceChain) != 0;
+        for (ModelLevel& level : model.levels)
+            for (ModelPart& part : level.parts)
+                part.chain = part.chain && lift;
         if (section == nullptr || section->water_splines[0].empty() || section->water_splines[1].empty())
             return;
         const ovl::Spline* left = spline_in(*file, section->water_splines[0]);
@@ -750,6 +756,7 @@ namespace rct3::park
             level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
             set_texture(level.parts.back(), mesh.texture, mesh.style, file->first);
             level.parts.back().board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
+            level.parts.back().chain = (mesh.texture_flags & ovl::kMeshFlagChain) != 0;
         }
         return shape;
     }

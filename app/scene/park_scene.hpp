@@ -320,10 +320,11 @@ namespace rct3::scene
         /// Park seconds the park has been shown: at the speed picked, stopped while paused. Everything in the
         /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
         float park_clock = 0;
-        simulation::ParkState park; ///< Money, guests, rating, weather, date and speed as they are now
-        BuildMenus build;           ///< The lists of rides, shops and scenery to build
-        save::ParkModel park_model; ///< As saved: finances, objectives, research; read by the management windows
-        simulation::DayClock day;   ///< The park's time of day
+        std::vector<float> chain_shifts; ///< By ride, how far its lift chain has moved (park/chain_lifts.hpp)
+        simulation::ParkState park;      ///< Money, guests, rating, weather, date and speed as they are now
+        BuildMenus build;                ///< The lists of rides, shops and scenery to build
+        save::ParkModel park_model;      ///< As saved: finances, objectives, research; read by the management windows
+        simulation::DayClock day;        ///< The park's time of day
         save::RideModel rides;
         std::vector<save::RideShow> shows; ///< What the show rides put on, by ride id
         save::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating

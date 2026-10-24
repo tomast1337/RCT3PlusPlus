@@ -22,7 +22,7 @@ import common;
 
 // render::SceneLight, packed. sun_direction.w is 0 without a shadow, else 1 plus the older shadow's weight; sky.w
 // is 1 when the variation is given, plus 2 when the relief map is, plus 4 times the surface detail (0 to 2),
-// plus 16 when the lamps are; sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
+// plus 16 when the lamps are, plus as its fraction how far the texture is moved along v (a lift's chain); sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
 struct Draw
 {
     float4x4 transform;
@@ -37,7 +37,7 @@ struct Draw
 LitVaryings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
 {
     // Not crossing levels (lit_crossing.slang).
-    return { mul(u_draw.transform, float4(position, 1.0)), color, uv, normal, position, float2(0.0), eye_of(u_draw.transform) };
+    return { mul(u_draw.transform, float4(position, 1.0)), color, uv + float2(0.0, frac(u_draw.sky.w)), normal, position, float2(0.0), eye_of(u_draw.transform) };
 }
 
 // How much of the 2 by 2 texels round `at` (in texels, from the map's corner) lies nearer the sun than `depth`,

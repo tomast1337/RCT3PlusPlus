@@ -5,6 +5,7 @@
 #include "park/asset_index.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/chain_lifts.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
@@ -939,7 +940,7 @@ namespace rct3::scene
             scene.front_only[made->id] = *front;
         }
         profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.show_supports))
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.show_supports, { }, park::chain_runs(scene.rides)))
                 show_objects(device, scene, std::move(*built));
         });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)

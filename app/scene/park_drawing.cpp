@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "park/chain_lifts.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/sun_view.hpp"
@@ -123,6 +124,7 @@ namespace rct3::scene
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
                     draw.extra_textures[1] = relief_of(textures, batch.texture);
+                    draw.scroll = park::chain_scroll(scene.chain_shifts, batch.chain);
                     device.draw(draw);
                 }
             };

@@ -2,6 +2,7 @@
 #include "scene/park_scene.hpp"
 
 #include "core/maybe.hpp"
+#include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
 #include "park/edge_walls.hpp"
 #include "park/item_category.hpp"
@@ -1628,6 +1629,9 @@ namespace rct3::scene
         scene.clock += elapsed;
         const float park_seconds = elapsed * simulation::time_factor(scene.park.speed);
         scene.park_clock += park_seconds;
+        scene.chain_shifts.resize(scene.rides.rides.size());
+        for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
+            scene.chain_shifts[i] = park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_seconds);
         advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);

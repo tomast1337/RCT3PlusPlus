@@ -39,6 +39,8 @@ namespace rct3::ovl
     /// A sign's or entrance's board, where words are shown. On queue signs it is the only such part, drawn
     /// unlit, its texture coordinates running along the board.
     inline constexpr std::uint32_t kMeshFlagBoard = 0x8;
+    /// On a lift piece, the chain, whose picture repeats along the track; on a water ride's piece, the water.
+    inline constexpr std::uint32_t kMeshFlagChain = 0x10;
 
     struct ShapeMesh
     {

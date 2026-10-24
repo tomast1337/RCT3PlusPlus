@@ -27,7 +27,7 @@ namespace rct3::park
             std::vector<std::uint32_t> owners;  ///< By vertex
         };
 
-        using Key = std::tuple<PartBlend, std::string, bool>; // Blend, painted picture, one-sided
+        using Key = std::tuple<PartBlend, std::string, bool, std::int32_t>; // Blend, painted picture, one-sided, chain run
 
         FlexiColours colours_of(const save::PlacedObject& object, const ColourOverrides& overrides)
         {
@@ -68,9 +68,9 @@ namespace rct3::park
         {
             for (auto& [key, run] : runs)
             {
-                const auto& [blend, texture, one_sided] = key;
+                const auto& [blend, texture, one_sided, chain] = key;
                 const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                mesh.batches.push_back({ texture, run.picture, run.colours, blend, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()), one_sided });
+                mesh.batches.push_back({ texture, run.picture, run.colours, blend, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()), one_sided, chain });
                 mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
                 mesh.owners.insert(mesh.owners.end(), run.owners.begin(), run.owners.end());
                 for (const std::uint32_t i : run.indices)
@@ -233,7 +233,7 @@ namespace rct3::park
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -267,10 +267,11 @@ namespace rct3::park
             const glm::vec2 anchor { transform[3].x, transform[3].z };
             // Plants, rocks and the like on the ground bend to it: each point keeps its height above the ground.
             const bool fit = model->second.fits_ground && !stretched && on_ground(object);
+            const auto chain = chains.find(object.id);
             for (const ModelPart& part : shown.parts)
             {
                 const auto paint = ground_paint_of(part.texture);
-                Run& run = runs[{ part.blend, paint ? ground_texture(*paint, grid, anchor) : painted_name(part.texture, part.slots, colours), part.one_sided }];
+                Run& run = runs[{ part.blend, paint ? ground_texture(*paint, grid, anchor) : painted_name(part.texture, part.slots, colours), part.one_sided, part.chain && chain != chains.end() ? chain->second : 0 }];
                 run.picture = part.texture;
                 run.colours = used_colours(part.slots, colours);
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
@@ -312,7 +313,7 @@ namespace rct3::park
                 continue;
             ++boards.mesh.placed;
             const FlexiColours colours = colours_of(objects[index], overrides);
-            Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours), false }];
+            Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours), false, 0 }];
             run.picture = board->texture;
             run.colours = used_colours(board->slots, colours);
             const auto first = static_cast<std::uint32_t>(run.vertices.size());

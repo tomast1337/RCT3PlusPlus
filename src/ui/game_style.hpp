@@ -791,10 +791,6 @@ namespace rct3::ui::game_skins
     {
         ConstructionPanelStyle s;
         s.text_colour = p.text;
-        s.strip = kCurvedStrip;
-        s.bottom = kOverToolRow;
-        s.title_button = kTitleButton;
-        s.close_icon = kCloseIcon;
         constexpr std::string_view kIcon = "AttractionEditor_Icon";
         const auto named = [&](std::string_view what) { return std::string(kIcon) + std::string(what); };
         s.curves = { named("CurveL3"), named("CurveL2"), named("CurveL1"), named("Curve0"), named("CurveR1"), named("CurveR2"), named("CurveR3") };

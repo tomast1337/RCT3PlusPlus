@@ -35,6 +35,7 @@
 #include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
+#include <array>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -53,7 +54,8 @@ namespace rct3::scene
 
     namespace
     {
-        constexpr std::string_view kPanelName = "construction";
+        /// The building controls, in the strip of the round panel in the bottom-left corner.
+        constexpr std::string_view kPanelName = "placing/body/construction";
         constexpr std::string_view kArmName = "construction_arm";       ///< The strip of arm angles above the panel
         constexpr std::string_view kDesignName = "construction_design"; ///< The saved designs, above the panel
         constexpr std::string_view kDesignFolder = "Coaster Designs";
@@ -84,7 +86,14 @@ namespace rct3::scene
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
         constexpr std::string_view kSectionTag = ":tks";
         /// Above the tool row, so the two never overlap.
-        constexpr float kPanelBottom = ui::game_skins::kOverToolRow; // As the path panel stands
+        /// Of the round panel's top, from the screen's bottom edge: its disc stands as the path panel does.
+        constexpr float kPanelTop = ui::game_skins::kOverToolRow + ui::info_panel::kDisc;
+        /// The controls' room in the strip: from a little left of their rows to a little right of their pager,
+        /// as high as the strip holds.
+        constexpr float kControlsLeft = ui::construction_panel::kRowLeft - 8;
+        constexpr float kControlsTop = 4;
+        constexpr float kControlsWidth = ui::construction_panel::kPagerLeft + ui::construction_panel::kPagerSize + 8 - kControlsLeft;
+        constexpr float kControlsHeight = ui::construction_panel::kHeight - kControlsTop;
         /// The ghost's tint and how much of what is behind it shows through.
 
         using park::kBankSteps;
@@ -758,14 +767,21 @@ namespace rct3::scene
         scene.building.ride.reset();
         scene.building.ghost.reset();
         scene.building.ghost_mesh = { };
+        scene.building.tabs_for.reset();
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
+        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
+            placing->set_body_size(0, 0);
         if (auto arm = scene.desktop->root().find(kArmName))
             arm->close();
         if (auto designs = scene.desktop->root().find(kDesignName))
             designs->close();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !ride_placing(scene))
+        {
             placing->hide();
+            placing->show_view_text({ });
+            scene.placing.preview_mesh = { };
+        }
     }
 
     std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride)
@@ -1151,29 +1167,23 @@ namespace rct3::scene
         b.designs.clear();
         b.design.clear();
         b.design_ride.reset();
+        b.tabs_for.reset();
+        b.preview_item.clear();
         refresh(scene, b, assets);
+        auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        if (!placing)
+            return false;
         if (!scene.desktop->root().find(kPanelName))
         {
-            auto& panel = scene.desktop->root().add<ui::ConstructionPanel>(std::string(kPanelName), ui::game_skins::construction_panel_style(assets.palette), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
+            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
+            panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
         }
-        // A ride that is one building is set down whole, as a flat ride is: the round panel with its turn button
-        // stands in for the construction panel, which keeps the building's state out of sight.
+        // A ride that is one building is set down whole, as a flat ride is: the round panel shows no strip,
+        // and the controls keep the building's state out of sight.
         const bool whole = ride < scene.track_rules.size() && scene.track_rules[ride].one_piece;
         scene.desktop->root().find(kPanelName)->visible = !whole;
-        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
-        {
-            // shortcut: the round view stays empty, upgrade by drawing the ride's one piece in it.
-            std::vector<ui::InfoTab> tabs(1);
-            tabs[0].icon = "IconAttractionEditorRotate";
-            tabs[0].help = assets.strings->get("ATE_TT_Rotate");
-            tabs[0].action = true;
-            if (whole)
-                placing->show(std::move(tabs), 1);
-            else if (placing->showing())
-                placing->hide();
-        }
         return true;
     }
 
@@ -1199,7 +1209,7 @@ namespace rct3::scene
             if (!strip)
             {
                 strip = scene.desktop->root().add<ui::Panel>(std::string(kArmName), std::string(skins::kCurvedStrip));
-                strip->placement = ui::bottom_left(ui::construction_panel::kStripLeft, kPanelBottom + ui::construction_panel::kHeight, 540, kRow + 8);
+                strip->placement = ui::bottom_left(ui::construction_panel::kStripLeft, kPanelTop, 540, kRow + 8);
                 auto& enable = strip->add<ui::Tickbox>("enable", std::string(skins::kTickbox), std::string(skins::kTick));
                 enable.tooltip = assets.strings->get(kArmEnableHelp);
                 enable.placement = ui::top_left(8, 6, 20, 20);
@@ -1289,22 +1299,74 @@ namespace rct3::scene
     {
         TrackBuilding& b = scene.building;
         auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
-        if (!panel || !b.ride)
-            return;
         auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
-        const bool whole = !panel->visible && placing && placing->showing();
-        if (panel->take_closed() || (whole && placing->take_closed()))
+        if (!panel || !placing || !b.ride)
+            return;
+        if (placing->take_closed())
         {
             close_track_building(scene);
             return;
         }
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
-        // Each press of the round panel's tab turns the ride a quarter, as a flat ride's does.
-        if (whole && placing->take_action())
+        // The round panel's ring, in this order: the ride's window, turning the first piece, a test run, and its
+        // state. The turn and the test show greyed while they do nothing.
+        enum Tab : std::size_t
         {
-            b.turns = (b.turns + 1) % 4;
-            changed = true;
+            Info,
+            Rotate,
+            Test,
+            State,
+        };
+        const bool whole = !panel->visible;
+        const bool starting = opening(scene.rides.rides.at(*b.ride));
+        if (const auto tab = placing->take_action())
+        {
+            if (*tab == Info)
+                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            // Each press turns the first piece a quarter, as a flat ride's turn does.
+            if (*tab == Rotate && starting)
+            {
+                b.turns = (b.turns + 1) % 4;
+                changed = true;
+            }
+        }
+        const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Tracked);
+        if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
+        {
+            scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
+            b.tabs_for.reset();
+        }
+        if (const std::pair now { starting, scene.rides.rides.at(*b.ride).base.state }; b.tabs_for != now || !placing->showing())
+        {
+            std::vector<ui::InfoTab> tabs(4);
+            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, now.second))
+            {
+                if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State)
+                    continue;
+                ui::InfoTab& tab = tabs[t.tab == ui::AttractionTab::View ? Info : State];
+                tab.icon = t.icon;
+                tab.help = assets.strings->get(t.help);
+            }
+            tabs[Rotate].icon = starting ? "IconAttractionEditorRotate" : "IconAttractionEditorRotate_Disabled";
+            tabs[Rotate].help = assets.strings->get("ATE_TT_Rotate");
+            // shortcut: the test tab is always greyed, upgrade once a ghost train can run the track while paused.
+            tabs[Test].icon = "Attraction_Button_Testing_Disabled";
+            tabs[Test].help = assets.strings->get("TT_AttractionDialogIconTestingButton");
+            for (const ui::StateChoice& s : states)
+            {
+                const bool is = s.state == now.second;
+                tabs[State].choices.push_back({ std::string(is ? s.disabled_icon : s.icon), std::u16string(assets.strings->get(s.help)), !is });
+            }
+            for (std::size_t i = 0; i < tabs.size(); ++i)
+            {
+                tabs[i].slot = static_cast<int>(i);
+                tabs[i].action = tabs[i].choices.empty();
+            }
+            const std::size_t none = tabs.size(); // No tab open: the strip holds the controls
+            placing->show(std::move(tabs), none);
+            placing->set_body_size(whole ? 0 : kControlsWidth, whole ? 0 : kControlsHeight);
+            b.tabs_for = now;
         }
         if (const save::Ride& ride = scene.rides.rides.at(*b.ride); opening(ride))
         {
@@ -1376,6 +1438,31 @@ namespace rct3::scene
             refresh(scene, b, assets);
         ghost_textures(device, scene, b.ghost_mesh);
         panel->show(panel_view(scene, b, assets, currency));
+        // The disc shows the piece to lay alone, turning, with its price across it.
+        std::u16string price;
+        if (b.ghost && b.picked && c != nullptr)
+        {
+            save::PlacedObject alone = b.ghost->object;
+            alone.col = alone.row = 0;
+            alone.base_height = 0;
+            alone.force_absolute_height = true;
+            if (b.preview_item != alone.symbol)
+            {
+                const std::array<save::PlacedObject, 1> one { alone };
+                scene.placing.preview_mesh = park::object_mesh(one, scene.models, scene.grid);
+                ghost_textures(device, scene, scene.placing.preview_mesh);
+                scene.placing.preview_bones.clear();
+                b.preview_item = alone.symbol;
+            }
+            scene.placing.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            price = ui::money_text(ui::currency(*assets.strings, currency), c->pieces[b.picked->index].record.cost);
+        }
+        else
+        {
+            scene.placing.preview_mesh = { };
+            b.preview_item.clear();
+        }
+        placing->show_view_text(std::move(price));
         update_arm_strip(scene, b, assets);
         // The designs offered while the track has no pieces: custom track first, then each by its file's name
         // without the kind in brackets before it.
@@ -1389,7 +1476,7 @@ namespace rct3::scene
         if (!designs)
         {
             designs = scene.desktop->root().add<ui::Dropdown>(std::string(kDesignName), ui::game_skins::dropdown_style(assets.palette));
-            designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 8, kPanelBottom + ui::construction_panel::kHeight + 4, 260, 20);
+            designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 8, kPanelTop + 4, 260, 20);
             designs->items.emplace_back(assets.strings->get(kCustomTrack));
             for (const std::filesystem::path& file : b.designs)
             {

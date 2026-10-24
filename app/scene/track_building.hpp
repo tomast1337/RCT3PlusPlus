@@ -101,6 +101,10 @@ namespace rct3::scene
         std::vector<DesignDoor> design_doors;
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
+        /// What the round panel's tabs were last shown for: whether the first piece was still to lay, and the
+        /// ride's state.
+        std::optional<std::pair<bool, save::AttractionState>> tabs_for;
+        std::string preview_item; ///< The piece shown on the round panel's disc
     };
 
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first

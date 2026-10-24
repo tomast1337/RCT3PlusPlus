@@ -92,7 +92,7 @@ TEST_CASE("the rows of curves and slopes sit side by side in the strip")
     Fixture f;
     const Rect panel = f.panel->rect();
     CHECK(panel.x0 == 0);
-    CHECK(panel.y1 == 720 - game_skins::kOverToolRow); // Over the tool row
+    CHECK(panel.y0 == 0); // Its owner places it
     for (std::size_t i = 0; i + 1 < cp::kCurves; ++i)
     {
         CHECK(f.panel->curve_button(i + 1).rect().x0 - f.panel->curve_button(i).rect().x0 == cp::kStep);
@@ -190,7 +190,7 @@ TEST_CASE("named pieces come a page at a time")
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Named, v.named.size() - 1 });
 }
 
-TEST_CASE("demolish is heard only while there is a piece to take down, and closing once")
+TEST_CASE("demolish is heard only while there is a piece to take down")
 {
     Fixture f;
     ConstructionView v = straight();
@@ -201,9 +201,6 @@ TEST_CASE("demolish is heard only while there is a piece to take down, and closi
     f.panel->show(v);
     f.press(f.panel->demolish_button());
     CHECK_FALSE(f.panel->take_event());
-    f.press(*f.panel->find("close"));
-    CHECK(f.panel->take_closed());
-    CHECK_FALSE(f.panel->take_closed());
 }
 
 TEST_CASE("finishing the track is heard only while it has an open end")

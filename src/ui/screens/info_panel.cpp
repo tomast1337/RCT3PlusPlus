@@ -47,6 +47,10 @@ namespace rct3::ui
         title_ = &add<Label>("title", std::u16string { }, FontRole::Medium);
         title_->style.colour = style_.text_colour;
         title_->style.vertical = Align::Centre;
+        view_text_ = &add<Label>("view_text", std::u16string { }, FontRole::Medium);
+        view_text_->style.colour = style_.text_colour;
+        view_text_->style.horizontal = Align::Centre;
+        view_text_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);
         hide_ = &add<Button>("hide", std::string { }, style_.left ? style_.hide_icon_left : style_.hide_icon);
         hide_->icon_scale = 0.5f; // The arrow's picture is twice the band's room
@@ -586,10 +590,17 @@ namespace rct3::ui
         return { right - width, d.y0, right, d.y0 + height };
     }
 
+    void InfoPanel::show_view_text(std::u16string text)
+    {
+        view_text_->text = std::move(text);
+    }
+
     void InfoPanel::place()
     {
         const Rect r = rect();
         const Rect d = disc();
+        const Rect v = view();
+        view_text_->placement = top_left(v.x0 - r.x0, v.y0 - r.y0, v.width(), v.height());
         const Point middle { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
         const auto tab_offset = [&](int slot) {
             const Point at = info_tab_offset(slot);

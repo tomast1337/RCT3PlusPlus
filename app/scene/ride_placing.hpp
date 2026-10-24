@@ -34,6 +34,7 @@
 
 #include <cstddef>
 #include <map>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -41,6 +42,12 @@
 
 namespace rct3::scene
 {
+
+    /// The placing panel's round view: a whole turn every ten seconds, looking down a little, near enough for
+    /// small items to fill it.
+    inline constexpr float kPreviewTurn = 2 * std::numbers::pi_v<float> / 10;
+    inline constexpr float kPreviewPitch = 0.5f;
+    inline constexpr float kPreviewClosest = 1.5f;
 
     struct ParkScene;
 

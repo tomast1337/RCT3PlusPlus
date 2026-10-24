@@ -70,11 +70,6 @@ namespace rct3::scene
     {
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
-        /// The placing panel's round view: a whole turn every ten seconds, looking down a little, near enough for
-        /// small items to fill it.
-        constexpr float kPreviewTurn = 2 * std::numbers::pi_v<float> / 10;
-        constexpr float kPreviewPitch = 0.5f;
-        constexpr float kPreviewClosest = 1.5f;
         /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
         constexpr int kTurnSlot = 1;
         constexpr int kColourSlot = 2;

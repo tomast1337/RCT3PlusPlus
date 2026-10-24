@@ -381,6 +381,8 @@ namespace rct3::ui
         {
             view_ = texture;
         }
+        /// Writes `text` across the middle of the round view, such as the price of what is being built.
+        void show_view_text(std::u16string text);
         [[nodiscard]] Rect disc() const;
         /// The square the round view fits in.
         [[nodiscard]] Rect view() const;
@@ -478,6 +480,7 @@ namespace rct3::ui
         bool striped_ = false; ///< Its lines are striped; a note alone sits in a plain box down the paper
         Widget* body_ = nullptr;
         Label* title_ = nullptr; ///< The page's, in the band
+        Label* view_text_ = nullptr;
 
         std::size_t picked_ = 0;
         std::optional<std::size_t> picked_now_;

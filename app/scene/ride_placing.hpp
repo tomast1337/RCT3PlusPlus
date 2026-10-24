@@ -21,7 +21,8 @@
 // and its doors leave the ground under them as it is.
 //
 // A stall is placed as a ride placed whole is, but has no doors and no fence: it serves the tile it faces, and
-// a click places one, puts the tool away and opens its window. It sells everything its kind offers.
+// a click places one, puts the tool away and opens its window. It sells everything its kind offers, and the
+// simulation takes it on once a path runs past the tile it faces.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -97,6 +98,7 @@ namespace rct3::scene
         park::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
+        std::vector<std::size_t> unjoined_stalls;             ///< The same of the stalls placed here
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside

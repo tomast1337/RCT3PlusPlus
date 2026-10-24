@@ -249,6 +249,11 @@ interface StallInfo {
     items: { item: string; price: number }[];
     /** Whether the info panel shows it. */
     shown: boolean;
+    /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
+     * it does: the price it sells at, in hundredths, and whether it is open to guests there. */
+    joined: boolean;
+    price?: number;
+    selling?: boolean;
 }
 
 declare namespace stalls {

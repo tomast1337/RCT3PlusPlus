@@ -40,11 +40,14 @@ namespace rct3::simulation
         }
     } // namespace
 
+    bool chain_at(const Coaster& c, float at)
+    {
+        return c.distance.size() >= 2 && c.length() > 0 && c.kinds[point_at(c, wrap(c, at))] == Stretch::Chain;
+    }
+
     bool on_chain(const Coaster& c)
     {
-        if (c.distance.size() < 2 || c.length() <= 0)
-            return false;
-        return c.kinds[point_at(c, c.at)] == Stretch::Chain || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Chain;
+        return chain_at(c, c.at) || chain_at(c, c.at - c.train_length);
     }
 
     bool drive(Coaster& c, float seconds, float room)

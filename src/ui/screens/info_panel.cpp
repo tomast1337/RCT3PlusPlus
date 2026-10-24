@@ -189,7 +189,7 @@ namespace rct3::ui
         value_rows_.clear();
         control_rows_.clear();
         measured_ = false;
-        paper_ = (!page.lines.empty() || !page.note.empty()) && page.graph.empty();
+        paper_ = !page.lines.empty() || !page.note.empty() || !page.graph.empty() || !page.controls.empty();
         striped_ = !page.lines.empty();
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;

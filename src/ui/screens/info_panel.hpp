@@ -378,8 +378,8 @@ namespace rct3::ui
             plain_paper_ = on;
         }
         /// Fills the body with `page`: its title in the band along the strip's top, its lines in two columns, the
-        /// values clear of the widest label, its note and its controls, each clear of its label. A page of lines or a
-        /// note without a graph sits on striped paper, in dark text. An empty page hides the strip.
+        /// values clear of the widest label, its note and its controls, each clear of its label. A page sits on paper,
+        /// striped where it has lines, in dark text. An empty page hides the strip.
         void show_page(const InfoPage& page);
 
         /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.

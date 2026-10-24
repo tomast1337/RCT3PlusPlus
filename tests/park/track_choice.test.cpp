@@ -158,3 +158,14 @@ TEST_CASE("with no plain piece offered, the station is picked before other speci
     CHECK(settled.named->index == 6);
     CHECK(chosen_piece(all, tower_base, settled)->index == 6);
 }
+
+TEST_CASE("wide is of the end a piece is laid to")
+{
+    // A piece widening the channel, which also fits laid backwards, narrowing it.
+    PieceShape widening = piece({ 0, 0, 0 }, 0, PieceUse::Plain, toggle_bit(PieceToggle::Wide));
+    widening.record.joins[1].width = 1;
+    const std::vector<PieceShape> all { widening };
+    const std::vector<LaidPiece> both { { 0, false }, { 0, true } };
+    CHECK(chosen_piece(all, both, picks(0, 0, 0, toggle_bit(PieceToggle::Wide))) == LaidPiece { 0, false });
+    CHECK(chosen_piece(all, both, picks(0)) == LaidPiece { 0, true });
+}

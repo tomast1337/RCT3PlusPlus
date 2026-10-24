@@ -269,6 +269,8 @@ namespace rct3::park
             if ((record.flags & flag) != 0)
                 shape.toggles |= toggle_bit(toggle);
         }
+        if (record.joins[1].width != 0)
+            shape.toggles |= toggle_bit(PieceToggle::Wide);
         const int turn = wrap_turn(shape.exit.heading - shape.entry.heading);
         const std::uint32_t join = record.join_a;
         if ((record.flags & kPieceStation) != 0)

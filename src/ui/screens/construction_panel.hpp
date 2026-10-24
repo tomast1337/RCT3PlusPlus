@@ -5,7 +5,7 @@
 // the disc. Their left part has two rows of seven buttons, the curve on top (tight, medium and loose left,
 // straight, then loose, medium and tight right) and below it the slope the piece ends at (vertical, steep and
 // gentle down, level, then gentle, steep and vertical up). Right of them are the toggles (lift chain, tube,
-// water, booster: those the track has pieces with), two to a column, then the bank dial: eight small buttons
+// water, wide channel, booster: those the track has pieces with), two to a column, then the bank dial: eight small buttons
 // round a disc, upside down at the top, level at the bottom. A toggle the picked piece cannot have is hidden
 // in its place, not greyed. Under the rows go the picked piece's name and its price, and the buttons that finish the track
 // for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
@@ -86,7 +86,7 @@ namespace rct3::ui
         inline constexpr std::size_t kCurves = 7;
         inline constexpr std::size_t kSlopes = 7;
         inline constexpr std::size_t kBanks = 8;   ///< From hardest left to upside down
-        inline constexpr std::size_t kToggles = 4; ///< Lift chain, tube, water, booster
+        inline constexpr std::size_t kToggles = 5; ///< Lift chain, tube, water, wide, booster
     } // namespace construction_panel
 
     /// What a picture button shows.

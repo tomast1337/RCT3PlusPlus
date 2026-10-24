@@ -19,7 +19,7 @@ namespace
 
         Fixture()
         {
-            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(kGamePalette), std::array<std::u16string, cp::kToggles> { u"Chain", u"Enclosed", u"Water", u"Booster" }, u"Demolish");
+            panel = &desktop.root().add<ConstructionPanel>("construction", game_skins::construction_panel_style(kGamePalette), std::array<std::u16string, cp::kToggles> { u"Chain", u"Enclosed", u"Water", u"Wide", u"Booster" }, u"Demolish");
             desktop.layout({ 0, 0, 1280, 720 });
             desktop.update({ });
         }
@@ -148,12 +148,12 @@ TEST_CASE("toggles fill two rows by columns, and three push the pictures and the
     f.desktop.update({ });
     const float pictures = f.panel->find("special0")->rect().x0;
     const float list = f.panel->list().rect().x0;
-    v.toggles = { IconState::Off, IconState::On, std::nullopt, IconState::Off };
+    v.toggles = { IconState::Off, IconState::On, std::nullopt, std::nullopt, IconState::Off };
     f.panel->show(v);
     f.desktop.update({ });
     const Rect chain = f.panel->toggle_button(0).rect();
     const Rect tube = f.panel->toggle_button(1).rect();
-    const Rect booster = f.panel->toggle_button(3).rect();
+    const Rect booster = f.panel->toggle_button(4).rect();
     CHECK(tube.x0 == chain.x0);
     CHECK(tube.y0 < chain.y0);
     CHECK(booster.x0 - chain.x0 == cp::kStep);
@@ -166,7 +166,7 @@ TEST_CASE("a toggle the picked piece cannot have is hidden in its place, and a c
 {
     Fixture f;
     ConstructionView v = straight();
-    v.toggles = { IconState::Dis, IconState::Off, std::nullopt, std::nullopt };
+    v.toggles = { IconState::Dis, IconState::Off, std::nullopt, std::nullopt, std::nullopt };
     f.panel->show(v);
     f.desktop.update({ });
     CHECK_FALSE(f.panel->toggle_button(0).visible);

@@ -3,7 +3,7 @@
 // What the player has asked the next piece of track to be, and which asks the track's open end allows.
 //
 // The player picks a curve, a slope the piece ends at and a bank it ends at, and turns toggles on or off: a
-// lift chain, a tube round the track, water, a booster. A value is offered when some piece fitting the open
+// lift chain, a tube round the track, water, a wide channel, a booster. A value is offered when some piece fitting the open
 // end has it, whatever the other picks are.
 // Picking a value that no piece has together with the other picks moves those to the nearest picks that
 // have one, keeping the value picked. Pieces with a use of their own (stations, loops, helices, brakes and

@@ -834,6 +834,17 @@ namespace rct3::ui
                 }
                 plain(style_.left ? Rect { inside.x0 + c.paper_corner, box, inside.x1 + 3, box + 1 } : Rect { inside.x0 - 3, box, inside.x1 - c.paper_corner, box + 1 }, { }, c.rule);
             }
+            else if (plain_paper_)
+            {
+                constexpr float kLead = 6; // Paper showing before the body's content
+                const Rect b = body_->rect();
+                const float top = slab.y0 + c.band_height + 1;
+                const float bottom = slab.y1 - c.paper_bottom;
+                if (style_.left)
+                    plain({ b.x0 - kLead, top, slab.x1 - kLead, bottom }, { c.paper_corner, 0, 0, c.paper_corner }, c.paper);
+                else
+                    plain({ slab.x0 + kLead, top, b.x1 + kLead, bottom }, { 0, c.paper_corner, c.paper_corner, 0 }, c.paper);
+            }
         }
 
         // The disc: while the strip shows, flat where it meets it with the strip's band running on into it;

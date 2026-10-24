@@ -14,8 +14,6 @@ namespace rct3::ui
     {
         namespace cp = construction_panel;
 
-        constexpr std::size_t kNamedSlots = cp::kNamedRows * cp::kNamedColumns;
-
         /// The panel's banks as the dial places them: level and leaning to the left down its right side, as
         /// a car is seen from the front.
         constexpr std::array<Point, cp::kBanks> kBankSpots { {
@@ -102,30 +100,8 @@ namespace rct3::ui
         piece_ = label("piece", cp::kNameTop);
         cost_ = label("cost", cp::kCostTop);
 
-        const float column = cp::kNamedWidth / static_cast<float>(cp::kNamedColumns);
-        for (std::size_t i = 0; i < kNamedSlots; ++i)
-        {
-            Button& b = add<Button>(std::format("named{}", i), style.named_button);
-            b.toggle = true;
-            b.font = style.font;
-            b.text_inset = style.named_inset;
-            const float left = cp::kNamedLeft + static_cast<float>(i % cp::kNamedColumns) * column;
-            const float top = cp::kNamedTop + static_cast<float>(i / cp::kNamedColumns) * cp::kNamedRowHeight;
-            constexpr float kMarks = 2 * (cp::kMarkSize + 1);
-            b.placement = top_left(left + kMarks, top, column - kMarks - 2, cp::kNamedRowHeight - 2);
-            named_.at(i) = &b;
-            for (std::size_t m = 0; m < 2; ++m)
-            {
-                Button& mark = *picture(std::format("mark{}_{}", i, m));
-                mark.inert = true;
-                mark.placement = top_left(left + static_cast<float>(m) * (cp::kMarkSize + 1), top + (cp::kNamedRowHeight - 2 - cp::kMarkSize) / 2, cp::kMarkSize, cp::kMarkSize);
-                marks_.at(i).at(m) = &mark;
-            }
-        }
-        page_up_ = &add<Button>("page_up", std::string { }, style.page_up);
-        page_up_->placement = top_left(cp::kPagerLeft, cp::kNamedTop, cp::kPagerSize, cp::kPagerSize);
-        page_down_ = &add<Button>("page_down", std::string { }, style.page_down);
-        page_down_->placement = top_left(cp::kPagerLeft, cp::kNamedTop + cp::kNamedRowHeight * static_cast<float>(cp::kNamedRows) - cp::kPagerSize, cp::kPagerSize, cp::kPagerSize);
+        list_ = &add<ListBox>("list", style.list, style.list_bar);
+        list_->placement = top_left(cp::kListLeft, cp::kListTop, cp::kListRight - cp::kListLeft, cp::kListHeight);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {
             Button& b = *picture(std::format("special{}", i));
@@ -154,7 +130,6 @@ namespace rct3::ui
             const bool pictured = !view_.named[i].icon.empty() && pictured_.size() < cp::kSpecials;
             (pictured ? pictured_ : listed_).push_back(i);
         }
-        top_ = std::min(top_, listed_.empty() ? 0 : listed_.size() - 1);
         lay_out();
         restyle();
     }
@@ -198,27 +173,22 @@ namespace rct3::ui
         new_segment_->enabled = view_.new_segment.value_or(false);
         piece_->text = view_.piece;
         cost_->text = view_.cost;
-        for (std::size_t i = 0; i < kNamedSlots; ++i)
+        list_->items.clear();
+        list_->icons.clear();
+        list_->greyed.clear();
+        std::optional<std::size_t> picked;
+        for (const std::size_t index : listed_)
         {
-            const std::size_t row = top_ + i;
-            Button& b = *named_.at(i);
-            b.visible = row < listed_.size();
-            for (std::size_t m = 0; m < 2; ++m)
-                marks_.at(i).at(m)->visible = b.visible && !view_.named[listed_[row]].marks.at(m).empty();
-            if (!b.visible)
-                continue;
-            const std::size_t index = listed_[row];
             const NamedPiece& piece = view_.named[index];
-            b.text = piece.name;
-            b.tooltip = piece.name;
-            b.on = view_.named_on == index;
-            b.enabled = piece.offered;
-            for (std::size_t m = 0; m < 2; ++m)
-            {
-                marks_.at(i).at(m)->icon = piece.marks.at(m);
-                marks_.at(i).at(m)->enabled = piece.offered;
-            }
+            if (view_.named_on == index)
+                picked = list_->items.size();
+            list_->items.push_back(piece.name);
+            list_->icons.emplace_back(piece.marks.begin(), piece.marks.end());
+            list_->greyed.push_back(!piece.offered);
         }
+        // Selected only when it changes, so the player can scroll away from it.
+        if (list_->selected() != picked)
+            list_->select(picked);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {
             Button& b = *specials_.at(i);
@@ -233,11 +203,6 @@ namespace rct3::ui
             // With no face to light, the picked one shows by the others fading.
             b.icon_colour = b.on || !view_.named_on ? kWhite : hex("#ffffff66");
         }
-        const bool paged = listed_.size() > kNamedSlots;
-        page_up_->visible = paged;
-        page_down_->visible = paged;
-        page_up_->enabled = top_ > 0;
-        page_down_->enabled = top_ + kNamedSlots < listed_.size();
         speed_icon_->visible = speed_->visible = view_.speed.has_value();
         speed_->maximum = view_.speed_most;
         speed_->unit = u" " + view_.speed_unit;
@@ -280,46 +245,22 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Complete, 0 });
         if (new_segment_->take_click() && view_.new_segment.value_or(false))
             events_.push_back({ ConstructionAction::NewSegment, 0 });
-        // A named piece clicked: picked, or built when it is picked already.
-        const auto named = [&](Button& b, std::optional<std::size_t> index) {
-            if (!b.take_click())
-                return;
-            if (index && view_.named[*index].offered)
-                events_.push_back({ view_.named_on == index ? ConstructionAction::Build : ConstructionAction::Named, view_.named_on == index ? 0 : *index });
-            restyle(); // A toggle turns itself over; the view says what is picked
-        };
-        for (std::size_t i = 0; i < kNamedSlots; ++i)
-        {
-            const std::size_t row = top_ + i;
-            named(*named_.at(i), row < listed_.size() ? std::optional(listed_[row]) : std::nullopt);
-        }
+        // A picture piece clicked: picked, or built when it is picked already.
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
-            named(*specials_.at(i), i < pictured_.size() ? std::optional(pictured_[i]) : std::nullopt);
+        {
+            if (!specials_.at(i)->take_click())
+                continue;
+            if (i < pictured_.size() && view_.named[pictured_[i]].offered)
+                events_.push_back({ view_.named_on == pictured_[i] ? ConstructionAction::Build : ConstructionAction::Named, view_.named_on == pictured_[i] ? 0 : pictured_[i] });
+            restyle(); // A toggle turns itself over; the view says what is picked
+        }
+        // A listed piece pressed is picked; pressed twice quickly, built.
+        if (list_->take_change() && list_->selected() && *list_->selected() < listed_.size())
+            events_.push_back({ ConstructionAction::Named, listed_[*list_->selected()] });
+        if (list_->take_activate())
+            events_.push_back({ ConstructionAction::Build, 0 });
         if (speed_->take_change() && view_.speed)
             events_.push_back({ ConstructionAction::Speed, static_cast<std::size_t>(std::max(0, speed_->value())) });
-        if (page_up_->take_click() && top_ > 0)
-        {
-            top_ -= std::min(top_, kNamedSlots);
-            restyle();
-        }
-        if (page_down_->take_click() && top_ + kNamedSlots < listed_.size())
-        {
-            top_ += kNamedSlots;
-            restyle();
-        }
-    }
-
-    bool ConstructionPanel::on_wheel(Point notches)
-    {
-        // Away from the user moves up the list.
-        if (notches.y > 0 && top_ > 0)
-            --top_;
-        else if (notches.y < 0 && top_ + kNamedSlots < listed_.size())
-            ++top_;
-        else
-            return false;
-        restyle();
-        return true;
     }
 
     void ConstructionPanel::draw(DrawContext& context) const
@@ -327,6 +268,9 @@ namespace rct3::ui
         const Rect r = rect();
         const float dial = dial_left(view_.chain ? 1 : 0);
         draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
+        // The lines that part the buttons from the name below them, and both from the list.
+        context.list.fill({ r.x0 + cp::kLabelLeft - 4, r.y0 + cp::kDividerTop, r.x0 + cp::kListLeft - 3, r.y0 + cp::kDividerTop + 1 }, style_.divider);
+        context.list.fill({ r.x0 + cp::kListLeft - 3, r.y0, r.x0 + cp::kListLeft - 2, r.y1 }, style_.divider);
     }
 
 } // namespace rct3::ui

@@ -111,7 +111,7 @@ namespace rct3::scene
         /// as high as the strip holds.
         constexpr float kControlsLeft = ui::construction_panel::kRowLeft - 8;
         constexpr float kControlsTop = 4;
-        constexpr float kControlsWidth = ui::construction_panel::kPagerLeft + ui::construction_panel::kPagerSize + 8 - kControlsLeft;
+        constexpr float kControlsWidth = ui::construction_panel::kListRight + 4 - kControlsLeft;
         constexpr float kControlsHeight = ui::construction_panel::kHeight - kControlsTop;
         /// The ghost's tint and how much of what is behind it shows through.
 
@@ -373,13 +373,13 @@ namespace rct3::scene
                 std::string name = p.record.name;
                 std::ranges::transform(name, name.begin(), strings::ascii_lower);
                 const auto has = [&](std::initializer_list<std::string_view> words) { return std::ranges::any_of(words, [&](std::string_view w) { return name.contains(w); }); };
-                n.marks[0] = std::ranges::contains(kBrakeRoles, p.record.role) || has({ "brake" }) ? "TrackSpecial_Block" : has({ "loop" }) ? "TrackSpecial_Loop" : has({ "helix" }) ? "TrackSpecial_Helix" : has({ "corkscrew", "roll", "twist" }) ? "TrackSpecial_Inverted" : has({ "curve", "turn", "bend" }) ? "TrackSpecial_Curve" : "TrackSpecial_Other";
+                n.marks[1] = std::ranges::contains(kBrakeRoles, p.record.role) || has({ "brake" }) ? "TrackSpecial_Block" : has({ "loop" }) ? "TrackSpecial_Loop" : has({ "helix" }) ? "TrackSpecial_Helix" : has({ "corkscrew", "roll", "twist" }) ? "TrackSpecial_Inverted" : has({ "curve", "turn", "bend" }) ? "TrackSpecial_Curve" : "TrackSpecial_Other";
                 // Its way: off to a side, else up or down, from its start to its end as drawn. The side is level,
                 // as the player sees it: an upside-down piece's rails swap sides.
                 const glm::vec3 run = p.line.end - p.line.start;
                 const glm::vec3 level = glm::cross(glm::vec3(0, 1, 0), p.line.start_direction);
                 const float sideways = glm::dot(run, glm::length(level) > 0.1f ? glm::normalize(level) : p.line.start_side);
-                n.marks[1] = sideways > kMarkedRun ? "TrackSpecial_Right" : sideways < -kMarkedRun ? "TrackSpecial_Left" : run.y > kMarkedRun ? "TrackSpecial_Up" : run.y < -kMarkedRun ? "TrackSpecial_Down" : "";
+                n.marks[0] = sideways > kMarkedRun ? "TrackSpecial_Right" : sideways < -kMarkedRun ? "TrackSpecial_Left" : run.y > kMarkedRun ? "TrackSpecial_Up" : run.y < -kMarkedRun ? "TrackSpecial_Down" : "";
                 return n;
             };
             const auto same = [](const ui::NamedPiece& a, const ui::NamedPiece& b) { return a.name == b.name && a.marks == b.marks; };
@@ -856,7 +856,10 @@ namespace rct3::scene
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
+        {
             placing->set_body_size(0, 0);
+            placing->set_paper(false);
+        }
         if (auto arm = scene.desktop->root().find(kArmName))
             arm->close();
         if (auto designs = scene.desktop->root().find(kDesignName))
@@ -1501,6 +1504,7 @@ namespace rct3::scene
             const std::size_t none = tabs.size(); // No tab open: the strip holds the controls
             placing->show(std::move(tabs), none);
             placing->set_body_size(whole ? 0 : kControlsWidth, whole ? 0 : kControlsHeight);
+            placing->set_paper(!whole);
             b.tabs_for = now;
         }
         if (const save::Ride& ride = scene.rides.rides.at(*b.ride); opening(ride))

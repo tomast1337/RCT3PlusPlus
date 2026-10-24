@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// A list of text rows to pick one from, with a scroll bar on the right for when they do not all fit. Pressing a
+// A list of text rows to pick one from, with a scroll bar on the right for when they do not all fit. A row may
+// start with small pictures, and may be greyed: faded, and passed over by every way of picking. Pressing a
 // row selects it, dragging moves the selection along, and pressing the same row again quickly (a double
 // click) activates it. The wheel scrolls.
 //
@@ -31,6 +32,9 @@ namespace rct3::ui
         Color selection_colour = hex("#5aa8e6");
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
+        Color stripe = hex("#00000000");      ///< Behind every other row, the first included
+        Color greyed_tint = hex("#ffffff66"); ///< Over a greyed row's pictures
+        float icon_size = 16;                 ///< Of the pictures before a row's text, each square
         FontRole font = FontRole::Small;
         float row_height = 18;
         Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the rows and bar; fixed when the list is made
@@ -45,6 +49,8 @@ namespace rct3::ui
 
         ListBoxStyle style;
         std::vector<std::u16string> items;
+        std::vector<std::vector<std::string>> icons; ///< Skins of the pictures before each row's text, by row
+        std::vector<bool> greyed;                    ///< By row; rows past its end are not
 
         [[nodiscard]] std::optional<std::size_t> selected() const
         {
@@ -86,6 +92,10 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
 
     private:
+        [[nodiscard]] bool is_greyed(std::size_t row) const
+        {
+            return row < greyed.size() && greyed[row];
+        }
         [[nodiscard]] Rect rows_box() const;
         [[nodiscard]] std::size_t rows_in_view() const;
         void pick(std::size_t index);

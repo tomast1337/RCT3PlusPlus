@@ -10,9 +10,9 @@
 // for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
 // the pieces with a picture of their own (stations, photo sections, brakes) stand as picture buttons, two by
 // two; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
-// use of their own (loops, helices and the like) by name, each after two small marks for its kind and the way
-// it goes, a page at a time; the wheel moves it a row. Pieces that cannot go on where the track ends stay in
-// their place, greyed.
+// use of their own (loops, helices and the like) in a list of striped rows, each its name after two small
+// marks for the way it goes and its kind. Pieces that cannot go on where the track ends stay in their place,
+// greyed. A line divides the rows of buttons from the name below them.
 //
 // Each picture button shows one of three pictures: picked, offered, or not offered (see IconState). The
 // curve, slope and bank buttons have no help text in the game; the toggles and the demolish button do.
@@ -26,6 +26,7 @@
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/list_box.hpp"
 #include "ui/widgets/spinner.hpp"
 
 #include <array>
@@ -67,15 +68,12 @@ namespace rct3::ui
         inline constexpr Point kCompleteSize { 40, 28 };
         inline constexpr Point kNewSegmentAt { 366, 70 };
         inline constexpr Point kNewSegmentSize { 40, 28 };
-        inline constexpr float kNamedLeft = 410;
-        inline constexpr float kNamedWidth = 205;
-        inline constexpr std::size_t kNamedRows = 4;
-        inline constexpr std::size_t kNamedColumns = 1; ///< One a row: two would cut the longer names
-        inline constexpr float kNamedTop = 6;
-        inline constexpr float kNamedRowHeight = 22;
-        inline constexpr float kPagerLeft = 622; ///< Of the paging arrows, right of the names
-        inline constexpr float kPagerSize = 16;
-        inline constexpr float kMarkSize = 16;        ///< Of a list row's marks, left of its name
+        inline constexpr float kListLeft = 410; ///< Of the list of the other named pieces
+        inline constexpr float kListTop = 2;
+        inline constexpr float kListRight = 640;
+        inline constexpr float kListHeight = 94;
+        inline constexpr float kListRowHeight = 16;
+        inline constexpr float kDividerTop = 63;      ///< Of the line over the piece's name, from the rows' left to the list
         inline constexpr Point kSpecialAt { 344, 5 }; ///< The first picture piece; the rest go down, then right
         inline constexpr float kSpecialSize = 28;
         inline constexpr float kSpecialStep = 30;
@@ -115,12 +113,11 @@ namespace rct3::ui
         std::string dial;
         std::string chain; ///< Base name
         std::string demolish;
-        std::string complete;     ///< Finishes the track
-        std::string new_segment;  ///< Begins another stretch of track
-        std::string named_button; ///< Skin family of the named pieces' buttons
-        Rect named_inset;
-        std::string page_up;
-        std::string page_down;
+        std::string complete;    ///< Finishes the track
+        std::string new_segment; ///< Begins another stretch of track
+        ListBoxStyle list;       ///< Of the named pieces without a picture
+        ScrollBarStyle list_bar;
+        Color divider = hex("#c8c8c8");
         std::string speed_icon; ///< Beside the speed
         SpinnerStyle speed;
         FontRole font = FontRole::Small;
@@ -132,7 +129,7 @@ namespace rct3::ui
     {
         std::u16string name { };
         std::string icon { }; ///< Skin of its picture: one with a picture stands as a picture button, not in the list
-        /// Skins of the small marks before its name in the list, its kind's then its way's; empty for none.
+        /// Skins of the small marks before its name in the list, its way's then its kind's; empty for none.
         std::array<std::string, 2> marks { };
         bool offered = true; ///< It can go on where the track ends; greyed otherwise
     };
@@ -223,9 +220,10 @@ namespace rct3::ui
         {
             return *new_segment_;
         }
-        [[nodiscard]] Button& named_button(std::size_t i) const
+        /// The named pieces without a picture.
+        [[nodiscard]] ListBox& list() const
         {
-            return *named_.at(i);
+            return *list_;
         }
         [[nodiscard]] Label& piece_label() const
         {
@@ -243,15 +241,6 @@ namespace rct3::ui
         {
             return *speed_;
         }
-        [[nodiscard]] Button& mark_button(std::size_t row, std::size_t i) const
-        {
-            return *marks_.at(row).at(i);
-        }
-        /// The first row shown, of the listed pieces.
-        [[nodiscard]] std::size_t top() const
-        {
-            return top_;
-        }
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -259,8 +248,6 @@ namespace rct3::ui
         }
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
-        /// Moves the list a row.
-        bool on_wheel(Point notches) override;
 
     private:
         void lay_out();
@@ -271,14 +258,11 @@ namespace rct3::ui
         std::array<Button*, construction_panel::kCurves> curves_ { };
         std::array<Button*, construction_panel::kSlopes> slopes_ { };
         std::array<Button*, construction_panel::kBanks> banks_ { };
-        std::array<Button*, construction_panel::kNamedRows * construction_panel::kNamedColumns> named_ { };
-        std::array<std::array<Button*, 2>, construction_panel::kNamedRows * construction_panel::kNamedColumns> marks_ { };
+        ListBox* list_ = nullptr;
         Button* chain_ = nullptr;
         Button* demolish_ = nullptr;
         Button* complete_ = nullptr;
         Button* new_segment_ = nullptr;
-        Button* page_up_ = nullptr;
-        Button* page_down_ = nullptr;
         std::array<Button*, construction_panel::kSpecials> specials_ { };
         Button* speed_icon_ = nullptr;
         Spinner* speed_ = nullptr;
@@ -287,7 +271,6 @@ namespace rct3::ui
         Label* piece_ = nullptr;
         Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;
-        std::size_t top_ = 0;
     };
 
 } // namespace rct3::ui

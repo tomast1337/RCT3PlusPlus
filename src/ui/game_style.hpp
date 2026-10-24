@@ -801,10 +801,16 @@ namespace rct3::ui::game_skins
         s.demolish = named("DeleteOn");
         s.complete = named("ForwardOn");
         s.new_segment = "IconAttractionEditorNewTrackSegment";
-        s.named_button = kTextButton;
-        s.named_inset = kLozengeInset;
-        s.page_up = "SquareArrowUp";
-        s.page_down = "SquareArrowDown";
+        // Plain striped rows on the panel's paper, as the game lists them.
+        s.list = list_box_style(p);
+        s.list.background.clear();
+        s.list.focused.clear();
+        s.list.stripe = p.stripe;
+        s.list.row_height = construction_panel::kListRowHeight;
+        s.list.padding = { };
+        s.list.text_indent = 2;
+        s.list_bar = scroll_bar_style(p, Orientation::Vertical);
+        s.divider = p.panel_edge;
         s.speed_icon = "TrackPieceParam_Speed";
         s.speed = spinner_style(p);
         return s;

@@ -64,13 +64,15 @@ namespace rct3::ui
         std::u16string name;
     };
 
-    /// A button under a page: a picture or a text, and its help.
+    /// A button under a page: a picture or a text, and its help. A button with choices fans them out beside
+    /// it when pressed, and reports the one picked instead of the press.
     struct ManagementButton
     {
         std::string icon;
         std::u16string text;
         std::u16string help;
         bool enabled = true;
+        std::vector<InfoChoice> choices { };
     };
 
     struct ManagementPage
@@ -115,6 +117,11 @@ namespace rct3::ui
         {
             return std::exchange(button_now_, std::nullopt);
         }
+        /// The button under the page and the one of its choices the player picked since the last call.
+        [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> take_choice()
+        {
+            return std::exchange(choice_now_, std::nullopt);
+        }
         /// The id of the table row the player activated since the last call.
         [[nodiscard]] std::optional<std::size_t> take_row()
         {
@@ -141,6 +148,9 @@ namespace rct3::ui
             return *page_;
         }
         void sort_rows();
+        /// Fans out the choices of button `i` beside it.
+        void open_choices(std::size_t i);
+        void close_choices();
 
         ManagementWindowStyle style_;
         std::vector<Button*> tabs_;
@@ -150,6 +160,9 @@ namespace rct3::ui
         Widget* lines_ = nullptr; ///< The page's lines, graph, buttons and note, made again with each page
         ColumnTable* table_ = nullptr;
         std::vector<Button*> buttons_;
+        std::vector<std::vector<InfoChoice>> button_choices_; ///< Of each of buttons_
+        std::vector<Button*> choices_;                        ///< Fanned out beside the button choosing_
+        std::optional<std::size_t> choosing_;
         /// Of each tab, the column the player sorted by and whether highest first; none until they pick one.
         std::vector<std::optional<std::pair<std::size_t, bool>>> sorts_;
         std::optional<std::pair<std::size_t, bool>> page_sort_; ///< The page's own, for when the player has none
@@ -157,6 +170,7 @@ namespace rct3::ui
         float page_age_ = 0;
         std::optional<std::size_t> tab_now_;
         std::optional<std::size_t> button_now_;
+        std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::optional<std::size_t> row_now_;
     };
 

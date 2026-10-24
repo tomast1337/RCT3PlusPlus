@@ -2124,6 +2124,14 @@ namespace rct3::scene
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
+        // Each listed ride that may take the state takes it; the others stay as they are.
+        for (const ui::ManagementRow& r : asks.listed)
+        {
+            if (r.kind == ui::ManagementRow::Kind::Ride && r.index < scene.rides.rides.size())
+                (void)change_ride_state(scene, r.index, *asks.state_all);
+            else if (r.kind == ui::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
+                set_attraction_state(scene, scene.rides.stalls[r.index].base, *asks.state_all);
+        }
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && (!scene.park.cash || *scene.park.cash >= facts.replace_cost))
         {

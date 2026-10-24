@@ -16,6 +16,7 @@
 #include "ui/screens/tool_menus.hpp"
 #include "ui/string_table.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -71,6 +72,11 @@ namespace rct3::ui
     /// The button on the park operations window's first page that replaces every broken path item at its full
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
     inline constexpr std::size_t kReplaceBrokenButton = 4;
+
+    /// The button on each page of the attractions window that puts every listed attraction in the state of the
+    /// choice picked, by its place among the page's buttons, and those states by the place of their choice.
+    inline constexpr std::size_t kOpenCloseAllButton = 0;
+    inline constexpr std::array<save::AttractionState, 2> kOpenCloseAllStates = { save::AttractionState::Open, save::AttractionState::Closed };
 
     /// The page of tab `tab` of `topic`'s window.
     [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);

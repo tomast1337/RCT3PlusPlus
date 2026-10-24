@@ -72,9 +72,13 @@ namespace rct3::ui
     void ManagementWindow::show_page(const ManagementPage& shown)
     {
         page_age_ = 0;
+        // The fan goes with the buttons, and comes back beside the same button if it is still there.
+        const std::optional<std::size_t> choosing = choosing_;
+        close_choices();
         while (!lines_->children().empty())
             (void)lines_->remove(*lines_->children().back());
         buttons_.clear();
+        button_choices_.clear();
 
         float y = 0;
         const auto label = [&](std::string name, const std::u16string& text, Placement placement, Color colour, Align align = Align::Start) {
@@ -179,7 +183,10 @@ namespace rct3::ui
                 button.placement = bottom_left(x, 0, width, height);
                 x += width + style_.gap / 2;
                 buttons_.push_back(&button);
+                button_choices_.push_back(b.choices);
             }
+            if (choosing && *choosing < buttons_.size() && !button_choices_[*choosing].empty() && buttons_[*choosing]->enabled)
+                open_choices(*choosing);
         }
 
         // The lines' widget covers the whole page so its buttons can sit at the bottom; the table goes over the
@@ -204,6 +211,35 @@ namespace rct3::ui
             if (found != table_->rows.end())
                 table_->select(static_cast<std::size_t>(found - table_->rows.begin()));
         }
+    }
+
+    void ManagementWindow::open_choices(std::size_t i)
+    {
+        close_choices();
+        // Our own layout: a row of small buttons after the button, level with its middle.
+        const Rect at = buttons_[i]->placement.offsets;
+        const float middle = (at.y0 + at.y1) / 2;
+        float x = at.x1 + style_.gap / 2;
+        for (std::size_t j = 0; j < button_choices_[i].size(); ++j)
+        {
+            const InfoChoice& c = button_choices_[i][j];
+            Button& b = lines_->add<Button>(c.icon.empty() ? std::format("choice{}", j) : c.icon, std::string { }, c.icon);
+            b.tooltip = c.help;
+            b.enabled = c.enabled;
+            b.icon_scale = info_panel::kChoiceIconScale;
+            b.placement = { { 0, 1, 0, 1 }, { x, middle - info_panel::kChoiceSize / 2, x + info_panel::kChoiceSize, middle + info_panel::kChoiceSize / 2 } };
+            x += info_panel::kChoiceSize + style_.gap / 2;
+            choices_.push_back(&b);
+        }
+        choosing_ = i;
+    }
+
+    void ManagementWindow::close_choices()
+    {
+        for (Button* b : choices_)
+            (void)lines_->remove(*b);
+        choices_.clear();
+        choosing_.reset();
     }
 
     void ManagementWindow::sort_rows()
@@ -236,10 +272,25 @@ namespace rct3::ui
             }
             tabs_[i]->on = true; // Pressing the open tab leaves it open
         }
+        for (std::size_t j = 0; j < choices_.size(); ++j)
+        {
+            if (choices_[j]->take_click() && choosing_)
+            {
+                choice_now_ = std::pair(*choosing_, j);
+                close_choices();
+                break;
+            }
+        }
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
-            if (buttons_[i]->take_click())
+            if (!buttons_[i]->take_click())
+                continue;
+            if (button_choices_[i].empty())
                 button_now_ = i;
+            else if (choosing_ == i)
+                close_choices();
+            else
+                open_choices(i);
         }
         if (const auto column = table_->take_sort())
         {

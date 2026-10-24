@@ -69,6 +69,9 @@ namespace rct3::ui
         std::int64_t replace_cost = 0;  ///< To replace them all at once, hundredths
     };
 
+    /// The park operations window's tab of the awards won and fines received.
+    inline constexpr std::size_t kAwardsTab = 3;
+
     /// The button on the park operations window's first page that replaces every broken path item at its full
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
     inline constexpr std::size_t kReplaceBrokenButton = 4;

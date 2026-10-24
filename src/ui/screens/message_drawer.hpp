@@ -8,8 +8,9 @@
 // When messages arrive the drawer slides down until all of them show, waits a few seconds and slides back
 // up to where it was. Dragging it up or down sets where it rests; a double press opens it fully or closes
 // it. Two arrows on the lip step through older and newer messages when they do not all fit. The owner gives
-// the messages with show(), as text ready to draw, and hears of new ones through take_alert(). A message about
-// something the park can show has a camera before its text; a click on it is heard through take_located().
+// the messages with show(), as text ready to draw, and hears of new ones through take_alert(). Every message has
+// an icon before its text, standing for what it is about; a click on an icon that leads somewhere is heard
+// through take_clicked().
 #pragma once
 
 #include "simulation/park_messages.hpp"
@@ -34,7 +35,10 @@ namespace rct3::ui
         std::string back;      ///< Repeated up the drawer above the lip
         std::string older;     ///< The arrow to older messages; its family has a disabled member
         std::string newer;     ///< And to newer ones
-        std::string locate;    ///< The camera before a message whose subject can be shown
+        std::string locate;    ///< The camera: the icon of a message about something with no icon of its own
+        std::string award;     ///< Of award and fine messages; it opens the park's awards
+        std::string objective; ///< Of messages about the scenario's goals
+        std::string inspector; ///< Of the park inspector's reports
         Color text_colour = hex("#000000");
         Color stripe = hex("#ffffff");     ///< Behind the newest message and every second one up from it
         Color stripe_alt = hex("#e5e5e5"); ///< Behind the others
@@ -45,8 +49,9 @@ namespace rct3::ui
     struct DrawerMessage
     {
         std::uint64_t serial = 0; ///< Grows with each new message; see simulation::ParkMessage
-        std::u16string text;
-        bool located = false; ///< Its subject can be shown, so it has a camera to click
+        std::u16string text { };
+        std::string icon { };   ///< Skin before the text
+        bool clickable = false; ///< A click on the icon leads to what the message is about
     };
 
     namespace message_drawer
@@ -64,8 +69,9 @@ namespace rct3::ui
     /// not known is left out along with the separator before it.
     [[nodiscard]] std::u16string message_text(const simulation::ParkMessage& message, const StringTable& strings);
 
-    /// The drawer's messages, oldest first.
-    [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings);
+    /// The drawer's messages, oldest first, each with the icon its kind has: an award's, a goal's, the inspector's,
+    /// else the camera. Only an award's icon is clickable; the owner gives messages about an attraction theirs.
+    [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style);
 
     /// The drawer's back and lip over `rect`, the drawer's own rectangle, without its messages.
     void draw_drawer_frame(DrawContext& context, const MessageDrawerStyle& style, const Rect& rect);
@@ -78,10 +84,10 @@ namespace rct3::ui
         /// The messages to show, oldest first. Those with a serial above any shown before are new; the
         /// first call takes all it is given as already seen.
         void show(std::span<const DrawerMessage> messages);
-        /// The serial of the message whose camera was clicked, once.
-        [[nodiscard]] std::optional<std::uint64_t> take_located()
+        /// The serial of the message whose icon was clicked, once.
+        [[nodiscard]] std::optional<std::uint64_t> take_clicked()
         {
-            return std::exchange(located_, std::nullopt);
+            return std::exchange(clicked_, std::nullopt);
         }
         /// True once after new messages arrived.
         [[nodiscard]] bool take_alert()
@@ -89,6 +95,10 @@ namespace rct3::ui
             return std::exchange(alert_, false);
         }
 
+        [[nodiscard]] const MessageDrawerStyle& style() const
+        {
+            return style_;
+        }
         [[nodiscard]] float height() const
         {
             return height_;
@@ -111,10 +121,10 @@ namespace rct3::ui
         {
             return true;
         }
-        /// Pulled up and down anywhere but on a camera.
+        /// Pulled up and down anywhere but on an icon that can be clicked.
         [[nodiscard]] CursorKind cursor(Point p) const override
         {
-            return camera_at(p) ? CursorKind::Hand : CursorKind::ResizeVertical;
+            return icon_at(p) ? CursorKind::Hand : CursorKind::ResizeVertical;
         }
         void on_press(Point p) override;
         void on_drag(Point p) override;
@@ -136,8 +146,8 @@ namespace rct3::ui
         /// From the drawer's bottom, the top of the `count` newest rows after those skipped.
         [[nodiscard]] float rows_top(std::size_t count) const;
         void step(std::ptrdiff_t older);
-        /// The serial of the message whose camera is at `p`, if any.
-        [[nodiscard]] std::optional<std::uint64_t> camera_at(Point p) const;
+        /// The serial of the message whose clickable icon is at `p`, if any.
+        [[nodiscard]] std::optional<std::uint64_t> icon_at(Point p) const;
         void draw_inside(DrawContext& context, const Rect& r) const;
 
         MessageDrawerStyle style_;
@@ -146,7 +156,7 @@ namespace rct3::ui
         std::uint64_t seen_ = 0;
         bool shown_ = false;
         bool alert_ = false;
-        std::optional<std::uint64_t> located_;
+        std::optional<std::uint64_t> clicked_;
         float height_ = message_drawer::kClosed;
         float rest_ = message_drawer::kClosed; ///< Where it goes back to by itself
         Slide slide_ = Slide::Resting;

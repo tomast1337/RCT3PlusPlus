@@ -26,13 +26,13 @@ namespace rct3::simulation
 
     struct ParkMessage
     {
-        std::uint64_t serial = 0;             ///< Counts up from 1 in the order messages joined the list
-        std::string text_key;                 ///< Names the message's text in the string table
-        float age = 0;                        ///< Game seconds since it was posted
-        std::optional<std::uint64_t> subject; ///< The object the message is about
-        std::string subject_name;             ///< Its name when the message was posted; may be empty
-        std::optional<std::int32_t> panel;    ///< The info panel's tab its subject opens at, by number (ui::kMessageTabs); none or negative keeps the last
-        std::optional<std::int32_t> award;    ///< Award messages: which award
+        std::uint64_t serial = 0;                 ///< Counts up from 1 in the order messages joined the list
+        std::string text_key { };                 ///< Names the message's text in the string table
+        float age = 0;                            ///< Game seconds since it was posted
+        std::optional<std::uint64_t> subject { }; ///< The object the message is about
+        std::string subject_name { };             ///< Its name when the message was posted; may be empty
+        std::optional<std::int32_t> panel { };    ///< The info panel's tab its subject opens at, by number (ui::kMessageTabs); none or negative keeps the last
+        std::optional<std::int32_t> award { };    ///< Award messages: which award
     };
 
     struct ParkMessages

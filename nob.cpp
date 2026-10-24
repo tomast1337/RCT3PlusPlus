@@ -935,8 +935,9 @@ int main(int argc, char** argv)
                 std::error_code ec;
                 fs::remove_all(folder, ec);
                 Cmd one;
-                // Without vsync: with it, frames stop while the screen sleeps and the script never moves on.
-                one << binary.string() << "--script" << js.string() << "--script-report" << folder.string() << "--no-intro" << "--no-audio" << "--no-vsync" << "--seed" << "1";
+                // Headless: no window pops up, the frames still draw for the screenshots, and no vsync stops them
+                // while the screen sleeps. Uncapped, so the script runs as fast as the machine draws.
+                one << binary.string() << "--script" << js.string() << "--script-report" << folder.string() << "--headless" << "--max-fps" << "0" << "--seed" << "1";
                 one.append(test_args);
                 const bool passed = run(one);
                 log(passed ? Level::Info : Level::Error, "{}: {}, report in {}", file.stem().string(), passed ? "passed" : "failed", folder.string());

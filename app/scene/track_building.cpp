@@ -1645,7 +1645,8 @@ namespace rct3::scene
         if (!designs)
         {
             designs = scene.desktop->root().add<ui::Dropdown>(std::string(kDesignName), ui::game_skins::dropdown_style(assets.palette));
-            designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 8, kPanelTop + 4, 260, 20);
+            // Right of the ring's top tabs, so it covers none of them.
+            designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 130, kPanelTop + 4, 260, 20);
             designs->items.emplace_back(assets.strings->get(kCustomTrack));
             for (const std::filesystem::path& file : b.designs)
             {

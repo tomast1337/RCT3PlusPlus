@@ -74,6 +74,16 @@ namespace rct3::simulation
             }
             case 8: // Most beautiful
                 return !had({ 1, 7 }) && share(8) > 1.0f / 128 && litter <= 15;
+            case 9: // Safest
+            {
+                constexpr float kGuests = 400;       ///< The crowd that makes a safe park news, at most
+                constexpr std::int32_t kRides = 7;   ///< At least that many rides
+                constexpr float kManyRides = 15;     ///< Past this a park is always big enough
+                constexpr std::int32_t kSick = 5;    ///< Guests feeling sick, at most
+                constexpr std::int32_t kDangers = 1; ///< Dangerous happenings, at most
+                constexpr float kReliability = 72;   ///< Average reliability, more than
+                return !had({ 22, 23, 24, 25 }) && static_cast<float>(f.guests) >= rand() * kGuests && rides >= kRides && static_cast<float>(rides) >= rand() * kManyRides && count(14) <= kSick && f.coaster_dangers + f.pool_dangers <= kDangers && f.crashed == 0 && f.reliability > kReliability;
+            }
             case 10: // Best staff
                 return !had({ 1 }) && litter <= 10 && f.every_staff_kind && f.staff * 32 > f.guests && down_over(25) == 0;
             case 11: // Best toilets
@@ -82,13 +92,21 @@ namespace rct3::simulation
                 return !had({ 7 }) && f.coasters >= 6;
             case 13: // Best water rides
                 return f.water_rides >= 6;
+            case 14: // Best reliability
+            {
+                constexpr std::int32_t kRunning = 7; ///< Rides running, at least
+                constexpr float kManyRunning = 25;   ///< Past this a park always has enough
+                constexpr float kDown = 10;          ///< No ride out of action more of the time
+                constexpr float kReliability = 78;   ///< Average reliability, more than
+                return !had({ 15 }) && f.running >= kRunning && static_cast<float>(f.running) >= rand() * kManyRunning && down_over(kDown) == 0 && f.reliability > kReliability;
+            }
             case 15: // Worst reliability
                 return !had({ 14 }) && rides >= 3 && static_cast<float>(rides) >= rand() * 10 && (down_over(75) > 2 || down_over(30) > 6 || f.reliability < 40);
             case 22: // Most unsanitary
                 return count(180) > 15;
             default:
-                // shortcut: safety, best reliability, scenery themes, animals and the dangerous-event fines are never
-                // given, as what they count is not known well enough or not simulated; add them as it is.
+                // shortcut: scenery themes, animals and the dangerous-event fines are never given, as what they count is
+                // not simulated; add them as it is.
                 return false;
         }
     }

@@ -50,9 +50,13 @@ namespace rct3::simulation
         std::int32_t coasters = 0;
         std::int32_t water_rides = 0;
         std::int32_t staff = 0;
-        bool every_staff_kind = false;   ///< Handymen, mechanics, guards and entertainers, at least one of each
-        std::vector<float> downtime { }; ///< Of each ride, 0 to 100 of the time it is out of action
-        float reliability = 0;           ///< Of the rides on average, 0 to 100
+        bool every_staff_kind = false;    ///< Handymen, mechanics, guards and entertainers, at least one of each
+        std::vector<float> downtime { };  ///< Of each ride, 0 to 100 of the time it is out of action
+        float reliability = 0;            ///< Of the rides on average, 0 to 100
+        std::int32_t running = 0;         ///< Rides open and not broken down
+        std::int32_t crashed = 0;         ///< Rides that have ever crashed
+        std::int32_t coaster_dangers = 0; ///< Dangerous happenings on coasters lately, as the awards keep them
+        std::int32_t pool_dangers = 0;    ///< And at pools
     };
 
     /// Whether the park earns award `kind` this month. `dice` draws the luck some awards leave to chance.

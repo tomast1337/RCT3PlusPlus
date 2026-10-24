@@ -56,3 +56,29 @@ TEST_CASE("litter on guests' minds makes the park untidy")
     park.thoughts = { { 3, 6 } };
     CHECK_FALSE(simulation::award_earned(1, park, 0, dice));
 }
+
+TEST_CASE("a big park with reliable rides that never crashed is the safest")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures park { .guests = 1000, .downtime = std::vector<float>(20, 0.0f), .reliability = 95 };
+    CHECK(simulation::award_earned(9, park, 0, dice));
+    CHECK_FALSE(simulation::award_earned(9, park, 1u << 23, dice)); // Fined for danger lately
+    park.crashed = 1;
+    CHECK_FALSE(simulation::award_earned(9, park, 0, dice));
+    park.crashed = 0;
+    park.thoughts = { { 14, 30 } }; // Many guests feeling sick
+    CHECK_FALSE(simulation::award_earned(9, park, 0, dice));
+}
+
+TEST_CASE("best reliability needs many rides running and none out of action long")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures park { .downtime = std::vector<float>(30, 2.0f), .reliability = 90, .running = 30 };
+    CHECK(simulation::award_earned(14, park, 0, dice));
+    CHECK_FALSE(simulation::award_earned(14, park, 1u << 15, dice));
+    park.downtime.back() = 50;
+    CHECK_FALSE(simulation::award_earned(14, park, 0, dice));
+    park.downtime.back() = 2;
+    park.running = 2;
+    CHECK_FALSE(simulation::award_earned(14, park, 0, dice));
+}

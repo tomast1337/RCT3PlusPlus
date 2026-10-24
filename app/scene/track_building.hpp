@@ -82,6 +82,7 @@ namespace rct3::scene
         int holding_time = 5; ///< Seconds
         int car_turn = 0;     ///< Degrees
         std::uint8_t facing = 0;
+        std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
         std::optional<save::Tile> aim;
         std::int32_t turns = 0;

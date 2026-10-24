@@ -546,6 +546,12 @@ namespace rct3::scene
             update_platforms(scene, *b.ride, assets);
         }
 
+        /// The colours the next piece is built in: as painted, else as the last piece, else as the cars.
+        save::RideColours next_colours(const save::Ride& ride, const TrackBuilding& b)
+        {
+            return b.colours.value_or(ride.track && !ride.track->pieces.empty() ? ride.track->pieces.back().colours : ride.car_colours);
+        }
+
         /// Adds the ghost to the park and to the ride's track, paid for if the park has the money, or `forced`
         /// whether or not it has.
         void build(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, bool forced = false)
@@ -574,6 +580,11 @@ namespace rct3::scene
                 // A new ride's track starts in its model's colours, as its cars do.
                 piece.colours = ride.car_colours;
                 object.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
+            }
+            if (b.colours)
+            {
+                piece.colours = *b.colours;
+                object.colours = { (*b.colours)[0], (*b.colours)[1], (*b.colours)[2] };
             }
             const park::PieceShape& shape = c->pieces[b.picked->index];
             if (scene.park.cash)
@@ -1280,6 +1291,7 @@ namespace rct3::scene
         b.design.clear();
         b.design_ride.reset();
         b.tabs_for.reset();
+        b.colours.reset();
         b.preview_item.clear();
         refresh(scene, b, assets);
         auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
@@ -1427,14 +1439,15 @@ namespace rct3::scene
         }
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
-        // The round panel's ring, in this order: the ride's window, turning the first piece, a test run, and its
-        // state. The turn and the test show greyed while they do nothing.
+        // The round panel's ring, in this order: the ride's window, turning the first piece, a test run, its
+        // state, and the colours of the pieces built next. The turn and the test show greyed while they do nothing.
         enum Tab : std::size_t
         {
             Info,
             Rotate,
             Test,
             State,
+            Colour,
         };
         const bool whole = !panel->visible;
         const bool starting = opening(scene.rides.rides.at(*b.ride));
@@ -1500,6 +1513,14 @@ namespace rct3::scene
             }
             park::move_meshes(t.meshes, places);
         }
+        if (const auto paint = placing->take_paint(); paint && paint->pot < std::tuple_size_v<save::RideColours>)
+        {
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            save::RideColours colours = next_colours(ride, b);
+            colours.at(paint->pot) = static_cast<std::uint8_t>(paint->colour);
+            b.colours = colours;
+            b.tabs_for.reset();
+        }
         const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Tracked);
         if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
         {
@@ -1508,7 +1529,7 @@ namespace rct3::scene
         }
         if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, testable }; b.tabs_for != now || !placing->showing())
         {
-            std::vector<ui::InfoTab> tabs(4);
+            std::vector<ui::InfoTab> tabs(5);
             for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, std::get<1>(now)))
             {
                 if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State)
@@ -1521,6 +1542,11 @@ namespace rct3::scene
             tabs[Rotate].help = assets.strings->get("ATE_TT_Rotate");
             tabs[Test].icon = testable ? "Attraction_Button_Testing" : "Attraction_Button_Testing_Disabled";
             tabs[Test].help = assets.strings->get("TT_AttractionDialogIconTestingButton");
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            const save::RideColours colours = next_colours(ride, b);
+            tabs[Colour].icon = "Attraction_Colour";
+            tabs[Colour].help = assets.strings->get("Scenery_SetFlexiColours");
+            tabs[Colour].paints = { colours.begin(), colours.end() };
             for (const ui::StateChoice& s : states)
             {
                 const bool is = s.state == std::get<1>(now);
@@ -1529,7 +1555,7 @@ namespace rct3::scene
             for (std::size_t i = 0; i < tabs.size(); ++i)
             {
                 tabs[i].slot = static_cast<int>(i);
-                tabs[i].action = tabs[i].choices.empty();
+                tabs[i].action = tabs[i].choices.empty() && tabs[i].paints.empty();
             }
             const std::size_t none = tabs.size(); // No tab open: the strip holds the controls
             placing->show(std::move(tabs), none);

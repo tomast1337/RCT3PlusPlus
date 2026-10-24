@@ -663,7 +663,7 @@ namespace
                     continue;
                 }
                 const auto& s = *item.skin;
-                out.info("  {:<40} kind {:d} values {:d} texture {}", name.c_str(), s.kind, s.coordinates.size(), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+                out.info("  {:<40} kind {:d} values {:d} texture {} at {}", name.c_str(), s.kind, s.coordinates.size(), s.texture.empty() ? "<none>" : std::string(s.texture).c_str(), s.coordinates);
             }
         }
         if (opt.psi)

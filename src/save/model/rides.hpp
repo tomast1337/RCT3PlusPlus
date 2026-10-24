@@ -305,6 +305,11 @@ namespace rct3::save
         /// Of a ride whose cars ride on arms, the arm's four joint angles in degrees where the player set them:
         /// the arm holds them at the piece's middle.
         std::optional<std::array<float, 4>> arm_angles { };
+        /// Of a ride whose cars turn as the player sets, degrees they turn to on this piece. Not read from files.
+        float car_turn = 0;
+        /// Of a ride whose cars face as the player sets: 0 forwards, 1 backwards, 2 spinning freely. Not read from
+        /// files.
+        std::uint8_t facing = 0;
         std::uint32_t segment = 0; ///< Index of the owning segment within Track::segments
     };
 

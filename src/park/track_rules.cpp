@@ -55,6 +55,8 @@ namespace rct3::park
         rules.circuit_only = stored.circuit_only;
         rules.entrances = stored.entrances;
         rules.exits = stored.exits;
+        rules.car_rotation = stored.car_rotation;
+        rules.car_facing = stored.car_facing;
         for (const auto& pattern : stored.patterns)
         {
             auto& copied = rules.patterns.emplace_back();

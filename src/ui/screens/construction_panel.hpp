@@ -5,12 +5,14 @@
 // the disc. Their left part has two rows of seven buttons, the curve on top (tight, medium and loose left,
 // straight, then loose, medium and tight right) and below it the slope the piece ends at (vertical, steep and
 // gentle down, level, then gentle, steep and vertical up). Right of them are the toggles (lift chain, tube,
-// water, wide channel, booster: those the track has pieces with), two to a column, then the bank dial: eight small buttons
+// water, wide channel, booster: those the track has pieces with; then which way the cars face, on rides where
+// the player sets it), two to a column, then the bank dial: eight small buttons
 // round a disc, upside down at the top, level at the bottom. A toggle the picked piece cannot have is hidden
 // in its place, not greyed. Under the rows go the picked piece's name and its price, and the buttons that finish the track
 // for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
 // the pieces with a picture of their own (stations, photo sections, brakes) stand as picture buttons, two by
-// two, moving right with the dial when it moves; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
+// two, moving right with the dial when it moves. Boxes for the picked piece's settings (how far the cars turn,
+// how long a train is held, a brake's speed) stand right of its price, those it has. The right part lists the other pieces with a
 // use of their own (loops, helices and the like) in a list of striped rows, each its name after two small
 // marks for the way it goes and its kind. Pieces that cannot go on where the track ends stay in their place,
 // greyed. A line divides the rows of buttons from the name below them.
@@ -36,6 +38,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::ui
@@ -81,15 +84,38 @@ namespace rct3::ui
         inline constexpr float kSpecialSize = 28;
         inline constexpr float kSpecialStep = 30;
         inline constexpr std::size_t kSpecials = 4;
-        inline constexpr Point kSpeedAt { 136, 80 }; ///< Of the speed's picture, the spinner right of it
-        inline constexpr float kSpeedIconSize = 18;
-        inline constexpr Point kSpeedSize { 118, 18 }; ///< Of the spinner
+        inline constexpr float kParamsRight = 272; ///< Where the last setting box ends, on the price's row
+        inline constexpr float kParamsTop = 80;
+        inline constexpr float kParamIconSize = 18; ///< Of the picture before each box
+        inline constexpr float kParamHeight = 18;
+        inline constexpr float kParamGap = 6;
+        inline constexpr std::size_t kParams = 3;                                 ///< Car turn, holding time, brake speed
+        inline constexpr std::array<float, kParams> kParamWidths { 60, 50, 118 }; ///< Of the boxes, past their pictures
 
         inline constexpr std::size_t kCurves = 7;
         inline constexpr std::size_t kSlopes = 7;
         inline constexpr std::size_t kBanks = 8;   ///< From hardest left to upside down
         inline constexpr std::size_t kToggles = 5; ///< Lift chain, tube, water, wide, booster
+        inline constexpr std::size_t kFacings = 3; ///< Forwards, backwards, spinning freely
     } // namespace construction_panel
+
+    /// The settings a piece may have, as the boxes stand left to right.
+    enum class PieceParam : std::uint8_t
+    {
+        CarTurn,     ///< Degrees the cars turn to
+        HoldingTime, ///< Seconds a train is held
+        Speed,       ///< A brake's speed
+    };
+
+    /// One setting's box: its value and range, in units of `unit` shown with `decimals` places.
+    struct ParamBox
+    {
+        int value = 0;
+        int least = 0;
+        int most = 0;
+        int decimals = 0;
+        std::u16string unit;
+    };
 
     /// What a picture button shows.
     enum class IconState : std::uint8_t
@@ -126,8 +152,9 @@ namespace rct3::ui
         ListBoxStyle list; ///< Of the named pieces without a picture
         ScrollBarStyle list_bar;
         Color divider = hex("#c8c8c8");
-        std::string speed_icon; ///< Beside the speed
-        SpinnerStyle speed;
+        std::array<std::string, construction_panel::kParams> param_icons; ///< Before each setting's box
+        SpinnerStyle param;
+        std::string facing; ///< Base name; the facing's number after it, from 1
         FontRole font = FontRole::Small;
         Color text_colour = hex("#000000");
     };
@@ -159,10 +186,9 @@ namespace rct3::ui
         std::u16string cost;
         std::vector<NamedPiece> named;
         std::optional<std::size_t> named_on; ///< The one picked
-        /// The picked piece's speed, in hundredths of `speed_unit`, when it has one to set.
-        std::optional<int> speed;
-        int speed_most = 0; ///< In hundredths, as `speed`
-        std::u16string speed_unit;
+        /// The picked piece's settings, in PieceParam order, those it has.
+        std::array<std::optional<ParamBox>, construction_panel::kParams> params { };
+        std::optional<std::size_t> facing; ///< Which way the cars face, of kFacings; none on rides where they cannot
     };
 
     enum class ConstructionAction : std::uint8_t
@@ -177,13 +203,15 @@ namespace rct3::ui
         Complete,   ///< Finish the track
         NewSegment, ///< Begin another stretch of track
         Heights,    ///< Show or hide the track's heights
-        Speed,      ///< `index` the new speed, as the view's
+        Param,      ///< `index` the PieceParam, `value` its new value
+        Facing,     ///< The cars to face the next way
     };
 
     struct ConstructionEvent
     {
         ConstructionAction action = ConstructionAction::Build;
         std::size_t index = 0;
+        int value = 0;
 
         friend bool operator==(const ConstructionEvent&, const ConstructionEvent&) = default;
     };
@@ -255,9 +283,13 @@ namespace rct3::ui
         {
             return *specials_.at(i);
         }
-        [[nodiscard]] Spinner& speed_spinner() const
+        [[nodiscard]] Spinner& param_spinner(PieceParam param) const
         {
-            return *speed_;
+            return *params_.at(std::to_underlying(param));
+        }
+        [[nodiscard]] Button& facing_button() const
+        {
+            return *facing_;
         }
 
         [[nodiscard]] bool takes_pointer() const override
@@ -284,8 +316,9 @@ namespace rct3::ui
         Button* new_segment_ = nullptr;
         Button* heights_ = nullptr;
         std::array<Button*, construction_panel::kSpecials> specials_ { };
-        Button* speed_icon_ = nullptr;
-        Spinner* speed_ = nullptr;
+        std::array<Button*, construction_panel::kParams> param_icons_ { };
+        std::array<Spinner*, construction_panel::kParams> params_ { };
+        Button* facing_ = nullptr;
         std::vector<std::size_t> listed_;   ///< The named pieces in the list, by index in the view
         std::vector<std::size_t> pictured_; ///< Those with picture buttons, by index in the view
         Label* piece_ = nullptr;

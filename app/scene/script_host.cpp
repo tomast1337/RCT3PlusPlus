@@ -443,7 +443,15 @@ namespace rct3::scene
                 for (const save::StallItem& item : stall.items)
                     items.push_back({ { "item", item.kind_symbol }, { "price", item.price } });
                 const bool shown = park.shown && park.shown->kind == park::AttractionRef::Kind::Stall && park.shown->index == i;
-                stalls.push_back({ { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "shown", shown } });
+                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "shown", shown }, { "joined", false } };
+                for (const auto [_, a] : park.sim.registry.view<const simulation::Attraction>().each())
+                    if (a.saved == stall.base.id)
+                    {
+                        one["joined"] = true;
+                        one["price"] = a.price.value;
+                        one["selling"] = a.open;
+                    }
+                stalls.push_back(std::move(one));
             }
             return stalls;
         });

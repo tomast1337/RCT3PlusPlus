@@ -2,7 +2,8 @@
 //
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
 // tab to face the road in from the park's entrance, refused on the road itself, then placed on the grass beside
-// it. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed.
+// it. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
+// the park must run it, as it faces the road.
 //
 //   ./nob script scripts/tests/stall_placing.ts -- --no-audio
 
@@ -55,6 +56,10 @@ expect(stall.name === "%ME% 1", `it named after its kind, not ${stall.name}`);
 expect(!stall.open, "it built closed");
 expect(JSON.stringify(stall.items) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
+// The road runs past the tile it faces, so the park runs it at once, closed.
+await frames(2);
+const running = stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`)!;
+expect(running.joined && running.selling === false && running.price === kind.goods[0].price, `the park running it, closed, at its first item's price (${JSON.stringify(running)})`);
 // The park's objects are built again a few times a second, beside the frame; a frame here takes far less.
 camera.look({ col: road!.col + 1.5, row: road!.row + 0.5 }, { col: road!.col + 1.5, row: road!.row + 4.5, up: 8 });
 await frames(300);

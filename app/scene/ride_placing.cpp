@@ -191,7 +191,8 @@ namespace rct3::scene
             objects_changed(scene);
         }
 
-        /// Has the simulation run the rides placed here whose entrances now have a path behind them.
+        /// Has the simulation run the rides placed here whose entrances now have a path behind them, and the stalls
+        /// placed here that now face one.
         void join_rides(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             RidePlacing& p = scene.placing;
@@ -237,6 +238,14 @@ namespace rct3::scene
                 }
                 logging::logger("park").info("{} joins the paths", ride.base.name);
                 return true;
+            });
+            // A stall serves from the path on the tile it faces.
+            std::erase_if(p.unjoined_stalls, [&](std::size_t i) {
+                if (i >= scene.rides.stalls.size())
+                    return true;
+                save::RideModel one;
+                one.stalls.push_back(scene.rides.stalls[i]);
+                return simulation::import_stalls(scene.sim, one) > 0;
             });
         }
 
@@ -706,6 +715,7 @@ namespace rct3::scene
                     *scene.park.cash -= p.item->price;
                 float_money(scene, site_point(scene, *p.site), -p.item->price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
+                p.unjoined_stalls.push_back(p.ride);
                 // One stall a pick: the tool goes away and the stall's window opens, as in the game.
                 scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Stall, p.ride };
                 stop_ride_placing(scene);

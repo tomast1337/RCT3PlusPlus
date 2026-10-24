@@ -168,7 +168,9 @@ namespace rct3::scene
 
     std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
     {
-        if ((!scene.show_path_heights && !scene.show_ride_heights) || size.x <= 0 || size.y <= 0)
+        // The construction panel shows the heights of the ride it builds, the view menu every ride's.
+        const std::optional<std::size_t> built = scene.building.heights ? scene.building.ride : std::nullopt;
+        if ((!scene.show_path_heights && !scene.show_ride_heights && !built) || size.x <= 0 || size.y <= 0)
             return { };
         const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
         const glm::vec3 middle = scene.camera.target;
@@ -193,11 +195,12 @@ namespace rct3::scene
                     add({ g.world_x(n.tile.col) + g.tile_size_x / 2, n.height, g.world_z(n.tile.row) + g.tile_size_z / 2 }, n.height);
             }
         }
-        if (scene.show_ride_heights)
+        if (scene.show_ride_heights || built)
         {
-            for (const save::Ride& ride : scene.rides.rides)
+            for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
-                if (!ride.track)
+                const save::Ride& ride = scene.rides.rides[r];
+                if (!ride.track || (!scene.show_ride_heights && r != built))
                     continue;
                 for (const save::TrackPiece& p : ride.track->pieces)
                 {

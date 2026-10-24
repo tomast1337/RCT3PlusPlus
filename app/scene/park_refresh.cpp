@@ -138,7 +138,7 @@ namespace rct3::scene
         {
             const auto& r = scene.sim.registry;
             // Each by turns, offset by who they are so they do not all move at once.
-            const auto turn = static_cast<std::size_t>(scene.clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
+            const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
             if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue)
                 return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
@@ -162,7 +162,7 @@ namespace rct3::scene
             for (const auto [g, walk, pose] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Pose>().each())
                 if (!walk.off && walk.next == 1 && walk.pause.value > 0 && glm::distance(pose.position, at) < kServeReach)
                     return { kTakeMoneyMotion, simulation::kTuning.queues.ticket.value - walk.pause.value };
-            const float turn = scene.clock / kVendorTurnSeconds + static_cast<float>(entt::to_integral(shown.guest));
+            const float turn = scene.park_clock / kVendorTurnSeconds + static_cast<float>(entt::to_integral(shown.guest));
             const auto whole = static_cast<std::size_t>(turn);
             return { whole % kShelvesEvery == 0 ? kShelvesMotion : kBoredMotion, (turn - static_cast<float>(whole)) * kVendorTurnSeconds };
         }
@@ -262,7 +262,7 @@ namespace rct3::scene
                     continue;
                 park::PlacedPerson pose = shown.pose;
                 pose.level = static_cast<std::size_t>(scene.people_levels[i]);
-                pose.time = shown.saved_time + scene.clock * shown.speed;
+                pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
                 pose.motion = kRideMotion;
                 by_car[seat->first].push_back(pose);
@@ -303,21 +303,21 @@ namespace rct3::scene
                     if (scene.simulate)
                         for (const auto [g, walk, errand] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Errand>().each())
                             if (errand.target == boned.ride && walk.off == boned.exit)
-                                boned.open_until = scene.clock + kGateHold;
+                                boned.open_until = scene.park_clock + kGateHold;
                     const std::size_t now = (*boned.gate)[boned.step];
-                    if (scene.clock - boned.since >= (now < seconds.size() ? seconds[now] : 0.0f))
+                    if (scene.park_clock - boned.since >= (now < seconds.size() ? seconds[now] : 0.0f))
                     {
-                        boned.step = park::next_gate_motion(boned.step, scene.clock < boned.open_until);
-                        boned.since = scene.clock;
+                        boned.step = park::next_gate_motion(boned.step, scene.park_clock < boned.open_until);
+                        boned.since = scene.park_clock;
                     }
-                    playing = { (*boned.gate)[boned.step], scene.clock - boned.since };
+                    playing = { (*boned.gate)[boned.step], scene.park_clock - boned.since };
                 }
                 else
                 {
                     const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
                     const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
-                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.clock);
+                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.park_clock);
                 }
                 const auto [motion, time] = playing;
                 const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
@@ -674,7 +674,7 @@ namespace rct3::scene
         if (!scene.moving_build.valid())
         {
             const profiling::Scope zone("Moving");
-            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.clock, true, view, scene.simulate)] { return park::person_mesh(library, placed, runs); });
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return park::person_mesh(library, placed, runs); });
         }
         if (ready(scene.riders_build))
         {

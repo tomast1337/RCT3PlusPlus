@@ -172,7 +172,7 @@ namespace rct3::scene
             const float faded = park::sky_column(day.faded);
             const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
-            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.clock });
+            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock });
             if (!scene.horizon_band.empty())
             {
                 const glm::vec4 c = glm::mix(park::band_colour(scene.horizon_band, column), park::band_colour(scene.horizon_band, faded), day.fade);
@@ -1626,7 +1626,9 @@ namespace rct3::scene
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
-        advance_park_particles(scene.particles, elapsed, viewer, static_cast<std::size_t>(options.get(config::GameOption::ParticleBudget)));
+        const float park_seconds = elapsed * simulation::time_factor(scene.park.speed);
+        scene.park_clock += park_seconds;
+        advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
@@ -1635,7 +1637,7 @@ namespace rct3::scene
         scene.light_shafts = options.flag(config::GameOption::LightShafts);
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
-        advance_park_water(scene.water, elapsed);
+        advance_park_water(scene.water, park_seconds);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
         if (bar)

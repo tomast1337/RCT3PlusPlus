@@ -283,7 +283,7 @@ namespace rct3::scene
         bool in_pass = true;
         for (LedSign& sign : scene.led_signs.signs)
         {
-            const std::uint32_t shift = park::sign_shift(scene.clock, sign.loop.width);
+            const std::uint32_t shift = park::sign_shift(scene.park_clock, sign.loop.width);
             const auto texture = scene.led_signs.textures.find(sign.board);
             if (shift == sign.shift || sign.loop.width == 0 || texture == scene.led_signs.textures.end())
                 continue;

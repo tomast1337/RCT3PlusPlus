@@ -117,3 +117,26 @@ TEST_CASE("an enabled button under the page reports its press; a stub does not")
     f.desktop.update({ });
     CHECK(f.window->take_button() == std::optional<std::size_t>(0));
 }
+
+TEST_CASE("a button with choices fans them out and reports the one picked, not its press")
+{
+    Fixture f;
+    ManagementPage page;
+    page.buttons = { { "All", { }, { }, true, { { "Yes", { } }, { "No", { } } } } };
+    f.window->show_page(page);
+    f.desktop.layout({ 0, 0, 1024, 768 });
+    auto all = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/All")));
+    REQUIRE(all != nullptr);
+    CHECK_FALSE(f.window->find("content/page/lines/No"));
+    all->click();
+    f.desktop.update({ });
+    CHECK_FALSE(f.window->take_button());
+    f.window->show_page(page); // A page coming again keeps the fan open
+    f.desktop.layout({ 0, 0, 1024, 768 });
+    auto no = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/No")));
+    REQUIRE(no != nullptr);
+    no->click();
+    f.desktop.update({ });
+    CHECK(f.window->take_choice() == std::optional(std::pair<std::size_t, std::size_t>(0, 1)));
+    CHECK_FALSE(f.window->find("content/page/lines/No"));
+}

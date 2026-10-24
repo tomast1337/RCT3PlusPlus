@@ -85,6 +85,12 @@ namespace rct3::scene
             // Hiring and the other buttons do nothing yet.
             if (const auto button = window->take_button(); button && topic == ui::ManagementTopic::ParkOperations && window->tab() == 0 && *button == ui::kReplaceBrokenButton)
                 asks.replace_broken = true;
+            if (const auto choice = window->take_choice(); choice && topic == ui::ManagementTopic::Attractions && choice->first == ui::kOpenCloseAllButton && choice->second < ui::kOpenCloseAllStates.size())
+            {
+                asks.state_all = ui::kOpenCloseAllStates[choice->second];
+                for (const ui::TableRow& r : ui::management_page(topic, window->tab(), facts, strings, units).rows)
+                    asks.listed.push_back(ui::management_row(r.id));
+            }
             if (const auto row = window->take_row())
                 asks.row = ui::management_row(*row);
         }

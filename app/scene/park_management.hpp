@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <vector>
 
 namespace rct3::scene
 {
@@ -30,6 +31,9 @@ namespace rct3::scene
     {
         std::optional<ui::ManagementRow> row; ///< The row activated
         bool replace_broken = false;          ///< Replace every broken path item (ui::kReplaceBrokenButton)
+        /// Put every attraction in `listed` in this state (ui::kOpenCloseAllButton)
+        std::optional<save::AttractionState> state_all;
+        std::vector<ui::ManagementRow> listed;
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns

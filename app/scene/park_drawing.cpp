@@ -433,7 +433,7 @@ namespace rct3::scene
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         if (!scene.footpaths.waterfalls.empty() || !scene.waterfall_mesh.indices.empty())
-            profiling::section("Waterfalls", [&] { park::waterfall_mesh(scene.footpaths.waterfalls, scene.clock, scene.waterfall_mesh); });
+            profiling::section("Waterfalls", [&] { park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh); });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
             profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", scene.horizon, [&] { draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });

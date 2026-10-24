@@ -473,6 +473,7 @@ namespace rct3::scene
                     return;
                 *scene.park.cash -= shape.record.cost;
             }
+            const bool closed_before = ride.track->circuit;
             // Its end meeting where the first piece starts closes the track.
             if (!opening(ride) && !b.backward)
             {
@@ -496,6 +497,12 @@ namespace rct3::scene
             piece.height = object.base_height.value_or(0);
             piece.direction = static_cast<std::uint8_t>(object.rotation);
             piece.reversed = b.picked->reversed != b.backward;
+            // The first piece down, the station, opens the ride's window, as in the game; a closed circuit goes on to
+            // its doors.
+            if (ride.track->pieces.empty())
+                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            if (ride.track->circuit && !closed_before)
+                scene.doors_requested = *b.ride;
             ride.track->pieces.insert(b.backward ? ride.track->pieces.begin() : ride.track->pieces.end(), piece);
             if (!ride.track->segments.empty())
                 ++ride.track->segments.back().piece_count;

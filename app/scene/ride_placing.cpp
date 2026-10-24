@@ -739,7 +739,10 @@ namespace rct3::scene
                 // shortcut: doors placed by hand go to the ride's first station, wherever along the track they stand;
                 // give each its own station's once rides of several stations are built here.
                 place_station_door(scene, assets, p.ride, 0, *o, p.site->height, p.step == RidePlacing::Step::Exit);
-                stop_ride_placing(scene);
+                // The entrance down, the exit follows when the ride has none, as in the game.
+                const auto& doors = scene.rides.rides.at(p.ride).stations;
+                if (p.step == RidePlacing::Step::Exit || doors.empty() || doors.front().exit_spot || !start_door_placing(scene, p.ride, park::BuildItem(*p.item), std::vector(p.stations), true))
+                    stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };
                 refresh_ride_floors(scene);

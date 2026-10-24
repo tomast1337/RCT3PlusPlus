@@ -407,13 +407,20 @@ namespace rct3::scene
             show_info_page(scene, panel, assets, options);
         }
 
-        /// Opens the panel on the attraction `ref`, at the tab last opened if it has one.
-        void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
+        void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::AttractionTab> tab = std::nullopt)
         {
             const ui::AttractionFacts f = facts(scene, ref);
             if (f.common == nullptr)
                 return;
             const ui::AttractionKind kind = f.stall ? ui::AttractionKind::Stall : ui::attraction_kind(*f.ride);
+            if (const bool tracked = f.ride != nullptr && f.ride->kind == save::RideKind::Tracked; tracked != scene.info_tracked)
+            {
+                std::swap(scene.info_tab, scene.other_info_tab);
+                scene.info_tracked = tracked;
+            }
+            if (tab)
+                scene.info_tab = *tab;
             std::vector<ui::InfoTab> tabs;
             scene.shown_tabs.clear();
             std::size_t picked = 0;
@@ -1464,16 +1471,27 @@ namespace rct3::scene
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
             const auto door = [](const ui::InfoChange& c) { return c.id == ui::control_id(ui::AttractionControl::Entrance) || c.id == ui::control_id(ui::AttractionControl::Exit); };
-            if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && door(*change))
-            {
-                // A tracked ride's entrance or exit goes beside its station, placed as its kind's item has it.
-                const std::size_t ride = scene.shown->index;
+            // A tracked ride's entrance or exit goes beside its station, placed as its kind's item has it.
+            const auto start_door = [&](std::size_t ride, bool exit) {
                 const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
                 std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
                 const auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); });
                 const auto any = std::ranges::find_if(items, [](const park::BuildItem& i) { return !i.entrance.empty(); });
-                if (const auto item = kind != items.end() ? kind : any; item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), change->id == ui::control_id(ui::AttractionControl::Exit)))
+                const auto item = kind != items.end() ? kind : any;
+                return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);
+            };
+            // A closed circuit goes on to its doors, the entrance first, while its window shows, as in the game.
+            if (const auto ride = std::exchange(scene.doors_requested, std::nullopt); ride && *ride < scene.rides.rides.size())
+            {
+                const auto& stations = scene.rides.rides[*ride].stations;
+                const bool entrance = !stations.empty() && stations.front().entrance_spot.has_value();
+                if ((!entrance || stations.front().exit_spot == std::nullopt) && start_door(*ride, entrance))
+                    stop_land_tools(scene);
+            }
+            if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && door(*change))
+            {
+                if (start_door(scene.shown->index, change->id == ui::control_id(ui::AttractionControl::Exit)))
                 {
                     stop_land_tools(scene);
                     info->hide();
@@ -1953,9 +1971,7 @@ namespace rct3::scene
             if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {
                 // At the tab the message names; one the attraction lacks opens its view.
-                if (const auto tab = ui::message_tab(message->panel.value_or(-1)))
-                    scene.info_tab = *tab;
-                open_info(scene, *info, *ref, assets, options);
+                open_info(scene, *info, *ref, assets, options, ui::message_tab(message->panel.value_or(-1)));
                 // The middle of the whole attraction, the same on every click, as in the game.
                 const glm::vec3 at = scene.view_camera.target;
                 // Close enough to make it out, never further out than the player was.

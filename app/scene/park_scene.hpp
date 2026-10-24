@@ -427,8 +427,12 @@ namespace rct3::scene
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order
         ui::AttractionTab info_tab = ui::AttractionTab::View; ///< The tab last opened, opened again next time
-        std::size_t info_section = 0;                         ///< Of the open tab's page
-        std::vector<std::u16string> tunes;                    ///< The install's music, by name, for rides to play
+        /// Tracked rides and the rest each keep the tab last opened, as in the game: this is the other one's, swapped
+        /// with info_tab when the panel goes from one to the other.
+        ui::AttractionTab other_info_tab = ui::AttractionTab::View;
+        bool info_tracked = false;         ///< Whether info_tab is the tracked rides' one
+        std::size_t info_section = 0;      ///< Of the open tab's page
+        std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
         /// The tune each ride plays, by ride id, as ui::AttractionFacts::tune; none for no music.
         /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
         /// ride music is read from and written to saves.
@@ -452,6 +456,7 @@ namespace rct3::scene
         {
             return riding || riding_flat || riding_person;
         }
+        std::optional<std::size_t> doors_requested;                 ///< A tracked ride whose circuit closed, to place its doors next
         std::optional<park::AttractionRef> info_requested;          ///< Asked by a script or a finished building, opened as a click on it does
         std::string refusal;                                        ///< String key: why the shown attraction was not opened, tested or edited
         std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead

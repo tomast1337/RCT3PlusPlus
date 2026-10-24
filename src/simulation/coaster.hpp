@@ -7,7 +7,8 @@
 // chain carries it up at no less than the ride's lift speed, and the station's tyres push it at the ride's
 // station speed, slowing it there too when it comes back. Brakes slow it to their speed and no further. A ride
 // with a fixed speed moves at that speed everywhere. On a shuttle the train runs back and forth between the
-// track's ends, counting its passes through the station. The speeds are the ride's own, as its park keeps them.
+// track's ends, counting its passes through the station. A train that runs off either end of a track with two
+// ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
 //
 // Units are metres and seconds.
 #pragma once
@@ -60,6 +61,10 @@ namespace rct3::simulation
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
         int passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
+        /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
+        /// runs off its end.
+        bool closed = true;
+        bool ghost = false; ///< A test train shown while the track is built: it never crashes, stopping at an end
         // The train
         bool running = false;
         float at = 0;          ///< Distance of the front of the train
@@ -72,6 +77,8 @@ namespace rct3::simulation
         float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
         float pushed = 0; ///< Metres it has moved under that push
         float held = 0;   ///< Seconds it has been held at the top of its climb
+        /// Run off an end of its track: stopped running, where it left the track and at the speed it left at
+        bool crashed = false;
 
         [[nodiscard]] float length() const
         {
@@ -87,7 +94,8 @@ namespace rct3::simulation
 
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
-    /// back to it for the last time), where it stops.
+    /// back to it for the last time), where it stops. A train that runs off an end of a track with two ends is
+    /// left crashed instead.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// How long a lap of `coaster` takes from a standing start, by driving a copy of it; nothing if the train

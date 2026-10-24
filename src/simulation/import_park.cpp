@@ -483,12 +483,19 @@ namespace rct3::simulation
         if (!course.closed)
         {
             // A track with two ends runs back and forth: how depends on the ride's mode, how long on its circuits.
+            // In a mode that goes round, the track is unfinished, and its train runs on off the end.
             // shortcut: a drop tower's car is pushed up like a launched tower's, not hauled up; plain shuttle mode
-            // and other open tracks run no train; upgrade when a park has them.
+            // and the other modes run no train; upgrade when a park has them.
             using enum save::OperatingMode;
             const int circuits = std::max(ride.options.circuits, 1);
+            c.closed = false;
             switch (ride.mode)
             {
+                case ContinuousCircuit:
+                case PoweredLaunch:
+                case Race:
+                case ReverseCableLiftHill:
+                    break;
                 case ReverseInclinedLaunch:
                     c.shuttle = Shuttle::Back;
                     c.passes = 2 * circuits; // In through the station and back into it, each circuit
@@ -505,7 +512,7 @@ namespace rct3::simulation
                 default:
                     return std::nullopt;
             }
-            if (!launch_of(ride))
+            if (c.shuttle != Shuttle::None && !launch_of(ride))
                 return std::nullopt;
         }
         c.distance = course.distance;

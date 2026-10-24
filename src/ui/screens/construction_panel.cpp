@@ -97,6 +97,8 @@ namespace rct3::ui
         new_segment_->icon = style.new_segment;
         new_segment_->placement = top_left(cp::kNewSegmentAt.x, cp::kNewSegmentAt.y, cp::kNewSegmentSize.x, cp::kNewSegmentSize.y);
         new_segment_->visible = false;
+        heights_ = picture("heights");
+        heights_->placement = top_left(cp::kHeightsAt.x, cp::kHeightsAt.y, cp::kHeightsSize.x, cp::kHeightsSize.y);
 
         const auto label = [&](std::string widget, float top) {
             Label& l = add<Label>(std::move(widget), std::u16string { }, style.font);
@@ -158,7 +160,7 @@ namespace rct3::ui
         const float specials = specials_left(toggles);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
             specials_.at(i)->placement = top_left(specials + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
-        list_left_ = std::max(cp::kListLeft, specials + 2 * cp::kSpecialStep + 6);
+        list_left_ = std::max({ cp::kListLeft, specials + 2 * cp::kSpecialStep + 6, view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x + 6 : 0.0f });
         list_->placement = top_left(list_left_, cp::kListTop, cp::kListRight - list_left_, cp::kListHeight);
     }
 
@@ -191,6 +193,8 @@ namespace rct3::ui
         complete_->enabled = view_.can_complete;
         new_segment_->visible = view_.new_segment.has_value();
         new_segment_->enabled = view_.new_segment.value_or(false);
+        heights_->icon = view_.heights || view_.heights_locked ? style_.heights_on : style_.heights;
+        heights_->tooltip = view_.heights_locked ? heights_locked_help : heights_help;
         piece_->text = view_.piece;
         cost_->text = view_.cost;
         list_->items.clear();
@@ -268,6 +272,8 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Complete, 0 });
         if (new_segment_->take_click() && view_.new_segment.value_or(false))
             events_.push_back({ ConstructionAction::NewSegment, 0 });
+        if (heights_->take_click() && !view_.heights_locked)
+            events_.push_back({ ConstructionAction::Heights, 0 });
         // A picture piece clicked: picked, or built when it is picked already.
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {

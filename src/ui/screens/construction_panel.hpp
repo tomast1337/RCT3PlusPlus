@@ -67,7 +67,9 @@ namespace rct3::ui
         inline constexpr Point kDemolishSize { 40, 26 };
         inline constexpr Point kCompleteAt { 278, 70 };
         inline constexpr Point kCompleteSize { 40, 28 };
-        inline constexpr Point kNewSegmentAt { 366, 70 };
+        inline constexpr Point kHeightsAt { 366, 70 };
+        inline constexpr Point kHeightsSize { 40, 28 };
+        inline constexpr Point kNewSegmentAt { 410, 70 }; ///< The list starts right of it while it shows
         inline constexpr Point kNewSegmentSize { 40, 28 };
         inline constexpr float kListLeft = 410; ///< Of the list of the other named pieces
         inline constexpr float kListTop = 2;
@@ -119,7 +121,9 @@ namespace rct3::ui
         std::string demolish;
         std::string complete;    ///< Finishes the track
         std::string new_segment; ///< Begins another stretch of track
-        ListBoxStyle list;       ///< Of the named pieces without a picture
+        std::string heights;     ///< Shows the track's heights: off, then on
+        std::string heights_on;
+        ListBoxStyle list; ///< Of the named pieces without a picture
         ScrollBarStyle list_bar;
         Color divider = hex("#c8c8c8");
         std::string speed_icon; ///< Beside the speed
@@ -149,6 +153,8 @@ namespace rct3::ui
         bool can_demolish = false;
         bool can_complete = false;       ///< The track has an open end to finish from
         std::optional<bool> new_segment; ///< None when the track is one stretch; else whether another can begin now
+        bool heights = false;            ///< The track's heights are shown
+        bool heights_locked = false;     ///< Shown for every ride, from the view menu, so the button cannot hide them
         std::u16string piece;            ///< Name of the piece picked, empty when nothing fits
         std::u16string cost;
         std::vector<NamedPiece> named;
@@ -170,6 +176,7 @@ namespace rct3::ui
         Demolish,
         Complete,   ///< Finish the track
         NewSegment, ///< Begin another stretch of track
+        Heights,    ///< Show or hide the track's heights
         Speed,      ///< `index` the new speed, as the view's
     };
 
@@ -225,6 +232,12 @@ namespace rct3::ui
         {
             return *new_segment_;
         }
+        [[nodiscard]] Button& heights_button() const
+        {
+            return *heights_;
+        }
+        std::u16string heights_help;        ///< The heights button's help
+        std::u16string heights_locked_help; ///< Its help while the view menu shows every ride's heights
         /// The named pieces without a picture.
         [[nodiscard]] ListBox& list() const
         {
@@ -269,6 +282,7 @@ namespace rct3::ui
         Button* demolish_ = nullptr;
         Button* complete_ = nullptr;
         Button* new_segment_ = nullptr;
+        Button* heights_ = nullptr;
         std::array<Button*, construction_panel::kSpecials> specials_ { };
         Button* speed_icon_ = nullptr;
         Spinner* speed_ = nullptr;

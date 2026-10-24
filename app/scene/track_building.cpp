@@ -420,6 +420,8 @@ namespace rct3::scene
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             v.can_demolish = ride.track && !ride.track->pieces.empty();
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride);
+            v.heights = b.heights;
+            v.heights_locked = scene.show_ride_heights;
             // A ride whose track may lie in several stretches, or a water transport, can begin another.
             if (const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { }; rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
                 v.new_segment = v.can_demolish && !opening(ride) && !b.backward;
@@ -1274,6 +1276,8 @@ namespace rct3::scene
             panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
+            panel.heights_help = assets.strings->get("ATE_TT_HeightMarks");
+            panel.heights_locked_help = assets.strings->get("ATE_TT_HeightMarksLocked");
         }
         // A ride that is one building is set down whole, as a flat ride is: the round panel shows no strip,
         // and the controls keep the building's state out of sight.
@@ -1566,6 +1570,9 @@ namespace rct3::scene
                     break;
                 case Complete:
                     complete(scene, b, assets);
+                    break;
+                case Heights:
+                    b.heights = !b.heights;
                     break;
                 case Speed:
                     scene.rides.rides.at(*b.ride).options.brake_speed = static_cast<float>(event->index) / 100 / ui::speed_scale(units);

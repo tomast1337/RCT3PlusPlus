@@ -322,3 +322,35 @@ TEST_CASE("a piece that cannot go on is greyed in its place, its marks too, and 
     CHECK_FALSE(f.panel->take_event());
     CHECK_FALSE(f.panel->list().selected());
 }
+
+TEST_CASE("the heights button turns over, unless the view menu shows every ride's heights")
+{
+    Fixture f;
+    const auto style = game_skins::construction_panel_style(kGamePalette);
+    f.panel->heights_help = u"Heights";
+    f.panel->heights_locked_help = u"Locked";
+    ConstructionView v = straight();
+    f.panel->show(v);
+    CHECK(f.panel->heights_button().icon == style.heights);
+    f.press(f.panel->heights_button());
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Heights, 0 });
+    v.heights_locked = true;
+    f.panel->show(v);
+    CHECK(f.panel->heights_button().icon == style.heights_on);
+    CHECK(f.panel->heights_button().tooltip == u"Locked");
+    f.press(f.panel->heights_button());
+    CHECK_FALSE(f.panel->take_event());
+}
+
+TEST_CASE("a new stretch button pushes the list right")
+{
+    Fixture f;
+    ConstructionView v = straight();
+    f.panel->show(v);
+    const float left = f.panel->list().rect().x0;
+    v.new_segment = true;
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->list().rect().x0 > left);
+    CHECK(f.panel->new_segment_button().rect().x1 < f.panel->list().rect().x0);
+}

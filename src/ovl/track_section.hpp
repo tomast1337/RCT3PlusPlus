@@ -63,6 +63,9 @@ namespace rct3::ovl
         /// Pieces of side by side tracks: 1 for the left track's, 2 for the right's, 0 for the rest. Ends
         /// only meet ends of the same side. Version 5 files only.
         std::uint32_t side = 0;
+        /// Of side by side tracks: the section of the other half of a joined piece, laid with it on the same
+        /// tiles on the other track; empty for a piece of one track alone. Version 5 files only.
+        std::string_view partner;
         /// The group the piece is in, such as "station", for the ride's piece patterns. Version 4 and 5 files only.
         std::string_view group;
         /// Join tags of the start and of the end.

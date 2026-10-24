@@ -441,7 +441,7 @@ namespace rct3::scene
             Json designs = Json::array();
             for (const std::filesystem::path& file : b.designs)
                 designs.push_back(file.filename().string());
-            return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() }, { "designs", std::move(designs) }, { "selected", b.selected ? Json(*b.selected) : Json(nullptr) } };
+            return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() }, { "designs", std::move(designs) }, { "selected", b.selected ? Json(*b.selected) : Json(nullptr) }, { "split", std::to_underlying(b.split) } };
         });
         engine_.define("build.stop", [this](const Json&) {
             stop_ride_placing(park_of(park_));

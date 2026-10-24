@@ -23,6 +23,7 @@
 #include "park/ride_cars.hpp"
 #include "park/track_choice.hpp"
 #include "park/track_pieces.hpp"
+#include "park/track_split.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -96,6 +97,8 @@ namespace rct3::scene
         /// when `selected_back`. None while building at the track's open end.
         std::optional<std::size_t> selected;
         bool selected_back = false;
+        /// On a ride of two tracks side by side, which open end is built on and with which pieces.
+        park::SplitState split = park::SplitState::None;
         park::ObjectMesh ghost_mesh;
         bool off_water = false; ///< The ghost's piece stands only on water, and some of it is on dry land
         std::string complaint;  ///< String key: why the track was last not finished; cleared by the next action

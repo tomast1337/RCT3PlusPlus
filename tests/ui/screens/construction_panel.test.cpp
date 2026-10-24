@@ -383,3 +383,21 @@ TEST_CASE("a new stretch button pushes the list right")
     CHECK(f.panel->list().rect().x0 > left);
     CHECK(f.panel->new_segment_button().rect().x1 < f.panel->list().rect().x0);
 }
+
+TEST_CASE("the split button shows the picture of its state, right of the new stretch button, and is heard")
+{
+    Fixture f;
+    const auto style = game_skins::construction_panel_style(kGamePalette);
+    ConstructionView v = straight();
+    f.panel->show(v);
+    CHECK_FALSE(f.panel->split_button().visible);
+    v.split = 2;
+    v.new_segment = true;
+    f.panel->show(v);
+    f.desktop.update({ });
+    CHECK(f.panel->split_button().icon == style.split.at(2));
+    CHECK(f.panel->split_button().rect().x0 > f.panel->new_segment_button().rect().x1);
+    CHECK(f.panel->split_button().rect().x1 < f.panel->list().rect().x0);
+    f.press(f.panel->split_button());
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Split, 0 });
+}

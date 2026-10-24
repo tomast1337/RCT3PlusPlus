@@ -230,6 +230,7 @@ namespace rct3::park
             };
             r.joins = { join(section.start_join, section.tags[0], section.widths[0]), join(section.end_join, section.tags[1], section.widths[1]) };
             r.side = section.side;
+            r.partner = section.partner.substr(0, section.partner.find(':'));
             r.group = section.group;
             lines.push_back(*line);
         }

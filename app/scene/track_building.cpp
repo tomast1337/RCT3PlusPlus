@@ -15,6 +15,7 @@
 #include "park/track_completion.hpp"
 #include "park/track_edit.hpp"
 #include "park/track_rules.hpp"
+#include "park/track_split.hpp"
 #include "park/track_supports.hpp"
 #include "park/water_fill.hpp"
 #include "save/save_file.hpp"
@@ -104,6 +105,7 @@ namespace rct3::scene
         constexpr float kMostBrakeSpeed = 30; ///< m/s, past the fastest coasters' top speeds
         constexpr std::string_view kCompleteHelp = "ATE_TT_Autocomplete";
         constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
+        constexpr std::string_view kSplitHelp = "ATE_TT_Split";
         /// Ends tried before finishing a track gives up, a few seconds at most.
         constexpr std::size_t kCompletionTries = 20000;
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
@@ -243,6 +245,42 @@ namespace rct3::scene
                     o.hidden = true;
         }
 
+        /// Builds on in `state`, at the open end of its track: the last stretch of that track still open, made the
+        /// track's last.
+        void use_split(ParkScene& scene, TrackBuilding& b, park::SplitState state)
+        {
+            b.split = state;
+            const park::PieceCatalogue* c = catalogue(b);
+            save::Ride& ride = scene.rides.rides.at(*b.ride);
+            if (c == nullptr || !ride.track || state == park::SplitState::None)
+                return;
+            const auto& segments = ride.track->segments;
+            for (std::size_t s = segments.size(); s-- > 0;)
+            {
+                const auto end = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : park::shape_named(*c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1).symbol);
+                if (end && end->record.side == park::split_side(state))
+                {
+                    park::make_last(*ride.track, s);
+                    return;
+                }
+            }
+        }
+
+        /// Of the left and the right track of a ride of two, whether it is closed: none of its stretches is open.
+        std::array<bool, 2> split_closed(const ParkScene& scene, const TrackBuilding& b)
+        {
+            std::array<bool, 2> closed { }, open { };
+            const park::PieceCatalogue* c = catalogue(b);
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            for (const save::TrackSegment& s : c != nullptr && ride.track ? ride.track->segments : std::vector<save::TrackSegment> { })
+            {
+                const auto first = s.piece_count == 0 ? std::nullopt : park::shape_named(*c, ride.track->pieces.at(s.first_piece).symbol);
+                if (first && (first->record.side == 1 || first->record.side == 2))
+                    (s.closed ? closed : open).at(first->record.side - 1) = true;
+            }
+            return { closed[0] && !open[0], closed[1] && !open[1] };
+        }
+
         /// A saved design: its ride, and the scenery placed with it, which is the ride's doors.
         struct SavedDesign
         {
@@ -336,6 +374,12 @@ namespace rct3::scene
             // Only pieces that can be laid there, so a piece offered one way round is not hidden by the other.
             if (!starting)
                 std::erase_if(b.candidates, [&](const park::LaidPiece& l) { return !park::place_after(*b.tip, c->pieces[l.index], l.reversed, scene.grid); });
+            // Of side by side tracks, only joined pieces or only pieces alone, as the split button says.
+            if (b.split != park::SplitState::None)
+                std::erase_if(b.candidates, [&](const park::LaidPiece& l) {
+                    const park::PieceRecord& r = c->pieces[l.index].record;
+                    return park::split_joined(b.split) == r.partner.empty() || (starting && r.side != park::split_side(b.split));
+                });
             b.choice = park::settle_choice(c->pieces, b.candidates, b.choice);
             b.picked = park::chosen_piece(c->pieces, b.candidates, b.choice);
             if (starting && !b.design.empty())
@@ -479,6 +523,8 @@ namespace rct3::scene
             // A ride whose track may lie in several stretches, or a water transport, can begin another.
             if (rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
                 v.new_segment = v.can_demolish && !opening(ride) && !b.backward && !b.selected;
+            if (b.split != park::SplitState::None)
+                v.split = park::split_joined(b.split) ? 0 : park::split_side(b.split);
             const park::PieceCatalogue* c = catalogue(b);
             if (c == nullptr || !b.tip)
                 return v;
@@ -621,6 +667,8 @@ namespace rct3::scene
                 b.selected = around && park::piece_neighbours(*ride.track, next) ? std::optional(next) : std::nullopt;
                 if (const auto laid = b.selected ? laid_piece(*c, ride.track->pieces[next]) : std::nullopt)
                     b.choice = park::choice_of(c->pieces, *laid);
+                if (!b.selected)
+                    use_split(scene, b, b.split);
                 refresh(scene, b, assets);
             };
             if (over && over->laid == *b.picked)
@@ -696,8 +744,6 @@ namespace rct3::scene
             // its doors.
             if (ride.track->pieces.empty())
                 scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
-            if (ride.track->circuit && !closed_before)
-                scene.doors_requested = *b.ride;
             if (over)
             {
                 // shortcut: the piece taken out is not paid back, as demolishing pays nothing back, upgrade when
@@ -716,13 +762,48 @@ namespace rct3::scene
                 ++ride.track->segments.back().piece_count;
             scene.attractions[object.id] = { park::AttractionRef::Kind::Ride, *b.ride };
             scene.objects.push_back(std::move(object));
+            // A joined piece is laid with its other half on the other track: on after that track's open end where
+            // it starts, else as a stretch of its own.
+            // shortcut: demolishing or building over one half leaves the other as it is, upgrade by finding the
+            // other half on the same tiles.
+            if (const auto other = b.split != park::SplitState::None && !shape.record.partner.empty() ? park::shape_named(*c, shape.record.partner) : std::nullopt)
+            {
+                save::PlacedObject half = scene.objects.back();
+                half.id = last_id(scene) + 1;
+                half.owner_ref = half.id;
+                half.symbol = other->record.item;
+                save::TrackPiece joined = piece;
+                joined.id = joined.scenery = half.id;
+                joined.symbol = other->record.name + std::string(kSectionTag);
+                const park::TrackTip start = park::start_of(half, *other, joined.reversed, scene.grid);
+                const park::TrackTip end = park::tip_of(half, *other, joined.reversed, scene.grid);
+                const auto meets = [](const park::TrackTip& a, const park::TrackTip& b) { return glm::length(a.position - b.position) < kCloses && a.end == b.end; };
+                std::optional<std::size_t> onto;
+                const auto& segments = ride.track->segments;
+                for (std::size_t s = 0; !onto && s + 1 < segments.size(); ++s)
+                {
+                    const auto last = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1));
+                    if (last && c->pieces[last->laid.index].record.side == other->record.side && meets(park::tip_of(scene.objects[last->object], c->pieces[last->laid.index], last->laid.reversed, scene.grid), start))
+                        onto = s;
+                }
+                const std::size_t s = park::add_piece(*ride.track, onto, std::move(joined));
+                // Its end meeting where its stretch starts closes that stretch.
+                if (const auto first = segments[s].piece_count > 1 ? built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece)) : std::nullopt)
+                    ride.track->segments[s].closed = meets(end, park::start_of(scene.objects[first->object], c->pieces[first->laid.index], first->laid.reversed, scene.grid));
+                ride.track->circuit = std::ranges::all_of(ride.track->segments, &save::TrackSegment::closed);
+                (void)load_object_model(scene, b.models, assets, half);
+                scene.attractions[half.id] = { park::AttractionRef::Kind::Ride, *b.ride };
+                scene.objects.push_back(std::move(half));
+            }
+            if (ride.track->circuit && !closed_before)
+                scene.doors_requested = *b.ride;
             // Its end meeting where another open stretch starts, as across a gap left mid-track, joins that one on.
             auto& segments = ride.track->segments;
             for (std::size_t s = 0; !b.backward && segments.size() > 1 && !segments.back().closed && s + 1 < segments.size(); ++s)
             {
                 const auto start = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece));
                 const auto at = start ? std::optional(park::start_of(scene.objects[start->object], c->pieces[start->laid.index], start->laid.reversed, scene.grid)) : std::nullopt;
-                if (at && glm::length(b.ghost->next.position - at->position) < kCloses && b.ghost->next.end == at->end)
+                if (at && c->pieces[start->laid.index].record.side == shape.record.side && glm::length(b.ghost->next.position - at->position) < kCloses && b.ghost->next.end == at->end)
                 {
                     park::join_stretch(*ride.track, s);
                     break;
@@ -803,6 +884,7 @@ namespace rct3::scene
                 last = park::take_out_piece(*ride.track, *std::exchange(b.selected, std::nullopt));
                 if (const auto laid = c != nullptr ? laid_piece(*c, last) : std::nullopt)
                     b.choice = park::choice_of(c->pieces, *laid);
+                use_split(scene, b, b.split);
             }
             else
             {
@@ -1309,6 +1391,10 @@ namespace rct3::scene
             const auto laid = laid_piece(*c, *piece);
             b.selected = laid && park::piece_neighbours(*ride.track, index) ? std::optional(index) : std::nullopt;
             b.complaint.clear();
+            if (!b.selected)
+                use_split(scene, b, b.split);
+            else if (b.split != park::SplitState::None)
+                b.split = park::split_of(c->pieces[laid->index].record);
             if (b.selected)
             {
                 // Building steps on toward the end of the piece nearer the click.
@@ -1436,6 +1522,9 @@ namespace rct3::scene
         b.tabs_for.reset();
         b.colours.reset();
         b.preview_item.clear();
+        // A ride of two tracks side by side starts with joined pieces, from the left track's end.
+        const auto& pieces = b.catalogues.at(b.overlay).pieces;
+        use_split(scene, b, std::ranges::any_of(pieces, [](const park::PieceShape& p) { return p.record.side != 0; }) ? park::SplitState::JoinedLeft : park::SplitState::None);
         refresh(scene, b, assets);
         auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
         if (!placing)
@@ -1446,6 +1535,7 @@ namespace rct3::scene
             panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
+            panel.split_button().tooltip = assets.strings->get(kSplitHelp);
             panel.heights_help = assets.strings->get("ATE_TT_HeightMarks");
             panel.facing_button().tooltip = assets.strings->get("ATE_TT_SpinAngle");
             using enum ui::PieceParam;
@@ -1745,6 +1835,13 @@ namespace rct3::scene
                     b.design_ride.reset();
                     break;
                 }
+                case Split:
+                    // Over a piece picked mid-track, only the kind of pieces changes.
+                    if (b.selected)
+                        b.split = park::next_split(b.split, split_closed(scene, b), true);
+                    else
+                        use_split(scene, b, park::next_split(b.split, split_closed(scene, b), false));
+                    break;
             }
             changed = true;
         }

@@ -106,8 +106,8 @@ namespace rct3::park
             if (!whole_stretch)
                 continue;
             course.closed = whole ? ride.track->circuit : segments[s].closed;
-            // shortcut: trains run only on the first stretch with a station, the others stand empty; upgrade when
-            // a ride's trains are kept by stretch.
+            // shortcut: trains run only on the first stretch with a station, the others stand empty, so a ride of two
+            // tracks side by side runs on one of them; upgrade when a ride's trains are kept by stretch.
             if (std::ranges::contains(course.kinds, CourseKind::Station) && !course.points.empty())
             {
                 if (stopping)

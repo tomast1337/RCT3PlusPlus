@@ -77,7 +77,7 @@ namespace rct3::ovl
                     s.widths = { record->u32(0x114), record->u32(0x118) };
                 }
                 // Later records number their own layout, 2 in version 4 files and 3 in version 5: the group and
-                // tags come with 2, the side with 3.
+                // tags come with 2, the side and the other half with 3.
                 const std::uint32_t layout = version >= 4 ? record->u32(0xE4) : 0;
                 if (layout >= 2)
                 {
@@ -89,7 +89,10 @@ namespace rct3::ovl
                     }
                 }
                 if (layout >= 3)
+                {
                     s.side = record->u32(0x16C);
+                    s.partner = record->ref(0x170, kTag);
+                }
                 s.references = record->references(static_cast<std::uint32_t>(size));
                 s.record = record->bytes();
                 item.section = std::move(s);

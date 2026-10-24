@@ -104,9 +104,22 @@ namespace rct3::simulation
                 return !had({ 14 }) && rides >= 3 && static_cast<float>(rides) >= rand() * 10 && (down_over(75) > 2 || down_over(30) > 6 || f.reliability < 40);
             case 22: // Most unsanitary
                 return count(180) > 15;
+            case 23: // Most dangerous
+            case 25: // Extremely dangerous
+            {
+                constexpr std::int32_t kCoasterWeight = 5; ///< A coaster happening counts as this many at pools
+                constexpr std::int32_t kDangerous = 25;    ///< Weighted happenings, at least
+                constexpr std::int32_t kExtremely = 60;
+                return f.coaster_dangers * kCoasterWeight + f.pool_dangers >= (kind == 23 ? kDangerous : kExtremely);
+            }
+            case 24: // Most dangerous pools
+            {
+                constexpr std::int32_t kPools = 12; ///< Happenings at pools, at least
+                return f.pool_dangers >= kPools;
+            }
             default:
-                // shortcut: scenery themes, animals and the dangerous-event fines are never given, as what they count is
-                // not simulated; add them as it is.
+                // shortcut: scenery themes and animals are never given, as what they count is not simulated; add them
+                // as it is.
                 return false;
         }
     }

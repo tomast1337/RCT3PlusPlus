@@ -285,6 +285,7 @@ namespace rct3::save
             constexpr std::string_view kSaleItem = "SaleItem";
             constexpr std::string_view kItemColours[3] = { "FlexiColour0", "FlexiColour1", "FlexiColour2" };
             constexpr std::string_view kExtraSetting = "Setting";
+            constexpr std::string_view kSyncStalls = "SyncStallsOfSameType";
         } // namespace id
 
         // ---------------------------------------------------------------------------------------------------------
@@ -1181,6 +1182,7 @@ namespace rct3::save
                     .base = read_common(*d, id::kStallSymbol, id::kStallOverlay),
                     .intervals = read_intervals(f),
                     .thoughts = read_thoughts(f),
+                    .sync = f[id::kSyncStalls].boolean(),
                 };
                 for (const auto& item : f[id::kShopItems].items())
                 {
@@ -1233,7 +1235,11 @@ namespace rct3::save
                         continue;
                     }
                     const View v(ex->fields);
-                    s.extras.push_back({ ex->id, live(v[id::kItemAsset]), v[id::kExtraSetting].i32() });
+                    StallExtra se { .id = ex->id, .extra_asset = live(v[id::kItemAsset]), .level = v[id::kExtraSetting].i32() };
+                    if (std::optional<const Object&> kind = se.extra_asset != 0 ? index_.find(se.extra_asset) : std::nullopt)
+                        if (auto k = decode(*kind))
+                            se.kind_symbol = View(k->fields)[id::kItemKindSymbol].text();
+                    s.extras.push_back(std::move(se));
                 }
                 model_.stalls.push_back(std::move(s));
             }

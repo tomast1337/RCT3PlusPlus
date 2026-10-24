@@ -25,6 +25,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::ui
@@ -169,6 +170,8 @@ namespace rct3::ui
         bool low_friction = false;
         /// Which of the graph's series show, a bit each: speed, altitude, vertical and lateral forces.
         std::uint8_t graph_series = kSpeedOnly;
+        /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`.
+        std::vector<std::string> offers { };
     };
 
     struct GuestsSuited
@@ -221,17 +224,31 @@ namespace rct3::ui
         Mechanic,       ///< Calls a mechanic to it
         SceneryPick,    ///< Picks scenery to keep with a tracked ride's design
         SceneryClear,   ///< Forgets the scenery picked
-        ItemPrice,      ///< The first of a stall's items' prices; the next item's is one more, and so on
+        SyncStalls,     ///< Whether a stall's menu changes go to every stall of its kind
+        /// Families of a stall's controls, one for each of its items, offers or extras: the first's id, the next's
+        /// one more, and so on, up to kMostListed.
+        ItemPrice = 64,   ///< An item's price
+        ItemRemove = 96,  ///< Takes an item off the menu
+        ItemAdd = 128,    ///< Puts one of AttractionFacts::offers on it, by place there
+        ExtraLevel = 160, ///< How much of an extra goes on, by place in the setting list
     };
+    inline constexpr std::size_t kMostListed = 32;
 
     /// The tricks the player may put in `show`, by place in its tricks: not the first, which the performers do
     /// between shows, nor hidden ones, nor ones not yet offered or researched.
     [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::RideShow& show);
 
-    /// The id of `control` on a page, and of item `item`'s price.
+    /// The id of `control` on a page, and of the control for item `item` in a family.
     [[nodiscard]] constexpr int control_id(AttractionControl control, std::size_t item = 0)
     {
         return static_cast<int>(control) + static_cast<int>(item);
+    }
+
+    /// Which item of `family` the control `id` is for; none when it is not of that family.
+    [[nodiscard]] constexpr std::optional<std::size_t> listed(int id, AttractionControl family)
+    {
+        const int item = id - static_cast<int>(family);
+        return item >= 0 && std::cmp_less(item, kMostListed) ? std::optional(static_cast<std::size_t>(item)) : std::nullopt;
     }
 
     /// The text shown for a value the save does not hold.
@@ -249,6 +266,8 @@ namespace rct3::ui
     inline constexpr int kMostRidePrice = 2000;
     inline constexpr int kMostPrice = 1000;
     inline constexpr int kPriceStep = 10;
+    /// A stall item's price goes up to the most a ride's admission does, in smaller steps.
+    inline constexpr int kItemPriceStep = 5;
 
     /// Speeds as the player reads them: so many of their unit to a metre a second, and the unit after a number.
     [[nodiscard]] float speed_scale(DistanceUnits units);

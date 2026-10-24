@@ -442,8 +442,11 @@ namespace rct3::scene
                 Json items = Json::array();
                 for (const save::StallItem& item : stall.items)
                     items.push_back({ { "item", item.kind_symbol }, { "price", item.price } });
+                Json extras = Json::array();
+                for (const save::StallExtra& extra : stall.extras)
+                    extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
                 const bool shown = park.shown && park.shown->kind == park::AttractionRef::Kind::Stall && park.shown->index == i;
-                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "shown", shown }, { "joined", false } };
+                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false } };
                 for (const auto [_, a] : park.sim.registry.view<const simulation::Attraction>().each())
                     if (a.saved == stall.base.id)
                     {
@@ -493,6 +496,14 @@ namespace rct3::scene
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
             // The reason it stays as it was, as a string key; null once changed.
             const auto refused = change_ride_state(park, a[0].get<std::size_t>(), state->second);
+            return refused ? Json(*refused) : Json(nullptr);
+        });
+        engine_.define("stalls.setState", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            const bool open = a.size() == 2 && a[1] == "open";
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
+                throw std::invalid_argument("stalls.setState takes a stall's place in stalls.list() and \"closed\" or \"open\"");
+            const auto refused = change_stall_state(park, a[0].get<std::size_t>(), open ? save::AttractionState::Open : save::AttractionState::Closed);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("rides.show", [this](const Json& a) {

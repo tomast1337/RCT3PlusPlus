@@ -64,6 +64,32 @@ namespace rct3::park
         return lowest_free_name(stalls, symbol);
     }
 
+    void copy_menu(std::span<save::Stall> stalls, std::size_t from)
+    {
+        if (from >= stalls.size())
+            return;
+        const save::Stall& source = stalls[from];
+        for (std::size_t i = 0; i < stalls.size(); ++i)
+        {
+            save::Stall& to = stalls[i];
+            if (i == from || to.base.symbol != source.base.symbol || to.base.overlay_path != source.base.overlay_path)
+                continue;
+            std::vector<save::StallItem> items;
+            for (const save::StallItem& item : source.items)
+            {
+                const auto kept = std::ranges::find(to.items, item.kind_symbol, &save::StallItem::kind_symbol);
+                save::StallItem& copy = items.emplace_back(kept != to.items.end() ? *kept : save::StallItem { .item_asset = item.item_asset, .kind_symbol = item.kind_symbol });
+                copy.price = item.price;
+                copy.name = item.name;
+                copy.colours = item.colours;
+            }
+            to.items = std::move(items);
+            for (save::StallExtra& extra : to.extras)
+                if (const auto same = std::ranges::find(source.extras, extra.kind_symbol, &save::StallExtra::kind_symbol); same != source.extras.end())
+                    extra.level = same->level;
+        }
+    }
+
     std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
     {
         // Lower case, without "anim" and the zeros that lead a number.

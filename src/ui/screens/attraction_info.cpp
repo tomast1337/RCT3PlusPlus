@@ -44,6 +44,9 @@ namespace rct3::ui
             { AttractionTab::Extras, 5, "Stall_ExtrasIcon", "AttractionDetails_StallExtrasHelp" },
         } };
 
+        /// The words of an extra's levels, in the order the save numbers them.
+        constexpr std::array<std::string_view, 6> kExtraLevels { "GUITextSymbol_ShopExtraSetting_NotProvided", "GUITextSymbol_ShopExtraSetting_Little", "GUITextSymbol_ShopExtraSetting_Some", "GUITextSymbol_ShopExtraSetting_More", "GUITextSymbol_ShopExtraSetting_Loads", "GUITextSymbol_ShopExtraSetting_GuestChoice" };
+
         constexpr std::string_view kUnnamed = "TT_AttractionInstance_UnnamedAttraction";
         constexpr char kKeyMark = '#';                 ///< Round a name that is a string's key
         constexpr std::string_view kNumbered = "%ME%"; ///< Before the number of a name made from the kind's
@@ -238,7 +241,7 @@ namespace rct3::ui
             page.controls.push_back(std::move(c));
         }
 
-        InfoControl price(int id, std::string name, std::u16string label, std::int64_t value, int most)
+        InfoControl price(int id, std::string name, std::u16string label, std::int64_t value, int most, int step = kPriceStep)
         {
             InfoControl c;
             c.id = id;
@@ -247,7 +250,7 @@ namespace rct3::ui
             c.label = std::move(label);
             c.value = static_cast<int>(std::clamp<std::int64_t>(value, 0, most));
             c.maximum = most;
-            c.step = kPriceStep;
+            c.step = step;
             c.decimals = 2;
             return c;
         }
@@ -680,10 +683,51 @@ namespace rct3::ui
             page.controls.push_back(std::move(mechanic));
         }
 
-        void items(InfoPage& page, const save::Stall& stall, const StringTable& strings)
+        /// A carried item's or an extra's name as its symbol gives it, as `MedBurger` for `MedBurger:cid`.
+        // shortcut: not the name its own overlay's text gives, upgrade once carried items' overlays are read.
+        std::u16string symbol_name(std::string_view symbol)
         {
-            for (std::size_t i = 0; i < stall.items.size(); ++i)
-                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), std::format("ItemPrice{}", i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostPrice));
+            return symbol.empty() ? missing() : strings::to_utf16(symbol.substr(0, symbol.find(':')));
+        }
+
+        // shortcut: buttons take items off the menu and put them on, where the game drags them; upgrade with
+        // dragging between panes.
+        void items(InfoPage& page, const save::Stall& stall, const std::vector<std::string>& offers, const StringTable& strings)
+        {
+            InfoControl sync;
+            sync.id = control_id(AttractionControl::SyncStalls);
+            sync.name = "Stall_Synchronize";
+            sync.kind = InfoControlKind::Tick;
+            sync.label = text(strings, "Stall_Synchronize");
+            sync.value = stall.sync ? 1 : 0;
+            page.controls.push_back(std::move(sync));
+            for (std::size_t i = 0; i < stall.items.size() && i < kMostListed; ++i)
+            {
+                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), std::format("ItemPrice{}", i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostRidePrice, kItemPriceStep));
+                InfoControl remove;
+                remove.id = control_id(AttractionControl::ItemRemove, i);
+                remove.name = std::format("ItemRemove{}", i);
+                remove.kind = InfoControlKind::Button;
+                remove.text = u"-";
+                remove.help = text(strings, "StallItemsWindow_TrashCan");
+                remove.beside = true;
+                page.controls.push_back(std::move(remove));
+            }
+            for (std::size_t i = 0; i < offers.size() && i < kMostListed; ++i)
+            {
+                if (std::ranges::contains(stall.items, offers[i], &save::StallItem::kind_symbol))
+                    continue;
+                InfoControl add;
+                add.id = control_id(AttractionControl::ItemAdd, i);
+                add.name = std::format("ItemAdd{}", i);
+                add.kind = InfoControlKind::Button;
+                add.label = symbol_name(offers[i]);
+                add.text = u"+";
+                add.help = text(strings, "StallItemsWindow_DragOn");
+                if (const auto at = add.help.find(u"%ITEM%"); at != std::u16string::npos)
+                    add.help.replace(at, 6, add.label);
+                page.controls.push_back(std::move(add));
+            }
         }
 
     } // namespace
@@ -930,12 +974,20 @@ namespace rct3::ui
             case AttractionTab::Extras:
                 if (f.stall && f.stall->extras.empty())
                     page.note = text(strings, "GUITextSymbol_ShopExtras_NoItemsRequireExtras");
-                // shortcut: an extra's name and the words of its levels are not read from the save, so each shows
-                // as missing with its level's number; name them once the extras' assets are read.
                 else if (f.stall)
                 {
-                    for (const save::StallExtra& e : f.stall->extras)
-                        page.lines.push_back({ missing(), count(e.level) });
+                    for (std::size_t i = 0; i < f.stall->extras.size() && i < kMostListed; ++i)
+                    {
+                        InfoControl c;
+                        c.id = control_id(AttractionControl::ExtraLevel, i);
+                        c.name = std::format("ExtraLevel{}", i);
+                        c.kind = InfoControlKind::Choice;
+                        c.label = symbol_name(f.stall->extras[i].kind_symbol);
+                        for (const std::string_view key : kExtraLevels)
+                            c.items.push_back(text(strings, key));
+                        c.value = std::cmp_less(f.stall->extras[i].level, kExtraLevels.size()) ? f.stall->extras[i].level : -1;
+                        page.controls.push_back(std::move(c));
+                    }
                 }
                 break;
             case AttractionTab::Maintenance:
@@ -944,7 +996,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Items:
                 if (f.stall)
-                    items(page, *f.stall, strings);
+                    items(page, *f.stall, f.offers, strings);
                 break;
             case AttractionTab::Thoughts:
                 if (f.ride)

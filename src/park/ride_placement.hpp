@@ -43,6 +43,10 @@ namespace rct3::park
     [[nodiscard]] std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol);
     /// The same for a new stall, among the park's `stalls`.
     [[nodiscard]] std::string numbered_name(std::span<const save::Stall> stalls, std::string_view symbol);
+    /// Gives every other stall of the kind of `stalls[from]` its menu, as its synchronise tick does: the same
+    /// items at the same prices, names and colours, and the same level of each extra both offer. An item a
+    /// stall already sold keeps its takings.
+    void copy_menu(std::span<save::Stall> stalls, std::size_t from);
 
     /// The tricks a show ride of kind `kind` (its symbol without the tag, as "KillerWhaleShow") knows: of
     /// `names` (every show trick the game names, as "WhaleShowAnimTrick1" or "LionShowFireHoop"), those whose

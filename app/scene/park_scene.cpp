@@ -1764,6 +1764,8 @@ namespace rct3::scene
                     f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::Ride& ride) { return ride.base.time_since_crash >= 0; }));
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
+                    if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                        f.themed = simulation::themed_attractions(scene.rides, scene.objects, scene.build.items.get());
                     if (!f.downtime.empty())
                         f.reliability /= static_cast<float>(f.downtime.size());
                     std::array<bool, 4> kinds { };

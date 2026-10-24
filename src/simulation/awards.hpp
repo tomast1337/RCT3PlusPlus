@@ -7,11 +7,16 @@
 // can come in one month. An award a park has had lately also keeps away its opposite, and others that would
 // sit badly with it. Each pays the park, or for a fine costs it, what the scenario sets.
 
+#include "park/build_catalogue.hpp"
 #include "random/generator.hpp"
 #include "save/model/park.hpp"
+#include "save/model/rides.hpp"
+#include "save/model/world.hpp"
 
 #include <cstdint>
 #include <map>
+#include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -57,7 +62,14 @@ namespace rct3::simulation
         std::int32_t crashed = 0;         ///< Rides that have ever crashed
         std::int32_t coaster_dangers = 0; ///< Dangerous happenings on coasters lately, as the awards keep them
         std::int32_t pool_dangers = 0;    ///< And at pools
+        /// By theme, as the themes' overlays name them ("Spooky"): rides and stalls that stand among its scenery.
+        std::map<std::string, std::int32_t, std::less<>> themed { };
     };
+
+    /// Of the park's rides and stalls, how many carry each theme: those with enough scenery of the theme round
+    /// them, their own theme counting for some. `catalogue` tells each overlay's theme and each item's size. By
+    /// theme name, as AwardFigures::themed.
+    [[nodiscard]] std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
 
     /// Whether the park earns award `kind` this month. `dice` draws the luck some awards leave to chance.
     [[nodiscard]] bool award_earned(std::int32_t kind, const AwardFigures& figures, std::uint32_t lately, random::RandomState& dice);

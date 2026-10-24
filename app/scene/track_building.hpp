@@ -3,9 +3,12 @@
 // Building a tracked ride's track in the park, piece by piece, with the construction panel. The panel offers
 // the pieces of the ride's track overlay that fit the open end of its track; the picked one shows there as
 // a see-through ghost, and building it adds it to the park's objects and to the ride's track in memory.
-// Demolish takes the last piece away, which opens a closed circuit. After either, the ride's piece patterns
-// swap the pieces they match (a station run's ends for its end pieces). A ride may not be edited while it is
-// open. Nothing is paid and no supports are built under new pieces yet.
+// Demolish takes the last piece away, which opens a closed circuit. A piece clicked between two others is
+// built over instead: the panel offers the pieces that fit both, building one swaps it in (the same piece is
+// left standing) and picks the next piece along, and demolish takes it out, leaving a gap the track is built
+// on into from the piece before. After any of these, the ride's piece patterns swap the pieces they match (a
+// station run's ends for its end pieces). A ride may not be edited while it is open. No supports are built
+// under new pieces yet.
 //
 // A new ride starts with no pieces: its first piece, one its kind may start a track with, follows the
 // pointer over the ground until it is built.
@@ -88,6 +91,11 @@ namespace rct3::scene
         park::TrackChoice choice;
         std::optional<park::LaidPiece> picked;
         std::optional<park::PiecePlacement> ghost;
+        /// A piece between two others clicked in the park, by place in the ride's track: the panel offers what
+        /// may stand in its place, and building steps on along the track to the piece after it, or before it
+        /// when `selected_back`. None while building at the track's open end.
+        std::optional<std::size_t> selected;
+        bool selected_back = false;
         park::ObjectMesh ghost_mesh;
         bool off_water = false; ///< The ghost's piece stands only on water, and some of it is on dry land
         std::string complaint;  ///< String key: why the track was last not finished; cleared by the next action
@@ -140,9 +148,11 @@ namespace rct3::scene
     /// ride without a platform type.
     void update_platforms(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
-    /// A click on the park while the ride being built has no pieces yet: lays its first piece where the ghost
-    /// shows it. False, doing nothing, at other times.
-    bool track_building_click(ParkScene& scene, const ui::InterfaceAssets& assets);
+    /// A click on the park at `at`, in interface units on a screen of `size`, while a ride is built. With no
+    /// pieces yet, lays its first piece where the ghost shows it. Otherwise a click on one of its pieces picks
+    /// it to build over, stepping on toward the end of it nearer the click; one at the track's open end goes
+    /// back to building there. False, doing nothing, at other times.
+    bool track_building_click(ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Closes the construction panel and leaves the building idle.
     void close_track_building(ParkScene& scene);

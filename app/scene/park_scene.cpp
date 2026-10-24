@@ -1424,7 +1424,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (painting_patrol(scene) || land_tool(scene))
                     ;
-                else if (still && !over && (ride_placing_click(device, scene, assets) || track_building_click(scene, assets)))
+                else if (still && !over && (ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
                 {

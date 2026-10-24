@@ -2,7 +2,8 @@
 //
 // Lays the first saved design the install offers for a corkscrew coaster on the game's blank landscape, from the
 // construction panel. The panel's ring carries the construction crane, which hides and shows the strip of
-// controls, and the ride's closed flag; no test light.
+// controls, and the ride's closed flag; no test light. A piece clicked mid-track is then taken out, leaving a
+// gap built on into.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
 
@@ -48,3 +49,19 @@ await ui.click("placing/Attraction_Construction");
 await frames(3);
 expect(ui.find("placing/body/construction") !== undefined, "the strip shown again by the crane");
 await screenshot("laid");
+
+// A click on a piece of the circuit picks it to build over, and demolish takes it out, opening the circuit.
+const ride = build.construction()!.ride;
+const before = rides.list()[ride].pieces ?? 0;
+// The design is laid round the point clicked; look a little round it for a piece.
+for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++i) {
+    await pointer.click(0.48 + 0.01 * (i % 5), 0.43 + 0.01 * Math.floor(i / 5));
+    await frames(3);
+}
+expect(typeof build.construction()?.selected === "number", "a piece picked mid-track");
+await screenshot("picked");
+await ui.click("placing/body/construction/demolish");
+await frames(5);
+expect(build.construction()?.selected === null, "building back at the open end");
+expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
+expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");

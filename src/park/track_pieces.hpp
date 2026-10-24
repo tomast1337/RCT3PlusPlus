@@ -53,6 +53,9 @@ namespace rct3::park
     // first, station pieces the second, and nearly every piece of later files the third.
     inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
+    /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
+    inline constexpr std::uint32_t kRoleTowerFirst = 91;
+    inline constexpr std::uint32_t kRoleTowerLast = 95;
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
     inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
@@ -61,6 +64,8 @@ namespace rct3::park
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
     inline constexpr std::uint32_t kPieceCableLift = 0x20;       ///< A cable pulls the cars up it
     inline constexpr std::uint32_t kPieceLaunch = 0x4000;        ///< Pushes a launched train on, as launch sections do
+    inline constexpr std::uint32_t kPieceHolds = 0x100;          ///< A train may be held on it: holding brakes, tilt and reverser pieces, tower caps
+    inline constexpr std::uint32_t kPieceLiftTop = 0x800;        ///< The top of a lift, where a train waits for the block ahead
     inline constexpr std::uint32_t kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
     inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
     /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.

@@ -65,13 +65,19 @@ namespace rct3::park
                 const auto model = models.find(model_ref(object));
                 const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
                 CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : (shape->toggles & toggle_bit(PieceToggle::Chain)) != 0 ? CourseKind::Chain : CourseKind::Plain;
+                const std::uint32_t role = shape->record.role;
+                if (kind == CourseKind::Chain && role >= kRoleTowerFirst && role <= kRoleTowerLast)
+                    kind = CourseKind::Plain;
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;
-                else if (kind == CourseKind::Plain && shape->record.role == kRoleBlockBrake)
+                // shortcut: holding pieces in a row make one block, not one each, split them when a ride has them so
+                else if ((shape->record.flags & (kPieceHolds | kPieceLiftTop)) != 0)
+                    kind = CourseKind::BlockBrake;
+                else if (kind == CourseKind::Plain && role == kRoleBlockBrake)
                     kind = CourseKind::BlockBrake;
                 else if (kind == CourseKind::Plain && (shape->record.flags & kPieceLaunch) != 0)
                     kind = CourseKind::Launch;
-                else if (kind == CourseKind::Plain && shape->record.role == kRoleBrakes)
+                else if (kind == CourseKind::Plain && role == kRoleBrakes)
                     kind = CourseKind::Brake;
                 const auto brake_speed = static_cast<float>(kind == CourseKind::Brake ? piece.brake_speed : -1);
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;

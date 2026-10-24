@@ -203,6 +203,7 @@ namespace
         kBench,
         kPool,
         kDesignScenery,
+        kWaterfall,
     };
 
     Attr u8a(const char* n)
@@ -266,6 +267,7 @@ namespace
             { "ParkBenchBehaviour", { refa("\"SceneryItem\"") } },
             { "PoolSegment", { i32a("Col"), i32a("Depth"), { "Prototype", "bool", 1, { } }, i32a("Row"), i32a("SegmentType"), i32a("SurfaceHeight") } },
             { "SceneryItemPlacementSingle", { colours("FlexiColourField"), refa("Owner"), refa("SIDDatabaseEntry"), refa("SceneryItem"), { "SceneryItemDataField", "struct", 20, { i32a("CORNER"), i32a("DIRECTION"), i32a("HEIGHT"), i32a("POSX"), i32a("POSZ") } } } },
+            { "WaterfallBody", { { "Dir", "vector3", 12, { } }, { "HiWaterPos", "vector3", 12, { } }, { "LoWaterPos", "vector3", 12, { } }, { "StartPosLeft", "vector3", 12, { } }, { "StartPosRight", "vector3", 12, { } } } },
         };
     }
 
@@ -947,4 +949,20 @@ TEST_CASE("load_world: the pool squares that hold water, at their surface and de
     CHECK(l->world->pool_water[0].surface == -5);
     CHECK(l->world->pool_water[0].depth == 2);
     CHECK(l->world->pool_water[1].col == 2);
+}
+
+TEST_CASE("load_world: waterfalls, from their lip down to where they land")
+{
+    Bytes p;
+    p.f32(1).f32(0).f32(0).f32(-10).f32(20).f32(4).f32(12).f32(5).f32(4).f32(-4).f32(20.03f).f32(8).f32(-4).f32(20.03f).f32(0);
+    const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), Obj { kWaterfall, 600, p } });
+    REQUIRE(l->world);
+    REQUIRE(l->world->waterfalls.size() == 1);
+    const auto& w = l->world->waterfalls[0];
+    CHECK(w.flow.x == 1);
+    CHECK(w.top.y == 20);
+    CHECK(w.bottom.y == 5);
+    CHECK(w.bottom.x == 12);
+    CHECK(w.lip_left.z == 8);
+    CHECK(w.lip_right.z == 0);
 }

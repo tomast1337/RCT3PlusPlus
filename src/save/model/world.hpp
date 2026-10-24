@@ -335,6 +335,16 @@ namespace rct3::save
         std::int32_t depth = 0;   ///< Whole units
     };
 
+    /// A waterfall: water pouring from a higher lake over a cliff edge into a lower one.
+    struct Waterfall
+    {
+        WorldPoint3 lip_left { };  ///< One end of the edge the water pours over, at the upper lake's level
+        WorldPoint3 lip_right { }; ///< The other end
+        WorldPoint3 top { };       ///< A point of the upper lake behind the edge; its height is that lake's level
+        WorldPoint3 bottom { };    ///< Where the water lands; its height is the lower lake's level
+        WorldPoint3 flow { };      ///< Unit direction the water runs across the ground, from `top` to `bottom`
+    };
+
     /// What a sign placed in the park says.
     struct SignState
     {
@@ -453,6 +463,7 @@ namespace rct3::save
         std::vector<SignState> signs { };
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
         std::vector<PoolWater> pool_water { };
+        std::vector<Waterfall> waterfalls { };
         std::optional<Weather> weather { };
         std::optional<std::int32_t> sky_background { }; ///< Background (sky box) index
         std::optional<WorldTime> time { };

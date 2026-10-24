@@ -307,6 +307,8 @@ namespace
             for (const auto& [d, n] : above)
                 pools += std::format(" {} x{}", d, n);
             out.info("{}", pools);
+            for (const auto& f : w.waterfalls)
+                out.info("  waterfall    lip ({:g}, {:g}, {:g}) to ({:g}, {:g}, {:g}), lakes {:g} over {:g}", f.lip_left.x, f.lip_left.y, f.lip_left.z, f.lip_right.x, f.lip_right.y, f.lip_right.z, f.top.y, f.bottom.y);
         }
 
         std::array<std::size_t, 4> kinds { };

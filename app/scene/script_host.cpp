@@ -8,6 +8,7 @@
 #include "park/water_fill.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "random/generator.hpp"
+#include "scene/front_end_scene.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
@@ -147,13 +148,14 @@ namespace rct3::scene
         engine_.define("ui.find", [this](const Json& a) -> Json {
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("ui.find takes a widget path");
-            if (park_ == nullptr || device_ == nullptr)
+            const auto root = shown_root();
+            if (!root || device_ == nullptr)
                 return nullptr;
-            auto w = park_->desktop->root().find(a[0].get<std::string>());
+            auto w = root->first.find(a[0].get<std::string>());
             const render::Extent view = device_->extent();
             if (!w || !w->visible || view.width == 0 || view.height == 0)
                 return nullptr;
-            const float scale = park_interface_scale(*device_, *park_);
+            const float scale = root->second;
             const ui::Rect& r = w->rect();
             const float across = scale / static_cast<float>(view.width);
             const float down = scale / static_cast<float>(view.height);
@@ -165,10 +167,11 @@ namespace rct3::scene
         engine_.define("ui.children", [this](const Json& a) -> Json {
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("ui.children takes a widget path");
-            if (park_ == nullptr)
+            const auto root = shown_root();
+            if (!root)
                 return nullptr;
             const std::string path = a[0].get<std::string>();
-            auto w = path.empty() ? std::optional<ui::Widget&>(park_->desktop->root()) : park_->desktop->root().find(path);
+            auto w = path.empty() ? std::optional<ui::Widget&>(root->first) : root->first.find(path);
             if (!w || !w->visible)
                 return nullptr;
             Json names = Json::array();
@@ -177,6 +180,13 @@ namespace rct3::scene
                     names.push_back(child->name());
             return names;
         });
+        engine_.define("career.start", [this](const Json& a) {
+            if (a.empty() || !a[0].is_number_integer() || a[0].get<int>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
+                throw std::invalid_argument("career.start takes a scenario's place in the list and a game");
+            career_ = { a.size() > 1 ? a[1].get<int>() : 0, a[0].get<std::size_t>() };
+            return Json(nullptr);
+        });
+        engine_.define("career.map", [this](const Json&) { return Json(park_ == nullptr && front_ != nullptr && front_->live->front->career_board().has_value()); });
         engine_.define("log", [this](const Json& a) {
             std::string line;
             for (const Json& v : a)
@@ -648,13 +658,14 @@ namespace rct3::scene
         });
     }
 
-    void ScriptHost::tick(const render::Device& device, ParkScene* park)
+    void ScriptHost::tick(const render::Device& device, ParkScene* park, FrontEndScene* front)
     {
         wheel_ = 0; // Turned for one frame only
         if (quit_)
             return;
         device_ = &device;
         park_ = park;
+        front_ = front;
         const scripting::ScriptState state = engine_.tick();
         device_ = nullptr;
         if (state == scripting::ScriptState::Failed)
@@ -687,6 +698,22 @@ namespace rct3::scene
     {
         write(why, true);
         quit_ = 1;
+    }
+
+    std::optional<std::pair<ui::Widget&, float>> ScriptHost::shown_root() const
+    {
+        if (device_ == nullptr)
+            return std::nullopt;
+        if (park_ != nullptr)
+            return std::pair<ui::Widget&, float> { park_->desktop->root(), park_interface_scale(*device_, *park_) };
+        if (front_ != nullptr)
+            return std::pair<ui::Widget&, float> { front_->live->desktop.root(), front_end_scale(*device_, *front_) };
+        return std::nullopt;
+    }
+
+    std::optional<std::pair<int, std::size_t>> ScriptHost::take_career()
+    {
+        return std::exchange(career_, std::nullopt);
     }
 
     std::optional<std::string> ScriptHost::take_park()

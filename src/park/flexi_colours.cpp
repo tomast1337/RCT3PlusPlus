@@ -2,6 +2,7 @@
 #include "park/flexi_colours.hpp"
 
 #include "math/hex_colour.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -91,6 +92,18 @@ namespace rct3::park
         FlexiColours out { };
         for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
             out[k] = flexi_colour(stored[k] >= 0 && static_cast<std::size_t>(stored[k]) < kFlexiColourCount ? static_cast<std::size_t>(stored[k]) : 0);
+        return out;
+    }
+
+    std::array<std::int32_t, kFlexiSlotCount> name_colours(std::string_view name)
+    {
+        // FNV-1a, then five bits of it for each slot.
+        std::uint32_t hash = 2166136261u;
+        for (const char c : name)
+            hash = (hash ^ static_cast<std::uint8_t>(strings::ascii_lower(c))) * 16777619u;
+        std::array<std::int32_t, kFlexiSlotCount> out { };
+        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
+            out[k] = static_cast<std::int32_t>((hash >> (5 * k)) % kFlexiColourCount);
         return out;
     }
 

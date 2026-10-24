@@ -6,6 +6,7 @@
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
+#include "park/flexi_colours.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
@@ -106,6 +107,7 @@ namespace rct3::scene
                 o.col = p.site->col;
                 o.row = p.site->row;
                 o.rotation = static_cast<std::uint8_t>(p.site->turns);
+                o.colours = park::name_colours(o.symbol);
                 return o;
             }
             if (!p.door)
@@ -129,6 +131,9 @@ namespace rct3::scene
             {
                 if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
                     o.colours = model->second.default_colours;
+                // The ride itself starts in its model's colours; its doors in their own.
+                if (scene.placing.step == RidePlacing::Step::Ride)
+                    o.colours = park::name_colours(o.symbol);
                 scene.attractions[o.id] = { park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
             scene.objects.push_back(o);
@@ -357,7 +362,7 @@ namespace rct3::scene
             {
                 // A new pick starts in the item's own colours.
                 p.panel_item = alone.symbol;
-                p.colours = scene.models.at(park::model_key(alone)).default_colours;
+                p.colours = scenery ? scene.models.at(park::model_key(alone)).default_colours : park::name_colours(alone.symbol);
                 show_alone();
                 if (panel)
                 {

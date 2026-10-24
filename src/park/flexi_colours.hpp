@@ -51,6 +51,11 @@ namespace rct3::park
     /// The colours an object's stored picks name; a pick out of range is the first colour.
     [[nodiscard]] FlexiColours flexi_colours(const std::array<std::int32_t, kFlexiSlotCount>& stored);
 
+    /// The picks a newly placed ride of model `name` starts in: three of the 32, drawn from the name (in any
+    /// case), so rides of one model start alike and models differ. Our own rule; the game starts coasters in
+    /// black.
+    [[nodiscard]] std::array<std::int32_t, kFlexiSlotCount> name_colours(std::string_view name);
+
     /// One frame of a flexi texture kept as palette indices, so it can be painted in any colours.
     struct PaletteImage
     {

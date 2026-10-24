@@ -8,6 +8,7 @@
 #include "ovl/ride_train.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/asset_index.hpp"
+#include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride_placement.hpp"
@@ -459,6 +460,12 @@ namespace rct3::scene
                 if (const auto found = objects.find(before.scenery); found != objects.end())
                     object.colours = scene.objects[found->second].colours;
             }
+            else
+            {
+                // A new ride's track starts in its model's colours, as its cars do.
+                piece.colours = ride.car_colours;
+                object.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
+            }
             const park::PieceShape& shape = c->pieces[b.picked->index];
             if (scene.park.cash)
             {
@@ -874,6 +881,8 @@ namespace rct3::scene
         ride.base.id = last_id(scene) + 1;
         ride.base.symbol = std::format("{}:trr", item.symbol);
         ride.base.overlay_path = item.overlay;
+        const auto colours = park::name_colours(item.symbol);
+        ride.car_colours = { static_cast<std::uint8_t>(colours[0]), static_cast<std::uint8_t>(colours[1]), static_cast<std::uint8_t>(colours[2]) };
         // Its kind's name and a number, as the game names a new ride.
         ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.

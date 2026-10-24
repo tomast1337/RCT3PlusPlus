@@ -64,6 +64,9 @@ namespace rct3::simulation
     /// Moves `takings` on to calendar `time`, given all the park has taken on rides and in shops so far.
     void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far);
 
+    /// Whether the simulation can tell if a goal of `kind` is met. Those it cannot are never met.
+    [[nodiscard]] bool judged(save::ConditionKind kind) noexcept;
+
     /// Prize numbers past the scenario's own: those of the three levels.
     inline constexpr std::int32_t kApprenticePrize = 10;
 

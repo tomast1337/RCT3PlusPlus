@@ -109,12 +109,30 @@ namespace rct3::simulation
                 case save::ConditionKind::Coaster:
                     return c.coaster && coaster_goal_met(*c.coaster, f.rides);
                 default:
-                    // shortcut: goals about things the simulation does not have yet (VIP visits, items bought, animals,
-                    // pools) are never met, so a level that sets one cannot be won; judge them as those parts arrive.
                     return false;
             }
         }
     } // namespace
+
+    bool judged(save::ConditionKind kind) noexcept
+    {
+        using enum save::ConditionKind;
+        switch (kind)
+        {
+            case ParkValue:
+            case ParkGuests:
+            case ParkRating:
+            case RideIncome:
+            case ShopProfit:
+            case RepayLoan:
+            case Coaster:
+                return true;
+            default:
+                // shortcut: goals about things the simulation does not have yet (VIP visits, items bought, pools,
+                // animals) are never met, so a level that sets one cannot be won; judge them as those parts arrive.
+                return false;
+        }
+    }
 
     RideGroup ride_group(std::uint32_t kind) noexcept
     {
@@ -235,8 +253,9 @@ namespace rct3::simulation
                 }
                 break;
             default:
-                // shortcut: a coaster design and a research boost only tell the player for now; give them once
-                // designs can be locked and research runs.
+                // A coaster design prize only tells the player: saved designs held back for a scenario's level open once
+                // the career has that level.
+                // shortcut: the research boost only tells the player too; give it once research runs.
                 break;
         }
     }

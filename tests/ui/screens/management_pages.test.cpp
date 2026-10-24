@@ -37,6 +37,9 @@ namespace
         s.add("ObjectiveCondition_ForManyMonths0", u"Held for");
         s.add("ObjectiveCondition_ForManyMonths1", u"months.");
         s.add("ObjectiveCondition_ParkGuests", u"Guests in park");
+        s.add("ObjectiveCondition_VIP", u"VIP");
+        s.add("ObjectiveCondition_AtAnyTime", u"At any time.");
+        s.add("Rct3pp_GoalNotSimulated", u"Not simulated yet");
         s.add("ChallengeWindow_NoChallenge", u"None now.");
         return s;
     }
@@ -184,6 +187,16 @@ TEST_CASE("an objective's condition says how long it must hold")
     CHECK(value_of(page, u"Guests in park") == u"800");
     CHECK(value_of(page, u"Held for 5 months.") == u"-");
     CHECK(management_page(ManagementTopic::Objectives, 0, { .park = &park }, s, kUnits).lines.size() == 2);
+}
+
+TEST_CASE("an objective's condition the simulation cannot judge says so")
+{
+    const StringTable s = test_strings();
+    save::ParkModel park;
+    park.objectives.conditions = { { .kind = save::ConditionKind::Vip } };
+    const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park }, s, kUnits);
+    CHECK(value_of(page, u"VIP") == u"-");
+    CHECK(value_of(page, u"At any time.") == u"Not simulated yet");
 }
 
 TEST_CASE("the research priorities show one row an area")

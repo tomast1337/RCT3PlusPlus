@@ -90,6 +90,7 @@
             "DeveloperWindows": "Developer windows"
         },
         "ManagementNotRead": "Not read from the park yet.",
+        "GoalNotSimulated": "Not simulated yet",
         "ManagementFamiliesNote": "Families are made with the family designer on the front screen. Here they can only be looked at.",
         "ManagementLeader": "Leader",
         "ManagementMembers": "Members",

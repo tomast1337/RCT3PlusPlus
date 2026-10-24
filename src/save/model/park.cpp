@@ -41,9 +41,25 @@ namespace rct3::save
             constexpr std::string_view kAnimalSpeciesEntryClass = "WASDatabaseEntry";
             // Condition classes are found by owning the slot attribute; these classes give the family.
             constexpr std::array kConditionKinds = {
-                std::pair { std::string_view { "ParkValueCondition" }, ConditionKind::ParkValue },   std::pair { std::string_view { "ParkGuestsCondition" }, ConditionKind::ParkGuests },   std::pair { std::string_view { "ParkRatingCondition" }, ConditionKind::ParkRating },
-                std::pair { std::string_view { "RideIncomeCondition" }, ConditionKind::RideIncome }, std::pair { std::string_view { "ShopProfitCondition" }, ConditionKind::ShopProfit },   std::pair { std::string_view { "RepayLoanCondition" }, ConditionKind::RepayLoan },
-                std::pair { std::string_view { "CoasterCondition" }, ConditionKind::Coaster },       std::pair { std::string_view { "ItemsBoughtCondition" }, ConditionKind::ItemsBought }, std::pair { std::string_view { "VIPCondition" }, ConditionKind::Vip },
+                std::pair { std::string_view { "ParkValueCondition" }, ConditionKind::ParkValue },
+                std::pair { std::string_view { "ParkGuestsCondition" }, ConditionKind::ParkGuests },
+                std::pair { std::string_view { "ParkRatingCondition" }, ConditionKind::ParkRating },
+                std::pair { std::string_view { "RideIncomeCondition" }, ConditionKind::RideIncome },
+                std::pair { std::string_view { "ShopProfitCondition" }, ConditionKind::ShopProfit },
+                std::pair { std::string_view { "RepayLoanCondition" }, ConditionKind::RepayLoan },
+                std::pair { std::string_view { "CoasterCondition" }, ConditionKind::Coaster },
+                std::pair { std::string_view { "ItemsBoughtCondition" }, ConditionKind::ItemsBought },
+                std::pair { std::string_view { "VIPCondition" }, ConditionKind::Vip },
+                std::pair { std::string_view { "PoolGuestsCondition" }, ConditionKind::PoolGuests },
+                std::pair { std::string_view { "PoolIncomeCondition" }, ConditionKind::PoolIncome },
+                std::pair { std::string_view { "NumAnimalsOfSpeciesCondition" }, ConditionKind::AnimalsOfSpecies },
+                std::pair { std::string_view { "AnimalSalesProfitCondition" }, ConditionKind::AnimalSalesProfit },
+                std::pair { std::string_view { "EnclosureVisitorsCondition" }, ConditionKind::GalleryVisitors },
+                std::pair { std::string_view { "EnclosureIncomeCondition" }, ConditionKind::GalleryIncome },
+                std::pair { std::string_view { "ReleaseAnimalsCondition" }, ConditionKind::AnimalsReleased },
+                std::pair { std::string_view { "MinAnimalHealthCondition" }, ConditionKind::AnimalHealth },
+                std::pair { std::string_view { "DungTargetCondition" }, ConditionKind::Dung },
+                std::pair { std::string_view { "ViewingGalleriesCondition" }, ConditionKind::ViewingGalleries },
             };
 
             // Group mix attributes, in GroupMix::weights order

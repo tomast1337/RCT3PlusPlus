@@ -1139,7 +1139,9 @@ int main(int argc, char** argv)
                     {
                         const auto p = game_pointer();
                         rct3::scene::ParkInput input;
-                        input.pointer = { { p.x, p.y }, p.left, !ImGui::GetIO().WantCaptureMouse, { p.wheel_x, p.wheel_y } };
+                        // The wheel over a developer window scrolls it, not the park.
+                        const bool ours = !ImGui::GetIO().WantCaptureMouse;
+                        input.pointer = { { p.x, p.y }, p.left, ours, ours ? rct3::ui::Point { p.wheel_x, p.wheel_y } : rct3::ui::Point { } };
                         input.right = p.right && input.pointer.present;
                         input.in_window = p.inside && input.pointer.present;
                         input.middle = p.middle && input.pointer.present;

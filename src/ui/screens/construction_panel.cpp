@@ -97,6 +97,8 @@ namespace rct3::ui
         new_segment_->icon = style.new_segment;
         new_segment_->placement = top_left(cp::kNewSegmentAt.x, cp::kNewSegmentAt.y, cp::kNewSegmentSize.x, cp::kNewSegmentSize.y);
         new_segment_->visible = false;
+        split_ = picture("split");
+        split_->visible = false;
         heights_ = picture("heights");
         heights_->placement = top_left(cp::kHeightsAt.x, cp::kHeightsAt.y, cp::kHeightsSize.x, cp::kHeightsSize.y);
 
@@ -182,7 +184,10 @@ namespace rct3::ui
         const float specials = specials_left(toggles);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
             specials_.at(i)->placement = top_left(specials + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
-        list_left_ = std::max({ cp::kListLeft, specials + 2 * cp::kSpecialStep + 6, view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x + 6 : 0.0f });
+        const float split = view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x + 4 : cp::kNewSegmentAt.x;
+        split_->placement = top_left(split, cp::kNewSegmentAt.y, cp::kSplitSize.x, cp::kSplitSize.y);
+        const float buttons_right = view_.split ? split + cp::kSplitSize.x : view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x : 0.0f;
+        list_left_ = std::max({ cp::kListLeft, specials + 2 * cp::kSpecialStep + 6, buttons_right > 0 ? buttons_right + 6 : 0.0f });
         list_->placement = top_left(list_left_, cp::kListTop, cp::kListRight - list_left_, cp::kListHeight);
     }
 
@@ -215,6 +220,9 @@ namespace rct3::ui
         complete_->enabled = view_.can_complete;
         new_segment_->visible = view_.new_segment.has_value();
         new_segment_->enabled = view_.new_segment.value_or(false);
+        split_->visible = view_.split.has_value();
+        if (view_.split)
+            split_->icon = style_.split.at(std::min(*view_.split, cp::kSplitPictures - 1));
         heights_->icon = view_.heights || view_.heights_locked ? style_.heights_on : style_.heights;
         heights_->tooltip = view_.heights_locked ? heights_locked_help : heights_help;
         piece_->text = view_.piece;
@@ -306,6 +314,8 @@ namespace rct3::ui
             events_.push_back({ ConstructionAction::Complete, 0 });
         if (new_segment_->take_click() && view_.new_segment.value_or(false))
             events_.push_back({ ConstructionAction::NewSegment, 0 });
+        if (split_->take_click() && view_.split)
+            events_.push_back({ ConstructionAction::Split, 0 });
         if (heights_->take_click() && !view_.heights_locked)
             events_.push_back({ ConstructionAction::Heights, 0 });
         // A picture piece clicked: picked, or built when it is picked already.

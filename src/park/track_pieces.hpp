@@ -147,6 +147,7 @@ namespace rct3::park
         std::int32_t cost = 0;          ///< As the scenery item stores it
         std::array<PieceJoin, 2> joins; ///< Of its start and its end, laid as drawn
         std::uint32_t side = 0;         ///< Of side by side tracks; ends meet only ends of the same side
+        std::string partner;            ///< Of side by side tracks: the other half of a joined piece, by name
         std::string group;              ///< For the ride's piece patterns
     };
 

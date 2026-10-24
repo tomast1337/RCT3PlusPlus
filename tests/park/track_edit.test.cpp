@@ -130,3 +130,17 @@ TEST_CASE("only pieces that end where the next piece starts, and meet its start,
     // A gap two tiles long takes no one piece.
     CHECK(pieces_between(pieces, tip, { 0, false }, start_of(placed(8, 5), pieces[0], false, g), { 0, false }, g).empty());
 }
+
+TEST_CASE("a stretch made last is built on, and a piece added to another keeps the last where it was")
+{
+    save::Track t = track({ { 2, false }, { 3, false } });
+    make_last(t, 0);
+    CHECK(ids(t) == std::vector<save::ObjectId> { 3, 4, 5, 1, 2 });
+    CHECK(add_piece(t, 0, { .id = 9 }) == 0);
+    CHECK(ids(t) == std::vector<save::ObjectId> { 3, 4, 5, 9, 1, 2 });
+    // With no stretch to add to, it begins one just before the last.
+    CHECK(add_piece(t, std::nullopt, { .id = 8 }) == 1);
+    CHECK(ids(t) == std::vector<save::ObjectId> { 3, 4, 5, 9, 8, 1, 2 });
+    CHECK(t.segments.size() == 3);
+    CHECK(t.segments[2].first_piece == 5);
+}

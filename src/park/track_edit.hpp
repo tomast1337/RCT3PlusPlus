@@ -43,4 +43,11 @@ namespace rct3::park
     /// Joins the stretch `stretch` of `track` on after its last one, as one open stretch.
     void join_stretch(save::Track& track, std::size_t stretch);
 
+    /// Makes the stretch `stretch` of `track` its last, where building goes on.
+    void make_last(save::Track& track, std::size_t stretch);
+
+    /// Adds `piece` to `track` at the end of the stretch `stretch`, or as a stretch of its own just before the
+    /// last when none, keeping the last where building goes on. Returns the stretch it is in.
+    std::size_t add_piece(save::Track& track, std::optional<std::size_t> stretch, save::TrackPiece piece);
+
 } // namespace rct3::park

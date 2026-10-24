@@ -152,3 +152,21 @@ TEST_CASE("later track sections give their join names, widths, group, tags and s
         CHECK(s.side == (version == 5 ? 2u : 0u));
     }
 }
+
+TEST_CASE("a joined piece of side by side tracks names the section of its other half")
+{
+    Pool pool;
+    pool.add("Joined:tks");
+    pool.add("Joined_R:tks");
+    std::vector<std::uint32_t> w(kSize[5] / 4, 0);
+    w[0xE4 / 4] = 3;
+    w[0x16C / 4] = 1;
+    std::vector<std::byte> bytes;
+    for (auto v : w)
+        append_u32(bytes, v);
+    const auto overlay = make_record_overlay(5, pool, "Joined:tks", bytes, { { 0x170, "Joined_R:tks" } });
+    const auto items = read_track_sections(overlay, overlay.common());
+    REQUIRE(items[0].section.has_value());
+    CHECK(items[0].section->side == 1);
+    CHECK(items[0].section->partner == "Joined_R");
+}

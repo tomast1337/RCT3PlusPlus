@@ -142,4 +142,26 @@ namespace rct3::park
         lay_out(track, std::move(parts));
     }
 
+    void make_last(save::Track& track, std::size_t stretch)
+    {
+        std::vector<Stretch> parts = stretches(track);
+        if (stretch + 1 >= parts.size())
+            return;
+        std::rotate(parts.begin() + static_cast<std::ptrdiff_t>(stretch), parts.begin() + static_cast<std::ptrdiff_t>(stretch) + 1, parts.end());
+        lay_out(track, std::move(parts));
+    }
+
+    std::size_t add_piece(save::Track& track, std::optional<std::size_t> stretch, save::TrackPiece piece)
+    {
+        std::vector<Stretch> parts = stretches(track);
+        if (!stretch || *stretch >= parts.size())
+        {
+            stretch = parts.empty() ? 0 : parts.size() - 1;
+            parts.insert(parts.begin() + static_cast<std::ptrdiff_t>(*stretch), Stretch { });
+        }
+        parts[*stretch].pieces.push_back(std::move(piece));
+        lay_out(track, std::move(parts));
+        return *stretch;
+    }
+
 } // namespace rct3::park

@@ -804,6 +804,7 @@ namespace rct3::ui::game_skins
         s.demolish = named("DeleteOn");
         s.complete = named("ForwardOn");
         s.new_segment = "IconAttractionEditorNewTrackSegment";
+        s.split = { named("SplitState1"), named("SplitState2"), named("SplitState3") };
         s.heights = named("RideHeights");
         s.heights_on = named("RideHeightsOn");
         // Plain striped rows on the panel's paper, as the game lists them.

@@ -86,6 +86,8 @@ namespace rct3::scene
         constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
+        constexpr std::string_view kOk = "SMB_Label_OK";
+        constexpr std::string_view kPrizeName = "prize_won"; ///< The box telling a prize won, one at a time
 
         // How far the controls move the camera.
         constexpr float kDragPan = 0.0025f;    ///< Per pixel, times the distance
@@ -1699,7 +1701,7 @@ namespace rct3::scene
                         if (prize == 0)
                             continue;
                         simulation::give_prize(scene.park, scene.park_model.finance, scene.grid, prize);
-                        simulation::post(scene.park.messages, { .text_key = std::string(simulation::prize_message(prize)) });
+                        scene.prizes.emplace_back(simulation::prize_message(prize));
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)
                         {
@@ -2165,6 +2167,15 @@ namespace rct3::scene
         {
             if (const auto answer = question->take_answer())
                 scene.leave = scene.leave || *answer == 0;
+        }
+        // Prizes won are told in a box each, as the player closes the one before.
+        if (auto box = desktop.root().find_as<ui::QuestionBox>(kPrizeName))
+            (void)box->take_answer();
+        else if (!scene.prizes.empty())
+        {
+            const ui::QuestionBoxStyle style = skins::question_box_style(assets.palette);
+            desktop.root().add<ui::QuestionBox>(std::string(kPrizeName), style, std::u16string(assets.strings->get(scene.prizes.front())), std::vector<ui::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
+            scene.prizes.erase(scene.prizes.begin());
         }
     }
 

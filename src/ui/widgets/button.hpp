@@ -24,9 +24,10 @@ namespace rct3::ui
     public:
         Button(std::string name, std::string skin, std::string icon = { });
 
-        std::string skin;     ///< Family base name
-        std::string icon;     ///< Optional skin drawn on top
-        float icon_scale = 1; ///< Of the icon's own size
+        std::string skin;                   ///< Family base name
+        std::string icon;                   ///< Optional skin drawn on top
+        float icon_scale = 1;               ///< Of the icon's own size
+        Color icon_colour = hex("#ffffff"); ///< Multiplies the icon while enabled
         std::u16string text;
         FontRole font = FontRole::Small;
         Color text_colour = hex("#000000");

@@ -2,13 +2,15 @@
 //
 // The controls that build a tracked ride piece by piece, as the game lays them out in the strip of the round
 // panel in the bottom-left corner (info_panel.hpp), which they sit in: 652 by 100 units, the first 32 under
-// the disc. Their left part has two rows of seven buttons, the curve on top (tight,
-// medium and loose left, straight, then loose, medium and tight right) and below it the slope the piece ends
-// at (vertical, steep and gentle down, level, then gentle, steep and vertical up). Right of them are the
-// toggles (only the lift chain here) in a column, then the bank dial: eight small buttons round a disc,
-// upside down at the top, level at the bottom. Under the rows go the picked piece's name and its price, and
-// the buttons that finish the track for the player and that pull down the last piece sit to the right of them. The right part lists the pieces with
-// a use of their own (stations, loops, brakes and the like) by name, a page at a time.
+// the disc. Their left part has two rows of seven buttons, the curve on top (tight, medium and loose left,
+// straight, then loose, medium and tight right) and below it the slope the piece ends at (vertical, steep and
+// gentle down, level, then gentle, steep and vertical up). Right of them are the toggles (only the lift chain
+// here) in a column, then the bank dial: eight small buttons round a disc, upside down at the top, level at
+// the bottom. Under the rows go the picked piece's name and its price, and the buttons that finish the track
+// for the player and that pull down the last piece sit to the right of them. Between the dial and the list,
+// the pieces with a picture of their own (stations, photo sections, brakes) stand as picture buttons, two by
+// two; a brake picked shows its speed to set beside its name. The right part lists the other pieces with a
+// use of their own (loops, helices and the like) by name, a page at a time.
 //
 // Each picture button shows one of three pictures: picked, offered, or not offered (see IconState). The
 // curve, slope and bank buttons have no help text in the game; the toggles and the demolish button do.
@@ -22,6 +24,7 @@
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/spinner.hpp"
 
 #include <array>
 #include <cstddef>
@@ -70,6 +73,13 @@ namespace rct3::ui
         inline constexpr float kNamedRowHeight = 22;
         inline constexpr float kPagerLeft = 622; ///< Of the paging arrows, right of the names
         inline constexpr float kPagerSize = 16;
+        inline constexpr Point kSpecialAt { 344, 5 }; ///< The first picture piece; the rest go down, then right
+        inline constexpr float kSpecialSize = 28;
+        inline constexpr float kSpecialStep = 30;
+        inline constexpr std::size_t kSpecials = 4;
+        inline constexpr Point kSpeedAt { 136, 80 }; ///< Of the speed's picture, the spinner right of it
+        inline constexpr float kSpeedIconSize = 18;
+        inline constexpr Point kSpeedSize { 118, 18 }; ///< Of the spinner
 
         inline constexpr std::size_t kCurves = 7;
         inline constexpr std::size_t kSlopes = 7;
@@ -108,6 +118,8 @@ namespace rct3::ui
         Rect named_inset;
         std::string page_up;
         std::string page_down;
+        std::string speed_icon; ///< Beside the speed
+        SpinnerStyle speed;
         FontRole font = FontRole::Small;
         Color text_colour = hex("#000000");
     };
@@ -126,6 +138,13 @@ namespace rct3::ui
         std::u16string cost;
         std::vector<std::u16string> named;   ///< Names of the pieces with a use of their own
         std::optional<std::size_t> named_on; ///< The one picked
+        /// Skin of each named piece's picture, in the order of `named`: one with a picture stands as a
+        /// picture button, not in the list. Shorter than `named` when the last have none.
+        std::vector<std::string> named_icons;
+        /// The picked piece's speed, in hundredths of `speed_unit`, when it has one to set.
+        std::optional<int> speed;
+        int speed_most = 0; ///< In hundredths, as `speed`
+        std::u16string speed_unit;
     };
 
     enum class ConstructionAction : std::uint8_t
@@ -139,6 +158,7 @@ namespace rct3::ui
         Demolish,
         Complete,   ///< Finish the track
         NewSegment, ///< Begin another stretch of track
+        Speed,      ///< `index` the new speed, as the view's
     };
 
     struct ConstructionEvent
@@ -205,6 +225,14 @@ namespace rct3::ui
         {
             return *cost_;
         }
+        [[nodiscard]] Button& special_button(std::size_t i) const
+        {
+            return *specials_.at(i);
+        }
+        [[nodiscard]] Spinner& speed_spinner() const
+        {
+            return *speed_;
+        }
         [[nodiscard]] std::size_t page() const
         {
             return page_;
@@ -233,6 +261,11 @@ namespace rct3::ui
         Button* new_segment_ = nullptr;
         Button* page_up_ = nullptr;
         Button* page_down_ = nullptr;
+        std::array<Button*, construction_panel::kSpecials> specials_ { };
+        Button* speed_icon_ = nullptr;
+        Spinner* speed_ = nullptr;
+        std::vector<std::size_t> listed_;   ///< The named pieces in the list, by index in the view
+        std::vector<std::size_t> pictured_; ///< Those with picture buttons, by index in the view
         Label* piece_ = nullptr;
         Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;

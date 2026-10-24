@@ -93,7 +93,7 @@ namespace rct3::ui
             const float h = std::round(glyph->size()[1] * grow);
             const float x = std::round(r.x0 + (r.width() - w) / 2) + nudge;
             const float y = std::round(r.y0 + (r.height() - h) / 2) + nudge;
-            draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? hex("#ffffff80") : kWhite);
+            draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? hex("#ffffff80") : icon_colour);
         }
 
         const auto f = text.empty() ? std::nullopt : context.fonts.get(font);

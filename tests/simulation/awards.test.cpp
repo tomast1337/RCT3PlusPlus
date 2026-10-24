@@ -82,3 +82,18 @@ TEST_CASE("best reliability needs many rides running and none out of action long
     park.running = 2;
     CHECK_FALSE(simulation::award_earned(14, park, 0, dice));
 }
+
+TEST_CASE("dangerous happenings bring fines, coasters weighing more than pools")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures park { };
+    CHECK_FALSE(simulation::award_earned(23, park, 0, dice));
+    park.coaster_dangers = 7;
+    CHECK(simulation::award_earned(23, park, 0, dice));
+    CHECK_FALSE(simulation::award_earned(24, park, 0, dice));
+    CHECK_FALSE(simulation::award_earned(25, park, 0, dice));
+    park.pool_dangers = 40;
+    CHECK(simulation::award_earned(24, park, 0, dice));
+    CHECK(simulation::award_earned(25, park, 0, dice));
+    CHECK(simulation::award_is_fine(25));
+}

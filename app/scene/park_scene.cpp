@@ -1899,16 +1899,33 @@ namespace rct3::scene
                 }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {
-                    const auto told = std::ranges::find(scene.broken_rides, e);
+                    const auto at = std::ranges::find(scene.ride_entities, e);
+                    const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
+                    const auto tell = [&](std::string_view key) { simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance), .field_key = std::string(ui::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) }); };
+                    const auto unreliable = std::ranges::find(scene.unreliable_rides, e);
+                    if ((upkeep.reliability.value < kLowReliability) != (unreliable != scene.unreliable_rides.end()))
+                    {
+                        if (unreliable == scene.unreliable_rides.end())
+                        {
+                            scene.unreliable_rides.push_back(e);
+                            tell("RideReliabilityLow");
+                        }
+                        else
+                            scene.unreliable_rides.erase(unreliable);
+                    }
+                    const auto told = std::ranges::find(scene.broken_rides, e, &BrokenRide::ride);
+                    if (upkeep.broken && told != scene.broken_rides.end() && (told->unrepaired += game_seconds) >= kStillBrokenReminder)
+                    {
+                        told->unrepaired = 0;
+                        tell("RideStillBrokenMessage");
+                    }
                     if (upkeep.broken == (told != scene.broken_rides.end()))
                         continue;
                     if (upkeep.broken)
-                        scene.broken_rides.push_back(e);
+                        scene.broken_rides.push_back({ e });
                     else
                         scene.broken_rides.erase(told);
-                    const auto at = std::ranges::find(scene.ride_entities, e);
-                    const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
-                    simulation::post(scene.park.messages, { .text_key = upkeep.broken ? "RideBrokenMessage" : "RideFixedMessage", .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance) });
+                    tell(!upkeep.broken ? "RideFixedMessage" : upkeep.kind == simulation::Breakdown::ControlFailure ? "RideBrokenMessageControlFail" : "RideBrokenMessage");
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
                     if (index >= scene.rides.rides.size())

@@ -74,6 +74,15 @@ TEST_CASE("a message's text fills in its subject's name, or leaves the name out"
     CHECK(message_text(m, strings) == u"100% fun");
 }
 
+TEST_CASE("a message's other field is filled from its field key")
+{
+    StringTable strings;
+    strings.add("Broken", u"%NAME% broke down (%KIND%)");
+    strings.add("Jammed", u"doors jammed");
+    simulation::ParkMessage m { .text_key = "Broken", .subject_name = "Big Wheel", .field_key = "Jammed" };
+    CHECK(message_text(m, strings) == u"Big Wheel broke down (doors jammed)");
+}
+
 TEST_CASE("an award's message is named by the award, a fine's too")
 {
     StringTable strings;

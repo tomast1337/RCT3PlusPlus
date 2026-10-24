@@ -95,6 +95,9 @@ namespace rct3::ui
     /// Open, testing, closed or broken down, in words.
     [[nodiscard]] std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings);
 
+    /// The text key naming how a ride has broken down; empty past the kinds known.
+    [[nodiscard]] std::string_view breakdown_key(save::BreakdownKind kind);
+
     /// The word for a rating of `value` (excitement, intensity or nausea): low, medium, high and so on.
     [[nodiscard]] std::u16string rating_word(float value, const StringTable& strings);
 

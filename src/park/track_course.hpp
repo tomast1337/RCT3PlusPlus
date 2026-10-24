@@ -29,6 +29,7 @@ namespace rct3::park
         Cable,      ///< A cable pulls the cars up, as a chain does
         BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear
         Launch,     ///< Pushes a launched train on, past its station
+        Brake,      ///< Slows a train down to the piece's brake speed
     };
 
     struct TrackCourse
@@ -37,6 +38,7 @@ namespace rct3::park
         std::vector<glm::vec3> ups;                ///< Up for the track at each point, leaning with its bank; none is straight up
         std::vector<float> distance;               ///< From the start to each point
         std::vector<CourseKind> kinds;             ///< Of the stretch from each point to the next; the last is unused
+        std::vector<float> brake_speeds;           ///< Of the brake piece from each point, in m/s; below 0 where none is set
         std::vector<float> piece_starts;           ///< Distance at the start of each of the track's pieces
         bool closed = false;                       ///< The end joins the start, so cars go round
         bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up

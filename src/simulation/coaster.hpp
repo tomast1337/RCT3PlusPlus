@@ -5,7 +5,8 @@
 // The track is known by its height along its length and by which stretches are lift chains and stations.
 // Gravity pulls the train along the slope under its whole length; rolling and the air hold it back. A lift
 // chain carries it up at no less than the ride's lift speed, and the station's tyres push it at the ride's
-// station speed, slowing it there too when it comes back. A ride with a fixed speed moves at that speed
+// station speed, slowing it there too when it comes back. Brakes slow it to their speed and no further. A ride
+// with a fixed speed moves at that speed
 // everywhere. The speeds are the ride's own, as its park keeps them.
 //
 // Units are metres and seconds.
@@ -26,13 +27,15 @@ namespace rct3::simulation
         Station,
         BlockBrake, ///< Rolled over as plain track; ends a block
         Launch,     ///< Goes on pushing a launched train as hard as its platform began to
+        Brake,      ///< Slows the train to the stretch's brake speed
     };
 
     struct Coaster
     {
-        std::vector<float> distance; ///< Along the track to each point, from 0
-        std::vector<float> height;   ///< Of each point
-        std::vector<Stretch> kinds;  ///< Of the stretch from each point to the next
+        std::vector<float> distance;     ///< Along the track to each point, from 0
+        std::vector<float> height;       ///< Of each point
+        std::vector<Stretch> kinds;      ///< Of the stretch from each point to the next
+        std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; unread elsewhere
         float lift_speed = 2;
         float station_speed = 2;
         std::optional<float> fixed_speed;

@@ -250,7 +250,6 @@ namespace rct3::scene
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
-            b.test.reset(); // A test runs the track as it was
             const park::PieceCatalogue* c = catalogue(b);
             b.candidates.clear();
             b.picked.reset();
@@ -888,7 +887,6 @@ namespace rct3::scene
         scene.building.ghost.reset();
         scene.building.ghost_mesh = { };
         scene.building.tabs_for.reset();
-        scene.building.test.reset();
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
@@ -1426,7 +1424,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed)
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands)
     {
         TrackBuilding& b = scene.building;
         auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
@@ -1440,23 +1438,20 @@ namespace rct3::scene
         }
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
-        // The round panel's ring, in this order: the ride's window, turning the first piece, a test run, its
-        // state, and the colours of the pieces built next. The turn and the test show greyed while they do nothing.
+        // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
+        // strip, its state, and the colours of the pieces built next. The turn shows greyed while it does nothing.
+        // shortcut: no test run of the track from the ring, as the original has none; add one if wanted.
         enum Tab : std::size_t
         {
             Info,
             Rotate,
-            Test,
+            Construction,
             State,
             Colour,
         };
-        const bool whole = !panel->visible;
+        // A ride set down whole has no strip to show.
+        const bool one_piece = *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece;
         const bool starting = opening(scene.rides.rides.at(*b.ride));
-        // A train can test the track once it is a circuit through a station.
-        const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
-        const bool testable = !b.tip && course && course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !scene.rides.rides.at(*b.ride).trains.empty() && scene.car_fits.contains(*b.ride) && assets.install;
-        if (!testable)
-            b.test.reset();
         if (const auto tab = placing->take_action())
         {
             if (*tab == Info)
@@ -1467,53 +1462,11 @@ namespace rct3::scene
                 b.turns = (b.turns + 1) % 4;
                 changed = true;
             }
-            // Each press starts a test, or stops the one running.
-            if (*tab == Test && b.test)
-                b.test.reset();
-            else if (*tab == Test && testable)
-            {
-                // The ride's first train, stood with its front where trains set off.
-                save::Ride ghost = scene.rides.rides.at(*b.ride);
-                ghost.trains.resize(1);
-                if (const auto start = simulation::coaster_of(*course, ghost))
-                {
-                    park::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), start->start);
-                    const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
-                    load_car_models(scene, *assets.install, cars);
-                    TrackBuilding::GhostTrain& t = b.test.emplace(*simulation::coaster_of(*course, ghost), cars.spots);
-                    t.train.running = true;
-                    t.stood_at = ghost.trains.front().distance;
-                    for (const save::PlacedObject& car : cars.pieces)
-                        t.stood.push_back(cars.fitted.at(car.id));
-                    t.meshes = park::moving_meshes(cars.pieces, scene.models, scene.grid);
-                    for (std::size_t i = 0; i < cars.pieces.size(); ++i)
-                        if (const auto model = scene.models.find(park::model_ref(cars.pieces[i])); model != scene.models.end())
-                            t.joints.insert(t.joints.end(), model->second.arm_joints.size(), i);
-                    for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
-                        for (park::GroundVertex& v : *vertices)
-                            v.colour *= kGhostTint;
-                    ghost_textures(device, scene, t.meshes.mesh);
-                }
-            }
+            // Each press shows or hides the strip of construction controls.
+            if (*tab == Construction && !one_piece)
+                panel->visible = !panel->visible;
         }
-        if (b.test)
-        {
-            // Round and round until stopped: each lap ends standing at the station, from where it sets off again.
-            TrackBuilding::GhostTrain& t = *b.test;
-            if (simulation::drive(t.train, elapsed))
-                t.train.running = true;
-            std::vector<glm::mat4> places;
-            for (std::size_t i = 0; i < t.stood.size(); ++i)
-                places.push_back(park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at));
-            // shortcut: the joints of cars on arms ride at rest with their car, upgrade if a test should swing
-            // them as the park does.
-            for (const std::size_t car : t.joints)
-            {
-                const glm::mat4 place = places[car];
-                places.push_back(place);
-            }
-            park::move_meshes(t.meshes, places);
-        }
+        const bool whole = !panel->visible;
         if (const auto paint = placing->take_paint(); paint && paint->pot < std::tuple_size_v<save::RideColours>)
         {
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
@@ -1528,21 +1481,21 @@ namespace rct3::scene
             scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
             b.tabs_for.reset();
         }
-        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, testable }; b.tabs_for != now || !placing->showing())
+        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole }; b.tabs_for != now || !placing->showing())
         {
             std::vector<ui::InfoTab> tabs(5);
             for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, std::get<1>(now)))
             {
-                if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State)
+                if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State && t.tab != ui::AttractionTab::Construction)
                     continue;
-                ui::InfoTab& tab = tabs[t.tab == ui::AttractionTab::View ? Info : State];
+                ui::InfoTab& tab = tabs[t.tab == ui::AttractionTab::View ? Info : t.tab == ui::AttractionTab::State ? State : Construction];
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
             }
             tabs[Rotate].icon = starting ? "IconAttractionEditorRotate" : "IconAttractionEditorRotate_Disabled";
             tabs[Rotate].help = assets.strings->get("ATE_TT_Rotate");
-            tabs[Test].icon = testable ? "Attraction_Button_Testing" : "Attraction_Button_Testing_Disabled";
-            tabs[Test].help = assets.strings->get("TT_AttractionDialogIconTestingButton");
+            if (one_piece)
+                tabs[Construction].icon = "Attraction_Construction_Disabled";
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const save::RideColours colours = next_colours(ride, b);
             tabs[Colour].icon = "Attraction_Colour";
@@ -1725,8 +1678,6 @@ namespace rct3::scene
     {
         if (scene.building.ride)
             draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
-        if (scene.building.test)
-            draw_ghost_mesh(device, scene, scene.building.test->meshes.mesh, transform, light);
     }
 
     render::SceneLight ghost_light(render::SceneLight light)

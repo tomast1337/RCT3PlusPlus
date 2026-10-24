@@ -91,7 +91,7 @@ namespace rct3::park
         return out;
     }
 
-    std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file)
+    std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)
     {
         auto overlay = ovl::Overlay::load(file);
         if (!overlay)
@@ -103,14 +103,14 @@ namespace rct3::park
                 continue;
             for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
             {
-                if (item.texture && strings::equals_ignoring_case(item.name, kFlowTexture))
+                if (item.texture && strings::equals_ignoring_case(item.name, name))
                 {
                     if (auto image = pixels.first_frame(*item.texture))
                         return std::move(*image);
                 }
             }
         }
-        return std::unexpected(std::format("{} is not in {}", kFlowTexture, file.string()));
+        return std::unexpected(std::format("{} is not in {}", name, file.string()));
     }
 
 } // namespace rct3::park

@@ -2,7 +2,8 @@
 //
 // The park's people heard from the camera, by the rules of audio/park_voices.hpp: the chatter of the crowd
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, and screams from
-// the riders of a train going fast or dropping, and the trains themselves by the rules of audio/ride_sounds.hpp.
+// the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
+// the roar of each waterfall.
 // The sounds come from the game's overlays by name; whatever it
 // does not have stays quiet. All follow the game volume and hush while the park is paused, and are heard muffled while the eye is under water.
 #pragma once
@@ -55,6 +56,8 @@ namespace rct3::scene
         std::array<std::array<std::optional<audio::SoundBuffer>, audio::kTrackSounds>, audio::kTrackSoundSets> track_sounds;
         std::map<std::pair<entt::entity, std::size_t>, TrainSounds> train_sounds; ///< By ride and train
         std::vector<glm::vec3> car_were;                                          ///< By car, where last heard
+        std::vector<audio::SoundBuffer> waterfall;                                ///< The waterfalls' loops
+        std::vector<audio::VoiceHandle> waterfall_voices;                         ///< By waterfall of the park
         std::minstd_rand random;
     };
 

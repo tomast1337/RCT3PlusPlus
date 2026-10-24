@@ -61,7 +61,7 @@ TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide 
         CHECK(mesh.batches[i].count % 6 == 0);
     }
     CHECK(mesh.batches[0].count == mesh.batches[1].count);
-    CHECK(mesh.batches[2].count == 12); // A foam square each
+    CHECK(mesh.batches[2].count == 2 * 9 * 6); // A foam patch of three by three squares each
     float low_z = 0, high_z = 0;
     for (std::uint32_t i = mesh.batches[0].first; i < mesh.batches[0].first + mesh.batches[0].count; ++i)
     {
@@ -94,4 +94,23 @@ TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
     CHECK(mesh.vertices.empty());
     CHECK(mesh.indices.empty());
     CHECK(mesh.batches.empty());
+}
+
+TEST_CASE("waterfall_mesh: foam fades out at its edges and is whole in its middle")
+{
+    const std::vector<save::Waterfall> falls { fall() };
+    ObjectMesh mesh;
+    waterfall_mesh(falls, 0.0f, mesh);
+    const ObjectBatch& foam = mesh.batches[2];
+    int clear = 0;
+    int whole = 0;
+    for (std::uint32_t i = foam.first; i < foam.first + foam.count; ++i)
+    {
+        const float alpha = mesh.vertices[mesh.indices[i]].colour.a;
+        clear += alpha == 0.0f;
+        whole += alpha == 1.0f;
+    }
+    CHECK(clear > 0);
+    CHECK(whole > 0);
+    CHECK(clear + whole == static_cast<int>(foam.count));
 }

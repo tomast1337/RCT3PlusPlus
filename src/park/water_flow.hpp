@@ -44,7 +44,8 @@ namespace rct3::park
     /// picture runs along the water.
     [[nodiscard]] ovl::RgbaImage flow_rows(const ovl::RgbaImage& image, std::uint32_t shift);
 
-    /// The flowing water's picture from the overlay whose common file is `file`.
-    [[nodiscard]] std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file);
+    /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
+    /// `file`.
+    [[nodiscard]] std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name = kFlowTexture);
 
 } // namespace rct3::park

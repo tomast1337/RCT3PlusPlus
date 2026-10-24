@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "park/camera.hpp"
+#include "park/waterfall_mesh.hpp"
 #include "scene/menu_audio.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/coaster.hpp"
@@ -27,7 +28,10 @@ namespace rct3::scene
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
         constexpr float kRideLevel = 0.7f;
-        constexpr float kChainFade = 0.5f; ///< Seconds the chain's loop takes to come in and to die away
+        constexpr float kChainFade = 0.5f;      ///< Seconds the chain's loop takes to come in and to die away
+        constexpr float kWaterfallLevel = 0.6f; ///< Of the game volume.
+        constexpr float kWaterfallNear = 10;    ///< World units from where it lands a waterfall is heard full loud.
+        constexpr float kWaterfallFar = 90;     ///< And no longer heard.
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -93,6 +97,8 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < kScreams.size(); ++i)
                     s.screams[i] = sounds_named(items, kScreams[i]);
             }
+        constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
+        s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
         {
             const auto path = install.find(std::format("tracks/TrackSounds/{}.common.ovl", audio::file_of(static_cast<audio::TrackSoundSet>(set))));
@@ -141,6 +147,32 @@ namespace rct3::scene
             {
                 engine.set_voice_volume(voice, chatter);
                 engine.set_voice_place(voice, crowd);
+            }
+        }
+        // Each waterfall's roar, a loop heard from where its water lands; the falls take the clips in turn.
+        const auto& falls = scene.footpaths.waterfalls;
+        for (std::size_t i = falls.size(); i < sounds.waterfall_voices.size(); ++i)
+            engine.stop(sounds.waterfall_voices[i]);
+        sounds.waterfall_voices.resize(falls.size());
+        for (std::size_t i = 0; i < falls.size(); ++i)
+        {
+            audio::VoiceHandle& voice = sounds.waterfall_voices[i];
+            if (quiet || sounds.waterfall.empty())
+            {
+                engine.stop(voice);
+                voice = { };
+                continue;
+            }
+            const glm::vec3 at = park::waterfall_point(falls[i], 1.0f);
+            if (!engine.is_playing(voice))
+            {
+                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = volume * kWaterfallLevel, .at = at, .near = kWaterfallNear, .far = kWaterfallFar, .loop = true });
+                voice = played ? *played : audio::VoiceHandle { };
+            }
+            else
+            {
+                engine.set_voice_volume(voice, volume * kWaterfallLevel);
+                engine.set_voice_place(voice, at);
             }
         }
         if (quiet)
@@ -282,6 +314,9 @@ namespace rct3::scene
             engine.stop(voice);
         for (const auto& [_, voice] : sounds.train_voices)
             engine.stop(voice);
+        for (const audio::VoiceHandle voice : sounds.waterfall_voices)
+            engine.stop(voice);
+        sounds.waterfall_voices.clear();
         silence_trains(engine, sounds);
     }
 

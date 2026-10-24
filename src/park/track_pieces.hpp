@@ -93,9 +93,10 @@ namespace rct3::park
         Chain,
         Enclosed,
         Water,
+        Wide, ///< The piece ends as wide as the wide water rides' channel
         Booster,
     };
-    inline constexpr std::size_t kPieceToggles = 4;
+    inline constexpr std::size_t kPieceToggles = 5;
     /// The bit of `toggle` in PieceShape::toggles.
     [[nodiscard]] constexpr std::uint8_t toggle_bit(PieceToggle toggle)
     {
@@ -156,7 +157,7 @@ namespace rct3::park
         PieceEnd exit;
         int curve = 0;
         PieceUse use = PieceUse::Plain;
-        std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has
+        std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
     };
 
     /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.

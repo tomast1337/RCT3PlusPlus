@@ -33,7 +33,10 @@ namespace rct3::park
                 if (p.use != PieceUse::Plain)
                     continue;
                 const PieceEnd exit = laid_exit(p, c.reversed);
-                out.push_back({ laid_curve(p, c.reversed), exit.slope, exit.bank, p.toggles, c });
+                // Wide is of the end the piece is laid to, its start when laid backwards.
+                const std::uint8_t wide = toggle_bit(PieceToggle::Wide);
+                const std::uint8_t toggles = c.reversed ? static_cast<std::uint8_t>((p.toggles & ~wide) | (p.record.joins[0].width != 0 ? wide : 0)) : p.toggles;
+                out.push_back({ laid_curve(p, c.reversed), exit.slope, exit.bank, toggles, c });
             }
             return out;
         }

@@ -75,7 +75,7 @@ namespace rct3::scene
         constexpr int kArmTurns = 360;
         constexpr int kArmStep = 10;
         /// In the order of park::PieceToggle.
-        constexpr std::array<std::string_view, park::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Booster" };
+        constexpr std::array<std::string_view, park::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
@@ -1268,7 +1268,7 @@ namespace rct3::scene
             return false;
         if (!scene.desktop->root().find(kPanelName))
         {
-            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::array { std::u16string(assets.strings->get(kToggleHelps[0])), std::u16string(assets.strings->get(kToggleHelps[1])), std::u16string(assets.strings->get(kToggleHelps[2])), std::u16string(assets.strings->get(kToggleHelps[3])) }, std::u16string(assets.strings->get(kDemolishHelp)));
+            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::array { std::u16string(assets.strings->get(kToggleHelps[0])), std::u16string(assets.strings->get(kToggleHelps[1])), std::u16string(assets.strings->get(kToggleHelps[2])), std::u16string(assets.strings->get(kToggleHelps[3])), std::u16string(assets.strings->get(kToggleHelps[4])) }, std::u16string(assets.strings->get(kDemolishHelp)));
             panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);

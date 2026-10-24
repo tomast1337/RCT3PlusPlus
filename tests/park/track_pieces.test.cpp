@@ -138,6 +138,9 @@ TEST_CASE("curves take their size from the curve pair and their side from the tu
     CHECK(shape_piece(record("Lift", kPieceChain), straight_line()).toggles == toggle_bit(PieceToggle::Chain));
     CHECK(shape_piece(record("Tube", kPieceEnclosed | kPieceBooster), straight_line()).toggles == (toggle_bit(PieceToggle::Enclosed) | toggle_bit(PieceToggle::Booster)));
     CHECK(shape_piece(record("Splash", kPieceWater), straight_line()).toggles == toggle_bit(PieceToggle::Water));
+    PieceRecord widening = record("Widening");
+    widening.joins[1].width = 1;
+    CHECK(shape_piece(widening, straight_line()).toggles == toggle_bit(PieceToggle::Wide));
 }
 
 TEST_CASE("each shape keeps one plain piece, the one with the fewest flags")

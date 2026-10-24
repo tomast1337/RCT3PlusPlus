@@ -103,9 +103,21 @@ namespace rct3::scene
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         ui::FrontEnd& front = *scene.live->front;
-        if (auto picked = update_save_browser(device, scene.saves, front.file_dialog(), front.file_dialogs_opened(), front.file_folder()))
+        // A custom scenario started from one of the scenarios to start from is saved with the custom scenarios.
+        const ParkGame files = front.file_folder() == config::UserFolder::Careers ? scene.careers.game : ParkGame { .folder = front.file_folder() };
+        if (auto picked = update_save_browser(device, scene.saves, front.file_dialog(), front.file_dialogs_opened(), files))
+        {
             scene.park_to_play = std::move(picked);
+            scene.game_to_play = files;
+            if (files.folder == config::UserFolder::NewScenarios)
+                scene.game_to_play.folder = config::UserFolder::Scenarios;
+        }
         update_career_browser(device, scene.careers, *scene.live->front, *scene.assets.strings, *scene.assets.install);
+        if (auto park = std::exchange(scene.careers.park, std::nullopt))
+        {
+            scene.park_to_play = std::move(park);
+            scene.game_to_play = scene.careers.game;
+        }
         if (scene.careers.slideshow != scene.slideshow_shown)
         {
             // The career map shows the picked scenario's pictures; back on the front screen, the usual ones.
@@ -128,7 +140,10 @@ namespace rct3::scene
                     picker->set_available(i, scene.assets.install->find(picker->tutorial(i).park).has_value());
             }
             if (const auto start = picker->take_start())
+            {
                 scene.park_to_play = scene.assets.install->find(picker->tutorial(*start).park);
+                scene.game_to_play = { };
+            }
         }
         if (scene.live->front->take_options_closed())
             save_front_end_options(scene);
@@ -138,6 +153,7 @@ namespace rct3::scene
             if (request->action == ui::FrontAction::NewSandbox)
             {
                 scene.park_to_play = scene.assets.install->find("Campaigns/Base/BlankLandscape.dat");
+                scene.game_to_play = { };
                 if (!scene.park_to_play)
                     logging::logger("ui").warning("front screen: the blank landscape is missing from the game's folder");
             }
@@ -145,6 +161,11 @@ namespace rct3::scene
                 logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<int>(request->action), request->pack);
         }
         return over;
+    }
+
+    float front_end_scale(const render::Device& device, const FrontEndScene& scene)
+    {
+        return scale_for(device, scene);
     }
 
     FrontEndRequests take_front_end_requests(FrontEndScene& scene)
@@ -156,6 +177,7 @@ namespace rct3::scene
         r.language = front.take_language();
         r.keys = front.take_keys();
         r.park = std::exchange(scene.park_to_play, std::nullopt);
+        r.game = scene.game_to_play;
         const bool fullscreen = scene.live->options.flag(config::GameOption::Fullscreen);
         if (fullscreen != scene.fullscreen)
         {

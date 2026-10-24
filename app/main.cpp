@@ -51,6 +51,7 @@
 #include "scene/menu_audio.hpp"
 #include "scene/park_loading.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
 #include "scene/park_sounds.hpp"
 #include "scene/park_windows.hpp"
 #include "scene/script_host.hpp"
@@ -63,6 +64,7 @@
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
 #include "ui/language.hpp"
+#include "ui/screens/tool_row.hpp"
 
 #include <algorithm>
 #include <array>
@@ -757,6 +759,7 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::FrontEndScene> front;
     std::optional<rct3::scene::ParkScene> park; ///< Played over the front end, which lends it the interface
     std::optional<std::filesystem::path> park_to_load = park_file;
+    rct3::scene::ParkGame park_game; ///< What that park is played as
     std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends
@@ -929,7 +932,10 @@ int main(int argc, char** argv)
         const auto requests = rct3::scene::take_front_end_requests(*front);
         apply_requests(requests);
         if (requests.park)
+        {
             park_to_load = std::move(requests.park);
+            park_game = requests.game;
+        }
         if (requests.language)
         {
             settings.set(config::Setting::Language, *requests.language);
@@ -980,6 +986,10 @@ int main(int argc, char** argv)
                 park->saves.data = front->saves.data;
                 park->saves.game_saves = front->saves.game_saves;
             }
+            park->game = park_game;
+            // In a career, leaving goes back to the career's map, under the park.
+            if (auto tools = park->desktop->root().find_as<rct3::ui::ToolRow>(rct3::scene::kToolsName))
+                tools->set_career(!park_game.career.empty());
         }
         else
             log.error("park loading failed during {} after {:.2f} s: {}: {}", rct3::scene::park_load_name(shown), now - started, path.string(), loaded.error());
@@ -1176,6 +1186,7 @@ int main(int argc, char** argv)
                                 rct3::scene::stop_park_sounds(*audio, *park_sounds);
                             park_sounds.reset();
                             park_to_load = std::move(park_requests.park);
+                            park_game = park_requests.game;
                         }
                     }
                     else if (phase == Phase::Running && (widgets || front))

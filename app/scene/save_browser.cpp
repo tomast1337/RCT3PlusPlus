@@ -75,10 +75,10 @@ namespace rct3::scene
         }
 
         /// The game's folder for ours, if there is one.
-        fs::path game_folder(const SaveBrowser& browser, config::UserFolder folder)
+        fs::path game_folder(const SaveBrowser& browser, const ParkGame& game)
         {
-            const auto name = config::game_saves_folder(folder);
-            if (!browser.game_saves || !name)
+            const auto name = config::game_saves_folder(game.folder);
+            if (!browser.game_saves || !name || !game.games.empty())
                 return { };
             return *browser.game_saves / *name;
         }
@@ -196,7 +196,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write)
     {
         if (!dialog)
         {
@@ -205,20 +205,29 @@ namespace rct3::scene
             browser.kept.clear();
             return std::nullopt;
         }
-        const fs::path game = game_folder(browser, folder);
+        const fs::path game_saves = game_folder(browser, game);
         if (browser.opened != opened)
         {
             browser.opened = opened;
             browser.folder.clear();
-            if (browser.data)
+            std::error_code error;
+            if (!game.games.empty())
             {
-                if (auto made = browser.data->make_folder(folder))
+                fs::create_directories(game.games, error);
+                if (error)
+                    logging::logger("ui").warning("saves: {}: {}", game.games.string(), error.message());
+                else
+                    browser.folder = game.games;
+            }
+            else if (browser.data)
+            {
+                if (auto made = browser.data->make_folder(game.folder))
                     browser.folder = std::move(*made);
                 else
                     logging::logger("ui").warning("saves: {}", made.error());
             }
             dialog->set_can_save(write != nullptr && !browser.folder.empty());
-            list(device, browser, *dialog, game);
+            list(device, browser, *dialog, game_saves);
         }
         if (const auto name = dialog->take_open())
         {
@@ -232,7 +241,7 @@ namespace rct3::scene
             }
             return std::nullopt;
         }
-        carry_out(device, browser, *dialog, game);
+        carry_out(device, browser, *dialog, game_saves);
         read_next(device, browser, *dialog);
         return std::nullopt;
     }

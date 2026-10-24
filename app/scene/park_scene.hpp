@@ -541,6 +541,7 @@ namespace rct3::scene
         std::size_t own_objects = 0;                       ///< `objects` from the file; those after it were made on loading or built since
         std::unordered_set<std::uint64_t> columns;         ///< Support columns under rides and track, which a path laid under them takes away
         SaveBrowser saves;                                 ///< Behind the save and load windows over the park
+        ParkGame game;                                     ///< Where the park's games go, and the career it counts for
         std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
         std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
         ParkMap map;                                       ///< The map window's pictures and what they show

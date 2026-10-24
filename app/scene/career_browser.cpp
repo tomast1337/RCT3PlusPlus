@@ -186,10 +186,10 @@ namespace rct3::scene
             return fs::is_regular_file(fs::path(entry.path).replace_extension() / relative, error);
         }
 
-        /// Shows the map of career `index`.
-        void open_map(CareerBrowser& browser, ui::FrontEnd& front, std::size_t index, const ui::StringTable& strings)
+        /// Shows the map of career `entry`.
+        void open_map(CareerBrowser& browser, ui::FrontEnd& front, career::CareerEntry entry, const ui::StringTable& strings)
         {
-            browser.playing = browser.careers[index];
+            browser.playing = std::move(entry);
             const career::Career& c = browser.playing->data.career;
             std::vector<ui::CareerBoardScenario> scenarios;
             for (std::size_t i = 0; i < c.scenarios.size(); ++i)
@@ -205,6 +205,12 @@ namespace rct3::scene
             browser.map_opened = front.career_boards_opened();
             if (map.size() > 0)
                 browser.slideshow = ui::career_scenario(strings, c.pack, map.picked(), c.scenarios[map.picked()].id).slideshow;
+        }
+
+        /// How a park of scenario `index` of the career is played: its games in the scenario's folder.
+        ParkGame career_game(const career::CareerEntry& entry, std::size_t index)
+        {
+            return { .folder = config::UserFolder::Careers, .career = entry.path, .scenario = entry.data.career.scenarios.at(index).id, .games = fs::path(entry.path).replace_extension() / career::prf_scenario_folder(index) };
         }
 
         /// The park file scenario `index` of the career starts from, if the game has it.
@@ -225,9 +231,21 @@ namespace rct3::scene
             return found ? std::optional(files[*found]) : std::nullopt;
         }
 
-        void carry_out_map(CareerBrowser& browser, ui::CareerBoard& map, const ui::StringTable& strings, const config::GameInstall& install)
+        /// Plays scenario `index` of the career whose map is shown, from `park`, as the current scenario.
+        void play(CareerBrowser& browser, std::size_t index, std::optional<fs::path> park)
         {
-            const auto log = logging::logger("ui");
+            career::CareerEntry& entry = *browser.playing;
+            if (!park)
+                return;
+            entry.data.career.current = index;
+            save(entry);
+            browser.park = std::move(park);
+            browser.game = career_game(entry, index);
+            browser.played = true;
+        }
+
+        void carry_out_map(CareerBrowser& browser, ui::FrontEnd& front, ui::CareerBoard& map, const ui::StringTable& strings, const config::GameInstall& install)
+        {
             career::CareerEntry& entry = *browser.playing;
             career::Career& c = entry.data.career;
             if (const auto picked = map.take_picked(); picked && *picked < c.scenarios.size())
@@ -236,15 +254,20 @@ namespace rct3::scene
                 save(entry);
                 browser.slideshow = ui::career_scenario(strings, c.pack, *picked, c.scenarios[*picked].id).slideshow;
             }
-            if (const auto index = map.take_new())
+            if (const auto index = map.take_new(); index && *index < c.scenarios.size())
             {
-                const auto park = scenario_park(c, *index, strings, install);
-                log.info("career map: starting {} from {} does nothing yet", c.scenarios.at(*index).id, park ? park->filename().string() : "no file");
+                auto park = scenario_park(c, *index, strings, install);
+                if (!park)
+                    logging::logger("ui").warning("career map: the park of {} is missing from the game's folder", c.scenarios[*index].id);
+                play(browser, *index, std::move(park));
             }
-            if (const auto index = map.take_resume())
-                log.info("career map: resuming {} does nothing yet", c.scenarios.at(*index).last_save);
-            if (map.take_load())
-                log.info("career map: loading a game does nothing yet");
+            if (const auto index = map.take_resume(); index && can_resume(entry, *index))
+                play(browser, *index, fs::path(entry.path).replace_extension() / fs::path(c.scenarios[*index].last_save).lexically_normal());
+            if (map.take_load() && c.current < c.scenarios.size())
+            {
+                browser.game = career_game(entry, c.current);
+                front.open_files(ui::FrontAction::Campaign, config::UserFolder::Careers);
+            }
         }
 
         void carry_out(CareerBrowser& browser, ui::CareerDialog& dialog, ui::FrontEnd& front, int pack, const ui::StringTable& strings)
@@ -276,7 +299,7 @@ namespace rct3::scene
                     --browser.next_picture;
             }
             if (const auto index = dialog.take_load(); index && *index < browser.careers.size())
-                open_map(browser, front, *index, strings); // Closes the window
+                open_map(browser, front, browser.careers[*index], strings); // Closes the window
         }
 
     } // namespace
@@ -284,8 +307,20 @@ namespace rct3::scene
     void update_career_browser(render::Device& device, CareerBrowser& browser, ui::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install)
     {
         auto map = front.career_board();
+        if (map && browser.playing && browser.played && !browser.park)
+        {
+            browser.played = false;
+            // Back from the park, which may have moved the career on: shown again as its file has it.
+            const fs::path path = browser.playing->path;
+            for (auto& entry : career::list_careers(path.parent_path(), browser.playing->data.career.pack, std::nullopt))
+            {
+                if (entry.path == path)
+                    open_map(browser, front, std::move(entry), strings);
+            }
+            map = front.career_board();
+        }
         if (map && browser.playing && browser.map_opened == front.career_boards_opened())
-            carry_out_map(browser, *map, strings, install);
+            carry_out_map(browser, front, *map, strings, install);
         else if (!map)
         {
             browser.playing.reset();
@@ -317,6 +352,46 @@ namespace rct3::scene
         }
         read_picture(device, browser, *dialog);
         carry_out(browser, *dialog, front, front.career_pack(), strings);
+    }
+
+    bool start_career_scenario(CareerBrowser& browser, ui::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install)
+    {
+        const auto log = logging::logger("ui");
+        if (!browser.data)
+            return false;
+        auto folder = browser.data->make_folder(config::UserFolder::Careers);
+        if (!folder)
+        {
+            log.warning("careers: {}", folder.error());
+            return false;
+        }
+        const auto ids = ui::career_scenario_ids(strings, pack);
+        auto careers = career::list_careers(*folder, pack, std::nullopt);
+        if (careers.empty())
+        {
+            career::CareerEntry entry;
+            entry.path = career::free_career_path(*folder);
+            entry.data.career = career::new_career(strings::to_utf8(ui::default_career_name(strings, career_number(entry.path))), pack, ids);
+            entry.data.career.created = now();
+            save(entry);
+            careers.push_back(std::move(entry));
+        }
+        career::fit(careers.front().data.career, ids);
+        const career::Career& c = careers.front().data.career;
+        if (index >= c.scenarios.size() || !career::is_open(c.scenarios[index].status))
+        {
+            log.warning("careers: scenario {} of {} is not there or not open", index, c.scenarios.size());
+            return false;
+        }
+        auto park = scenario_park(c, index, strings, install);
+        if (!park)
+        {
+            log.warning("careers: the park of {} is missing from the game's folder", c.scenarios[index].id);
+            return false;
+        }
+        open_map(browser, front, std::move(careers.front()), strings);
+        play(browser, index, std::move(park));
+        return true;
     }
 
     void destroy_career_browser(render::Device& device, CareerBrowser& browser)

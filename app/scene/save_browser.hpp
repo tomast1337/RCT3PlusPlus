@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace rct3::scene
@@ -33,13 +34,22 @@ namespace rct3::scene
         std::vector<render::TextureHandle> pictures;
     };
 
+    /// What a park is played as: where its games are saved and listed, and the career it counts for.
+    struct ParkGame
+    {
+        config::UserFolder folder = config::UserFolder::Parks; ///< Ours, with the game's of the same kind
+        std::filesystem::path career;                          ///< The career file the park counts for; empty outside a career
+        std::string scenario;                                  ///< The scenario's id in that career
+        std::filesystem::path games;                           ///< In a career, the scenario's own folder of games in place of `folder`
+    };
+
     /// The bytes of the save to write to the path given, made when the player saves.
     using SaveWriter = std::function<std::vector<std::byte>(const std::filesystem::path&)>;
 
-    /// Follows `dialog` (none when no window is open): lists `folder`, ours and the game's, whenever `opened`
-    /// changes, reads the next file and carries out the window's requests, saving with `write`. Returns the file
-    /// picked to load.
-    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, config::UserFolder folder, const SaveWriter& write = nullptr);
+    /// Follows `dialog` (none when no window is open): lists the folder of `game`, ours and the game's (none in a
+    /// career), whenever `opened` changes, reads the next file and carries out the window's requests, saving with
+    /// `write`. Returns the file picked to load.
+    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write = nullptr);
 
     void destroy_save_browser(render::Device& device, SaveBrowser& browser);
 

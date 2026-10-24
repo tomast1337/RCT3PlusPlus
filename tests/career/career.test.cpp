@@ -110,3 +110,18 @@ TEST_CASE("a locked scenario says what it waits for")
     complete(c, 0, ScenarioStatus::Apprentice, 1);
     CHECK(lock(c, 5).levels == 2);
 }
+
+TEST_CASE("a design asking for a scenario opens once a career completes it at its level")
+{
+    Career c = new_career("A", 0, ids(9));
+    const std::vector<Career> none;
+    CHECK_FALSE(design_locked(-1, 2, none));
+    CHECK(design_locked(2, 0, none));
+    CHECK(design_locked(2, 2, std::span(&c, 1)));
+    c.scenarios[2].status = ScenarioStatus::Entrepreneur;
+    CHECK(design_locked(2, 2, std::span(&c, 1)));
+    CHECK_FALSE(design_locked(2, 1, std::span(&c, 1)));
+    c.scenarios[2].status = ScenarioStatus::Tycoon;
+    CHECK_FALSE(design_locked(2, 2, std::span(&c, 1)));
+    CHECK(design_locked(20, 0, std::span(&c, 1))); // A scenario the career does not have
+}

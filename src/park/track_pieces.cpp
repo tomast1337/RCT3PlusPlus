@@ -264,7 +264,11 @@ namespace rct3::park
         shape.line = line;
         shape.entry = measure_end(line.start_direction, line.start_side, base_bank);
         shape.exit = measure_end(line.end_direction, line.end_side, base_bank);
-        shape.chain = (record.flags & kPieceChain) != 0;
+        for (const auto& [flag, toggle] : { std::pair { kPieceChain, PieceToggle::Chain }, { kPieceEnclosed, PieceToggle::Enclosed }, { kPieceWater, PieceToggle::Water }, { kPieceBooster, PieceToggle::Booster } })
+        {
+            if ((record.flags & flag) != 0)
+                shape.toggles |= toggle_bit(toggle);
+        }
         const int turn = wrap_turn(shape.exit.heading - shape.entry.heading);
         const std::uint32_t join = record.join_a;
         if ((record.flags & kPieceStation) != 0)
@@ -299,14 +303,14 @@ namespace rct3::park
         for (std::size_t i = 0; i < records.size() && i < lines.size(); ++i)
             pieces.push_back(shape_piece(records[i], lines[i], base));
         // One plain piece per shape: the plainest keeps it, the others are offered by name.
-        using Key = std::tuple<int, int, int, int, int, int, int, bool>;
+        using Key = std::tuple<int, int, int, int, int, int, int, std::uint8_t>;
         std::map<Key, std::size_t> plainest;
         for (std::size_t i = 0; i < pieces.size(); ++i)
         {
             const PieceShape& p = pieces[i];
             if (p.use != PieceUse::Plain)
                 continue;
-            const Key key { p.entry.slope, p.entry.bank, p.entry.heading, p.exit.slope, p.exit.bank, p.exit.heading, p.curve, p.chain };
+            const Key key { p.entry.slope, p.entry.bank, p.entry.heading, p.exit.slope, p.exit.bank, p.exit.heading, p.curve, p.toggles };
             const auto [found, added] = plainest.try_emplace(key, i);
             if (added)
                 continue;

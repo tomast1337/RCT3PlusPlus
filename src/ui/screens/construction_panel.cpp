@@ -58,7 +58,12 @@ namespace rct3::ui
         return cp::kToggleLeft + cp::kStep * static_cast<float>((toggles + 1) / 2);
     }
 
-    ConstructionPanel::ConstructionPanel(std::string name, const ConstructionPanelStyle& style, std::u16string chain_help, std::u16string demolish_help)
+    float specials_left(std::size_t toggles)
+    {
+        return std::max(cp::kSpecialAt.x, dial_left(toggles) + cp::kDialSize + 4);
+    }
+
+    ConstructionPanel::ConstructionPanel(std::string name, const ConstructionPanelStyle& style, std::array<std::u16string, cp::kToggles> toggle_helps, std::u16string demolish_help)
         : Widget(std::move(name))
         , style_(style)
     {
@@ -76,8 +81,11 @@ namespace rct3::ui
         }
         for (std::size_t i = 0; i < cp::kBanks; ++i)
             banks_.at(i) = picture(style.banks.at(i).empty() ? std::format("bank{}", i) : style.banks.at(i));
-        chain_ = picture("chain");
-        chain_->tooltip = std::move(chain_help);
+        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        {
+            toggles_.at(i) = picture(std::format("toggle{}", i));
+            toggles_.at(i)->tooltip = std::move(toggle_helps.at(i));
+        }
         demolish_ = picture("demolish");
         demolish_->icon = style.demolish;
         demolish_->tooltip = std::move(demolish_help);
@@ -101,12 +109,10 @@ namespace rct3::ui
         cost_ = label("cost", cp::kCostTop);
 
         list_ = &add<ListBox>("list", style.list, style.list_bar);
-        list_->placement = top_left(cp::kListLeft, cp::kListTop, cp::kListRight - cp::kListLeft, cp::kListHeight);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {
             Button& b = *picture(std::format("special{}", i));
             b.toggle = true;
-            b.placement = top_left(cp::kSpecialAt.x + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
             specials_.at(i) = &b;
         }
         speed_icon_ = picture("speed_icon");
@@ -136,12 +142,24 @@ namespace rct3::ui
 
     void ConstructionPanel::lay_out()
     {
-        const std::size_t toggles = view_.chain ? 1 : 0;
-        chain_->visible = view_.chain.has_value();
-        chain_->placement = top_left(cp::kToggleLeft, cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y, cp::kToggleSize.x, cp::kToggleSize.y);
+        // The toggles the track has fill two rows by columns, the slope row's first, then the curve row's.
+        std::size_t toggles = 0;
+        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        {
+            if (!view_.toggles.at(i))
+                continue;
+            const float top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
+            toggles_.at(i)->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<float>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
+            ++toggles;
+        }
         const float dial = dial_left(toggles);
         for (std::size_t i = 0; i < cp::kBanks; ++i)
             banks_.at(i)->placement = top_left(dial + kBankSpots.at(i).x, cp::kDialTop + kBankSpots.at(i).y, cp::kBankSize, cp::kBankSize);
+        const float specials = specials_left(toggles);
+        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+            specials_.at(i)->placement = top_left(specials + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
+        list_left_ = std::max(cp::kListLeft, specials + 2 * cp::kSpecialStep + 6);
+        list_->placement = top_left(list_left_, cp::kListTop, cp::kListRight - list_left_, cp::kListHeight);
     }
 
     void ConstructionPanel::restyle()
@@ -162,10 +180,12 @@ namespace rct3::ui
             banks_.at(i)->icon = icon_skin(style_.banks.at(i), view_.banks.at(i) == IconState::On ? IconState::On : IconState::Off);
             banks_.at(i)->visible = view_.banks.at(i) != IconState::Dis;
         }
-        if (view_.chain)
+        for (std::size_t i = 0; i < cp::kToggles; ++i)
         {
-            chain_->icon = icon_skin(style_.chain, *view_.chain);
-            chain_->inert = *view_.chain == IconState::Dis;
+            const auto& state = view_.toggles.at(i);
+            toggles_.at(i)->visible = state && *state != IconState::Dis;
+            if (toggles_.at(i)->visible)
+                toggles_.at(i)->icon = icon_skin(style_.toggles.at(i), *state);
         }
         demolish_->enabled = view_.can_demolish;
         complete_->enabled = view_.can_complete;
@@ -237,8 +257,11 @@ namespace rct3::ui
         pictures(curves_, view_.curves, ConstructionAction::Curve);
         pictures(slopes_, view_.slopes, ConstructionAction::Slope);
         pictures(banks_, view_.banks, ConstructionAction::Bank);
-        if (chain_->take_click() && view_.chain && *view_.chain != IconState::Dis)
-            events_.push_back({ ConstructionAction::Chain, 0 });
+        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        {
+            if (toggles_.at(i)->take_click() && view_.toggles.at(i).value_or(IconState::Dis) != IconState::Dis)
+                events_.push_back({ ConstructionAction::Toggle, i });
+        }
         if (demolish_->take_click() && view_.can_demolish)
             events_.push_back({ ConstructionAction::Demolish, 0 });
         if (complete_->take_click() && view_.can_complete)
@@ -266,11 +289,11 @@ namespace rct3::ui
     void ConstructionPanel::draw(DrawContext& context) const
     {
         const Rect r = rect();
-        const float dial = dial_left(view_.chain ? 1 : 0);
+        const float dial = dial_left(static_cast<std::size_t>(std::ranges::count_if(view_.toggles, [](const auto& t) { return t.has_value(); })));
         draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
         // The lines that part the buttons from the name below them, and both from the list.
-        context.list.fill({ r.x0 + cp::kLabelLeft - 4, r.y0 + cp::kDividerTop, r.x0 + cp::kListLeft - 3, r.y0 + cp::kDividerTop + 1 }, style_.divider);
-        context.list.fill({ r.x0 + cp::kListLeft - 3, r.y0, r.x0 + cp::kListLeft - 2, r.y1 }, style_.divider);
+        context.list.fill({ r.x0 + cp::kLabelLeft - 4, r.y0 + cp::kDividerTop, r.x0 + list_left_ - 3, r.y0 + cp::kDividerTop + 1 }, style_.divider);
+        context.list.fill({ r.x0 + list_left_ - 3, r.y0, r.x0 + list_left_ - 2, r.y1 }, style_.divider);
     }
 
 } // namespace rct3::ui

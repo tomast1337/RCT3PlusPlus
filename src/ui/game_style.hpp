@@ -797,7 +797,7 @@ namespace rct3::ui::game_skins
         s.slopes = { named("SlopeD3"), named("SlopeD2"), named("SlopeD1"), named("Slope0"), named("SlopeU1"), named("SlopeU2"), named("SlopeU3") };
         s.banks = { named("BankL3"), named("BankL2"), named("BankL1"), named("Bank0"), named("BankR1"), named("BankR2"), named("BankR3"), named("BankInv") };
         s.dial = "AttractionEditor_BankBackground";
-        s.chain = named("Chain");
+        s.toggles = { named("Chain"), named("Enclosed"), named("Water"), named("Booster") };
         s.demolish = named("DeleteOn");
         s.complete = named("ForwardOn");
         s.new_segment = "IconAttractionEditorNewTrackSegment";

@@ -32,6 +32,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::ovl
@@ -52,6 +53,9 @@ namespace rct3::park
     // first, station pieces the second, and nearly every piece of later files the third.
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr std::uint32_t kPieceChain = 0x2;
+    inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
+    inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
+    inline constexpr std::uint32_t kPieceBooster = 0x1000000; ///< Speeds the cars up
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
     inline constexpr std::uint32_t kPieceCableLift = 0x20;       ///< A cable pulls the cars up it
@@ -81,6 +85,22 @@ namespace rct3::park
         Station, ///< Where riders get on and off
         Special, ///< Loops, helices, brakes and the like, picked by name
     };
+
+    /// What the player turns on or off for the next piece, beside its curve, slope and bank, in the order the
+    /// game sets out their buttons.
+    enum class PieceToggle : std::uint8_t
+    {
+        Chain,
+        Enclosed,
+        Water,
+        Booster,
+    };
+    inline constexpr std::size_t kPieceToggles = 4;
+    /// The bit of `toggle` in PieceShape::toggles.
+    [[nodiscard]] constexpr std::uint8_t toggle_bit(PieceToggle toggle)
+    {
+        return static_cast<std::uint8_t>(1u << std::to_underlying(toggle));
+    }
 
     /// The two ends of a piece's middle line, between its rails, and which way the track runs there, in the
     /// model's space. The sides run from the left rail to the right rail.
@@ -136,7 +156,7 @@ namespace rct3::park
         PieceEnd exit;
         int curve = 0;
         PieceUse use = PieceUse::Plain;
-        bool chain = false;
+        std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has
     };
 
     /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.

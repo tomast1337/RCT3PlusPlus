@@ -74,7 +74,8 @@ namespace rct3::scene
         /// How far each joint may be turned either way, degrees, and the spinners' step.
         constexpr int kArmTurns = 360;
         constexpr int kArmStep = 10;
-        constexpr std::string_view kChainHelp = "ATE_TT_Chain";
+        /// In the order of park::PieceToggle.
+        constexpr std::array<std::string_view, park::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
@@ -434,8 +435,12 @@ namespace rct3::scene
                 const int bank = panel_bank(i);
                 v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(park::bank_index(bank)));
             }
-            if (o.any_chain)
-                v.chain = state_of(b.choice.chain && o.chain, o.chain);
+            for (std::size_t i = 0; i < park::kPieceToggles; ++i)
+            {
+                const std::uint8_t bit = park::toggle_bit(static_cast<park::PieceToggle>(i));
+                if ((o.any_toggles & bit) != 0)
+                    v.toggles.at(i) = state_of((b.choice.toggles & o.toggles & bit) != 0, (o.toggles & bit) != 0);
+            }
             for (ListedPiece& l : listed_pieces(*assets.strings, *c, o))
             {
                 if (l.laid && b.choice.named == l.laid)
@@ -1263,7 +1268,7 @@ namespace rct3::scene
             return false;
         if (!scene.desktop->root().find(kPanelName))
         {
-            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::u16string(assets.strings->get(kChainHelp)), std::u16string(assets.strings->get(kDemolishHelp)));
+            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::array { std::u16string(assets.strings->get(kToggleHelps[0])), std::u16string(assets.strings->get(kToggleHelps[1])), std::u16string(assets.strings->get(kToggleHelps[2])), std::u16string(assets.strings->get(kToggleHelps[3])) }, std::u16string(assets.strings->get(kDemolishHelp)));
             panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
@@ -1541,8 +1546,8 @@ namespace rct3::scene
                 case Bank:
                     b.choice = park::pick_value(c->pieces, b.candidates, b.choice, park::ChoiceAxis::Bank, panel_bank(event->index));
                     break;
-                case Chain:
-                    b.choice = park::pick_chain(c->pieces, b.candidates, b.choice);
+                case Toggle:
+                    b.choice = park::pick_toggle(c->pieces, b.candidates, b.choice, static_cast<park::PieceToggle>(event->index));
                     break;
                 case Named:
                 {

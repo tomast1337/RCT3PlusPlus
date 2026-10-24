@@ -64,7 +64,7 @@ namespace rct3::park
                 }
                 const auto model = models.find(model_ref(object));
                 const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
-                CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : shape->chain ? CourseKind::Chain : CourseKind::Plain;
+                CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : (shape->toggles & toggle_bit(PieceToggle::Chain)) != 0 ? CourseKind::Chain : CourseKind::Plain;
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;
                 else if (kind == CourseKind::Plain && shape->record.role == kRoleBlockBrake)

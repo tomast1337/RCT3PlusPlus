@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <vector>
 
 using namespace rct3::simulation;
 
@@ -23,6 +24,42 @@ namespace
         c.train_length = 5;
         c.start = 10;
         c.at = 10;
+        return c;
+    }
+
+    /// A 100 m track with two ends: a 30 m spike up 25 m at each, and a 20 m station from 40 to 60 between.
+    Coaster spikes(Shuttle shuttle, int passes)
+    {
+        Coaster c;
+        c.distance = { 0, 30, 40, 60, 70, 100 };
+        c.height = { 25, 0, 0, 0, 0, 25 };
+        c.kinds = { Stretch::Plain, Stretch::Plain, Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+        c.station_speed = 2;
+        c.train_length = 5;
+        c.start = 60;
+        c.at = 60;
+        c.shuttle = shuttle;
+        c.passes = passes;
+        c.launch_speed = 10;
+        c.running = true;
+        return c;
+    }
+
+    /// A 60 m tower straight up from a 5 m base.
+    Coaster tower(Shuttle shuttle, int passes)
+    {
+        Coaster c;
+        c.distance = { 0, 5, 65 };
+        c.height = { 0, 5, 65 };
+        c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain };
+        c.station_speed = 2;
+        c.train_length = 3;
+        c.start = 5;
+        c.at = 5;
+        c.shuttle = shuttle;
+        c.passes = passes;
+        c.launch_speed = 20;
+        c.running = true;
         return c;
     }
 } // namespace
@@ -151,4 +188,100 @@ TEST_CASE("a launched train that rolls back into the station stops there and is 
     CHECK(top < 8.5f);
     CHECK_FALSE(c.running);
     CHECK(c.at == 10);
+}
+
+TEST_CASE("a reverse launched shuttle goes back up one spike, through the station up the other, and stops in it")
+{
+    Coaster c = spikes(Shuttle::Back, 2);
+    float lowest = c.at;
+    float highest = c.at;
+    float first = 0; // Its speed a moment after setting off
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+    {
+        back = drive(c, 0.05f);
+        first = i == 10 ? c.speed : first;
+        lowest = std::min(lowest, c.at);
+        highest = std::max(highest, c.at);
+    }
+    CHECK(back);
+    CHECK(first < 0);
+    CHECK(lowest < 40 - 5);  // Up the spike behind the station
+    CHECK(highest > 70 + 5); // and the one ahead of it
+    CHECK(c.at == 60);
+    CHECK(c.passed == 2);
+    CHECK_FALSE(c.running);
+}
+
+TEST_CASE("a shuttle's chain carries the train up it going backwards too")
+{
+    Coaster c = spikes(Shuttle::Back, 2);
+    c.kinds[0] = Stretch::Chain;
+    c.lift_speed = 3;
+    c.launch_speed = 4; // Too slow to climb far up the spike on its own
+    float lowest = c.at;
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+    {
+        back = drive(c, 0.05f);
+        lowest = std::min(lowest, c.at);
+    }
+    CHECK(back);
+    CHECK(lowest < 5 + 2); // Carried all the way up
+}
+
+TEST_CASE("a swinging shuttle is pushed each pass, building up and dying down, and stops after its passes")
+{
+    Coaster c = spikes(Shuttle::Swing, 8);
+    std::vector<float> fastest(9, 0); // On each pass
+    bool back = false;
+    for (int i = 0; i < 20000 && !back; ++i)
+    {
+        const int pass = c.passed;
+        back = drive(c, 0.05f);
+        fastest[static_cast<std::size_t>(pass)] = std::max(fastest[static_cast<std::size_t>(pass)], std::abs(c.speed));
+    }
+    CHECK(back);
+    CHECK(c.at == 60);
+    CHECK(fastest[0] < fastest[3]);
+    CHECK(fastest[3] == doctest::Approx(fastest[4]).epsilon(0.15));
+}
+
+TEST_CASE("a launched tower's train is braked as it falls back, then pushed up again but less high")
+{
+    Coaster c = tower(Shuttle::Tower, 2);
+    std::vector<float> top(3, 0); // Highest on each pass
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+    {
+        back = drive(c, 0.05f);
+        top[static_cast<std::size_t>(std::min(c.passed, 2))] = std::max(top[static_cast<std::size_t>(std::min(c.passed, 2))], c.at);
+    }
+    CHECK(back);
+    CHECK(c.at == 5);
+    CHECK(top[0] > 15);
+    CHECK(top[1] > 10);
+    CHECK(top[1] < top[0]);
+}
+
+TEST_CASE("a drop tower's train is held at the top of its climb before it falls")
+{
+    Coaster c = tower(Shuttle::Drop, 1);
+    float still = 0; // Seconds stopped up the tower
+    bool back = false;
+    for (int i = 0; i < 4000 && !back; ++i)
+    {
+        back = drive(c, 0.05f);
+        still += c.speed == 0 && c.at > 10 ? 0.05f : 0;
+    }
+    CHECK(back);
+    CHECK(still == doctest::Approx(3).epsilon(0.1));
+    Coaster plain = tower(Shuttle::Tower, 1);
+    float plain_still = 0;
+    for (int i = 0; i < 4000 && plain.running; ++i)
+    {
+        drive(plain, 0.05f);
+        plain_still += plain.speed == 0 && plain.at > 10 ? 0.05f : 0;
+    }
+    CHECK(plain_still < 0.2f);
 }

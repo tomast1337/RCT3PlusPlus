@@ -144,6 +144,7 @@ namespace rct3::save
             constexpr std::string_view kBrakeSpeed = "BrakeSpeed";
             constexpr std::string_view kBlockBrakeOff = "BlockBrakeOffSpeed";
             constexpr std::string_view kFixedSpeed = "FixedSpeed";
+            constexpr std::string_view kCircuitsRun = "NumCircuits";
             constexpr std::string_view kRaceInProgress = "RaceInProgress";
             constexpr std::string_view kRaceOver = "RaceOver";
             constexpr std::string_view kRaceWinner = "RaceWinnerIndex";
@@ -855,6 +856,7 @@ namespace rct3::save
                     .brake_speed = f[id::kBrakeSpeed].number(),
                     .block_brake_off_speed = f[id::kBlockBrakeOff].number(),
                     .fixed_speed = f[id::kFixedSpeed].number(-1),
+                    .circuits = f[id::kCircuitsRun].i32(1),
                 };
 
                 ride.race = RaceState {

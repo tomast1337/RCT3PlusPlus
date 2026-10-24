@@ -405,6 +405,26 @@ TEST_CASE("with blocks, a train waits at a block brake while the block beyond ho
     CHECK(room_ahead(trains, 1) > 0);
 }
 
+TEST_CASE("with blocks, a plain brake does not end a block")
+{
+    // As above, but the piece at 50 to 55 is a plain brake: the next block end ahead is the station.
+    Coaster track;
+    track.distance = { 0, 10, 50, 55, 100 };
+    track.height = { 0, 0, 0, 0, 0 };
+    track.kinds = { Stretch::Station, Stretch::Plain, Stretch::Brake, Stretch::Plain, Stretch::Plain };
+    track.brake_speeds = { -1, -1, 5, -1, -1 };
+    track.fixed_speed = 10;
+    track.train_length = 5;
+    track.blocks = true;
+    Coaster stopped = track;
+    stopped.at = 70;
+    Coaster coming = track;
+    coming.at = 30;
+    coming.running = true;
+    std::vector<Coaster> trains { stopped, coming };
+    CHECK(room_ahead(trains, 1) == doctest::Approx(70 - 5 - 30 - kBlockGap)); // Only the gap to the train ahead
+}
+
 TEST_CASE("guests spread over the path but keep on it")
 {
     Sandbox park;

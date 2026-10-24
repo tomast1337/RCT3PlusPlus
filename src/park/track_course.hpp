@@ -27,7 +27,7 @@ namespace rct3::park
         Chain,      ///< A lift chain pulls the cars up
         Station,    ///< Riders get on and off
         Cable,      ///< A cable pulls the cars up, as a chain does
-        BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear
+        BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear (also holding pieces, lift tops)
         Launch,     ///< Pushes a launched train on, past its station
         Brake,      ///< Slows a train down to the piece's brake speed
     };

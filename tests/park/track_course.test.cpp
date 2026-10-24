@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_course.hpp"
 
+#include <algorithm>
 #include <array>
 #include <doctest/doctest.h>
 
@@ -188,4 +189,49 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     REQUIRE(bare);
     CHECK(bare->first_piece == 0);
     CHECK(!bare->closed);
+}
+
+TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked pieces are no lift")
+{
+    save::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::PieceShape plain;
+    plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
+    park::PieceShape holds = plain;
+    holds.record.flags = park::kPieceHolds;
+    park::PieceShape top = plain;
+    top.record.flags = park::kPieceLiftTop;
+    park::PieceShape tower = plain;
+    tower.toggles = park::toggle_bit(park::PieceToggle::Chain);
+    tower.record.role = park::kRoleTowerFirst;
+    save::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::PlacedObject> objects;
+    const std::array<std::string, 4> symbols { "Holds", "Top", "Tower", "Plain" };
+    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    {
+        save::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.col = static_cast<int>(i);
+        o.force_absolute_height = true;
+        save::TrackPiece& piece = track.pieces.emplace_back();
+        piece.symbol = symbols[i];
+        piece.scenery = o.id;
+    }
+    track.segments = { { .first_piece = 0, .piece_count = 4 } };
+    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::PieceShape&> { return p.symbol == "Holds" ? holds : p.symbol == "Top" ? top : p.symbol == "Tower" ? tower : plain; };
+    const auto course = park::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(course);
+    REQUIRE(course->piece_starts.size() == 4);
+    const auto kind_of = [&](std::size_t piece) {
+        const auto after = std::ranges::upper_bound(course->distance, course->piece_starts[piece] + 0.01f);
+        return course->kinds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
+    };
+    CHECK(kind_of(0) == park::CourseKind::BlockBrake);
+    CHECK(kind_of(1) == park::CourseKind::BlockBrake);
+    CHECK(kind_of(2) == park::CourseKind::Plain);
 }

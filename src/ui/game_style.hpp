@@ -35,6 +35,7 @@
 #include "ui/widgets/menu.hpp"
 #include "ui/widgets/menu_bar.hpp"
 #include "ui/widgets/question_box.hpp"
+#include "ui/widgets/row_bands.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/slider.hpp"
 #include "ui/widgets/spinner.hpp"
@@ -290,6 +291,15 @@ namespace rct3::ui::game_skins
         s.font = FontRole::Small;
         s.row_height = 18;
         return s;
+    }
+
+    /// The rows of the lists of things, the special pieces and a stall's menu: striped, with the light band.
+    [[nodiscard]] inline RowBands row_bands(const Palette& p)
+    {
+        RowBands b;
+        b.stripe = p.stripe;
+        b.band = p.icon;
+        return b;
     }
 
     /// Tabs as text lozenges, the current one drawn down. The game's tab strips are rows of text buttons;
@@ -829,12 +839,13 @@ namespace rct3::ui::game_skins
         s.list = list_box_style(p);
         s.list.background.clear();
         s.list.focused.clear();
-        s.list.stripe = p.stripe;
-        s.list.row_height = construction_panel::kListRowHeight;
+        const RowBands rows = row_bands(p);
+        s.list.stripe = rows.stripe;
+        s.list.row_height = rows.height;
         s.list.padding = { };
         // The picked row is a flat light band, not a lozenge, and the marks sit flush before the name.
         s.list.selection_skin.clear();
-        s.list.selection_colour = p.icon;
+        s.list.selection_colour = rows.band;
         s.list.text_indent = 0;
         s.list.icon_gap = 0;
         s.list_bar = scroll_bar_style(p, Orientation::Vertical);

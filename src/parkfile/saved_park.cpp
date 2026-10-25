@@ -33,9 +33,9 @@ namespace rct3::parkfile
         constexpr std::uint32_t kChunks = 10;
     } // namespace
 
-    std::vector<save::PlacedObject> kept_objects(std::span<const save::PlacedObject> objects, std::size_t own, std::span<const save::PathTile> paths, const save::RideModel& rides)
+    std::vector<save::PlacedObject> kept_objects(std::span<const save::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::PathTile> paths, const save::RideModel& rides)
     {
-        std::unordered_set<std::uint64_t> built;
+        std::unordered_set<std::uint64_t> built = placed;
         for (const save::PathTile& p : paths)
         {
             if (p.elevation)

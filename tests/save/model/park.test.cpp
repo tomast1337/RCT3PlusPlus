@@ -543,6 +543,32 @@ TEST_CASE("park: awards, objectives, research")
     CHECK(prize);
 }
 
+TEST_CASE("park: a VIP goal keeps its visit, wishes and tolerances")
+{
+    const auto l = load(
+        {
+            { "VIPCondition", 1, { fint("Difficulty", 1), fint("ObjectiveId", 0), fint("ConditionId", 0), fint("SubConditionFlags", 0x30), fint("SubTypeVIP", 2), ffloat("FirstInsertTime", 900), ffloat("NextInsertVIPTime", 950), fint("InsertionInterval", 3), fint("MonthsToStayInPark", 2), fint("CoastersNeeded", 2), ffloat("MinExcitment", 6.5f), ffloat("BreakdownTolerance", 4), ffloat("TargetHappiness", 0.6f), fbool("ConditionMet", true) } },
+            { "ParkValueCondition", 2, { fint("Difficulty", 1), fint("ConditionId", 1), fint("Value", 5) } },
+        });
+    const auto& c = l->model.objectives.conditions;
+    REQUIRE(c.size() == 2);
+    REQUIRE(c[0].vip.has_value());
+    const VipTarget& v = *c[0].vip;
+    CHECK(v.wishes == (VipTarget::kCoasters | VipTarget::kBreakdowns));
+    CHECK(v.who == 2);
+    CHECK(v.first_visit == 900.0f);
+    CHECK(v.next_visit == 950.0f);
+    CHECK(v.retry_months == 3);
+    CHECK(v.months_to_stay == 2);
+    CHECK(v.coasters_needed == 2);
+    CHECK(v.min_excitement == 6.5f);
+    CHECK(v.breakdown_tolerance == 4.0f);
+    CHECK(v.target_happiness == doctest::Approx(0.6f));
+    CHECK(v.met);
+    CHECK_FALSE(v.warned_week);
+    CHECK_FALSE(c[1].vip.has_value());
+}
+
 TEST_CASE("park: validation reports broken invariants")
 {
     const auto l = load(

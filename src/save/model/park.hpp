@@ -325,6 +325,42 @@ namespace rct3::save
         static constexpr std::uint32_t kPoolSlides = 1u << 6;
     };
 
+    /// What a VIP goal asks: when the guest of honour comes, how long they stay, what they want to see and
+    /// what they put up with, as the file keeps it. Times are game time units.
+    struct VipTarget
+    {
+        /// Bits of `wishes`. kLitter and kBreakdowns are things they put up with only so far; the others are
+        /// things they want to do while in the park.
+        static constexpr std::uint32_t kLitter = 1u << 0;
+        static constexpr std::uint32_t kHappiness = 1u << 1; ///< Their happiness on average must reach target_happiness
+        static constexpr std::uint32_t kFireworks = 1u << 2;
+        static constexpr std::uint32_t kThemedArea = 1u << 3;
+        static constexpr std::uint32_t kCoasters = 1u << 4;
+        static constexpr std::uint32_t kBreakdowns = 1u << 5;
+        static constexpr std::uint32_t kAutographs = 1u << 6;
+        static constexpr std::uint32_t kPool = 1u << 7;
+        static constexpr std::uint32_t kDung = 1u << 8;
+        static constexpr std::uint32_t kAnimals = 1u << 9;
+        static constexpr std::uint32_t kGalleries = 1u << 10;
+
+        std::uint32_t wishes = 0;
+        std::uint8_t who = 0;                           ///< Which celebrity comes, 1..6
+        float first_visit = 0;                          ///< The first visit's date; later years' visits fall on the same day
+        float next_visit = 0;                           ///< When the next visit is due
+        std::int32_t retry_months = 0;                  ///< After a visit that went badly, months until they come again
+        std::int32_t months_to_stay = 0;                ///< How long a visit lasts
+        std::int32_t coasters_needed = 0;               ///< kCoasters: how many different coasters they want to ride
+        float min_excitement = 0;                       ///< kCoasters: how exciting each must be, as rides are rated
+        std::int32_t theme = 0;                         ///< kThemedArea: the theme they want to see
+        std::int32_t scenery_needed = 0;                ///< kThemedArea: how many pieces of it
+        float litter_tolerance = 0;                     ///< Larger takes more litter
+        float breakdown_tolerance = 0;                  ///< Larger takes more time on broken rides
+        float autograph_tolerance = 0;                  ///< Larger takes more autograph hunters
+        float target_happiness = 0;                     ///< kHappiness, 0..1
+        bool met = false;                               ///< A visit went well; the goal stays met
+        bool warned_month = false, warned_week = false; ///< The player was told the visit is near
+    };
+
     struct Condition
     {
         ConditionKind kind = ConditionKind::Other;
@@ -341,6 +377,7 @@ namespace rct3::save
         std::optional<std::int64_t> value { };    ///< Threshold, for the families that have one
         std::optional<bool> greater_than { };     ///< Comparison direction, newer generations only
         std::optional<CoasterTarget> coaster { }; ///< Coaster conditions only
+        std::optional<VipTarget> vip { };         ///< VIP conditions only
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept
         {

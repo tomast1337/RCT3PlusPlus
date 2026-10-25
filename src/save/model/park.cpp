@@ -157,6 +157,23 @@ namespace rct3::save
             constexpr std::string_view kCompareValue = "CmpVal";
             constexpr std::string_view kConditionFlags = "Flags";
             constexpr std::string_view kRidesRequired = "NumRequired";
+            constexpr std::string_view kVipWishes = "SubConditionFlags";
+            constexpr std::string_view kVipWho = "SubTypeVIP";
+            constexpr std::string_view kVipFirst = "FirstInsertTime";
+            constexpr std::string_view kVipNext = "NextInsertVIPTime";
+            constexpr std::string_view kVipRetry = "InsertionInterval";
+            constexpr std::string_view kVipStay = "MonthsToStayInPark";
+            constexpr std::string_view kVipCoasters = "CoastersNeeded";
+            constexpr std::string_view kVipExcitement = "MinExcitment";
+            constexpr std::string_view kVipTheme = "PreferedStyle";
+            constexpr std::string_view kVipScenery = "SceneryNeeded";
+            constexpr std::string_view kVipLitter = "LitterTolerance";
+            constexpr std::string_view kVipBreakdowns = "BreakdownTolerance";
+            constexpr std::string_view kVipAutographs = "AutographTolerance";
+            constexpr std::string_view kVipHappiness = "TargetHappiness";
+            constexpr std::string_view kVipMet = "ConditionMet";
+            constexpr std::string_view kVipWarnedMonth = "GivenMonthWarning";
+            constexpr std::string_view kVipWarnedWeek = "GivenWeekWarning";
 
             // Challenge attributes
             constexpr std::string_view kChallengeName = "Name";
@@ -582,6 +599,26 @@ namespace rct3::save
                 c.greater_than = v->as_bool();
             if (c.kind == ConditionKind::Coaster)
                 c.coaster = CoasterTarget { .value = float_of(o.find(kCompareValue), 0.0f), .flags = static_cast<std::uint32_t>(i32_of(o.find(kConditionFlags), 0)), .rides = i32_of(o.find(kRidesRequired), 0) };
+            if (c.kind == ConditionKind::Vip)
+                c.vip = VipTarget {
+                    .wishes = static_cast<std::uint32_t>(i32_of(o.find(kVipWishes), 0)),
+                    .who = static_cast<std::uint8_t>(i32_of(o.find(kVipWho), 0)),
+                    .first_visit = float_of(o.find(kVipFirst), 0.0f),
+                    .next_visit = float_of(o.find(kVipNext), 0.0f),
+                    .retry_months = i32_of(o.find(kVipRetry), 0),
+                    .months_to_stay = i32_of(o.find(kVipStay), 0),
+                    .coasters_needed = i32_of(o.find(kVipCoasters), 0),
+                    .min_excitement = float_of(o.find(kVipExcitement), 0.0f),
+                    .theme = i32_of(o.find(kVipTheme), 0),
+                    .scenery_needed = i32_of(o.find(kVipScenery), 0),
+                    .litter_tolerance = float_of(o.find(kVipLitter), 0.0f),
+                    .breakdown_tolerance = float_of(o.find(kVipBreakdowns), 0.0f),
+                    .autograph_tolerance = float_of(o.find(kVipAutographs), 0.0f),
+                    .target_happiness = float_of(o.find(kVipHappiness), 0.0f),
+                    .met = bool_of(o.find(kVipMet), false),
+                    .warned_month = bool_of(o.find(kVipWarnedMonth), false),
+                    .warned_week = bool_of(o.find(kVipWarnedWeek), false),
+                };
             set.conditions.push_back(std::move(c));
         }
 

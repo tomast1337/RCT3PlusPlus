@@ -376,3 +376,40 @@ TEST_CASE("a train on a circuit with another station stops there, and goes on ro
     REQUIRE(lap);
     CHECK(*lap == doctest::Approx(25).epsilon(0.02));
 }
+
+TEST_CASE("a lap's graphs take a sample each tenth of a second, newest first when the lap ends")
+{
+    Coaster c;
+    c.distance = { 0, 100 };
+    c.height = { 5, 5 };
+    c.points = { { 0, 5, 0 }, { 0, 5, 100 } };
+    c.kinds = { Stretch::Plain, Stretch::Plain };
+    c.speed = 10;
+    LapRecorder lap;
+    for (int i = 0; i < 3; ++i)
+    {
+        c.at = static_cast<float>(i);
+        record(lap, c, 0.06f);
+        record(lap, c, 0.06f);
+        c.speed += 1;
+    }
+    REQUIRE(lap.speed.size() == 3);
+    CHECK(lap.speed[0] == doctest::Approx(10));
+    CHECK(lap.altitude[0] == doctest::Approx(5));
+    // Level and straight: one g up, nothing across.
+    CHECK(lap.vertical[0] == doctest::Approx(9.81f));
+    CHECK(lap.lateral[0] == doctest::Approx(0));
+    const rct3::save::RideGraphs graphs = end_lap(lap);
+    CHECK(graphs.speed == std::vector<float> { 12, 11, 10 });
+    CHECK(lap.speed.empty());
+}
+
+TEST_CASE("a long lap's graphs keep its last samples")
+{
+    LapRecorder lap;
+    lap.speed.assign(kLapSamples + 50, 1);
+    lap.speed.back() = 7;
+    const rct3::save::RideGraphs graphs = end_lap(lap);
+    REQUIRE(graphs.speed.size() == kLapSamples);
+    CHECK(graphs.speed.front() == 7);
+}

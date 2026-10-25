@@ -71,6 +71,47 @@ namespace rct3::simulation
         return glm::length(run) > 0 ? glm::normalize(run) : glm::vec3(0, 0, 1);
     }
 
+    void record(LapRecorder& lap, const Coaster& c, float seconds)
+    {
+        if (seconds <= 0)
+            return;
+        const glm::vec3 velocity = track_way(c, c.at) * c.speed;
+        if (lap.seconds == 0 && lap.speed.empty())
+            lap.velocity_from = velocity;
+        lap.seconds += seconds;
+        lap.speed_sum += std::abs(c.speed) * seconds;
+        lap.height_sum += track_point(c, c.at).y * seconds;
+        constexpr float kSample = 1.0f / static_cast<float>(save::kGraphSamplesPerSecond);
+        if (lap.seconds < kSample)
+            return;
+        // The forces from how the train's velocity changed over the sample, with gravity's: up, and across the
+        // way it runs.
+        // shortcut: up is the world's, so a banked turn's force shows as lateral; take the track's roll once it is
+        // known along it.
+        const glm::vec3 pull = (velocity - lap.velocity_from) / lap.seconds;
+        const glm::vec3 up { 0, 1, 0 };
+        const glm::vec3 across = glm::cross(up, track_way(c, c.at));
+        lap.speed.push_back(lap.speed_sum / lap.seconds);
+        lap.altitude.push_back(lap.height_sum / lap.seconds);
+        lap.vertical.push_back(pull.y + kGravity);
+        lap.lateral.push_back(glm::length(across) > 0 ? glm::dot(pull, glm::normalize(across)) : 0);
+        lap.seconds = 0;
+        lap.speed_sum = 0;
+        lap.height_sum = 0;
+        lap.velocity_from = velocity;
+    }
+
+    save::RideGraphs end_lap(LapRecorder& lap)
+    {
+        const auto newest_first = [](const std::vector<float>& v) {
+            const std::size_t kept = std::min(v.size(), kLapSamples);
+            return std::vector<float>(v.rbegin(), v.rbegin() + static_cast<std::ptrdiff_t>(kept));
+        };
+        save::RideGraphs out { .speed = newest_first(lap.speed), .altitude = newest_first(lap.altitude), .vertical_g = newest_first(lap.vertical), .lateral_g = newest_first(lap.lateral) };
+        lap = { };
+        return out;
+    }
+
     std::vector<Wreck> thrown_cars(const Coaster& c, random::RandomState& dice)
     {
         const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)); };

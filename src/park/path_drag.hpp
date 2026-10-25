@@ -41,6 +41,10 @@ namespace rct3::park
     /// before it.
     [[nodiscard]] std::vector<save::Tile> brush_line(save::Tile from, save::Tile to);
 
+    /// The tiles of the `size` by `size` square round `centre`; an even size reaches one tile further towards
+    /// higher columns and rows than lower ones.
+    [[nodiscard]] std::vector<save::Tile> brush_square(save::Tile centre, int size);
+
     /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
     [[nodiscard]] DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 

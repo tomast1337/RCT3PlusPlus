@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/footpath_panel.hpp"
 
+#include "ui/screens/land_panel.hpp"
 #include "ui/shape.hpp"
 
 #include <algorithm>
@@ -54,6 +55,11 @@ namespace rct3::ui
         paths_tab_ = &tab("paths", style_.paths_icon, 4);
         queues_tab_ = &tab("queues", style_.queues_icon, 5);
         straight_ = &tab("straight", style_.straight_icon, 6);
+        size_ = &add<Spinner>("Path_Brush_Size", style_.size);
+        size_->minimum = 1;
+        size_->maximum = footpath_panel::kLargestBrush;
+        size_->set_value(1);
+        size_->tooltip = std::u16string(strings_.get("Land_Brush_RadiusHelp"));
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
             Button& b = body_->add<Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
@@ -212,6 +218,7 @@ namespace rct3::ui
         put_tab(*paths_tab_, footpath_panel::kPathsSlot);
         put_tab(*queues_tab_, footpath_panel::kQueuesSlot);
         put_tab(*straight_, footpath_panel::kStraightSlot);
+        size_->placement = top_left(centre.x - land_panel::kSizeWidth / 2, d.y1 - r.y0 - land_panel::kSizeBottom - land_panel::kSizeHeight, land_panel::kSizeWidth, land_panel::kSizeHeight);
 
         const Rect s = strip();
         const Point body = body_size();

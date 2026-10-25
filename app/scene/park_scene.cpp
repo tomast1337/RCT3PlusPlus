@@ -3261,6 +3261,7 @@ namespace rct3::scene
             std::erase_if(*saved.shows, [&](const save::RideShow& show) { return !std::ranges::contains(saved.rides.rides, show.ride, [](const save::Ride& r) { return r.base.id; }); });
         saved.waterfalls = scene.footpaths.waterfalls;
         saved.day_mode = scene.day.mode;
+        saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

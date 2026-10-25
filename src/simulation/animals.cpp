@@ -51,12 +51,6 @@ namespace rct3::simulation
             return std::nullopt;
         }
 
-        Dice dice_of(const SimWorld& world, entt::entity e)
-        {
-            std::uint64_t mix = world.seed.value ^ (std::uint64_t { entt::to_integral(e) } << 32);
-            return { random::seeded(random::Seed { random::split_mix(mix) }) };
-        }
-
         float idle_seconds(random::RandomState& dice)
         {
             return static_cast<float>(random::between(dice, 1.0, static_cast<double>(kRates.idle.value)));
@@ -75,6 +69,12 @@ namespace rct3::simulation
         }
     } // namespace
 
+    Dice dice_for(const SimWorld& world, entt::entity e)
+    {
+        std::uint64_t mix = world.seed.value ^ (std::uint64_t { entt::to_integral(e) } << 32);
+        return { random::seeded(random::Seed { random::split_mix(mix) }) };
+    }
+
     entt::entity add_animal_house(SimWorld& world, const AnimalHouse& house, glm::vec3 at)
     {
         auto& r = world.registry;
@@ -86,7 +86,7 @@ namespace rct3::simulation
         r.emplace<Staff>(keeper, staff);
         r.emplace<Pose>(keeper, Pose { .position = at, .was = at });
         r.emplace<KeeperDuty>(keeper, KeeperDuty { .house = home });
-        r.emplace<Dice>(keeper, dice_of(world, keeper));
+        r.emplace<Dice>(keeper, dice_for(world, keeper));
         return keeper;
     }
 
@@ -100,7 +100,7 @@ namespace rct3::simulation
         a.dung_in = kRates.dung;
         r.emplace<Animal>(e, std::move(a));
         r.emplace<Pose>(e, Pose { .position = at, .was = at });
-        r.emplace<Dice>(e, dice_of(world, e));
+        r.emplace<Dice>(e, dice_for(world, e));
         return e;
     }
 

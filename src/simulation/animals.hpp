@@ -15,6 +15,7 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
+#include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/units.hpp"
@@ -136,6 +137,9 @@ namespace rct3::simulation
     };
 
     inline constexpr AnimalRates kAnimalRates { };
+
+    /// The dice an animal or keeper `e` of `world` throws.
+    [[nodiscard]] Dice dice_for(const SimWorld& world, entt::entity e);
 
     /// A house for `house` and a keeper for it, standing at `at`. Returns the keeper.
     entt::entity add_animal_house(SimWorld& world, const AnimalHouse& house, glm::vec3 at);

@@ -37,6 +37,7 @@
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_glow.hpp"
 #include "scene/park_map_view.hpp"
@@ -704,7 +705,7 @@ namespace rct3::scene
         scene.footpaths.water = world->water;
         scene.footpaths.pools = world->pool_water;
         scene.footpaths.waterfalls = saved && saved->waterfalls ? *saved->waterfalls : world->waterfalls;
-        scene.enclosures = world->enclosures;
+        scene.enclosures = saved && saved->animals ? saved->animals->enclosures : world->enclosures;
         scene.footpaths.pictured = paths.styles;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
@@ -1187,7 +1188,16 @@ namespace rct3::scene
                     gate.closed = park_model && park_model->has_park && !park_model->park.flags.has(save::ParkFlag::Open);
                 if (park_model && park_model->group_mix)
                     simulation::import_party_mix(scene.sim, *park_model->group_mix);
-                const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);
+                const auto placed_staff = kept != nullptr ? parkfile::place_staff(scene.sim, *kept) : std::vector<entt::entity> { };
+                const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
+                // shortcut: the animals of an original park are not read; only those of our own saves come back.
+                if (kept != nullptr && saved->animals)
+                {
+                    parkfile::place_animals(scene.sim, *saved->animals, placed_staff);
+                    const save::PlacedObject crate = animal_crate();
+                    load_models(install, std::span(&crate, 1), false, scene.models, scene.pictures);
+                    animals_changed(device, scene);
+                }
                 for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
                 {
                     if (upkeep.broken)
@@ -1201,8 +1211,11 @@ namespace rct3::scene
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
                         p.guest = guests[p.saved];
                     // A vendor stands in their booth as saved, serving the riders handing over their tickets.
-                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && (scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]) || scene.sim.registry.get<simulation::Staff>(staff[p.saved]).role == simulation::StaffRole::Vendor))
+                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && (scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]) || scene.sim.registry.get<simulation::Staff>(staff[p.saved]).role == simulation::StaffRole::Vendor || scene.sim.registry.all_of<simulation::KeeperDuty>(staff[p.saved])))
+                    {
                         p.guest = staff[p.saved];
+                        scene.known_guests.insert(p.guest); // A keeper is not hired again
+                    }
                 }
             });
         }

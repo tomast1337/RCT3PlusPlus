@@ -253,3 +253,47 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     // No paths to walk on here, so the sweeper is not placed.
     CHECK(parkfile::place_staff(loaded, people) == std::vector<entt::entity> { entt::null });
 }
+
+TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animals and dung")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity sweeper = r.create();
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman });
+    r.emplace<Pose>(sweeper);
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = 0, .troughs = { 2, 0, 2 }, .food = { 0.5f } }, { 1, 0, 1 });
+    const entt::entity yak = add_animal(world, { .species = "yak", .name = "Yak", .enclosure = 0 }, { 3, 0, 1 });
+    r.get<Animal>(yak).hunger = { 0.25f };
+    const entt::entity dung = r.create();
+    r.emplace<Dung>(dung, Dung { 0 });
+    r.emplace<Pose>(dung, Pose { .position = { 2, 0, 3 } });
+    save::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { 0, -1 }, .fences = { "Wood" } };
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    park.animals = parkfile::keep_animals(world, map);
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->animals);
+    CHECK(read->animals->enclosures.tiles == std::vector<std::int32_t> { 0, -1 });
+    CHECK(read->animals->enclosures.fences == std::vector<std::string> { "Wood" });
+
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    const auto staff = parkfile::place_staff(loaded, *read->people);
+    parkfile::place_animals(loaded, *read->animals, staff);
+    const auto keepers = l.view<const Staff, const KeeperDuty>();
+    REQUIRE(std::ranges::distance(keepers) == 1);
+    const entt::entity keeper2 = keepers.front();
+    CHECK(l.get<Pose>(keeper2).position == r.get<Pose>(keeper).position);
+    const AnimalHouse& house = l.get<AnimalHouse>(l.get<KeeperDuty>(keeper2).house);
+    CHECK(house.object == 7);
+    CHECK(house.food.value == 0.5f);
+    const auto animals = l.view<const Animal, const Pose>();
+    REQUIRE(std::ranges::distance(animals) == 1);
+    CHECK(animals.get<const Animal>(animals.front()).name == "Yak");
+    CHECK(animals.get<const Animal>(animals.front()).hunger.value == 0.25f);
+    CHECK(animals.get<const Pose>(animals.front()).position == glm::vec3 { 3, 0, 1 });
+    CHECK(l.view<const Dung>().size() == 1);
+}

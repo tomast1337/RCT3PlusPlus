@@ -4,9 +4,9 @@
 // fences stand again round them when it loads. There, a drag with a fence from the enclosure list fences the
 // tiles round, paid for. An animal house goes only inside it, with its keeper's hut and a keeper, who walks
 // about the enclosure. An animal goes only inside it too, coming in a crate. A drag with the list's delete tool
-// takes some of the tiles out again.
+// takes some of the tiles out again. Saved and loaded, the enclosures, the keeper and the animals are all back.
 //
-//   ./nob script scripts/tests/enclosures.ts -- --no-audio
+//   RCT3PP_DATA=<an empty folder> ./nob script scripts/tests/enclosures.ts -- --no-audio
 
 export {};
 
@@ -142,3 +142,27 @@ expect(fenced() === panels.length + 16, `four by four left, not ${fenced() - pan
 build.stop();
 await frames(60);
 await screenshot("enclosure_cut");
+
+// Saved and loaded again: the enclosure, its keeper and both zebras come back.
+const kept = { fences: fenced(), keepers: keepers(), animals: animals.list().length, enclosure: map.tile(c0 + 1, r0 + 1)!.enclosure };
+await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click("tools/Files/File_SaveGame");
+await until(() => ui.find("park_files") !== undefined, 120, "the save window");
+await ui.click("park_files/content/open");
+await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
+if (!ui.find("tools/Files/File_LoadGame"))
+    await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
+await ui.click("tools/Files/File_LoadGame");
+const saved_row = "park_files/content/list/view/content/row0";
+await until(() => ui.find(saved_row) !== undefined, 120, "the save in the load window");
+await ui.click(saved_row);
+await ui.click("park_files/content/open");
+await until(() => animals.list().length === kept.animals, 1200, `${kept.animals} animals back after loading`);
+await frames(30);
+expect(fenced() === kept.fences, `${kept.fences} fence panels after loading, not ${fenced()}`);
+expect(map.tile(c0 + 1, r0 + 1)!.enclosure === kept.enclosure, "the enclosure where it was");
+await until(() => keepers() === kept.keepers, 600, "the keeper back");
+camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
+await frames(10);
+await screenshot("enclosure_loaded");

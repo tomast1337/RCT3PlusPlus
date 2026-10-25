@@ -158,8 +158,7 @@ namespace rct3::scene
                 q.textures.merge(*made);
                 return true;
             };
-            // The models are read by the build beside the frame.
-            wait_for_build(scene);
+            // Only reads the models and objects, as the build beside the frame does, so it need not wait for it.
             std::map<std::uint64_t, std::size_t> placed;
             for (std::size_t s = 0; s < scene.signs.size(); ++s)
                 placed.emplace(scene.signs[s].object_ref, s);
@@ -241,8 +240,19 @@ namespace rct3::scene
     {
         LedSigns& q = scene.led_signs;
         const std::array counts { scene.footpaths.paths.size(), scene.rides.rides.size(), scene.objects.size() };
-        if (std::exchange(q.stale, false) || std::exchange(q.counted, counts) != counts)
-            put_up(device, scene, assets);
+        if (q.stale || q.counted != counts)
+        {
+            // Objects only added, as a piece or a ride laid, put up no board unless one is an entrance or a sign.
+            const bool added = !q.stale && q.counted[0] == counts[0] && q.counted[1] == counts[1] && counts[2] > q.counted[2];
+            const auto boarded = [&](const save::PlacedObject& o) {
+                const auto found = scene.models.find(park::model_ref(o));
+                return std::ranges::contains(scene.signs, o.id, &save::SignState::object_ref) || (found != scene.models.end() && found->second.category == std::to_underlying(park::ItemCategory::ParkEntrance));
+            };
+            if (!added || std::ranges::any_of(std::span(scene.objects).subspan(q.counted[2]), boarded))
+                put_up(device, scene, assets);
+            q.stale = false;
+            q.counted = counts;
+        }
         const ui::Font* font = board_font(q, assets);
         if (font == nullptr)
             return;

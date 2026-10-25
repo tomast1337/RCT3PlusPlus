@@ -56,8 +56,10 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace rct3::config
@@ -87,7 +89,7 @@ namespace rct3::scene
         bool floors_stale = false;               ///< The ground was built without the floors as they are now
         park::EdgeWalls walls;                   ///< The fences and walls paths do not join across
         std::vector<std::uint64_t> floor_decks;  ///< Objects drawing the raised rides' floors
-        std::vector<std::uint64_t> door_pieces;  ///< Decks and supports under raised doors a path joins
+        std::vector<std::uint64_t> door_pieces;  ///< Decks under raised doors a path joins
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
         std::vector<park::QueuePainting> queues_pictured;       ///< The same for the ground queues' pictures
@@ -95,8 +97,6 @@ namespace rct3::scene
         park::ObjectMesh raised_ghost;                          ///< The next piece when it is raised
         std::map<std::string, TrackModels, std::less<>> models; ///< Of the raised pieces and supports laid
         std::optional<park::SupportSets> support_sets;          ///< Read when the first raised piece is laid
-        /// Of the raised paths laid here, the supports holding each up.
-        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> supports;
         /// Of the queue tiles laid here, the railings along them.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
         park::TerrainMesh arrow;                              ///< Over the next piece, pointing the way it goes
@@ -163,6 +163,14 @@ namespace rct3::scene
 
     /// The supports' pieces, read when first needed; none when the install has none.
     const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// What columns pass by as if it were not there: the rides' station platforms and the floors of raised rides.
+    [[nodiscard]] std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene);
+
+    /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
+    /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if
+    /// the difference shows.
+    [[nodiscard]] std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::SupportSets& sets);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);

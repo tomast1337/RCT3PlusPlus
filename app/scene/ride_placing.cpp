@@ -12,7 +12,7 @@
 #include "park/path_furniture.hpp"
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
-#include "park/track_supports.hpp"
+#include "park/support_columns.hpp"
 #include "park/water_fill.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
@@ -114,8 +114,8 @@ namespace rct3::scene
         }
 
         /// Adds `o` to the park with a new id, in the colours its item gives, as part of the ride being placed
-        /// unless it is scenery, with the supports its item asks for under it when raised.
-        std::uint64_t add_object(ParkScene& scene, const ui::InterfaceAssets& assets, save::PlacedObject o)
+        /// unless it is scenery. Its supports follow with the park's (scene/park_supports.hpp).
+        std::uint64_t add_object(ParkScene& scene, save::PlacedObject o)
         {
             o.id = last_id(scene) + 1;
             o.owner_ref = o.id;
@@ -127,20 +127,6 @@ namespace rct3::scene
                 scene.attractions[o.id] = { scene.placing.item->stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
             scene.objects.push_back(o);
-            if (const park::SupportSets* sets = support_sets(scene, assets))
-            {
-                // shortcut: columns run through items under it to the ground, and stay when it goes; look at
-                // the whole tile, and keep them with the item, once that shows.
-                park::BuiltSupports columns = park::track_supports(std::span(&o, 1), scene.models, scene.footpaths.paths, scene.grid, *sets, o.id);
-                for (save::PlacedObject& piece : columns.pieces)
-                {
-                    if (!load_object_model(scene, scene.placing.models, assets, piece))
-                        continue;
-                    scene.columns.insert(piece.id);
-                    scene.objects.push_back(std::move(piece));
-                }
-                scene.fitted.merge(columns.fitted);
-            }
             objects_changed(scene);
             return o.id;
         }
@@ -427,8 +413,16 @@ namespace rct3::scene
             const auto o = ghost_object(p);
             if (!o || o->symbol.empty() || !load_object_model(scene, p.models, assets, *o))
                 return;
-            const std::array<save::PlacedObject, 1> one { *o };
-            p.ghost_mesh = park::object_mesh(one, scene.models, scene.grid);
+            std::vector<save::PlacedObject> shown { *o };
+            if (const park::SupportSets* sets = support_sets(scene, assets))
+            {
+                for (save::PlacedObject& piece : supports_under(scene, shown, *sets))
+                {
+                    if (load_object_model(scene, p.models, assets, piece))
+                        shown.push_back(std::move(piece));
+                }
+            }
+            p.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
             const glm::vec4 tint = p.problem == park::SiteProblem::None && p.affordable ? kGhostTint : kRefusedTint;
             for (park::GroundVertex& v : p.ghost_mesh.vertices)
                 v.colour *= tint;
@@ -626,7 +620,7 @@ namespace rct3::scene
         RidePlacing& p = scene.placing;
         p.ride = ride;
         p.step = exit ? RidePlacing::Step::Exit : RidePlacing::Step::Entrance;
-        const std::uint64_t object = add_object(scene, assets, door);
+        const std::uint64_t object = add_object(scene, door);
         save::Ride& r = scene.rides.rides.at(ride);
         if (r.stations.size() <= station_index)
             r.stations.resize(station_index + 1);
@@ -663,7 +657,7 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Scenery)
         {
             // The tool stays out for the next one, as in the game.
-            const std::uint64_t id = add_object(scene, assets, *o);
+            const std::uint64_t id = add_object(scene, *o);
             // What guests use on the paths is theirs at once.
             const park::ObjectModel& model = scene.models.at(park::model_key(*o));
             const auto category = model.category;
@@ -694,7 +688,7 @@ namespace rct3::scene
             if (p.item->stall)
             {
                 p.ride = scene.rides.stalls.size();
-                const std::uint64_t object = add_object(scene, assets, *o);
+                const std::uint64_t object = add_object(scene, *o);
                 save::Stall& stall = scene.rides.stalls.emplace_back();
                 stall.base.id = last_id(scene) + 1;
                 stall.base.symbol = std::format("{}:sta", p.item->symbol);
@@ -725,7 +719,7 @@ namespace rct3::scene
             p.ride = scene.rides.rides.size();
             save::Ride& ride = scene.rides.rides.emplace_back();
             ride.kind = save::RideKind::Flat;
-            const std::uint64_t object = add_object(scene, assets, *o);
+            const std::uint64_t object = add_object(scene, *o);
             ride.base.id = last_id(scene) + 1;
             ride.base.symbol = std::format("{}:anr", p.item->symbol);
             ride.base.overlay_path = p.item->overlay;
@@ -786,7 +780,7 @@ namespace rct3::scene
                 rebuild_ground(device, scene, assets);
                 return true;
             }
-            const std::uint64_t object = add_object(scene, assets, *o);
+            const std::uint64_t object = add_object(scene, *o);
             save::Ride& ride = scene.rides.rides.at(p.ride);
             if (ride.stations.empty())
                 ride.stations.emplace_back();

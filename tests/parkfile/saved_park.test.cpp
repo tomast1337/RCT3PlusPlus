@@ -109,6 +109,22 @@ TEST_CASE("a saved park reads back as written")
     CHECK(falls->waterfalls->front().bottom.y == 3.0f);
 }
 
+TEST_CASE("a saved park keeps its day mode")
+{
+    parkfile::SavedPark park = small_park();
+    const auto old = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(old);
+    CHECK_FALSE(old->day_mode); // As in saves made before the mode was kept
+    park.day_mode = simulation::DayMode::AlwaysNight;
+    const auto night = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(night);
+    CHECK(night->day_mode == simulation::DayMode::AlwaysNight);
+    park.day_mode = static_cast<simulation::DayMode>(7);
+    const auto odd = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(odd);
+    CHECK(odd->day_mode == simulation::DayMode::ParkHours);
+}
+
 TEST_CASE("a cut or changed saved park is refused")
 {
     auto bytes = parkfile::write_saved_park(small_park());

@@ -182,7 +182,7 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.day_mode ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
@@ -196,6 +196,8 @@ namespace rct3::parkfile
             put_chunk(w, "BRKN", 1, park.broken_items);
         if (park.waterfalls)
             put_chunk(w, "FALL", 1, *park.waterfalls);
+        if (park.day_mode)
+            put_chunk(w, "DAYM", 1, *park.day_mode);
         return w.take();
     }
 
@@ -244,6 +246,15 @@ namespace rct3::parkfile
                 if (park.waterfalls || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.waterfalls.emplace());
+            }
+            if (tag == "DAYM")
+            {
+                if (park.day_mode || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                auto read = get_chunk(tag, body, park.day_mode.emplace());
+                // A number with no mode keeps the park's hours.
+                park.day_mode = simulation::day_mode(static_cast<std::int32_t>(*park.day_mode));
+                return read;
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

@@ -28,6 +28,8 @@
 //              are any.
 //   "FALL" v1  std::vector<save::Waterfall>: the park's waterfalls, with those the player made or deleted.
 //              Saves made before it lack it; their waterfalls are read again from the original park.
+//   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
+//              the original park's mode.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -39,6 +41,7 @@
 #include "save/model/world.hpp"
 #include "save/summary.hpp"
 #include "simulation/components.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/park_rating.hpp"
 #include "simulation/sim_world.hpp"
 
@@ -135,6 +138,7 @@ namespace rct3::parkfile
         std::optional<SavedGoals> goals;
         std::vector<std::uint64_t> broken_items;                ///< Path items vandals have broken, by object id
         std::optional<std::vector<save::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
+        std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
     };
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one

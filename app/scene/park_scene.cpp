@@ -757,9 +757,14 @@ namespace rct3::scene
             const std::uint64_t id = scene.objects[index].id;
             auto& r = scene.sim.registry;
             std::vector<entt::entity> gone;
+            const auto sign = std::ranges::find(scene.signs, id, &save::SignState::object_ref);
             for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                 if (item.object == id)
+                {
                     gone.push_back(e);
+                    if (sign != scene.signs.end() && sign->kind == 1)
+                        scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index]), false);
+                }
             r.destroy(gone.begin(), gone.end());
             std::erase_if(scene.bins, [&](const save::BinState& b) { return b.object_ref == id; });
             std::erase_if(scene.signs, [&](const save::SignState& s) { return s.object_ref == id; });

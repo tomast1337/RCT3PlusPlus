@@ -14,6 +14,10 @@
 // A tile taken away keeps its node, so the nodes walkers and attractions hold stay valid, but the node is
 // joined to nothing and found by nothing; a tile laid there later gets a new node.
 //
+// A no-entry sign on a tile bars one of its sides to guests coming in across it; they may still leave that way.
+// Staff walk past the signs, but never step onto a tile kept from them (off the park's land, or the park
+// entrance's own path), unless they already stand on one, so a member of staff found outside can come back in.
+//
 // Nothing is sized to the original game's maps: columns, rows and levels are full integers.
 #pragma once
 
@@ -33,6 +37,13 @@ namespace rct3::simulation
     using NodeId = std::uint32_t;
     inline constexpr NodeId kNoNode = ~NodeId { 0 };
 
+    /// Who walks: guests keep to the no-entry signs, staff to the tiles not kept from them.
+    enum class Walker : std::uint8_t
+    {
+        Guest,
+        Staff,
+    };
+
     struct PathTileSpot
     {
         int col = 0;
@@ -45,12 +56,14 @@ namespace rct3::simulation
     {
         PathTileSpot tile;
         bool queue = false;
-        float height = 0;       ///< World height of the middle of the tile
-        std::uint64_t line = 0; ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
-        bool covered = false;   ///< Under a roof that keeps the rain off
-        bool shaded = false;    ///< Out of the sun: under a roof or trees
-        bool removed = false;   ///< Its tile was taken away
-        bool sloped = false;    ///< A ramp, whose height at its middle is halfway between its ends
+        float height = 0;            ///< World height of the middle of the tile
+        std::uint64_t line = 0;      ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
+        bool covered = false;        ///< Under a roof that keeps the rain off
+        bool shaded = false;         ///< Out of the sun: under a roof or trees
+        bool removed = false;        ///< Its tile was taken away
+        bool sloped = false;         ///< A ramp, whose height at its middle is halfway between its ends
+        std::uint8_t no_entry = 0;   ///< Sides guests may not come in across, bit k for side k as `next` numbers them
+        bool staff_kept_off = false; ///< Staff do not step onto it
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -95,6 +108,19 @@ namespace rct3::simulation
         {
             nodes_[node].sloped = sloped;
         }
+        /// Bars side `side` (as `next` numbers them) of a node's tile to guests coming in, or lifts the bar.
+        void set_no_entry(NodeId node, std::size_t side, bool barred)
+        {
+            const auto bit = static_cast<std::uint8_t>(1U << (side % 4));
+            nodes_[node].no_entry = barred ? nodes_[node].no_entry | bit : nodes_[node].no_entry & ~bit;
+        }
+        /// Keeps staff off a node's tile, or lets them on again.
+        void keep_staff_off(NodeId node, bool kept)
+        {
+            nodes_[node].staff_kept_off = kept;
+        }
+        /// Whether `who` may step from `from` to `to`, a node beside it or across a square from it.
+        [[nodiscard]] bool may_step(NodeId from, NodeId to, Walker who) const;
         /// Marks what is over a node's tile.
         void cover(NodeId node, bool covered, bool shaded)
         {
@@ -109,11 +135,11 @@ namespace rct3::simulation
         [[nodiscard]] float height_between(NodeId from, NodeId to, float t) const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
-        /// when no walk reaches it. Queues are only entered at `to`, never walked through.
-        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to) const;
+        /// when no walk reaches it. Queues are only entered at `to`, never walked through. Only steps `who` may take.
+        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest) const;
         /// Like route, to whichever of `targets` is nearest: its place in `targets` (the first, where several
         /// share a node) and the walk there. One search, however many targets.
-        [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets) const;
+        [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest) const;
 
     private:
         static std::uint64_t key(int col, int row);

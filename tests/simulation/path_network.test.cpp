@@ -211,3 +211,51 @@ TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and
     high.add_wall(0, 0, 0, -0.5f, 2);
     CHECK(high.nodes()[low].next[0] == high.add({ 1, 0, 6 }));
 }
+
+TEST_CASE("a no-entry side keeps guests from coming in across it, but not from leaving or staff from passing")
+{
+    PathNetwork p;
+    const NodeId a = p.add({ 0, 0, 0 });
+    const NodeId b = p.add({ 1, 0, 0 });
+    const NodeId c = p.add({ 2, 0, 0 });
+    p.set_no_entry(b, 2, true); // The side facing a
+    CHECK_FALSE(p.may_step(a, b, Walker::Guest));
+    CHECK(p.may_step(b, a, Walker::Guest));
+    CHECK(p.may_step(c, b, Walker::Guest));
+    CHECK_FALSE(p.route(a, c));
+    CHECK(p.route(c, a));
+    CHECK(p.route(a, c, Walker::Staff));
+    p.set_no_entry(b, 2, false);
+    CHECK(p.route(a, c));
+}
+
+TEST_CASE("a no-entry side also bars the cut across a square into its tile")
+{
+    PathNetwork p;
+    for (int c = 0; c <= 1; ++c)
+        for (int r = 0; r <= 1; ++r)
+            p.add({ c, r, 0 });
+    const NodeId from = *p.find({ 0, 0, 0 });
+    const NodeId to = *p.find({ 1, 1, 0 });
+    REQUIRE(std::ranges::contains(p.nodes()[from].corner, to));
+    CHECK(p.may_step(from, to, Walker::Guest));
+    p.set_no_entry(to, 3, true); // Its -row side
+    CHECK_FALSE(p.may_step(from, to, Walker::Guest));
+    const auto walk = p.route(from, to);
+    REQUIRE(walk);
+    CHECK(walk->size() == 2); // Round by (0, 1), coming in across the -col side
+}
+
+TEST_CASE("staff never step onto a tile kept from them, unless they stand on one")
+{
+    PathNetwork p;
+    const NodeId inside = p.add({ 0, 0, 0 });
+    const NodeId gate = p.add({ 1, 0, 0 });
+    const NodeId outside = p.add({ 2, 0, 0 });
+    p.keep_staff_off(gate, true);
+    p.keep_staff_off(outside, true);
+    CHECK_FALSE(p.route(inside, outside, Walker::Staff));
+    CHECK(p.route(inside, outside, Walker::Guest));
+    CHECK(p.route(outside, inside, Walker::Staff)); // Found outside, they can come back in
+    CHECK_FALSE(p.may_step(inside, gate, Walker::Staff));
+}

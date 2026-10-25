@@ -215,14 +215,29 @@ namespace rct3::simulation
         return (b.no_entry & across) == 0;
     }
 
-    std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to, Walker who) const
+    void PathNetwork::link(const PathLink& link)
     {
-        auto found = route_nearest(from, std::span(&to, 1), who);
+        links_.emplace(link.from, link);
+    }
+
+    std::optional<const PathLink&> PathNetwork::link_between(NodeId from, NodeId to) const
+    {
+        const auto [first, last] = links_.equal_range(from);
+        for (auto it = first; it != last; ++it)
+            if (it->second.to == to)
+                return it->second;
+        return std::nullopt;
+    }
+
+    std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to, Walker who, std::optional<std::int64_t> purse) const
+    {
+        auto found = route_nearest(from, std::span(&to, 1), who, purse);
         return found ? std::optional(std::move(found->second)) : std::nullopt;
     }
 
-    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets, Walker who) const
+    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets, Walker who, std::optional<std::int64_t> purse) const
     {
+        const bool linked = purse && !links_.empty();
         if (from >= nodes_.size())
             return std::nullopt;
         constexpr std::size_t kNotTarget = std::numeric_limits<std::size_t>::max();
@@ -241,12 +256,13 @@ namespace rct3::simulation
             return std::pair { target[to], std::move(walk) };
         };
         came[from] = from;
-        if (corners_)
+        if (corners_ || linked)
         {
-            // Steps across squares are longer, so the shortest walk is found by length; ties go to the lower node,
-            // so the same network always gives the same walk.
+            // Steps across squares and links are longer, so the shortest walk is found by length; ties go to the
+            // lower node, so the same network always gives the same walk.
             constexpr float kAcross = std::numbers::sqrt2_v<float>;
             std::vector<float> length(nodes_.size(), std::numeric_limits<float>::max());
+            std::vector<std::int64_t> spent(linked ? nodes_.size() : 0); // Tolls paid on the way to each node
             std::priority_queue<std::pair<float, NodeId>, std::vector<std::pair<float, NodeId>>, std::greater<>> open;
             length[from] = 0;
             open.emplace(0.0f, from);
@@ -259,12 +275,32 @@ namespace rct3::simulation
                 if (so_far > length[at])
                     continue;
                 const auto step = [&](NodeId n, float cost) {
-                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || so_far + cost >= length[n] || !may_step(at, n, who))
+                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !(linked && links_.contains(n))) || so_far + cost >= length[n] || !may_step(at, n, who))
                         return;
                     length[n] = so_far + cost;
                     came[n] = at;
                     open.emplace(length[n], n);
+                    if (linked)
+                        spent[n] = spent[at];
                 };
+                if (linked)
+                {
+                    const auto [first, last] = links_.equal_range(at);
+                    for (auto it = first; it != last; ++it)
+                    {
+                        const PathLink& l = it->second;
+                        const std::int64_t paid = spent[at] + l.toll;
+                        if (paid > *purse || l.to >= nodes_.size() || nodes_[l.to].removed || so_far + l.length >= length[l.to] || (nodes_[l.to].queue && target[l.to] == kNotTarget))
+                            continue;
+                        length[l.to] = so_far + l.length;
+                        came[l.to] = at;
+                        spent[l.to] = paid;
+                        open.emplace(length[l.to], l.to);
+                    }
+                    // From a queue come to only for its link, nowhere else.
+                    if (nodes_[at].queue && at != from)
+                        continue;
+                }
                 for (const NodeId n : nodes_[at].next)
                     step(n, 1);
                 for (const NodeId n : nodes_[at].corner)

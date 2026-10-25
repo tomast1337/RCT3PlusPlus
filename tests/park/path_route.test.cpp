@@ -206,3 +206,32 @@ TEST_CASE("a queue route bridging a path leaves room to walk under it")
     REQUIRE(over != route->end());
     CHECK(std::min(over->piece.start, over->piece.end) >= 3); // Higher than one steep ramp climbs
 }
+
+TEST_CASE("a straight route steps along the line to its goal, where the default turns once")
+{
+    const save::TerrainGrid g = owned_grid(10, 10);
+    const auto off_diagonal = [](const RouteStep& s) { return std::abs(s.piece.spot.col - s.piece.spot.row); };
+    const auto straight = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000, std::nullopt, std::nullopt, true);
+    REQUIRE(straight);
+    CHECK(joined(*straight));
+    CHECK(straight->size() == 13);
+    CHECK(straight->back().piece.spot == save::Tile { 7, 7 });
+    CHECK(std::ranges::all_of(*straight, [&](const RouteStep& s) { return off_diagonal(s) <= 1; }));
+    const auto corner = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000);
+    REQUIRE(corner);
+    CHECK(corner->size() == 13);
+    CHECK(std::ranges::any_of(*corner, [&](const RouteStep& s) { return off_diagonal(s) >= 3; }));
+}
+
+TEST_CASE("across a dip a route bridges it level rather than ramp down into it")
+{
+    save::TerrainGrid g = owned_grid(12, 3);
+    for (int col = 4; col <= 7; ++col)
+        ridge(g, col, -3);
+    const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, 1000);
+    REQUIRE(route);
+    CHECK(joined(*route));
+    CHECK(route->size() == 10);
+    CHECK(std::ranges::all_of(*route, [](const RouteStep& s) { return s.piece.start == 0 && s.piece.end == 0; }));
+    CHECK(std::ranges::count_if(*route, [](const RouteStep& s) { return !s.piece.ground; }) == 4);
+}

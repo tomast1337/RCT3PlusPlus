@@ -36,6 +36,16 @@ TEST_CASE("a brush stroke fills the tiles between two looks at the pointer, side
         CHECK((spot.row == 0 ? spot.col <= 3 : spot.col >= 3));
 }
 
+TEST_CASE("a brush square is centred on its tile, an even one reaching further towards higher tiles")
+{
+    CHECK(brush_square({ 4, 4 }, 1) == std::vector<save::Tile> { { 4, 4 } });
+    CHECK(brush_square({ 4, 4 }, 2) == std::vector<save::Tile> { { 4, 4 }, { 5, 4 }, { 4, 5 }, { 5, 5 } });
+    const std::vector<save::Tile> five = brush_square({ 4, 4 }, 5);
+    CHECK(five.size() == 25);
+    CHECK(five.front() == save::Tile { 2, 2 });
+    CHECK(five.back() == save::Tile { 6, 6 });
+}
+
 TEST_CASE("the nearest side of a tile is found by its diagonals")
 {
     CHECK(nearest_side(0.5f, 0.9f) == 0);

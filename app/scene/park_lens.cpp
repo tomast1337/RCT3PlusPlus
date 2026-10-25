@@ -73,11 +73,11 @@ namespace rct3::scene
             park::wet_lens(water, park::kSoakingDrops, park::kSoakingSheets, around.aspect);
         lens.was_under = around.under_water;
 
-        // Rain lands on a lens looking out level or up into it, little on one looking down.
+        // Rain lands on a lens looking out level or up into it, less the more it looks down, none straight down.
         const int rain = std::clamp(around.rain, 0, 3);
         if (!around.under_water && rain > 0)
         {
-            lens.rain_due += kRainPerSecond[rain] * std::clamp(0.4f + ahead.y * 2.0f, 0.0f, 1.0f) * seconds;
+            lens.rain_due += kRainPerSecond[rain] * std::clamp(1.0f + ahead.y * 1.5f, 0.0f, 1.0f) * seconds;
             const auto whole = static_cast<std::size_t>(lens.rain_due);
             park::wet_lens(water, whole, 0, around.aspect);
             lens.rain_due -= static_cast<float>(whole);

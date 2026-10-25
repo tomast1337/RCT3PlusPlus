@@ -3,7 +3,7 @@
 // Picking a guest up and putting them down. Their window's pick-up button hands them to the pointer, where
 // they hang over what it is on; a click on a path lets them go there, to fall and walk on; a click on the
 // park's bare land lets them go too, and they walk to the nearest path; water does not take them; a right
-// click puts them back. Their Cash tab shows what they have and have spent.
+// click puts them back. Their Cash tab shows what they have and have spent, their party's the same summed.
 //
 //   ./nob script scripts/tests/guest_pickup.ts -- --no-audio
 
@@ -44,6 +44,20 @@ if (cashTab !== undefined) {
     await ui.click(`info/${cashTab}`);
     await frames(10);
     await screenshot("cash_tab");
+    // Their party's Cash tab: the same rows, summed over the members.
+    const partyTab = tab("group");
+    if (partyTab !== undefined) {
+        await ui.click(`info/${partyTab}`);
+        await frames(10);
+        const partyCash = tab("cash");
+        if (partyCash !== undefined) {
+            await ui.click(`info/${partyCash}`);
+            await frames(10);
+            await screenshot("party_cash_tab");
+        }
+        people.show(who);
+        await until(() => tab("options") !== undefined, 120, "the guest's window again");
+    }
     await ui.click(`info/${tab("options")}`);
     await frames(5);
 }

@@ -515,21 +515,6 @@ namespace rct3::ui
             page.note = text(strings, "Passport_StampsNeededLabelText") + u": " + std::u16string(kMissingValue);
         }
 
-        void cash(InfoPage& page, const save::Guest& g, const StringTable& strings, const InfoUnits& units)
-        {
-            const save::Cash& c = g.cash;
-            const auto money = [&](std::int32_t amount) { return money_text(units.currency, amount); };
-            add(page, strings, "Guest_CashInPocket", money(c.current));
-            add(page, strings, "Guest_CashSpent", money(c.total_spent));
-            // What the money went on, two to a row.
-            add_half(page, strings, "Guest_SpentOnRides", money(c.spent_rides));
-            add_half(page, strings, "Guest_SpentOnFood", money(c.spent_food));
-            add_half(page, strings, "Guest_SpentOnDrink", money(c.spent_drink));
-            add_half(page, strings, "Guest_SpentOnSouvenirs", money(c.spent_souvenirs));
-            add(page, strings, "Guest_PaidToEnterPark", money(c.spent_park_entry));
-            add(page, strings, "Guest_CashWithdrawn", money(c.withdrawn));
-        }
-
     } // namespace
 
     std::vector<PersonTabInfo> person_tabs(const PersonFacts& facts)
@@ -579,6 +564,25 @@ namespace rct3::ui
         return doing;
     }
 
+    void cash_lines(InfoPage& page, std::span<const PersonFacts> who, const StringTable& strings, const InfoUnits& units)
+    {
+        const auto money = [&](std::int32_t save::Cash::* field) {
+            std::int64_t sum = 0;
+            for (const PersonFacts& f : who)
+                sum += f.guest->cash.*field;
+            return money_text(units.currency, sum);
+        };
+        add(page, strings, "Guest_CashInPocket", money(&save::Cash::current));
+        add(page, strings, "Guest_CashSpent", money(&save::Cash::total_spent));
+        // What the money went on, two to a row.
+        add_half(page, strings, "Guest_SpentOnRides", money(&save::Cash::spent_rides));
+        add_half(page, strings, "Guest_SpentOnFood", money(&save::Cash::spent_food));
+        add_half(page, strings, "Guest_SpentOnDrink", money(&save::Cash::spent_drink));
+        add_half(page, strings, "Guest_SpentOnSouvenirs", money(&save::Cash::spent_souvenirs));
+        add(page, strings, "Guest_PaidToEnterPark", money(&save::Cash::spent_park_entry));
+        add(page, strings, "Guest_CashWithdrawn", money(&save::Cash::withdrawn));
+    }
+
     InfoPage person_page(PersonTab tab, const PersonFacts& facts, const StringTable& strings, const InfoUnits& units)
     {
         InfoPage page;
@@ -624,7 +628,7 @@ namespace rct3::ui
                 break;
             case PersonTab::Cash:
                 if (facts.guest != nullptr)
-                    cash(page, *facts.guest, strings, units);
+                    cash_lines(page, { &facts, 1 }, strings, units);
                 break;
             case PersonTab::Passport:
                 passport(page, strings);

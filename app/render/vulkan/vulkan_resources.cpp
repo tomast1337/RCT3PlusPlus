@@ -64,6 +64,9 @@ namespace
     const std::uint32_t kShaftsFrag[] =
 #include "shafts.frag.inc"
         ;
+    const std::uint32_t kLensDropsFrag[] =
+#include "lens_drops.frag.inc"
+        ;
     const std::uint32_t kPresentVert[] =
 #include "present.vert.inc"
         ;
@@ -118,6 +121,8 @@ namespace rct3::render::vulkan
                     return { kOcclusionVert, kOcclusionFrag };
                 case Shader::Shafts:
                     return { kShaftsVert, kShaftsFrag };
+                case Shader::LensDrops:
+                    return { kTexturedVert, kLensDropsFrag };
             }
             return { };
         }

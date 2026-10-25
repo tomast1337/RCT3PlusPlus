@@ -2,9 +2,12 @@
 #include "scene/park_lens.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
+#include <span>
 
 namespace rct3::scene
 {
@@ -18,9 +21,20 @@ namespace rct3::scene
         constexpr float kWindPeriod = 240.0f;                           ///< Seconds the wind takes to swing round and back
         constexpr float kSplashFall = 4.0f;                             ///< World units a second the car must be falling, to splash
         constexpr float kSplashPull = 25.0f;                            ///< And how sharply its fall must stop, world units a second squared
+        constexpr float kSplashRun = 3.0f;                              ///< World units a second the car must run on at
         constexpr float kSplashRest = 1.5f;                             ///< Seconds between splashes
         constexpr std::size_t kSplashDrops = 40;
         constexpr std::size_t kSplashSheets = 2;
+
+        constexpr float kStretch = 2.5f; ///< A drop's length along its slide grows by this per screen height a second
+        constexpr float kFadeIn = 0.15f; ///< Seconds a drop takes to show in full
+        constexpr float kFadeOut = 1.0f; ///< And to dry away at the end of its life
+
+        constexpr std::array kAttributes {
+            render::VertexAttribute { 0, render::VertexFormat::Float2, offsetof(LensCorner, position) },
+            render::VertexAttribute { 1, render::VertexFormat::Float4, offsetof(LensCorner, colour) },
+            render::VertexAttribute { 2, render::VertexFormat::Float2, offsetof(LensCorner, uv) },
+        };
 
         /// The point `clip` (x right, y up, both -1..1, at depth `depth`) stands for in the world.
         glm::vec3 unprojected(const glm::mat4& back, glm::vec2 clip, float depth)
@@ -73,7 +87,11 @@ namespace rct3::scene
         if (around.splashing_car && seconds > 0)
         {
             const float rise = around.splashing_car->y;
-            if (lens.last_rise && *lens.last_rise < -kSplashFall && (rise - *lens.last_rise) / seconds > kSplashPull && lens.splash_wait <= 0 && !around.under_water)
+            // It runs on through the water; a car held at the top of a spike stopped short too, but stands still.
+            // shortcut: any sharp stop of a fast fall on a splash ride splashes, water under it or not; check the track
+            // piece's water once pieces say so.
+            const bool running_on = glm::length(glm::vec2 { around.splashing_car->x, around.splashing_car->z }) > kSplashRun;
+            if (lens.last_rise && *lens.last_rise < -kSplashFall && (rise - *lens.last_rise) / seconds > kSplashPull && running_on && lens.splash_wait <= 0 && !around.under_water)
             {
                 park::wet_lens(water, kSplashDrops, kSplashSheets, around.aspect);
                 lens.splash_wait = kSplashRest;
@@ -99,6 +117,73 @@ namespace rct3::scene
         lens.last_eye = around.eye;
         if (!water.drops.empty())
             park::run_lens_water(water, push, seconds);
+    }
+
+    void draw_park_lens(render::Device& device, ParkLens& lens)
+    {
+        if (lens.water.drops.empty())
+            return;
+        if (!lens.pipeline)
+        {
+            auto made = device.create_pipeline({ .shader = render::Shader::LensDrops, .layout = { sizeof(LensCorner), kAttributes }, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "lens drops" });
+            if (!made)
+                return;
+            lens.pipeline = *made;
+        }
+        const render::Extent size = device.extent();
+        if (!lens.screen || lens.screen_size.width != size.width || lens.screen_size.height != size.height)
+        {
+            if (lens.screen)
+                device.destroy_texture(lens.screen);
+            lens.screen = { };
+            // The screen is copied only into targets whose depth can be read.
+            auto created = device.create_texture({ .width = size.width, .height = size.height, .label = "lens screen", .target = true, .readable_depth = true });
+            if (!created)
+                return;
+            lens.screen = *created;
+            lens.screen_size = size;
+        }
+        const float aspect = static_cast<float>(size.width) / static_cast<float>(std::max(size.height, 1u));
+        std::vector<LensCorner>& corners = lens.corners;
+        corners.clear();
+        for (const park::LensDrop& drop : lens.water.drops)
+        {
+            const float shown = std::min({ 1.0f, drop.age / kFadeIn, (drop.life - drop.age) / kFadeOut });
+            if (shown <= 0)
+                continue;
+            // Long along its slide, a little narrower across it; to screen shares, then clip space with y up.
+            const float speed = glm::length(drop.velocity);
+            const glm::vec2 along = speed > 1e-4f ? drop.velocity / speed : glm::vec2 { 0, 1 };
+            const glm::vec2 side { -along.y, along.x };
+            const glm::vec2 a = along * drop.radius * (1 + speed * kStretch);
+            const glm::vec2 b = side * drop.radius / std::sqrt(1 + speed * kStretch);
+            const glm::vec4 colour { shown, drop.sheet ? 1.0f : 0.0f, drop.at.x / aspect, drop.at.y };
+            const auto clip = [&](glm::vec2 p) { return glm::vec2 { p.x / aspect * 2 - 1, 1 - p.y * 2 }; };
+            const LensCorner c00 { clip(drop.at - a - b), colour, { -1, -1 } };
+            const LensCorner c10 { clip(drop.at - a + b), colour, { 1, -1 } };
+            const LensCorner c11 { clip(drop.at + a + b), colour, { 1, 1 } };
+            const LensCorner c01 { clip(drop.at + a - b), colour, { -1, 1 } };
+            corners.insert(corners.end(), { c00, c10, c11, c00, c11, c01 });
+        }
+        if (corners.empty())
+            return;
+        const auto vertices = device.allocate_transient(std::as_bytes(std::span(corners)));
+        if (!vertices)
+            return;
+        device.end_pass();
+        const bool copied = device.copy_screen(lens.screen);
+        render::PassDesc back;
+        back.clear = false;
+        device.begin_pass(back);
+        if (!copied)
+            return;
+        render::DrawCommand draw;
+        draw.pipeline = lens.pipeline;
+        draw.vertices = *vertices;
+        draw.count = static_cast<std::uint32_t>(corners.size());
+        draw.texture = lens.screen;
+        draw.filter = render::Filter::Linear;
+        device.draw(draw);
     }
 
     void destroy_park_lens(render::Device& device, ParkLens& lens)

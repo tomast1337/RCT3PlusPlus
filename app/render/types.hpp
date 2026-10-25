@@ -229,6 +229,11 @@ namespace rct3::render
         /// world, not applied; the sun is `DrawCommand::light`'s. The extra textures are, in order: the screen's
         /// depth, the sun's shadow map and the view it was drawn with (`SceneLight::shadow_view`).
         Shafts,
+        /// Water on the camera's lens (app/scene/park_lens.hpp), over a copy of the screen in `DrawCommand::texture`.
+        /// Inputs as Textured, with location 0 the position in clip space; uv runs -1..1 across each drop, colour
+        /// red is how much it shows, green 1 for a sheet of water, and blue and alpha its middle on the screen
+        /// (0..1, y down). Alpha blended.
+        LensDrops,
     };
 
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.

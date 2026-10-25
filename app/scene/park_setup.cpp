@@ -6,6 +6,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/chain_lifts.hpp"
+#include "park/enclosures.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
@@ -696,6 +697,7 @@ namespace rct3::scene
         scene.footpaths.water = world->water;
         scene.footpaths.pools = world->pool_water;
         scene.footpaths.waterfalls = saved && saved->waterfalls ? *saved->waterfalls : world->waterfalls;
+        scene.enclosures = world->enclosures;
         scene.footpaths.pictured = paths.styles;
 
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
@@ -920,12 +922,18 @@ namespace rct3::scene
             for (const save::PlacedObject& panel : boundary.pieces)
                 scene.fence_panels.push_back(panel.id);
             const std::size_t first_panel = built.size();
-            const std::size_t panels = boundary.pieces.size();
             built.insert(built.end(), std::make_move_iterator(boundary.pieces.begin()), std::make_move_iterator(boundary.pieces.end()));
             scene.leans.merge(boundary.leans);
+            // The animal enclosures' fences: the park keeps only which tiles are in which.
+            park::BoundaryFence enclosed = park::enclosure_fences(scene.enclosures, scene.grid, largest_id());
+            log.info("{} enclosure fence panels", enclosed.pieces.size());
+            for (const save::PlacedObject& panel : enclosed.pieces)
+                scene.enclosure_panels.push_back(panel.id);
+            built.insert(built.end(), std::make_move_iterator(enclosed.pieces.begin()), std::make_move_iterator(enclosed.pieces.end()));
+            scene.leans.merge(enclosed.leans);
             load_models(install, built, false, scene.models, scene.pictures);
-            // The park names only the fence, so its panels take the fence's own colours.
-            for (std::size_t i = first_panel; i < first_panel + panels; ++i)
+            // The park names only the fences, so their panels take the fences' own colours.
+            for (std::size_t i = first_panel; i < built.size(); ++i)
             {
                 if (const auto found = scene.models.find(park::model_ref(built[i])); found != scene.models.end())
                     built[i].colours = found->second.default_colours;

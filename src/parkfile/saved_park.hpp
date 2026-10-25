@@ -30,6 +30,8 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
+//   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
+//              it; their enclosures are read again from the original park.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -40,6 +42,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/summary.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_rating.hpp"
@@ -120,6 +123,36 @@ namespace rct3::parkfile
         float interest_rate_percent = 0;
     };
 
+    /// An animal house, and which of SavedPeople::staff keeps it; -1 for none.
+    struct SavedAnimalHouse
+    {
+        simulation::AnimalHouse house { };
+        std::int32_t keeper = -1;
+    };
+
+    /// An animal, standing where it stood.
+    struct SavedAnimal
+    {
+        simulation::Animal animal { };
+        glm::vec3 position { 0.0f };
+        float heading = 0;
+    };
+
+    /// Dung left lying.
+    struct SavedDung
+    {
+        std::int32_t enclosure = -1;
+        glm::vec3 position { 0.0f };
+    };
+
+    struct SavedAnimals
+    {
+        save::EnclosureMap enclosures { };
+        std::vector<SavedAnimalHouse> houses { };
+        std::vector<SavedAnimal> animals { };
+        std::vector<SavedDung> dung { };
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -139,6 +172,7 @@ namespace rct3::parkfile
         std::vector<std::uint64_t> broken_items;                ///< Path items vandals have broken, by object id
         std::optional<std::vector<save::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
+        std::optional<SavedAnimals> animals;                    ///< None in saves made before animals were kept
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.
@@ -159,6 +193,14 @@ namespace rct3::parkfile
     /// Adds the saved staff to `world`, walking; returns them in the order of people.staff, null for those not
     /// on a path. In place of import_staff.
     std::vector<entt::entity> place_staff(simulation::SimWorld& world, const SavedPeople& people);
+
+    /// The enclosures and the animals of `world` as a save keeps them, the keepers named by their place in
+    /// keep_people's staff.
+    [[nodiscard]] SavedAnimals keep_animals(const simulation::SimWorld& world, save::EnclosureMap enclosures);
+
+    /// Adds the saved animal houses, animals and dung to `world`, the houses' keepers being among `staff`,
+    /// place_staff's answer.
+    void place_animals(simulation::SimWorld& world, const SavedAnimals& animals, std::span<const entt::entity> staff);
 
     /// The objects a save keeps: the first `own` (the park's own), the scenery the player `placed`, and those a
     /// path, a track piece or a ride placed whole stands on, with its entrance and exit (the player's); not

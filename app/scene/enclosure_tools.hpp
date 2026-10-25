@@ -34,8 +34,11 @@ namespace rct3::scene
     /// keeper, who starts at the hut.
     void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site);
 
-    /// Makes the animals' shapes again after animals came or went.
-    void animals_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    /// The crate animals come in, as an object to load the model of.
+    [[nodiscard]] save::PlacedObject animal_crate();
+
+    /// Makes the animals' shapes again after animals came or went; the crate's model must be loaded.
+    void animals_changed(render::Device& device, ParkScene& scene);
 
     /// Moves the animals' shapes to where the animals are now.
     void place_animals(ParkScene& scene);

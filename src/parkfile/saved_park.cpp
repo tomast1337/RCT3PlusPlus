@@ -178,7 +178,9 @@ namespace rct3::parkfile
         {
             const SavedWorker& w = people.staff[i];
             const auto at = world.paths.nearest(w.position);
-            if (w.role != StaffRole::Vendor && (!at || world.paths.nodes()[*at].queue))
+            // A vendor stays in their booth, a keeper in their enclosure.
+            const bool walks = w.role != StaffRole::Vendor && w.role != StaffRole::Keeper;
+            if (walks && (!at || world.paths.nodes()[*at].queue))
                 continue;
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.
@@ -187,18 +189,69 @@ namespace rct3::parkfile
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
                 r.emplace<Patrol>(e, *w.patrol);
-            if (w.role != StaffRole::Vendor) // A vendor stays in their booth
+            if (walks)
                 start_walking(world, e, *at);
             out[i] = e;
         }
         return out;
     }
 
+    SavedAnimals keep_animals(const simulation::SimWorld& world, save::EnclosureMap enclosures)
+    {
+        using namespace simulation;
+        const entt::registry& r = world.registry;
+        SavedAnimals out { .enclosures = std::move(enclosures) };
+        // The staff in keep_people's order.
+        std::map<entt::entity, std::int32_t> kept;
+        for (const entt::entity e : r.view<const Staff, const Pose>())
+            kept.emplace(e, static_cast<std::int32_t>(kept.size()));
+        std::map<entt::entity, std::int32_t> keepers; // Of each house
+        for (const auto [e, duty] : r.view<const KeeperDuty>().each())
+            if (const auto found = kept.find(e); found != kept.end())
+                keepers.emplace(duty.house, found->second);
+        for (const auto [e, house] : r.view<const AnimalHouse>().each())
+            out.houses.push_back({ .house = house, .keeper = keepers.contains(e) ? keepers.at(e) : -1 });
+        for (const auto [e, animal, pose] : r.view<const Animal, const Pose>().each())
+            out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value });
+        for (const auto [e, dung, pose] : r.view<const Dung, const Pose>().each())
+            out.dung.push_back({ .enclosure = dung.enclosure, .position = pose.position });
+        return out;
+    }
+
+    void place_animals(simulation::SimWorld& world, const SavedAnimals& animals, std::span<const entt::entity> staff)
+    {
+        using namespace simulation;
+        entt::registry& r = world.registry;
+        for (const SavedAnimalHouse& saved : animals.houses)
+        {
+            const entt::entity home = r.create();
+            r.emplace<AnimalHouse>(home, saved.house);
+            const entt::entity keeper = saved.keeper >= 0 && static_cast<std::size_t>(saved.keeper) < staff.size() ? staff[static_cast<std::size_t>(saved.keeper)] : entt::null;
+            if (keeper == entt::null || !r.valid(keeper))
+                continue;
+            r.emplace_or_replace<KeeperDuty>(keeper, KeeperDuty { .house = home });
+            r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
+        }
+        for (const SavedAnimal& saved : animals.animals)
+        {
+            const entt::entity e = r.create();
+            r.emplace<Animal>(e, saved.animal);
+            r.emplace<Pose>(e, saved.position, saved.heading, saved.position, saved.heading);
+            r.emplace<Dice>(e, dice_for(world, e));
+        }
+        for (const SavedDung& saved : animals.dung)
+        {
+            const entt::entity e = r.create();
+            r.emplace<Dung>(e, Dung { saved.enclosure });
+            r.emplace<Pose>(e, saved.position, 0.0f, saved.position, 0.0f);
+        }
+    }
+
     std::vector<std::byte> write_saved_park(const SavedPark& park)
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.day_mode ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
@@ -214,6 +267,8 @@ namespace rct3::parkfile
             put_chunk(w, "FALL", 1, *park.waterfalls);
         if (park.day_mode)
             put_chunk(w, "DAYM", 1, *park.day_mode);
+        if (park.animals)
+            put_chunk(w, "ANML", 1, *park.animals);
         return w.take();
     }
 
@@ -271,6 +326,12 @@ namespace rct3::parkfile
                 // A number with no mode keeps the park's hours.
                 park.day_mode = simulation::day_mode(static_cast<std::int32_t>(*park.day_mode));
                 return read;
+            }
+            if (tag == "ANML")
+            {
+                if (park.animals || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.animals.emplace());
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

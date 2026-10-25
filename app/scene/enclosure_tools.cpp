@@ -79,7 +79,8 @@ namespace rct3::scene
             if (scene.park.cash)
                 *scene.park.cash -= item.price;
             float_money(scene, at, -item.price);
-            animals_changed(device, scene, assets);
+            (void)load_object_model(scene, scene.placing.models, assets, animal_crate());
+            animals_changed(device, scene);
         }
     } // namespace
 
@@ -207,19 +208,23 @@ namespace rct3::scene
         (void)simulation::add_animal_house(scene.sim, home, tile_point(scene.grid, spot.value_or(middle)));
     }
 
-    void animals_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    save::PlacedObject animal_crate()
+    {
+        save::PlacedObject crate;
+        crate.symbol = "Crate01";
+        crate.overlay = "WildAnimals/Crates/Crates";
+        return crate;
+    }
+
+    void animals_changed(render::Device& device, ParkScene& scene)
     {
         // shortcut: every animal is drawn as the same closed crate, standing where the animal is; draw each
         // species' own model, moving as the animal does, once animal models can be read. This is the one place
         // the animals' shapes are made; place_animals moves them.
-        constexpr std::string_view kCrate = "Crate01";
-        constexpr std::string_view kCrates = "WildAnimals/Crates/Crates";
-        save::PlacedObject crate;
-        crate.symbol = kCrate;
-        crate.overlay = kCrates;
+        save::PlacedObject crate = animal_crate();
         scene.animals_shown.clear();
         std::vector<save::PlacedObject> shapes;
-        if (load_object_model(scene, scene.placing.models, assets, crate))
+        if (scene.models.contains(park::model_key(crate)))
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
             {
                 scene.animals_shown.push_back(e);

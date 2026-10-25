@@ -39,7 +39,7 @@ namespace rct3::config
             { O::CoasterCameraPhotos, "coaster_camera_photos", 0, 1, 1, 1 },
             { O::AutoScrollAtEdge, "auto_scroll_at_edge", 0, 1, 1, 1 },
             { O::CameraMode, "camera_mode", 0, 3, 1, 3 },
-            { O::CameraControls, "camera_controls", 0, 2, 1, 0 },
+            { O::CameraControls, "camera_controls", 0, 2, 1, 1 },
             { O::CameraIgnoresScenery, "camera_ignores_scenery", 0, 1, 1, 0 },
             { O::CameraFocusOnMiddle, "camera_focus_on_middle", 0, 1, 1, 0 },
             { O::FreeLookSpeed, "free_look_speed", 0, 1, 0.01f, 0.5f },

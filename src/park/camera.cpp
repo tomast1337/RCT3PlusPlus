@@ -244,6 +244,22 @@ namespace rct3::park
         return camera;
     }
 
+    ParkCamera orbited(ParkCamera camera, glm::vec3 pivot, float yaw, float pitch)
+    {
+        const glm::vec3 from = eye(camera) - pivot;
+        const float reach = glm::length(from);
+        const ParkCamera turned_camera = turned(camera, yaw, pitch);
+        if (reach <= 0)
+            return turned_camera;
+        // The eye goes round the pivot as far as the view turns, so the pivot keeps its place on the view.
+        const float round = std::atan2(from.x, from.z) + yaw;
+        const float up = std::asin(std::clamp(from.y / reach, -1.0f, 1.0f)) + (turned_camera.pitch - camera.pitch);
+        const glm::vec3 moved = pivot + reach * glm::vec3 { std::sin(round) * std::cos(up), std::sin(up), std::cos(round) * std::cos(up) };
+        camera = turned_camera;
+        camera.target += moved - eye(camera);
+        return camera;
+    }
+
     ParkCamera flown(ParkCamera camera, glm::vec3 by)
     {
         const glm::vec3 forward = glm::normalize(camera.target - eye(camera));

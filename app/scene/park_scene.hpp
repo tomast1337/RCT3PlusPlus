@@ -10,7 +10,9 @@
 // along, the middle button (or both) turns and tilts, the wheel zooms, and the keys the player bound to the
 // game's camera commands do the same from the keyboard. The isometric mode looks down from one of the map's
 // four diagonals at a fixed tilt, and right with left (or the turn keys) turns it a quarter at a time. Free
-// look flies the eye about: the right button looks round, the middle button and the keys fly it. With
+// look flies the eye about: the right button looks round, the middle button and the keys fly it. The
+// advanced mode turns round the point a drag starts on and shares the buttons out as the camera controls
+// option picks. With
 // the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
 // round panel that tells about it; a click on open water starts a ripple there. The Files menu's options and
@@ -560,6 +562,7 @@ namespace rct3::scene
         park::ControlMode control_mode = park::ControlMode::Normal; ///< The camera last moved in
         int iso_step = 0;                                           ///< Isometric's diagonal, any whole number taken round the four
         float iso_drag = 0;                                         ///< Isometric: pixels across the turning drag has gone since it last turned
+        std::optional<glm::vec3> pivot;                             ///< Advanced: what the drag turns round, picked when it started
         int zooming = 0;                                            ///< From the keys: 1 in, -1 out
         bool hover_pickable = false;                                ///< A click would open a panel on what is under the pointer
         float since_hover_pick = 0;                                 ///< Seconds since that was looked at

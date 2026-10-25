@@ -108,6 +108,8 @@ namespace rct3::scene
         constexpr float kKeyTurn = 1.5f;        ///< Radians per second
         constexpr float kIsoTurnDrag = 60;      ///< Interface units across, times the sensitivity option, that turn isometric a quarter
         constexpr float kIsoTurnSpeed = 3.5f;   ///< Radians a second isometric turns at
+        constexpr float kDragZoom = 1.006f;     ///< Distance times this per pixel down, advanced's right drag
+        constexpr float kWheelTilt = 0.08f;     ///< Radians down per notch away, advanced's wheel in its first scheme
         constexpr float kFlySpeed = 80;         ///< World units a second free look flies at, times its speed option
         constexpr float kFlyDrag = 0.004f;      ///< Seconds of flight per pixel a middle drag goes
         constexpr float kFlyAboveGround = 1.5f; ///< Free look's eye stays this high over the ground
@@ -142,14 +144,38 @@ namespace rct3::scene
 
             // A drag starts away from the windows and goes on wherever the pointer then goes. Which buttons hold
             // it decides what it does: the right one, the right with the left, or the middle one.
+            const DragButtons started = scene.drag_buttons;
             const DragButtons buttons = input.middle ? DragButtons::Middle : input.right && input.pointer.down ? DragButtons::Both : input.right ? DragButtons::Right : DragButtons::None;
             scene.drag_buttons = scene.drag_buttons != DragButtons::None || !over_interface ? buttons : DragButtons::None;
             const DragButtons held = scene.drag_buttons;
+            if (mode == ControlMode::Advanced && held != DragButtons::None && started == DragButtons::None)
+            {
+                // A drag turns round the point under the pointer when it starts (or the screen's middle): the
+                // ground, or unless the option says not, the scenery in front of it.
+                const ui::Rect screen = scene.desktop->root().rect();
+                const glm::vec2 size = glm::vec2 { screen.width(), screen.height() } * scale;
+                const glm::vec2 at = options.flag(config::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
+                const park::Ray ray = park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                std::optional<float> hit = park::ground_hit(ray, scene.grid);
+                if (!options.flag(config::GameOption::CameraIgnoresScenery) && scene.show_scenery)
+                {
+                    if (scene.pick_boxes_of != scene.objects.size())
+                    {
+                        scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
+                        scene.pick_boxes_of = scene.objects.size();
+                    }
+                    if (const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
+                        hit = object->distance;
+                }
+                scene.pivot = hit ? std::optional(ray.origin + ray.direction * *hit) : std::nullopt;
+            }
+            if (held == DragButtons::None)
+                scene.pivot.reset();
             const bool free = scene.free_camera;
             scene.turning = false;
             scene.dragging = false;
             const auto turn = [&](float yaw, float pitch) {
-                c = park::turned(c, yaw, pitch, free);
+                c = scene.pivot && !free ? park::orbited(c, *scene.pivot, yaw, pitch) : park::turned(c, yaw, pitch, free);
                 scene.turning = true;
             };
             const auto pan = [&](float right, float forward) {
@@ -157,7 +183,7 @@ namespace rct3::scene
                 scene.dragging = true;
             };
             // Notches to zoom; free look has no zoom.
-            const float wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
+            float wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
             const float fly = options.get(config::GameOption::FreeLookSpeed) * kFlySpeed; ///< World units a second, flying
 
             switch (mode)
@@ -193,6 +219,32 @@ namespace rct3::scene
                         scene.dragging = true;
                     }
                     break;
+                case ControlMode::Advanced:
+                {
+                    // Three ways to share the buttons out, as the camera controls option picks; the middle
+                    // button always turns and tilts.
+                    const int scheme = options.choice(config::GameOption::CameraControls);
+                    const bool turns = held == DragButtons::Middle || (scheme == 1 && held == DragButtons::Both) || (scheme == 2 && held == DragButtons::Right);
+                    const bool slides = (scheme == 1 && held == DragButtons::Right) || (scheme != 1 && held == DragButtons::Both);
+                    if (turns)
+                        turn(dx * kDragTurn, dy * kDragTurn);
+                    else if (slides)
+                        pan(-dx * kDragPan * c.distance, dy * kDragPan * c.distance);
+                    else if (scheme == 0 && held == DragButtons::Right)
+                    {
+                        // Across turns, up and down brings the view nearer and farther.
+                        turn(dx * kDragTurn, 0);
+                        c = park::zoomed(c, std::pow(kDragZoom, dy), free);
+                    }
+                    if (scheme == 0)
+                    {
+                        // The wheel tilts instead of zooming.
+                        if (wheel != 0)
+                            c = park::turned(c, 0, wheel * kWheelTilt, free);
+                        wheel = 0;
+                    }
+                    break;
+                }
                 default:
                     if (held == DragButtons::Middle || held == DragButtons::Both)
                         turn(dx * kDragTurn, dy * kDragTurn);
@@ -261,7 +313,8 @@ namespace rct3::scene
             }
             else if (yaw != 0 || pitch != 0)
                 c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
-            scene.camera = free ? c : park::on_ground(c, scene.grid);
+            // Advanced turns round points above the ground too.
+            scene.camera = free ? c : park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
         }
 
         /// The sky and the light as the day clock shows them, with a look that is fading out over them.

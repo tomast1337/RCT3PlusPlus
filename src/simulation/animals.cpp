@@ -104,6 +104,34 @@ namespace rct3::simulation
         return e;
     }
 
+    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers)
+    {
+        auto& r = world.registry;
+        std::vector<entt::entity> homes;
+        for (const AnimalHouse& house : houses)
+        {
+            homes.push_back(r.create());
+            r.emplace<AnimalHouse>(homes.back(), house);
+        }
+        std::vector<bool> kept(houses.size(), false);
+        for (const auto& [keeper, enclosure] : keepers)
+        {
+            if (!r.valid(keeper) || !r.all_of<Pose>(keeper))
+                continue;
+            const glm::vec3 at = r.get<Pose>(keeper).position;
+            std::optional<std::size_t> best;
+            const auto better = [&](std::size_t i) { return !best || (kept[i] != kept[*best] ? !kept[i] : glm::distance(houses[i].troughs, at) < glm::distance(houses[*best].troughs, at)); };
+            for (std::size_t i = 0; i < houses.size(); ++i)
+                if (houses[i].enclosure == enclosure && better(i))
+                    best = i;
+            if (!best)
+                continue;
+            kept[*best] = true;
+            r.emplace_or_replace<KeeperDuty>(keeper, KeeperDuty { .house = homes[*best] });
+            r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
+        }
+    }
+
     void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure)
     {
         for (const save::ZooAnimal& z : saved)
@@ -111,9 +139,9 @@ namespace rct3::simulation
             // Its model's place: rows of the x, y and z axes, then the position.
             const glm::vec3 at { z.world[12], z.world[13], z.world[14] };
             const std::int32_t in = enclosure ? enclosure({ at.x, at.z }) : -1;
-            // shortcut: its needs start afresh and only its health is kept; read the saved food, drink, tiredness
-            // and company once which way they run is checked against a park.
-            const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .health = { std::clamp(z.health, 0.0f, 1.0f) } }, at);
+            // The park keeps how fed, watered and in company it is, where we keep how much it wants each.
+            const auto share = [](float v) { return Share { std::clamp(v, 0.0f, 1.0f) }; };
+            const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
             auto& r = world.registry;
             r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = std::atan2(z.world[8], z.world[10]);
             Animal& animal = r.get<Animal>(e);
@@ -147,16 +175,19 @@ namespace rct3::simulation
             }
             return best;
         };
-        std::vector<std::int32_t> dung_in; // By enclosure
+        // Dung by enclosure, less what the animals living there put up with.
+        std::vector<std::int32_t> dung_in;
+        const auto count_in = [&](std::int32_t enclosure, std::int32_t n) {
+            if (enclosure < 0)
+                return;
+            dung_in.resize(std::max(dung_in.size(), static_cast<std::size_t>(enclosure) + 1));
+            dung_in[static_cast<std::size_t>(enclosure)] += n;
+        };
+        for (const auto [a, animal] : r.view<const Animal>().each())
+            count_in(animal.enclosure, -kRates.dung_limit);
         for (const auto [d, dung] : r.view<const Dung>().each())
-        {
-            if (dung.enclosure >= 0)
-            {
-                dung_in.resize(std::max(dung_in.size(), static_cast<std::size_t>(dung.enclosure) + 1));
-                ++dung_in[static_cast<std::size_t>(dung.enclosure)];
-            }
-        }
-        const auto dung_count = [&](std::int32_t enclosure) { return enclosure >= 0 && static_cast<std::size_t>(enclosure) < dung_in.size() ? dung_in[static_cast<std::size_t>(enclosure)] : 0; };
+            count_in(dung.enclosure, 1);
+        const auto dung_over = [&](std::int32_t enclosure) { return enclosure >= 0 && static_cast<std::size_t>(enclosure) < dung_in.size() ? dung_in[static_cast<std::size_t>(enclosure)] : 0; };
 
         // The animals.
         std::vector<std::pair<glm::vec3, std::int32_t>> dropped; // Dung left this step, and its enclosure
@@ -196,7 +227,7 @@ namespace rct3::simulation
                 animal.dung_in = kRates.dung;
                 dropped.emplace_back(pose.position, animal.enclosure);
             }
-            const bool ailing = animal.hunger.value >= 1 || animal.thirst.value >= 1 || dung_count(animal.enclosure) > kRates.dung_limit;
+            const bool ailing = animal.hunger.value >= 1 || animal.thirst.value >= 1 || dung_over(animal.enclosure) > 0;
             if (ailing)
                 animal.health.value = std::max(0.0f, animal.health.value - dt.value / kRates.sickening.value);
             else

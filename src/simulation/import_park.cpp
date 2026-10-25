@@ -1021,11 +1021,13 @@ namespace rct3::simulation
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
             using enum save::StaffKind;
             const save::StaffKind kind = people.staff[i].kind;
-            const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : StaffRole::Other;
+            const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : kind == AnimalKeeper ? StaffRole::Keeper : StaffRole::Other;
+            // A vendor stays in their booth, a keeper in their enclosure (import_animal_houses gives them their work).
+            const bool walks = role != StaffRole::Vendor && role != StaffRole::Keeper;
             auto at = world.paths.nearest(position);
             if (!at || world.paths.nodes()[*at].queue)
                 at = walkway_near(world.paths, position);
-            if (!at && role != StaffRole::Vendor)
+            if (!at && walks)
                 continue;
             const entt::entity e = r.create();
             const save::Staff& saved = people.staff[i];
@@ -1033,7 +1035,7 @@ namespace rct3::simulation
             set_wage_level(staff, saved.wage_level);
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
-            if (role != StaffRole::Vendor)                                  // A vendor stays in their booth
+            if (walks)
                 start_walking(world, e, *at);
             out[i] = e;
         }

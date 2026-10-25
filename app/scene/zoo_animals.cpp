@@ -2,7 +2,6 @@
 #include "scene/zoo_animals.hpp"
 
 #include "logging/log.hpp"
-#include "profiling/profiler.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
 #include "simulation/animals.hpp"
@@ -55,40 +54,15 @@ namespace rct3::scene
         }
     } // namespace
 
-    void load_zoo_animals(render::Device& device, ParkScene& scene, const config::GameInstall& install)
+    void load_zoo_animals(ParkScene& scene, const config::GameInstall& install)
     {
-        const profiling::Scope zone("ZooAnimals");
         constexpr std::string_view kAnimalFolder = "WildAnimals";
         const auto folder = install.find(kAnimalFolder);
         if (!folder)
             return;
         const std::string name = folder->filename().string();
         const std::array<std::string_view, 1> folders { name };
-        DrawnAnimals& drawn = scene.drawn_animals;
-        drawn.library.emplace(install.root(), folders);
-        for (std::size_t i = 0; i < scene.people.zoo_animals.size(); ++i)
-        {
-            const save::ZooAnimal& animal = scene.people.zoo_animals[i];
-            if (animal.in_crate)
-                continue; // Drawn as its crate
-            const auto body = drawn.library->body(animal.species, animal.is_adult, animal.is_male);
-            if (!body)
-                continue;
-            const ovl::AnimalMotion motion = park::motion_seconds(*body, ovl::AnimalMotion::Stand) > 0 ? ovl::AnimalMotion::Stand : ovl::AnimalMotion::Idle1;
-            park::PlacedAnimal placed { .body = &*body, .motion = motion };
-            // Stored a row per axis, which is a column each here.
-            for (glm::length_t c = 0; c < 4; ++c)
-            {
-                for (glm::length_t r = 0; r < 4; ++r)
-                    placed.world[c][r] = animal.world[static_cast<std::size_t>(c * 4 + r)];
-            }
-            drawn.offsets.push_back(static_cast<float>(drawn.saved_placed.size()) * kMotionSpread);
-            drawn.saved_placed.push_back(placed);
-            drawn.saved.push_back(i);
-        }
-        drawn.library->close_files();
-        upload_new_pictures(device, scene);
-        logging::logger("park").info("{} of {} zoo animals shown, {} pictures", drawn.saved_placed.size(), scene.people.zoo_animals.size(), drawn.library->pictures().size());
+        scene.drawn_animals.library.emplace(install.root(), folders);
     }
 
     save::PlacedObject animal_crate()
@@ -109,6 +83,7 @@ namespace rct3::scene
         {
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
                 (void)drawn.library->body(animal.species, animal.adult, animal.male);
+            drawn.library->close_files();
             upload_new_pictures(device, scene);
         }
         drawn.crated.clear();
@@ -121,11 +96,6 @@ namespace rct3::scene
         DrawnAnimals& drawn = scene.drawn_animals;
         const auto& r = scene.sim.registry;
         drawn.placed.clear();
-        for (std::size_t i = 0; i < drawn.saved_placed.size(); ++i)
-        {
-            drawn.placed.push_back(drawn.saved_placed[i]);
-            drawn.placed.back().time = scene.park_clock + drawn.offsets[i];
-        }
         std::vector<entt::entity> crated;
         std::vector<glm::mat4> crate_places;
         for (const auto [e, animal, pose] : r.view<const simulation::Animal, const simulation::Pose>().each())

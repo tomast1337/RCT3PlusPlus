@@ -327,11 +327,6 @@ declare namespace stalls {
     function setState(i: number, state: "closed" | "open"): string | null;
 }
 
-declare namespace zooAnimals {
-    /** The saved zoo animals drawn with their models, where each stands. */
-    function list(): (MapPoint & { species: string; adult: boolean })[];
-}
-
 declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height

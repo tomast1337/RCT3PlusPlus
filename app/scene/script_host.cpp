@@ -695,18 +695,6 @@ namespace rct3::scene
             }
             return out;
         });
-        engine_.define("zooAnimals.list", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
-            const save::TerrainGrid& g = park.grid;
-            Json out = Json::array();
-            for (std::size_t i = 0; i < park.drawn_animals.saved_placed.size(); ++i)
-            {
-                const save::ZooAnimal& saved = park.people.zoo_animals[park.drawn_animals.saved[i]];
-                const glm::vec3 at(park.drawn_animals.saved_placed[i].world[3]);
-                out.push_back({ { "species", saved.species }, { "adult", saved.is_adult }, { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 }, { "up", at.y - g.height_at(at.x, at.z).value_or(0) } });
-            }
-            return out;
-        });
         engine_.define("animals.list", [this](const Json&) {
             const ParkScene& park = park_of(park_);
             const save::TerrainGrid& g = park.grid;

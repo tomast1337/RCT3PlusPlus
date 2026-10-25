@@ -15,6 +15,7 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
+#include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/sim_world.hpp"
@@ -23,6 +24,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -151,6 +153,9 @@ namespace rct3::simulation
 
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
+
+    /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
+    void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape.
     void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages);

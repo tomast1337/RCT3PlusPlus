@@ -275,3 +275,23 @@ TEST_CASE("looking round from the eye keeps the eye where it is, and flying move
     CHECK(eye(f).y < before.y); // Tilted down, forward goes down too
     CHECK(flown(c, { 0, 3, 0 }).target.y == doctest::Approx(c.target.y + 3));
 }
+
+TEST_CASE("turning round a pivot keeps it where it was on the view, and round the target is a plain turn")
+{
+    ParkCamera c;
+    c.target = { 10, 2, 10 };
+    c.distance = 40;
+    const ParkCamera plain = turned(c, 0.4f, 0.2f);
+    const ParkCamera round = orbited(c, c.target, 0.4f, 0.2f);
+    CHECK(glm::length(round.target - plain.target) < 1e-3f);
+    CHECK(round.pitch == doctest::Approx(plain.pitch));
+    // A pivot off to one side: its place on the view stays put through a turn.
+    const glm::vec3 pivot { 16, 0, 14 };
+    const auto on_view = [&](const ParkCamera& cam) {
+        const glm::vec4 clip = view_projection(cam, 1.5f) * glm::vec4(pivot, 1);
+        return glm::vec2(clip) / clip.w;
+    };
+    const ParkCamera turned_round = orbited(c, pivot, 0.5f, 0.1f);
+    CHECK(glm::length(on_view(turned_round) - on_view(c)) < 0.02f);
+    CHECK(glm::length(eye(turned_round) - pivot) == doctest::Approx(glm::length(eye(c) - pivot)));
+}

@@ -126,6 +126,9 @@ namespace rct3::park
     /// Turned by `yaw` and tilted by `pitch` radians round its own eye, which stays put; only stopping short of
     /// looking straight up or down.
     [[nodiscard]] ParkCamera turned_at_eye(ParkCamera camera, float yaw, float pitch);
+    /// Turned by `yaw` and tilted by `pitch` radians (within the tilt's limits) round `pivot`, which stays where
+    /// it is on the view; round the target, the same as turned().
+    [[nodiscard]] ParkCamera orbited(ParkCamera camera, glm::vec3 pivot, float yaw, float pitch);
     /// Moved `by` world units along the way it looks: x to its right, y up, z forward (tilted with the view).
     [[nodiscard]] ParkCamera flown(ParkCamera camera, glm::vec3 by);
 

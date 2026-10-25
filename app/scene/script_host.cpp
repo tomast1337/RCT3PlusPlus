@@ -470,7 +470,7 @@ namespace rct3::scene
         });
         engine_.define("build.pick", [this](const Json& a) -> Json {
             if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
-                throw std::invalid_argument("build.pick takes an overlay and a symbol");
+                throw std::invalid_argument("build.pick takes an overlay, a symbol and, for a tracked ride, \"designs\" to offer its saved designs");
             ParkScene& park = park_of(park_);
             const auto items = build_items(park);
             if (!items)
@@ -480,7 +480,10 @@ namespace rct3::scene
                 return false;
             // A ride built piece by piece needs the interface's assets, which it gets as a pick from a list does.
             if (found->kind == park::BuildKind::TrackedRide)
+            {
                 park.build.asked = *found;
+                park.build.asked_designs = a.size() > 2 && a[2] == "designs";
+            }
             return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found);
         });
         engine_.define("build.construction", [this](const Json&) -> Json {
@@ -490,8 +493,8 @@ namespace rct3::scene
             const auto c = b.catalogues.find(b.overlay);
             const bool named = b.picked && c != b.catalogues.end();
             Json designs = Json::array();
-            for (const std::filesystem::path& file : b.designs)
-                designs.push_back(file.filename().string());
+            for (const DesignFile& d : b.designs)
+                designs.push_back(d.path.filename().string());
             return { { "ride", *b.ride }, { "offered", b.candidates.size() }, { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) }, { "ghost", b.ghost.has_value() }, { "designs", std::move(designs) }, { "selected", b.selected ? Json(*b.selected) : Json(nullptr) }, { "split", std::to_underlying(b.split) } };
         });
         engine_.define("build.stop", [this](const Json&) {

@@ -171,12 +171,13 @@ declare namespace build {
     function flatRides(): FlatRideItem[] | undefined;
     /** The install's stalls; undefined while the lists are still being read. Picked as rides are. */
     function stalls(): StallItem[] | undefined;
-    /** Starts placing a ride, as picking it in its build list does; false when there is no such ride. A ride
-     * built piece by piece opens its construction panel on the next frame. */
-    function pick(overlay: string, symbol: string): boolean;
+    /** Starts placing a ride; false when there is no such ride. A ride built piece by piece opens its
+     * construction panel on the next frame, for a custom track; with "designs" it also opens the window of its
+     * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. */
+    function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
-     * the one picked, whether it can be built there and the files of the saved designs offered for it (the
-     * install's, then the player's own), the piece clicked mid-track to build over (its place in the ride's
+     * the one picked, whether it can be built there and the files of the saved designs of its kind (the
+     * player's own, then the install's), the piece clicked mid-track to build over (its place in the ride's
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */

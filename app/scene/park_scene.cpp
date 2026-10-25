@@ -2,6 +2,7 @@
 #include "scene/park_scene.hpp"
 
 #include "career/career_file.hpp"
+#include "config/game_saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "park/chain_lifts.hpp"
@@ -2219,6 +2220,17 @@ namespace rct3::scene
                 // A ride's window opened before then named it from the kind's name it could not yet find.
                 if (info && info->visible)
                     show_info_page(scene, *info, assets, options);
+            }
+            // The saved designs are read once the folders are known: the player's own, in our folder and in the
+            // game's, then the install's.
+            // shortcut: read once a park; a design saved meanwhile shows in the next park.
+            if (!scene.build.designs.valid() && assets.install && scene.saves.data)
+            {
+                std::vector<std::filesystem::path> folders { scene.saves.data->folder(config::UserFolder::Coasters) };
+                if (const auto name = config::game_saves_folder(config::UserFolder::Coasters); scene.saves.game_saves && name)
+                    folders.push_back(*scene.saves.game_saves / *name);
+                folders.push_back(assets.install->find("Coaster Designs").value_or(std::filesystem::path { }));
+                start_design_scan(scene.build, std::move(folders));
             }
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {

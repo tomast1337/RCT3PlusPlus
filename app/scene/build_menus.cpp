@@ -2,12 +2,17 @@
 #include "scene/build_menus.hpp"
 
 #include "logging/log.hpp"
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/build_rows.hpp"
 #include "ui/widgets/button.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <fstream>
+#include <iterator>
+#include <map>
 #include <string_view>
 #include <utility>
 
@@ -21,6 +26,14 @@ namespace rct3::scene
 
         constexpr std::string_view kListName = "build_list";
         constexpr std::string_view kAllShown = "Rct3pp_AllItemsShown";
+        constexpr std::string_view kDesignExtension = ".trk";
+
+        /// The kind a design's ride symbol names, as the build lists name it ("Giga" of "Giga:trr").
+        std::string_view design_kind(const DesignFile& design)
+        {
+            const std::string_view symbol = design.summary.ride_symbol;
+            return symbol.substr(0, symbol.find(':'));
+        }
 
     } // namespace
 
@@ -31,6 +44,44 @@ namespace rct3::scene
         if (content != nullptr)
             menus.offer = park::BuildOffer(*content);
         return menus;
+    }
+
+    void start_design_scan(BuildMenus& menus, std::vector<std::filesystem::path> folders)
+    {
+        menus.designs = std::async(std::launch::async, [folders = std::move(folders)] {
+                            std::vector<DesignFile> designs;
+                            for (const std::filesystem::path& folder : folders)
+                            {
+                                const std::size_t first = designs.size();
+                                std::error_code error;
+                                for (auto it = std::filesystem::directory_iterator(folder, error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
+                                {
+                                    if (!strings::equals_ignoring_case(it->path().extension().string(), kDesignExtension))
+                                        continue;
+                                    std::ifstream in(it->path(), std::ios::binary);
+                                    const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                                    auto summary = save::read_design_summary(std::as_bytes(std::span(raw)));
+                                    if (!summary)
+                                    {
+                                        logging::logger("park").info("design {}: {}", it->path().filename().string(), save::to_string(summary.error()));
+                                        continue;
+                                    }
+                                    summary->picture = { }; // Read again for the one shown, rather than kept for every design
+                                    designs.push_back({ it->path(), std::move(*summary) });
+                                }
+                                std::ranges::sort(designs.begin() + static_cast<std::ptrdiff_t>(first), designs.end(), { }, &DesignFile::path);
+                            }
+                            return designs;
+                        }).share();
+    }
+
+    std::vector<DesignFile> designs_for(const BuildMenus& menus, std::string_view symbol)
+    {
+        std::vector<DesignFile> found;
+        for (const DesignFile& d : menus.designs.valid() ? menus.designs.get() : std::vector<DesignFile> { })
+            if (strings::equals_ignoring_case(design_kind(d), symbol))
+                found.push_back(d);
+        return found;
     }
 
     namespace
@@ -56,7 +107,12 @@ namespace rct3::scene
         if (!list || !menus.items.valid())
             return false;
         close_build_list(root);
-        auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency);
+        // How many saved designs each tracked ride kind has, once they are read.
+        std::map<std::string, std::size_t, strings::LessIgnoringCase> design_counts;
+        if (menus.designs.valid() && menus.designs.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+            for (const DesignFile& d : menus.designs.get())
+                ++design_counts[std::string(design_kind(d))];
+        auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency, design_counts);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
         auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
         picker.kinds_off = menus.kinds_off;
@@ -90,7 +146,10 @@ namespace rct3::scene
     std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
         if (menus.asked)
+        {
+            menus.offer_designs = std::exchange(menus.asked_designs, false);
             return std::exchange(menus.asked, std::nullopt);
+        }
         auto picker = root.find_as<ui::BuildPicker>(kListName);
         if (!picker)
             return std::nullopt;
@@ -106,6 +165,7 @@ namespace rct3::scene
             if (*picked < items.size())
             {
                 logging::logger("ui").info("picked {} from {}", items[*picked].symbol, items[*picked].overlay);
+                menus.offer_designs = true;
                 return items[*picked];
             }
         }

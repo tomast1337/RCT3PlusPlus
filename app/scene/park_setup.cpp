@@ -957,6 +957,7 @@ namespace rct3::scene
                 scene.tunes.push_back(file.path().stem().u16string());
         std::ranges::sort(scene.tunes);
         show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
+        show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
                                        std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },

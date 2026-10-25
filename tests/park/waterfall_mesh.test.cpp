@@ -128,3 +128,26 @@ TEST_CASE("waterfall_layer_scroll: the first picture runs on past its second, an
         CHECK(s < 1.0f);
     }
 }
+
+TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for a wider fall")
+{
+    const std::vector<save::Waterfall> one { fall() };
+    const std::vector<PlacedEffect> narrow = waterfall_spray(one);
+    REQUIRE(!narrow.empty());
+    for (const PlacedEffect& spray : narrow)
+    {
+        CHECK(spray.effect == kWaterfallSpray);
+        CHECK(spray.object == 0);
+        CHECK(spray.position.x == doctest::Approx(10.0f));
+        CHECK(spray.position.y >= 5.0f);
+        CHECK(std::abs(spray.position.z) < 4.0f);
+    }
+    save::Waterfall wide = fall();
+    wide.lip_left.z = -20.0f;
+    wide.lip_right.z = 20.0f;
+    const std::vector<save::Waterfall> two { fall(), wide };
+    const std::vector<PlacedEffect> both = waterfall_spray(two);
+    CHECK(both.size() > 2 * narrow.size());
+    CHECK(both.back().object == 1);
+    CHECK(waterfall_spray({ }).empty());
+}

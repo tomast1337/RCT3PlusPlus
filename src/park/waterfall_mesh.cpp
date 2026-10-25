@@ -26,6 +26,8 @@ namespace rct3::park
         constexpr float kFrothPicture = 0.55f; ///< Part of the froth's picture, from the top, the quad shows.
         constexpr float kFrothMargin = 1.0f;   ///< Froth reaches this far past each side of the sheet.
         constexpr float kFade = 0.25f;         ///< Part of foam and froth at each edge that fades out.
+        constexpr float kSprayGap = 8.0f;      ///< Units of a fall's width each spray covers.
+        constexpr float kSpraySize = 2.0f;     ///< Times the effect's own particle sizes, made for small splashes.
         constexpr glm::vec3 kUp { 0.0f, 1.0f, 0.0f };
 
         glm::vec3 vec(const save::WorldPoint3& p)
@@ -131,6 +133,20 @@ namespace rct3::park
     glm::vec3 waterfall_point(const save::Waterfall& fall, float along)
     {
         return point(shape_of(fall), along);
+    }
+
+    std::vector<PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls)
+    {
+        std::vector<PlacedEffect> sprays;
+        for (std::size_t i = 0; i < falls.size(); ++i)
+        {
+            const Shape s = shape_of(falls[i]);
+            const glm::vec3 start = point(s, 1.0f) + kUp * kFoamLift - s.across / 2.0f;
+            const int count = std::max(1, static_cast<int>(std::round(glm::length(s.across) / kSprayGap)));
+            for (int k = 0; k < count; ++k)
+                sprays.push_back({ .effect = kWaterfallSpray, .position = start + s.across * ((static_cast<float>(k) + 0.5f) / static_cast<float>(count)), .object = i, .size = kSpraySize });
+        }
+        return sprays;
     }
 
     void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, ObjectMesh& mesh)

@@ -117,6 +117,7 @@ namespace rct3::park
         glm::vec3 position { 0.0f };
         glm::mat3 axes { 1.0f }; ///< Its second column the way it points
         std::size_t object = 0;  ///< By index
+        float size = 1;          ///< Times the sizes its particles have in the effect
     };
 
     /// The particle effects the objects' models show, placed in the park as object_lamps places lamps.

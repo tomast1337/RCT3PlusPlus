@@ -121,8 +121,9 @@ namespace rct3::scene
     /// whole, stalls and scenery are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);
 
-    /// Starts placing the entrance, or the `exit`, of the tracked ride `ride` beside its `stations`, as `item`
-    /// (the ride's) has it; one placed before moves. False without stations or a door in the item.
+    /// Starts placing the entrance, or the `exit`, of the ride `ride` as `item` (the ride's) has it: of a tracked
+    /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
+    /// False without stations on a tracked ride or a door in the item.
     bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.

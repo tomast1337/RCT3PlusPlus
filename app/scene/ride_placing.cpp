@@ -276,13 +276,33 @@ namespace rct3::scene
 
     bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit)
     {
-        if (stations.empty() || item.entrance.empty() || item.exit.empty() || ride >= scene.rides.rides.size())
+        if (item.entrance.empty() || item.exit.empty() || ride >= scene.rides.rides.size())
+            return false;
+        save::Ride& r = scene.rides.rides[ride];
+        if (stations.empty() && (r.kind != save::RideKind::Flat || !r.base.spot))
             return false;
         RidePlacing& p = scene.placing;
         p.item = item;
         p.step = exit ? RidePlacing::Step::Exit : RidePlacing::Step::Entrance;
         p.ride = ride;
         p.site.reset();
+        if (stations.empty())
+        {
+            // A flat ride's doors go round the ground it stands on, its fence built again as each goes in.
+            const save::PlacementSpot& spot = *r.base.spot;
+            const std::array squares { static_cast<std::int32_t>(item.width), static_cast<std::int32_t>(item.length) };
+            p.site = park::RideSite { .col = spot.col, .row = spot.row, .turns = spot.direction & 3, .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
+            p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turns, scene.grid).height;
+            p.fence.clear();
+            const auto model = std::ranges::find(scene.objects, spot.object, &save::PlacedObject::id);
+            const auto found = model != scene.objects.end() ? scene.models.find(park::model_ref(*model)) : scene.models.end();
+            for (const save::PlacedObject& was : park::ride_fences(r, found != scene.models.end() ? &found->second : nullptr, 0))
+            {
+                const auto panel = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && o.fixture && o.symbol == was.symbol && o.overlay == was.overlay && o.col == was.col && o.row == was.row && o.rotation == was.rotation && o.base_height == was.base_height; });
+                if (panel != scene.objects.end())
+                    p.fence.push_back(panel->id);
+            }
+        }
         p.door.reset();
         p.ghost_mesh = { };
         p.panel_item.clear();
@@ -616,10 +636,10 @@ namespace rct3::scene
             }
             else
                 p.door = park::door_spot(*p.site, { tile->col, tile->row });
-            p.problem = park::door_problem(*p.site, *p.door, p.step == RidePlacing::Step::Exit || !p.stations.empty() ? p.entrance : std::nullopt, scene.grid, paths, p.solids);
+            p.problem = park::door_problem(*p.site, *p.door, p.entrance, scene.grid, paths, p.solids);
             // The ride's own door of that kind standing there moves when this one is placed, so it is no block.
             const bool exit = p.step == RidePlacing::Step::Exit;
-            if (p.problem == park::SiteProblem::Blocked && !p.stations.empty() && std::ranges::any_of(scene.rides.rides.at(p.ride).stations, [&](const save::Station& st) {
+            if (p.problem == park::SiteProblem::Blocked && std::ranges::any_of(scene.rides.rides.at(p.ride).stations, [&](const save::Station& st) {
                     const auto& old = exit ? st.exit_spot : st.entrance_spot;
                     return old && old->col == p.door->col && old->row == p.door->row;
                 }))
@@ -807,21 +827,26 @@ namespace rct3::scene
             save::Ride& ride = scene.rides.rides.at(p.ride);
             if (ride.stations.empty())
                 ride.stations.emplace_back();
-            const save::PlacementSpot spot { object, p.door->col, p.door->row, p.site->height, p.door->direction };
-            if (p.step == RidePlacing::Step::Entrance)
+            save::Station& doors = ride.stations.front();
+            const bool exit = p.step == RidePlacing::Step::Exit;
+            // One placed before moves.
+            std::uint64_t& old = exit ? doors.exit : doors.entrance;
+            if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); old != 0 && at != scene.objects.end())
+                at->hidden = true;
+            old = object;
+            (exit ? doors.exit_spot : doors.entrance_spot) = save::PlacementSpot { object, p.door->col, p.door->row, p.site->height, p.door->direction };
+            fence_ride(scene, assets, ride);
+            // The entrance down, the exit follows when the ride has none, as in the game.
+            if (!exit && !doors.exit_spot)
             {
-                ride.stations.front().entrance = object;
-                ride.stations.front().entrance_spot = spot;
                 p.entrance = p.door;
                 p.step = RidePlacing::Step::Exit;
-                fence_ride(scene, assets, ride);
             }
             else
             {
-                ride.stations.front().exit = object;
-                ride.stations.front().exit_spot = spot;
-                fence_ride(scene, assets, ride);
-                p.unjoined.push_back(p.ride);
+                const bool running = p.ride < scene.ride_entities.size() && scene.ride_entities[p.ride] != entt::null;
+                if (doors.entrance_spot && doors.exit_spot && !running && !std::ranges::contains(p.unjoined, p.ride))
+                    p.unjoined.push_back(p.ride);
                 stop_ride_placing(scene);
             }
         }

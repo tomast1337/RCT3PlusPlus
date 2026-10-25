@@ -121,6 +121,33 @@ namespace rct3::simulation
             return static_cast<std::size_t>(static_cast<float>(line.size() - 1) / kTuning.queues.spacing.value) + 1;
         }
 
+        /// The guest pays the park `price`, counted in all and under `on` (none: in all only), whether they
+        /// could. The rest of their party makes up what they are short of, the richest first.
+        bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on)
+        {
+            std::vector<entt::entity> payers { guest };
+            if (const auto* member = r.try_get<Member>(guest); member != nullptr && r.valid(member->party))
+                for (const entt::entity m : r.get<Party>(member->party).members)
+                    if (m != guest && r.all_of<Wallet>(m))
+                        payers.push_back(m);
+            std::ranges::stable_sort(payers.begin() + 1, payers.end(), std::greater { }, [&](entt::entity m) { return r.get<Wallet>(m).cash.value; });
+            if (std::ranges::fold_left(payers, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) < price.value)
+                return false;
+            std::int64_t owed = price.value;
+            for (const entt::entity m : payers)
+            {
+                Wallet& wallet = r.get<Wallet>(m);
+                const std::int64_t part = std::clamp(wallet.cash.value, std::int64_t { 0 }, owed);
+                wallet.cash.value -= part;
+                wallet.spent.value += part;
+                if (on != nullptr)
+                    (wallet.*on).value += part;
+                owed -= part;
+            }
+            r.ctx().emplace<Receipts>().paid.value += price.value;
+            return true;
+        }
+
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
         /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
         /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
@@ -713,7 +740,26 @@ namespace rct3::simulation
                 auto& dice = r.get<Dice>(gate).state;
                 if (!random::chance(dice, arrivals * dt) || r.get<ParkGate>(gate).closed)
                     continue;
-                admit_party(world, dice, r.get<ParkGate>(gate).node);
+                // Each pays the entrance fee, the party making up what one is short of; a party that cannot
+                // pay for all of them is turned away.
+                const std::vector<entt::entity> party = admit_party(world, dice, r.get<ParkGate>(gate).node);
+                const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
+                if (fee.value <= 0)
+                    continue;
+                if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
+                {
+                    for (const entt::entity m : party)
+                        pay(r, m, fee, &Wallet::spent_entry);
+                    continue;
+                }
+                if (const auto* member = r.try_get<Member>(party.front()))
+                    r.destroy(member->party);
+                for (const entt::entity m : party)
+                {
+                    --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
+                    r.destroy(m);
+                }
+                ++r.ctx().emplace<Turnstile>().turned_away;
             }
             vandalism.recent *= std::exp(-dt / kTuning.vandals.fade.value);
             if (vandalism.since_warning.value >= 0)
@@ -1867,16 +1913,15 @@ namespace rct3::simulation
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
             if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
                 return; // Came along without wanting anything
-            if (!attraction.open || wallet.cash.value < attraction.price.value)
+            Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
+            if (!attraction.open || !pay(r, guest, attraction.price, on))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
-                if (wallet.cash.value < attraction.price.value)
+                if (attraction.open)
                     think(r, guest, ThoughtKind::CantAfford, at, now);
                 return;
             }
-            wallet.cash.value -= attraction.price.value;
             attraction.income.value += attraction.price.value;
-            r.ctx().emplace<Receipts>().paid.value += attraction.price.value;
             ++attraction.customers;
             if (need != nullptr)
                 *need = 0;
@@ -2388,17 +2433,14 @@ namespace rct3::simulation
                         const entt::entity guest = queue[i];
                         if (!r.valid(guest))
                             continue;
-                        auto& wallet = r.get<Wallet>(guest);
-                        if (!attraction.open || wallet.cash.value < attraction.price.value)
+                        if (!attraction.open || !pay(r, guest, attraction.price, &Wallet::spent_rides))
                         {
-                            if (wallet.cash.value < attraction.price.value)
+                            if (attraction.open)
                                 think(r, guest, ThoughtKind::CantAfford, e, now);
                             r.get<Errand>(guest) = after_ride(r, guest, e);
                             continue;
                         }
-                        wallet.cash.value -= attraction.price.value;
                         attraction.income.value += attraction.price.value;
-                        r.ctx().emplace<Receipts>().paid.value += attraction.price.value;
                         ++attraction.customers;
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
                         if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())

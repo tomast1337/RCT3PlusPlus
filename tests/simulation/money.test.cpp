@@ -70,3 +70,55 @@ TEST_CASE("a cash machine gives a guest no more than their bank has left, and no
     CHECK(r.get<Attraction>(machine).customers == 1);
     CHECK(r.get<Wallet>(g).cash.value == 100);
 }
+
+TEST_CASE("guests pay the entrance fee at the gate, and a party that cannot is turned away")
+{
+    for (const std::int64_t fee : { 1000, 100000 })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 3, 0 });
+        auto& r = park.world().registry;
+        r.emplace<ParkGate>(r.create(), *park.world().paths.nearest({ 0, 0, 0 }));
+        r.ctx().emplace<Draw>(Draw { .entrance_fee = { fee } });
+        const auto turned_away = [&] { return r.ctx().contains<Turnstile>() ? r.ctx().get<Turnstile>().turned_away : 0; };
+        CHECK(park.run_until([&] { return !r.view<Visitor>().empty() || turned_away() > 0; }, 20000));
+        const auto* receipts = r.ctx().find<Receipts>();
+        if (fee == 1000)
+        {
+            REQUIRE_FALSE(r.view<Visitor>().empty());
+            std::int64_t entry = 0;
+            for (const auto [g, wallet] : r.view<const Wallet>().each())
+            {
+                CHECK(wallet.spent.value == wallet.spent_entry.value);
+                entry += wallet.spent_entry.value;
+            }
+            REQUIRE(receipts != nullptr);
+            CHECK(receipts->paid.value == fee * static_cast<std::int64_t>(r.view<Visitor>().size()));
+            CHECK(entry == receipts->paid.value);
+        }
+        else
+        {
+            CHECK(r.view<Visitor>().empty());
+            CHECK(turned_away() == 1);
+            CHECK(receipts == nullptr);
+        }
+    }
+}
+
+TEST_CASE("a guest short of the price is helped out by their party, the richest first")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 300);
+    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
+    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 100 });
+    const auto teen = park.guest({ 0, 0 }, { .cash = 150 });
+    park.party({ parent, child, teen });
+    auto& r = park.world().registry;
+    CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
+    CHECK(r.get<Needs>(child).thirst.value < 0.05f);
+    CHECK(r.get<Wallet>(child).cash.value == 0);
+    CHECK(r.get<Wallet>(parent).cash.value == 800);
+    CHECK(r.get<Wallet>(teen).cash.value == 150);
+    CHECK(r.get<Wallet>(parent).spent_drink.value == 200);
+}

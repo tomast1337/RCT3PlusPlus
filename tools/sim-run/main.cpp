@@ -676,10 +676,15 @@ int main(int argc, char** argv)
             const auto* receipts = r.ctx().find<simulation::Receipts>();
             const std::int64_t in = receipts ? receipts->paid.value : 0;
             const std::int64_t wages = payroll ? payroll->paid.value : 0;
+            std::int64_t takings = 0; // At rides and shops; the rest of what guests paid is entry
+            for (const auto [_, a] : r.view<const simulation::Attraction>().each())
+                takings += a.income.value;
+            const auto* turnstile = r.ctx().find<simulation::Turnstile>();
+            const std::string paid = std::format("guests paid {:.2f} ({:.2f} at the gate), {:d} parties turned away; wages {:.2f}", static_cast<double>(in) / 100, static_cast<double>(in - takings) / 100, turnstile ? turnstile->turned_away : 0, static_cast<double>(wages) / 100);
             if (state.cash)
-                out.info("money: park cash {:.2f} to {:.2f}; guests paid {:.2f}, wages {:.2f}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - wages) / 100, static_cast<double>(in) / 100, static_cast<double>(wages) / 100);
+                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - wages) / 100, paid);
             else
-                out.info("money: unlimited; guests paid {:.2f}, wages {:.2f}", static_cast<double>(in) / 100, static_cast<double>(wages) / 100);
+                out.info("money: unlimited; {}", paid);
         }
         {
             float happy = 0, lazy = 0, load = 0;

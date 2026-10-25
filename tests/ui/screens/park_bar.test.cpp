@@ -21,6 +21,7 @@ namespace
         {
             strings.add("Playing_PauseHelp", u"Halt");
             strings.add("WeatherType_Cloudy_TT", u"Wolken");
+            strings.add("Toolbar_TT_DayNight", u"Tag und Nacht");
             bar = &desktop.root().add<ParkBar>("bar", game_skins::park_bar_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
@@ -163,4 +164,72 @@ TEST_CASE("the rating's help gives its number, then its parts once a week has be
     parts.litter = -20;
     parts.total = 400;
     CHECK(park_rating_help(strings, 0.4f, parts) == u"Rating: 400\nHappy: +300\nRides: +50\nUp: +40\nGuests: +30\nLitter: -20\nScore: 400");
+}
+
+TEST_CASE("the day mode button shows only with a mode, and makes room for itself")
+{
+    Fixture f;
+    CHECK_FALSE(f.bar->day_mode_button().visible);
+    const float money = f.bar->money().rect().width();
+
+    ParkBarValues v;
+    v.day_mode = simulation::DayMode::AlwaysNight;
+    f.bar->show(v);
+    f.desktop.update({ });
+    CHECK(f.bar->day_mode_button().visible);
+    CHECK(f.bar->day_mode_button().icon == "GUI2_DayNightCycle_Night");
+    CHECK(f.bar->day_mode_button().tooltip == u"Tag und Nacht");
+    CHECK(f.bar->day_mode_button().rect().x0 > f.bar->objective_button().rect().x1);
+    CHECK(f.bar->speed_button(0).rect().x0 > f.bar->day_mode_button().rect().x1);
+    CHECK(f.bar->money().rect().width() < money);
+
+    v.day_mode.reset();
+    f.bar->show(v);
+    f.desktop.update({ });
+    CHECK_FALSE(f.bar->day_mode_button().visible);
+    CHECK(f.bar->money().rect().width() == doctest::Approx(money));
+}
+
+TEST_CASE("the day mode button opens the modes below it, and picking one asks for it")
+{
+    Fixture f;
+    ParkBarValues v;
+    v.day_mode = simulation::DayMode::ParkHours;
+    f.bar->show(v);
+    f.desktop.update({ });
+    CHECK_FALSE(f.bar->day_mode_choice(1).visible);
+
+    f.click(f.bar->day_mode_button());
+    f.desktop.update({ });
+    const Rect button = f.bar->day_mode_button().rect();
+    const Rect day = f.bar->day_mode_choice(1).rect();
+    const Rect both = f.bar->day_mode_choice(0).rect();
+    const Rect night = f.bar->day_mode_choice(2).rect();
+    REQUIRE(f.bar->day_mode_choice(1).visible);
+    CHECK(both.y0 >= button.y1); // Below the button, the bar's edge down
+    CHECK(day.x1 <= both.x0 + 1);
+    CHECK(night.x0 >= both.x1 - 1);
+    CHECK_FALSE(f.bar->take_day_mode());
+
+    f.click(f.bar->day_mode_choice(2));
+    CHECK(f.bar->take_day_mode() == simulation::DayMode::AlwaysNight);
+    CHECK_FALSE(f.bar->take_day_mode());
+    CHECK_FALSE(f.bar->day_mode_choice(2).visible);
+}
+
+TEST_CASE("a double click on the money asks for the finances")
+{
+    Fixture f;
+    f.click(f.bar->money());
+    CHECK_FALSE(f.bar->take_finances());
+    f.click(f.bar->money());
+    CHECK(f.bar->take_finances());
+    CHECK_FALSE(f.bar->take_finances());
+
+    // Two clicks far apart are two single clicks.
+    f.desktop.update({ }, UpdateContext { .elapsed = 1 });
+    f.click(f.bar->money());
+    f.desktop.update({ }, UpdateContext { .elapsed = 1 });
+    f.click(f.bar->money());
+    CHECK_FALSE(f.bar->take_finances());
 }

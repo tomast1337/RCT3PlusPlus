@@ -104,6 +104,28 @@ namespace rct3::simulation
         return e;
     }
 
+    void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure)
+    {
+        for (const save::ZooAnimal& z : saved)
+        {
+            // Its model's place: rows of the x, y and z axes, then the position.
+            const glm::vec3 at { z.world[12], z.world[13], z.world[14] };
+            const std::int32_t in = enclosure ? enclosure({ at.x, at.z }) : -1;
+            // shortcut: its needs start afresh and only its health is kept; read the saved food, drink, tiredness
+            // and company once which way they run is checked against a park.
+            const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .health = { std::clamp(z.health, 0.0f, 1.0f) } }, at);
+            auto& r = world.registry;
+            r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = std::atan2(z.world[8], z.world[10]);
+            Animal& animal = r.get<Animal>(e);
+            if (!z.in_crate)
+            {
+                animal.job = AnimalJob::Idle;
+                animal.busy = { };
+            }
+            animal.escaped = in < 0 && !z.in_crate;
+        }
+    }
+
     void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages)
     {
         auto& r = world.registry;

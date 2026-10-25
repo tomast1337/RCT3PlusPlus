@@ -2,8 +2,7 @@
 //
 // The park's animals, drawn. One out of its crate is drawn with its species' own model, posed every frame in
 // the motion that fits what it is doing: walking, eating or drinking at the troughs, asleep, or standing. One
-// still in its crate, or of a species whose model cannot be read, is drawn as the crate. The park's zoo animals
-// as saved are drawn the same way, each where the save placed it, standing.
+// still in its crate, or of a species whose model cannot be read, is drawn as the crate.
 #pragma once
 
 #include "config/game_install.hpp"
@@ -25,10 +24,7 @@ namespace rct3::scene
     struct DrawnAnimals
     {
         std::optional<park::AnimalLibrary> library;
-        std::vector<park::PlacedAnimal> saved_placed; ///< The saved zoo animals; bodies point into `library`
-        std::vector<float> offsets;                   ///< By saved animal, seconds its motion runs ahead, so they do not move as one
-        std::vector<std::size_t> saved;               ///< By saved animal, its place in the saved zoo animals
-        std::vector<park::PlacedAnimal> placed;       ///< All drawn with their models, as last posed
+        std::vector<park::PlacedAnimal> placed; ///< Those drawn with their models, as last posed; bodies point into `library`
         park::AnimalRuns runs { };
         park::ObjectMesh mesh; ///< As last posed
         ui::UiTextures textures;
@@ -36,8 +32,8 @@ namespace rct3::scene
         std::vector<entt::entity> crated { }; ///< By crate, its animal
     };
 
-    /// Reads the models of the saved zoo animals in `scene.people` and uploads their pictures.
-    void load_zoo_animals(render::Device& device, ParkScene& scene, const config::GameInstall& install);
+    /// Finds the animals' models in `install`, to read as animals come.
+    void load_zoo_animals(ParkScene& scene, const config::GameInstall& install);
 
     /// The crate animals come in, as an object to load the model of.
     [[nodiscard]] save::PlacedObject animal_crate();

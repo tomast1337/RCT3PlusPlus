@@ -101,12 +101,13 @@ camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 2
 // An animal from the animal list comes down in an enclosure, paid for, in a crate that opens after a while.
 expect(build.pick("WildAnimals/WildAnimals", "zebra"), "the zebra in the animal list");
 const before = park.cash()!;
+const had = new Set(animals.list().map((a) => a.id)); // The park's own
 await pointer.click(...on_view(c0 + 3, r0 + 2));
 await frames(3);
 build.stop();
-const first = animals.list()[0]?.id;
+const first = animals.list().find((a) => !had.has(a.id))?.id;
 const zebra = () => animals.list().find((a) => a.id === first)!;
-expect(animals.list().length === 1 && zebra().crated, "the zebra in its crate");
+expect(animals.list().length === had.size + 1 && zebra().crated, "the zebra in its crate");
 expect(Math.floor(zebra().at.col) === c0 + 3 && Math.floor(zebra().at.row) === r0 + 2, `the crate where it was put, not ${JSON.stringify(zebra().at)}`);
 expect(park.cash()! < before, "the zebra paid for");
 camera.look({ col: c0 + 3.5, row: r0 + 2.5 }, { col: c0 + 5, row: r0 + 7, up: 4 });
@@ -124,8 +125,8 @@ expect(build.pick("WildAnimals/WildAnimals", "zebra"), "the zebra in the animal 
 await pointer.click(...on_view(c0 + 2, r0 - 2));
 await frames(3);
 build.stop();
-expect(animals.list().length === 2, "a second zebra put down outside the enclosure");
-const second = animals.list().find((a) => a.id !== first)!.id;
+expect(animals.list().length === had.size + 2, "a second zebra put down outside the enclosure");
+const second = animals.list().find((a) => !had.has(a.id) && a.id !== first)!.id;
 const loose = () => animals.list().find((a) => a.id === second)!;
 await until(() => loose().escaped, 3000, "the zebra out");
 await until(() => park.messages().some((m) => m.key === "Thought_PI_AnimalEscaped1"), 60, "the park saying a zebra got out");

@@ -1071,7 +1071,7 @@ namespace rct3::scene
         {
             scene.people = std::move(*people);
             load_people_models(device, scene, install, seed);
-            load_zoo_animals(device, scene, install);
+            load_zoo_animals(scene, install);
             profiling::section("Simulation", [&] {
                 scene.sim.seed = seed;
                 scene.sim.ratings = ratings;
@@ -1190,10 +1190,20 @@ namespace rct3::scene
                     simulation::import_party_mix(scene.sim, *park_model->group_mix);
                 const auto placed_staff = kept != nullptr ? parkfile::place_staff(scene.sim, *kept) : std::vector<entt::entity> { };
                 const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
-                // shortcut: the animals of an original park are not read; only those of our own saves come back.
+                // The animals as our save kept them, else as the original park did.
                 if (kept != nullptr && saved->animals)
-                {
                     parkfile::place_animals(scene.sim, *saved->animals, placed_staff);
+                else
+                {
+                    const save::TerrainGrid& g = scene.grid;
+                    simulation::import_animals(scene.sim, scene.people.zoo_animals, [&](glm::vec2 p) {
+                        const auto col = g.tile_size_x > 0 ? static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
+                        const auto row = g.tile_size_z > 0 ? static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
+                        return scene.enclosures.at(col, row);
+                    });
+                }
+                if (!scene.sim.registry.view<const simulation::Animal>().empty())
+                {
                     const save::PlacedObject crate = animal_crate();
                     load_models(install, std::span(&crate, 1), false, scene.models, scene.pictures);
                     animals_changed(device, scene);

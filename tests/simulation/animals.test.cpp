@@ -4,8 +4,10 @@
 #include "simulation/components.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <numbers>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -232,4 +234,42 @@ TEST_CASE("animals: a keeper crates an escaped animal and takes it back to their
     run(world, ground, kAnimalRates.crated.value + 1);
     CHECK(r.get<Animal>(e).job != AnimalJob::Crated);
     CHECK_FALSE(r.get<Animal>(e).escaped);
+}
+
+TEST_CASE("animals: a park's saved zoo animals come in where they stood, those in crates still crated")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    save::ZooAnimal out;
+    out.species = "zebu";
+    out.first_names = "Zia";
+    out.is_adult = true;
+    out.health = 0.5f;
+    out.world = { 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 2, 0, 3, 1 }; // Facing along x, at (2, 0, 3)
+    save::ZooAnimal crated = out;
+    crated.in_crate = true;
+    crated.world[12] = 11;
+    const std::array saved { out, crated };
+    import_animals(world, saved, ground.enclosure);
+    auto& r = world.registry;
+    const auto animals = r.view<const Animal, const Pose>();
+    REQUIRE(std::ranges::distance(animals) == 2);
+    for (const entt::entity e : animals)
+    {
+        const Animal& a = animals.get<const Animal>(e);
+        const Pose& pose = animals.get<const Pose>(e);
+        CHECK(a.name == "Zia");
+        CHECK(a.health.value == 0.5f);
+        if (pose.position.x == 2)
+        {
+            CHECK(a.job == AnimalJob::Idle);
+            CHECK(a.enclosure == 0);
+            CHECK(pose.heading.value == doctest::Approx(std::numbers::pi / 2));
+        }
+        else
+        {
+            CHECK(a.job == AnimalJob::Crated);
+            CHECK(a.enclosure == 1);
+        }
+    }
 }

@@ -222,3 +222,17 @@ TEST_CASE("themes come in the install's order, once each, for the lists that fil
     CHECK_FALSE(has_theme_filters(BuildList::Coasters));
     CHECK_FALSE(has_theme_filters(BuildList::Facilities));
 }
+
+TEST_CASE("a tracked ride's row tells how many saved designs its kind has, when it has any")
+{
+    StringTable strings;
+    strings.add("RideSelectionWindow_BuildCustomTrack", u"Custom track");
+    strings.add("RideSelectionWindow_DesignsAvailable", u"Designs available: %NUMBER%");
+    std::vector<BuildItem> items { scenery("Giga", BuildList::Coasters, "GigaName"), scenery("Wild", BuildList::Coasters, "WildName") };
+    items[0].kind = items[1].kind = rct3::park::BuildKind::TrackedRide;
+    const std::map<std::string, std::size_t, rct3::strings::LessIgnoringCase> counts { { "giga", 3 } };
+    const auto rows = picker_rows(BuildList::Coasters, items, BuildOffer(), strings, kCoins, counts);
+    REQUIRE(rows.size() == 2);
+    CHECK(rows[0].size == u"Designs available: 3");
+    CHECK(rows[1].size == u"Custom track");
+}

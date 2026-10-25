@@ -14,6 +14,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/construction_panel.hpp"
+#include "ui/screens/design_browser.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/footpath_panel.hpp"
 #include "ui/screens/front_screen.hpp"
@@ -487,6 +488,23 @@ namespace rct3::ui::game_skins
         s.table.selection_skin = kSelectedRow;
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
+        return s;
+    }
+
+    /// The saved designs' window in the game's frame, its list as the management windows' tables.
+    [[nodiscard]] inline DesignBrowserStyle design_browser_style(const Palette& p)
+    {
+        DesignBrowserStyle s;
+        s.text_colour = p.text;
+        s.window = window_style(p);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.table.background = kListBox;
+        s.table.selection_skin = kSelectedRow;
+        s.button = kTextButton;
+        s.button_inset = kLozengeInset;
+        s.previous = kScrollLeft;
+        s.next = kScrollRight;
+        s.border = kStandardBorder;
         return s;
     }
 

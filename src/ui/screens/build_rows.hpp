@@ -4,11 +4,13 @@
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "strings/ascii.hpp"
 #include "ui/money_text.hpp"
 #include "ui/screens/build_picker.hpp"
 #include "ui/screens/tool_menus.hpp"
 #include "ui/string_table.hpp"
 
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -37,7 +39,8 @@ namespace rct3::ui
     [[nodiscard]] std::u16string placement_text(const park::BuildItem& item, const StringTable& strings);
 
     /// The rows of `list`: the items in it that `offer` lets the park build, those of a set under a heading
-    /// named after the set, each row in name order. A row's number is the item's index in `items`.
-    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency);
+    /// named after the set, each row in name order. A row's number is the item's index in `items`. A tracked
+    /// ride's row tells how many saved designs `design_counts` gives its kind, by symbol, when it has any.
+    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts = { });
 
 } // namespace rct3::ui

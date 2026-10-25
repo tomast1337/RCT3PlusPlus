@@ -72,6 +72,7 @@
             "Blocked": "Something is in the way",
             "RouteHelp": "Route: point at a tile and the path finds its own way there from the arrow",
             "NoRoute": "No way there",
+            "StraightHelp": "Straight: routes keep to the line to the tile pointed at, stepping along it, rather than turning once",
             "RemoveHelp": "Remove: click a path to take it away, or drag over paths; refunds what laying them costs"
         },
         "View": {

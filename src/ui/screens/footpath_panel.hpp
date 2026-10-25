@@ -5,8 +5,8 @@
 // it, and a strip running out to the right of the disc that shows one page at a time.
 //
 // Tabs, going round the ring: one shows the building controls, one keeps the camera on the build point while
-// building, one switches route building on (paths find their own way to a tile picked), and two open the path
-// styles and the queue styles. A style page shows each style's picture; the
+// building, one switches route building on (paths find their own way to a tile picked), two open the path
+// styles and the queue styles, and one has routes keep to the straight line to the tile picked. A style page shows each style's picture; the
 // one chosen is marked, and choosing one goes back to the controls. The controls are three arrows that turn
 // left, go straight on or turn right, five slopes from steps down to steps up, a switch to cut into the
 // ground and a button that takes the last piece away. A line under them tells what the control under the
@@ -50,8 +50,9 @@ namespace rct3::ui
         std::string remove_icon;
         std::string paths_icon;
         std::string queues_icon;
+        std::string straight_icon;
         /// Strings keys of the tabs' help, in the order above.
-        std::array<std::string, 6> tab_help; ///< Controls, follow, route, remove, paths, queues
+        std::array<std::string, 7> tab_help; ///< Controls, follow, route, remove, paths, queues, straight
         /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
         /// pictures instead, for on and off.
         std::array<std::string, kFootpathControls> usable_icons;
@@ -76,6 +77,7 @@ namespace rct3::ui
         inline constexpr int kRemoveSlot = 3;
         inline constexpr int kPathsSlot = 4;
         inline constexpr int kQueuesSlot = 5;
+        inline constexpr int kStraightSlot = 6;
         inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
         inline constexpr float kCloseBottom = 9;
         /// From the strip's left edge to the page: the ring's tabs on the right of the disc stand over the room
@@ -178,6 +180,11 @@ namespace rct3::ui
         {
             return route_->on;
         }
+        /// Routes keep to the straight line to their goal rather than turn once.
+        [[nodiscard]] bool straight() const
+        {
+            return straight_->on;
+        }
         /// Clicks take paths away rather than lay them.
         [[nodiscard]] bool removing() const
         {
@@ -214,6 +221,10 @@ namespace rct3::ui
         [[nodiscard]] Button& route_tab() const
         {
             return *route_;
+        }
+        [[nodiscard]] Button& straight_tab() const
+        {
+            return *straight_;
         }
         [[nodiscard]] Button& remove_tab() const
         {
@@ -259,6 +270,7 @@ namespace rct3::ui
         Button* remove_ = nullptr;
         Button* paths_tab_ = nullptr;
         Button* queues_tab_ = nullptr;
+        Button* straight_ = nullptr;
         Widget* body_ = nullptr;
         std::array<Button*, kFootpathControls> controls_ { };
         std::array<bool, kFootpathControls> usable_ { };

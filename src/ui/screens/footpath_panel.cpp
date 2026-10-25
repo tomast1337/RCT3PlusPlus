@@ -53,6 +53,7 @@ namespace rct3::ui
         remove_ = &tab("remove", style_.remove_icon, 3);
         paths_tab_ = &tab("paths", style_.paths_icon, 4);
         queues_tab_ = &tab("queues", style_.queues_icon, 5);
+        straight_ = &tab("straight", style_.straight_icon, 6);
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
             Button& b = body_->add<Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
@@ -210,6 +211,7 @@ namespace rct3::ui
         put_tab(*remove_, footpath_panel::kRemoveSlot);
         put_tab(*paths_tab_, footpath_panel::kPathsSlot);
         put_tab(*queues_tab_, footpath_panel::kQueuesSlot);
+        put_tab(*straight_, footpath_panel::kStraightSlot);
 
         const Rect s = strip();
         const Point body = body_size();

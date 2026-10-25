@@ -20,6 +20,8 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     pool.add("SmallWombat:txt");
     pool.add("WombatAdult:gsi");
     pool.add("WombatYoung:gsi");
+    pool.add("BigWombat:mdl");
+    pool.add("wombat:wad");
     const std::uint32_t at = pool.base();
     // The species, then two animal blocks; the female slots are null.
     std::vector<std::byte> bytes;
@@ -33,7 +35,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
         put(p, { price, bits(0.7f) });
         std::copy(p.begin(), p.end(), bytes.begin() + static_cast<std::ptrdiff_t>(start + 0x14));
     }
-    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0xC, "WombatDesc:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40 + 0x1C, "BigWombat:txt" }, { 0x40 + 0x30, "WombatAdult:gsi" }, { 0x74 + 0x1C, "SmallWombat:txt" }, { 0x74 + 0x30, "WombatYoung:gsi" } });
+    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0xC, "WombatDesc:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40 + 0x04, "BigWombat:mdl" }, { 0x40 + 0x08, "wombat:wad" }, { 0x40 + 0x1C, "BigWombat:txt" }, { 0x40 + 0x30, "WombatAdult:gsi" }, { 0x74 + 0x1C, "SmallWombat:txt" }, { 0x74 + 0x30, "WombatYoung:gsi" } });
     const auto items = read_animal_species(overlay, overlay.common());
     REQUIRE(items.size() == 1);
     CHECK(items[0].name == "wombat");
@@ -45,12 +47,15 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     CHECK(s.shelter == "burrow");
     CHECK(s.fence_strength == doctest::Approx(1.5f));
     REQUIRE(s.variants[0].has_value());
+    CHECK(s.variants[0]->model == "BigWombat");
+    CHECK(s.variants[0]->motions == "wombat");
     CHECK(s.variants[0]->description_text == "BigWombat");
     CHECK(s.variants[0]->icon == "WombatAdult");
     CHECK(s.variants[0]->price == 12500);
     CHECK(s.variants[0]->rarity == doctest::Approx(0.7f));
     CHECK_FALSE(s.variants[1].has_value());
     REQUIRE(s.variants[2].has_value());
+    CHECK(s.variants[2]->model.empty());
     CHECK(s.variants[2]->description_text == "SmallWombat");
     CHECK(s.variants[2]->price == 16000);
     CHECK_FALSE(s.variants[3].has_value());

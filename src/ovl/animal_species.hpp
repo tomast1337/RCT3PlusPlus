@@ -18,6 +18,8 @@ namespace rct3::ovl
     /// One animal of a species that can be bought.
     struct AnimalVariant
     {
+        std::string_view model;            ///< "mdl" item (animal_model.hpp)
+        std::string_view motions;          ///< "wad" item (animal_motions.hpp)
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item; adults of both sexes often share one
         std::int32_t price = 0;            ///< Hundredths of the currency unit
@@ -52,7 +54,7 @@ namespace rct3::ovl
 
     /// Animal species of one part of an overlay: pointer symbols tagged "was". Parks name a species by its
     /// symbol name. The record holds its name, description and icon references from 0x08, four pointers to the animals
-    /// (each with its description, icon and price), a pointer to the name of its shelter and the fence strength it needs. Views in the
+    /// (each with its model, motion set, description, icon and price), a pointer to the name of its shelter and the fence strength it needs. Views in the
     /// result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalSpeciesItem> read_animal_species(const Overlay& overlay, const Part& part);
 

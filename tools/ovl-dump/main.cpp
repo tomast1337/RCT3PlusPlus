@@ -2,7 +2,7 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--wad] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include "logging/log.hpp"
@@ -27,6 +27,7 @@
 #include "ovl/terrain_type.hpp"
 // --- end scenery and placement item types ---
 #include "ovl/animal_model.hpp"
+#include "ovl/animal_motions.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/bone_anim.hpp"
@@ -87,6 +88,7 @@ namespace
         bool san = false;
         bool modelanim = false;
         bool mdl = false;
+        bool wad = false;
         bool ssk = false;
         bool mam = false;
         bool fct = false;
@@ -454,6 +456,24 @@ namespace
                     continue;
                 for (const auto& mesh : item.model->levels.front())
                     out.info("    material {} vertices {:d} triangles {:d}", mesh.texture, mesh.vertex_count, mesh.index_count / 3);
+            }
+        }
+        if (opt.wad)
+        {
+            for (const auto& item : rct3::ovl::read_animal_motions(overlay, part))
+            {
+                const std::string name(item.name);
+                if (!item.motions)
+                {
+                    out.info("  {:<32} <unreadable>", name.c_str());
+                    continue;
+                }
+                out.info("  {:<32} slots {:d}", name.c_str(), item.motions->animations.size());
+                for (std::size_t slot = 0; slot < item.motions->animations.size(); ++slot)
+                {
+                    if (!item.motions->animations[slot].empty())
+                        out.info("    {:>2} {} {:g}s", slot, item.motions->animations[slot], item.motions->seconds[slot]);
+                }
             }
         }
         if (opt.ssk)
@@ -1369,6 +1389,8 @@ int main(int argc, char** argv)
             opt.modelanim = true;
         else if (std::strcmp(argv[i], "--mdl") == 0)
             opt.mdl = true;
+        else if (std::strcmp(argv[i], "--wad") == 0)
+            opt.wad = true;
         else if (std::strcmp(argv[i], "--ssk") == 0)
             opt.ssk = true;
         else if (std::strcmp(argv[i], "--mam") == 0)
@@ -1415,7 +1437,7 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
+        out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--wad] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
         out.error("scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]");
         return 2;
     }

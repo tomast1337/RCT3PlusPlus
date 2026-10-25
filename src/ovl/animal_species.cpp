@@ -20,6 +20,8 @@ namespace rct3::ovl
 
         // An animal's own block.
         constexpr std::size_t kVariantSize = 0x34;
+        constexpr std::size_t kVariantModel = 0x04;
+        constexpr std::size_t kVariantMotions = 0x08;
         constexpr std::size_t kVariantPrice = 0x14;
         constexpr std::size_t kVariantRarity = 0x18;
         constexpr std::size_t kVariantDescription = 0x1C;
@@ -54,7 +56,7 @@ namespace rct3::ovl
                     if (at == 0)
                         continue;
                     if (const auto v = ItemRecord::open(space, refs, at, kVariantSize))
-                        s.variants[i] = AnimalVariant { v->ref(kVariantDescription, "txt"), v->ref(kVariantIcon, "gsi"), v->i32(kVariantPrice), v->real(kVariantRarity) };
+                        s.variants[i] = AnimalVariant { v->ref(kVariantModel, "mdl"), v->ref(kVariantMotions, "wad"), v->ref(kVariantDescription, "txt"), v->ref(kVariantIcon, "gsi"), v->i32(kVariantPrice), v->real(kVariantRarity) };
                 }
                 item.species = s;
             }

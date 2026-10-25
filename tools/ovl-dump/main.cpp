@@ -2,11 +2,12 @@
 //
 // ovl-dump: print the structure of an OVL common/unique pair.
 //
-//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
+//   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
 #include "logging/log.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -25,6 +26,7 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/terrain_type.hpp"
 // --- end scenery and placement item types ---
+#include "ovl/animal_model.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/bone_anim.hpp"
@@ -84,6 +86,7 @@ namespace
         bool spl = false;
         bool san = false;
         bool modelanim = false;
+        bool mdl = false;
         bool ssk = false;
         bool mam = false;
         bool fct = false;
@@ -423,6 +426,34 @@ namespace
                     continue;
                 }
                 out.info("  {:<32} frames {:d} duration {:g} moving {:d} turning {:d}", name.c_str(), item.anim->frame_count, item.anim->duration, item.anim->position_bones.size(), item.anim->rotation_bones.size());
+            }
+        }
+        if (opt.mdl)
+        {
+            const auto models = rct3::ovl::read_animal_models(overlay, part);
+            const auto bad = std::ranges::count_if(models, [](const auto& item) { return !item.model; });
+            out.info("animal models  {:d} ({:d} unreadable)", models.size(), bad);
+            for (const auto& item : models)
+            {
+                const std::string name(item.name);
+                if (!item.model)
+                {
+                    out.info("  {:<32} <unreadable>", name.c_str());
+                    continue;
+                }
+                std::string levels;
+                for (const auto& level : item.model->levels)
+                {
+                    std::size_t vertices = 0;
+                    for (const auto& mesh : level)
+                        vertices += mesh.vertex_count;
+                    levels += std::format(" {}/{}", level.size(), vertices);
+                }
+                out.info("  {:<32} bones {:d} levels (meshes/vertices){}", name.c_str(), item.model->bones.size(), levels);
+                if (item.model->levels.empty())
+                    continue;
+                for (const auto& mesh : item.model->levels.front())
+                    out.info("    material {} vertices {:d} triangles {:d}", mesh.texture, mesh.vertex_count, mesh.index_count / 3);
             }
         }
         if (opt.ssk)
@@ -1336,6 +1367,8 @@ int main(int argc, char** argv)
             opt.san = true;
         else if (std::strcmp(argv[i], "--modelanim") == 0)
             opt.modelanim = true;
+        else if (std::strcmp(argv[i], "--mdl") == 0)
+            opt.mdl = true;
         else if (std::strcmp(argv[i], "--ssk") == 0)
             opt.ssk = true;
         else if (std::strcmp(argv[i], "--mam") == 0)
@@ -1382,7 +1415,7 @@ int main(int argc, char** argv)
     }
     if (!path)
     {
-        out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
+        out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
         out.error("scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg]");
         return 2;
     }

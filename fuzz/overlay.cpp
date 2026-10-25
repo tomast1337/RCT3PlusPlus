@@ -14,6 +14,7 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/terrain_type.hpp"
 // --- end scenery and placement item types ---
+#include "ovl/animal_model.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/bone_anim.hpp"
@@ -136,6 +137,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (item.anim)
             sink += item.anim->positions.size() + item.anim->rotations.size() + item.anim->position_bones.size();
+    }
+    for (const auto& item : rct3::ovl::read_animal_models(*overlay, part))
+    {
+        if (item.model)
+            sink += item.model->bones.size() + item.model->levels.size();
     }
     for (const auto& item : rct3::ovl::read_simple_skins(*overlay, part))
     {

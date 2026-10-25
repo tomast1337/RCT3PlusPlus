@@ -2646,7 +2646,7 @@ namespace rct3::scene
     {
         parkfile::SavedPark saved;
         saved.base = scene.base;
-        saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.footpaths.paths, scene.rides);
+        saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.placed, scene.footpaths.paths, scene.rides);
         if (auto summary = save::read_summary(scene.base))
             saved.summary = std::move(*summary);
         // shortcut: the picture stays the original park's and the day is the week's first; draw the park and

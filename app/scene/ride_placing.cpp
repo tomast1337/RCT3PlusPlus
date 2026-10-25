@@ -138,6 +138,8 @@ namespace rct3::scene
                     o.colours = model->second.default_colours;
                 scene.attractions[o.id] = { scene.placing.item->stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, scene.placing.ride };
             }
+            else
+                scene.placed.insert(o.id);
             scene.objects.push_back(o);
             objects_changed(scene);
             return o.id;

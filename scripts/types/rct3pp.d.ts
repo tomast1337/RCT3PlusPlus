@@ -154,6 +154,8 @@ declare namespace map {
     function paths(): PathPiece[];
     /** The tiles with support columns standing on them, and how many pieces each has. */
     function supports(): { col: number; row: number; pieces: number }[];
+    /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest. */
+    function objects(): { symbol: string; overlay: string; col: number; row: number }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */

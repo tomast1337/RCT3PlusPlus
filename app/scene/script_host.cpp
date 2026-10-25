@@ -487,6 +487,16 @@ namespace rct3::scene
                 tiles.push_back({ { "col", tile.first }, { "row", tile.second }, { "pieces", n } });
             return tiles;
         });
+        engine_.define("map.objects", [this](const Json&) {
+            grid_of(park_);
+            Json objects = Json::array();
+            for (const save::PlacedObject& o : park_->objects)
+            {
+                if (!o.hidden)
+                    objects.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row } });
+            }
+            return objects;
+        });
         engine_.define("build.flatRides", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));
             if (!items)

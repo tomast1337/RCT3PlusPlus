@@ -25,6 +25,7 @@
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
 #include "scene/ride_placing.hpp"
+#include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -371,6 +372,16 @@ namespace rct3::scene
         bool clashes(const ParkScene& scene, const park::SolidTiles& taken, const save::PlacedObject& o)
         {
             return park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), taken, scene.footpaths.paths, scene.grid) != park::Clash::None;
+        }
+
+        /// Makes the park's own trains of `ride` ghosts, which stop at an open end of the track rather than crash,
+        /// or real trains again.
+        void ghost_trains(ParkScene& scene, std::size_t ride, bool ghost)
+        {
+            const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
+            if (auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr)
+                for (simulation::Coaster& c : fleet->trains)
+                    c.ghost = ghost;
         }
 
         /// Recomputes what fits the open end, the piece picked and its ghost.
@@ -1171,6 +1182,8 @@ namespace rct3::scene
 
     void close_track_building(ParkScene& scene)
     {
+        if (scene.building.ride)
+            ghost_trains(scene, *scene.building.ride, false);
         scene.building.ride.reset();
         scene.building.selected.reset();
         scene.building.ghost.reset();
@@ -1973,8 +1986,10 @@ namespace rct3::scene
         }
         if (changed)
             refresh(scene, b, assets);
-        // A test of a track that is not yet a circuit: the park runs no train on it, so a ghost of its first train
-        // runs it, stopping where it ends. A circuit's own trains test it.
+        // While the panel has the ride, its own trains are ghosts too, so none crashes off a track being built.
+        ghost_trains(scene, *b.ride, true);
+        // A test of a track that is not yet a circuit, of a ride the park does not run yet: no train runs it, so a
+        // ghost of its first train does, stopping where it ends. Once the park runs the ride, its own trains test it.
         const save::Ride& tested = scene.rides.rides.at(*b.ride);
         const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
         const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !tested.trains.empty() && scene.car_fits.contains(*b.ride) && assets.install;
@@ -1993,6 +2008,7 @@ namespace rct3::scene
                 train->closed = false;
                 train->ghost = true;
                 train->running = true;
+                train->speed = train->station_speed; // Sent off by the station, as the park sends a train
                 park::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
                 const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
@@ -2020,6 +2036,7 @@ namespace rct3::scene
                 t.train.travelled = 0;
                 t.train.launched = false;
                 t.train.running = true;
+                t.train.speed = t.train.station_speed;
                 t.waited = 0;
             }
             std::vector<glm::mat4> places;

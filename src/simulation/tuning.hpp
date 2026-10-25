@@ -333,6 +333,15 @@ namespace rct3::simulation::tuning
         std::int32_t reach = 3; ///< Tiles round them they see a themed area in
     };
 
+    /// Rides with more than one station as ways across the park: a guest going far may ride from one station
+    /// to another when that is sooner than walking, counting the wait in its queue and the ride.
+    struct Transport
+    {
+        Seconds refresh { 30 };  ///< Between fresh looks at each ride's queues, closures and breakdowns
+        Seconds boarding { 30 }; ///< Through the station, waiting for a train and getting on and off
+        Seconds dwell { 15 };    ///< A train stands at each station on the way
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -357,6 +366,7 @@ namespace rct3::simulation::tuning
         Prizes prizes;
         Crashes crashes;
         Vips vips;
+        Transport transport;
     };
 
 } // namespace rct3::simulation::tuning

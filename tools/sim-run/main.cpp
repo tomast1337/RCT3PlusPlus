@@ -541,6 +541,8 @@ int main(int argc, char** argv)
                         ++at[errand.station][1], ++at[errand.off][2];
                 for (std::size_t s = 0; s < at.size(); ++s)
                     line += std::format("  [station {} queue {} on {} off {}]", s, at[s][0], at[s][1], at[s][2]);
+                const auto crossing = std::ranges::count_if(r.view<const simulation::Crossing>().each(), [&](const auto& c) { return std::get<1>(c).ride == e; });
+                line += std::format("  crossing the park {}", crossing);
             }
         }
         out.info("{}", line);

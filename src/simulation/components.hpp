@@ -155,6 +155,7 @@ namespace rct3::simulation
     {
         std::array<std::uint32_t, 3> in { };
         std::array<std::uint32_t, 3> out { };
+        std::uint32_t turned_away = 0; ///< Parties that could not pay to come in
     };
 
     /// The intensity of rides a guest likes, 0..1 as rides are rated; any when they have none.

@@ -1872,6 +1872,7 @@ namespace rct3::simulation
             }
             wallet.cash.value -= attraction.price.value;
             attraction.income.value += attraction.price.value;
+            r.ctx().emplace<Receipts>().paid.value += attraction.price.value;
             ++attraction.customers;
             if (need != nullptr)
                 *need = 0;
@@ -2387,6 +2388,7 @@ namespace rct3::simulation
                         }
                         wallet.cash.value -= attraction.price.value;
                         attraction.income.value += attraction.price.value;
+                        r.ctx().emplace<Receipts>().paid.value += attraction.price.value;
                         ++attraction.customers;
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
                         if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())

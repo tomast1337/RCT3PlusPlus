@@ -515,6 +515,7 @@ namespace rct3::scene
         std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
+        std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
         /// Of each ride whose trains have crashed, the crashes and dangers (simulation::Wrecks) already taken in.

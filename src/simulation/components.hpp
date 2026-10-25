@@ -664,6 +664,12 @@ namespace rct3::simulation
         double owed = 0; ///< Hundredths earned and not yet paid, under one
     };
 
+    /// What guests have paid the park for rides, shops and entry, kept in the registry's context.
+    struct Receipts
+    {
+        Money paid { };
+    };
+
     /// The park's run of vandalism, kept in the registry's context.
     /// A photo taken of a player's guest, with their party, at a photo spot.
     struct Photo

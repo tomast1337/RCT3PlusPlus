@@ -2527,6 +2527,13 @@ namespace rct3::scene
                         *scene.park.cash -= payroll->paid.value - scene.wages_seen;
                     scene.wages_seen = payroll->paid.value;
                 }
+                // What guests pay for rides, shops and entry goes into it.
+                if (const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>())
+                {
+                    if (scene.park.cash)
+                        *scene.park.cash += receipts->paid.value - scene.receipts_seen;
+                    scene.receipts_seen = receipts->paid.value;
+                }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
                     if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)

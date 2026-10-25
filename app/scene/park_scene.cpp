@@ -1284,6 +1284,7 @@ namespace rct3::scene
             // What is hidden cannot be clicked.
             if (scene.pick_boxes_of != scene.objects.size())
             {
+                const profiling::Scope zone("PickBoxes");
                 scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
                 scene.pick_boxes_of = scene.objects.size();
             }
@@ -1408,8 +1409,8 @@ namespace rct3::scene
     {
         // The ground is built before the models that give the rides' floors their size are read.
         if (scene.footpaths.floors_stale)
-            rebuild_ground(device, scene, assets);
-        update_led_signs(device, scene, assets);
+            profiling::section("Ground", [&] { rebuild_ground(device, scene, assets); });
+        profiling::section("LedSigns", [&] { update_led_signs(device, scene, assets); });
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = *scene.desktop;

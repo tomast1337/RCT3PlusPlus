@@ -932,7 +932,8 @@ namespace rct3::ui
         if (f.common == nullptr)
             return page;
         page.title = attraction_name(*f.common, strings);
-        const std::u16string note = f.refusal.empty() ? status(*f.common, strings) : text(strings, f.refusal);
+        // A refusal names the ride either way the translation chose.
+        const std::u16string note = f.refusal.empty() ? status(*f.common, strings) : filled(filled(text(strings, f.refusal), u"%RIDENAME%", page.title), u"%NAME%", page.title);
         switch (tab)
         {
             case AttractionTab::View:

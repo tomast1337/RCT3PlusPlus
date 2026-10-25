@@ -2284,7 +2284,10 @@ namespace rct3::scene
                         scene.broken_rides.push_back({ e });
                     else
                         scene.broken_rides.erase(told);
-                    tell(!upkeep.broken ? "RideFixedMessage" : upkeep.kind == simulation::Breakdown::ControlFailure ? "RideBrokenMessageControlFail" : "RideBrokenMessage");
+                    // Each kind of breakdown has its own message, in the order the kinds are numbered.
+                    constexpr std::array<std::string_view, 9> kBroken = { "RideBrokenMessage", "RideBrokenMessageEmergencyStop", "RideBrokenMessageRestraintsFailOpen", "RideBrokenMessageRestraintsFailClose", "RideBrokenMessageDoorsFailOpen", "RideBrokenMessageDoorsFailClose", "RideBrokenMessageStuckLeavingStation", "RideBrokenMessageBrakesFail", "RideBrokenMessageControlFail" };
+                    const auto kind = static_cast<std::size_t>(std::to_underlying(upkeep.kind));
+                    tell(!upkeep.broken ? "RideFixedMessage" : kind < kBroken.size() ? kBroken[kind] : kBroken[0]);
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
                     if (index >= scene.rides.rides.size())

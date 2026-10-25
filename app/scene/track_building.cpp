@@ -30,6 +30,7 @@
 #include "simulation/import_park.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/career_scenarios.hpp"
 #include "ui/game_style.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/money_text.hpp"
@@ -70,8 +71,8 @@ namespace rct3::scene
         constexpr std::string_view kBrowserName = "design_browser"; ///< The saved designs' window
         constexpr std::string_view kCustomTrack = "TrackBrowser_CustomTrack";
         constexpr std::string_view kLockedSuffix = "TrackBrowser_LockedSuffix";
-        constexpr std::string_view kLockedHelp = "TrackBrowser_LockedHelp";
-        constexpr std::string_view kDesignText = "TrackDesign_"; ///< Before a design's name, for its translated name
+        constexpr std::string_view kLockedHelp = "TrackBrowser_LockedHelp"; ///< The name of its line
+        constexpr std::string_view kDesignText = "TrackDesign_";            ///< Before a design's name, for its translated name
         constexpr std::array<std::string_view, 4> kArmJoints { "base", "lower", "upper", "head" };
         constexpr std::string_view kArmEnable = "ATE_RoboCoaster_Enable";
         constexpr std::string_view kArmEnableHelp = "ATE_TT_RoboCoaster_Enable";
@@ -2226,7 +2227,7 @@ namespace rct3::scene
                 lines = ui::design_lines(summary, *assets.strings, { ui::currency(*assets.strings, currency), units });
                 locked = b.designs_locked.at(*b.design_shown);
                 if (locked)
-                    lines.push_back({ .label = std::u16string(assets.strings->get(kLockedHelp)), .name = std::string(kLockedHelp) });
+                    lines.push_back({ .label = ui::locked_design_help(*assets.strings, summary.scenario, summary.level), .name = std::string(kLockedHelp) });
                 b.design_train = trains.empty() ? 0 : static_cast<std::size_t>(std::clamp<std::int32_t>(summary.train, 0, static_cast<std::int32_t>(trains.size()) - 1));
             }
             browser->show_design(picture, std::move(lines), !locked);

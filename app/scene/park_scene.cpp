@@ -1576,14 +1576,18 @@ namespace rct3::scene
             {
                 const ui::Point from = *std::exchange(scene.right_press, std::nullopt);
                 const ui::Rect screen = desktop.root().rect();
-                if (ride_placing(scene))
+                // Only a still click: a right drag moves the camera and leaves the tool out, as in the game.
+                const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
+                if (!still)
+                    ;
+                else if (ride_placing(scene))
                     stop_ride_placing(scene); // A right click puts the placing away, as in the game
                 else if (land_tool(scene))
                 {
                     if (!delete_waterfall(scene, pointer.position, { screen.width(), screen.height() }))
                         stop_land_tools(scene);
                 }
-                else if (std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack && !over)
+                else if (!over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
             }
             // The customers page follows the running park; it has no controls to lose a half-made change in.

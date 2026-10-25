@@ -1482,11 +1482,14 @@ namespace rct3::simulation
                     {
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
-                        // Waiting for the others: in a ring with them on the last tile.
+                        // Waiting for the others: in a ring with them on the last tile, round a spot of the
+                        // party's own there, so two parties waiting by one exit do not stand in one another.
                         if (stride.route.empty() && errand.kind == ErrandKind::Waiting)
                         {
                             const auto [place, of] = place_in_party(r, movers[i]);
-                            stride.lane_to = ring_lane(place, of);
+                            const float off = kLaneReach - kTuning.walking.huddle_radius.value;
+                            const glm::vec2 middle = member == nullptr ? glm::vec2 { 0.0f } : off * glm::vec2(2 * fixed_share(member->party, 1) - 1, 2 * fixed_share(member->party, 2) - 1);
+                            stride.lane_to = middle + ring_lane(place, of);
                             ringed = true;
                         }
                     }

@@ -51,6 +51,7 @@ namespace rct3::simulation
         std::vector<float> distance;     ///< Along the track to each point, from 0
         std::vector<float> height;       ///< Of each point
         std::vector<glm::vec3> points;   ///< Where each point is; may be empty, when only the heights are known
+        std::vector<glm::vec3> ups;      ///< Up for the track at each point, leaning with its bank; empty for straight up
         std::vector<Stretch> kinds;      ///< Of the stretch from each point to the next
         std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; unread elsewhere
         float lift_speed = 2;
@@ -109,6 +110,9 @@ namespace rct3::simulation
     /// track with two; under its points, at the height, when only that is known.
     [[nodiscard]] glm::vec3 track_point(const Coaster& coaster, float d);
 
+    /// Up for `coaster`'s track `d` along it, leaning with its bank, a unit vector; straight up when not known.
+    [[nodiscard]] glm::vec3 track_up(const Coaster& coaster, float d);
+
     /// The way `coaster`'s track runs `d` along it, a unit vector; +z when it is not known.
     [[nodiscard]] glm::vec3 track_way(const Coaster& coaster, float d);
 
@@ -123,12 +127,13 @@ namespace rct3::simulation
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// A lap's graphs taken from a train as it runs: a sample each tenth of a second of its speed, height and the
-    /// forces on its riders, each the average over that tenth.
+    /// forces its riders feel, each the average over that tenth. The forces are in the track's own frame, so a
+    /// banked turn presses riders into their seats rather than sideways.
     struct LapRecorder
     {
-        float seconds = 0;           ///< Into the sample being taken
-        glm::vec3 velocity_from { }; ///< As the sample began
-        float speed_sum = 0, height_sum = 0;
+        float seconds = 0; ///< Into the sample being taken
+        std::optional<float> speed_before { };
+        float speed_sum = 0, height_sum = 0, vertical_sum = 0, lateral_sum = 0;
         std::vector<float> speed, altitude, vertical, lateral; ///< Oldest first
     };
 

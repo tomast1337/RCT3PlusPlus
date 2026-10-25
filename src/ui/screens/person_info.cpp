@@ -17,7 +17,7 @@ namespace rct3::ui
 
     namespace
     {
-        constexpr std::array<PersonTabInfo, 7> kGuestTabs { {
+        constexpr std::array<PersonTabInfo, 8> kGuestTabs { {
             { PersonTab::General, 0, "Guest_Options", "GuestDetails_ViewHelp" },
             { PersonTab::Thoughts, 1, "Guest_Thoughts", "GuestDetails_ThoughtsHelp" },
             { PersonTab::Rides, 2, "Guest_Rides", "GuestDetails_RidesVisitedHelp" },
@@ -25,6 +25,7 @@ namespace rct3::ui
             { PersonTab::Stats, 4, "Guest_Stats", "GuestDetails_StatsHelp" },
             { PersonTab::Cash, 5, "Guest_Cash", "GuestDetails_CashHelp" },
             { PersonTab::Passport, 6, "Guest_Passport", "GuestDetails_PassportHelp" },
+            { PersonTab::Party, 7, "Guest_Group", "GuestDetails_GroupHelp" },
         } };
         constexpr std::array<PersonTabInfo, 3> kStaffTabs { {
             { PersonTab::General, 0, "Staff_InfoIcon", "Staff_Details" },
@@ -639,6 +640,7 @@ namespace rct3::ui
                     costume(page, *facts.staff, strings);
                 break;
             case PersonTab::Uniform:
+            case PersonTab::Party:
                 break;
         }
         return page;

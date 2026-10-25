@@ -509,8 +509,13 @@ namespace rct3::scene
             profiling::section("Waterfalls", [&] { park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh); });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
-        if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
-            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", scene.shown_person ? kPeopleViewBack : scene.horizon, [&] { scene.shown_person ? draw_people_alone(device, scene, std::array { *scene.shown_person }) : draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
+        if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || !scene.shown_party.empty()))
+        {
+            // A person, or a party, stands alone; anything else is seen where it is in the park.
+            const std::array person { scene.shown_person.value_or(0) };
+            const std::span<const std::size_t> alone = scene.shown_person ? std::span<const std::size_t>(person) : std::span<const std::size_t>(scene.shown_party);
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
+        }
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.

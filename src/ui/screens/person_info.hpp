@@ -39,6 +39,7 @@ namespace rct3::ui
         Tasks,   ///< Staff: the jobs they do
         Uniform, ///< Staff: a paint tab, the colours of their uniform or costume
         Costume, ///< Entertainers: which costume they wear
+        Party,   ///< Guests: opens the window of the party they go round with
     };
 
     struct PersonTabInfo

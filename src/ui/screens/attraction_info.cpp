@@ -759,12 +759,12 @@ namespace rct3::ui
         return tabs;
     }
 
-    std::vector<StateChoice> state_choices(AttractionKind kind)
+    std::vector<StateChoice> state_choices(AttractionKind kind, bool tested)
     {
         std::vector<StateChoice> out;
         for (const StateChoice& c : kStateChoices)
         {
-            if (c.state != save::AttractionState::Testing || kind == AttractionKind::Tracked || kind == AttractionKind::Flat)
+            if (c.state != save::AttractionState::Testing || (tested && (kind == AttractionKind::Tracked || kind == AttractionKind::Flat)))
                 out.push_back(c);
         }
         return out;

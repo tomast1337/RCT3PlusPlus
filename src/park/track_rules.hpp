@@ -88,8 +88,9 @@ namespace rct3::park
     /// can. `editing`: its track is open in the construction panel. `course`: its track's course, when known,
     /// for the length of its stations and its reverse cable lift hill. Checked in the order the player meets them: an
     /// unjoined track, no station, too few pieces, not a circuit, a ride never tested, the panel open, a
-    /// station shorter than a train, a cable lift ride without its lift, its entrances and exits, then for
-    /// a ride of one entrance and one exit on an open track, an exit before the entrance.
+    /// station shorter than a train, a cable lift ride without its lift, then, to open only, its entrances and
+    /// exits and for a ride of one entrance and one exit on an open track, an exit before the entrance. A flat
+    /// ride has only the door checks, so it may always be tested.
     [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt);
 
     /// `track` (pieces of `pieces` laid in order) after every pattern of `patterns` has swapped what it

@@ -1709,7 +1709,8 @@ namespace rct3::scene
             b.colours = colours;
             b.tabs_for.reset();
         }
-        const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Tracked);
+        const park::AttractionRef ref { .kind = park::AttractionRef::Kind::Ride, .index = *b.ride };
+        const std::vector<ui::StateChoice> states = state_choices(scene, ref);
         if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
         {
             scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
@@ -1735,11 +1736,7 @@ namespace rct3::scene
             tabs[Colour].icon = "Attraction_Colour";
             tabs[Colour].help = assets.strings->get("Scenery_SetFlexiColours");
             tabs[Colour].paints = { colours.begin(), colours.end() };
-            for (const ui::StateChoice& s : states)
-            {
-                const bool is = s.state == std::get<1>(now);
-                tabs[State].choices.push_back({ std::string(is ? s.disabled_icon : s.icon), std::u16string(assets.strings->get(s.help)), !is });
-            }
+            tabs[State].choices = state_fan(scene, ref, *assets.strings);
             for (std::size_t i = 0; i < tabs.size(); ++i)
             {
                 tabs[i].slot = static_cast<int>(i);

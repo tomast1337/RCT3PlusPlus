@@ -81,13 +81,26 @@ TEST_CASE("entrances and exits are counted as the ride's door rules say")
     CHECK_FALSE(open_refusal(two, TrackRules { }, kOpen, false));
     // One per station.
     CHECK(open_refusal(two, rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false) == "CantOpenRideMissingEntrance");
-    CHECK(open_refusal(two, rules_with([](TrackRules& r) { r.exits = 0; }), kTest, false) == "CantTestRideMissingExit");
+    CHECK(open_refusal(two, rules_with([](TrackRules& r) { r.exits = 0; }), kOpen, false) == "CantOpenRideMissingExit");
     // None anywhere.
     save::Ride bare = ride(6, 1);
     bare.stations[0] = { .entrance = 1 };
     CHECK(open_refusal(bare, TrackRules { }, kOpen, false) == "CantOpenRideNoExit");
     CHECK_FALSE(open_refusal(bare, rules_with([](TrackRules& r) { r.exits = 1; }), kOpen, false));
-    CHECK(open_refusal(bare, rules_with([](TrackRules& r) { r.exits = kOneDoor; }), kTest, false) == "CantTestRideNoExit");
+    CHECK(open_refusal(bare, rules_with([](TrackRules& r) { r.exits = kOneDoor; }), kOpen, false) == "CantOpenRideNoExit");
+    // A test run needs no doors.
+    CHECK_FALSE(open_refusal(bare, TrackRules { }, kTest, false));
+}
+
+TEST_CASE("a flat ride always tests, and opens once it has its doors")
+{
+    save::Ride flat;
+    flat.kind = save::RideKind::Flat;
+    flat.stations.resize(1);
+    CHECK_FALSE(open_refusal(flat, TrackRules { }, kTest, false));
+    CHECK(open_refusal(flat, TrackRules { }, kOpen, false) == "CantOpenRideNoEntrance");
+    flat.stations[0] = { .entrance = 1, .exit = 2 };
+    CHECK_FALSE(open_refusal(flat, TrackRules { }, kOpen, false));
 }
 
 TEST_CASE("patterns swap a station run's ends for its own end pieces")

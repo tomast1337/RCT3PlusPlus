@@ -281,11 +281,12 @@ namespace rct3::ui
     {
         save::AttractionState state = save::AttractionState::Open;
         std::string_view icon;          ///< Skin
-        std::string_view disabled_icon; ///< Skin when it is the state already
+        std::string_view disabled_icon; ///< Skin when the attraction cannot be put in it
         std::string_view help;          ///< String key
     };
 
-    /// The states an attraction of `kind` can be put in: open and closed, and testing for rides.
-    [[nodiscard]] std::vector<StateChoice> state_choices(AttractionKind kind);
+    /// The states an attraction of `kind` can be put in: open and closed, and testing for rides that are
+    /// `tested` (some tracked rides open without a test run, and offer none).
+    [[nodiscard]] std::vector<StateChoice> state_choices(AttractionKind kind, bool tested = true);
 
 } // namespace rct3::ui

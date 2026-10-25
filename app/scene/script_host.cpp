@@ -510,6 +510,7 @@ namespace rct3::scene
                      { "complaint", b.complaint },
                      { "testing", b.test.has_value() },
                      { "testAt", b.test ? Json(b.test->train.at) : Json(nullptr) },
+                     { "testWrecks", b.test ? std::ranges::count_if(b.test->wrecks, [](const simulation::Wreck& w) { return w.state != simulation::WreckState::Gone; }) : 0 },
                      { "designs", std::move(designs) },
                      { "selected", b.selected ? Json(*b.selected) : Json(nullptr) },
                      { "split", std::to_underlying(b.split) } };

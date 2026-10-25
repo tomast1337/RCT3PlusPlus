@@ -14,6 +14,8 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "random/generator.hpp"
+#include "simulation/crash.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -68,7 +70,9 @@ namespace rct3::simulation
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;
-        bool ghost = false; ///< A test train shown while the track is built: it never crashes, stopping at an end
+        /// A test train shown while the track is built: it crashes as any train does, but its wrecks hurt no one
+        /// and the crash is not the park's
+        bool ghost = false;
         // The train
         bool running = false;
         float at = 0;          ///< Distance of the front of the train
@@ -102,6 +106,10 @@ namespace rct3::simulation
 
     /// The way `coaster`'s track runs `d` along it, a unit vector; +z when it is not known.
     [[nodiscard]] glm::vec3 track_way(const Coaster& coaster, float d);
+
+    /// The wrecks of `coaster`'s crashed train, a car each from the front back, thrown on from where each left the
+    /// track at the train's speed, tumbling as `dice` has them.
+    [[nodiscard]] std::vector<Wreck> thrown_cars(const Coaster& coaster, random::RandomState& dice);
 
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,

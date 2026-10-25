@@ -340,17 +340,14 @@ TEST_CASE("a train on a finished circuit never crashes")
     CHECK(lap_seconds(unfinished()) == std::nullopt);
 }
 
-TEST_CASE("a ghost train stops at the end of an unfinished track instead of crashing")
+TEST_CASE("a ghost train crashes off the end of an unfinished track as any train does")
 {
     Coaster c = unfinished();
     c.ghost = true;
-    float end = 0;
-    for (int i = 0; i < 2000; ++i)
-    {
+    for (int i = 0; i < 2000 && !c.crashed; ++i)
         drive(c, 0.05f);
-        end = std::max(end, c.at);
-    }
-    CHECK_FALSE(c.crashed);
+    CHECK(c.crashed);
     CHECK_FALSE(c.running);
-    CHECK(end == 80);
+    CHECK(c.at == 80);
+    CHECK(c.speed > 0); // Going as fast as it left
 }

@@ -106,6 +106,42 @@ TEST_CASE("a crashed train is back in the station once its wrecks are gone and t
     CHECK(train.travelled < 1);
 }
 
+TEST_CASE("a ghost train's crash flies its wrecks but hurts no one, closes nothing and is not counted")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = unfinished(park);
+    auto& r = park.world().registry;
+    r.get<Attraction>(ride).testing = true;
+    r.get<Trains>(ride).trains[0].ghost = true;
+    const auto near = park.guest({ 3, 0 });
+    CHECK(park.run_until([&] { return r.all_of<Wrecks>(ride); }, 30));
+    const auto& wrecks = r.get<Wrecks>(ride);
+    REQUIRE(wrecks.trains.size() == 1);
+    CHECK(wrecks.trains[0].size() == 2);
+    CHECK(wrecks.trains[0][0].velocity.x > 4);
+    CHECK(wrecks.trains[0][0].ghost);
+    CHECK(wrecks.crashes == 0);
+    CHECK(wrecks.dangers == 0);
+    CHECK(wrecks.since.value == -1);
+    CHECK(r.get<Attraction>(ride).testing);
+    CHECK_FALSE(thought(r, near, ThoughtKind::Disaster));
+    // Right by a wreck as it blows up, and still standing.
+    Wreck& wreck = r.get<Wrecks>(ride).trains[0][0];
+    for (int i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
+    {
+        wreck.at.x = r.get<Pose>(near).position.x;
+        wreck.at.z = r.get<Pose>(near).position.z;
+        park.run(1);
+    }
+    CHECK(wreck.state == WreckState::Burning);
+    CHECK_FALSE(thought(r, near, ThoughtKind::BeenInjured));
+    // Once its wrecks are gone, it sets off from the station again.
+    CHECK(park.run_until([&] { return wrecks.trains[0].empty(); }, 30));
+    park.run(1);
+    CHECK_FALSE(r.get<Trains>(ride).trains[0].crashed);
+}
+
 TEST_CASE("the park forgets a crash after a while")
 {
     Sandbox park;

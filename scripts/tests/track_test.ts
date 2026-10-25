@@ -3,8 +3,9 @@
 // Lays a saved design the install offers for a corkscrew coaster on the game's blank landscape, picked in the
 // designs' window. The construction panel's ring carries the construction crane, which hides and shows the
 // strip of controls, and the ride's closed flag; no test light. Its doors are placed, a straight piece clicked
-// mid-track is taken out, leaving a gap built on into, and the ride tested: a ghost train runs to the gap. Once
-// a path joins it to the park, its own train, tested with the panel open, stops at the gap rather than crash.
+// mid-track is taken out, leaving a gap built on into, and the ride tested: a ghost train runs to the gap and
+// crashes off it. Once a path joins it to the park, its own train, tested with the panel open, crashes there too,
+// but as a ghost: the park counts no crash.
 // Auto-complete then closes the gap again.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
@@ -116,8 +117,8 @@ expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
 expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
 expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
 
-// Tested while its track has a gap, before the park runs it, a ghost of its train runs from the station to the gap.
-// Closing the ride stops the test.
+// Tested while its track has a gap, before the park runs it, a ghost of its train runs from the station to the gap
+// and crashes off it, its wrecks flying as a crashed train's do. Closing the ride stops the test.
 expect(rides.setState(ride, "testing") == null, "the unfinished track tested");
 await frames(10);
 expect(build.construction()?.testing === true, "a test train running the unfinished track");
@@ -125,6 +126,12 @@ const from = build.construction()?.testAt ?? 0;
 await frames(60);
 expect((build.construction()?.testAt ?? 0) > from, "the test train moving along the track");
 await screenshot("testing");
+await ui.click("bar/Top_SuperFastForward");
+await until(() => (build.construction()?.testWrecks ?? 0) > 0, 18000, "the test train crashed off the gap");
+await ui.click("bar/Top_Play");
+await frames(20);
+await screenshot("ghost_crash");
+expect((rides.list()[ride].crashes ?? 0) === 0, "the test train's crash not the park's");
 expect(rides.setState(ride, "closed") == null, "the ride closed again");
 await frames(3);
 expect(build.construction()?.testing === false, "the test train gone once the ride is closed");
@@ -156,22 +163,13 @@ await ui.click("info/Attraction_Construction");
 await frames(5);
 expect(build.construction()?.ride === ride, "the construction panel back on the ride");
 
-// Tested again while the panel has it, the park's own train runs to the gap and stops there rather than crash.
+// Tested again while the panel has it, the park's own train runs to the gap and crashes off it, but as a ghost: no
+// crash counted.
 expect(rides.setState(ride, "testing") == null, "the ride the park runs tested");
-const stood = rides.list()[ride].cars![0];
 await ui.click("bar/Top_SuperFastForward");
-// Run till it crashes, or stops where it was a while ago, out of the station: at the gap.
-let last = stood;
-let stopped = false;
-for (let i = 0; i < 300 && (rides.list()[ride].crashes ?? 0) === 0 && !stopped; ++i) {
-    await frames(60);
-    const now = rides.list()[ride].cars![0];
-    stopped = now.col === last.col && now.row === last.row && (now.col !== stood.col || now.row !== stood.row);
-    last = now;
-}
+await until(() => (rides.list()[ride].wrecks ?? []).length > 0, 18000, "the park's train crashed off the gap");
 await ui.click("bar/Top_Play");
-expect(stopped, "the park's train run out of the station and stopped");
-expect((rides.list()[ride].crashes ?? 0) === 0, "no train crashed while the panel has the ride");
+expect((rides.list()[ride].crashes ?? 0) === 0, "no crash counted while the panel has the ride");
 expect(rides.setState(ride, "closed") == null, "the ride closed once more");
 await frames(3);
 

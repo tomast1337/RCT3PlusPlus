@@ -12,6 +12,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/systems.hpp"
+#include "strings/unicode.hpp"
 
 #include <algorithm>
 #include <array>
@@ -62,17 +63,19 @@ namespace rct3::scene
             return !scene.park.cash || *scene.park.cash >= cost;
         }
 
-        /// Whether the animal picked may come down on `tile`: inside an enclosure, and paid for.
+        /// Whether the animal picked may come down on `tile`: on the park's own land, and paid for. Outside every
+        /// enclosure it gets out as its crate opens.
         bool crate_allowed(const ParkScene& scene, save::Tile tile)
         {
-            return scene.enclosures.at(tile.col, tile.row) >= 0 && (!scene.park.cash || *scene.park.cash >= scene.enclosing.item->price);
+            return allowed(scene, marked(tile, tile), scene.enclosing.item->price);
         }
 
         /// The animal of `item` in its crate on `tile`, paid for.
         void put_animal(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const park::BuildItem& item, save::Tile tile)
         {
             const glm::vec3 at = tile_point(scene.grid, tile);
-            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
+            const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
+            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
             if (scene.park.cash)
                 *scene.park.cash -= item.price;
             float_money(scene, at, -item.price);

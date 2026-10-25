@@ -351,7 +351,8 @@ declare namespace structures {
 }
 
 declare namespace animals {
-    /** The park's animals, with their species, the enclosure they live in, whether they are still in their crate,
-     *  their health from 0 to 1, and the point of the map they stand on, in tiles. */
-    function list(): { species: string; enclosure: number; crated: boolean; health: number; at: { col: number; row: number } }[];
+    /** The park's animals, each with a number of its own, its species, the enclosure they live in (-1 for none), whether they are in a
+     *  crate or out of every enclosure, their health from 0 to 1, and the point of the map they stand on, in
+     *  tiles. */
+    function list(): { id: number; species: string; enclosure: number; crated: boolean; escaped: boolean; health: number; at: { col: number; row: number } }[];
 }

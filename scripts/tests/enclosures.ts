@@ -98,16 +98,14 @@ await frames(5);
 await screenshot("enclosure_shelter_keeper");
 camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
 
-// An animal from the animal list comes down only inside an enclosure, paid for, in a crate that opens after a while.
+// An animal from the animal list comes down in an enclosure, paid for, in a crate that opens after a while.
 expect(build.pick("WildAnimals/WildAnimals", "zebra"), "the zebra in the animal list");
 const before = park.cash()!;
-await pointer.click(...on_view(c0 + 2, r0 - 2));
-await frames(3);
-expect(animals.list().length === 0, "no animal put down outside the enclosure");
 await pointer.click(...on_view(c0 + 3, r0 + 2));
 await frames(3);
 build.stop();
-const zebra = () => animals.list()[0];
+const first = animals.list()[0]?.id;
+const zebra = () => animals.list().find((a) => a.id === first)!;
 expect(animals.list().length === 1 && zebra().crated, "the zebra in its crate");
 expect(Math.floor(zebra().at.col) === c0 + 3 && Math.floor(zebra().at.row) === r0 + 2, `the crate where it was put, not ${JSON.stringify(zebra().at)}`);
 expect(park.cash()! < before, "the zebra paid for");
@@ -115,6 +113,26 @@ camera.look({ col: c0 + 3.5, row: r0 + 2.5 }, { col: c0 + 5, row: r0 + 7, up: 4 
 await frames(10);
 await screenshot("enclosure_crate");
 await until(() => !zebra().crated, 3000, "the crate opened");
+expect(!zebra().escaped, "the zebra at home in its enclosure");
+
+// One put down outside every enclosure gets out as its crate opens; the park says so, and the keeper goes after
+// it, crates it and takes it home.
+expect(build.pick("WildAnimals/WildAnimals", "zebra"), "the zebra in the animal list");
+await pointer.click(...on_view(c0 + 2, r0 - 2));
+await frames(3);
+build.stop();
+expect(animals.list().length === 2, "a second zebra put down outside the enclosure");
+const second = animals.list().find((a) => a.id !== first)!.id;
+const loose = () => animals.list().find((a) => a.id === second)!;
+await until(() => loose().escaped, 3000, "the zebra out");
+await until(() => park.messages().some((m) => m.key === "Thought_PI_AnimalEscaped1"), 60, "the park saying a zebra got out");
+camera.look({ col: loose().at.col, row: loose().at.row }, { col: loose().at.col + 2, row: loose().at.row + 6, up: 4 });
+await frames(10);
+await screenshot("animal_escaped");
+await until(() => !loose().escaped && loose().enclosure === map.tile(c0, r0)!.enclosure, 9000, "the keeper bringing the zebra home");
+camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
+await frames(10);
+await screenshot("animal_recaptured");
 camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
 await frames(5);
 expect(build.pick("", "EnclosureDelete"), "the enclosure delete tool");

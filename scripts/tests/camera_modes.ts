@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The camera's control modes, in the game's Vanilla Hills: each mode is picked in turn, its buttons and wheel
+// The camera's control modes (normal, isometric, free look), in the game's Vanilla Hills: each mode is picked in turn, its buttons and wheel
 // moved over the park, and what they did to the camera checked; a click on a flat ride then opens its window,
 // so what is under the pointer still follows the view.
 //
@@ -93,6 +93,25 @@ pointer.wheel(2);
 await frames(30);
 expect(camera.view().distance < after.distance, "isometric: the wheel to zoom");
 await clickRide("isometric");
+
+// Free look: the right button looks round from where the eye is, the middle one flies it, the wheel does nothing.
+options.set("camera_mode", 1);
+await frames(2);
+const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+before = camera.view();
+await drag(["right"], [0.1, 0.05]);
+after = camera.view();
+expect(!near(after.yaw, before.yaw) && dist(after.eye, before.eye) < 0.1, "free look: the right button to look round from the eye");
+before = after;
+await drag(["middle"], [0.1, -0.2]);
+after = camera.view();
+expect(near(after.yaw, before.yaw) && dist(after.eye, before.eye) > 1, "free look: the middle button to fly the eye");
+before = after;
+pointer.move(0.5, 0.5);
+pointer.wheel(2);
+await frames(30);
+expect(dist(camera.view().eye, before.eye) < 0.1, "free look: the wheel to do nothing");
+await clickRide("freelook");
 
 options.set("camera_mode", 3);
 quit(0);

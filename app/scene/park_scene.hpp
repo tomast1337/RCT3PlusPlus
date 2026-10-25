@@ -9,7 +9,8 @@
 // The camera moves as the control mode option says. In the normal mode the right button drags the ground
 // along, the middle button (or both) turns and tilts, the wheel zooms, and the keys the player bound to the
 // game's camera commands do the same from the keyboard. The isometric mode looks down from one of the map's
-// four diagonals at a fixed tilt, and right with left (or the turn keys) turns it a quarter at a time. With
+// four diagonals at a fixed tilt, and right with left (or the turn keys) turns it a quarter at a time. Free
+// look flies the eye about: the right button looks round, the middle button and the keys fly it. With
 // the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
 // round panel that tells about it; a click on open water starts a ripple there. The Files menu's options and

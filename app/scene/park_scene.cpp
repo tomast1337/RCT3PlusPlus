@@ -583,9 +583,65 @@ namespace rct3::scene
             logging::logger("park").info("{} carried items, {} extras, {} pictures", scene.carried.items.size(), scene.carried.extras.size(), skins);
         }
 
+        /// The saved group of shown person `shown`, when the save has them in one.
+        std::optional<const save::GuestGroup&> saved_group(const ParkScene& scene, std::size_t shown)
+        {
+            const ShownPerson& p = scene.shown_people[shown];
+            if (p.staff || p.saved >= scene.people.guests.size() || !scene.people.guests[p.saved].group)
+                return std::nullopt;
+            const auto group = std::ranges::find(scene.people.groups, scene.people.guests[p.saved].group.id, &save::GuestGroup::id);
+            return group != scene.people.groups.end() ? std::optional<const save::GuestGroup&>(*group) : std::nullopt;
+        }
+
+        /// The party shown person `shown` goes round with, as shown people, its leader first: the simulation's
+        /// while it walks them, else the save's group; only them when they are on their own.
+        std::vector<std::size_t> party_of(const ParkScene& scene, std::size_t shown)
+        {
+            std::vector<std::size_t> party;
+            const auto add = [&](auto&& matches) {
+                const auto at = std::ranges::find_if(scene.shown_people, matches);
+                if (at != scene.shown_people.end() && !std::ranges::contains(party, static_cast<std::size_t>(at - scene.shown_people.begin())))
+                    party.push_back(static_cast<std::size_t>(at - scene.shown_people.begin()));
+            };
+            const auto& r = scene.sim.registry;
+            const entt::entity guest = scene.shown_people[shown].guest;
+            if (const auto* member = guest != entt::null && r.valid(guest) ? r.try_get<simulation::Member>(guest) : nullptr; member != nullptr && r.valid(member->party))
+            {
+                const auto& walking = r.get<simulation::Party>(member->party);
+                add([&](const ShownPerson& p) { return p.guest == walking.leader; });
+                for (const entt::entity e : walking.members)
+                    if (r.valid(e) && !r.all_of<simulation::Left>(e))
+                        add([&](const ShownPerson& p) { return p.guest == e; });
+            }
+            else if (const auto group = saved_group(scene, shown))
+            {
+                const auto saved_as = [&](save::PeopleRef ref) { return [&scene, ref](const ShownPerson& p) { return !p.staff && p.saved < scene.people.guests.size() && scene.people.guests[p.saved].person.id == ref.id; }; };
+                if (group->leader)
+                    add(saved_as(group->leader));
+                for (const save::PeopleRef ref : group->members)
+                    if (ref)
+                        add(saved_as(ref));
+            }
+            if (!std::ranges::contains(party, shown))
+                party.push_back(shown);
+            return party;
+        }
+
+        ui::PartyFacts party_facts(const ParkScene& scene)
+        {
+            ui::PartyFacts f;
+            for (const std::size_t shown : scene.shown_party)
+                f.members.push_back(person_facts(scene, shown));
+            if (const auto group = saved_group(scene, scene.shown_party.front()))
+                f.kind = group->group_type;
+            return f;
+        }
+
         void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
-            if (scene.shown_prop)
+            if (!scene.shown_party.empty())
+                panel.show_page(ui::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
+            else if (scene.shown_prop)
                 panel.show_page(ui::scenery_page(scene.prop_tab, prop_facts(scene, *scene.shown_prop), *assets.strings));
             else if (scene.shown_person)
                 panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
@@ -626,10 +682,11 @@ namespace rct3::scene
                 for (std::size_t pot = 0; pot < t.pots; ++pot)
                     tab.paints.push_back(scene.shown_people[shown].pose.look.colours.at(ui::kUpperPalette + pot));
                 tab.colours = ui::kUniformColours;
+                tab.action = t.tab == ui::PersonTab::Party;
                 scene.person_tabs.push_back(t.tab);
             }
-            // A uniform tab has no page of its own.
-            if (scene.person_tabs.at(picked) == ui::PersonTab::Uniform)
+            // A uniform tab has no page of its own, nor the party's, which opens the party.
+            if (scene.person_tabs.at(picked) == ui::PersonTab::Uniform || scene.person_tabs.at(picked) == ui::PersonTab::Party)
                 picked = 0;
             scene.person_tab = scene.person_tabs.at(picked);
             if (scene.shown_person != shown)
@@ -639,7 +696,27 @@ namespace rct3::scene
             }
             scene.shown.reset();
             scene.shown_prop.reset();
+            scene.shown_party.clear();
             scene.shown_person = shown;
+            panel.show(std::move(tabs), picked);
+            show_info_page(scene, panel, assets, options);
+        }
+
+        /// Opens the panel on the party shown person `shown` goes round with, at the tab last opened on a party.
+        void open_party(ParkScene& scene, ui::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        {
+            std::vector<ui::InfoTab> tabs;
+            std::size_t picked = 0;
+            for (const ui::PartyTabInfo& t : ui::kPartyTabs)
+            {
+                if (t.tab == scene.party_tab)
+                    picked = tabs.size();
+                tabs.push_back({ .icon = std::string(t.icon), .help = std::u16string(assets.strings->get(t.help)), .slot = t.slot });
+            }
+            scene.shown_party = party_of(scene, shown);
+            scene.shown.reset();
+            scene.shown_person.reset();
+            scene.shown_prop.reset();
             panel.show(std::move(tabs), picked);
             show_info_page(scene, panel, assets, options);
         }
@@ -678,7 +755,7 @@ namespace rct3::scene
             if (scene.shown_tabs.at(picked) == ui::AttractionTab::State)
                 picked = 0;
             scene.info_tab = scene.shown_tabs.at(picked);
-            if (scene.shown != ref || scene.shown_person)
+            if (scene.shown != ref || scene.shown_person || !scene.shown_party.empty())
             {
                 // The view starts from where the player looks from, and turns from there.
                 std::vector<glm::vec3> points;
@@ -692,6 +769,7 @@ namespace rct3::scene
             }
             scene.shown_person.reset();
             scene.shown_prop.reset();
+            scene.shown_party.clear();
             if (scene.shown != ref)
                 scene.refusal.clear();
             scene.shown = ref;
@@ -720,6 +798,7 @@ namespace rct3::scene
                 scene.view_camera = park::framed(park::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
             scene.shown.reset();
             scene.shown_person.reset();
+            scene.shown_party.clear();
             scene.shown_prop = index;
             scene.prop_tab.reset();
             const std::size_t none = tabs.size();
@@ -2051,6 +2130,8 @@ namespace rct3::scene
                 scene.shown_prop.reset();
                 info->hide();
             }
+            if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::PersonTab::Party)
+                open_party(scene, *info, *scene.shown_person, assets, options);
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
             const auto door = [](const ui::InfoChange& c) { return c.id == ui::control_id(ui::AttractionControl::Entrance) || c.id == ui::control_id(ui::AttractionControl::Exit); };
@@ -2091,6 +2172,11 @@ namespace rct3::scene
                 if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name) || change->id == ui::control_id(ui::AttractionControl::CarKind) || (change->id >= ui::control_id(ui::AttractionControl::SpeedSeries) && change->id <= ui::control_id(ui::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
+            else if (change && !scene.shown_party.empty())
+            {
+                if (const auto member = static_cast<std::size_t>(change->id); member < scene.shown_party.size())
+                    open_person(scene, *info, scene.shown_party[member], assets, options);
+            }
             else if (change && scene.shown_person)
             {
                 if (change->id == ui::person_control(ui::PersonControl::PickUp))
@@ -2127,6 +2213,14 @@ namespace rct3::scene
                 if (*tab < scene.prop_tabs.size())
                 {
                     scene.prop_tab = scene.prop_tabs[*tab];
+                    show_info_page(scene, *info, assets, options);
+                }
+            }
+            else if (tab && !scene.shown_party.empty())
+            {
+                if (*tab < ui::kPartyTabs.size())
+                {
+                    scene.party_tab = ui::kPartyTabs[*tab].tab;
                     show_info_page(scene, *info, assets, options);
                 }
             }
@@ -2170,6 +2264,7 @@ namespace rct3::scene
                 scene.shown.reset();
                 scene.shown_person.reset();
                 scene.shown_prop.reset();
+                scene.shown_party.clear();
             }
         }
         if (const auto asked = std::exchange(scene.rename_requested, std::nullopt); asked && change_person(scene, asked->first, ui::InfoChange { .id = ui::person_control(ui::PersonControl::Name), .text = asked->second }))

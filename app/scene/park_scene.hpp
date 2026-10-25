@@ -67,6 +67,7 @@
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/options_session.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/screens/party_info.hpp"
 #include "ui/screens/person_info.hpp"
 #include "ui/screens/scenery_info.hpp"
 #include "ui/screens/tool_menus.hpp"
@@ -543,6 +544,8 @@ namespace rct3::scene
         std::optional<std::size_t> shown_person;                    ///< Of shown_people, the one the info panel tells about instead
         std::vector<ui::PersonTab> person_tabs;                     ///< Their tabs in the panel's order
         ui::PersonTab person_tab = ui::PersonTab::General;          ///< The tab last opened on a person
+        std::vector<std::size_t> shown_party;                       ///< Of shown_people, the party the info panel tells about instead, its leader first
+        ui::PartyTab party_tab = ui::PartyTab::Members;             ///< The tab last opened on a party
         bool painting_patrol = false;                               ///< Strokes on the ground paint the shown staff member's patrol area
         int patrol_brush = 0;                                       ///< Of ui::kPatrolBrushes
         std::optional<bool> patrol_stroke;                          ///< While a stroke goes on: whether it adds tiles, or takes them away

@@ -1924,6 +1924,30 @@ namespace rct3::simulation
                     attraction.open = false;
                 }
             };
+            // The wrecks of crashed trains fly on and blow up, knocking over the guests on foot beside them. The
+            // park remembers the last crash a while.
+            const auto& crashes = kTuning.crashes;
+            auto* wrecks = r.try_get<Wrecks>(e);
+            if (wrecks != nullptr)
+            {
+                if (wrecks->since.value >= 0 && (wrecks->since.value += dt) >= crashes.forgotten.value)
+                    wrecks->since.value = -1;
+                const auto* surroundings = r.ctx().find<WreckSurroundings>();
+                const WreckSurroundings around = surroundings != nullptr ? *surroundings : WreckSurroundings { };
+                for (std::vector<Wreck>& cars : wrecks->trains)
+                {
+                    for (Wreck& wreck : cars)
+                        if (fly(wreck, dt, around) == WreckEvent::BlewUp)
+                            for (const auto [g, pose, errand, visitor] : r.view<const Pose, const Errand, const Visitor>().each())
+                                if (errand.kind != ErrandKind::Riding && errand.kind != ErrandKind::Queueing && glm::distance(pose.position, wreck.at) < crashes.blast.value)
+                                {
+                                    r.emplace_or_replace<Gesture>(g, GestureKind::Down, crashes.knocked);
+                                    think(r, g, ThoughtKind::BeenInjured, e, now);
+                                }
+                    if (std::ranges::all_of(cars, [](const Wreck& w) { return w.state == WreckState::Gone; }))
+                        cars.clear();
+                }
+            }
             // A cycle ends when the ride's time is up, or a train has come round.
             auto* fleet = r.try_get<Trains>(e);
             std::optional<std::size_t> loading; // The train standing at the start, ready to load
@@ -1934,8 +1958,69 @@ namespace rct3::simulation
                     Coaster& train = fleet->trains[t];
                     if (upkeep.broken && upkeep.kind == Breakdown::EmergencyStop)
                         continue; // Halted on the track till fixed
+                    // A crashed train is off the track till its wrecks are gone, and back in the station once the
+                    // ride is opened or tested again.
+                    if (train.crashed)
+                    {
+                        if ((wrecks != nullptr && t < wrecks->trains.size() && !wrecks->trains[t].empty()) || !(attraction.open || attraction.testing))
+                            continue;
+                        train.crashed = false;
+                        train.at = train.start;
+                        train.travelled = 0;
+                        train.speed = 0;
+                        train.slow = 0;
+                        train.launched = false;
+                        train.passed = 0;
+                        train.push = 0;
+                    }
                     if (drive(train, dt, room_ahead(fleet->trains, t)))
                         unload(fleet->riders[t]);
+                    // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
+                    // closes. Guests who see it think it a disaster.
+                    if (train.crashed)
+                    {
+                        wrecks = &r.get_or_emplace<Wrecks>(e);
+                        wrecks->trains.resize(fleet->trains.size());
+                        std::vector<Wreck>& thrown = wrecks->trains[t];
+                        auto& dice = r.get<Dice>(e).state;
+                        const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)); };
+                        const std::size_t cars = static_cast<std::size_t>(std::max(train.cars, 1));
+                        const float car = train.train_length / static_cast<float>(cars);
+                        for (std::size_t k = 0; k < cars; ++k)
+                        {
+                            const float d = train.at - (static_cast<float>(k) + 0.5f) * car;
+                            const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * crashes.tumble;
+                            thrown.push_back({ .at = track_point(train, d), .velocity = track_way(train, d) * train.speed, .spin = spin });
+                        }
+                        // Riders fill the cars front to back.
+                        std::vector<entt::entity>& riders = fleet->riders[t];
+                        const std::size_t seats = std::max<std::size_t>((ride.capacity + cars - 1) / cars, 1);
+                        wrecks->dangers += (attraction.open ? 1 : 0) + static_cast<std::uint32_t>(std::min(cars, (riders.size() + seats - 1) / seats));
+                        ++wrecks->crashes;
+                        wrecks->since.value = 0;
+                        const auto* surroundings = r.ctx().find<WreckSurroundings>();
+                        // shortcut: riders land beside their car where it left the track and, once up, are back on
+                        // the paths at the ride's exit; upgrade when people fly and walk off the paths.
+                        for (std::size_t seat = 0; seat < riders.size(); ++seat)
+                        {
+                            const entt::entity guest = riders[seat];
+                            if (!r.valid(guest))
+                                continue;
+                            let_out(r, paths, guest, e, std::nullopt);
+                            glm::vec3 at = thrown[std::min(seat / seats, cars - 1)].at + glm::vec3(spread(), 0, spread()) * crashes.thrown.value;
+                            at.y = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
+                            auto& pose = r.get<Pose>(guest);
+                            pose.position = pose.was = at;
+                            r.emplace_or_replace<Gesture>(guest, GestureKind::Down, crashes.knocked);
+                            think(r, guest, ThoughtKind::BeenInjured, e, now);
+                        }
+                        riders.clear();
+                        for (const auto [g, pose, visitor, dice] : r.view<const Pose, const Visitor, const Dice>().each())
+                            if (glm::distance(pose.position, thrown.front().at) < crashes.seen.value)
+                                think(r, g, ThoughtKind::Disaster, e, now);
+                        attraction.open = false;
+                        attraction.testing = false;
+                    }
                     if (!train.running && train.travelled == 0 && !loading)
                         loading = t;
                 }

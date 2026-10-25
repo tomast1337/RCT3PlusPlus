@@ -476,6 +476,8 @@ namespace rct3::scene
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
+        /// Of each ride whose trains have crashed, the crashes and dangers (simulation::Wrecks) already taken in.
+        std::unordered_map<entt::entity, std::pair<std::uint32_t, std::uint32_t>> crashes_seen;
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         /// Whether the view rides along in a car, on a flat ride or with a person.

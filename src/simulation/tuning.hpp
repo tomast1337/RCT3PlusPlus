@@ -308,6 +308,17 @@ namespace rct3::simulation::tuning
         Share rating_bonus { 0.05f }; ///< Added to the park's rating
     };
 
+    /// Trains crashing off the end of their track.
+    struct Crashes
+    {
+        Seconds forgotten { 1800 }; ///< After a ride's last crash, the park forgets it
+        Distance blast { 6 };       ///< Guests on foot this near a wreck blowing up are knocked over
+        Distance seen { 40 };       ///< Guests this near a crash think it a disaster
+        Seconds knocked { 5 };      ///< A guest knocked over lies for, then gets up
+        Distance thrown { 2.5f };   ///< Riders land at most this far beside where their car left the track
+        float tumble = 4;           ///< Radians a second a wreck tumbles at most
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -330,6 +341,7 @@ namespace rct3::simulation::tuning
         Rating rating;
         Boats boats;
         Prizes prizes;
+        Crashes crashes;
     };
 
 } // namespace rct3::simulation::tuning

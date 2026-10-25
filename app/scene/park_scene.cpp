@@ -2044,6 +2044,23 @@ namespace rct3::scene
                     ride.base.repair_status = !upkeep->broken ? Fine : upkeep->mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
                     ride.base.flags = upkeep->broken ? ride.base.flags | save::AttractionCommon::kBrokenDown : ride.base.flags & ~save::AttractionCommon::kBrokenDown;
                 }
+                // A crash closes its ride, counts as dangerous for the awards, and is remembered a while.
+                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                {
+                    const auto* wrecks = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Wrecks>(scene.ride_entities[i]) : nullptr;
+                    if (wrecks == nullptr)
+                        continue;
+                    save::Ride& ride = scene.rides.rides[i];
+                    ride.base.time_since_crash = wrecks->since.value;
+                    auto& [crashes, dangers] = scene.crashes_seen[scene.ride_entities[i]];
+                    if (wrecks->crashes == crashes)
+                        continue;
+                    crashes = wrecks->crashes;
+                    ride.base.state = save::AttractionState::Closed;
+                    auto& events = scene.park_model.awards.dangerous_coaster_events;
+                    events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
+                    dangers = wrecks->dangers;
+                }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {
                     const auto at = std::ranges::find(scene.ride_entities, e);

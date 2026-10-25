@@ -221,9 +221,18 @@ namespace rct3::scene
                     if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
                     {
                         // By the names the people's meshes give these motions, in GestureKind's order.
-                        constexpr std::array<std::string_view, 6> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit" };
+                        constexpr std::array<std::string_view, 7> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop" };
                         pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
                         pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
+                        // Knocked over, they go down, lie there, and get up for the last of it.
+                        constexpr float kGettingUp = 1.5f; ///< Seconds of it a knocked over guest takes getting up
+                        if (gesture->kind == simulation::GestureKind::Down)
+                        {
+                            const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
+                            const bool up = gesture->left.value - scene.sim_time < kGettingUp;
+                            pose.motion = park::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::motion::kIdle);
+                            pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
+                        }
                     }
                     // An umbrella held up in the rain.
                     // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen

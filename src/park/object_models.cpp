@@ -590,6 +590,7 @@ namespace rct3::park
                 model.broken_levels = std::move(worn.levels);
         }
         model.price = item->cost;
+        model.removal_cost = item->removal_cost;
         add_flow(model, symbol, near);
         return model;
     }

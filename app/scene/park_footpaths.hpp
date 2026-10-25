@@ -188,6 +188,12 @@ namespace rct3::scene
     /// going on sells the path under the pointer, as in the game. Whether it did either.
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size);
 
+    /// The path under the pointer at `at`, in interface units on a screen of `size`, by its id.
+    [[nodiscard]] std::optional<std::uint64_t> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size);
+
+    /// Takes paths `ids` away, paying back what laying them cost, as selling them from the path panel does.
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids);
+
     /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
     bool drop_footpath_trail(ParkScene& scene);
 

@@ -133,7 +133,8 @@ namespace rct3::park
         /// How it looks once vandals have broken it, level for level as `levels`: the visual the item lists
         /// named after it with "_Broken" (a bench has one, a bin or a lamp not). Empty when it has none.
         std::vector<ModelLevel> broken_levels;
-        std::int32_t price = 0; ///< To build one, hundredths of the currency unit
+        std::int32_t price = 0;        ///< To build one, hundredths of the currency unit
+        std::int32_t removal_cost = 0; ///< To pull one down, hundredths; below zero it pays back
         /// Of an animated model, the length in seconds of each animation its finest level lists, in the order
         /// listed; 0 for one that cannot be read. Flat rides list theirs as standing, starting, running and
         /// stopping.

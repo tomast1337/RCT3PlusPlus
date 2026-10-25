@@ -186,6 +186,18 @@ namespace rct3::scene
         bool stale = true; ///< The ground changed since they were made
     };
 
+    /// The delete menu's tools: one deletes what a click lands on, the other what stands on the tiles dragged over.
+    struct DeleteTools
+    {
+        enum class Tool : std::uint8_t
+        {
+            None,
+            One,
+            Area,
+        };
+        Tool tool = Tool::None;
+    };
+
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
     struct FloatingMoney
     {
@@ -571,7 +583,7 @@ namespace rct3::scene
         bool leave = false;
         bool message_alert = false;
         std::vector<park::AttractionRef> demolish_asked;                ///< Waiting on the question whether to pull them down
-        std::vector<std::string> prizes;                                ///< Text keys of prizes won and not yet shown, oldest first
+        std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
         std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_windows.hpp)
         std::unique_ptr<ui::OptionsSession> options;                    ///< The options window over the park, once opened
         std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
@@ -590,6 +602,7 @@ namespace rct3::scene
         ParkMap map;                                                    ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
+        DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed
         LedSigns led_signs;                                             ///< The scrolling boards over queues and on park entrances

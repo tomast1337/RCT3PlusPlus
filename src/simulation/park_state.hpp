@@ -34,6 +34,7 @@ namespace rct3::simulation
         save::WeatherType weather = save::WeatherType::Unknown;
         std::optional<save::WeatherType> forecast; ///< The weather on its way
         std::optional<float> temperature;          ///< Degrees Celsius
+        float wind = 0;                            ///< How strong the wind blows, 0 calm to 1 strong
         GameSpeed speed;
         ParkMessages messages;
     };

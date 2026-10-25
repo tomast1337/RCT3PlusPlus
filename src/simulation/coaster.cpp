@@ -50,6 +50,25 @@ namespace rct3::simulation
         }
     } // namespace
 
+    glm::vec3 track_point(const Coaster& c, float d)
+    {
+        if (c.distance.size() < 2 || c.points.size() != c.distance.size())
+            return { 0, c.distance.size() < 2 ? 0 : height_at(c, d), 0 };
+        d = wrap(c, d);
+        const std::size_t i = point_at(c, d);
+        const float span = c.distance[i + 1] - c.distance[i];
+        return glm::mix(c.points[i], c.points[i + 1], span > 0 ? (d - c.distance[i]) / span : 0.0f);
+    }
+
+    glm::vec3 track_way(const Coaster& c, float d)
+    {
+        if (c.distance.size() < 2 || c.points.size() != c.distance.size())
+            return { 0, 0, 1 };
+        const std::size_t i = point_at(c, wrap(c, d));
+        const glm::vec3 run = c.points[i + 1] - c.points[i];
+        return glm::length(run) > 0 ? glm::normalize(run) : glm::vec3(0, 0, 1);
+    }
+
     bool chain_at(const Coaster& c, float at)
     {
         return c.distance.size() >= 2 && c.length() > 0 && c.kinds[point_at(c, wrap(c, at))] == Stretch::Chain;

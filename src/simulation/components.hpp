@@ -16,6 +16,7 @@
 #include "random/generator.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
 #include "simulation/units.hpp"
@@ -222,6 +223,8 @@ namespace rct3::simulation
         GaveUpQueue = 131,
         QueueTooLong = 201, ///< Put off a ride by its queue, before joining
         Soaked = 191,
+        Disaster = 62,     ///< Saw a ride crash
+        BeenInjured = 163, ///< Thrown from a crashed ride, or knocked over by its blast
     };
 
     struct Thought
@@ -421,6 +424,18 @@ namespace rct3::simulation
         std::vector<std::vector<entt::entity>> riders; ///< By train
     };
 
+    /// A ride whose trains have crashed, and how long since the last did. A crashed train's cars fly off as
+    /// wrecks, and the train is off the track till they are gone and the ride is opened again.
+    struct Wrecks
+    {
+        std::vector<std::vector<Wreck>> trains { }; ///< By train; empty for one not crashed
+        Seconds since { -1 };                       ///< Since the last crash; -1 once the park has forgotten it
+        std::uint32_t crashes = 0;                  ///< Since the run began
+        /// Dangerous happenings for the awards to count, since the run began: each crash of an open ride, and
+        /// each car of it with riders.
+        std::uint32_t dangers = 0;
+    };
+
     // ----- litter, path items and staff -----
 
     /// A piece of litter lying on a path tile until a handyman sweeps it up.
@@ -476,6 +491,7 @@ namespace rct3::simulation
         Grumble, ///< Shaking their head at a ride too tame for them
         Dizzy,   ///< Reeling off a ride too wild for them
         Retch,   ///< Being sick
+        Down,    ///< Knocked over, lying on the ground till they get up
     };
 
     struct Gesture

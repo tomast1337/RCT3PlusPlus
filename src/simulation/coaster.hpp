@@ -13,6 +13,8 @@
 // Units are metres and seconds.
 #pragma once
 
+#include "math/glm.hpp"
+
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -45,6 +47,7 @@ namespace rct3::simulation
     {
         std::vector<float> distance;     ///< Along the track to each point, from 0
         std::vector<float> height;       ///< Of each point
+        std::vector<glm::vec3> points;   ///< Where each point is; may be empty, when only the heights are known
         std::vector<Stretch> kinds;      ///< Of the stretch from each point to the next
         std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; unread elsewhere
         float lift_speed = 2;
@@ -57,6 +60,7 @@ namespace rct3::simulation
         /// beyond holds another.
         bool blocks = false;
         float train_length = 10;
+        int cars = 1;    ///< In the train, each as long as the others
         float start = 0; ///< Where the train's front waits to set off, at the station's end
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
@@ -91,6 +95,13 @@ namespace rct3::simulation
 
     /// Whether the stretch `at` along `coaster`'s track, round again past either end, is a lift chain.
     [[nodiscard]] bool chain_at(const Coaster& coaster, float at);
+
+    /// The point `d` along `coaster`'s track, round again past the end of a circuit and held at the ends of a
+    /// track with two; under its points, at the height, when only that is known.
+    [[nodiscard]] glm::vec3 track_point(const Coaster& coaster, float d);
+
+    /// The way `coaster`'s track runs `d` along it, a unit vector; +z when it is not known.
+    [[nodiscard]] glm::vec3 track_way(const Coaster& coaster, float d);
 
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,

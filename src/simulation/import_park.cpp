@@ -516,6 +516,7 @@ namespace rct3::simulation
                 return std::nullopt;
         }
         c.distance = course.distance;
+        c.points = course.points;
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
         for (const park::CourseKind k : course.kinds)
@@ -543,6 +544,8 @@ namespace rct3::simulation
         c.blocks = ride.options.block_sectioned;
         if (!ride.trains.empty() && ride.trains[0].length > 0)
             c.train_length = ride.trains[0].length;
+        if (!ride.trains.empty() && !ride.trains[0].cars.empty())
+            c.cars = static_cast<int>(ride.trains[0].cars.size());
         return c;
     }
 
@@ -746,6 +749,8 @@ namespace rct3::simulation
             r.emplace<CycleRide>(e, std::move(cycle));
             if (coaster)
                 r.emplace<Trains>(e, trains_of(*coaster, ride));
+            if (ride.base.time_since_crash >= 0)
+                r.emplace<Wrecks>(e, Wrecks { .since = { ride.base.time_since_crash } });
             r.emplace<Upkeep>(e, upkeep_of(ride));
             if (r.get<Upkeep>(e).broken)
                 r.get<Attraction>(e).open = false;

@@ -148,6 +148,21 @@ TEST_CASE("a weekly graph of money that went below nought has nought across its 
     REQUIRE(page.graph[0].axis.size() == 5);
     CHECK(page.graph[0].axis[2] == money(0));
     CHECK(page.graph[0].axis[4] == money(-500));
+    // Money too small to see reads against a whole unit.
+    park.finance.weekly_profit = { .samples = { 0, 0, 0 }, .capacity = 64 };
+    CHECK(management_page(ManagementTopic::Finances, 1, { .park = &park }, s, kUnits).graph[0].full == doctest::Approx(100));
+}
+
+TEST_CASE("a weekly graph has no month marks from before the calendar began")
+{
+    const StringTable s = test_strings();
+    save::ParkModel park;
+    park.park.guests_in_park = { .samples = { 5, 5, 5 }, .capacity = 64 };
+    simulation::ParkState state;
+    state.time = 2 * save::GameClock::kUnitsPerWeek;
+    const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
+    REQUIRE(page.graph_ticks.size() == 1);
+    CHECK(page.graph_ticks[0].back == 1);
 }
 
 TEST_CASE("the staff tabs list one job each, the first everyone")

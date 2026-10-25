@@ -39,7 +39,7 @@ namespace rct3::simulation
 
     void close_week(save::ParkModel& park, const WeekFigures& f)
     {
-        if (park.has_park)
+        // A park the file kept no records for, such as a new sandbox, starts its graphs empty.
         {
             save::Park& p = park.park;
             level(p.park_rating, static_cast<float>(f.rating));
@@ -50,7 +50,6 @@ namespace rct3::simulation
             total(p.guest_intake, static_cast<float>(f.intake));
             carry(p.publicity_level);
         }
-        if (park.has_finance)
         {
             save::Finance& m = park.finance;
             level(m.cash_less_loan, static_cast<float>(f.cash_less_loan));

@@ -27,10 +27,13 @@ TEST_CASE("a week's end puts its figures in the week's slot and starts the next"
     CHECK(park.finance.expenditure.capacity == kGraphWeeks);
 }
 
-TEST_CASE("a park without its records gets no graphs")
+TEST_CASE("a park without its records starts its graphs as a week ends")
 {
     save::ParkModel park;
-    close_week(park, { .guests = 100 });
-    CHECK(park.park.guests_in_park.empty());
-    CHECK(park.finance.income.empty());
+    close_week(park, { .guests = 100, .income = 50 });
+    CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100 });
+    CHECK(park.park.guests_in_park.capacity == kGraphWeeks);
+    CHECK(park.finance.income.samples == std::vector<float> { 0, 50 });
+    // Nothing to carry on from.
+    CHECK(park.finance.park_value.empty());
 }

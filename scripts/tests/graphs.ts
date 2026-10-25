@@ -108,4 +108,17 @@ for (let i = 0; i < list.length && !shown; ++i) {
 }
 expect(shown, "a coaster with test graphs");
 await screenshot("ride_graphs");
+await ui.click("info/close").catch(() => undefined);
+
+// A new sandbox, with no graphs kept, starts them as its weeks end.
+await park.open("Campaigns/Base/BlankLandscape.dat");
+await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the sandbox");
+await frames(30);
+for (let week = 0; week < 3; ++week) {
+    park.setDate((Math.floor(park.date() / 90) + 1) * 90 - 0.05);
+    await frames(30);
+}
+await management("Man_Finances", "FinancialManagement_Title", "CashGraphTabIcon");
+expect(under("FinancialManagement_Title", "graph") !== undefined, "the sandbox's finance graph");
+await screenshot("sandbox_graphs");
 quit(0);

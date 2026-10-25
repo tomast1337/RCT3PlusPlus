@@ -30,7 +30,7 @@ namespace rct3::simulation
         std::int64_t profit = 0;         ///< Change in cash over the week
     };
 
-    /// Ends the week in `park`'s graphs with `figures`. Park value, company value, share price and publicity,
+    /// Ends the week in `park`'s graphs with `figures`, starting any series it has none of. Park value, company value, share price and publicity,
     /// which the simulation does not work out, carry on as they were.
     void close_week(save::ParkModel& park, const WeekFigures& figures);
 

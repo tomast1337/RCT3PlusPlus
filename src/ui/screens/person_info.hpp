@@ -85,6 +85,7 @@ namespace rct3::ui
         Name,
         Sack, ///< Fires them at once, as the game does
         Warn,
+        PickUp,      ///< Hands them to the pointer, to be put down elsewhere
         Wage,        ///< The wage level, 0 to 2
         Train,       ///< Trains them a level up, for its cost
         Costume,     ///< An entertainer's, by its place in the list

@@ -322,7 +322,8 @@ declare namespace zooAnimals {
 
 declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them. */
-    function list(): { name: string; staff: boolean }[];
+    /** With, for those the simulation walks, where they are (tiles, and world height `up`) and what they are at. */
+    function list(): { name: string; staff: boolean; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "held" | "dropped" | "still" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

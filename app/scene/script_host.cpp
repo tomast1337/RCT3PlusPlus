@@ -647,7 +647,19 @@ namespace rct3::scene
             for (const ShownPerson& p : park.shown_people)
             {
                 const save::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
-                out.push_back({ { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff } });
+                Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff } };
+                // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
+                const auto& r = park.sim.registry;
+                if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
+                {
+                    const glm::vec3 at = r.get<simulation::Pose>(p.guest).position;
+                    const auto* errand = r.try_get<simulation::Errand>(p.guest);
+                    person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
+                    person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
+                    person["up"] = at.y;
+                    person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? "dropped" : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : "walking";
+                }
+                out.push_back(std::move(person));
             }
             return out;
         });

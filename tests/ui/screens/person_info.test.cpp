@@ -198,12 +198,13 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(work.controls[1].value == 1);
 
     const InfoPage general = person_page(PersonTab::General, staff(p), s, units);
-    REQUIRE(general.controls.size() == 3);
+    REQUIRE(general.controls.size() == 4);
     CHECK(general.controls[0].kind == InfoControlKind::Text);
-    CHECK(general.controls[1].id == person_control(PersonControl::Sack));
-    CHECK(general.controls[2].id == person_control(PersonControl::Warn));
+    CHECK(general.controls[1].id == person_control(PersonControl::PickUp));
+    CHECK(general.controls[2].id == person_control(PersonControl::Sack));
+    CHECK(general.controls[3].id == person_control(PersonControl::Warn));
     mechanic.warnings = kMostWarnings;
-    CHECK(person_page(PersonTab::General, staff(p), s, units).controls.size() == 2);
+    CHECK(person_page(PersonTab::General, staff(p), s, units).controls.size() == 3);
 
     const InfoPage stats = person_page(PersonTab::Stats, staff(p), s, units);
     REQUIRE(stats.controls.size() == 2);

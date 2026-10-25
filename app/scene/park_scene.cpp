@@ -25,6 +25,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/park_footpaths.hpp"
+#include "scene/park_holding.hpp"
 #include "scene/park_management.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_patrol.hpp"
@@ -1835,7 +1836,9 @@ namespace rct3::scene
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
             auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
-            if (!escape.empty() && scene.riding_along())
+            if (!escape.empty() && scene.holding)
+                hold_person(scene, { }, { }, false, true);
+            else if (!escape.empty() && scene.riding_along())
                 stop_riding(scene);
             else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
@@ -1912,6 +1915,8 @@ namespace rct3::scene
             const ui::Rect view = desktop.root().rect();
             if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
                 show_info_page(scene, *info, assets, options);
+            // A person picked up hangs over what the pointer is on; a right click puts them back.
+            hold_person(scene, pointer.position, { view.width(), view.height() }, false, input.right && !over);
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right, input.shift, input.control);
@@ -1967,7 +1972,9 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
-                if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab)
+                if (scene.holding)
+                    hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -2086,7 +2093,13 @@ namespace rct3::scene
             }
             else if (change && scene.shown_person)
             {
-                if (change->id == ui::person_control(ui::PersonControl::Sack))
+                if (change->id == ui::person_control(ui::PersonControl::PickUp))
+                {
+                    // Only those walking in the park; riders are left be.
+                    if (!pick_up_person(scene, *scene.shown_person) && (scene.shown_people[*scene.shown_person].guest == entt::null || scene.sim.registry.all_of<simulation::Left>(scene.shown_people[*scene.shown_person].guest)))
+                        simulation::post(scene.park.messages, { .text_key = "Pincer_NotOwned" });
+                }
+                else if (change->id == ui::person_control(ui::PersonControl::Sack))
                 {
                     fire(scene, *scene.shown_person);
                     scene.shown_person.reset();

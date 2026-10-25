@@ -2057,7 +2057,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
                     hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
-                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.fence)
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -2111,7 +2111,7 @@ namespace rct3::scene
                     stop_structure_tools(scene);
                 else if (scene.deleting.tool != DeleteTools::Tool::None)
                     stop_deleting(scene);
-                else if (scene.enclosing.fence)
+                else if (scene.enclosing.item)
                     stop_enclosing(scene);
                 else if (land_tool(scene))
                 {

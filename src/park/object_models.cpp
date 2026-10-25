@@ -521,7 +521,16 @@ namespace rct3::park
         const std::string hint = index_.overlay(overlay).value_or(std::string(overlay));
         const auto item_file = files_->holding(tagged(symbol, kItemTag), hint);
         if (!item_file)
-            return std::nullopt;
+        {
+            // A look of its own, with no item to place it as, such as an animal's crate: drawn as it is.
+            const auto visual_file = files_->holding(tagged(symbol, kVisualTag), hint);
+            const ovl::SceneryVisual* visual = visual_file ? visual_in(*visual_file->second, symbol) : nullptr;
+            if (visual == nullptr)
+                return std::nullopt;
+            ObjectModel model;
+            add_levels(model, *visual, visual_file->first);
+            return model.levels.empty() ? std::nullopt : std::optional(std::move(model));
+        }
         const ovl::SceneryItem* item = item_in(*item_file->second, symbol);
         if (item == nullptr)
             return std::nullopt;

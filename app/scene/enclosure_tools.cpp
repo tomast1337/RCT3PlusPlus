@@ -5,13 +5,17 @@
 #include "park/enclosures.hpp"
 #include "park/tile_shaping.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/animals.hpp"
+#include "simulation/components.hpp"
+#include "simulation/systems.hpp"
 
 #include <algorithm>
 #include <array>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace rct3::scene
 {
@@ -23,7 +27,7 @@ namespace rct3::scene
 
         bool deleting(const EnclosureTool& t)
         {
-            return t.fence && t.fence->symbol == park::kEnclosureDelete;
+            return t.item && t.item->symbol == park::kEnclosureDelete;
         }
 
         /// The area marked, as its least and greatest column and row.
@@ -43,9 +47,9 @@ namespace rct3::scene
                 park::unenclose(map, a, b);
                 return { std::move(map), 0 };
             }
-            park::enclose(map, scene.grid, a, b, t.fence->symbol);
+            park::enclose(map, scene.grid, a, b, t.item->symbol);
             const auto panels = [&](const save::EnclosureMap& m) { return static_cast<std::int64_t>(park::enclosure_fences(m, scene.grid, 0).pieces.size()); };
-            return { std::move(map), std::max<std::int64_t>(0, panels(map) - panels(scene.enclosures)) * t.fence->price };
+            return { std::move(map), std::max<std::int64_t>(0, panels(map) - panels(scene.enclosures)) * t.item->price };
         }
 
         /// Whether the area may be worked on: all of it land the park owns outright, and the fence paid for.
@@ -57,13 +61,30 @@ namespace rct3::scene
                         return false;
             return !scene.park.cash || *scene.park.cash >= cost;
         }
+
+        /// Whether the animal picked may come down on `tile`: inside an enclosure, and paid for.
+        bool crate_allowed(const ParkScene& scene, save::Tile tile)
+        {
+            return scene.enclosures.at(tile.col, tile.row) >= 0 && (!scene.park.cash || *scene.park.cash >= scene.enclosing.item->price);
+        }
+
+        /// The animal of `item` in its crate on `tile`, paid for.
+        void put_animal(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const park::BuildItem& item, save::Tile tile)
+        {
+            const glm::vec3 at = tile_point(scene.grid, tile);
+            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
+            if (scene.park.cash)
+                *scene.park.cash -= item.price;
+            float_money(scene, at, -item.price);
+            animals_changed(device, scene, assets);
+        }
     } // namespace
 
     bool start_enclosing(ParkScene& scene, const park::BuildItem& item)
     {
-        if (item.kind != park::BuildKind::EnclosureFence)
+        if (item.kind != park::BuildKind::EnclosureFence && item.kind != park::BuildKind::Animal)
             return false;
-        scene.enclosing.fence = item;
+        scene.enclosing.item = item;
         scene.enclosing.corner.reset();
         scene.enclosing.other.reset();
         return true;
@@ -77,13 +98,22 @@ namespace rct3::scene
     void update_enclosing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
     {
         EnclosureTool& t = scene.enclosing;
-        const auto tile = t.fence && !over ? ground_tile(scene, at, size) : std::nullopt;
-        if (t.fence && down && (t.corner || tile))
+        const bool animal = t.item && t.item->kind == park::BuildKind::Animal;
+        const auto tile = t.item && !over ? ground_tile(scene, at, size) : std::nullopt;
+        if (t.item && down && (t.corner || tile))
         {
             if (!t.corner)
                 t.corner = tile;
             if (tile)
                 t.other = tile;
+        }
+        else if (t.corner && t.other && animal)
+        {
+            // Let go: the animal comes down in its crate, and the tool stays out for the next.
+            if (crate_allowed(scene, *t.other))
+                put_animal(device, scene, assets, *t.item, *t.other);
+            t.corner.reset();
+            t.other.reset();
         }
         else if (t.corner && t.other)
         {
@@ -103,7 +133,13 @@ namespace rct3::scene
         }
         std::optional<std::array<std::int32_t, 4>> marks;
         bool ok = true;
-        if (t.corner && t.other)
+        if (animal && (t.other || tile))
+        {
+            const save::Tile spot = t.other ? *t.other : *tile;
+            marks = marked(spot, spot);
+            ok = crate_allowed(scene, spot);
+        }
+        else if (t.corner && t.other)
         {
             marks = marked(*t.corner, *t.other);
             ok = allowed(scene, *marks, marked_enclosures(scene, *t.corner, *t.other).second);
@@ -166,6 +202,44 @@ namespace rct3::scene
             }
         }
         (void)simulation::add_animal_house(scene.sim, home, tile_point(scene.grid, spot.value_or(middle)));
+    }
+
+    void animals_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        // shortcut: every animal is drawn as the same closed crate, standing where the animal is; draw each
+        // species' own model, moving as the animal does, once animal models can be read. This is the one place
+        // the animals' shapes are made; place_animals moves them.
+        constexpr std::string_view kCrate = "Crate01";
+        constexpr std::string_view kCrates = "WildAnimals/Crates/Crates";
+        save::PlacedObject crate;
+        crate.symbol = kCrate;
+        crate.overlay = kCrates;
+        scene.animals_shown.clear();
+        std::vector<save::PlacedObject> shapes;
+        if (load_object_model(scene, scene.placing.models, assets, crate))
+            for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
+            {
+                scene.animals_shown.push_back(e);
+                crate.id = shapes.size() + 1;
+                shapes.push_back(crate);
+            }
+        scene.animal_meshes = park::moving_meshes(shapes, scene.models, scene.grid);
+        add_textures(device, scene, scene.animal_meshes.mesh.batches);
+        place_animals(scene);
+    }
+
+    void place_animals(ParkScene& scene)
+    {
+        const auto& r = scene.sim.registry;
+        std::vector<glm::mat4> places;
+        places.reserve(scene.animals_shown.size());
+        for (const entt::entity e : scene.animals_shown)
+        {
+            const auto* pose = r.valid(e) ? r.try_get<simulation::Pose>(e) : nullptr;
+            const simulation::Pose at = pose != nullptr ? simulation::between_steps(*pose, scene.sim_time / simulation::kTickSeconds) : simulation::Pose { };
+            places.push_back(pose != nullptr ? glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f)) : glm::mat4(0.0f));
+        }
+        park::move_meshes(scene.animal_meshes, places);
     }
 
     void enclosures_changed(ParkScene& scene, const ui::InterfaceAssets& assets)

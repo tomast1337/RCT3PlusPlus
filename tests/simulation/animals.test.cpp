@@ -3,6 +3,7 @@
 
 #include "simulation/components.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
 
@@ -52,7 +53,7 @@ TEST_CASE("animals: a keeper strolls about their own enclosure and nowhere else,
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
-    const entt::entity keeper = add_animal_house(world, { .enclosure = 1, .low = { 10, 0 }, .high = { 12, 4 } }, { 12, 0, 2 });
+    const entt::entity keeper = add_animal_house(world, { .enclosure = 1, .troughs = { 13, 0, 2 }, .low = { 10, 0 }, .high = { 12, 4 } }, { 12, 0, 2 });
     const glm::vec3 first = world.registry.get<Pose>(keeper).position;
     bool moved = false;
     for (int i = 0; i < 400; ++i)
@@ -65,4 +66,111 @@ TEST_CASE("animals: a keeper strolls about their own enclosure and nowhere else,
         moved = moved || at != first;
     }
     CHECK(moved);
+}
+
+namespace
+{
+    /// A house in enclosure 0 with its troughs at (3, 2), and an animal of `species` let out of its crate at
+    /// (1, 1); returns the animal.
+    entt::entity animal_at_home(SimWorld& world, const AnimalGround& ground, std::string species = "zebu")
+    {
+        (void)add_animal_house(world, { .enclosure = 0, .troughs = { 3, 0, 2 }, .low = { 3.5f, 0 }, .high = { 4, 4 } }, { 3, 0, 3 });
+        const entt::entity e = add_animal(world, { .species = std::move(species), .enclosure = 0 }, { 1, 0, 1 });
+        run(world, ground, kAnimalRates.crated.value + 0.5f);
+        return e;
+    }
+} // namespace
+
+TEST_CASE("animals: an animal stays in its crate a while, then walks out about its enclosure")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = 0 }, { 1, 0, 1 });
+    run(world, ground, kAnimalRates.crated.value - 1);
+    CHECK(world.registry.get<Animal>(e).job == AnimalJob::Crated);
+    CHECK(world.registry.get<Pose>(e).position == glm::vec3 { 1, 0, 1 });
+    bool moved = false;
+    for (int i = 0; i < 120; ++i)
+    {
+        run(world, ground, 1);
+        const glm::vec3 at = world.registry.get<Pose>(e).position;
+        REQUIRE(ground.enclosure({ at.x, at.z }) == 0);
+        moved = moved || at != glm::vec3 { 1, 0, 1 };
+    }
+    CHECK(moved);
+}
+
+TEST_CASE("animals: a hungry animal eats at its house's troughs, which empty as it does")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity e = animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.get<Animal>(e).hunger = { 0.9f };
+    run(world, ground, 30);
+    CHECK(r.get<Animal>(e).hunger.value < 0.5f);
+    const auto houses = r.view<const AnimalHouse>();
+    CHECK(houses.get<const AnimalHouse>(houses.front()).food.value < 1);
+}
+
+TEST_CASE("animals: the keeper fills the troughs once they run low")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const auto houses = r.view<AnimalHouse>();
+    AnimalHouse& house = houses.get<AnimalHouse>(houses.front());
+    house.food = { 0.1f };
+    house.water = { 0.2f };
+    run(world, ground, 40);
+    CHECK(house.food.value > 0.8f);
+    CHECK(house.water.value > 0.8f);
+    CHECK(house.since_fed.value < 40);
+}
+
+TEST_CASE("animals: an animal leaves dung now and then, which its keeper clears")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const auto dung = [&] { return r.view<const Dung>().size(); };
+    std::size_t most = 0;
+    for (int i = 0; i < static_cast<int>(kAnimalRates.dung.value) * 3; ++i)
+    {
+        run(world, ground, 1);
+        most = std::max(most, dung());
+    }
+    CHECK(most >= 1);
+    run(world, ground, 60);
+    CHECK(dung() <= 1); // Cleared, bar what was just left
+}
+
+TEST_CASE("animals: with empty troughs and no keeper to fill them, a starving animal sickens")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity e = animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.destroy(r.view<KeeperDuty>().front());
+    const auto houses = r.view<AnimalHouse>();
+    houses.get<AnimalHouse>(houses.front()).food = { };
+    houses.get<AnimalHouse>(houses.front()).water = { };
+    run(world, ground, kAnimalRates.thirsty.value + kAnimalRates.sickening.value / 2);
+    CHECK(r.get<Animal>(e).health.value < 0.75f);
+}
+
+TEST_CASE("animals: an animal alone grows lonely; one with its own kind about does not")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity alone = animal_at_home(world, ground, "zebu");
+    const entt::entity a = add_animal(world, { .species = "yak", .enclosure = 1 }, { 11, 0, 1 });
+    const entt::entity b = add_animal(world, { .species = "yak", .enclosure = 1 }, { 12, 0, 1 });
+    run(world, ground, 120);
+    auto& r = world.registry;
+    CHECK(r.get<Animal>(alone).loneliness.value > 0.2f);
+    CHECK(r.get<Animal>(a).loneliness.value == 0);
+    CHECK(r.get<Animal>(b).loneliness.value == 0);
 }

@@ -226,7 +226,8 @@ namespace rct3::park
 
         /// The model of the scenery item `symbol` (its name without the tag), looked for in the overlay the
         /// park names (`overlay`) first. `modelled_plants` picks the item's last readable visual instead of
-        /// its first. Nothing when the item or every level it could show is missing.
+        /// its first. With no such item, the visual of that name, drawn as it is. Nothing when the item or
+        /// every level it could show is missing.
         [[nodiscard]] std::optional<ObjectModel> load(std::string_view symbol, std::string_view overlay, bool modelled_plants = true);
 
         /// The model of car `slot` (0 to 5) of the ride train `train` (its name without the tag), looked for in

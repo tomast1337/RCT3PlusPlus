@@ -317,6 +317,9 @@ namespace rct3::render
         /// its bumps' short shadows and the texture shifted by the map's depth. Draws without a relief map get
         /// only the grain.
         int surface_detail = 0;
+        /// The Lit shaders only: a ghost's look. The vertex colour alone, times `sky`, with no other light and no
+        /// haze; the texture gives only its alpha, and the surface shows more see-through where it faces the eye.
+        bool ghost = false;
     };
 
     /// What the Water shader needs besides its light and pictures.

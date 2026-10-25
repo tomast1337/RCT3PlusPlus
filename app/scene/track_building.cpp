@@ -12,11 +12,11 @@
 #include "park/object_models.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride_placement.hpp"
+#include "park/support_columns.hpp"
 #include "park/track_completion.hpp"
 #include "park/track_edit.hpp"
 #include "park/track_rules.hpp"
 #include "park/track_split.hpp"
-#include "park/track_supports.hpp"
 #include "park/water_fill.hpp"
 #include "save/save_file.hpp"
 #include "scene/park_scene.hpp"
@@ -431,6 +431,15 @@ namespace rct3::scene
                     break;
                 tip = placed->next;
                 shown.push_back(std::move(placed->object));
+            }
+            // Ghost track is held up as built track is, its supports ghosts too.
+            if (const park::SupportSets* sets = support_sets(scene, assets))
+            {
+                for (save::PlacedObject& piece : supports_under(scene, shown, *sets))
+                {
+                    if (load_object_model(scene, b.models, assets, piece))
+                        shown.push_back(std::move(piece));
+                }
             }
             b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
@@ -1012,6 +1021,7 @@ namespace rct3::scene
 
     void objects_changed(ParkScene& scene)
     {
+        scene.supports.stale = true;
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps_due = true;

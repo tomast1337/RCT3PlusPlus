@@ -15,7 +15,6 @@
 #include "park/off_map_trees.hpp"
 #include "park/overhead.hpp"
 #include "park/path_decks.hpp"
-#include "park/path_supports.hpp"
 #include "park/path_tunnels.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
@@ -24,8 +23,8 @@
 #include "park/ride_fences.hpp"
 #include "park/ride_walks.hpp"
 #include "park/sky_models.hpp"
+#include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
-#include "park/track_supports.hpp"
 #include "park/water_flow.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
@@ -60,6 +59,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <format>
@@ -818,7 +818,6 @@ namespace rct3::scene
             {
                 if (const auto sets = park::load_support_sets(*found))
                 {
-                    built = park::path_supports(world->paths, scene.objects, scene.models, scene.grid, *sets);
                     // Tops, caps and beams are fitted to the points they join, so their shapes are needed first.
                     std::vector<save::PlacedObject> sized;
                     const auto size = [&](const park::SupportPiece& piece) {
@@ -839,11 +838,14 @@ namespace rct3::scene
                         }
                     }
                     load_models(install, sized, false, scene.models, scene.pictures);
-                    park::BuiltSupports columns = park::track_supports(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id());
-                    for (const save::PlacedObject& piece : columns.pieces)
-                        scene.columns.insert(piece.id);
-                    built.insert(built.end(), std::make_move_iterator(columns.pieces.begin()), std::make_move_iterator(columns.pieces.end()));
+                    const auto started = std::chrono::steady_clock::now();
+                    park::BuiltSupports columns = park::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
+                    log.info("supports built in {} us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
+                    for (std::size_t i = 0; i < columns.pieces.size(); ++i)
+                        scene.columns.emplace(columns.pieces[i].id, columns.of[i].tile);
+                    built = std::move(columns.pieces);
                     scene.fitted = std::move(columns.fitted);
+                    scene.footpaths.support_sets = *sets;
                 }
                 else
                     log.warning("supports: {}", sets.error());
@@ -1155,6 +1157,7 @@ namespace rct3::scene
         const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
         const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
         log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
+        watch_supports(scene);
         return scene;
     }
 

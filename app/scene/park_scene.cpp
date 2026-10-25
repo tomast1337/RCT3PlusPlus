@@ -526,6 +526,7 @@ namespace rct3::scene
             }
             scene.levels = { };
             scene.since_rebuild = kObjectRebuildInterval;
+            scene.supports.stale = true;
         }
 
         /// Takes the prop `index` out of the park.
@@ -2280,6 +2281,7 @@ namespace rct3::scene
                 *scene.park.cash -= facts.replace_cost;
         }
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
+        profiling::section("Supports", [&] { refresh_supports(scene, assets); });
         follow_footpaths(scene, elapsed);
         if (auto guide = desktop.root().find_as<ui::TutorialGuide>(kGuideName); guide && guide->take_quit())
             ask_leave(scene, *assets.strings, assets.palette);

@@ -10,11 +10,11 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
-#include "park/path_supports.hpp"
 #include "park/path_tunnels.hpp"
 #include "park/queue_fences.hpp"
 #include "park/queue_lines.hpp"
 #include "park/relief_maps.hpp"
+#include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
@@ -49,6 +49,52 @@ namespace rct3::scene
             }
         }
         return f.support_sets ? &*f.support_sets : nullptr;
+    }
+
+    std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::SupportSets& sets)
+    {
+        std::vector<save::PlacedObject> objects = scene.objects;
+        std::uint64_t last = 0;
+        for (const save::PlacedObject& o : objects)
+            last = std::max(last, o.id);
+        std::set<park::SupportTile> tiles;
+        std::unordered_set<std::uint64_t> ids;
+        for (const save::PlacedObject& ghost : ghosts)
+        {
+            save::PlacedObject& o = objects.emplace_back(ghost);
+            o.id = ++last;
+            const auto under = park::support_tiles(o, scene.models);
+            tiles.insert(under.begin(), under.end());
+            ids.insert(o.id);
+        }
+        park::BuiltSupports built = park::support_columns(objects, scene.models, scene.footpaths.paths, scene.grid, sets, last, supports_passed(scene), tiles);
+        std::vector<save::PlacedObject> out;
+        for (std::size_t i = 0; i < built.pieces.size(); ++i)
+        {
+            if (ids.contains(built.of[i].held))
+                out.push_back(std::move(built.pieces[i]));
+        }
+        return out;
+    }
+
+    std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene)
+    {
+        std::unordered_set<std::uint64_t> platforms;
+        for (const save::Ride& ride : scene.rides.rides)
+        {
+            for (const save::TrackPiece& piece : ride.track ? ride.track->pieces : std::vector<save::TrackPiece> { })
+            {
+                if (piece.platform)
+                    platforms.insert(piece.platform->id);
+            }
+        }
+        std::unordered_set<std::uint64_t> out(scene.footpaths.floor_decks.begin(), scene.footpaths.floor_decks.end());
+        for (const save::PlacedObject& o : scene.objects)
+        {
+            if (o.owner_ref != o.id && platforms.contains(o.owner_ref))
+                out.insert(o.id);
+        }
+        return out;
     }
 
     namespace
@@ -252,49 +298,9 @@ namespace rct3::scene
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         ParkFootpaths& f = scene.footpaths;
-        // Supports of raised pieces stand on the ground, so not where a path lies on it (park/path_supports.hpp).
-        std::set<std::pair<int, int>> on_ground;
-        for (const save::PathTile& p : f.paths)
-        {
-            if (!p.elevation || park::is_ground_queue(p))
-                on_ground.emplace(p.col, p.row);
-        }
-        std::map<std::uint64_t, bool> hidden;
-        for (const auto& [id, supports] : f.supports)
-        {
-            const auto path = std::ranges::find(f.paths, id, &save::PathTile::id);
-            for (const std::uint64_t support : supports)
-                hidden[support] = path != f.paths.end() && on_ground.contains({ path->col, path->row });
-        }
-        // A path under a ride or track takes its columns there away, as in the game: a path below the column's
-        // top on the same tile.
-        std::map<std::pair<int, int>, std::int32_t> lowest_path;
-        for (const save::PathTile& p : f.paths)
-        {
-            if (!scene.grid.contains(p.col, p.row))
-                continue;
-            const auto height = p.elevation && !park::is_ground_queue(p) ? p.elevation->quantised_height : static_cast<std::int32_t>(std::floor(scene.grid.at(p.col, p.row).min_height()));
-            const auto [at, _] = lowest_path.emplace(std::pair { p.col, p.row }, height);
-            at->second = std::min(at->second, height);
-        }
-        std::map<std::pair<int, int>, std::int32_t> column_top;
-        for (const save::PlacedObject& o : scene.objects)
-        {
-            if (o.base_height && scene.columns.contains(o.id))
-            {
-                const auto [at, _] = column_top.emplace(std::pair { o.col, o.row }, *o.base_height);
-                at->second = std::max(at->second, *o.base_height);
-            }
-        }
-        for (const save::PlacedObject& o : scene.objects)
-        {
-            if (!scene.columns.contains(o.id))
-                continue;
-            const auto path = lowest_path.find({ o.col, o.row });
-            hidden[o.id] = path != lowest_path.end() && path->second <= column_top[{ o.col, o.row }];
-        }
-        // A raised door a path leads to stands on that path's deck and supports, as in the game, not its own
-        // columns: the door's tile and the path that joins it, level with the door at its back.
+        scene.supports.stale = true; // Paths or the ground changed
+        // A raised door a path leads to stands on a deck like that path's: the door's tile and the path that joins
+        // it, level with the door at its back. The deck's columns stand under the door.
         std::vector<std::pair<save::PathTile, std::uint64_t>> doors; // The door's tile, as path, and the path joining it
         for (const save::Ride& ride : scene.rides.rides)
         {
@@ -327,22 +333,6 @@ namespace rct3::scene
                 }
             }
         }
-        for (const save::PlacedObject& o : scene.objects)
-        {
-            if (scene.columns.contains(o.id) && std::ranges::any_of(doors, [&](const auto& d) { return d.first.col == o.col && d.first.row == o.row; }))
-                hidden[o.id] = true;
-        }
-        bool moved = false;
-        for (save::PlacedObject& o : scene.objects)
-        {
-            if (const auto h = hidden.find(o.id); h != hidden.end() && o.hidden != h->second)
-            {
-                o.hidden = h->second;
-                moved = true;
-            }
-        }
-        if (moved)
-            objects_changed(scene);
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
         park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
         park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
@@ -379,7 +369,6 @@ namespace rct3::scene
         {
             std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(f.door_pieces, o.id); });
             f.door_pieces.clear();
-            const park::SupportSets* sets = support_sets(scene, assets);
             for (auto& [tile, joined] : doors)
             {
                 const park::PathStyle* style = style_named(tile.surface_name);
@@ -418,17 +407,6 @@ namespace rct3::scene
                 tile.elevation->scenery_ref = deck.id;
                 f.door_pieces.push_back(deck.id);
                 scene.objects.push_back(std::move(deck));
-                if (sets == nullptr)
-                    continue;
-                for (save::PlacedObject& o : park::path_supports(std::span(&tile, 1), scene.objects, scene.models, scene.grid, *sets))
-                {
-                    o.fixture = true;
-                    if (!load_object_model(scene, f.models, assets, o))
-                        continue;
-                    id = std::max(id, o.id);
-                    f.door_pieces.push_back(o.id);
-                    scene.objects.push_back(std::move(o));
-                }
             }
             objects_changed(scene);
         }
@@ -680,13 +658,7 @@ namespace rct3::scene
             std::erase_if(shown, [&](const save::PlacedObject& o) { return !load_object_model(scene, f.models, assets, o); });
             if (const park::SupportSets* sets = support_sets(scene, assets); sets != nullptr && !shown.empty())
             {
-                std::vector<save::PathTile> here;
-                for (const std::size_t i : raised)
-                    here.push_back(with[i]);
-                std::ranges::copy_if(f.paths, std::back_inserter(here), [&](const save::PathTile& p) { return !p.elevation && std::ranges::any_of(raised, [&](std::size_t i) { return with[i].col == p.col && with[i].row == p.row; }); });
-                std::vector<save::PlacedObject> objects = scene.objects;
-                std::ranges::copy(shown, std::back_inserter(objects));
-                for (save::PlacedObject& o : park::path_supports(here, objects, scene.models, scene.grid, *sets))
+                for (save::PlacedObject& o : supports_under(scene, shown, *sets))
                 {
                     if (load_object_model(scene, f.models, assets, o))
                         shown.push_back(std::move(o));
@@ -779,11 +751,7 @@ namespace rct3::scene
                 return;
             if (const park::SupportSets* sets = support_sets(scene, assets))
             {
-                std::vector<save::PathTile> here { with.back() };
-                std::ranges::copy_if(f.paths, std::back_inserter(here), [&](const save::PathTile& p) { return p.col == piece->spot.col && p.row == piece->spot.row && !p.elevation; });
-                std::vector<save::PlacedObject> objects = scene.objects;
-                objects.push_back(shown.front());
-                for (save::PlacedObject& o : park::path_supports(here, objects, scene.models, scene.grid, *sets))
+                for (save::PlacedObject& o : supports_under(scene, std::span(&shown.front(), 1), *sets))
                 {
                     if (load_object_model(scene, f.models, assets, o))
                         shown.push_back(std::move(o));
@@ -812,28 +780,6 @@ namespace rct3::scene
         void refresh_around(ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile spot)
         {
             refresh_area(scene, assets, spot, spot);
-        }
-
-        /// Adds the supports under raised path `path`, which stands alone on its tile.
-        void hold_up(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& path)
-        {
-            ParkFootpaths& f = scene.footpaths;
-            const park::SupportSets* sets = support_sets(scene, assets);
-            if (sets == nullptr)
-                return;
-            // shortcut: only the new piece and paths on the ground of its tile are looked at, so a raised piece
-            // laid over a lower one gets its own supports through it; look at the whole tile when that shows.
-            std::vector<save::PathTile> here { path };
-            std::ranges::copy_if(f.paths, std::back_inserter(here), [&](const save::PathTile& p) { return p.col == path.col && p.row == path.row && !p.elevation; });
-            std::vector<save::PlacedObject> built = park::path_supports(here, scene.objects, scene.models, scene.grid, *sets);
-            std::vector<std::uint64_t>& held = f.supports[path.id];
-            for (save::PlacedObject& o : built)
-            {
-                if (!load_object_model(scene, f.models, assets, o))
-                    continue;
-                held.push_back(o.id);
-                scene.objects.push_back(std::move(o));
-            }
         }
 
         /// Hides `objects` of the scene's objects.
@@ -1001,7 +947,6 @@ namespace rct3::scene
                 if (load_object_model(scene, f.models, assets, deck))
                 {
                     scene.objects.push_back(std::move(deck));
-                    hold_up(scene, assets, laid);
                 }
                 else
                     logging::logger("park").warning("{}: no model for {}", style.overlay, deck.symbol);
@@ -1069,14 +1014,10 @@ namespace rct3::scene
             ParkFootpaths& f = scene.footpaths;
             refund(scene, removed);
             wait_for_build(scene);
-            std::vector<std::uint64_t> gone = std::move(f.supports[removed.id]);
-            f.supports.erase(removed.id);
-            std::ranges::copy(f.railings[removed.id], std::back_inserter(gone));
+            std::vector<std::uint64_t> gone = std::move(f.railings[removed.id]);
             f.railings.erase(removed.id);
             if (removed.elevation)
                 gone.push_back(removed.elevation->scenery_ref);
-            // shortcut: supports of paths loaded with the park are not known by path, so they stay; tie them to
-            // their path when the park's supports are read back per path.
             hide(scene, gone);
             sim_paths(scene, { }, std::span(&removed, 1));
             if (removed.queue && removed.queue->queue_line_ref != 0)

@@ -43,6 +43,7 @@
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
 #include "scene/park_particles.hpp"
+#include "scene/park_supports.hpp"
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
@@ -72,6 +73,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -533,23 +535,24 @@ namespace rct3::scene
         float since_hover_pick = 0;  ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
-        std::vector<std::string> prizes;                   ///< Text keys of prizes won and not yet shown, oldest first
-        std::vector<ui::ToolItem> window_requests;         ///< Files menu items that open a window the owner opens (park_windows.hpp)
-        std::unique_ptr<ui::OptionsSession> options;       ///< The options window over the park, once opened
-        std::filesystem::path file;                        ///< The park file loaded, whose name saving offers
-        std::vector<std::byte> base;                       ///< The original park file the park started from, kept for saving
-        std::size_t own_objects = 0;                       ///< `objects` from the file; those after it were made on loading or built since
-        std::unordered_set<std::uint64_t> columns;         ///< Support columns under rides and track, which a path laid under them takes away
-        SaveBrowser saves;                                 ///< Behind the save and load windows over the park
-        ParkGame game;                                     ///< Where the park's games go, and the career it counts for
-        std::size_t file_windows_opened = 0;               ///< Counts them, so the browser tells a new one from the last
-        std::optional<std::filesystem::path> park_to_load; ///< Picked in the load window, until taken
-        ParkMap map;                                       ///< The map window's pictures and what they show
-        ParkFootpaths footpaths;                           ///< The path panel's styles and the paths laid with it
-        TrackBuilding building;                            ///< The construction panel's ride and the piece it would build
-        LandTools land;                                    ///< The land menu's shape and paint tools
-        RidePlacing placing;                               ///< The ride picked in a build list, while it is placed
-        LedSigns led_signs;                                ///< The scrolling boards over queues and on park entrances
+        std::vector<std::string> prizes;                                ///< Text keys of prizes won and not yet shown, oldest first
+        std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_windows.hpp)
+        std::unique_ptr<ui::OptionsSession> options;                    ///< The options window over the park, once opened
+        std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
+        std::vector<std::byte> base;                                    ///< The original park file the park started from, kept for saving
+        std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since
+        std::unordered_map<std::uint64_t, std::pair<int, int>> columns; ///< Support pieces built, by id, and the tile their column stands on
+        SupportWatch supports;                                          ///< How the park stood when its supports were last built
+        SaveBrowser saves;                                              ///< Behind the save and load windows over the park
+        ParkGame game;                                                  ///< Where the park's games go, and the career it counts for
+        std::size_t file_windows_opened = 0;                            ///< Counts them, so the browser tells a new one from the last
+        std::optional<std::filesystem::path> park_to_load;              ///< Picked in the load window, until taken
+        ParkMap map;                                                    ///< The map window's pictures and what they show
+        ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
+        TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
+        LandTools land;                                                 ///< The land menu's shape and paint tools
+        RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed
+        LedSigns led_signs;                                             ///< The scrolling boards over queues and on park entrances
     };
 
     /// The stages of loading a park, in the order they run.

@@ -181,3 +181,24 @@ TEST_CASE("each tool holds its button and its menu's items, named by their icons
     CHECK(rct3::as_pointer(f.desktop.root().find("tools/View/Land_PeopleOff")) == &f.row->item(ToolItem::People));
     CHECK(f.row->item(ToolItem::DeleteOne).parent()->name() == "Delete");
 }
+
+TEST_CASE("an item with a smaller menu opens it a step above itself instead of being picked, and closes it again")
+{
+    Fixture f(1000, 800);
+    f.press(f.row->button(ParkTool::Scenery));
+    const Button& grab = f.row->item(ToolItem::StructureGrab);
+    CHECK_FALSE(grab.visible);
+    f.press(f.row->item(ToolItem::SavedStructures));
+    CHECK_FALSE(f.row->take_item());
+    CHECK(grab.visible);
+    CHECK(f.row->item(ToolItem::StructureList).visible);
+    CHECK(grab.rect().y1 == doctest::Approx(f.row->item(ToolItem::SavedStructures).rect().y1 - tool_row::kItemStep));
+    f.press(grab);
+    CHECK(f.row->take_item() == ToolItem::StructureGrab);
+    CHECK(rct3::as_pointer(f.desktop.root().find("tools/Scenery/SavedSelection_Grab")) == &grab);
+    f.press(f.row->item(ToolItem::SavedStructures));
+    CHECK_FALSE(grab.visible);
+    f.press(f.row->item(ToolItem::SavedStructures));
+    f.press(f.row->button(ParkTool::Scenery));
+    CHECK_FALSE(grab.visible); // Closing the menu closes the smaller one too
+}

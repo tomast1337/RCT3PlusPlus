@@ -73,6 +73,15 @@ namespace rct3::ui
                 item.visible = false;
                 items_.push_back({ entry.item, &item, tool, entry.shown });
                 show_switch(items_.back());
+                for (const ToolMenuItem& sub : tool_submenu(entry.item))
+                {
+                    Button& below = group.add<Button>(std::string(sub.icon), style_.item_face, std::string(sub.icon));
+                    below.swell = style_.item_swell;
+                    below.icon_scale = tool_row::kItemIconScale;
+                    below.tooltip = help(strings_, sub);
+                    below.visible = false;
+                    items_.push_back({ .item = sub.item, .button = &below, .tool = tool, .under = entry.item });
+                }
             }
         }
         set_career(false);
@@ -124,6 +133,7 @@ namespace rct3::ui
     void ToolRow::close_menu()
     {
         open_.reset();
+        sub_open_.reset();
         for (MenuItem& m : items_)
             m.button->visible = false;
     }
@@ -135,14 +145,14 @@ namespace rct3::ui
         const float middle = (under.placement.offsets.x0 + under.placement.offsets.x1) / 2;
         const float first = tool_row::kMargin + step + tool_row::kItemGap;
         const float width = rect().width();
-        const auto count = static_cast<std::size_t>(std::ranges::count(items_, tool, &MenuItem::tool));
+        const auto count = static_cast<std::size_t>(std::ranges::count_if(items_, [&](const MenuItem& m) { return m.tool == tool && !m.under; }));
         // A row centred over the button and kept on the screen; one too wide for it goes on in another row above.
         const float room = width - 2 * tool_row::kMargin - (tool_row::kItemStep - tool_row::kItemWidth);
         const std::size_t fit = std::max<std::size_t>(1, static_cast<std::size_t>(std::floor(room / tool_row::kItemStep)));
         std::size_t i = 0;
         for (MenuItem& m : items_)
         {
-            if (m.tool != tool)
+            if (m.tool != tool || m.under)
                 continue;
             const std::size_t line = i / fit;
             const std::size_t in_line = std::min(fit, count - line * fit);
@@ -150,9 +160,29 @@ namespace rct3::ui
             const float left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, width - tool_row::kMargin - span));
             const float x = left + tool_row::kItemStep * static_cast<float>(i % fit);
             const float y = first + tool_row::kItemStep * static_cast<float>(line);
-            m.button->placement = bottom_left(std::floor(x), y, tool_row::kItemWidth, tool_row::kItemHeight);
+            m.x = std::floor(x);
+            m.bottom = y;
+            m.button->placement = bottom_left(m.x, y, tool_row::kItemWidth, tool_row::kItemHeight);
             m.button->visible = true;
             ++i;
+        }
+    }
+
+    void ToolRow::place_submenu(ToolItem item)
+    {
+        // A row centred over the item, a step above it, kept on the screen.
+        const MenuItem& over = find(item);
+        const float middle = over.x + tool_row::kItemWidth / 2;
+        const auto count = static_cast<std::size_t>(std::ranges::count(items_, std::optional(item), &MenuItem::under));
+        const float span = tool_row::kItemStep * static_cast<float>(count - 1) + tool_row::kItemWidth;
+        const float left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, rect().width() - tool_row::kMargin - span));
+        std::size_t i = 0;
+        for (MenuItem& m : items_)
+        {
+            if (m.under != item)
+                continue;
+            m.button->placement = bottom_left(std::floor(left + tool_row::kItemStep * static_cast<float>(i++)), over.bottom + tool_row::kItemStep, tool_row::kItemWidth, tool_row::kItemHeight);
+            m.button->visible = true;
         }
     }
 
@@ -186,6 +216,8 @@ namespace rct3::ui
             place(width);
             if (open_)
                 place_menu(*open_);
+            if (sub_open_)
+                place_submenu(*sub_open_);
         }
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
@@ -209,6 +241,20 @@ namespace rct3::ui
         {
             if (!m.button->take_click())
                 continue;
+            if (!tool_submenu(m.item).empty())
+            {
+                const bool again = sub_open_ == m.item;
+                for (MenuItem& sub : items_)
+                    if (sub.under)
+                        sub.button->visible = false;
+                sub_open_.reset();
+                if (!again)
+                {
+                    sub_open_ = m.item;
+                    place_submenu(m.item);
+                }
+                continue;
+            }
             if (is_switch(m.item))
             {
                 m.on = !m.on;

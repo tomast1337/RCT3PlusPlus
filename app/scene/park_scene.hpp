@@ -52,6 +52,7 @@
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
+#include "scene/structure_tools.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
@@ -612,6 +613,7 @@ namespace rct3::scene
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed
+        StructureTools structures;                                      ///< The scenery menu's tools that pick out and place structures
         LedSigns led_signs;                                             ///< The scrolling boards over queues and on park entrances
     };
 

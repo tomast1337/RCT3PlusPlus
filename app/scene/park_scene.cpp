@@ -1956,6 +1956,7 @@ namespace rct3::scene
                 set_view_lines(device, scene.delete_marks, mesh);
                 deleting.drawn = marks;
             }
+            update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, input.commands);
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -1966,7 +1967,7 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
-                if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area)
+                if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -1979,7 +1980,7 @@ namespace rct3::scene
                     else if (const auto path = footpath_at(scene, pointer.position, { screen.width(), screen.height() }))
                         delete_paths(device, scene, assets, std::span(&*path, 1));
                 }
-                else if (still && !over && (ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
+                else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
                 {
@@ -2016,6 +2017,8 @@ namespace rct3::scene
                     ;
                 else if (ride_placing(scene))
                     stop_ride_placing(scene); // A right click puts the placing away, as in the game
+                else if (scene.structures.tool != StructureTools::Tool::None)
+                    stop_structure_tools(scene);
                 else if (scene.deleting.tool != DeleteTools::Tool::None)
                     stop_deleting(scene);
                 else if (land_tool(scene))
@@ -2733,6 +2736,7 @@ namespace rct3::scene
                 stop_ride_placing(scene);
                 stop_land_tools(scene);
                 stop_deleting(scene);
+                stop_structure_tools(scene);
                 toggle_footpath_panel(device, scene, assets, options);
             }
             if (const auto item = tools->take_item())
@@ -2743,6 +2747,7 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_deleting(scene);
+                    stop_structure_tools(scene);
                     using enum LandTools::Tool;
                     toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? Shape : (*item == ui::ToolItem::PaintGround ? Paint : (*item == ui::ToolItem::Water ? Water : Waterfall)), assets);
                 }
@@ -2752,6 +2757,7 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
+                    stop_structure_tools(scene);
                     const auto tool = *item == ui::ToolItem::DeleteOne ? DeleteTools::Tool::One : DeleteTools::Tool::Area;
                     const bool out = scene.deleting.tool == tool;
                     stop_deleting(scene);
@@ -2759,6 +2765,15 @@ namespace rct3::scene
                         scene.deleting.tool = tool;
                     if (!out && tool == DeleteTools::Tool::Area)
                         desktop.root().add<ui::DeleteAreaPanel>(std::string(kDeleteAreaName), skins::delete_area_panel_style(), *assets.strings);
+                }
+                else if (*item == ui::ToolItem::StructureGrab || *item == ui::ToolItem::StructureList)
+                {
+                    close_track_building(scene);
+                    stop_ride_placing(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                    stop_deleting(scene);
+                    toggle_structure_tool(scene, *item == ui::ToolItem::StructureGrab ? StructureTools::Tool::Grab : StructureTools::Tool::Place, assets);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
@@ -2826,6 +2841,7 @@ namespace rct3::scene
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
+                    stop_structure_tools(scene);
                     building = picked->kind != park::BuildKind::Scenery;
                 }
                 else if (new_tracked_ride(scene, *picked, assets))
@@ -2834,6 +2850,7 @@ namespace rct3::scene
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
+                    stop_structure_tools(scene);
                     building = true;
                 }
                 // Building a ride puts the build menus away, as in the game; scenery keeps its list out for the

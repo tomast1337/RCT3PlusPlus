@@ -1021,7 +1021,7 @@ namespace rct3::scene
                 tools.set_available(
                     entry.item,
                     entry.item == ui::ToolItem::DeleteOne || entry.item == ui::ToolItem::DeleteArea || entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights
-                        || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                        || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || entry.item == ui::ToolItem::SavedStructures || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
         // Both round panels stand over the tool row, as the path and land panels do.
@@ -1207,6 +1207,7 @@ namespace rct3::scene
         destroy_park_particles(device, scene.particles);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);
+        destroy_save_browser(device, scene.structures.browser);
         for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
         {
             if (b)

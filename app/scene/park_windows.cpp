@@ -3,6 +3,7 @@
 
 #include "career/career_file.hpp"
 #include "logging/log.hpp"
+#include "parkfile/structure_file.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/about_window.hpp"
@@ -25,6 +26,8 @@ namespace rct3::scene
 
         constexpr std::string_view kAboutName = "about";
         constexpr std::string_view kFilesName = "park_files";
+        constexpr std::string_view kStructureFilesName = "structure_files";
+        constexpr std::u16string_view kStructureName = u"MyBuilding"; ///< Offered for a new structure, as in the game
         /// A new sandbox starts from the blank landscape in the game's folder; its first save is offered this name.
         constexpr std::string_view kBlankLandscape = "BlankLandscape";
         constexpr std::u16string_view kNewSandbox = u"New Sandbox";
@@ -84,10 +87,40 @@ namespace rct3::scene
             dialog.set_file_name(park.file.stem() == kBlankLandscape ? std::u16string(kNewSandbox) : park.file.filename().u16string());
         }
 
+        std::optional<ui::FileDialog&> structure_dialog(const ParkScene& park)
+        {
+            return park.desktop->root().find_as<ui::FileDialog>(kStructureFilesName);
+        }
+
+        /// The window that saves the structure picked out, or lists the structures to place one, in place of
+        /// another such window.
+        /// shortcut: the window shows a structure's file name only, without a picture or its size; give the
+        /// rows those once structure files carry a picture.
+        void open_structure_files(ParkScene& park, const FrontEndScene& front, ui::FileDialogMode mode)
+        {
+            ui::Widget& root = park.desktop->root();
+            if (auto shown = structure_dialog(park))
+                root.remove(*shown);
+            park.structures.browser.data = front.saves.data;
+            park.structures.browser.game_saves = front.saves.game_saves;
+            ++park.structures.windows_opened;
+            auto& dialog = root.add<ui::FileDialog>(std::string(kStructureFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
+            dialog.set_file_name(kStructureName);
+        }
+
     } // namespace
 
     void update_park_windows(render::Device& device, ParkScene& park, FrontEndScene& front)
     {
+        if (const auto mode = std::exchange(park.structures.asked, std::nullopt))
+            open_structure_files(park, front, *mode);
+        const ParkGame structures { .folder = config::UserFolder::Structures };
+        if (const auto picked = update_save_browser(device, park.structures.browser, structure_dialog(park), park.structures.windows_opened, structures, [&park](const std::filesystem::path& path) {
+                save::Structure s = park.structures.structure.value_or(save::Structure { });
+                s.name = path.stem().string();
+                return parkfile::write_structure_file(s);
+            }))
+            (void)start_structure_placing(park, *picked, front.assets);
         for (const ui::ToolItem item : std::exchange(park.window_requests, { }))
         {
             if (item == ui::ToolItem::About)
@@ -162,6 +195,7 @@ namespace rct3::scene
     void close_park_windows(render::Device& device, ParkScene& park, FrontEndScene& front)
     {
         destroy_save_browser(device, park.saves);
+        destroy_save_browser(device, park.structures.browser);
         if (!park.options)
             return;
         park.options->close();

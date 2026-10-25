@@ -29,6 +29,8 @@ namespace rct3::ui
         // Scenery
         Fireworks,
         SavedStructures,
+        StructureGrab, ///< Under SavedStructures
+        StructureList, ///< Under SavedStructures
         Billboards,
         GroundSurfaces,
         RideEvents,
@@ -94,6 +96,9 @@ namespace rct3::ui
 
     /// The items of `tool`'s menu, left to right; none for a tool that acts at once.
     [[nodiscard]] std::span<const ToolMenuItem> tool_menu(ParkTool tool);
+
+    /// The items of the smaller menu that `item` opens above itself, left to right; none for most items.
+    [[nodiscard]] std::span<const ToolMenuItem> tool_submenu(ToolItem item);
 
     /// Whether `item` is a switch of the view controls.
     [[nodiscard]] bool is_switch(ToolItem item);

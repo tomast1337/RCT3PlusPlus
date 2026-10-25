@@ -2,6 +2,8 @@
 //
 // The small panel shown while the area delete tool is out, over the tool row: a button that clears the tiles
 // marked so far and one that deletes what stands on them. The owner takes what was asked with take_action().
+// The structure tools use it too, with their own pictures and help: picking out a structure (clear the marks,
+// save them), and placing one (a lone turn button, as the second is left out when its picture is empty).
 #pragma once
 
 #include "ui/string_table.hpp"
@@ -21,7 +23,9 @@ namespace rct3::ui
         std::string back;   ///< Behind the whole panel
         std::string button; ///< Each button's face
         std::string clear;
-        std::string remove;
+        std::string remove;                                        ///< Empty for no second button
+        std::string clear_help = "GUI2_DeleteSelection_ClearHelp"; ///< String keys
+        std::string remove_help = "GUI2_DeleteSelection_DeleteHelp";
         float bottom = 0; ///< Its bottom edge, up from the screen's
     };
 

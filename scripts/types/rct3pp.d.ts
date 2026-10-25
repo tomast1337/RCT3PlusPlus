@@ -323,3 +323,10 @@ declare namespace people {
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */
     function rename(i: number, name: string): void;
 }
+
+declare namespace structures {
+    /** The structure being placed, while the placing tool is out: what its ghost shows and whether it may go there. */
+    function placing(): { name: string; items: number; problem: "none" | "not owned" | "blocked" | "path"; affordable: boolean; cost: number; turns: number; height: number; ghost: boolean; at?: { col: number; row: number } } | undefined;
+    /** How many tiles the picking out tool has marked. */
+    function marked(): number;
+}

@@ -9,7 +9,8 @@
 // The row keeps a fixed step between buttons and packs them closer on narrow screens, so all of them always
 // fit. Most buttons open a menu in a row above them (see tool_menus.hpp): one menu is open at a time, pressing its
 // button again closes it, and pressing another button opens that one's instead. Picking an item leaves the
-// menu open. The owner hears of a press of a button without a menu through take_pressed(), of an item
+// menu open. An item with a smaller menu of its own (tool_submenu) opens it in a row above itself instead of
+// being picked, and closes it when pressed again. The owner hears of a press of a button without a menu through take_pressed(), of an item
 // picked through take_item(), and decides what they do.
 #pragma once
 
@@ -114,11 +115,15 @@ namespace rct3::ui
             ToolItem item;
             Button* button = nullptr;
             ParkTool tool;
-            bool on = false; ///< Switches only
+            bool on = false;                   ///< Switches only
+            std::optional<ToolItem> under { }; ///< The item whose smaller menu it is in
+            float x = 0;                       ///< Where it was last placed: its left edge
+            float bottom = 0;                  ///< And its bottom, up from the screen's
         };
 
         void place(float width);
         void place_menu(ParkTool tool);
+        void place_submenu(ToolItem item);
         void show_switch(MenuItem& item);
         [[nodiscard]] MenuItem& find(ToolItem item);
         [[nodiscard]] const MenuItem& find(ToolItem item) const;
@@ -128,6 +133,7 @@ namespace rct3::ui
         std::array<Button*, kParkToolCount> buttons_ { };
         std::vector<MenuItem> items_;
         std::optional<ParkTool> open_;
+        std::optional<ToolItem> sub_open_;
         std::optional<ParkTool> pressed_;
         std::optional<ToolItem> picked_;
         float placed_for_ = -1; ///< The width the buttons were last placed for

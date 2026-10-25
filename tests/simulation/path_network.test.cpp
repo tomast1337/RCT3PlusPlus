@@ -259,3 +259,28 @@ TEST_CASE("staff never step onto a tile kept from them, unless they stand on one
     CHECK(p.route(outside, inside, Walker::Staff)); // Found outside, they can come back in
     CHECK_FALSE(p.may_step(inside, gate, Walker::Staff));
 }
+
+TEST_CASE("given a purse, a route takes a link through a queue when it is shorter and its toll fits")
+{
+    PathNetwork p;
+    // A long path along row 0, with a queue tile off its start whose link ends near the far end.
+    for (int c = 0; c <= 20; ++c)
+        p.add({ c, 0, 0 });
+    const NodeId start = *p.find({ 0, 0, 0 });
+    const NodeId far = *p.find({ 20, 0, 0 });
+    const NodeId queue = p.add({ 0, 1, 0 }, true);
+    p.link({ .from = queue, .to = *p.find({ 19, 0, 0 }), .length = 5, .toll = 100 });
+    CHECK(p.link_between(queue, *p.find({ 19, 0, 0 })));
+    CHECK_FALSE(p.link_between(queue, far));
+    // Without a purse, or one too light, the walk is along the path.
+    CHECK(p.route(start, far)->size() == 20);
+    CHECK(p.route(start, far, Walker::Guest, 99)->size() == 20);
+    const auto ride = p.route(start, far, Walker::Guest, 100);
+    REQUIRE(ride);
+    CHECK(*ride == std::vector<NodeId> { queue, *p.find({ 19, 0, 0 }), far });
+    // A link longer than the walk is left alone, and the queue is no way through otherwise.
+    p.clear_links();
+    p.link({ .from = queue, .to = *p.find({ 19, 0, 0 }), .length = 30, .toll = 0 });
+    CHECK(p.route(start, far, Walker::Guest, 0)->size() == 20);
+    CHECK_FALSE(p.route(start, p.add({ 0, 2, 0 }), Walker::Guest, 0));
+}

@@ -71,6 +71,17 @@ namespace rct3::simulation
         std::array<NodeId, 4> corner { kNoNode, kNoNode, kNoNode, kNoNode };
     };
 
+    /// A way across the park that is not walked: a guest steps on at `from` and off at `to`, as if `length`
+    /// steps apart, paying `toll`.
+    struct PathLink
+    {
+        NodeId from = kNoNode;
+        NodeId to = kNoNode;
+        float length = 0;        ///< In steps between tiles side by side
+        std::int64_t toll = 0;   ///< In cents
+        std::uint32_t owner = 0; ///< What it stands for, as whoever made it numbers it
+    };
+
     class PathNetwork
     {
     public:
@@ -134,12 +145,24 @@ namespace rct3::simulation
         /// The height of the path a fraction `t` of the way from the middle of `from`'s tile to the middle of `to`'s.
         [[nodiscard]] float height_between(NodeId from, NodeId to, float t) const;
 
+        /// Adds a link; a queue tile it starts from is entered on the way only to take it.
+        void link(const PathLink& link);
+        /// Takes every link away.
+        void clear_links()
+        {
+            links_.clear();
+        }
+        /// The link from `from` to `to`, if there is one.
+        [[nodiscard]] std::optional<const PathLink&> link_between(NodeId from, NodeId to) const;
+
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
         /// when no walk reaches it. Queues are only entered at `to`, never walked through. Only steps `who` may take.
-        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest) const;
+        /// Given a `purse`, the way may also take links, as many as their tolls together fit it; a link shows in
+        /// the walk as a step from its start to its end.
+        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
         /// Like route, to whichever of `targets` is nearest: its place in `targets` (the first, where several
         /// share a node) and the walk there. One search, however many targets.
-        [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest) const;
+        [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
 
     private:
         static std::uint64_t key(int col, int row);
@@ -159,6 +182,7 @@ namespace rct3::simulation
         bool corners_ = false;                               ///< Whether any square of paths has been found
         std::vector<PathNode> nodes_;
         std::unordered_multimap<std::uint64_t, NodeId> by_tile_;
+        std::unordered_multimap<NodeId, PathLink> links_; ///< By the node each starts from
     };
 
 } // namespace rct3::simulation

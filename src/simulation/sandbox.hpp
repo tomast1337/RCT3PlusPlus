@@ -33,7 +33,8 @@ namespace rct3::simulation
         float happiness = 0.5f;
         float energy = 1;
         float nausea = 0;
-        std::int64_t cash = 5000; ///< Hundredths
+        std::int64_t cash = 5000;  ///< Hundredths
+        std::int64_t bank = 10000; ///< What cash machines can give them
     };
 
     struct RideSetup

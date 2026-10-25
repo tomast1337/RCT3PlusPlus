@@ -731,7 +731,7 @@ namespace rct3::save
         return Guest {
             .person = build_person(o, index, PersonType::Adult),
             .cash = {
-                .arrival = i32(sub(cash, at::atm_cash)),
+                .bank = i32(sub(cash, at::atm_cash)),
                 .current = i32(sub(cash, at::current_cash)),
                 .withdrawn = i32(sub(cash, at::withdrawn)),
                 .spent_drink = i32(sub(cash, at::spent_drink)),

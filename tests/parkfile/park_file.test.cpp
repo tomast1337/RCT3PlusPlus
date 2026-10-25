@@ -22,7 +22,7 @@ namespace
         r.emplace<simulation::Pose>(a, glm::vec3 { 1.5f, 2.0f, -3.25f }, 0.5f);
         r.emplace<simulation::Needs>(a, 0.1f, 0.9f, 0.3f);
         r.emplace<simulation::Mood>(a, 0.8f, 0.6f, 0.0f);
-        r.emplace<simulation::Wallet>(a, std::int64_t { 2550 });
+        r.emplace<simulation::Wallet>(a, simulation::Money { 2550 }, simulation::Money { 9000 }, simulation::Money { 1000 }, simulation::Money { 700 });
         const auto gone = r.create();
         const auto b = r.create();
         r.destroy(gone); // A gap in the ids
@@ -77,6 +77,8 @@ TEST_CASE("a park read back from its file is the park that was written")
     CHECK(r.get<simulation::Needs>(a).thirst.value == 0.9f);
     CHECK(r.get<simulation::Mood>(a).happiness.value == 0.8f);
     CHECK(r.get<simulation::Wallet>(a).cash.value == 2550);
+    CHECK(r.get<simulation::Wallet>(a).bank.value == 9000);
+    CHECK(r.get<simulation::Wallet>(a).spent.value == 700);
     CHECK(r.all_of<simulation::Visitor, simulation::Needs>(b));
     CHECK_FALSE(r.any_of<simulation::Pose, simulation::Mood, simulation::Wallet>(b));
 }
@@ -164,6 +166,20 @@ TEST_CASE("broken files are refused, not trusted")
         const auto read = parkfile::read_park_file(bytes);
         REQUIRE_FALSE(read);
         CHECK(read.error().contains("entity 5"));
+    }
+    SUBCASE("a wallet of the first version holds cash alone")
+    {
+        auto bytes = header(1, 2);
+        chunk(bytes, "ENTS", 1, { std::byte { 1 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 } });
+        std::vector<std::byte> wallet(4 + 4 + 8, std::byte { 0 });
+        wallet[0] = std::byte { 1 }; // one record, for entity 0
+        wallet[8] = std::byte { 200 };
+        chunk(bytes, "WALT", 1, wallet);
+        const auto read = parkfile::read_park_file(bytes);
+        REQUIRE(read);
+        const auto& wallet_read = read->registry.get<simulation::Wallet>(entt::entity { 0 });
+        CHECK(wallet_read.cash.value == 200);
+        CHECK(wallet_read.bank.value == 0);
     }
     SUBCASE("a count larger than the file")
     {

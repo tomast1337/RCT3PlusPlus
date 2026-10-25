@@ -257,7 +257,7 @@ namespace rct3::save
 
     struct Cash
     {
-        std::int32_t arrival = 0; ///< Cash brought into the park, minor units
+        std::int32_t bank = 0; ///< What cash machines can still give them, minor units
         std::int32_t current = 0;
         std::int32_t withdrawn = 0;
         std::int32_t spent_drink = 0;

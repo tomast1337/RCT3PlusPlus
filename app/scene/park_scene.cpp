@@ -2405,7 +2405,7 @@ namespace rct3::scene
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
-                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
+                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
                 // standing in the park, each as the box it is clicked in.
                 // shortcut: wrecks fly through the tracked rides, their own and others', with their stations and

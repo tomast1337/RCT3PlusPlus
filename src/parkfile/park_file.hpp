@@ -18,7 +18,8 @@
 //   "POSE" v1  Pose:     count u32, then entity u32, position 3 x f32, heading f32
 //   "NEED" v1  Needs:    count u32, then entity u32, hunger, thirst, bladder f32
 //   "MOOD" v1  Mood:     count u32, then entity u32, happiness, energy, nausea f32
-//   "WALT" v1  Wallet:   count u32, then entity u32, cash i64
+//   "WALT" v2  Wallet:   count u32, then entity u32, cash, bank, withdrawn i64, then spent in all, on entry,
+//              rides, food, drink and souvenirs i64 (v1: cash only)
 //   "DPRT" v1  Departure: count u32, then entity u32, load waited for u8 (0 full, 1 three quarters, 2 half,
 //              3 quarter, 4 any), least and longest wait i32 seconds (-1 none)
 //   "UPKP" v1  Upkeep:   count u32, then entity u32, reliability f32, broken u8, breakdown going on and last

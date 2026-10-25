@@ -45,7 +45,8 @@ namespace rct3::simulation
     void remove_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
 
     /// Has each imported ride and stall of `rides` find its entrance on the paths again, and each ride its
-    /// queue line, after paths changed. A ride with guests in its queue keeps its line until the queue empties.
+    /// queue line at each of its stations, after paths changed. A station with guests in its queue keeps its line
+    /// until the queue empties.
     /// Returns how many changed.
     std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides);
 

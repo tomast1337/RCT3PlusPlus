@@ -267,6 +267,16 @@ namespace rct3::simulation
             c.at = wrap(c, c.at + moved);
             c.travelled += moved;
             c.launched = c.launched || c.travelled >= c.train_length;
+            // At another station, it stops there to let riders off and on.
+            if (c.next_stop < c.stops.size() && c.travelled >= c.stops[c.next_stop])
+            {
+                c.travelled = c.stops[c.next_stop++];
+                c.at = wrap(c, c.start + c.travelled);
+                c.speed = 0;
+                c.slow = 0;
+                c.running = false;
+                return false;
+            }
             // Not yet off the platform, the station holds it from rolling back.
             if (c.travelled < 0 && !c.launched)
             {
@@ -283,14 +293,24 @@ namespace rct3::simulation
                 c.slow = 0;
                 c.launched = false;
                 c.running = false;
+                c.next_stop = 0;
                 return true;
             }
         }
         return false;
     }
 
+    std::optional<std::size_t> standing_at(const Coaster& c)
+    {
+        if (c.running || c.crashed)
+            return std::nullopt;
+        return c.travelled == 0 ? 0 : c.next_stop;
+    }
+
     std::optional<float> lap_seconds(Coaster c, float most)
     {
+        c.stops.clear();
+        c.next_stop = 0;
         c.running = true;
         c.at = c.start;
         c.travelled = 0;

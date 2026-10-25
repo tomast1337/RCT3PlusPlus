@@ -41,6 +41,7 @@ namespace rct3::simulation
             s.weather = world.weather->type;
             s.forecast = world.weather->forecast;
             s.temperature = world.weather->temperature;
+            s.wind = std::clamp(world.weather->wind_speed, 0.0f, 1.0f);
         }
         return s;
     }

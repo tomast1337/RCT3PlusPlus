@@ -2326,6 +2326,29 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
+        profiling::section("LensWater", [&] {
+            using save::WeatherType;
+            const WeatherType w = scene.park.weather;
+            // The car ridden, while its ride goes through water and the view moves with it.
+            std::optional<glm::vec3> splashing;
+            if (scene.riding && *scene.riding < scene.car_spots.size() && scene.ride_view.velocity)
+                if (const std::size_t ride = scene.car_spots[*scene.riding].ride; scene.simulate && ride < scene.ride_entities.size())
+                    if (const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[ride]); cycle != nullptr && cycle->splash)
+                        splashing = scene.ride_view.velocity;
+            const LensSurroundings around {
+                .view_projection = park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across),
+                .eye = viewer,
+                .aspect = aspect(device),
+                .under_water = scene.water.eye_in.has_value(),
+                .rain = w == WeatherType::LightRain  ? 1
+                    : w == WeatherType::HeavyRain    ? 2
+                    : w == WeatherType::Thunderstorm ? 3
+                                                     : 0,
+                .wind = scene.park.wind,
+                .splashing_car = splashing,
+            };
+            advance_park_lens(scene.lens, around, true, elapsed);
+        });
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { refresh_zoo_animals(scene); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);

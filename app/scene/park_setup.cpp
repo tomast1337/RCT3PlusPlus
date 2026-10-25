@@ -1216,6 +1216,7 @@ namespace rct3::scene
         destroy_park_water(device, scene.water);
         destroy_led_signs(device, scene.led_signs);
         destroy_park_glow(device, scene.glow);
+        destroy_park_lens(device, scene.lens);
         destroy_park_particles(device, scene.particles);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);

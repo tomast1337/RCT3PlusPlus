@@ -45,6 +45,7 @@
 #include "scene/led_signs.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_glow.hpp"
+#include "scene/park_lens.hpp"
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
 #include "scene/park_particles.hpp"
@@ -296,6 +297,7 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
+        ParkLens lens;             ///< Water on the camera's lens
         ParkParticles particles;   ///< The effects scenery and rides show
         bool bloom = false;        ///< The Bloom option: glow round bright parts
         bool light_shafts = false; ///< The Light shafts option

@@ -123,8 +123,8 @@ namespace rct3::park
     /// shortcut: effects on bones stand where the bone rests, as lamps do.
     [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
 
-    /// The level of each object seen from `eye`, with the models' distances times `scale`.
-    [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale = 1);
+    /// The level of each object seen from `eye`, its models' distances scaled for its kind by `scales`.
+    [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales = { });
 
     /// How far round a crossing objects are already drawn as crossing, as a share of its distance, so ones the
     /// eye reaches between two looks at the levels are ready.
@@ -142,10 +142,10 @@ namespace rct3::park
         bool operator==(const LevelPlan&) const = default;
     };
 
-    /// The plan for `objects` seen from `eye`, with the models' distances times `scale`. An object starts crossing
+    /// The plan for `objects` seen from `eye`, its models' distances scaled for its kind by `scales`. An object starts crossing
     /// into the next level `band` of a level's farthest distance before it, as the eye draws away, and is wholly
     /// at the next level at the distance itself; with `band` 0, objects jump from level to level.
-    [[nodiscard]] LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale = 1);
+    [[nodiscard]] LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales = { });
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.

@@ -163,7 +163,30 @@ TEST_CASE("a level is the first that reaches as far as the viewer")
     CHECK(level_at(m, 11) == 1u);
     CHECK(level_at(m, 199) == 2u);
     CHECK_FALSE(level_at(m, 201));
-    CHECK(level_at(m, 15, 2) == 0u);
+    CHECK(level_at(m, 15, { .detail = 2, .distance = 2 }) == 0u);
+}
+
+TEST_CASE("detail stretches the finer levels and draw distance the last, which bounds them all")
+{
+    const ObjectModel m = three_levels(); // Levels reach 10, 50 and 200
+    CHECK(level_at(m, 15, { .detail = 2 }) == 0u);
+    CHECK(level_at(m, 250, { .detail = 2 }) == std::nullopt);
+    CHECK(level_at(m, 250, { .distance = 1.5f }) == 2u);
+    CHECK(level_at(m, 15, { .distance = 1.5f }) == 1u);
+    // Finer levels never reach past where the item stops being drawn.
+    CHECK(level_reach(m, 1, { .detail = 3, .distance = 0.5f }) == doctest::Approx(100));
+    CHECK(level_at(m, 120, { .detail = 3, .distance = 0.5f }) == std::nullopt);
+    CHECK(level_at(m, 5, { .detail = 0 }) == 2u);
+}
+
+TEST_CASE("each item counts as one kind for its detail and draw distance")
+{
+    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Tree)) == DetailKind::Vegetation);
+    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Fence)) == DetailKind::Fences);
+    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Bench)) == DetailKind::Paths);
+    CHECK(detail_kind(14) == DetailKind::Supports);
+    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::RideExit)) == DetailKind::Rides);
+    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::SmallScenery)) == DetailKind::Scenery);
 }
 
 TEST_CASE("objects are drawn at the level their distance calls for")
@@ -288,6 +311,13 @@ TEST_CASE("objects near the edge of a level are drawn at both levels, crossing o
     CHECK(plan(210).coarser == ObjectLevels { kNotDrawn });
     CHECK(plan(300).steady == ObjectLevels { kNotDrawn });
     CHECK(plan(300).finer == ObjectLevels { kNotDrawn });
+    // Each kind's own scales: a tree's are the vegetation ones.
+    LevelScales far { };
+    far[static_cast<std::size_t>(DetailKind::Vegetation)].distance = 2;
+    CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 250), 0.2f, far).steady == ObjectLevels { 2 });
+    far = { };
+    far[static_cast<std::size_t>(DetailKind::Scenery)].distance = 2;
+    CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 250), 0.2f, far).steady == ObjectLevels { kNotDrawn });
     // Without a band, objects jump.
     CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 9), 0).steady == ObjectLevels { 0 });
 }

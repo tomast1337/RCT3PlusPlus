@@ -500,11 +500,17 @@ namespace rct3::park
         return slots;
     }
 
-    std::optional<std::size_t> level_at(const ObjectModel& model, float distance, float scale)
+    float level_reach(const ObjectModel& model, std::size_t level, LevelScale scale)
+    {
+        const float last = model.levels.back().distance * scale.distance;
+        return level + 1 < model.levels.size() ? std::min(model.levels[level].distance * scale.detail, last) : last;
+    }
+
+    std::optional<std::size_t> level_at(const ObjectModel& model, float distance, LevelScale scale)
     {
         for (std::size_t i = 0; i < model.levels.size(); ++i)
         {
-            if (distance <= model.levels[i].distance * scale)
+            if (distance <= level_reach(model, i, scale))
                 return i;
         }
         return std::nullopt;

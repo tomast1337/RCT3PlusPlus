@@ -16,6 +16,7 @@
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
+#include "park/item_category.hpp"
 #include "park/model_lights.hpp"
 #include "park/ride_walks.hpp"
 #include "park/support_footprint.hpp"
@@ -174,9 +175,22 @@ namespace rct3::park
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).
     [[nodiscard]] std::uint32_t colour_slots(const ObjectModel& model);
 
-    /// The level of `model` to draw at `distance`, with every level's distance times `scale`: the first that
-    /// reaches that far. Nothing when the item is too far away for all of them.
-    [[nodiscard]] std::optional<std::size_t> level_at(const ObjectModel& model, float distance, float scale = 1);
+    /// How far an item's levels reach, as shares of the distances its model gives them: `detail` for every level
+    /// but the last, so how long the finer levels hold, and `distance` for the last, beyond which it is not drawn.
+    struct LevelScale
+    {
+        float detail = 1;
+        float distance = 1;
+    };
+    /// By DetailKind.
+    using LevelScales = std::array<LevelScale, kDetailKinds>;
+
+    /// How far level `level` of `model` reaches with `scale`; never past where the last level ends.
+    [[nodiscard]] float level_reach(const ObjectModel& model, std::size_t level, LevelScale scale);
+
+    /// The level of `model` to draw at `distance` with `scale`: the first that reaches that far. Nothing when the
+    /// item is too far away for all of them.
+    [[nodiscard]] std::optional<std::size_t> level_at(const ObjectModel& model, float distance, LevelScale scale = { });
 
     using ModelPictures = std::map<std::string, PaletteImage, std::less<>>;
 

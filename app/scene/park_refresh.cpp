@@ -651,9 +651,17 @@ namespace rct3::scene
                 if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
                     continue; // Gone home
                 const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
-                const auto level = std::ranges::find_if(kPersonDistances, [&](float d) { return distance <= d; });
-                if (level != kPersonDistances.end())
-                    levels[i] = static_cast<std::int8_t>(level - kPersonDistances.begin());
+                // Scaled as objects' levels are: detail for the finer ones, draw distance for the last.
+                const park::LevelScale scale = scene.level_scales[static_cast<std::size_t>(park::DetailKind::People)];
+                const float last = kPersonDistances.back() * scale.distance;
+                for (std::size_t k = 0; k < kPersonDistances.size(); ++k)
+                {
+                    if (distance <= (k + 1 < kPersonDistances.size() ? std::min(kPersonDistances[k] * scale.detail, last) : last))
+                    {
+                        levels[i] = static_cast<std::int8_t>(k);
+                        break;
+                    }
+                }
             }
             if (levels != scene.people_levels)
             {
@@ -694,10 +702,10 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, bool supports, const park::Broken& broken, const park::Chains& chains)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken, const park::Chains& chains)
     {
         ObjectBuild built;
-        built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band); });
+        built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
         const auto leave_out = [&](std::size_t i) {
             built.plan.steady[i] = park::kNotDrawn;
             built.plan.finer[i] = park::kNotDrawn;
@@ -780,9 +788,9 @@ namespace rct3::scene
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())
             return;
         scene.since_rebuild = 0;
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides)] {
             profiling::register_thread("ObjectWorker");
-            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, supports, broken, chains); });
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains); });
             profiling::unregister_thread();
             return built;
         });
@@ -803,7 +811,7 @@ namespace rct3::scene
 
     float scale_for(const render::Device& device, const ParkScene& scene)
     {
-        return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale);
+        return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale, device.render_scale());
     }
 
     float aspect(const render::Device& device)

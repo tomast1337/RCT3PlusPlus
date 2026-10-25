@@ -4,6 +4,7 @@
 // values checked against the game's items have names here; the rest are kept as numbers.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace rct3::park
@@ -57,6 +58,60 @@ namespace rct3::park
     {
         const auto in = [&](ItemCategory low, ItemCategory high) { return category >= static_cast<std::uint32_t>(low) && category <= static_cast<std::uint32_t>(high); };
         return !in(ItemCategory::SupportColumn, ItemCategory::PathPiece) && !in(ItemCategory::Leftover, ItemCategory::Stall) && category != static_cast<std::uint32_t>(ItemCategory::Effect);
+    }
+
+    /// The kinds of thing the graphics options give a detail level and a draw distance of their own, in the order
+    /// the options list them.
+    enum class DetailKind : std::uint8_t
+    {
+        People,
+        Animals,
+        Vegetation,
+        Fences,
+        Buildings,
+        Paths, ///< Path pieces and what stands on them: bins, benches, signs, lamps, litter
+        Scenery,
+        Supports,
+        Track,
+        Rides, ///< Rides with their entrances and exits
+    };
+    inline constexpr std::size_t kDetailKinds = 10;
+
+    /// The kind an item of `category` counts as for its detail level and draw distance. Our own grouping, by what
+    /// each category holds; anything not named is scenery.
+    [[nodiscard]] constexpr DetailKind detail_kind(std::uint32_t category) noexcept
+    {
+        using C = ItemCategory;
+        if (category <= static_cast<std::uint32_t>(C::Flowers)) // Trees to flowers, the unnamed one between too
+            return DetailKind::Vegetation;
+        switch (static_cast<C>(category))
+        {
+            case C::Fence:
+            case C::KeepClear:
+                return DetailKind::Fences;
+            case C::Wall:
+            case C::Floor:
+            case C::Roof:
+            case C::WallCorner:
+            case C::Stall:
+                return DetailKind::Buildings;
+            case C::PathPiece:
+            case C::Leftover:
+            case C::LitterBin:
+            case C::Bench:
+            case C::Sign:
+            case C::PathFeature:
+                return DetailKind::Paths;
+            case C::TrackPiece:
+                return DetailKind::Track;
+            case C::Ride:
+            case C::RideEntrance:
+            case C::RideExit:
+            case C::RideEvent:
+                return DetailKind::Rides;
+            default:
+                return category >= static_cast<std::uint32_t>(C::SupportColumn) && category <= static_cast<std::uint32_t>(C::SupportCap) ? DetailKind::Supports : DetailKind::Scenery;
+        }
     }
 
 } // namespace rct3::park

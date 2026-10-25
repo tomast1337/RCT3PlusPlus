@@ -66,6 +66,8 @@ namespace rct3::config
         Shadows,         ///< 0 none, 1 static, 2 dynamic
         BlendShadows,    ///< Shadows move smoothly between drawings from the sun, rather than step
         ShowDetailLevels,
+        // Detail and draw distance pairs: shares of the distances the item files give their levels, 1 as given.
+        // Detail stretches the finer levels, draw distance the last, beyond which a thing is not drawn.
         PeopleDetail,
         PeopleDistance,
         AnimalDetail,
@@ -87,8 +89,7 @@ namespace rct3::config
         RideDetail,
         RideDistance,
         ImposterDistance, ///< Beyond it, scenery is drawn as flat pictures
-        BlendDetailLevels,
-        DetailBlendBand, ///< How far before a level's edge objects start blending into the next, as a share of its distance
+        DetailBlendBand,  ///< How far before a level's edge objects start blending into the next, as a share of its distance; 0 jumps
         CompressTextures,
         AggressiveDepthBias,
         TextureDetail,

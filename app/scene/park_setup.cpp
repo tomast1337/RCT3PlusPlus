@@ -674,8 +674,9 @@ namespace rct3::scene
         {
             scene.camera = saved->camera;
             const simulation::DayClock from_file = scene.day;
-            scene.day = simulation::start_day(saved->progress.day_time, from_file.window, from_file.transition);
-            scene.day.mode = from_file.mode;
+            const simulation::DayMode mode = saved->day_mode.value_or(from_file.mode);
+            scene.day = simulation::start_day(saved->progress.day_time, simulation::day_window(mode, from_file.park_hours), from_file.transition);
+            scene.day.mode = mode;
             scene.day.park_hours = from_file.park_hours;
         }
         begin(ParkLoadStage::Ground);

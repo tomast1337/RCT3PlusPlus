@@ -1729,7 +1729,7 @@ namespace rct3::scene
                 draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
-                draw.light = ghost_light(light);
+                draw.light = ghost_light(light, scene.clock);
                 device.draw(draw);
             }
         }

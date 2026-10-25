@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -1936,12 +1937,16 @@ namespace rct3::scene
             draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
     }
 
-    render::SceneLight ghost_light(render::SceneLight light)
+    render::SceneLight ghost_light(render::SceneLight light, float clock)
     {
-        constexpr float kGhostGlow = 2.4f; // Bright enough to pass the glow's threshold through the ghost's see-through tint
-        light.sun = glm::vec3(0.0f);
-        light.sky = glm::vec3(kGhostGlow);
-        light.ground = glm::vec3(kGhostGlow);
+        // The strength swings between these, rising and falling evenly, this many times a second.
+        constexpr float kDimmest = 0.7f;
+        constexpr float kBrightest = 1.1f;
+        constexpr float kPulses = 0.6f;
+        const float wave = 2 * std::abs(clock * kPulses - std::floor(clock * kPulses) - 0.5f); // 1 to 0 and back
+        light.sky = glm::vec3(std::lerp(kDimmest, kBrightest, wave));
+        light.ghost = true;
+        light.haze_rate = 0;
         light.shadow_map = { };
         light.shadow_view = { };
         light.shadow_map_before = { };
@@ -1971,7 +1976,7 @@ namespace rct3::scene
             draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
             draw.filter = render::Filter::Linear;
             draw.address = render::AddressMode::Repeat;
-            draw.light = solid ? light : ghost_light(light);
+            draw.light = solid ? light : ghost_light(light, scene.clock);
             device.draw(draw);
         }
     }

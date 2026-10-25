@@ -22,7 +22,7 @@ import common;
 
 // render::SceneLight, packed. sun_direction.w is 0 without a shadow, else 1 plus the older shadow's weight; sky.w
 // is 1 when the variation is given, plus 2 when the relief map is, plus 4 times the surface detail (0 to 2),
-// plus 16 when the lamps are, plus as its fraction how far the texture is moved along v (a lift's chain); sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
+// plus 16 when the lamps are, plus 32 for a ghost (render::SceneLight::ghost), plus as its fraction how far the texture is moved along v (a lift's chain); sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
 struct Draw
 {
     float4x4 transform;
@@ -315,6 +315,15 @@ float4 fragment_main(LitVaryings f) : SV_Target
         if (color.a < 0.5)
             discard;
         color.a = 1.0;
+    }
+    // A ghost: its own colour, lit by nothing but the sky's strength, so it glows at any hour; see-through as its
+    // texture is, and more where it faces the eye, so its outline stands out.
+    if ((flags & 32u) != 0u)
+    {
+        static const float kGhostFacing = 0.35; // Of its alpha left where it faces the eye
+        const float3 view = f.eye.w > 0.5 ? normalize(f.eye.xyz - f.world) : n;
+        const float edge = 1.0 - abs(dot(n, view));
+        return float4(eased_off(f.color.rgb * u_draw.sky.rgb), color.a * lerp(kGhostFacing, 1.0, edge));
     }
 
     // The shadow is looked up by the true normal below; only the light follows the relief.

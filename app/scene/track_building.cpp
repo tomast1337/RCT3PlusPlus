@@ -342,6 +342,34 @@ namespace rct3::scene
             return !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
         }
 
+        /// The room the park's solid items take, but the pieces a piece `b` builds would join: the track's ends, or
+        /// the piece built over and those either side of it. Joined pieces may share a tile, as diagonals do.
+        /// shortcut: the track's far end is left out even where the new piece does not join it, so a piece may cross
+        /// it; leave it in once a piece's ends tell which pieces it meets.
+        park::SolidTiles taken_room(const ParkScene& scene, const TrackBuilding& b)
+        {
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            if (!ride.track || ride.track->pieces.empty())
+                return park::solid_tiles(scene.objects, scene.models, scene.grid);
+            const auto& pieces = ride.track->pieces;
+            std::vector<std::uint64_t> joined { pieces.front().scenery, pieces.back().scenery };
+            if (b.selected)
+            {
+                joined.push_back(pieces.at(*b.selected).scenery);
+                if (const auto around = park::piece_neighbours(*ride.track, *b.selected))
+                    joined.insert(joined.end(), { pieces[around->before].scenery, pieces[around->after].scenery });
+            }
+            std::vector<save::PlacedObject> others;
+            std::ranges::copy_if(scene.objects, std::back_inserter(others), [&](const save::PlacedObject& o) { return !std::ranges::contains(joined, o.id); });
+            return park::solid_tiles(others, scene.models, scene.grid);
+        }
+
+        /// Whether `o`, its model loaded, would take room `taken` or a path takes.
+        bool clashes(const ParkScene& scene, const park::SolidTiles& taken, const save::PlacedObject& o)
+        {
+            return park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), taken, scene.footpaths.paths, scene.grid) != park::Clash::None;
+        }
+
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
@@ -352,6 +380,7 @@ namespace rct3::scene
             b.ghost.reset();
             b.ghost_mesh = { };
             b.off_water = false;
+            b.clashes = false;
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
             b.backward = false;
@@ -442,6 +471,7 @@ namespace rct3::scene
             if (!load_object_model(scene, b.models, assets, o))
                 return;
             b.off_water = off_water(scene, b, assets, o);
+            b.clashes = clashes(scene, taken_room(scene, b), o);
             // A design shows whole, as far as its pieces go on from the first.
             std::vector<save::PlacedObject> shown { o };
             park::TrackTip tip = b.ghost->next;
@@ -468,7 +498,7 @@ namespace rct3::scene
             }
             b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
-                v.colour *= b.off_water ? kRefusedTint : kGhostTint;
+                v.colour *= b.off_water || b.clashes ? kRefusedTint : kGhostTint;
         }
 
         ui::IconState state_of(bool picked, bool offered)
@@ -589,7 +619,7 @@ namespace rct3::scene
             {
                 const park::PieceShape& shape = c->pieces[b.picked->index];
                 v.piece = piece_name(*assets.strings, shape.record.name);
-                if (!b.ghost)
+                if (!b.ghost || b.clashes)
                     v.piece = assets.strings->get(kCannotPlace);
                 else if (b.off_water)
                     v.piece = assets.strings->get("PlaceObject_MustBeOnWater");
@@ -689,7 +719,7 @@ namespace rct3::scene
         {
             const park::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
-            if (c == nullptr || !b.ghost || b.off_water || !b.picked || !ride.track)
+            if (c == nullptr || !b.ghost || b.off_water || b.clashes || !b.picked || !ride.track)
                 return;
             wait_for_build(scene);
             const auto over = b.selected ? built_piece(scene, *c, ride.track->pieces.at(*b.selected)) : std::nullopt;
@@ -866,7 +896,16 @@ namespace rct3::scene
             if (object == objects.end() || !shape)
                 return;
             const park::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
-            const auto way = park::complete_track(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&](const save::PlacedObject& o) { return !off_water(scene, b, assets, o); }, kCompletionTries);
+            // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
+            // laid in thought in its way too if a found way does.
+            const park::SolidTiles taken = taken_room(scene, b);
+            const auto way = park::complete_track(
+                c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid,
+                [&](save::PlacedObject o) {
+                    o.overlay = b.overlay;
+                    return !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
+                },
+                kCompletionTries);
             if (!way)
             {
                 b.complaint = way.error() == park::CompletionFailure::OutOfTries ? "RideAutoCompleteOutOfTime" : "RideAutoCompleteNoSolution";

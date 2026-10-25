@@ -105,6 +105,7 @@ namespace rct3::scene
         park::SplitState split = park::SplitState::None;
         park::ObjectMesh ghost_mesh;
         bool off_water = false; ///< The ghost's piece stands only on water, and some of it is on dry land
+        bool clashes = false;   ///< The ghost's piece takes room a solid item or a path takes
         std::string complaint;  ///< String key: why the track was last not finished; cleared by the next action
         bool arm = false;       ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.

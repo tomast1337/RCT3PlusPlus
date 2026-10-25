@@ -181,7 +181,7 @@ declare namespace build {
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; designs: string[]; selected: number | null; split: number } | undefined;
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; clashes: boolean; designs: string[]; selected: number | null; split: number } | undefined;
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */

@@ -3,6 +3,7 @@
 
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
+#include "park/path_decks.hpp"
 #include "park/path_furniture.hpp"
 #include "park/support_columns.hpp"
 
@@ -59,8 +60,27 @@ namespace rct3::park
             }
             for (std::size_t i = 0; i < under.size() && i < m.solid.size(); ++i)
             {
-                if (const auto& levels = m.solid[i])
-                    out.tiles[key_of(under[i].first, under[i].second)].push_back({ base + static_cast<float>((*levels)[0]), base + static_cast<float>((*levels)[1] + 1), room });
+                const auto& levels = m.solid[i];
+                if (!levels)
+                    continue;
+                // The thirds the square fills, turned with the item onto the park's.
+                std::uint16_t thirds = kAllThirds;
+                if (m.supports && i < m.supports->squares.size() && m.supports->squares[i].cells != 0)
+                {
+                    thirds = 0;
+                    const std::int32_t lx = static_cast<std::int32_t>(i) % m.squares[0];
+                    const std::int32_t lz = static_cast<std::int32_t>(i) / m.squares[0];
+                    for (std::int32_t c = 0; c < 9; ++c)
+                    {
+                        if ((m.supports->squares[i].cells & (1U << c)) == 0)
+                            continue;
+                        const glm::vec2 at = spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, true);
+                        const int x = std::clamp(static_cast<int>((at.x - std::floor(at.x)) * 3), 0, 2);
+                        const int z = std::clamp(static_cast<int>((at.y - std::floor(at.y)) * 3), 0, 2);
+                        thirds |= static_cast<std::uint16_t>(1U << (3 * z + x));
+                    }
+                }
+                out.tiles[key_of(under[i].first, under[i].second)].push_back({ base + static_cast<float>((*levels)[0]), base + static_cast<float>((*levels)[1]), room, thirds });
             }
         }
         return out;
@@ -73,6 +93,30 @@ namespace rct3::park
             return false;
         // A wall along an edge parts paths there instead (edge_walls.hpp).
         return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return (s.room & kWholeTile) != 0 && s.low < high + kPathHeadroom && low < s.high; });
+    }
+
+    Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    {
+        constexpr float kTopSlack = 0.05f; // An item may rest on another's top
+        for (const auto& [key, spans] : mine.tiles)
+        {
+            const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
+            const auto there = solids.tiles.find(key);
+            for (const SolidSpan& s : spans)
+            {
+                if (there != solids.tiles.end() && std::ranges::any_of(there->second, [&](const SolidSpan& t) { return (t.room & s.room) != 0 && (t.thirds & s.thirds) != 0 && t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
+                    return Clash::Solid;
+            }
+            for (const save::PathTile& path : paths)
+            {
+                // shortcut: a path's height is taken at one edge, so a slope's lower end may pass under an item;
+                // take its lowest edge if that shows.
+                const auto deck = edge_height(path, grid, 0);
+                if (path.col == tile.col && path.row == tile.row && deck && blocked(mine, tile, *deck, *deck))
+                    return Clash::Path;
+            }
+        }
+        return Clash::None;
     }
 
 } // namespace rct3::park

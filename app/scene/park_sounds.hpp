@@ -62,8 +62,8 @@ namespace rct3::scene
     };
 
     [[nodiscard]] ParkSounds load_park_sounds(const config::GameInstall& install, std::uint32_t seed);
-    /// Plays what is heard in `scene` now, `elapsed` seconds after the last update, at `volume` (0..1).
-    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float volume, float elapsed);
+    /// Plays what is heard in `scene` now, `elapsed` seconds after the last update.
+    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float elapsed);
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds);
 
 } // namespace rct3::scene

@@ -24,12 +24,12 @@ namespace rct3::scene
     {
 
         constexpr float kChatterReach = 30;   ///< World units about the camera's point whose people are heard chatting
-        constexpr float kChatterLevel = 0.5f; ///< Of the game volume, with a full crowd
+        constexpr float kChatterLevel = 0.5f; ///< Of full loudness, with a full crowd
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
         constexpr float kRideLevel = 0.7f;
         constexpr float kChainFade = 0.5f;      ///< Seconds the chain's loop takes to come in and to die away
-        constexpr float kWaterfallLevel = 0.6f; ///< Of the game volume.
+        constexpr float kWaterfallLevel = 0.6f; ///< Of full loudness.
         constexpr float kWaterfallNear = 10;    ///< World units from where it lands a waterfall is heard full loud.
         constexpr float kWaterfallFar = 90;     ///< And no longer heard.
 
@@ -118,10 +118,10 @@ namespace rct3::scene
         return s;
     }
 
-    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float volume, float elapsed)
+    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float elapsed)
     {
         const auto& r = scene.sim.registry;
-        const bool quiet = scene.park.speed.paused || !scene.simulate || volume <= 0;
+        const bool quiet = scene.park.speed.paused || !scene.simulate;
         const glm::vec3 eye = park::eye(scene.camera);
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
         engine.set_muffled(scene.water.eye_in.has_value());
@@ -138,7 +138,7 @@ namespace rct3::scene
                     crowd += pose.position;
                 }
         crowd = near > 0 ? crowd / static_cast<float>(near) : scene.camera.target;
-        const float chatter = quiet ? 0.0f : volume * kChatterLevel * audio::chatter_level(near);
+        const float chatter = quiet ? 0.0f : kChatterLevel * audio::chatter_level(near);
         for (audio::VoiceHandle& voice : sounds.chatter_voices)
         {
             if (!engine.is_playing(voice))
@@ -166,12 +166,12 @@ namespace rct3::scene
             const glm::vec3 at = park::waterfall_point(falls[i], 1.0f);
             if (!engine.is_playing(voice))
             {
-                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = volume * kWaterfallLevel, .at = at, .near = kWaterfallNear, .far = kWaterfallFar, .loop = true });
+                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear, .far = kWaterfallFar, .loop = true });
                 voice = played ? *played : audio::VoiceHandle { };
             }
             else
             {
-                engine.set_voice_volume(voice, volume * kWaterfallLevel);
+                engine.set_voice_volume(voice, kWaterfallLevel);
                 engine.set_voice_place(voice, at);
             }
         }
@@ -189,7 +189,7 @@ namespace rct3::scene
             if (sounds.heard.contains(e))
                 continue;
             const bool man = !visitor.female && visitor.age != simulation::AgeGroup::Child;
-            const audio::PlayParams params = audio::heard(pose.position, volume * kGestureLevel);
+            const audio::PlayParams params = audio::heard(pose.position, kGestureLevel);
             using enum simulation::GestureKind;
             if (gesture.kind == Cheer)
                 play_any(engine, man ? sounds.whoops : sounds.cheers, sounds.random, params);
@@ -240,7 +240,7 @@ namespace rct3::scene
             const entt::entity lead = riders[std::uniform_int_distribution<std::size_t>(0, riders.size() - 1)(sounds.random)];
             const auto* visitor = r.try_get<simulation::Visitor>(lead);
             const std::size_t woman = visitor != nullptr && visitor->female ? 1 : 0;
-            voice = play_any(engine, sounds.screams[(riders.size() >= 3 ? 2 : 0) + woman], sounds.random, audio::heard(at, volume * kScreamLevel));
+            voice = play_any(engine, sounds.screams[(riders.size() >= 3 ? 2 : 0) + woman], sounds.random, audio::heard(at, kScreamLevel));
             engine.set_voice_place(voice, at, velocity);
         }
 
@@ -254,7 +254,7 @@ namespace rct3::scene
             auto node = sounds.train_sounds.extract(t.key);
             TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
             const auto& kit = sounds.track_sounds[static_cast<std::size_t>(train.set)];
-            const float level = i < audio::kHeardTrains ? volume * kRideLevel : 0.0f;
+            const float level = i < audio::kHeardTrains ? kRideLevel : 0.0f;
             const auto params = [&](float gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear, .far = audio::kRideFar }; };
             const auto sound = [&](audio::TrackSound which) -> const std::optional<audio::SoundBuffer>& { return kit[static_cast<std::size_t>(which)]; };
 

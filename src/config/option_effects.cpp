@@ -16,6 +16,7 @@ namespace rct3::config
             O::Currency,         // Money in the park's windows
             O::DistanceUnits,    // Lengths and speeds
             O::TemperatureUnits, // The weather
+            O::GameVolume,       // The master volume
             O::MusicVolume,
             O::InterfaceVolume,
             O::CycleMenuMusic,

@@ -175,6 +175,9 @@ namespace rct3::scene
     void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park, float level)
     {
         follow_choice(engine, menu, options, in_park);
+        // The game volume is the master: it scales every sound, the music and the interface's too.
+        if (const float master = options.get(config::GameOption::GameVolume); master != engine.master_volume())
+            engine.set_master_volume(master);
         if (menu.music)
         {
             const float volume = audio::kMenuMusicLevel * options.get(config::GameOption::MusicVolume);

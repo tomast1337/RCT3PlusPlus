@@ -410,6 +410,15 @@ namespace rct3::simulation
         std::vector<Stop> stops { };
     };
 
+    /// A guest riding from one station of a ride to another on the way somewhere: what they were doing, and the
+    /// rest of their way from the exit they get off at.
+    struct Crossing
+    {
+        entt::entity ride = entt::null;
+        Errand errand { };
+        std::vector<NodeId> route { };
+    };
+
     /// The ways riders walk on and off a ride, in the park's space, worked out from the ride's models where it
     /// is drawn. Seats are counted as a load fills them: a ride's riders, or a train's. A ride without one lets
     /// its riders on and off where they stand.

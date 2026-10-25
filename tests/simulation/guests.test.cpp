@@ -926,3 +926,33 @@ TEST_CASE("on a ride with two stations, riders get on at either and off at the o
     CHECK(r.get<Stride>(far).from == *paths.find({ 2, 0, 0 }));
     CHECK(r.get<Attraction>(ride).customers == 2);
 }
+
+TEST_CASE("a guest going far rides from one station of a ride to another when that is sooner, and walks on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 40, 0 });
+    const auto stand = park.shop("Drinks", Product::Drink, { 40, 0 }, 100);
+    const auto ride = park.flat_ride("Railway", { 1, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 2, 0 } });
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = *paths.find({ 38, 0, 0 }), .exit = *paths.find({ 39, 0, 0 }), .saved = 1 });
+    Coaster track;
+    track.distance = { 0, 100 };
+    track.height = { 0, 0 };
+    track.kinds = { Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.stops = { 50 };
+    r.emplace<Trains>(ride, Trains { { track }, { { } } });
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 1000 });
+    bool crossed = false;
+    CHECK(park.run_until(
+        [&] {
+            crossed = crossed || r.all_of<Crossing>(guest);
+            return r.get<Attraction>(stand).customers == 1;
+        },
+        90));
+    CHECK(crossed);
+    CHECK(r.get<Attraction>(ride).customers == 1);
+    CHECK(r.get<Wallet>(guest).cash.value == 800);
+    CHECK_FALSE(r.all_of<Crossing>(guest));
+}

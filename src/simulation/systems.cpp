@@ -94,16 +94,19 @@ namespace rct3::simulation
         {
             std::vector<entt::entity> wanted;
             std::vector<NodeId> entrances;
+            std::int64_t dearest = 0;
             for (const Offer& o : offers)
             {
                 if (o.price > wallet.cash.value || !pick(o))
                     continue;
                 wanted.push_back(o.entity);
                 entrances.push_back(o.entrance);
+                dearest = std::max(dearest, o.price);
             }
             if (wanted.empty())
                 return std::nullopt;
-            auto found = paths.route_nearest(at, entrances);
+            // A ride there on the way only with what they would still have left for it.
+            auto found = paths.route_nearest(at, entrances, Walker::Guest, wallet.cash.value - dearest);
             if (!found)
                 return std::nullopt;
             return std::pair { wanted[found->first], std::move(found->second) };
@@ -357,7 +360,7 @@ namespace rct3::simulation
             if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
                 return std::nullopt;
             for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
-                if (auto walk = paths.route(at, at_gate.node))
+                if (auto walk = paths.route(at, at_gate.node, Walker::Guest, r.get<Wallet>(guest).cash.value))
                     return std::pair { gate, std::move(*walk) };
             return std::nullopt;
         }
@@ -366,7 +369,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish, RideWalk>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish, RideWalk, Crossing>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -435,6 +438,14 @@ namespace rct3::simulation
             const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
             r.get<Errand>(guest) = after_ride(r, guest, ride);
             stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
+            // Riding across the park, they walk on where they were going; one in a party waits for the others
+            // first (phase 5).
+            if (auto* crossing = r.try_get<Crossing>(guest); crossing != nullptr && crossing->ride == ride && !r.all_of<Member>(guest))
+            {
+                r.get<Errand>(guest) = crossing->errand;
+                r.get<Stride>(guest).route = std::move(crossing->route);
+                r.remove<Crossing>(guest);
+            }
             auto& dice = r.get<Dice>(guest).state;
             if (gesture && random::chance(dice, kTuning.gestures.chance.value))
                 r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.shown.value);
@@ -1463,6 +1474,48 @@ namespace rct3::simulation
         }
 
         phase.emplace("Walking");
+        // Now and then, each open, working ride with more than one station becomes a set of links between them,
+        // as long as the wait at the station boarded at, the ride on to the other and getting through both,
+        // walked at an adult's pace. Its ticket is the toll.
+        if (world.tick % ticks(kTuning.transport.refresh.value) == 0)
+        {
+            world.paths.clear_links();
+            for (const auto [e, ride, attraction] : r.view<const CycleRide, const Attraction>().each())
+            {
+                const auto* fleet = r.try_get<Trains>(e);
+                const auto* upkeep = r.try_get<Upkeep>(e);
+                if (ride.stops.empty() || fleet == nullptr || fleet->trains.empty() || !attraction.open || attraction.testing || (upkeep != nullptr && upkeep->broken))
+                    continue;
+                const Coaster& track = fleet->trains.front();
+                const float length = track.length();
+                // Timed by its last lap, or by one driven now without stops when it has none.
+                const float lap = ride.run.value > 0 ? ride.run.value : lap_seconds(track).value_or(0);
+                if (length <= 0 || lap <= 0 || track.stops.size() != ride.stops.size())
+                    continue;
+                const float pace = kTuning.walking.speed[2].value / paths.tile_size;
+                for (std::size_t from = 0; from <= ride.stops.size(); ++from)
+                {
+                    const auto& queue = from == 0 ? ride.queue : ride.stops[from - 1].queue;
+                    // The wait: the queue ahead at the rate the ride takes riders, or a load at a time by laps
+                    // before it has a rate.
+                    const float wait = ride.per_hour > 0 ? static_cast<float>(queue.size()) * 3600 / ride.per_hour : static_cast<float>(queue.size() / std::max<std::uint32_t>(ride.capacity, 1)) * lap;
+                    // How far on round the track from this station each is.
+                    const auto ahead = [&](std::size_t k) { return std::fmod((k == 0 ? 0 : track.stops[k - 1]) - (from == 0 ? 0 : track.stops[from - 1]) + length, length); };
+                    for (std::size_t to = 0; to <= ride.stops.size(); ++to)
+                    {
+                        if (to == from || (to > 0 && ride.stops[to - 1].exit == kNoNode))
+                            continue;
+                        const float along = ahead(to);
+                        // Stations passed on the way, where the train stands too.
+                        std::size_t passed = 0;
+                        for (std::size_t k = 0; k <= ride.stops.size(); ++k)
+                            passed += k != from && ahead(k) < along;
+                        const float seconds = kTuning.transport.boarding.value + wait + lap * along / length + kTuning.transport.dwell.value * static_cast<float>(passed);
+                        world.paths.link({ .from = entrance_of(r, e, from), .to = exit_of(r, e, to), .length = seconds * pace, .toll = attraction.price.value, .owner = entt::to_integral(e) });
+                    }
+                }
+            }
+        }
         // 2. Walking and deciding. Arrivals are noted per guest and dealt with after.
         const std::vector<Offer> on_offer = offers(r);
         // Footpath tiles under cover and in the shade, where guests go out of the rain or the sun.
@@ -1481,6 +1534,8 @@ namespace rct3::simulation
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
         std::vector<entt::entity> arrived(movers.size(), entt::null);
+        // Of those come to a station to ride on across the park: the rest of their way, from its exit.
+        std::vector<std::vector<NodeId>> crossing(movers.size());
         if (!paths.nodes().empty())
         {
             share(workers, movers.size(), [&](std::size_t begin, std::size_t end) {
@@ -1526,7 +1581,16 @@ namespace rct3::simulation
                     stride.fresh = true;
                     stride.lane_from = stride.lane_to;
                     bool ringed = false;
-                    if (!stride.route.empty())
+                    const auto link = stride.route.empty() ? std::nullopt : paths.link_between(at, stride.route.front());
+                    if (link && r.valid(entt::entity { link->owner }) && r.all_of<CycleRide>(entt::entity { link->owner }))
+                    {
+                        arrived[i] = entt::entity { link->owner };
+                        crossing[i] = std::move(stride.route);
+                        stride.route.clear();
+                        stride.to = at;
+                        stride.progress.value = 1;
+                    }
+                    else if (!stride.route.empty())
                     {
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
@@ -1867,7 +1931,18 @@ namespace rct3::simulation
                 for (std::size_t k = 0; k <= ride->stops.size(); ++k)
                     if (k != station && (k == 0 || ride->stops[k - 1].exit != kNoNode))
                         offs.push_back(k);
-                const auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
+                auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
+                // Riding across the park: off where their way goes on.
+                if (!crossing[i].empty())
+                {
+                    for (std::size_t k = 0; k <= ride->stops.size(); ++k)
+                        if (k != station && exit_of(r, arrived[i], k) == crossing[i].front())
+                            off = static_cast<std::uint8_t>(k);
+                    crossing[i].erase(crossing[i].begin());
+                    r.emplace_or_replace<Crossing>(guest, Crossing { .ride = arrived[i], .errand = errand, .route = std::move(crossing[i]) });
+                }
+                else
+                    r.remove<Crossing>(guest);
                 // A full line puts them off: they think so and go elsewhere, and the party with them.
                 if (queue.size() >= queue_room(line))
                 {
@@ -2418,7 +2493,7 @@ namespace rct3::simulation
         {
             const Party& party = r.get<Party>(e);
             entt::entity ride = entt::null;
-            std::uint8_t off = 0; // The station those on it get off at
+            std::uint8_t off_at = 0; // The station those on it get off at
             bool waiting = false;
             for (const entt::entity m : party.members)
             {
@@ -2426,13 +2501,13 @@ namespace rct3::simulation
                 if (errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding)
                 {
                     ride = errand.target;
-                    off = errand.off;
+                    off_at = errand.off;
                 }
                 waiting = waiting || errand.kind == ErrandKind::Waiting;
             }
             if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
             {
-                const NodeId exit = exit_of(r, ride, off);
+                const NodeId exit = exit_of(r, ride, off_at);
                 const NodeId spot = waiting_spot(paths, exit);
                 for (const entt::entity m : party.members)
                 {
@@ -2448,11 +2523,12 @@ namespace rct3::simulation
                     stride.to = at;
                     stride.progress.value = 1;
                     stride.lane_to = stride.lane_from;
-                    errand = { .kind = ErrandKind::Waiting, .target = ride, .off = off };
+                    errand = { .kind = ErrandKind::Waiting, .target = ride, .off = off_at };
                 }
             }
             else if (waiting)
             {
+                const Errand was = r.get<Errand>(party.leader);
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
@@ -2460,6 +2536,23 @@ namespace rct3::simulation
                         errand = errand.kind == ErrandKind::Waiting ? Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) } : errand;
                     else
                         errand = { ErrandKind::Following, entt::null, 0 };
+                }
+                // A party riding across the park walks on from the exit where it was going.
+                if (auto* crossing = r.try_get<Crossing>(party.leader); crossing != nullptr && was.kind == ErrandKind::Waiting && was.target == crossing->ride)
+                {
+                    auto& stride = r.get<Stride>(party.leader);
+                    const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
+                    if (auto back = r.valid(was.target) && r.all_of<CycleRide>(was.target) ? paths.route(at, exit_of(r, was.target, was.off)) : std::nullopt)
+                    {
+                        back->insert(back->end(), crossing->route.begin(), crossing->route.end());
+                        stride.route = std::move(*back);
+                        stride.from = at;
+                        stride.to = at;
+                        stride.progress.value = 1;
+                        stride.lane_to = stride.lane_from;
+                        r.get<Errand>(party.leader) = crossing->errand;
+                    }
+                    r.remove<Crossing>(party.leader);
                 }
             }
         }

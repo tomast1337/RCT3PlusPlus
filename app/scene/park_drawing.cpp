@@ -187,6 +187,8 @@ namespace rct3::scene
                     if (scene.simulate)
                         draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
+            if (parts.people)
+                profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery)

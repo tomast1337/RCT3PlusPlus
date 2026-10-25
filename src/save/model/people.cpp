@@ -311,6 +311,7 @@ namespace rct3::save
             constexpr std::string_view l_flags = "Flags";
             // part group
             constexpr std::string_view pg_symbol = "SymbolName";
+            constexpr std::string_view entry_symbol = "SYMBOLNAME";
             constexpr std::string_view pg_section = "PartGroup";
             constexpr std::string_view pg_sex = "PeopleSex";
             constexpr std::string_view pg_type = "PeopleType";
@@ -1190,7 +1191,17 @@ namespace rct3::save
                     break;
                 case Slot::Zoo:
                     if (auto z = make_zoo_animal(d, index))
+                    {
+                        // Its species and its place are kept in objects of their own.
+                        if (const auto entry = resolve(z->entry, index))
+                            if (const auto e = decode_object(file, *entry))
+                                z->species = str(e->find(at::entry_symbol));
+                        if (const auto visual = resolve(z->visual, index))
+                            if (const auto v = decode_object(file, *visual))
+                                if (const auto world = v->find(at::world_matrix); world && world->floats().size() == z->world.size())
+                                    std::ranges::copy(world->floats(), z->world.begin());
                         m.zoo_animals.push_back(std::move(*z));
+                    }
                     break;
                 case Slot::Group:
                     if (auto g = make_guest_group(d, index))

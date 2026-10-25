@@ -54,6 +54,7 @@
 #include "scene/save_browser.hpp"
 #include "scene/structure_tools.hpp"
 #include "scene/track_building.hpp"
+#include "scene/zoo_animals.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park_state.hpp"
@@ -486,6 +487,7 @@ namespace rct3::scene
         std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
         float since_riders = 0;
         ui::UiTextures people_textures;
+        DrawnAnimals drawn_animals;                           ///< The saved zoo animals, drawn with their models
         park::AttractionObjects attractions;                  ///< Which attraction each object belongs to, for clicks
         std::optional<park::AttractionRef> shown;             ///< The attraction the info panel tells about
         std::vector<ui::AttractionTab> shown_tabs;            ///< Its tabs in the panel's order

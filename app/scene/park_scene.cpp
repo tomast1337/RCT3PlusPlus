@@ -2219,6 +2219,7 @@ namespace rct3::scene
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
+        profiling::section("ZooAnimals", [&] { refresh_zoo_animals(scene); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
         if (bar)
         {

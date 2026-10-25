@@ -474,6 +474,9 @@ namespace rct3::save
         PeopleRef entry { };
         PeopleRef family_membership { };
         PeopleRef visual { };
+        std::string species { }; ///< Symbol of its species ("was" item), from the database entry `entry` names
+        /// Model to world from the visual `visual` names, stored as Person::world is; identity without one.
+        std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
         float pregnancy_timer = -1; ///< -1 when not pregnant
         std::int32_t babies_in_womb = 0;
         float enclosure_health_score = 0;

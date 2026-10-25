@@ -46,6 +46,12 @@ async function close(title: string): Promise<void> {
     await frames(5);
 }
 
+// Two weeks end, each adding to the weekly graphs.
+for (let week = 0; week < 2; ++week) {
+    park.setDate((Math.floor(park.date() / 90) + 1) * 90 - 0.05);
+    await frames(30);
+}
+
 await management("Man_Park", "PID_Title", "ParkInfoDialogIcon_Graphs");
 expect(under("PID_Title", "graph") !== undefined, "the park's graph");
 // A tick box for each series, the guests by age among them.

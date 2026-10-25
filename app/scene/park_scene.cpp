@@ -2225,6 +2225,12 @@ namespace rct3::scene
         {
             if (const auto asked = bar->take_speed())
                 scene.park.speed = *asked;
+            if (const auto mode = bar->take_day_mode())
+                simulation::change_mode(scene.day, *mode);
+            if (bar->objective_button().take_click())
+                open_management_window(desktop, ui::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+            if (bar->take_finances())
+                open_management_window(desktop, ui::ManagementTopic::Finances, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
         }
         for (const ui::PlayCommand c : input.commands)
         {
@@ -2656,7 +2662,11 @@ namespace rct3::scene
             units.fahrenheit = options.choice(config::GameOption::TemperatureUnits) == kFahrenheit;
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
-            bar->show(ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units));
+            ui::ParkBarValues values = ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units);
+            // The player chooses how the day goes in a sandbox, a park whose money never runs out.
+            if (!scene.park.cash)
+                values.day_mode = scene.day.mode;
+            bar->show(values);
         }
         if (auto messages = desktop.root().find_as<ui::MessageDrawer>(kMessagesName))
         {

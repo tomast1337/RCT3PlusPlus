@@ -220,6 +220,32 @@ TEST_CASE("a queue fills two or three abreast, round its turn, and a full one pu
     }
 }
 
+TEST_CASE("in a moving queue nobody walks up past the guest ahead, nor into them")
+{
+    Sandbox park;
+    park.path({ 0, 3 }, { 5, 3 }).queue({ 5, 0 }, { 5, 2 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 1, .cycle_seconds = 3, .line = { { 5, 0 }, { 5, 1 }, { 5, 2 } } });
+    auto& r = park.world().registry;
+    for (int i = 0; i < 30; ++i)
+        r.get<Errand>(park.guest({ i % 5, 3 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+    const auto& queue = r.get<CycleRide>(ride).queue;
+    float closest = 100;
+    float least_gap = 100;
+    for (int t = 0; t < 1200; ++t)
+    {
+        park.run(1);
+        // Those just come in at the line's far end are left out: they step up one by one from there.
+        for (std::size_t k = 1; k < queue.size() && r.get<Stride>(queue[k]).along.value < 2; ++k)
+        {
+            least_gap = std::min(least_gap, r.get<Stride>(queue[k]).along.value - r.get<Stride>(queue[k - 1]).along.value);
+            for (std::size_t j = k >= 2 ? k - 2 : 0; j < k; ++j)
+                closest = std::min(closest, glm::distance(r.get<Pose>(queue[k]).position, r.get<Pose>(queue[j]).position));
+        }
+    }
+    CHECK(least_gap > 0);
+    CHECK(closest > 0.3f);
+}
+
 TEST_CASE("guests a save put in a queue stand off its middle, to each side in turn")
 {
     Sandbox park;

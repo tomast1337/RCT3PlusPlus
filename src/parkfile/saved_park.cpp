@@ -62,6 +62,12 @@ namespace rct3::parkfile
         return kept;
     }
 
+    save::Cash kept_cash(const simulation::Wallet& wallet)
+    {
+        const auto i32 = [](simulation::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
+        return { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
+    }
+
     SavedPeople keep_people(const simulation::SimWorld& world, save::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks)
     {
         using namespace simulation;
@@ -92,9 +98,7 @@ namespace rct3::parkfile
             {
                 in_park[static_cast<std::size_t>(g.look)] = true;
                 // The rest of their money goes with their page, where the original keeps it.
-                save::Cash& c = model.guests[static_cast<std::size_t>(g.look)].cash;
-                const auto i32 = [](Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
-                c = { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
+                model.guests[static_cast<std::size_t>(g.look)].cash = kept_cash(wallet);
             }
         }
         for (std::size_t i = 0; i < model.guests.size(); ++i)

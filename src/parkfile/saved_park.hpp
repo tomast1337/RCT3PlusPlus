@@ -141,6 +141,9 @@ namespace rct3::parkfile
         std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
     };
 
+    /// A guest's wallet as their saved page keeps it, each sum held to the page's range.
+    [[nodiscard]] save::Cash kept_cash(const simulation::Wallet& wallet);
+
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one
     /// drawn (guests in model.guests, staff in model.staff).
     [[nodiscard]] SavedPeople keep_people(const simulation::SimWorld& world, save::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks);

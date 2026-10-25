@@ -140,6 +140,8 @@ declare namespace map {
     /** The middle of a tile on the view, or with fractions that point of it; undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
+    /** The tiles with support columns standing on them, and how many pieces each has. */
+    function supports(): { col: number; row: number; pieces: number }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */

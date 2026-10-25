@@ -32,6 +32,8 @@
 #include <map>
 #include <set>
 #include <span>
+#include <string_view>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -89,10 +91,17 @@ namespace rct3::scene
                     platforms.insert(piece.platform->id);
             }
         }
+        // A queue's railings stand on its deck: they hold up nothing and are not in the way of its columns.
+        std::set<std::pair<std::string_view, std::string_view>> railings;
+        for (const save::PathTile& p : scene.footpaths.paths)
+        {
+            if (p.queue)
+                railings.emplace(p.queue->fence_symbol, p.queue->fence_overlay);
+        }
         std::unordered_set<std::uint64_t> out(scene.footpaths.floor_decks.begin(), scene.footpaths.floor_decks.end());
         for (const save::PlacedObject& o : scene.objects)
         {
-            if (o.owner_ref != o.id && platforms.contains(o.owner_ref))
+            if ((o.owner_ref != o.id && platforms.contains(o.owner_ref)) || (o.fixture && railings.contains({ o.symbol, o.overlay })))
                 out.insert(o.id);
         }
         return out;

@@ -24,6 +24,7 @@
 #include <cmath>
 #include <format>
 #include <future>
+#include <map>
 #include <span>
 #include <sstream>
 
@@ -442,6 +443,16 @@ namespace rct3::scene
                     paths.back()["height"] = p.elevation->quantised_height;
             }
             return paths;
+        });
+        engine_.define("map.supports", [this](const Json&) {
+            grid_of(park_);
+            std::map<std::pair<int, int>, int> pieces;
+            for (const auto& [_, tile] : park_->columns)
+                ++pieces[tile];
+            Json tiles = Json::array();
+            for (const auto& [tile, n] : pieces)
+                tiles.push_back({ { "col", tile.first }, { "row", tile.second }, { "pieces", n } });
+            return tiles;
         });
         engine_.define("build.flatRides", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));

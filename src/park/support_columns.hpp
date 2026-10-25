@@ -8,7 +8,7 @@
 // One rule for every item, tile by tile. The items on a tile are taken by their undersides, the highest first.
 // A square that wants a column gets one under the middle of the tile, from the item's underside down to what is
 // next below it on the tile. That is the ground, rounded up to the next whole level from its lowest corner,
-// when nothing is below; then a ground path on the tile, or no room between the item and the ground (an item at
+// when nothing is below; then a path at the ground of the tile, or no room between the item and the ground (an item at
 // or under the ground, as in a tunnel), leaves the column out. Otherwise it is the next item down: a column
 // stands on it only when the set's columns stand on anything (wooden and mine track do) or that item carries
 // columns, keeping one level clear over track unless the set stands close; on anything else, such as a path
@@ -72,6 +72,10 @@ namespace rct3::park
     /// The tiles whose columns `object` may change: under its footprint, and where its support points stand
     /// beside it. None when its model is not among `models` or columns pass by it.
     [[nodiscard]] std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const ObjectModels& models);
+
+    /// Whether `path` lies at the ground of its tile, which keeps a column off the ground there: a path or queue
+    /// laid on the ground, or a raised piece whose heights reach into those of the tile's ground.
+    [[nodiscard]] bool path_at_ground(const save::PathTile& path, const save::TerrainGrid& grid);
 
     /// Placed support pieces under the items among `objects` whose models ask for them, on `tiles` only when
     /// given. Items in `passed` are left out, as if not there. New objects take ids after `last_id`. `models`

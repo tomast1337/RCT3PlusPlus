@@ -15,6 +15,7 @@
 
 #include "math/glm.hpp"
 #include "random/generator.hpp"
+#include "save/model/rides.hpp"
 #include "simulation/crash.hpp"
 
 #include <cstdint>
@@ -120,6 +121,26 @@ namespace rct3::simulation
     /// back to it for the last time), where it stops. At one of its other stops it stops too, no longer running,
     /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
+
+    /// A lap's graphs taken from a train as it runs: a sample each tenth of a second of its speed, height and the
+    /// forces on its riders, each the average over that tenth.
+    struct LapRecorder
+    {
+        float seconds = 0;           ///< Into the sample being taken
+        glm::vec3 velocity_from { }; ///< As the sample began
+        float speed_sum = 0, height_sum = 0;
+        std::vector<float> speed, altitude, vertical, lateral; ///< Oldest first
+    };
+
+    /// Samples a ride's graphs keep in a park file, the lap's last ones.
+    inline constexpr std::size_t kLapSamples = 200;
+
+    /// Adds `seconds` of the run of `coaster`'s train, as it is now, to `lap`.
+    void record(LapRecorder& lap, const Coaster& coaster, float seconds);
+
+    /// The lap recorded into `lap`, newest sample first as saved and no more than kLapSamples, and starts the
+    /// next.
+    [[nodiscard]] save::RideGraphs end_lap(LapRecorder& lap);
 
     /// The station `coaster`'s train stands at, if it stands at one: 0 at its start, k at the k-th of its stops.
     [[nodiscard]] std::optional<std::size_t> standing_at(const Coaster& coaster);

@@ -490,6 +490,9 @@ namespace rct3::simulation
     {
         std::vector<Coaster> trains;
         std::vector<std::vector<entt::entity>> riders; ///< By train
+        LapRecorder lap { };                           ///< Of the first train's lap under way
+        /// The first train's last lap, for the ride's graphs, till the park takes it.
+        std::optional<save::RideGraphs> lap_done { };
     };
 
     /// A ride whose trains have crashed, and how long since the last did. A crashed train's cars fly off as

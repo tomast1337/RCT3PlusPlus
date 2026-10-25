@@ -2412,7 +2412,16 @@ namespace rct3::simulation
                         train.push = 0;
                     }
                     const bool was_running = train.running;
-                    if (drive(train, dt, room_ahead(fleet->trains, t)))
+                    const bool round = drive(train, dt, room_ahead(fleet->trains, t));
+                    // The first train's laps, while tested or open, make the ride's graphs; a test train's on
+                    // unfinished track never comes round.
+                    if (t == 0 && (train.running || round))
+                        record(fleet->lap, train, dt);
+                    if (t == 0 && round)
+                        fleet->lap_done = end_lap(fleet->lap);
+                    if (t == 0 && train.crashed)
+                        fleet->lap = { };
+                    if (round)
                         unload(fleet->riders[t], 0);
                     else if (const auto stop = standing_at(train); was_running && stop && *stop > 0)
                         unload(fleet->riders[t], *stop);

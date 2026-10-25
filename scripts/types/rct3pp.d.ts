@@ -255,6 +255,8 @@ interface RideInfo {
     exit: Spot | null;
     /** Whether it was pulled down; it keeps its place in the list. */
     demolished: boolean;
+    /** Samples in its graphs: its last lap's, a tenth of a second each. */
+    graphSamples: number;
     /** Whether the simulation runs it. The rest are there only when it does. */
     joined: boolean;
     customers?: number;

@@ -70,6 +70,18 @@ expect(ui.find(tick)?.on === false, "the weekly profit unticked");
 await screenshot("finance_graphs");
 await close("FinancialManagement_Title");
 
+// A coaster's lap run here replaces the graphs it was saved with.
+const coaster = rides.list().findIndex((r) => !r.flat && !r.demolished && r.open === true && r.graphSamples > 0);
+expect(coaster >= 0, "an open coaster with graphs");
+const saved = rides.list()[coaster].graphSamples;
+await ui.click("bar/Top_SuperFastForward");
+await until(() => rides.list()[coaster].graphSamples !== saved, 3600, "a lap's graphs");
+// The first lap was joined part way round; the next is whole.
+const part = rides.list()[coaster].graphSamples;
+await until(() => rides.list()[coaster].graphSamples !== part, 3600, "a whole lap's graphs");
+log("lap graphs:", rides.list()[coaster].name, saved, "then", part, "then", rides.list()[coaster].graphSamples);
+await ui.click("bar/Top_Play");
+
 // The first ride with a graph tab and a test to show on it.
 const list = rides.list();
 let shown = false;

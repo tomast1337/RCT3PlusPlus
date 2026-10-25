@@ -2598,6 +2598,13 @@ namespace rct3::scene
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
                 });
+                // A coaster's lap just run becomes its graphs.
+                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                    if (auto* fleet = scene.ride_entities[i] == entt::null ? nullptr : scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[i]); fleet != nullptr && fleet->lap_done)
+                    {
+                        scene.rides.rides[i].graphs = std::move(*fleet->lap_done);
+                        fleet->lap_done.reset();
+                    }
                 // The scenario's VIPs: told of, let in, looking round and judging the park as they go.
                 std::map<std::string_view, std::int32_t, std::less<>> theme_of; // Of each themed item, by symbol
                 const auto themed = [&](glm::vec3 at, std::int32_t theme, std::int32_t reach) {

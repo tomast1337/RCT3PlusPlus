@@ -737,7 +737,7 @@ namespace rct3::scene
             {
                 const save::Ride& ride = park.rides.rides[i];
                 const save::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished } };
+                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
                 if (ride.track)
                 {
                     one["pieces"] = ride.track->pieces.size();

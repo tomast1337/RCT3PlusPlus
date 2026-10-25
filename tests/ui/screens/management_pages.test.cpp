@@ -193,9 +193,8 @@ TEST_CASE("an objective's condition the simulation cannot judge says so")
 {
     const StringTable s = test_strings();
     save::ParkModel park;
-    park.objectives.conditions = { { .kind = save::ConditionKind::Vip } };
+    park.objectives.conditions = { { .kind = save::ConditionKind::PoolGuests } };
     const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park }, s, kUnits);
-    CHECK(value_of(page, u"VIP") == u"-");
     CHECK(value_of(page, u"At any time.") == u"Not simulated yet");
 }
 

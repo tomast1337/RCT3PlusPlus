@@ -319,6 +319,17 @@ namespace rct3::simulation::tuning
         float tumble = 4;           ///< Radians a second a wreck tumbles at most
     };
 
+    /// Guests of honour (VIPs) judging the park on their visit; the tolerances and targets they are weighed
+    /// against come from the scenario.
+    struct Vips
+    {
+        Seconds look { 4 };     ///< Between their looks round the park
+        Share cheer { 0.025f }; ///< Their patience grows by this share of their happiness at each look
+        std::int32_t heap = 3;  ///< Pieces of litter by them from which on it counts in full
+        Share few { 0.4f };     ///< What less litter than a heap counts for
+        std::int32_t reach = 3; ///< Tiles round them they see a themed area in
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -342,6 +353,7 @@ namespace rct3::simulation::tuning
         Boats boats;
         Prizes prizes;
         Crashes crashes;
+        Vips vips;
     };
 
 } // namespace rct3::simulation::tuning

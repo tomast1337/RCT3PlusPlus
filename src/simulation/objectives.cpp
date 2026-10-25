@@ -108,6 +108,8 @@ namespace rct3::simulation
                     return f.loan == 0;
                 case save::ConditionKind::Coaster:
                     return c.coaster && coaster_goal_met(*c.coaster, f.rides);
+                case save::ConditionKind::Vip:
+                    return c.vip && c.vip->met; // Judged as the VIP leaves (vip.hpp)
                 default:
                     return false;
             }
@@ -126,9 +128,10 @@ namespace rct3::simulation
             case ShopProfit:
             case RepayLoan:
             case Coaster:
+            case Vip:
                 return true;
             default:
-                // shortcut: goals about things the simulation does not have yet (VIP visits, items bought, pools,
+                // shortcut: goals about things the simulation does not have yet (items bought, pools,
                 // animals) are never met, so a level that sets one cannot be won; judge them as those parts arrive.
                 return false;
         }

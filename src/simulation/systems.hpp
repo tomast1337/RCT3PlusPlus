@@ -20,6 +20,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/tuning.hpp"
 
 #include <array>
 #include <cstdint>
@@ -138,6 +139,10 @@ namespace rct3::simulation
     /// Brings a whole party in on path node `at`, of a kind the park's mix picks, as the gate does: a lone guest
     /// or a party, each walking with nothing to do yet. Returns its members, the leader first.
     std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at);
+
+    /// Brings in `who` (each an age, and whether female) on path node `at` as one party, the first its leader,
+    /// with tastes from `band`. Returns its members.
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
 
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);

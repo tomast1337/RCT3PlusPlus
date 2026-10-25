@@ -298,6 +298,10 @@ namespace rct3::simulation
         /// its members are on average. `cash_machine` is whether the park has one open.
         std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm, bool cash_machine, std::uint64_t tick)
         {
+            // A guest of honour stays for their whole visit, then heads straight out.
+            const auto* vip = r.try_get<Vip>(guest);
+            if (vip != nullptr && !vip->leaving)
+                return std::nullopt;
             const auto done = [&](entt::entity g) {
                 double chance = 0;
                 if (const auto* mood = r.try_get<Mood>(g))
@@ -320,7 +324,7 @@ namespace rct3::simulation
                 fed_up /= static_cast<double>(std::max<std::size_t>(members.size(), 1));
             }
             const double chance = fed_up + (night && age_of(r, guest) != AgeGroup::Teen ? kTuning.leaving.night.value : 0) + (storm ? kTuning.leaving.storm.value : 0);
-            if (chance == 0 || !random::chance(dice.state, chance * kTuning.needs.idle.value))
+            if (vip == nullptr && (chance == 0 || !random::chance(dice.state, chance * kTuning.needs.idle.value)))
                 return std::nullopt;
             if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
                 return std::nullopt;
@@ -522,7 +526,6 @@ namespace rct3::simulation
     std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at)
     {
         entt::registry& r = world.registry;
-        const PathNetwork& paths = world.paths;
         const auto weights = party_weights(world, is_night(time_of_day(r)));
         double roll = random::unit(dice) * std::reduce(weights.begin(), weights.end());
         std::size_t pick = 0;
@@ -567,6 +570,13 @@ namespace rct3::simulation
                 break;
         }
         const tuning::TasteBand band = kind == PartyKind::LoneTeen || kind == PartyKind::TeenGang ? kTuning.parties.thrill : kind == PartyKind::Family || kind == PartyKind::DayTrip ? kTuning.parties.gentle : kTuning.parties.middle;
+        return admit_guests(world, dice, at, who, band);
+    }
+
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band)
+    {
+        entt::registry& r = world.registry;
+        const PathNetwork& paths = world.paths;
         std::vector<entt::entity> members;
         for (const auto [age, is_female] : who)
         {

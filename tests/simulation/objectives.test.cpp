@@ -55,7 +55,7 @@ TEST_CASE("a goal the simulation cannot judge is never met, so its level is not 
     set.conditions = { goal(0, save::ConditionKind::ParkGuests, 0), goal(0, save::ConditionKind::PoolGuests, 0) };
     CHECK(simulation::judged(save::ConditionKind::ParkGuests));
     CHECK_FALSE(simulation::judged(save::ConditionKind::PoolGuests));
-    CHECK_FALSE(simulation::judged(save::ConditionKind::Vip));
+    CHECK(simulation::judged(save::ConditionKind::Vip));
     CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 0));
     CHECK(set.conditions[0].completed);
     CHECK_FALSE(set.conditions[1].completed);

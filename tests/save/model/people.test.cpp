@@ -615,6 +615,25 @@ TEST_CASE("zoo animal")
     CHECK(a->thoughts[0].id == 250);
 }
 
+TEST_CASE("a zoo animal takes its species from its entry and its place from its visual")
+{
+    Obj z("WildAnimal", 1);
+    z.ref("Entry", 2).ref("Visual", 3);
+    Obj e("WASDatabaseEntry", 2);
+    e.str("SYMBOLNAME", u"wombat");
+    Obj v("WildAnimalVisual", 3);
+    v.matrix("WorldMatrix", 4, 5, 6);
+    const auto w = make_world({ z, e, v });
+    const auto model = load_people(w->file, *w->index);
+    REQUIRE(model);
+    REQUIRE(model->zoo_animals.size() == 1);
+    const auto& a = model->zoo_animals[0];
+    CHECK(a.species == "wombat");
+    CHECK(a.world[0] == 1.0f);
+    CHECK(a.world[12] == 4.0f);
+    CHECK(a.world[14] == 6.0f);
+}
+
 TEST_CASE("guest groups, holders, items and litter")
 {
     Obj g("GuestGroup", 1);

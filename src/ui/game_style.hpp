@@ -798,7 +798,8 @@ namespace rct3::ui::game_skins
         s.remove_icon = "PathEditor_IconDeleteOn";
         s.paths_icon = "Obj_Paths_Path";
         s.queues_icon = "Obj_Paths_Queue";
-        s.tab_help = { "PathEditor_EditMode", "PathEditor_CameraFollow", "Rct3pp_Paths_RouteHelp", "Rct3pp_Paths_RemoveHelp", "Obj_Paths_PathHelp", "Obj_Paths_QueueHelp" };
+        s.straight_icon = "AttractionEditor_IconCurveR1On";
+        s.tab_help = { "PathEditor_EditMode", "PathEditor_CameraFollow", "Rct3pp_Paths_RouteHelp", "Rct3pp_Paths_RemoveHelp", "Obj_Paths_PathHelp", "Obj_Paths_QueueHelp", "Rct3pp_Paths_StraightHelp" };
         // Each turn and slope picture has a usable and an unusable look; the remove picture has only one.
         const std::array<std::string_view, 8> bases { "AttractionEditor_IconCurveL3", "AttractionEditor_IconCurve0", "AttractionEditor_IconCurveR3", "AttractionEditor_IconSlopeD2", "AttractionEditor_IconSlopeD1", "AttractionEditor_IconSlope0", "AttractionEditor_IconSlopeU1", "AttractionEditor_IconSlopeU2" };
         for (std::size_t i = 0; i < bases.size(); ++i)

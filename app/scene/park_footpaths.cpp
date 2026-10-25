@@ -526,9 +526,9 @@ namespace rct3::scene
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
                 return { };
             const auto cost = static_cast<std::int32_t>(next_cost(f.styles[*f.style]));
-            if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, f.solids))
+            if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, f.solids, f.straight))
                 return { std::move(route), false };
-            auto through = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height);
+            auto through = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, std::nullopt, f.straight);
             const bool blocked = through.has_value();
             return { std::move(through), blocked };
         }
@@ -1245,6 +1245,11 @@ namespace rct3::scene
             f.routing = panel->routing();
             f.route_goal.reset();
             f.route_goal_height.reset();
+            f.dirty = true;
+        }
+        if (panel->straight() != f.straight)
+        {
+            f.straight = panel->straight();
             f.dirty = true;
         }
         if (std::exchange(f.lay_route, false))

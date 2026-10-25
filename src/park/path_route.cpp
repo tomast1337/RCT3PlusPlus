@@ -65,7 +65,7 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::Tile goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::Tile goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
             return std::nullopt;
@@ -106,6 +106,15 @@ namespace rct3::park
                     return true;
             }
             return false;
+        };
+        // How far a tile's middle stands off the line from the first tile's middle to the goal's, in tiles.
+        const auto line_dx = static_cast<float>(goal.col - first.spot.col);
+        const auto line_dy = static_cast<float>(goal.row - first.spot.row);
+        const float line_length = std::hypot(line_dx, line_dy);
+        const auto off_line = [&](save::Tile at) {
+            if (line_length == 0)
+                return 0.0F;
+            return std::abs(static_cast<float>(at.col - first.spot.col) * line_dy - static_cast<float>(at.row - first.spot.row) * line_dx) / line_length;
         };
         const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
         const auto estimate = [&](save::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
@@ -161,7 +170,7 @@ namespace rct3::park
                     next.on_slope = b.slope != PathSlope::Flat;
                     next.parent = at;
                     next.step = { heading, b.slope, *piece };
-                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn ? kRouteTurnCost : 0) + cut_cost(*piece, grid) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
+                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
                     const std::uint64_t key = key_of(next);
                     if (const auto known = best.find(key); known != best.end() && known->second <= next.cost)
                         continue;

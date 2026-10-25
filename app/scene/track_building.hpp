@@ -11,7 +11,10 @@
 // under new pieces yet.
 //
 // A new ride starts with no pieces: its first piece, one its kind may start a track with, follows the
-// pointer over the ground until it is built.
+// pointer over the ground until it is built. A new ride picked from a build list whose kind has saved designs
+// first opens their window (ui/screens/design_browser.hpp): building a design lays it whole with the train
+// picked there, a custom track is built piece by piece, and cancelling closes the building as closing its
+// panel does.
 //
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once
@@ -27,6 +30,7 @@
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "scene/build_menus.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/attraction_info.hpp"
 
@@ -106,8 +110,16 @@ namespace rct3::scene
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
         std::uint64_t arm_piece = 0;
         std::size_t arm_back = 0; ///< The piece the arm strip sets, counted back from the last
-        /// Saved designs of the ride's kind, offered while its track has no pieces.
-        std::vector<std::filesystem::path> designs;
+        /// Saved designs of the ride's kind, offered in their window before its track has pieces.
+        std::vector<DesignFile> designs;
+        bool offer_designs = false; ///< Their window is to open
+        bool browsing = false;      ///< Their window is open; closing it closes the building
+        /// The picture of the design their window shows, the train of its kind it shows (by place in the ride's
+        /// train choices), and the design (by place in designs).
+        std::optional<render::TextureHandle> design_picture;
+        std::size_t design_train = 0;
+        std::optional<std::size_t> design_shown;
+        std::vector<bool> designs_locked; ///< By place in designs: waiting for a career scenario
         /// The pieces of the design picked, in track order, laid whole by the first click; empty for a track
         /// built piece by piece.
         std::vector<save::TrackPiece> design;

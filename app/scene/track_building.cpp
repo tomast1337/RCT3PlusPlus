@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track_building.hpp"
 
+#include "career/career_file.hpp"
 #include "config/game_saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
@@ -19,6 +20,7 @@
 #include "park/track_split.hpp"
 #include "park/water_fill.hpp"
 #include "profiling/profiler.hpp"
+#include "save/model/design.hpp"
 #include "save/save_file.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -31,9 +33,9 @@
 #include "ui/money_text.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/construction_panel.hpp"
+#include "ui/screens/design_browser.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/screens/tool_row.hpp"
-#include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/panel.hpp"
 #include "ui/widgets/spinner.hpp"
 #include "ui/widgets/tickbox.hpp"
@@ -62,11 +64,12 @@ namespace rct3::scene
     {
         /// The building controls, in the strip of the round panel in the bottom-left corner.
         constexpr std::string_view kPanelName = "placing/body/construction";
-        constexpr std::string_view kArmName = "construction_arm";       ///< The strip of arm angles above the panel
-        constexpr std::string_view kDesignName = "construction_design"; ///< The saved designs, above the panel
-        constexpr std::string_view kDesignFolder = "Coaster Designs";
-        constexpr std::string_view kDesignExtension = ".trk";
+        constexpr std::string_view kArmName = "construction_arm";   ///< The strip of arm angles above the panel
+        constexpr std::string_view kBrowserName = "design_browser"; ///< The saved designs' window
         constexpr std::string_view kCustomTrack = "TrackBrowser_CustomTrack";
+        constexpr std::string_view kLockedSuffix = "TrackBrowser_LockedSuffix";
+        constexpr std::string_view kLockedHelp = "TrackBrowser_LockedHelp";
+        constexpr std::string_view kDesignText = "TrackDesign_"; ///< Before a design's name, for its translated name
         constexpr std::array<std::string_view, 4> kArmJoints { "base", "lower", "upper", "head" };
         constexpr std::string_view kArmEnable = "ATE_RoboCoaster_Enable";
         constexpr std::string_view kArmEnableHelp = "ATE_TT_RoboCoaster_Enable";
@@ -304,6 +307,25 @@ namespace rct3::scene
                 return std::nullopt;
             auto world = save::load_world(*saved, index);
             return SavedDesign { std::move(rides->rides.front()), world ? std::move(world->objects) : std::vector<save::PlacedObject> { } };
+        }
+
+        /// The file of the train named `train_name` among the install's cars.
+        std::optional<std::filesystem::path> train_file(const config::GameInstall& install, std::string_view train_name)
+        {
+            std::error_code error;
+            const std::filesystem::path cars = install.find("Cars").value_or(std::filesystem::path { });
+            for (auto it = std::filesystem::recursive_directory_iterator(cars, error); !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
+                if (strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
+                    return it->path();
+            return std::nullopt;
+        }
+
+        /// The name of a design's file without the kind in brackets before it ("Giga" of "[Giga]Giga.trk").
+        std::string design_name(const std::filesystem::path& file)
+        {
+            const std::string stem = file.stem().string();
+            const std::size_t close = stem.find(']');
+            return stem.substr(close == std::string::npos ? 0 : close + 1);
         }
 
         /// Whether `o`, a piece of the ride being built, goes only on water and has dry land under it. Pieces of
@@ -1101,8 +1123,10 @@ namespace rct3::scene
         }
         if (auto arm = scene.desktop->root().find(kArmName))
             arm->close();
-        if (auto designs = scene.desktop->root().find(kDesignName))
-            designs->close();
+        if (auto browser = scene.desktop->root().find(kBrowserName))
+            browser->close();
+        scene.building.offer_designs = false;
+        scene.building.design_shown.reset();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !ride_placing(scene))
         {
             placing->hide();
@@ -1168,13 +1192,9 @@ namespace rct3::scene
     std::optional<bool> use_train(ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name)
     {
         save::Ride& ride = scene.rides.rides[index];
-        std::error_code error;
-        const std::filesystem::path cars = install.find("Cars").value_or(std::filesystem::path { });
-        for (auto it = std::filesystem::recursive_directory_iterator(cars, error); !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error))
+        if (const auto file = train_file(install, train_name))
         {
-            if (!strings::equals_ignoring_case(it->path().filename().string(), std::format("{}.common.ovl", train_name)))
-                continue;
-            std::string path = std::filesystem::relative(it->path(), install.root()).generic_string();
+            std::string path = std::filesystem::relative(*file, install.root()).generic_string();
             path.resize(path.size() - std::string_view(".common.ovl").size());
             ride.trains.assign(1, save::Train { });
             save::Train& train = ride.trains.front();
@@ -1183,7 +1203,7 @@ namespace rct3::scene
             // As many cars as its kind usually has, and the fewest and most it may have.
             ui::TrainLimits& limits = scene.train_limits[index];
             limits = { };
-            const auto car_file = ovl::Overlay::load(it->path());
+            const auto car_file = ovl::Overlay::load(*file);
             for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                     if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
@@ -1275,31 +1295,11 @@ namespace rct3::scene
         scene.track_rules[index] = park::load_track_rules(*file, ride.base.symbol);
         scene.courses.resize(scene.rides.rides.size());
         logging::logger("park").info("new {} built from {}", item.symbol, *pieces);
-        // The saved designs of its kind, offered until its first piece is laid: the install's, then the player's
-        // own in our folder and in the game's.
-        // shortcut: none locked, as none the install ships is; upgrade with designs a scenario locks.
-        std::vector<std::filesystem::path> designs;
-        std::vector<std::filesystem::path> folders { assets.install->find(kDesignFolder).value_or(std::filesystem::path { }) };
-        if (scene.saves.data)
-            folders.push_back(scene.saves.data->folder(config::UserFolder::Coasters));
-        if (const auto name = config::game_saves_folder(config::UserFolder::Coasters); scene.saves.game_saves && name)
-            folders.push_back(*scene.saves.game_saves / *name);
-        for (const std::filesystem::path& folder : folders)
-        {
-            const std::size_t first = designs.size();
-            error.clear();
-            for (auto it = std::filesystem::directory_iterator(folder, error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
-            {
-                if (!strings::equals_ignoring_case(it->path().extension().string(), kDesignExtension))
-                    continue;
-                if (const auto design = design_ride(it->path()); design && strings::equals_ignoring_case(std::string_view(design->ride.base.symbol).substr(0, design->ride.base.symbol.find(':')), item.symbol))
-                    designs.push_back(it->path());
-            }
-            std::ranges::sort(designs.begin() + static_cast<std::ptrdiff_t>(first), designs.end());
-        }
         const bool opened = open_track_building(scene, index, *pieces, assets);
         scene.building.arm = scene.building.arm || arm;
-        scene.building.designs = std::move(designs);
+        // The saved designs of its kind, offered in their window when it was picked from a list.
+        scene.building.designs = designs_for(scene.build, item.symbol);
+        scene.building.offer_designs = std::exchange(scene.build.offer_designs, false) && opened && !scene.building.designs.empty();
         return opened;
     }
 
@@ -1679,6 +1679,13 @@ namespace rct3::scene
     void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands)
     {
         TrackBuilding& b = scene.building;
+        auto browser = scene.desktop->root().find_as<ui::DesignBrowser>(kBrowserName);
+        if (b.design_picture && !browser)
+        {
+            // The design's picture goes with its window.
+            device.destroy_texture(*b.design_picture);
+            b.design_picture.reset();
+        }
         auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
         auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
         if (!panel || !placing || !b.ride)
@@ -1890,32 +1897,120 @@ namespace rct3::scene
         }
         placing->show_view_text(std::move(price));
         update_arm_strip(scene, b, assets);
-        // The designs offered while the track has no pieces: custom track first, then each by its file's name
-        // without the kind in brackets before it.
-        auto designs = scene.desktop->root().find_as<ui::Dropdown>(kDesignName);
-        if (b.designs.empty() || !scene.rides.rides.at(*b.ride).track || !scene.rides.rides.at(*b.ride).track->pieces.empty())
+        // The saved designs' window, opened for a new ride picked from a list: custom track first, then each
+        // design by its translated name or its file's, sorted by the heading pressed.
+        if (std::exchange(b.offer_designs, false) && !browser)
         {
-            if (designs)
-                designs->close();
+            const ui::StringTable& strings = *assets.strings;
+            // shortcut: a design opens once any career of the base game has completed its scenario, not only the
+            // one being played; upgrade once the park knows its career.
+            std::vector<career::Career> careers;
+            if (scene.saves.data)
+                for (career::CareerEntry& e : career::list_careers(scene.saves.data->folder(config::UserFolder::Careers), 0, std::nullopt))
+                    careers.push_back(std::move(e.data.career));
+            const auto heading = [&](std::string_view key) {
+                std::u16string h(strings.get(key));
+                while (!h.empty() && (h.back() == u':' || h.back() == u' '))
+                    h.pop_back();
+                return h;
+            };
+            std::vector<ui::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = 120, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = 120, .align = ui::Align::End } };
+            std::vector<ui::TableRow> rows { { .cells = { std::u16string(strings.get(kCustomTrack)), { }, { } }, .keys = { }, .id = 0 } };
+            b.designs_locked.clear();
+            for (std::size_t i = 0; i < b.designs.size(); ++i)
+            {
+                const save::DesignSummary& d = b.designs[i].summary;
+                const std::string name = design_name(b.designs[i].path);
+                std::string key(kDesignText);
+                std::ranges::copy_if(name, std::back_inserter(key), [](char c) { return c != ' ' && c != '\'' && c != '-'; });
+                std::u16string text(strings.get(key));
+                if (text.empty())
+                    text = strings::to_utf16(name);
+                const bool locked = career::design_locked(d.scenario, d.level, careers);
+                b.designs_locked.push_back(locked);
+                if (locked)
+                    text += strings.get(kLockedSuffix);
+                const auto rated = [&](float v) { return d.assessment.valid ? strings::to_utf16(std::format("{:.2f}", v)) : std::u16string { }; };
+                const auto key_of = [&](float v) { return d.assessment.valid ? std::optional<double>(v) : std::nullopt; };
+                rows.push_back({ .cells = { std::move(text), rated(d.assessment.excitement), rated(d.assessment.intensity) }, .keys = { std::nullopt, key_of(d.assessment.excitement), key_of(d.assessment.intensity) }, .id = i + 1 });
+            }
+            browser = scene.desktop->root().add<ui::DesignBrowser>(std::string(kBrowserName), ui::game_skins::design_browser_style(assets.palette), std::u16string(strings.get("TrackBrowser_Title")), "Ride_Coaster", std::move(columns), std::move(rows), std::u16string(strings.get("TrackBrowser_BuildThis")), std::u16string(strings.get("TrackBrowser_Cancel")));
+            b.browsing = true;
+        }
+        if (!browser)
+        {
+            // Closed from its frame: nothing is built, as with Cancel.
+            if (std::exchange(b.browsing, false))
+                close_track_building(scene);
             return;
         }
-        if (!designs)
-        {
-            designs = scene.desktop->root().add<ui::Dropdown>(std::string(kDesignName), ui::game_skins::dropdown_style(assets.palette));
-            // Right of the ring's top tabs, so it covers none of them.
-            designs->placement = ui::bottom_left(ui::construction_panel::kStripLeft + 130, kPanelTop + 4, 260, 20);
-            designs->items.emplace_back(assets.strings->get(kCustomTrack));
-            for (const std::filesystem::path& file : b.designs)
+        const std::vector<std::string>& trains = scene.train_choices[*b.ride];
+        const auto show_train = [&] {
+            std::u16string name;
+            if (b.design_train < trains.size())
             {
-                const std::string stem = file.stem().string();
-                designs->items.push_back(strings::to_utf16(std::string_view(stem).substr(stem.find(']') == std::string::npos ? 0 : stem.find(']') + 1)));
+                name = strings::to_utf16(trains[b.design_train]);
+                // Named as its file names it, else by its own name.
+                if (const auto file = train_file(*assets.install, trains[b.design_train]))
+                    if (const auto car_file = ovl::Overlay::load(*file))
+                        for (const auto part : std::array { maybe(&car_file->common()), car_file->unique() })
+                            for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
+                                if (const auto text = t.train ? assets.strings->get(t.train->display_name) : std::u16string_view { }; !text.empty())
+                                    name = text;
             }
-            designs->select(0);
-        }
-        if (designs->take_change())
+            browser->show_train(std::move(name), trains.size() > 1);
+        };
+        if (const auto picked = browser->take_picked())
         {
-            const std::size_t picked = designs->selected().value_or(0);
-            const auto design = picked > 0 && picked <= b.designs.size() ? design_ride(b.designs[picked - 1]) : std::nullopt;
+            if (b.design_picture)
+                device.destroy_texture(*b.design_picture);
+            b.design_picture.reset();
+            b.design_shown = *picked == 0 ? std::nullopt : std::optional(*picked - 1);
+            ui::TextureId picture = 0;
+            std::vector<ui::InfoLine> lines;
+            bool locked = false;
+            if (b.design_shown)
+            {
+                // Read again for its picture, which the list of designs does not keep.
+                std::ifstream in(b.designs[*b.design_shown].path, std::ios::binary);
+                const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                const auto d = save::read_design_summary(std::as_bytes(std::span(raw)));
+                const save::DesignSummary& summary = d ? *d : b.designs[*b.design_shown].summary;
+                if (!summary.picture.empty())
+                    if (auto texture = device.create_texture({ summary.picture_width, summary.picture_height, render::TextureFormat::Rgba8, std::as_bytes(std::span(summary.picture)), "design picture" }))
+                    {
+                        b.design_picture = *texture;
+                        picture = ui::texture_id(*texture);
+                    }
+                lines = ui::design_lines(summary, *assets.strings, { ui::currency(*assets.strings, currency), units });
+                locked = b.designs_locked.at(*b.design_shown);
+                if (locked)
+                    lines.push_back({ .label = std::u16string(assets.strings->get(kLockedHelp)), .name = std::string(kLockedHelp) });
+                b.design_train = trains.empty() ? 0 : static_cast<std::size_t>(std::clamp<std::int32_t>(summary.train, 0, static_cast<std::int32_t>(trains.size()) - 1));
+            }
+            browser->show_design(picture, std::move(lines), !locked);
+            if (b.design_shown)
+                show_train();
+            else
+                browser->show_train({ }, false);
+        }
+        if (const auto step = browser->take_train_step(); step && b.design_shown && !trains.empty())
+        {
+            b.design_train = (*step > 0 ? b.design_train + 1 : b.design_train + trains.size() - 1) % trains.size();
+            show_train();
+        }
+        if (browser->take_cancel())
+        {
+            close_track_building(scene);
+            return;
+        }
+        if (const auto build = browser->take_build())
+        {
+            b.browsing = false;
+            browser->close();
+            // A design is laid whole by the next click, with the train picked for it; a custom track is built
+            // piece by piece.
+            const auto design = *build > 0 ? design_ride(b.designs.at(*build - 1).path) : std::nullopt;
             b.design = design ? design->ride.track->pieces : std::vector<save::TrackPiece> { };
             b.design_ride = design ? std::optional(design->ride) : std::nullopt;
             b.design_doors.clear();
@@ -1928,6 +2023,9 @@ namespace rct3::scene
                         b.design_doors.push_back({ i, exit, *door });
                 }
             }
+            if (design && b.design_train < trains.size())
+                if (const auto arm = use_train(scene, *assets.install, *b.ride, trains[b.design_train]))
+                    b.arm = *arm || b.arm;
             refresh(scene, b, assets);
         }
     }

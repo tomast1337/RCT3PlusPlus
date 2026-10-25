@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Lays the first saved design the install offers for a corkscrew coaster on the game's blank landscape, from the
-// construction panel. The panel's ring carries the construction crane, which hides and shows the strip of
-// controls, and the ride's closed flag; no test light. A piece clicked mid-track is then taken out, leaving a
-// gap built on into.
+// Lays a saved design the install offers for a corkscrew coaster on the game's blank landscape, picked in the
+// designs' window. The construction panel's ring carries the construction crane, which hides and shows the
+// strip of controls, and the ride's closed flag; no test light. A piece clicked mid-track is then taken out,
+// leaving a gap built on into.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
 
@@ -16,25 +16,27 @@ function expect(ok: boolean, what: string): void {
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
-expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew"), "a corkscrew coaster to build");
-await frames(5);
+expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew", "designs"), "a corkscrew coaster to build");
+await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
+await frames(3);
 const designs = build.construction()?.designs ?? [];
 expect(designs.length > 0, "a saved corkscrew design");
 expect(ui.find("placing/Attraction_Construction") !== undefined, "the construction crane on the ring");
 expect(ui.find("placing/Attraction_General_Closed") !== undefined, "the closed flag on the ring");
-const crane = ui.find("placing/Attraction_Construction")!;
-const list = ui.find("construction_design");
-expect(list !== undefined && (list.left >= crane.right || list.bottom <= crane.top), "the designs list clear of the crane");
 expect(ui.find("placing/Attraction_Button_Testing") === undefined && ui.find("placing/Attraction_Button_Testing_Disabled") === undefined, "no test light on the ring");
 
-// The designs list opens with the custom track first; the first saved design is the row below it.
-await ui.click("construction_design");
-await frames(3);
-const menu = ui.find("construction_design.menu");
-expect(menu !== undefined, "the designs list open");
-const row = (menu!.bottom - menu!.top) / (designs.length + 1);
-await pointer.click(menu!.x, menu!.top + row * 1.5);
+// The window opens on the custom track, the first row; a design is the row below it, a heading and two rows
+// down in the window's units (a button is 22 of them high).
+const list = ui.find("design_browser/content/list")!;
+const button = ui.find("design_browser/content/build")!;
+const unit = (button.bottom - button.top) / 22;
+await pointer.click(list.x, list.top + (18 + 16 * 2) * unit);
+await frames(5);
+expect(ui.find("design_browser/content/details/lines") !== undefined, "the design's details");
+await screenshot("designs");
+await ui.click("design_browser/content/build");
 await frames(10);
+expect(ui.find("design_browser") === undefined, "the window closed by Build");
 pointer.move(0.5, 0.45);
 await frames(30);
 await pointer.click(0.5, 0.45);

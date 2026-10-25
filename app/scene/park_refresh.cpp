@@ -181,94 +181,13 @@ namespace rct3::scene
             for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
-                const bool simulated = simulate && shown.guest != entt::null;
-                if (levels[i] == park::kNotDrawn || (simulated || !shown.walking) != moving)
+                if (levels[i] == park::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
                     continue;
-                park::PlacedPerson pose = shown.pose;
-                pose.level = static_cast<std::size_t>(levels[i]);
-                pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
-                if (simulated)
-                {
-                    const auto& r = scene.sim.registry;
-                    const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
-                    if (r.all_of<simulation::Left>(shown.guest))
-                        continue; // Gone home since the levels were taken
-                    if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
-                    {
-                        std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
-                        if (!moving || maybe_in_view(view, glm::vec3(pose.world[3])))
-                            placed.push_back(pose);
-                        continue;
-                    }
-                    pose.time = shown.saved_time + clock * shown.speed;
-                    // Held by the player they hang where the pointer has them; let go, they fall, then walk to the paths.
-                    if (const auto* held = r.try_get<simulation::Held>(shown.guest); held != nullptr || r.all_of<simulation::Dropped>(shown.guest))
-                    {
-                        const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
-                        const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
-                        pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                        pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
-                        if (held == nullptr && !falling && shown.pace > 0)
-                            pose.time = at.walked.value / shown.pace;
-                        if (!moving || maybe_in_view(view, glm::vec3(pose.world[3])))
-                            placed.push_back(pose);
-                        continue;
-                    }
-                    const auto& stride = r.get<simulation::Stride>(shown.guest);
-                    const auto kind = r.get<simulation::Errand>(shown.guest).kind;
-                    const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
-                    if (kind == simulation::ErrandKind::Riding && ride_walk == nullptr)
-                        continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight
-                    const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
-                    const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause.value > 0;
-                    const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
-                    // The walk goes as far into its motion as the ground covered allows, so the feet stay put
-                    // however fast the guest goes.
-                    if (walking && shown.pace > 0)
-                        pose.time = at.walked.value / shown.pace;
-                    // People are modelled facing +z, which the heading turns towards the way they go.
-                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
-                    if (at_ticket)
-                    {
-                        pose.motion = kTicketMotion;
-                        pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause.value;
-                    }
-                    if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
-                    {
-                        // By the names the people's meshes give these motions, in GestureKind's order.
-                        constexpr std::array<std::string_view, 7> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop" };
-                        pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
-                        pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
-                        // Knocked over, they go down, lie there, and get up for the last of it.
-                        constexpr float kGettingUp = 1.5f; ///< Seconds of it a knocked over guest takes getting up
-                        if (gesture->kind == simulation::GestureKind::Down)
-                        {
-                            const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
-                            const bool up = gesture->left.value - scene.sim_time < kGettingUp;
-                            pose.motion = park::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::motion::kIdle);
-                            pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
-                        }
-                    }
-                    // An umbrella held up in the rain.
-                    // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
-                    // with one then.
-                    const auto* weather = r.ctx().find<simulation::Weather>();
-                    if (weather != nullptr && weather->rain && r.all_of<simulation::Umbrella>(shown.guest))
-                    {
-                        const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
-                        const auto& umbrella = scene.umbrellas[visitor != nullptr && visitor->age == simulation::AgeGroup::Child ? 1 : 0];
-                        pose.held = umbrella ? &*umbrella : nullptr;
-                        // shortcut: standing guests hold it up in the walk's first pose, legs mid-step; upgrade if a
-                        // standing motion with an umbrella turns up.
-                        pose.motion = kUmbrellaMotion;
-                        if (!walking)
-                            pose.time = 0;
-                    }
-                }
-                if (moving && !maybe_in_view(view, glm::vec3(pose.world[3])))
+                std::optional<park::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
+                if (!pose || (moving && !maybe_in_view(view, glm::vec3(pose->world[3]))))
                     continue;
-                placed.push_back(pose);
+                pose->level = static_cast<std::size_t>(levels[i]);
+                placed.push_back(*pose);
             }
             return placed;
         }
@@ -407,6 +326,90 @@ namespace rct3::scene
         }
 
     } // namespace
+
+    std::optional<park::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
+    {
+        const ShownPerson& shown = scene.shown_people[i];
+        const bool simulated = simulate && shown.guest != entt::null;
+        park::PlacedPerson pose = shown.pose;
+        pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
+        if (simulated)
+        {
+            const auto& r = scene.sim.registry;
+            const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
+            if (r.all_of<simulation::Left>(shown.guest))
+                return std::nullopt; // Gone home
+            if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
+            {
+                std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
+                return pose;
+            }
+            pose.time = shown.saved_time + clock * shown.speed;
+            // Held by the player they hang where the pointer has them; let go, they fall, then walk to the paths.
+            if (const auto* held = r.try_get<simulation::Held>(shown.guest); held != nullptr || r.all_of<simulation::Dropped>(shown.guest))
+            {
+                const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
+                if (held == nullptr && !falling && shown.pace > 0)
+                    pose.time = at.walked.value / shown.pace;
+                return pose;
+            }
+            const auto& stride = r.get<simulation::Stride>(shown.guest);
+            const auto kind = r.get<simulation::Errand>(shown.guest).kind;
+            const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
+            if (kind == simulation::ErrandKind::Riding && ride_walk == nullptr)
+                return std::nullopt; // Seated riders go with their cars (pose_riders); the rest wait out of sight
+            const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+            const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause.value > 0;
+            const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
+            // The walk goes as far into its motion as the ground covered allows, so the feet stay put
+            // however fast the guest goes.
+            if (walking && shown.pace > 0)
+                pose.time = at.walked.value / shown.pace;
+            // People are modelled facing +z, which the heading turns towards the way they go.
+            pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+            pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+            if (at_ticket)
+            {
+                pose.motion = kTicketMotion;
+                pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause.value;
+            }
+            if (const auto* gesture = r.try_get<simulation::Gesture>(shown.guest))
+            {
+                // By the names the people's meshes give these motions, in GestureKind's order.
+                constexpr std::array<std::string_view, 7> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop" };
+                pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
+                pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
+                // Knocked over, they go down, lie there, and get up for the last of it.
+                constexpr float kGettingUp = 1.5f; ///< Seconds of it a knocked over guest takes getting up
+                if (gesture->kind == simulation::GestureKind::Down)
+                {
+                    const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
+                    const bool up = gesture->left.value - scene.sim_time < kGettingUp;
+                    pose.motion = park::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::motion::kIdle);
+                    pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
+                }
+            }
+            // An umbrella held up in the rain.
+            // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
+            // with one then.
+            const auto* weather = r.ctx().find<simulation::Weather>();
+            if (weather != nullptr && weather->rain && r.all_of<simulation::Umbrella>(shown.guest))
+            {
+                const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
+                const auto& umbrella = scene.umbrellas[visitor != nullptr && visitor->age == simulation::AgeGroup::Child ? 1 : 0];
+                pose.held = umbrella ? &*umbrella : nullptr;
+                // shortcut: standing guests hold it up in the walk's first pose, legs mid-step; upgrade if a
+                // standing motion with an umbrella turns up.
+                pose.motion = kUmbrellaMotion;
+                if (!walking)
+                    pose.time = 0;
+            }
+        }
+        return pose;
+    }
 
     bool maybe_in_view(const glm::mat4& transform, const glm::vec3& at, float reach)
     {

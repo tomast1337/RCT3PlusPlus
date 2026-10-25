@@ -132,6 +132,8 @@ interface Tile {
     cliff: number;
     /** Whether the park owns it outright. */
     owned: boolean;
+    /** The animal enclosure it is in, by number; -1 when in none. */
+    enclosure: number;
     /** The surface height of the water on it, when it holds any. */
     water?: number;
 }
@@ -207,7 +209,8 @@ declare namespace build {
     function stalls(): StallItem[] | undefined;
     /** Starts placing a ride; false when there is no such ride. A ride built piece by piece opens its
      * construction panel on the next frame, for a custom track; with "designs" it also opens the window of its
-     * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. */
+     * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. An
+     * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool. */
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
      * the one picked, whether it can be built there and the files of the saved designs of its kind (the
@@ -216,7 +219,7 @@ declare namespace build {
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
     function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
-    /** Puts the placing tool away, as a right click does. */
+    /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
     function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean; ghost: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;

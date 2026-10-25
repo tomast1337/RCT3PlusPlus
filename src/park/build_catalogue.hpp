@@ -90,6 +90,10 @@ namespace rct3::park
         Animal,         ///< One animal of a species, bought into an enclosure
     };
 
+    /// The symbol of the enclosure list's delete tool, listed first among the fences: it takes tiles out of
+    /// enclosures as a fence puts them in.
+    inline constexpr std::string_view kEnclosureDelete = "EnclosureDelete";
+
     /// The parts of the enclosure list, in the order it shows them.
     enum class EnclosurePart : std::uint8_t
     {

@@ -40,6 +40,8 @@ namespace rct3::park
         /// this ending; the rest of its overlays are the pieces' shapes.
         constexpr std::string_view kFenceFolder = "Enclosures/Fences";
         constexpr std::string_view kFenceEnding = "_Stub";
+        constexpr std::string_view kEnclosureDeleteText = "EnclosureDeleteTool_TT";
+        constexpr std::string_view kEnclosureDeleteIcon = "GUI2_DeleteSelection";
         /// The overlays of shelters, animal species and toys.
         constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
@@ -544,6 +546,17 @@ namespace rct3::park
             std::ranges::sort(files);
             for (const auto& file : files)
                 read_file(root, file, items);
+            if (!files.empty())
+            {
+                BuildItem& del = items.emplace_back();
+                del.list = BuildList::Enclosures;
+                del.kind = BuildKind::EnclosureFence;
+                del.symbol = kEnclosureDelete;
+                del.name_text = kEnclosureDeleteText;
+                del.icon = kEnclosureDeleteIcon;
+                del.part = EnclosurePart::Fences;
+                del.strength = -1; // listed before the weakest fence
+            }
         }
         for (const std::string_view overlay : kAnimalOverlays)
         {

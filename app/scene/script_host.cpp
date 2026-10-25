@@ -8,6 +8,7 @@
 #include "park/water_fill.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "random/generator.hpp"
+#include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
@@ -381,7 +382,7 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::TerrainCell& c = g.at(col, row);
-            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) }, { "enclosure", park_->enclosures.at(col, row) } };
             for (const save::WaterBody& b : park_->footpaths.water.bodies)
                 if (park::holds(b, { col, row }))
                     tile["water"] = b.level;
@@ -582,7 +583,7 @@ namespace rct3::scene
                 park.build.asked = *found;
                 park.build.asked_designs = a.size() > 2 && a[2] == "designs";
             }
-            return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found);
+            return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found) || start_enclosing(park, *found);
         });
         engine_.define("build.construction", [this](const Json&) -> Json {
             const TrackBuilding& b = park_of(park_).building;
@@ -611,6 +612,7 @@ namespace rct3::scene
         });
         engine_.define("build.stop", [this](const Json&) {
             stop_ride_placing(park_of(park_));
+            stop_enclosing(park_of(park_));
             return Json(nullptr);
         });
         engine_.define("rides.setState", [this](const Json& a) {

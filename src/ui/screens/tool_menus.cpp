@@ -32,6 +32,10 @@ namespace rct3::ui
             { Fences, "Obj_Scenery_Fences", { }, { }, false },
             { Plants, "Obj_Scenery_TreesNPlants", { }, { }, false },
         } };
+        constexpr std::array<ToolMenuItem, 2> kStructures { {
+            { StructureGrab, "SavedSelection_Grab", { }, { }, false },
+            { StructureList, "SavedSelection_List", { }, { }, false },
+        } };
         constexpr std::array<ToolMenuItem, 4> kShops { {
             { Facilities, "Obj_Shops_Utilities", { }, { }, false },
             { Stalls, "Obj_Shops_Stalls", { }, { }, false },
@@ -108,6 +112,13 @@ namespace rct3::ui
             case ParkTool::Map:
                 break;
         }
+        return { };
+    }
+
+    std::span<const ToolMenuItem> tool_submenu(ToolItem item)
+    {
+        if (item == SavedStructures)
+            return kStructures;
         return { };
     }
 

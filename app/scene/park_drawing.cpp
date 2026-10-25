@@ -206,6 +206,7 @@ namespace rct3::scene
                 draw_track_ghost(device, scene, transform, light);
                 draw_raised_footpath_ghost(device, scene, transform, light);
                 draw_ride_placing_ghost(device, scene, transform, light);
+                draw_structure_ghost(device, scene, transform, light);
             }
             // Last, so what it hides is drawn first and shows through it.
             if (parts.terrain && parts.faded_ground)

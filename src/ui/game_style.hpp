@@ -778,6 +778,34 @@ namespace rct3::ui::game_skins
         };
     }
 
+    /// The structure tools' panels, over the tool row and the scenery menu's smaller menu: picking one out, with
+    /// buttons that clear the marks and save what stands on them, and placing one, with a button that turns it.
+    [[nodiscard]] inline DeleteAreaPanelStyle structure_grab_panel_style()
+    {
+        return {
+            .back = "CircularPanelDialog",
+            .button = std::string(kMenuButtonSmall),
+            .clear = "SavedSelectionGrabber_ClearIcon",
+            .remove = "SavedSelectionGrabber_SaveIcon",
+            .clear_help = "SavedSelectionGrabber_TT_Clear",
+            .remove_help = "SavedSelectionGrabber_TT_Save",
+            .bottom = kOverToolRow + tool_row::kItemStep,
+        };
+    }
+    /// shortcut: turning only, without the game's button that recolours the structure; add it once it is known
+    /// whether that recolours every item or only those with colours of their own.
+    [[nodiscard]] inline DeleteAreaPanelStyle structure_place_panel_style()
+    {
+        return {
+            .back = "CircularPanelDialog",
+            .button = std::string(kMenuButtonSmall),
+            .clear = "IconAttractionEditorRotate",
+            .remove = { },
+            .clear_help = "SavedSelectionPlacer_TT_Rotate",
+            .bottom = kOverToolRow + tool_row::kItemStep,
+        };
+    }
+
     /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
     /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable
     /// look.

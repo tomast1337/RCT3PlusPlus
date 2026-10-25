@@ -674,6 +674,20 @@ namespace rct3::scene
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;
         });
+        engine_.define("structures.placing", [this](const Json&) -> Json {
+            const StructureTools& t = park_of(park_).structures;
+            if (t.tool != StructureTools::Tool::Place || !t.structure)
+                return nullptr;
+            constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "blocked", "path" };
+            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost }, { "turns", t.turns }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
+            if (t.at)
+                placing["at"] = { { "col", t.at->col }, { "row", t.at->row } };
+            return placing;
+        });
+        engine_.define("structures.marked", [this](const Json&) -> Json {
+            const StructureTools& t = park_of(park_).structures;
+            return std::ranges::count(t.marks, std::uint8_t { 1 });
+        });
         engine_.define("rides.list", [this](const Json&) {
             const ParkScene& park = park_of(park_);
             Json rides = Json::array();

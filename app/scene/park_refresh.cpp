@@ -621,14 +621,17 @@ namespace rct3::scene
             {
                 if (!scene.simulate || scene.wardrobe.empty() || !r.all_of<simulation::Stride>(e) || !scene.known_guests.insert(e).second)
                     continue;
-                const auto type = static_cast<save::PersonType>(std::to_underlying(visitor.age)); // The same numbers
-                const save::Sex sex = visitor.female ? save::Sex::Female : save::Sex::Male;
+                // A VIP wears their own clothes.
+                const auto* vip = r.try_get<simulation::Vip>(e);
+                const std::uint8_t celebrity = vip != nullptr ? vip->who : 0;
+                const auto type = vip != nullptr ? save::PersonType::Special : static_cast<save::PersonType>(std::to_underlying(visitor.age)); // The same numbers
+                const save::Sex sex = visitor.female && vip == nullptr ? save::Sex::Female : save::Sex::Male;
                 std::array<const Outfit*, 3> worn { };
                 for (std::size_t section = 0; section < worn.size(); ++section)
                 {
                     std::vector<const Outfit*> fits;
                     for (const Outfit& o : scene.wardrobe)
-                        if (o.type == type && o.sex == sex && o.section == section)
+                        if (o.type == type && o.sex == sex && o.vip == celebrity && o.section == section)
                             fits.push_back(&o);
                     if (!fits.empty())
                         worn[section] = fits[random::below(scene.looks, fits.size())];
@@ -639,7 +642,7 @@ namespace rct3::scene
                 kept.in_park = true;
                 kept.mood_now.happiness = mood.happiness.value;
                 kept.person.type = type;
-                kept.person.sub_type = std::to_underlying(sex);
+                kept.person.sub_type = vip != nullptr ? celebrity : std::to_underlying(sex);
                 kept.person.name = visitor.name.empty() ? std::format("Guest {}", scene.people.guests.size()) : visitor.name;
                 save::Appearance& a = kept.person.appearance;
                 a.head = { worn[0]->id };

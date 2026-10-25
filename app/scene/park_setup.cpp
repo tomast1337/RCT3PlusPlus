@@ -280,8 +280,18 @@ namespace rct3::scene
             for (const auto& age : std::filesystem::directory_iterator(*folder, error))
             {
                 const std::string name = age.path().filename().string();
-                const auto type = name.size() == 2 ? std::string_view("CTA").find(name[0]) : std::string_view::npos;
-                const auto sex = name.size() == 2 ? std::string_view("MF").find(name[1]) : std::string_view::npos;
+                // The celebrities VIP goals send each have a folder of their own, by the goals' numbers from 1.
+                constexpr std::array<std::string_view, 6> kCelebrities { "Politician", "PopStar", "MovieStar", "JoeSlugger", "BobWaterman", "Smythe" };
+                const auto celebrity = std::ranges::find(kCelebrities, name);
+                const auto vip = celebrity != kCelebrities.end() ? static_cast<std::uint8_t>(celebrity - kCelebrities.begin() + 1) : std::uint8_t { 0 };
+                auto type = name.size() == 2 ? std::string_view("CTA").find(name[0]) : std::string_view::npos;
+                auto sex = name.size() == 2 ? std::string_view("MF").find(name[1]) : std::string_view::npos;
+                if (vip != 0)
+                {
+                    // Saved as the game saves them: of the special persons, their number in place of a sex.
+                    type = std::to_underlying(save::PersonType::Special);
+                    sex = vip;
+                }
                 if (type == std::string_view::npos || sex == std::string_view::npos)
                     continue;
                 for (const auto& file : std::filesystem::directory_iterator(age.path(), error))
@@ -289,7 +299,7 @@ namespace rct3::scene
                     constexpr std::string_view kStub = "_Stub.common.ovl";
                     constexpr std::array<std::string_view, 3> kSections { "_Head", "_Body", "_Legs" };
                     const std::string file_name = file.path().filename().string();
-                    if (!file_name.starts_with(name) || !file_name.ends_with(kStub))
+                    if ((vip == 0 && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
                         continue;
                     const std::string_view symbol = std::string_view(file_name).substr(0, file_name.size() - kStub.size());
                     const auto section = std::ranges::find_if(kSections, [&](std::string_view s) { return symbol.ends_with(s); });
@@ -302,7 +312,7 @@ namespace rct3::scene
                     const save::PeopleObjectId id = known != scene.people.part_groups.end() ? known->id : next_id++;
                     if (known == scene.people.part_groups.end())
                         scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section - kSections.begin()), .sex = static_cast<std::uint8_t>(sex), .type = static_cast<std::uint8_t>(type) });
-                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), static_cast<save::Sex>(sex), static_cast<std::uint8_t>(section - kSections.begin()) });
+                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(sex), static_cast<std::uint8_t>(section - kSections.begin()), vip });
                 }
             }
             library.close_files();

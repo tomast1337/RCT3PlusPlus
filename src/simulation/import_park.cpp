@@ -541,6 +541,7 @@ namespace rct3::simulation
         }
         c.distance = course.distance;
         c.points = course.points;
+        c.ups = course.ups;
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
         for (const park::CourseKind k : course.kinds)

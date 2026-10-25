@@ -62,6 +62,17 @@ namespace rct3::simulation
         return glm::mix(c.points[i], c.points[i + 1], span > 0 ? (d - c.distance[i]) / span : 0.0f);
     }
 
+    glm::vec3 track_up(const Coaster& c, float d)
+    {
+        if (c.distance.size() < 2 || c.ups.size() != c.distance.size())
+            return { 0, 1, 0 };
+        d = wrap(c, d);
+        const std::size_t i = point_at(c, d);
+        const float span = c.distance[i + 1] - c.distance[i];
+        const glm::vec3 up = glm::mix(c.ups[i], c.ups[i + 1], span > 0 ? (d - c.distance[i]) / span : 0.0f);
+        return glm::length(up) > 1e-6f ? glm::normalize(up) : glm::vec3(0, 1, 0);
+    }
+
     glm::vec3 track_way(const Coaster& c, float d)
     {
         if (c.distance.size() < 2 || c.points.size() != c.distance.size())
@@ -75,30 +86,36 @@ namespace rct3::simulation
     {
         if (seconds <= 0)
             return;
-        const glm::vec3 velocity = track_way(c, c.at) * c.speed;
-        if (lap.seconds == 0 && lap.speed.empty())
-            lap.velocity_from = velocity;
+        // The track's way and its bend from points a little either side, so the corners between its points do
+        // not jolt: the push along it, and the turn's pull into the bend at the train's speed.
+        constexpr float kReach = 2; ///< Metres either side
+        const glm::vec3 here = track_point(c, c.at);
+        const glm::vec3 ahead = track_point(c, c.at + kReach);
+        const glm::vec3 behind = track_point(c, c.at - kReach);
+        const glm::vec3 chord = ahead - behind;
+        const glm::vec3 way = glm::length(chord) > 0 ? glm::normalize(chord) : track_way(c, c.at);
+        const glm::vec3 bend = (ahead - 2.0f * here + behind) / (kReach * kReach);
+        const float push = lap.speed_before ? (c.speed - *lap.speed_before) / seconds : 0;
+        lap.speed_before = c.speed;
+        // What riders feel: the train's acceleration less gravity's, up through their seats and across them.
+        const glm::vec3 felt = way * push + bend * c.speed * c.speed + glm::vec3(0, kGravity, 0);
+        const glm::vec3 lean = glm::cross(track_up(c, c.at), way);
+        const glm::vec3 across = glm::length(lean) > 1e-6f ? glm::normalize(lean) : glm::vec3(1, 0, 0);
+        const glm::vec3 up = glm::cross(way, across);
         lap.seconds += seconds;
         lap.speed_sum += std::abs(c.speed) * seconds;
-        lap.height_sum += track_point(c, c.at).y * seconds;
+        lap.height_sum += here.y * seconds;
+        lap.vertical_sum += glm::dot(felt, up) * seconds;
+        lap.lateral_sum += glm::dot(felt, across) * seconds;
         constexpr float kSample = 1.0f / static_cast<float>(save::kGraphSamplesPerSecond);
         if (lap.seconds < kSample)
             return;
-        // The forces from how the train's velocity changed over the sample, with gravity's: up, and across the
-        // way it runs.
-        // shortcut: up is the world's, so a banked turn's force shows as lateral; take the track's roll once it is
-        // known along it.
-        const glm::vec3 pull = (velocity - lap.velocity_from) / lap.seconds;
-        const glm::vec3 up { 0, 1, 0 };
-        const glm::vec3 across = glm::cross(up, track_way(c, c.at));
         lap.speed.push_back(lap.speed_sum / lap.seconds);
         lap.altitude.push_back(lap.height_sum / lap.seconds);
-        lap.vertical.push_back(pull.y + kGravity);
-        lap.lateral.push_back(glm::length(across) > 0 ? glm::dot(pull, glm::normalize(across)) : 0);
+        lap.vertical.push_back(lap.vertical_sum / lap.seconds);
+        lap.lateral.push_back(lap.lateral_sum / lap.seconds);
         lap.seconds = 0;
-        lap.speed_sum = 0;
-        lap.height_sum = 0;
-        lap.velocity_from = velocity;
+        lap.speed_sum = lap.height_sum = lap.vertical_sum = lap.lateral_sum = 0;
     }
 
     save::RideGraphs end_lap(LapRecorder& lap)

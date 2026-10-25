@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <numbers>
 #include <vector>
 
 using namespace rct3::simulation;
@@ -412,4 +413,42 @@ TEST_CASE("a long lap's graphs keep its last samples")
     const rct3::save::RideGraphs graphs = end_lap(lap);
     REQUIRE(graphs.speed.size() == kLapSamples);
     CHECK(graphs.speed.front() == 7);
+}
+
+TEST_CASE("a turn banked to suit the train's speed presses riders into their seats, not sideways")
+{
+    // A circle 20 m round its middle, banked 45 degrees in, taken at the speed whose pull into the turn is one g.
+    constexpr float kRadius = 20;
+    constexpr int kPoints = 361;
+    Coaster c;
+    for (int i = 0; i < kPoints; ++i)
+    {
+        const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / (kPoints - 1);
+        const glm::vec3 out { std::cos(angle), 0, std::sin(angle) };
+        c.points.push_back(out * kRadius);
+        c.ups.push_back(glm::normalize(glm::vec3(0, 1, 0) - out));
+        c.distance.push_back(kRadius * angle);
+        c.height.push_back(0);
+        c.kinds.push_back(Stretch::Plain);
+    }
+    c.speed = std::sqrt(9.81f * kRadius);
+    LapRecorder lap;
+    for (int i = 0; i < 20; ++i)
+    {
+        c.at = static_cast<float>(i) * c.speed * 0.025f;
+        record(lap, c, 0.025f);
+    }
+    REQUIRE_FALSE(lap.vertical.empty());
+    CHECK(lap.vertical.back() == doctest::Approx(9.81f * std::numbers::sqrt2_v<float>).epsilon(0.02));
+    CHECK(std::abs(lap.lateral.back()) < 0.2f);
+    // Unbanked, the same turn pulls them sideways by a g.
+    c.ups.clear();
+    LapRecorder flat;
+    for (int i = 0; i < 20; ++i)
+    {
+        c.at = static_cast<float>(i) * c.speed * 0.025f;
+        record(flat, c, 0.025f);
+    }
+    CHECK(std::abs(flat.lateral.back()) == doctest::Approx(9.81f).epsilon(0.02));
+    CHECK(flat.vertical.back() == doctest::Approx(9.81f).epsilon(0.02));
 }

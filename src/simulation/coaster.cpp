@@ -203,8 +203,8 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
-            // Run off either end of its track, the train crashes there, going as fast as it left; a ghost's is
-            // stopped dead instead, as if by buffers.
+            // Run off either end of its track, the train crashes there, going as fast as it left; a ghost's run
+            // ends there instead, stopped dead as if by buffers.
             if (two_ends(c))
             {
                 const float to = c.at + moved;
@@ -212,14 +212,12 @@ namespace rct3::simulation
                 if (kept != to)
                 {
                     moved = kept - c.at;
-                    if (!c.ghost)
-                    {
-                        c.at = kept;
-                        c.crashed = true;
-                        c.running = false;
-                        return false;
-                    }
-                    c.speed = 0;
+                    c.at = kept;
+                    if (c.ghost)
+                        c.speed = 0;
+                    c.crashed = !c.ghost;
+                    c.running = false;
+                    return false;
                 }
             }
             if (open)

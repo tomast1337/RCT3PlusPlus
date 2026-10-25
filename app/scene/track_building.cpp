@@ -115,6 +115,7 @@ namespace rct3::scene
         constexpr std::size_t kCompletionTries = 20000;
         constexpr std::size_t kCompletionTriesPerFrame = 300;
         constexpr float kFlashSeconds = 0.4f; ///< The found way's button is lit, then dim, this long
+        constexpr float kTestWait = 3;        ///< Seconds a test train stands at the open end
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
         constexpr float kCloses = 0.1f;
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
@@ -376,6 +377,7 @@ namespace rct3::scene
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
             const profiling::Scope zone("Ghost");
+            b.test.reset(); // A test runs the track as it was
             const park::PieceCatalogue* c = catalogue(b);
             b.candidates.clear();
             b.picked.reset();
@@ -1176,6 +1178,7 @@ namespace rct3::scene
         scene.building.tabs_for.reset();
         scene.building.completing.reset();
         scene.building.proposed.clear();
+        scene.building.test.reset();
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
@@ -1764,7 +1767,6 @@ namespace rct3::scene
         bool changed = false;
         // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
         // strip, its state, and the colours of the pieces built next. The turn shows greyed while it does nothing.
-        // shortcut: no test run of the track from the ring, as the original has none; add one if wanted.
         enum Tab : std::size_t
         {
             Info,
@@ -1956,6 +1958,67 @@ namespace rct3::scene
         }
         if (changed)
             refresh(scene, b, assets);
+        // A test of a track that is not yet a circuit: the park runs no train on it, so a ghost of its first train
+        // runs it, stopping where it ends. A circuit's own trains test it.
+        const save::Ride& tested = scene.rides.rides.at(*b.ride);
+        const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
+        const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !tested.trains.empty() && scene.car_fits.contains(*b.ride) && assets.install;
+        if (!testable)
+            b.test.reset();
+        else if (!b.test)
+        {
+            // The ride's first train, stood with its front where trains set off. The course is taken as a circuit
+            // to make the train, which is then told the track has ends.
+            save::Ride ghost = tested;
+            ghost.trains.resize(1);
+            park::TrackCourse round = *course;
+            round.closed = true;
+            if (auto train = simulation::coaster_of(round, ghost))
+            {
+                train->closed = false;
+                train->ghost = true;
+                train->running = true;
+                park::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
+                const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
+                load_car_models(scene, *assets.install, cars);
+                TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
+                for (const save::PlacedObject& car : cars.pieces)
+                    t.stood.push_back(cars.fitted.at(car.id));
+                t.meshes = park::moving_meshes(cars.pieces, scene.models, scene.grid);
+                for (std::size_t i = 0; i < cars.pieces.size(); ++i)
+                    if (const auto model = scene.models.find(park::model_ref(cars.pieces[i])); model != scene.models.end())
+                        t.joints.insert(t.joints.end(), model->second.arm_joints.size(), i);
+                for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
+                    for (park::GroundVertex& v : *vertices)
+                        v.colour *= kGhostTint;
+                ghost_textures(device, scene, t.meshes.mesh);
+            }
+        }
+        if (b.test)
+        {
+            TrackBuilding::GhostTrain& t = *b.test;
+            simulation::drive(t.train, elapsed);
+            // Stood at the open end a while, it is back at the station and sets off again.
+            if (!t.train.running && (t.waited += elapsed) >= kTestWait)
+            {
+                t.train.at = t.train.start;
+                t.train.travelled = 0;
+                t.train.launched = false;
+                t.train.running = true;
+                t.waited = 0;
+            }
+            std::vector<glm::mat4> places;
+            for (std::size_t i = 0; i < t.stood.size(); ++i)
+                places.push_back(park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at));
+            // shortcut: the joints of cars on arms ride at rest with their car, upgrade if a test should swing them
+            // as the park does.
+            for (const std::size_t car : t.joints)
+            {
+                const glm::mat4 place = places[car];
+                places.push_back(place);
+            }
+            park::move_meshes(t.meshes, places);
+        }
         if (b.completing)
             show_way(scene, b, assets, park::nearest_way(*b.completing));
         else if (!b.proposed.empty())
@@ -2125,6 +2188,8 @@ namespace rct3::scene
     {
         if (scene.building.ride)
             draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
+        if (scene.building.test)
+            draw_ghost_mesh(device, scene, scene.building.test->meshes.mesh, transform, light);
     }
 
     render::SceneLight ghost_light(render::SceneLight light, float clock)

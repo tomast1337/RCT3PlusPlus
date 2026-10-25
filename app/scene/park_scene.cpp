@@ -1721,7 +1721,8 @@ namespace rct3::scene
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
         scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
-        scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
+        scene.blend_band = options.get(config::GameOption::DetailBlendBand);
+        scene.level_scales = level_scales(options);
         scene.bloom = options.flag(config::GameOption::Bloom);
         scene.light_shafts = options.flag(config::GameOption::LightShafts);
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
@@ -2310,6 +2311,15 @@ namespace rct3::scene
     bool take_park_alert(ParkScene& scene)
     {
         return std::exchange(scene.message_alert, false);
+    }
+
+    park::LevelScales level_scales(const config::GameOptions& options)
+    {
+        static_assert(config::kDetailPairs.size() == park::kDetailKinds); // In the same order
+        park::LevelScales scales;
+        for (std::size_t i = 0; i < scales.size(); ++i)
+            scales[i] = { .detail = options.get(config::kDetailPairs[i].detail), .distance = options.get(config::kDetailPairs[i].distance) };
+        return scales;
     }
 
     render::Color park_background(const ParkScene& scene)

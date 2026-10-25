@@ -290,7 +290,8 @@ namespace rct3::scene
         /// Of a level's distance, how far before its edge objects start blending into the next; 0 jumps. Set
         /// from the options each frame, and handed to each build.
         float blend_band = 0;
-        float since_rebuild = 0; ///< Seconds since the levels were last looked at
+        park::LevelScales level_scales { }; ///< Each kind's detail and draw distance; set as blend_band is
+        float since_rebuild = 0;            ///< Seconds since the levels were last looked at
         /// Meshes for levels that differ from those shown, while being built. Building only reads what is
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
@@ -595,6 +596,8 @@ namespace rct3::scene
     /// if it did.
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size);
 
+    /// Each kind's detail and draw distance, from the graphics options.
+    [[nodiscard]] park::LevelScales level_scales(const config::GameOptions& options);
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
 

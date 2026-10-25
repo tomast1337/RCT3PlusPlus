@@ -180,7 +180,7 @@ namespace rct3::park
         return effects;
     }
 
-    LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, float scale)
+    LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };
         for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
@@ -192,6 +192,7 @@ namespace rct3::park
                 continue;
             const auto& levels = model->second.levels;
             const float distance = glm::distance(eye, anchors[i]);
+            const LevelScale scale = scales[static_cast<std::size_t>(detail_kind(model->second.category))];
             const auto level = level_at(model->second, distance, scale);
             // The edges the object may be crossing: past the end of its own level, or just past the one before.
             const std::size_t last = levels.size() - 1;
@@ -202,7 +203,7 @@ namespace rct3::park
                     break;
                 if (edge > last)
                     continue;
-                const float far = levels[edge].distance * scale;
+                const float far = level_reach(model->second, edge, scale);
                 const float near = far * (1 - band);
                 if (!std::isfinite(far) || far <= 0 || distance < near - far * kCrossMargin || distance > far + far * kCrossMargin)
                     continue;
@@ -217,7 +218,7 @@ namespace rct3::park
         return plan;
     }
 
-    ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float scale)
+    ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales)
     {
         ObjectLevels levels(objects.size(), kNotDrawn);
         for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
@@ -227,7 +228,7 @@ namespace rct3::park
             const auto model = models.find(model_ref(objects[i]));
             if (model == models.end())
                 continue;
-            if (const auto level = level_at(model->second, glm::distance(eye, anchors[i]), scale))
+            if (const auto level = level_at(model->second, glm::distance(eye, anchors[i]), scales[static_cast<std::size_t>(detail_kind(model->second.category))]))
                 levels[i] = static_cast<std::int8_t>(*level);
         }
         return levels;

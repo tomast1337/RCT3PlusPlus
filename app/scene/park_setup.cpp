@@ -912,7 +912,8 @@ namespace rct3::scene
                                                return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
                                            });
                                        });
-        scene.blend_band = options.flag(config::GameOption::BlendDetailLevels) ? options.get(config::GameOption::DetailBlendBand) : 0.0f;
+        scene.blend_band = options.get(config::GameOption::DetailBlendBand);
+        scene.level_scales = level_scales(options);
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         log.info("{} lamps", scene.lamps.size());
@@ -942,7 +943,7 @@ namespace rct3::scene
             scene.front_only[made->id] = *front;
         }
         profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.show_supports, { }, park::chain_runs(scene.rides)))
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides)))
                 show_objects(device, scene, std::move(*built));
         });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)

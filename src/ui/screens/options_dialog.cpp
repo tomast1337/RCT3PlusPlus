@@ -48,7 +48,6 @@ namespace rct3::ui
         constexpr std::string_view kCloudsHelp = "Rct3pp_CloudsHelp";
         constexpr std::string_view kSkyHelp = "Rct3pp_SkyHelp";
         constexpr std::string_view kMountainsHelp = "Rct3pp_MountainsHelp";
-        constexpr std::string_view kBlendBand = "Rct3pp_DetailBlendBand";
         constexpr std::string_view kBlendBandHelp = "Rct3pp_DetailBlendBandHelp";
         constexpr std::string_view kBlendShadows = "Rct3pp_BlendShadows";
         constexpr std::string_view kBlendShadowsHelp = "Rct3pp_BlendShadowsHelp";
@@ -412,10 +411,7 @@ namespace rct3::ui
         rows.number(O::ImposterDistance, str(strings, "GameOptionsDialog_GeometryImposterDistance"), str(strings, "GameOptionsDialog_GeometryImposterDistance_TT"));
         rows.shown_when(details);
         rows.section();
-        rows.tick(O::BlendDetailLevels, str(strings, "GameOptionsDialog_SceneryItemLODBlend"), str(strings, "GameOptionsDialog_SceneryItemLODBlend_TT"));
-        rows.level(O::DetailBlendBand, str(strings, kBlendBand), str(strings, kBlendBandHelp));
-        rows.indent();
-        rows.enabled_when({ O::BlendDetailLevels, 1 });
+        rows.level(O::DetailBlendBand, str(strings, "GameOptionsDialog_SceneryItemLODBlend"), str(strings, kBlendBandHelp));
         rows.tick(O::CompressTextures, str(strings, "GameOptionsDialog_TextureCompress"), str(strings, "GameOptionsDialog_TextureCompress_TT"));
         rows.tick(O::AggressiveDepthBias, str(strings, "GameOptionsDialog_AggressiveZBias"), str(strings, "GameOptionsDialog_AggressiveZBiasHelp"));
         rows.level(O::TextureDetail, str(strings, "GameOptionsDialog_TextureLOD"), str(strings, "GameOptionsDialog_TextureLODHelp"));

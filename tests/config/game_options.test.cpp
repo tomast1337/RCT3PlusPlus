@@ -80,6 +80,13 @@ TEST_CASE("bad values are reported and skipped")
     CHECK(problems.size() == 1);
 }
 
+TEST_CASE("retired options are skipped without a word")
+{
+    std::vector<FileProblem> problems;
+    CHECK(GameOptions::parse(R"({ "live_content": 0 })", problems) == GameOptions { });
+    CHECK(problems.empty());
+}
+
 TEST_CASE("options are saved to and loaded from a file")
 {
     const fs::path folder = fs::temp_directory_path() / "rct3pp-game-options-test";

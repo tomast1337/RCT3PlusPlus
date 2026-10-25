@@ -38,7 +38,6 @@ namespace rct3::config
         DistanceUnits,    ///< 0 metric, 1 imperial, 2 SI
         TemperatureUnits, ///< 0 Celsius, 1 Fahrenheit
         Brightness,
-        LiveContent, ///< Fetch live media from the internet; takes effect at the next start
         GameVolume,
         MusicVolume,
         InterfaceVolume,

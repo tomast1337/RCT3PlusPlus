@@ -324,6 +324,39 @@ namespace rct3::scene
             simulation::post(park.park.messages, std::move(message));
             return Json(nullptr);
         });
+        engine_.define("park.messages", [this](const Json&) {
+            Json out = Json::array();
+            for (const simulation::ParkMessage& m : park_of(park_).park.messages.list)
+                out.push_back({ { "key", m.text_key }, { "name", m.subject_name } });
+            return out;
+        });
+        engine_.define("park.date", [this](const Json&) { return Json(park_of(park_).park.time); });
+        engine_.define("park.setDate", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_number())
+                throw std::invalid_argument("park.setDate takes calendar units");
+            park_of(park_).park.time = a[0].get<float>();
+            return Json(nullptr);
+        });
+        engine_.define("park.vipGoals", [this](const Json&) {
+            Json out = Json::array();
+            for (const save::Condition& c : park_of(park_).park_model.objectives.conditions)
+                if (c.vip)
+                    out.push_back({ { "level", c.difficulty }, { "who", c.vip->who }, { "next", c.vip->next_visit }, { "months", c.vip->months_to_stay }, { "met", c.vip->met }, { "toldMonth", c.vip->warned_month } });
+            return out;
+        });
+        engine_.define("park.vips", [this](const Json&) {
+            const ParkScene& park = park_of(park_);
+            const auto& r = park.sim.registry;
+            Json out = Json::array();
+            for (const auto [e, vip, visitor] : r.view<const simulation::Vip, const simulation::Visitor>().each())
+            {
+                const auto shown = std::ranges::find(park.shown_people, e, &ShownPerson::guest);
+                const glm::vec3 at = r.all_of<simulation::Pose>(e) ? r.get<simulation::Pose>(e).position : glm::vec3 { };
+                const save::TerrainGrid& g = park.grid;
+                out.push_back({ { "name", visitor.name }, { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 }, { "patience", vip.patience.value }, { "leaving", vip.leaving }, { "gone", r.all_of<simulation::Left>(e) }, { "shown", shown != park.shown_people.end() ? Json(shown - park.shown_people.begin()) : Json(nullptr) } });
+            }
+            return out;
+        });
         engine_.define("map.size", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             return Json { { "width", g.width }, { "height", g.height } };
@@ -582,6 +615,13 @@ namespace rct3::scene
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size() || !a.at(1).is_string())
                 throw std::invalid_argument("people.rename takes a person's place in people.list() and a name");
             park.rename_requested = std::pair { a[0].get<std::size_t>(), strings::to_utf16(a[1].get<std::string>()) };
+            return Json(nullptr);
+        });
+        engine_.define("people.show", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size())
+                throw std::invalid_argument("people.show takes a person's place in people.list()");
+            park.person_requested = a[0].get<std::size_t>();
             return Json(nullptr);
         });
         engine_.define("people.list", [this](const Json&) {

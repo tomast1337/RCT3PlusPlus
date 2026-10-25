@@ -8,6 +8,7 @@
 #include "park/ride_placement.hpp"
 #include "park/water_fill.hpp"
 #include "park/waterfall_making.hpp"
+#include "park/waterfall_mesh.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
@@ -374,7 +375,10 @@ namespace rct3::scene
             if (!fall)
                 say(scene, fall.error());
             else
+            {
                 scene.footpaths.waterfalls.push_back(*fall);
+                show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+            }
         }
 
         /// The fence round the park's land built again, and the staff kept to that land, after it changed.
@@ -561,7 +565,10 @@ namespace rct3::scene
         if (g.contains(col, row) && !park::owned_outright(g.at(col, row)))
             say(scene, park::kWaterfallDeleteNotOwned);
         else
+        {
             falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
+            show_park_particles(scene.particles, park::waterfall_spray(falls), &ParkParticles::sprays);
+        }
         return true;
     }
 

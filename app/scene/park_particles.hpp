@@ -32,12 +32,14 @@ namespace rct3::scene
             std::vector<const particles::Sprite*> sprites;
             glm::vec3 position { 0.0f };
             std::string effect { }; ///< Its file's name
+            float size = 1;         ///< As park::PlacedEffect::size
             bool awake = false;     ///< Ran in the last advance, so it is drawn
         };
 
         std::optional<particles::Library> library;
         std::vector<Shown> shown;
-        std::vector<Shown> fired; ///< Effects set off once, such as fireworks; dropped when they end
+        std::vector<Shown> fired;  ///< Effects set off once, such as fireworks; dropped when they end
+        std::vector<Shown> sprays; ///< The waterfalls' spray (park/waterfall_mesh.hpp), apart from the objects'
         random::RandomState random;
         std::map<std::string, render::TextureHandle> atlases;
         render::PipelineHandle added;
@@ -47,8 +49,8 @@ namespace rct3::scene
     /// Loads the particle sprites of the install at `root`, with numbers from `random`. Logs and leaves the library
     /// out when the install has no particle sprites; nothing is shown then.
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
-    /// Starts the effects `effects` name, in place of any running.
-    void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects);
+    /// Starts the effects `effects` name, in place of any running in `list`.
+    void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list = &ParkParticles::shown);
     /// Sets off the effect `effect` once at `position`, pointing along `up`. False when there is no such effect.
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up);
     /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are

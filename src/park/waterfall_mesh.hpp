@@ -14,6 +14,7 @@
 #include <array>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace rct3::park
 {
@@ -48,6 +49,13 @@ namespace rct3::park
 
     /// Where the water of `fall` is after running `along` (0 at the edge, 1 where it lands), halfway across.
     [[nodiscard]] glm::vec3 waterfall_point(const save::Waterfall& fall, float along);
+
+    /// The particle effect that sprays where the water lands: a file of the game's particle effects.
+    inline constexpr std::string_view kWaterfallSpray = "WhiteWaterRapidsVapour";
+
+    /// The spray of `falls`: kWaterfallSpray along the line where each one's water lands, one for every few units
+    /// of its width, rising; `object` is the fall's index.
+    [[nodiscard]] std::vector<PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls);
 
     /// Builds the water of `falls` into `mesh`, its pictures scrolled for `seconds`; one see-through batch per
     /// picture of kWaterfallPictures that some fall uses. Keeps `mesh`'s memory.

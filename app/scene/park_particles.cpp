@@ -69,16 +69,19 @@ namespace rct3::scene
                 *pipeline = *made;
     }
 
-    void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects)
+    void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list)
     {
-        particles.shown.clear();
+        (particles.*list).clear();
         if (!particles.library)
             return;
         std::size_t missing = 0;
         for (const park::PlacedEffect& placed : effects)
         {
             if (auto shown = start(particles, placed.effect, placed.position, placed.axes, true))
-                particles.shown.push_back(std::move(*shown));
+            {
+                shown->size = placed.size;
+                (particles.*list).push_back(std::move(*shown));
+            }
             else
                 ++missing;
         }
@@ -102,7 +105,7 @@ namespace rct3::scene
     {
         std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
         std::vector<std::pair<float, ParkParticles::Shown*>> near;
-        for (auto* list : { &particles.shown, &particles.fired })
+        for (auto* list : { &particles.shown, &particles.fired, &particles.sprays })
             for (ParkParticles::Shown& shown : *list)
             {
                 shown.awake = false;
@@ -139,7 +142,7 @@ namespace rct3::scene
             std::array<Corner, 6> corners;
         };
         std::map<std::pair<std::string, bool>, std::vector<Quad>> batches;
-        for (const auto* list : { &particles.shown, &particles.fired })
+        for (const auto* list : { &particles.shown, &particles.fired, &particles.sprays })
             for (const ParkParticles::Shown& shown : *list)
             {
                 if (!shown.awake)
@@ -157,7 +160,7 @@ namespace rct3::scene
                     if (look.size <= 0 || (sprite->blended ? look.colour.a <= 0 : glm::vec3(look.colour) == glm::vec3(0.0f)))
                         continue;
                     const auto& f = sprite->frames[sprite->frame(live.age[i], live.roll[i] / 6.2832f)];
-                    const float half = look.size / 2;
+                    const float half = look.size * shown.size / 2;
                     const glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
                     const glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
                     const glm::vec3 p = live.position[i];

@@ -95,6 +95,16 @@ namespace rct3::scene
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
         std::optional<save::Tile> aim;
         std::int32_t turns = 0;
+        /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
+        std::optional<std::int32_t> raised;
+        /// While Shift is held over the first piece: where the pointer met the ground when it went down, and the
+        /// piece's height then. The piece stays on its tile meanwhile.
+        struct Lift
+        {
+            glm::vec3 at { 0.0f };
+            std::int32_t height = 0;
+        };
+        std::optional<Lift> lift;
         std::vector<park::LaidPiece> candidates;
         park::TrackChoice choice;
         std::optional<park::LaidPiece> picked;
@@ -204,10 +214,10 @@ namespace rct3::scene
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
     [[nodiscard]] std::vector<save::TrackPiece> station_pieces(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
-    /// Handles the panel's events, and for a track with no pieces the ground tile `pointed` at (none while the
-    /// pointer is off the ground) and the turn commands. Call once per update after the interface, `elapsed`
-    /// seconds after the last.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed);
+    /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
+    /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
+    /// update after the interface, `elapsed` seconds after the last.
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// Draws the ghost of the picked piece, and any test train, with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

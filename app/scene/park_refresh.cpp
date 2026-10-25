@@ -738,6 +738,7 @@ namespace rct3::scene
     /// Puts `built` in the object buffers.
     void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
     {
+        scene.objects_shown = built.plan.steady.size();
         scene.levels = std::move(built.plan);
         show_shapes(device, scene, scene.steady_objects, std::move(built.steady), scene.levels);
         const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.slang)
@@ -754,6 +755,26 @@ namespace rct3::scene
         {
             if (auto built = scene.object_build.get())
                 show_objects(device, scene, std::move(*built));
+        }
+        if (const std::array now { scene.objects_shown, scene.objects.size() }; scene.fresh_for != now)
+        {
+            const profiling::Scope zone("Fresh");
+            // shortcut: only objects added show at once; pieces built over or hidden in place, and new billboards, wait for the next build. Upgrade when those feel slow too.
+            const std::size_t from = std::min(now[0], now[1]);
+            std::vector<std::size_t> moving;
+            for (const ParkScene::BonedRide& boned : scene.boned_rides)
+                moving.push_back(boned.object);
+            moving.append_range(park::twins(scene.objects, moving));
+            // Drawn as the build would: moving ones apart, supports only when shown.
+            std::vector<std::int8_t> levels(now[1] - from, 0);
+            for (std::size_t i = from; i < now[1]; ++i)
+            {
+                if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == park::kSupportOverlay))
+                    levels[i - from] = park::kNotDrawn;
+            }
+            scene.fresh_objects = park::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
+            add_textures(device, scene, scene.fresh_objects.batches);
+            scene.fresh_for = now;
         }
         scene.since_rebuild += elapsed;
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid())

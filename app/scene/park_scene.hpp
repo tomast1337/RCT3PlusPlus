@@ -295,9 +295,14 @@ namespace rct3::scene
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
         std::future<std::optional<ObjectBuild>> object_build;
-        ShownObjects steady_objects;                          ///< Objects drawn at one level
-        ShownObjects finer_objects;                           ///< Those crossing between two, at the finer
-        ShownObjects coarser_objects;                         ///< The same at the coarser
+        ShownObjects steady_objects;   ///< Objects drawn at one level
+        ShownObjects finer_objects;    ///< Those crossing between two, at the finer
+        ShownObjects coarser_objects;  ///< The same at the coarser
+        std::size_t objects_shown = 0; ///< How many objects those were built from
+        /// Objects added since the shown ones were built, drawn on their own until a build takes them in, so a
+        /// piece laid shows at once.
+        park::ObjectMesh fresh_objects;
+        std::array<std::size_t, 2> fresh_for { };             ///< objects_shown and the objects' count it was built for
         std::optional<glm::vec3> billboards_eye;              ///< The eye they face, none when not turned yet
         render::PipelineHandle object_pipeline;               ///< Opaque parts
         render::PipelineHandle cutout_pipeline;               ///< Parts with holes

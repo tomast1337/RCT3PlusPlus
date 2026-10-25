@@ -165,7 +165,10 @@ namespace rct3::scene
                     draw_shown(*shown, see_through);
             };
             if (scene.show_scenery && parts.scenery)
-                profiling::section("Objects", [&] { draw_objects(false); });
+                profiling::section("Objects", [&] {
+                    draw_objects(false);
+                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+                });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Billboards", [&] {
                     for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })

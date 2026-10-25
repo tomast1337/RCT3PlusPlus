@@ -25,7 +25,6 @@ namespace rct3::config
             { O::DistanceUnits, "distance_units", 0, 2, 1, 0 },
             { O::TemperatureUnits, "temperature_units", 0, 1, 1, 0 },
             { O::Brightness, "brightness", 0, 1, kAny, 0.5f },
-            { O::LiveContent, "live_content", 0, 1, 1, 1 },
             { O::GameVolume, "game_volume", 0, 1, kAny, 0.8f },
             { O::MusicVolume, "music_volume", 0, 1, kAny, 0.6f },
             { O::InterfaceVolume, "interface_volume", 0, 1, kAny, 0.8f },
@@ -115,6 +114,8 @@ namespace rct3::config
         }());
 
         constexpr std::string_view kBackgroundMusic = "background_music";
+        // Options files of earlier versions may hold these; they are skipped without a word.
+        constexpr std::array<std::string_view, 1> kRetired = { "live_content" };
 
         constexpr std::size_t index(GameOption option)
         {
@@ -168,6 +169,8 @@ namespace rct3::config
                 else
                     report(problems, std::format("{}: not a file name", name));
             }
+            else if (info == nullptr && std::ranges::contains(kRetired, name))
+                continue;
             else if (info == nullptr)
                 report(problems, std::format("unknown option {}", name));
             else if (value.is_boolean())

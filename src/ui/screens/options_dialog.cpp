@@ -212,8 +212,6 @@ namespace rct3::ui
         rows.choice(O::TemperatureUnits, str(strings, "GameOptionsDialog_Temperature"), items(strings, { "GameOptionsDialog_Celcius", "GameOptionsDialog_Fahrenheit" }));
         rows.level(O::Brightness, str(strings, "GameOptionsDialog_Brightness"));
         rows.section();
-        rows.tick(O::LiveContent, str(strings, "GameOptionsDialog_EnableLiveContent"), str(strings, "GameOptionsDialog_EnableLiveContent_TT"));
-        rows.section();
         rows.level(O::GameVolume, str(strings, "GameOptionsDialog_SetVolumeGame"));
         rows.level(O::MusicVolume, str(strings, "GameOptionsDialog_SetVolumeMusic"));
         rows.level(O::InterfaceVolume, str(strings, "GameOptionsDialog_SetVolumeGUI"));

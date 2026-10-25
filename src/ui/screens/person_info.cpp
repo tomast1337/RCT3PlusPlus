@@ -406,6 +406,17 @@ namespace rct3::ui
             return name;
         }
 
+        InfoControl pick_up_control(const StringTable& strings, std::string_view help)
+        {
+            InfoControl b;
+            b.id = person_control(PersonControl::PickUp);
+            b.name = "PickUp";
+            b.kind = InfoControlKind::Button;
+            b.icon = "Staff_MovePincerLarge";
+            b.label = text(strings, help);
+            return b;
+        }
+
         void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings)
         {
             const save::Staff& s = *f.staff;
@@ -419,6 +430,7 @@ namespace rct3::ui
                 b.label = text(strings, help);
                 page.controls.push_back(std::move(b));
             };
+            page.controls.push_back(pick_up_control(strings, "Employee_Name_Pincer"));
             if (s.kind == save::StaffKind::ParkInspector)
                 return;
             button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
@@ -580,6 +592,7 @@ namespace rct3::ui
                 {
                     guest_general(page, *facts.guest, strings);
                     page.controls.push_back(name_control(facts, strings));
+                    page.controls.push_back(pick_up_control(strings, "Guest_Name_Pincer"));
                 }
                 else if (facts.staff != nullptr)
                     staff_general(page, facts, strings);

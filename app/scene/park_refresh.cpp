@@ -123,6 +123,9 @@ namespace rct3::scene
         const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
         const std::int32_t kTicketMotion = park::motion_number("handticket").value_or(park::motion::kIdle);
+        /// How a person picked up hangs, enjoying it or cross, as the game's motions name it.
+        const std::int32_t kDangleHappyMotion = park::motion_number("danglehappy").value_or(park::motion::kIdle);
+        const std::int32_t kDangleCrossMotion = park::motion_number("dangleangry").value_or(park::motion::kIdle);
         /// How riders sit in a car, as the game's motions name it.
         const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
@@ -197,9 +200,22 @@ namespace rct3::scene
                             placed.push_back(pose);
                         continue;
                     }
+                    pose.time = shown.saved_time + clock * shown.speed;
+                    // Held by the player they hang where the pointer has them; let go, they fall, then walk to the paths.
+                    if (const auto* held = r.try_get<simulation::Held>(shown.guest); held != nullptr || r.all_of<simulation::Dropped>(shown.guest))
+                    {
+                        const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                        const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
+                        pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                        pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
+                        if (held == nullptr && !falling && shown.pace > 0)
+                            pose.time = at.walked.value / shown.pace;
+                        if (!moving || maybe_in_view(view, glm::vec3(pose.world[3])))
+                            placed.push_back(pose);
+                        continue;
+                    }
                     const auto& stride = r.get<simulation::Stride>(shown.guest);
                     const auto kind = r.get<simulation::Errand>(shown.guest).kind;
-                    pose.time = shown.saved_time + clock * shown.speed;
                     const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
                     if (kind == simulation::ErrandKind::Riding && ride_walk == nullptr)
                         continue; // Seated riders go with their cars (pose_riders); the rest wait out of sight

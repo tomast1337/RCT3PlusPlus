@@ -238,6 +238,15 @@ namespace rct3::scene
         std::vector<std::size_t> cars;
     };
 
+    /// A person the player holds under the pointer (park_holding.hpp).
+    struct HeldPerson
+    {
+        entt::entity who = entt::null;
+        glm::vec3 from { 0.0f };       ///< Where they were picked up, to put them back
+        std::optional<glm::vec3> spot; ///< The ground or path under the pointer
+        bool allowed = false;          ///< They may be let go there
+    };
+
     /// A person as the park shows it.
     struct ShownPerson
     {
@@ -537,6 +546,7 @@ namespace rct3::scene
         bool painting_patrol = false;                               ///< Strokes on the ground paint the shown staff member's patrol area
         int patrol_brush = 0;                                       ///< Of ui::kPatrolBrushes
         std::optional<bool> patrol_stroke;                          ///< While a stroke goes on: whether it adds tiles, or takes them away
+        std::optional<HeldPerson> holding;                          ///< The person the player has picked up
         std::vector<save::BinState> bins;                           ///< Of the litter bins among the objects
         std::vector<save::SignState> signs;                         ///< Of the signs among the objects
         std::optional<std::size_t> shown_prop;                      ///< Of objects, the prop the info panel tells about instead

@@ -34,8 +34,12 @@ namespace rct3::park
     /// True for a placed item drawn as a tree or plant: one that sways in the wind.
     [[nodiscard]] bool is_plant(const save::PlacedObject& object, const ObjectModels& models);
 
-    /// Trees for the land round `grid`, of the kinds among `objects`, numbered after the highest id there.
-    /// None when the park has no trees.
-    [[nodiscard]] std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery);
+    /// How many groves the trees among `objects` standing on `grid` call for beyond its edge.
+    [[nodiscard]] std::size_t off_map_groves(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+
+    /// Trees for the land round `grid`, of the kinds among `objects` on it, numbered after the highest id there: those
+    /// of the groves past the first `made` that the park calls for. None when the park has no trees. Planting
+    /// more in the park adds groves to those made, the stream going on where it stopped.
+    [[nodiscard]] std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery, std::size_t made = 0);
 
 } // namespace rct3::park

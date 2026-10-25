@@ -555,6 +555,9 @@ namespace rct3::scene
         std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
         std::vector<std::byte> base;                                    ///< The original park file the park started from, kept for saving
         std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since
+        std::optional<random::RandomState> off_map_stream;              ///< Where the trees beyond the edge left their stream; none when not grown
+        std::size_t off_map_groves = 0;                                 ///< Groves grown beyond the edge
+        bool modelled_plants = true;                                    ///< Trees and plants modelled, not flat, as the options were on loading
         std::unordered_map<std::uint64_t, std::pair<int, int>> columns; ///< Support pieces built, by id, and the tile their column stands on
         SupportWatch supports;                                          ///< How the park stood when its supports were last built
         SaveBrowser saves;                                              ///< Behind the save and load windows over the park

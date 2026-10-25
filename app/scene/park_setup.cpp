@@ -797,7 +797,8 @@ namespace rct3::scene
             if (auto uploaded = ui::upload_textures(device, pictures))
                 scene.object_textures.merge(*uploaded);
         }
-        load_models(install, world->objects, options.flag(config::GameOption::Trees3D), scene.models, scene.pictures);
+        scene.modelled_plants = options.flag(config::GameOption::Trees3D);
+        load_models(install, world->objects, scene.modelled_plants, scene.models, scene.pictures);
         scene.objects = std::move(world->objects);
         scene.own_objects = scene.objects.size();
         scene.bins = std::move(world->bins);
@@ -915,8 +916,9 @@ namespace rct3::scene
         }
         if (options.flag(config::GameOption::OffMapTrees))
         {
-            random::RandomState scenery = random::stream(seed, random::RandomStream::Scenery);
-            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), scenery);
+            scene.off_map_stream = random::stream(seed, random::RandomStream::Scenery);
+            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
+            scene.off_map_groves = park::off_map_groves(scene.objects, scene.models, scene.grid);
             log.info("{} trees beyond the edge", trees.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }

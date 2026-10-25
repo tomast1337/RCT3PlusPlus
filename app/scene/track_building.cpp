@@ -1060,7 +1060,7 @@ namespace rct3::scene
         }
         if (m.missing.contains(object.symbol))
             return false;
-        auto model = m.loader->load(object.symbol, object.overlay);
+        auto model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
         if (!model)
         {
             // Path and queue styles and support sets keep each piece in an overlay of its own, named after the
@@ -1083,7 +1083,7 @@ namespace rct3::scene
             if (file && add_with_references(*file))
             {
                 m.loader = std::make_unique<park::ModelLoader>(*m.index);
-                model = m.loader->load(object.symbol, object.overlay);
+                model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
             }
             // A theme keeps its rides and entrances in overlays of their own, named apart from the items they
             // hold, below its folder (Rides/<ride>/, EntranceExit/<style>/) or, for some, below the folder above
@@ -1104,7 +1104,7 @@ namespace rct3::scene
                 if (added)
                 {
                     m.loader = std::make_unique<park::ModelLoader>(*m.index);
-                    model = m.loader->load(object.symbol, object.overlay);
+                    model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
                 }
             }
         }

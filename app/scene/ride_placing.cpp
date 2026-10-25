@@ -8,6 +8,7 @@
 #include "park/edge_walls.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
+#include "park/off_map_trees.hpp"
 #include "park/path_decks.hpp"
 #include "park/path_furniture.hpp"
 #include "park/ride_fences.hpp"
@@ -682,6 +683,15 @@ namespace rct3::scene
                     scene.signs.push_back({ .object_ref = id });
             }
             animate_scenery(device, scene, scene.objects.size() - 1);
+            // The woods beyond the edge grow with the park's: more trees call for more groves there.
+            if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models) && park::off_map_groves(scene.objects, scene.models, scene.grid) > scene.off_map_groves)
+            {
+                std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream, scene.off_map_groves);
+                scene.off_map_groves = park::off_map_groves(scene.objects, scene.models, scene.grid);
+                logging::logger("park").info("{} more trees beyond the edge", trees.size());
+                scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
+                objects_changed(scene);
+            }
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
             float_money(scene, site_point(scene, *p.site), -p.item->price);

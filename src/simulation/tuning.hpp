@@ -50,7 +50,10 @@ namespace rct3::simulation::tuning
         Chance huddle_chance { 0.08 }; ///< Of a wandering party stopping to stand together, each thought
         Seconds shortest_huddle { 8 };
         Seconds longest_huddle { 20 };
-        Distance huddle_radius { 0.7f }; ///< Of the ring a party stands in
+        Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
+        Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
+        Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others
+        Factor keep_right { 1.0 };        ///< How much of stepping apart goes to the right, so two meeting head on pass
     };
 
     /// Queues. Tuned by eye against busy saved parks, whose queue tiles hold 7 to 16 waiting guests two to four abreast.

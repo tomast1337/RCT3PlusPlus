@@ -18,6 +18,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -1660,6 +1661,75 @@ namespace rct3::simulation
                             break;
                     }
                     place(paths, stride, pose);
+                }
+            });
+        }
+
+        phase.emplace("Spacing");
+        // People walking the paths near one another step apart, a little at a time, and keep to the right so two
+        // meeting head on go round each other. Only those in the same or a neighbouring cell of a grid as fine as
+        // the space each keeps are compared. Those sitting, watching, showing how they feel or standing with their
+        // party stand still.
+        if (!paths.nodes().empty())
+        {
+            const float space = kTuning.walking.personal_space.value;
+            auto& bodies = world.buffers.bodies;
+            auto& steps = world.buffers.steps;
+            // Cells of one column in a row of keys, so a cell and those above and below it are one run.
+            const auto cell_key = [](int col, int row) { return std::int64_t { col } * (std::int64_t { 1 } << 32) + row; };
+            bodies.clear();
+            for (const auto [e, errand, stride, pose] : r.view<const Errand, const Stride, const Pose>().each())
+            {
+                const bool walking = errand.kind == ErrandKind::Wandering || errand.kind == ErrandKind::Heading || errand.kind == ErrandKind::Following || errand.kind == ErrandKind::Waiting;
+                if (!walking || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                    continue;
+                const glm::ivec2 cell { glm::floor(glm::vec2(pose.position.x, pose.position.z) / space) };
+                bodies.push_back({ .cell = cell_key(cell.x, cell.y), .at = pose.position, .who = e });
+            }
+            std::ranges::sort(bodies, [](const auto& a, const auto& b) { return std::tie(a.cell, a.who) < std::tie(b.cell, b.who); });
+            steps.assign(bodies.size(), glm::vec2 { 0.0f });
+            const float most = kTuning.walking.step_aside.value * dt;
+            share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    const auto& me = bodies[i];
+                    const glm::ivec2 cell { glm::floor(glm::vec2(me.at.x, me.at.z) / space) };
+                    glm::vec2 away { 0.0f };
+                    for (int dc = -1; dc <= 1; ++dc)
+                    {
+                        const std::int64_t last = cell_key(cell.x + dc, cell.y + 1);
+                        for (auto it = std::ranges::lower_bound(bodies, cell_key(cell.x + dc, cell.y - 1), { }, &StepBuffers::Body::cell); it != bodies.end() && it->cell <= last; ++it)
+                        {
+                            if (it->who == me.who || std::abs(it->at.y - me.at.y) > 1)
+                                continue; // Themselves, or on a path above or below
+                            const glm::vec2 off { me.at.x - it->at.x, me.at.z - it->at.z };
+                            if (glm::dot(off, off) >= space * space)
+                                continue;
+                            const float apart = glm::length(off);
+                            // Standing in one spot: apart by who they are, each one way.
+                            const glm::vec2 way = apart > 0.001f ? off / apart : glm::vec2 { me.who < it->who ? 1.0f : -1.0f, 0.0f };
+                            away += (space - apart) / space * (way + static_cast<float>(kTuning.walking.keep_right.value) * glm::vec2 { -way.y, way.x });
+                        }
+                    }
+                    const float length = glm::length(away) * most;
+                    if (length <= 0)
+                        continue;
+                    const auto* member = r.try_get<Member>(me.who);
+                    if ((member != nullptr && r.get<Party>(member->party).huddle > 0) || r.any_of<Linger, Gesture>(me.who))
+                        continue; // Standing still, in the others' way
+                    steps[i] = away / glm::length(away) * std::min(length, most);
+                }
+            });
+            share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    if (steps[i] == glm::vec2 { 0.0f })
+                        continue;
+                    // The lanes move with them, so the step lasts, but never off the path.
+                    auto& stride = r.get<Stride>(bodies[i].who);
+                    stride.lane_from = glm::clamp(stride.lane_from + steps[i], -kLaneReach, kLaneReach);
+                    stride.lane_to = glm::clamp(stride.lane_to + steps[i], -kLaneReach, kLaneReach);
+                    place(paths, stride, r.get<Pose>(bodies[i].who));
                 }
             });
         }

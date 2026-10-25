@@ -468,6 +468,28 @@ TEST_CASE("guests spread over the path but keep on it")
     CHECK(widest > 0.5f); // Not along one line
 }
 
+TEST_CASE("two strangers walking into each other step aside and pass")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto a = park.guest({ 0, 0 });
+    const auto b = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    // On one line, straight at each other.
+    const NodeId west = r.get<Stride>(a).from;
+    const NodeId east = r.get<Stride>(b).from;
+    r.get<Stride>(a) = Stride { .from = west, .to = east, .progress = 0, .speed = 1.2f };
+    r.get<Stride>(b) = Stride { .from = east, .to = west, .progress = 0, .speed = 1.2f };
+    float closest = 100;
+    for (int t = 0; t < 12; ++t)
+    {
+        park.run(1);
+        closest = std::min(closest, glm::distance(r.get<Pose>(a).position, r.get<Pose>(b).position));
+    }
+    CHECK(closest > 0.3f);
+    CHECK(r.get<Pose>(a).position.x > r.get<Pose>(b).position.x); // Past each other
+}
+
 TEST_CASE("between steps a pose is drawn part way, turning the short way round")
 {
     const Pose pose { .position = { 4, 0, 0 }, .heading = 3.0f, .was = { 0, 0, 0 }, .was_heading = -3.0f };

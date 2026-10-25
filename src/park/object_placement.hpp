@@ -19,6 +19,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 
 namespace rct3::park
 {
@@ -45,6 +46,12 @@ namespace rct3::park
 
     /// The direction a model's +X points after `turns` quarter turns, in the park's X and Z.
     [[nodiscard]] glm::vec2 turned_x(std::int32_t turns);
+
+    /// The turns an item that snaps to the pointer takes, from where the pointer is inside its tile (`at`, 0 to 1
+    /// along X and Z): an edge or half item faces the tile's edge nearest the pointer, its quarter of the tile
+    /// cut by the diagonals; a corner item turns to the corner of the quarter the pointer is in. None for items
+    /// the player turns.
+    [[nodiscard]] std::optional<std::int32_t> snapped_turns(Positioning positioning, glm::vec2 at);
 
     /// Where the middle of `object`'s footprint is, in tiles from the grid's corner, for an item covering
     /// `squares` tiles along its own X and Z. The object names the footprint's tile of lowest column and row

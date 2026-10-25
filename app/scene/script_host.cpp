@@ -336,13 +336,18 @@ namespace rct3::scene
         });
         engine_.define("map.screen", [this](const Json& a) -> Json {
             const save::TerrainGrid& g = grid_of(park_);
-            const auto col = static_cast<int>(number(a, 0));
-            const auto row = static_cast<int>(number(a, 1));
+            // A whole tile means its middle; a fraction, that point of it.
+            const auto at = [&](std::size_t i) {
+                const double v = number(a, i);
+                return v == std::floor(v) ? v + 0.5 : v;
+            };
+            const double col = at(0);
+            const double row = at(1);
             const render::Extent view = device_->extent();
-            if (!g.contains(col, row) || view.width == 0 || view.height == 0)
+            if (!g.contains(static_cast<int>(std::floor(col)), static_cast<int>(std::floor(row))) || view.width == 0 || view.height == 0)
                 return nullptr;
-            const float x = g.world_x(col) + g.tile_size_x / 2;
-            const float z = g.world_z(row) + g.tile_size_z / 2;
+            const float x = g.world_x(0) + static_cast<float>(col) * g.tile_size_x;
+            const float z = g.world_z(0) + static_cast<float>(row) * g.tile_size_z;
             const glm::vec4 clip = park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, g.height_at(x, z).value_or(0), z, 1);
             if (clip.w <= 0)
                 return nullptr;
@@ -573,7 +578,10 @@ namespace rct3::scene
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
             constexpr std::array<std::string_view, 7> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path" };
-            return { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
+            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
+            if (p.site)
+                placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
+            return placing;
         });
         engine_.define("rides.list", [this](const Json&) {
             const ParkScene& park = park_of(park_);

@@ -353,11 +353,17 @@ namespace rct3::scene
                 show_alone();
                 if (panel)
                 {
-                    std::vector<ui::InfoTab> tabs(1);
-                    tabs[0].icon = "IconAttractionEditorRotate";
-                    tabs[0].help = assets.strings->get("ATE_TT_Rotate");
-                    tabs[0].slot = kTurnSlot;
-                    tabs[0].action = true;
+                    std::vector<ui::InfoTab> tabs;
+                    // Walls and other items that turn to the pointer have nothing to turn.
+                    const auto positioning = static_cast<park::Positioning>(scene.models.at(park::model_key(alone)).positioning);
+                    if (!scenery || !park::snapped_turns(positioning, { }))
+                    {
+                        ui::InfoTab& turn = tabs.emplace_back();
+                        turn.icon = "IconAttractionEditorRotate";
+                        turn.help = assets.strings->get("ATE_TT_Rotate");
+                        turn.slot = kTurnSlot;
+                        turn.action = true;
+                    }
                     for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours }))
                     {
                         // A ride takes its own colours when placed.
@@ -512,12 +518,13 @@ namespace rct3::scene
                     p.ghost_mesh = { };
                     return;
                 }
-                p.site = park::ride_site({ col, row }, squares, p.turns, scene.grid);
+                const glm::vec2 inside { spot.x - static_cast<float>(col), spot.y - static_cast<float>(row) };
+                p.site = park::ride_site({ col, row }, squares, park::snapped_turns(positioning, inside).value_or(p.turns), scene.grid);
                 p.ground = p.site->height;
                 // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
                 if (top)
                     p.site->height = std::max(p.site->height, static_cast<std::int32_t>(std::ceil(*top - 0.005f)));
-                p.quadrant = (spot.x - static_cast<float>(col) >= 0.5f ? 1 : 0) + (spot.y - static_cast<float>(row) >= 0.5f ? 2 : 0);
+                p.quadrant = (inside.x >= 0.5f ? 1 : 0) + (inside.y >= 0.5f ? 2 : 0);
                 p.lift = shift ? std::optional(RidePlacing::Lift { *hit, p.site->height }) : std::nullopt;
             }
             const save::PlacedObject o = *ghost_object(p);

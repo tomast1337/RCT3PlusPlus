@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_placement.hpp"
 
+#include <algorithm>
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -115,6 +117,30 @@ TEST_CASE("an edge item goes to the edge its turn faces")
     const glm::vec3 south = place(object_transform(at(0, 1, 1), Positioning::Edge, g), { });
     CHECK(south.x == doctest::Approx(2));
     CHECK(south.z == doctest::Approx(8));
+}
+
+TEST_CASE("an edge item snaps to the tile edge nearest the pointer")
+{
+    CHECK(snapped_turns(Positioning::Edge, { 0.1f, 0.5f }) == 0);
+    CHECK(snapped_turns(Positioning::Edge, { 0.5f, 0.9f }) == 1);
+    CHECK(snapped_turns(Positioning::Edge, { 0.9f, 0.5f }) == 2);
+    CHECK(snapped_turns(Positioning::Half, { 0.5f, 0.1f }) == 3);
+    // The turn faces the edge the pointer is nearest.
+    for (const glm::vec2 at : { glm::vec2 { 0.2f, 0.4f }, glm::vec2 { 0.3f, 0.8f }, glm::vec2 { 0.7f, 0.6f }, glm::vec2 { 0.6f, 0.15f } })
+    {
+        const std::array gaps { at.x, 1 - at.y, 1 - at.x, at.y }; // To each edge, in turn order
+        CHECK(*snapped_turns(Positioning::Edge, at) == std::ranges::min_element(gaps) - gaps.begin());
+    }
+}
+
+TEST_CASE("a corner item turns to the pointer's quarter and other items keep the player's turns")
+{
+    CHECK(snapped_turns(Positioning::Corner, { 0.2f, 0.7f }) == 0);
+    CHECK(snapped_turns(Positioning::Corner, { 0.7f, 0.7f }) == 1);
+    CHECK(snapped_turns(Positioning::Corner, { 0.7f, 0.2f }) == 2);
+    CHECK(snapped_turns(Positioning::Corner, { 0.2f, 0.2f }) == 3);
+    CHECK(!snapped_turns(Positioning::Tile, { 0.2f, 0.2f }));
+    CHECK(!snapped_turns(Positioning::Quarter, { 0.2f, 0.2f }));
 }
 
 TEST_CASE("a quarter-tile item goes to its quarter")

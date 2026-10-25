@@ -126,7 +126,7 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
-    /** The middle of a tile on the view; undefined when it is not in sight. */
+    /** The middle of a tile on the view, or with fractions that point of it; undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     function water(): Lake[];
@@ -185,7 +185,7 @@ declare namespace build {
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean } | undefined;
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */

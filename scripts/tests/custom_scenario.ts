@@ -31,6 +31,8 @@ await ui.click("load_game/content/list/view/content/row0");
 await ui.click("load_game/content/open");
 await park.ready();
 await until(() => ui.find("tools/Files") !== undefined, 300, "the tool row");
+if (ui.find("bar/day_mode") !== undefined)
+    throw new Error("expected no day mode button outside a sandbox");
 await screenshot("custom_scenario_started");
 
 await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);

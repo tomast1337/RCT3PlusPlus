@@ -41,6 +41,9 @@ namespace rct3::scene
         std::filesystem::path career;                          ///< The career file the park counts for; empty outside a career
         std::string scenario;                                  ///< The scenario's id in that career
         std::filesystem::path games;                           ///< In a career, the scenario's own folder of games in place of `folder`
+        /// Started as a sandbox, where the player chooses how the day goes. The park file does not say; the menu
+        /// it was opened from does, whatever the park's money.
+        bool sandbox = true;
     };
 
     /// The bytes of the save to write to the path given, made when the player saves.

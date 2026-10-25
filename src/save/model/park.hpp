@@ -181,7 +181,8 @@ namespace rct3::save
         std::int32_t average_guest_bank_funds = 0;
         std::uint32_t flags = 0; ///< Raw; the bits below are the known ones
 
-        /// Set in parks where money never runs out, as in sandbox ones.
+        /// Set in parks where money never runs out. A setting of the park's own: a new sandbox has it, and any
+        /// scenario may; it does not say how the park is played.
         static constexpr std::uint32_t kUnlimitedCash = 1u << 0;
         [[nodiscard]] bool unlimited() const noexcept
         {

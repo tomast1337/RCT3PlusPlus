@@ -210,7 +210,7 @@ namespace rct3::scene
         /// How a park of scenario `index` of the career is played: its games in the scenario's folder.
         ParkGame career_game(const career::CareerEntry& entry, std::size_t index)
         {
-            return { .folder = config::UserFolder::Careers, .career = entry.path, .scenario = entry.data.career.scenarios.at(index).id, .games = fs::path(entry.path).replace_extension() / career::prf_scenario_folder(index) };
+            return { .folder = config::UserFolder::Careers, .career = entry.path, .scenario = entry.data.career.scenarios.at(index).id, .games = fs::path(entry.path).replace_extension() / career::prf_scenario_folder(index), .sandbox = false };
         }
 
         /// The park file scenario `index` of the career starts from, if the game has it.

@@ -2417,7 +2417,8 @@ namespace rct3::scene
                     if (const auto* gate = scene.sim.registry.ctx().find<simulation::Turnstile>())
                         for (const std::uint32_t n : gate->in)
                             intake += n;
-                    const std::int64_t income = rides_taken + shops_taken;
+                    // Where money never runs out the park books nothing, so its income stays flat.
+                    const std::int64_t income = scene.park.cash ? rides_taken + shops_taken : 0;
                     const std::int64_t cash = scene.park.cash.value_or(0);
                     // shortcut: the week the park was opened in counts nothing in, taken or made; keep the week's totals
                     // in the park file to count it whole.
@@ -2877,8 +2878,8 @@ namespace rct3::scene
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             ui::ParkBarValues values = ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units);
-            // The player chooses how the day goes in a sandbox, a park whose money never runs out.
-            if (!scene.park.cash)
+            // The player chooses how the day goes in a sandbox, whatever its money.
+            if (scene.game.sandbox)
                 values.day_mode = scene.day.mode;
             bar->show(values);
         }

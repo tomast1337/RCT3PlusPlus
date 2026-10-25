@@ -279,6 +279,20 @@ TEST_CASE("park: a minimal park, economy and clock")
     CHECK(validate(m).empty());
 }
 
+TEST_CASE("park: unlimited money is a money setting of its own, apart from the scenario's other money rules")
+{
+    const auto limited = load({ { "Money", 1, { fint("Cash", 500000), fint("Flags", 0x6) } } });
+    CHECK_FALSE(limited->model.finance.unlimited());
+    CHECK(limited->model.finance.entrance_fee_fixed());
+    CHECK(limited->model.finance.free_rides());
+
+    const auto unlimited = load({ { "Money", 1, { fint("Cash", 0), fint("EntranceFee", 2500), fint("Flags", 0x1) } } });
+    CHECK(unlimited->model.finance.unlimited());
+    CHECK_FALSE(unlimited->model.finance.entrance_fee_fixed());
+    CHECK_FALSE(unlimited->model.finance.free_rides());
+    CHECK(unlimited->model.finance.entrance_fee == 2500);
+}
+
 TEST_CASE("park: missing or mistyped attributes take documented defaults")
 {
     const auto l = load(

@@ -987,6 +987,13 @@ int main(int argc, char** argv)
                 park->saves.game_saves = front->saves.game_saves;
             }
             park->game = park_game;
+            // Outside a sandbox the day keeps the park's hours, whatever mode the file asks for.
+            if (!park_game.sandbox && park->day.mode != rct3::simulation::DayMode::ParkHours)
+            {
+                rct3::simulation::change_mode(park->day, rct3::simulation::DayMode::ParkHours);
+                park->day.shown = park->day.time; // no fade at load
+                park->day.fade = 0;
+            }
             // In a career, leaving goes back to the career's map, under the park.
             if (auto tools = park->desktop->root().find_as<rct3::ui::ToolRow>(rct3::scene::kToolsName))
                 tools->set_career(!park_game.career.empty());

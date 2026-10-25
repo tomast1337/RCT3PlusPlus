@@ -890,3 +890,39 @@ TEST_CASE("pulling a ride down sends its riders and its queue off on the paths")
     for (const auto g : guests)
         CHECK(park.world().paths.nearest(r.get<Pose>(g).position).has_value());
 }
+
+TEST_CASE("on a ride with two stations, riders get on at either and off at the other")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 9, 0 });
+    const auto ride = park.flat_ride("Railway", { 1, 0 }, 100, { .capacity = 4, .cycle_seconds = 1000, .exit = glm::ivec2 { 2, 0 } });
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    const NodeId far_in = *paths.find({ 8, 0, 0 });
+    const NodeId far_out = *paths.find({ 7, 0, 0 });
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = 1 });
+    Coaster track;
+    track.distance = { 0, 100 };
+    track.height = { 0, 0 };
+    track.kinds = { Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.stops = { 40 };
+    r.emplace<Trains>(ride, Trains { { track }, { { } } });
+    const auto near = park.guest({ 1, 0 }, { .cash = 1000 });
+    const auto far = park.guest({ 8, 0 }, { .cash = 1000 });
+    r.get<Errand>(near) = { ErrandKind::Heading, ride, 0 };
+    r.get<Errand>(far) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    CHECK(r.get<Errand>(near).kind == ErrandKind::Riding);
+    CHECK(r.get<Errand>(near).off == 1);
+    CHECK(r.get<Errand>(far).kind == ErrandKind::Queueing);
+    CHECK(r.get<Errand>(far).station == 1);
+    CHECK(r.get<Errand>(far).off == 0);
+    // At the other station the first gets off at its exit, and the second gets on.
+    CHECK(park.run_until([&] { return r.get<Errand>(near).kind != ErrandKind::Riding; }, 10));
+    CHECK(r.get<Stride>(near).from == far_out);
+    CHECK(r.get<Errand>(far).kind == ErrandKind::Riding);
+    CHECK(park.run_until([&] { return r.get<Errand>(far).kind != ErrandKind::Riding; }, 15));
+    CHECK(r.get<Stride>(far).from == *paths.find({ 2, 0, 0 }));
+    CHECK(r.get<Attraction>(ride).customers == 2);
+}

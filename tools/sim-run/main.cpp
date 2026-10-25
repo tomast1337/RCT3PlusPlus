@@ -528,7 +528,21 @@ int main(int argc, char** argv)
                 suits += taste.least.value <= ride->intensity.value && ride->intensity.value <= taste.most.value;
         std::string line = std::format("  {:<28} {:<6} customers {:5}  income {:8.2f}  suits {}", a.name, sells, a.customers, static_cast<double>(a.income.value) / 100, suits);
         if (ride)
+        {
             line += std::format("  queue {} on {} tiles{}", ride->queue.size(), ride->line.size(), a.open ? "" : "  closed");
+            // On a ride with more than one station: by station, those queueing, and those riding from and to it.
+            if (!ride->stops.empty())
+            {
+                std::vector<std::array<std::size_t, 3>> at(1 + ride->stops.size());
+                for (std::size_t s = 0; s < at.size(); ++s)
+                    at[s][0] = s == 0 ? ride->queue.size() : ride->stops[s - 1].queue.size();
+                for (const auto [_, errand] : r.view<const simulation::Errand>().each())
+                    if (errand.target == e && errand.kind == simulation::ErrandKind::Riding && errand.station < at.size() && errand.off < at.size())
+                        ++at[errand.station][1], ++at[errand.off][2];
+                for (std::size_t s = 0; s < at.size(); ++s)
+                    line += std::format("  [station {} queue {} on {} off {}]", s, at[s][0], at[s][1], at[s][2]);
+            }
+        }
         out.info("{}", line);
     }
     {

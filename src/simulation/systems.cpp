@@ -78,7 +78,13 @@ namespace rct3::simulation
                 if (const auto* shop = r.try_get<Shop>(e))
                     out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price.value, 0, 1, shop->serve, false });
                 else if (const auto* ride = r.try_get<CycleRide>(e))
+                {
+                    // A ride with more than one station is on offer at each, guests going to the nearest.
                     out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                    for (const Stop& stop : ride->stops)
+                        if (stop.entrance != kNoNode)
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                }
             }
             return out;
         }
@@ -103,13 +109,13 @@ namespace rct3::simulation
             return std::pair { wanted[found->first], std::move(found->second) };
         }
 
-        /// How many guests the queue line of `ride` holds; no limit for a ride guests walk straight into.
-        std::size_t queue_room(const CycleRide& ride)
+        /// How many guests a ride's queue `line` holds; no limit for a ride guests walk straight into.
+        std::size_t queue_room(const std::vector<NodeId>& line)
         {
-            if (ride.line.empty())
+            if (line.empty())
                 return std::numeric_limits<std::size_t>::max();
             // Up to the middle of the line's far tile.
-            return static_cast<std::size_t>(static_cast<float>(ride.line.size() - 1) / kTuning.queues.spacing.value) + 1;
+            return static_cast<std::size_t>(static_cast<float>(line.size() - 1) / kTuning.queues.spacing.value) + 1;
         }
 
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
@@ -272,7 +278,10 @@ namespace rct3::simulation
         Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride)
         {
             if (r.all_of<Member>(guest))
-                return { ErrandKind::Waiting, ride, 0 };
+            {
+                const Errand& was = r.get<Errand>(guest);
+                return { .kind = ErrandKind::Waiting, .target = ride, .station = was.station, .off = was.off };
+            }
             return { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
         }
 
@@ -403,19 +412,28 @@ namespace rct3::simulation
             place(paths, stride, pose);
         }
 
-        /// Where riders come off `ride` on to the paths.
-        NodeId exit_of(const entt::registry& r, entt::entity ride)
+        /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
+        NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0)
         {
-            const NodeId exit = r.get<CycleRide>(ride).exit;
-            return exit != kNoNode ? exit : r.get<Attraction>(ride).entrance;
+            const CycleRide& cycle = r.get<CycleRide>(ride);
+            if (station > 0 && station <= cycle.stops.size())
+                return cycle.stops[station - 1].exit != kNoNode ? cycle.stops[station - 1].exit : cycle.stops[station - 1].entrance;
+            return cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride).entrance;
         }
 
-        /// A rider off `ride` and on the paths at its exit: on to what they do next, showing how the ride left
-        /// them, and sick there if it turned their stomach.
+        /// Where guests come into `ride`'s station `station`.
+        NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station)
+        {
+            const CycleRide& cycle = r.get<CycleRide>(ride);
+            return station > 0 && station <= cycle.stops.size() ? cycle.stops[station - 1].entrance : r.get<Attraction>(ride).entrance;
+        }
+
+        /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
+        /// next, showing how the ride left them, and sick there if it turned their stomach.
         void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
         {
+            const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
             r.get<Errand>(guest) = after_ride(r, guest, ride);
-            const NodeId out = exit_of(r, ride);
             stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
             auto& dice = r.get<Dice>(guest).state;
             if (gesture && random::chance(dice, kTuning.gestures.chance.value))
@@ -1209,13 +1227,14 @@ namespace rct3::simulation
         entt::registry& r = world.registry;
         if (!r.valid(attraction) || !r.all_of<Attraction>(attraction))
             return;
-        const NodeId entrance = r.get<Attraction>(attraction).entrance;
-        const NodeId exit = r.all_of<CycleRide>(attraction) ? exit_of(r, attraction) : entrance;
+        const bool ride = r.all_of<CycleRide>(attraction);
         for (const auto [guest, errand, stride, pose] : r.view<Errand, Stride, Pose>().each())
         {
             if (errand.target != attraction)
                 continue;
             const ErrandKind was = errand.kind;
+            const NodeId entrance = ride ? entrance_of(r, attraction, errand.station) : r.get<Attraction>(attraction).entrance;
+            const NodeId exit = ride ? exit_of(r, attraction, errand.off) : entrance;
             // A party goes on together behind its leader, who picks somewhere else to go.
             const auto* member = r.try_get<Member>(guest);
             const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
@@ -1835,8 +1854,22 @@ namespace rct3::simulation
             }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
+                // At whichever of its stations they came to; with more than one, off at one of the others, alike
+                // (a party all at the same).
+                const NodeId at = r.get<Stride>(guest).to;
+                std::size_t station = 0;
+                while (station < ride->stops.size() && ride->stops[station].entrance != at)
+                    ++station;
+                station = station < ride->stops.size() ? station + 1 : 0;
+                auto& queue = station == 0 ? ride->queue : ride->stops[station - 1].queue;
+                const auto& line = station == 0 ? ride->line : ride->stops[station - 1].line;
+                std::vector<std::size_t> offs;
+                for (std::size_t k = 0; k <= ride->stops.size(); ++k)
+                    if (k != station && (k == 0 || ride->stops[k - 1].exit != kNoNode))
+                        offs.push_back(k);
+                const auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
                 // A full line puts them off: they think so and go elsewhere, and the party with them.
-                if (ride->queue.size() >= queue_room(*ride))
+                if (queue.size() >= queue_room(line))
                 {
                     think(r, guest, ThoughtKind::QueueTooLong, arrived[i], now);
                     errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
@@ -1846,12 +1879,12 @@ namespace rct3::simulation
                 // Each stands to the other side of the line's middle from the guest ahead.
                 const auto join = [&](entt::entity g) {
                     auto& dice = r.get<Dice>(g).state;
-                    const float ahead = ride->queue.empty() || !r.valid(ride->queue.back()) ? 0 : r.get<Stride>(ride->queue.back()).side.value;
+                    const float ahead = queue.empty() || !r.valid(queue.back()) ? 0 : r.get<Stride>(queue.back()).side.value;
                     const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, 0.2, 1.0));
-                    ride->queue.push_back(g);
-                    r.get<Errand>(g) = { ErrandKind::Queueing, arrived[i], 0 };
+                    queue.push_back(g);
+                    r.get<Errand>(g) = { .kind = ErrandKind::Queueing, .target = arrived[i], .station = static_cast<std::uint8_t>(station), .off = off };
                     auto& stride = r.get<Stride>(g);
-                    stride.along.value = ride->line.empty() ? 0 : static_cast<float>(ride->line.size() - 1);
+                    stride.along.value = line.empty() ? 0 : static_cast<float>(line.size() - 1);
                     stride.side.value = ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
                 };
                 join(guest);
@@ -1923,77 +1956,93 @@ namespace rct3::simulation
                     upkeep.samples = 0;
                 }
             }
-            for (const entt::entity guest : ride.queue)
-                if (r.valid(guest) && (r.get<Errand>(guest).queued.value += dt) >= kLongQueue)
-                    think(r, guest, ThoughtKind::QueueingForAges, e, now);
-            // Unhappy guests who have waited very long now and then give up and walk off.
-            std::erase_if(ride.queue, [&](entt::entity guest) {
-                if (!r.valid(guest) || r.get<Errand>(guest).queued.value < kTuning.queues.give_up_after.value || r.get<Mood>(guest).happiness.value >= kTuning.queues.give_up_mood.value || !random::chance(r.get<Dice>(guest).state, kTuning.queues.give_up.value * dt))
-                    return false;
-                think(r, guest, ThoughtKind::GaveUpQueue, e, now);
-                r.get<Errand>(guest) = after_ride(r, guest, e);
-                stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
-                return true;
-            });
-            if (!ride.line.empty())
+            // Each station's queue in turn.
+            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
-                const float last = static_cast<float>(ride.line.size() - 1);
-                float side_ahead = 0;
-                float along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
-                for (std::size_t k = 0; k < ride.queue.size(); ++k)
+                auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
+                const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
+                const NodeId entrance = entrance_of(r, e, station);
+                for (const entt::entity guest : queue)
+                    if (r.valid(guest) && (r.get<Errand>(guest).queued.value += dt) >= kLongQueue)
+                        think(r, guest, ThoughtKind::QueueingForAges, e, now);
+                // Unhappy guests who have waited very long now and then give up and walk off.
+                std::erase_if(queue, [&](entt::entity guest) {
+                    if (!r.valid(guest) || r.get<Errand>(guest).queued.value < kTuning.queues.give_up_after.value || r.get<Mood>(guest).happiness.value >= kTuning.queues.give_up_mood.value || !random::chance(r.get<Dice>(guest).state, kTuning.queues.give_up.value * dt))
+                        return false;
+                    think(r, guest, ThoughtKind::GaveUpQueue, e, now);
+                    r.get<Errand>(guest) = after_ride(r, guest, e);
+                    stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    return true;
+                });
+                if (!line.empty())
                 {
-                    if (!r.valid(ride.queue[k]))
-                        continue;
-                    auto& stride = r.get<Stride>(ride.queue[k]);
-                    enum : std::uint64_t
+                    const float last = static_cast<float>(line.size() - 1);
+                    float side_ahead = 0;
+                    float along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
+                    for (std::size_t k = 0; k < queue.size(); ++k)
                     {
-                        Side = 1,
-                        Place = 2
-                    };
-                    // Guests brought in from a save have no side yet: across from the guest ahead too.
-                    if (stride.side.value == 0)
-                        stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (0.2f + 0.8f * fixed_share(ride.queue[k], Side));
-                    side_ahead = stride.side.value;
-                    // Off their even place by a little, so the line is not spaced like a ruler.
-                    // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
-                    // their own gap to open is not walked up past or into.
-                    const float even = (static_cast<float>(k) + kTuning.queues.gap_spread.value * (fixed_share(ride.queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
-                    const float place_in_line = std::clamp(std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
-                    // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
-                    const bool was_moving = stride.from != stride.to;
-                    const bool moving = stride.along.value > place_in_line && (was_moving || stride.along.value - place_in_line > kTuning.queues.shuffle.value);
-                    if (moving)
-                        stride.along.value = std::max(stride.along.value - stride.speed.value * dt / paths.tile_size, place_in_line);
-                    along_ahead = stride.along.value;
-                    // Between the tile behind and the one ahead, facing the front.
-                    const auto behind = static_cast<std::size_t>(std::ceil(stride.along.value));
-                    const auto ahead = static_cast<std::size_t>(std::floor(stride.along.value));
-                    stride.from = ride.line[behind];
-                    stride.to = moving && stride.along.value > place_in_line ? ride.line[ahead] : ride.line[behind];
-                    stride.progress.value = static_cast<float>(behind) - stride.along.value;
-                    auto& pose = r.get<Pose>(ride.queue[k]);
-                    pose.position = glm::mix(paths.centre(ride.line[behind]), paths.centre(ride.line[ahead]), stride.progress.value);
-                    pose.position.y = paths.height_between(ride.line[behind], ride.line[ahead], stride.progress.value);
-                    // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
-                    const std::size_t from = ahead != behind ? behind : std::min(behind + 1, ride.line.size() - 1);
-                    const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
-                    const glm::vec3 d = paths.centre(ride.line[to]) - paths.centre(ride.line[from]);
-                    if (from != to && glm::length(glm::vec2(d.x, d.z)) > 0)
-                    {
-                        const glm::vec2 way = glm::normalize(glm::vec2(d.x, d.z));
-                        pose.position.x += -way.y * stride.side.value;
-                        pose.position.z += way.x * stride.side.value;
-                        pose.heading.value = std::atan2(way.x, way.y);
+                        if (!r.valid(queue[k]))
+                            continue;
+                        auto& stride = r.get<Stride>(queue[k]);
+                        enum : std::uint64_t
+                        {
+                            Side = 1,
+                            Place = 2
+                        };
+                        // Guests brought in from a save have no side yet: across from the guest ahead too.
+                        if (stride.side.value == 0)
+                            stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (0.2f + 0.8f * fixed_share(queue[k], Side));
+                        side_ahead = stride.side.value;
+                        // Off their even place by a little, so the line is not spaced like a ruler.
+                        // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
+                        // their own gap to open is not walked up past or into.
+                        const float even = (static_cast<float>(k) + kTuning.queues.gap_spread.value * (fixed_share(queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
+                        const float place_in_line = std::clamp(std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
+                        // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
+                        const bool was_moving = stride.from != stride.to;
+                        const bool moving = stride.along.value > place_in_line && (was_moving || stride.along.value - place_in_line > kTuning.queues.shuffle.value);
+                        if (moving)
+                            stride.along.value = std::max(stride.along.value - stride.speed.value * dt / paths.tile_size, place_in_line);
+                        along_ahead = stride.along.value;
+                        // Between the tile behind and the one ahead, facing the front.
+                        const auto behind = static_cast<std::size_t>(std::ceil(stride.along.value));
+                        const auto ahead = static_cast<std::size_t>(std::floor(stride.along.value));
+                        stride.from = line[behind];
+                        stride.to = moving && stride.along.value > place_in_line ? line[ahead] : line[behind];
+                        stride.progress.value = static_cast<float>(behind) - stride.along.value;
+                        auto& pose = r.get<Pose>(queue[k]);
+                        pose.position = glm::mix(paths.centre(line[behind]), paths.centre(line[ahead]), stride.progress.value);
+                        pose.position.y = paths.height_between(line[behind], line[ahead], stride.progress.value);
+                        // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
+                        const std::size_t from = ahead != behind ? behind : std::min(behind + 1, line.size() - 1);
+                        const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
+                        const glm::vec3 d = paths.centre(line[to]) - paths.centre(line[from]);
+                        if (from != to && glm::length(glm::vec2(d.x, d.z)) > 0)
+                        {
+                            const glm::vec2 way = glm::normalize(glm::vec2(d.x, d.z));
+                            pose.position.x += -way.y * stride.side.value;
+                            pose.position.z += way.x * stride.side.value;
+                            pose.heading.value = std::atan2(way.x, way.y);
+                        }
                     }
                 }
             }
             const auto* walks = r.try_get<RideWalks>(e);
-            const auto unload = [&](std::vector<entt::entity>& riders) {
+            // Those getting off at `station`: where they meant to, or back where they got on.
+            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station) {
+                std::vector<bool> off(riders.size());
                 for (std::size_t seat = 0; seat < riders.size(); ++seat)
                 {
                     const entt::entity guest = riders[seat];
                     if (!r.valid(guest))
+                    {
+                        off[seat] = true;
                         continue;
+                    }
+                    const Errand& riding = r.get<Errand>(guest);
+                    if (riding.off != station && riding.station != station)
+                        continue;
+                    off[seat] = true;
                     auto& mood = r.get<Mood>(guest);
                     const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
                     mood.happiness.value = clamp01(mood.happiness.value + felt * 0.3f);
@@ -2025,7 +2074,8 @@ namespace rct3::simulation
                         gesture = GestureKind::Grumble;
                     }
                     // Off the seat and out on foot where the ride has a way out; still riding till on the paths.
-                    if (walks != nullptr && seat < walks->off.size() && !walks->off[seat].empty())
+                    // shortcut: only the first station has ways off worked out, upgrade when the others' are
+                    if (station == 0 && walks != nullptr && seat < walks->off.size() && !walks->off[seat].empty())
                     {
                         RideWalk walk { .points = walks->off[seat], .off = true, .gesture = gesture };
                         walk.points.push_back(paths.centre(exit_of(r, e)));
@@ -2035,19 +2085,20 @@ namespace rct3::simulation
                     else
                         let_out(r, paths, guest, e, gesture);
                 }
-                riders.clear();
+                std::size_t seat = 0;
+                std::erase_if(riders, [&](entt::entity) { return off[seat++]; });
             };
             // Riders an hour over the time since the last departure, smoothed over the last few.
             if (ride.since_departure.value >= 0)
                 ride.since_departure.value += dt;
-            const auto depart = [&](std::size_t riding) {
+            const auto depart = [&](std::size_t riding, Seconds& timer) {
                 if (ride.since_departure.value > 0)
                 {
                     const float rate = static_cast<float>(riding) * 3600 / ride.since_departure.value;
                     ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kTuning.wear.flow_smoothing.value) : rate;
                 }
                 ride.since_departure.value = 0;
-                ride.loading.value = 0;
+                timer.value = 0;
                 // Each run with riders wears the ride, and may end in a breakdown that closes it.
                 if (riding == 0)
                     return;
@@ -2092,7 +2143,7 @@ namespace rct3::simulation
             }
             // A cycle ends when the ride's time is up, or a train has come round.
             auto* fleet = r.try_get<Trains>(e);
-            std::optional<std::size_t> loading; // The train standing at the start, ready to load
+            std::vector<std::optional<std::size_t>> standing(1 + ride.stops.size()); // The train standing at each station, ready to load
             if (fleet != nullptr)
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
@@ -2115,8 +2166,11 @@ namespace rct3::simulation
                         train.passed = 0;
                         train.push = 0;
                     }
+                    const bool was_running = train.running;
                     if (drive(train, dt, room_ahead(fleet->trains, t)))
-                        unload(fleet->riders[t]);
+                        unload(fleet->riders[t], 0);
+                    else if (const auto stop = standing_at(train); was_running && stop && *stop > 0)
+                        unload(fleet->riders[t], *stop);
                     // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
                     // closes. Guests who see it think it a disaster. A ghost's crash is only shown: it is not the
                     // park's, and closes nothing.
@@ -2160,8 +2214,8 @@ namespace rct3::simulation
                         attraction.open = false;
                         attraction.testing = false;
                     }
-                    if (!train.running && train.travelled == 0 && !loading)
-                        loading = t;
+                    if (const auto stop = standing_at(train); stop && *stop < standing.size() && !standing[*stop])
+                        standing[*stop] = t;
                 }
             }
             else
@@ -2180,7 +2234,7 @@ namespace rct3::simulation
                     }
                 const RidePhase was = ride.phase;
                 if (advance_cycle(ride, dt, held || sailing))
-                    unload(ride.riders);
+                    unload(ride.riders, 0);
                 if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
                     // shortcut: every boat casts off at once from one spot, empty ones too, and a transport boat's
                     // riders stay on past its other docks back to the one they boarded at; upgrade when each boat
@@ -2188,15 +2242,8 @@ namespace rct3::simulation
                     for (Boat& boat : boats->boats)
                         cast_off(boat, boats->dock, boats->roams, boats->calls);
             }
-            // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
-            // its departure settings say.
-            // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
-            const bool at_front = !ride.queue.empty() && (ride.line.empty() || !r.valid(ride.queue.front()) || r.get<Stride>(ride.queue.front()).along.value < 0.5f);
-            const bool ready = fleet != nullptr ? loading.has_value() : ride.phase == RidePhase::Loading;
-            auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*loading] : &ride.riders;
             // On a ride with ways on, riders walk to their seats one by one past the ticket spot, the next
             // stepping up once the one ahead has handed over their ticket.
-            const bool walk_on = walks != nullptr && !walks->on.empty();
             const auto on_their_way = [&](entt::entity g) {
                 const auto* walk = r.valid(g) ? r.try_get<RideWalk>(g) : nullptr;
                 return walk != nullptr && !walk->off;
@@ -2205,141 +2252,161 @@ namespace rct3::simulation
                 const auto* walk = r.valid(g) ? r.try_get<RideWalk>(g) : nullptr;
                 return on_their_way(g) && (walk->next == 0 || walk->pause.value > 0);
             };
-            if (riders != nullptr && at_front && riders->size() < ride.capacity && !(walk_on && std::ranges::any_of(*riders, at_ticket)))
+            // Loads once the first in line has reached the front, as many as there are seats left, and leaves when
+            // its departure settings say.
+            // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
+            // On a ride whose trains stop at more than one station, each station's in turn, riders only walking on at
+            // the first.
+            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
-                std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), ride.queue.size());
-                // A party in line rides on one load: cut through by the seats left, it waits for the next when it
-                // fits one.
-                if (boarding < ride.queue.size())
+                auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
+                const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
+                Seconds& timer = station == 0 ? ride.loading : ride.stops[station - 1].loading;
+                const bool walk_on = station == 0 && walks != nullptr && !walks->on.empty();
+                const bool at_front = !queue.empty() && (line.empty() || !r.valid(queue.front()) || r.get<Stride>(queue.front()).along.value < 0.5f);
+                const bool ready = fleet != nullptr ? standing[station].has_value() : ride.phase == RidePhase::Loading;
+                auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*standing[station]] : &ride.riders;
+                if (riders != nullptr && at_front && riders->size() < ride.capacity && !(walk_on && std::ranges::any_of(*riders, at_ticket)))
                 {
-                    const auto party_of = [&](entt::entity g) {
-                        const auto* m = r.valid(g) ? r.try_get<Member>(g) : nullptr;
-                        return m != nullptr ? m->party : entt::null;
-                    };
-                    if (const entt::entity cut = party_of(ride.queue[boarding]); cut != entt::null && boarding > 0 && party_of(ride.queue[boarding - 1]) == cut)
+                    std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), queue.size());
+                    // A party in line rides on one load: cut through by the seats left, it waits for the next when it
+                    // fits one.
+                    if (boarding < queue.size())
                     {
-                        std::size_t first = boarding;
-                        while (first > 0 && party_of(ride.queue[first - 1]) == cut)
-                            --first;
-                        std::size_t last = boarding;
-                        while (last < ride.queue.size() && party_of(ride.queue[last]) == cut)
-                            ++last;
-                        auto& count = r.ctx().emplace<PartyBoarding>();
-                        if (last - first <= ride.capacity)
+                        const auto party_of = [&](entt::entity g) {
+                            const auto* m = r.valid(g) ? r.try_get<Member>(g) : nullptr;
+                            return m != nullptr ? m->party : entt::null;
+                        };
+                        if (const entt::entity cut = party_of(queue[boarding]); cut != entt::null && boarding > 0 && party_of(queue[boarding - 1]) == cut)
                         {
-                            boarding = first;
-                            ++count.held;
+                            std::size_t first = boarding;
+                            while (first > 0 && party_of(queue[first - 1]) == cut)
+                                --first;
+                            std::size_t last = boarding;
+                            while (last < queue.size() && party_of(queue[last]) == cut)
+                                ++last;
+                            auto& count = r.ctx().emplace<PartyBoarding>();
+                            if (last - first <= ride.capacity)
+                            {
+                                boarding = first;
+                                ++count.held;
+                            }
+                            else
+                                ++count.split;
                         }
+                    }
+                    if (walk_on)
+                        boarding = std::min<std::size_t>(boarding, 1);
+                    for (std::size_t i = 0; i < boarding; ++i)
+                    {
+                        const entt::entity guest = queue[i];
+                        if (!r.valid(guest))
+                            continue;
+                        auto& wallet = r.get<Wallet>(guest);
+                        if (!attraction.open || wallet.cash.value < attraction.price.value)
+                        {
+                            if (wallet.cash.value < attraction.price.value)
+                                think(r, guest, ThoughtKind::CantAfford, e, now);
+                            r.get<Errand>(guest) = after_ride(r, guest, e);
+                            continue;
+                        }
+                        wallet.cash.value -= attraction.price.value;
+                        attraction.income.value += attraction.price.value;
+                        ++attraction.customers;
+                        r.get<Errand>(guest).kind = ErrandKind::Riding;
+                        if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
+                        {
+                            RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket.value };
+                            walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
+                            r.emplace_or_replace<RideWalk>(guest, std::move(walk));
+                        }
+                        riders->push_back(guest);
+                    }
+                    queue.erase(queue.begin(), queue.begin() + static_cast<std::ptrdiff_t>(boarding));
+                }
+                if (riders != nullptr && !upkeep.broken)
+                {
+                    const auto* departure = r.try_get<Departure>(e);
+                    // It waits for those still walking to their seats.
+                    bool go = std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, timer.value));
+                    // Told to, a ready train waits for one ready at each station beside it told the same; then all go.
+                    // shortcut: only the stations right beside count, not those beside them in turn; upgrade if a row of
+                    // three or more synced stations turns up in a park.
+                    const auto* beside = r.try_get<StationNeighbours>(e);
+                    if (go && station == 0 && fleet != nullptr && !attraction.testing && departure != nullptr && departure->sync && beside != nullptr)
+                    {
+                        const auto told = [&](entt::entity b) {
+                            const auto* d = r.valid(b) ? r.try_get<Departure>(b) : nullptr;
+                            return d != nullptr && d->sync && r.all_of<CycleRide>(b);
+                        };
+                        ride.synced = true;
+                        go = ride.released || std::ranges::all_of(beside->rides, [&](entt::entity b) { return !told(b) || r.get<CycleRide>(b).synced; });
+                        if (go && !ride.released)
+                            for (const entt::entity b : beside->rides)
+                                if (told(b))
+                                    r.get<CycleRide>(b).released = true;
+                    }
+                    if (go)
+                    {
+                        ride.synced = false;
+                        ride.released = false;
+                        depart(static_cast<std::size_t>(std::ranges::count_if(*riders, [&](entt::entity g) { return r.valid(g) && r.get<Errand>(g).station == station; })), timer);
+                        if (fleet != nullptr)
+                            fleet->trains[*standing[station]].running = true;
                         else
-                            ++count.split;
+                        {
+                            // shortcut: every flat ride loads all at once and runs its loops; wheels that turn a step per
+                            // pair seated, shows and rides in sections are left out, upgrade with the ride menu's setups.
+                            ride.phase = RidePhase::Starting;
+                            ride.in_phase.value = 0;
+                        }
                     }
-                }
-                if (walk_on)
-                    boarding = std::min<std::size_t>(boarding, 1);
-                for (std::size_t i = 0; i < boarding; ++i)
-                {
-                    const entt::entity guest = ride.queue[i];
-                    if (!r.valid(guest))
-                        continue;
-                    auto& wallet = r.get<Wallet>(guest);
-                    if (!attraction.open || wallet.cash.value < attraction.price.value)
-                    {
-                        if (wallet.cash.value < attraction.price.value)
-                            think(r, guest, ThoughtKind::CantAfford, e, now);
-                        r.get<Errand>(guest) = after_ride(r, guest, e);
-                        continue;
-                    }
-                    wallet.cash.value -= attraction.price.value;
-                    attraction.income.value += attraction.price.value;
-                    ++attraction.customers;
-                    r.get<Errand>(guest).kind = ErrandKind::Riding;
-                    if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
-                    {
-                        RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket.value };
-                        walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
-                        r.emplace_or_replace<RideWalk>(guest, std::move(walk));
-                    }
-                    riders->push_back(guest);
-                }
-                ride.queue.erase(ride.queue.begin(), ride.queue.begin() + static_cast<std::ptrdiff_t>(boarding));
-            }
-            if (riders != nullptr && !upkeep.broken)
-            {
-                const auto* departure = r.try_get<Departure>(e);
-                // It waits for those still walking to their seats.
-                bool go = std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, ride.loading.value));
-                // Told to, a ready train waits for one ready at each station beside it told the same; then all go.
-                // shortcut: only the stations right beside count, not those beside them in turn; upgrade if a row of
-                // three or more synced stations turns up in a park.
-                const auto* beside = r.try_get<StationNeighbours>(e);
-                if (go && fleet != nullptr && !attraction.testing && departure != nullptr && departure->sync && beside != nullptr)
-                {
-                    const auto told = [&](entt::entity b) {
-                        const auto* d = r.valid(b) ? r.try_get<Departure>(b) : nullptr;
-                        return d != nullptr && d->sync && r.all_of<CycleRide>(b);
-                    };
-                    ride.synced = true;
-                    go = ride.released || std::ranges::all_of(beside->rides, [&](entt::entity b) { return !told(b) || r.get<CycleRide>(b).synced; });
-                    if (go && !ride.released)
-                        for (const entt::entity b : beside->rides)
-                            if (told(b))
-                                r.get<CycleRide>(b).released = true;
-                }
-                if (go)
-                {
-                    ride.synced = false;
-                    ride.released = false;
-                    depart(riders->size());
-                    if (fleet != nullptr)
-                        fleet->trains[*loading].running = true;
                     else
-                    {
-                        // shortcut: every flat ride loads all at once and runs its loops; wheels that turn a step per
-                        // pair seated, shows and rides in sections are left out, upgrade with the ride menu's setups.
-                        ride.phase = RidePhase::Starting;
-                        ride.in_phase.value = 0;
-                    }
+                        timer.value += dt;
                 }
-                else
-                    ride.loading.value += dt;
             }
-            // In the rain, guests with nothing over them leave an open-air ride's queue.
-            if (weather.rain && ride.cover.value < kTuning.weather.covered.value)
+            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
-                std::erase_if(ride.queue, [&](entt::entity guest) {
-                    if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from].covered || !random::chance(r.get<Dice>(guest).state, kTuning.weather.rain_leave.value * (weather.storm ? 3 : 1) * dt))
-                        return false;
-                    think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
-                    r.get<Errand>(guest) = after_ride(r, guest, e);
-                    stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
-                    return true;
-                });
-            }
-            // A broken ride's queue gives up, put out at the far end of the line.
-            if (upkeep.broken)
-            {
-                for (const entt::entity guest : ride.queue)
+                auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
+                const NodeId entrance = entrance_of(r, e, station);
+                // In the rain, guests with nothing over them leave an open-air ride's queue.
+                if (weather.rain && ride.cover.value < kTuning.weather.covered.value)
                 {
-                    if (!r.valid(guest))
-                        continue;
-                    auto& mood = r.get<Mood>(guest);
-                    mood.happiness.value = clamp01(mood.happiness.value - kTuning.wear.breakdown_gloom.value);
-                    r.get<Errand>(guest) = after_ride(r, guest, e);
-                    stop_at(paths, attraction.entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    std::erase_if(queue, [&](entt::entity guest) {
+                        if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from].covered || !random::chance(r.get<Dice>(guest).state, kTuning.weather.rain_leave.value * (weather.storm ? 3 : 1) * dt))
+                            return false;
+                        think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
+                        r.get<Errand>(guest) = after_ride(r, guest, e);
+                        stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                        return true;
+                    });
                 }
-                ride.queue.clear();
+                // A broken ride's queue gives up, put out at the far end of the line.
+                if (upkeep.broken)
+                {
+                    for (const entt::entity guest : queue)
+                    {
+                        if (!r.valid(guest))
+                            continue;
+                        auto& mood = r.get<Mood>(guest);
+                        mood.happiness.value = clamp01(mood.happiness.value - kTuning.wear.breakdown_gloom.value);
+                        r.get<Errand>(guest) = after_ride(r, guest, e);
+                        stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    }
+                    queue.clear();
+                }
             }
             // When the player asks, a train standing at the start goes, empty if need be, once it has waited its least
             // and another is held up behind it (within a centimetre: positions far round a long track lose that much
             // to rounding).
             const auto* leaving = r.try_get<Departure>(e);
-            if (fleet != nullptr && loading && leaving != nullptr && leaving->leave_on_arrival && ride.loading.value >= static_cast<float>(leaving->min_wait) && !fleet->trains[*loading].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*loading], on_their_way))
+            if (fleet != nullptr && standing[0] && leaving != nullptr && leaving->leave_on_arrival && ride.loading.value >= static_cast<float>(leaving->min_wait) && !fleet->trains[*standing[0]].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*standing[0]], on_their_way))
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
-                    if (t != *loading && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
+                    if (t != *standing[0] && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
                     {
-                        fleet->trains[*loading].running = true;
-                        depart(fleet->riders[*loading].size());
+                        fleet->trains[*standing[0]].running = true;
+                        depart(fleet->riders[*standing[0]].size(), ride.loading);
                     }
             }
         }
@@ -2351,17 +2418,21 @@ namespace rct3::simulation
         {
             const Party& party = r.get<Party>(e);
             entt::entity ride = entt::null;
+            std::uint8_t off = 0; // The station those on it get off at
             bool waiting = false;
             for (const entt::entity m : party.members)
             {
                 const Errand& errand = r.get<Errand>(m);
                 if (errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding)
+                {
                     ride = errand.target;
+                    off = errand.off;
+                }
                 waiting = waiting || errand.kind == ErrandKind::Waiting;
             }
             if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
             {
-                const NodeId exit = r.get<CycleRide>(ride).exit != kNoNode ? r.get<CycleRide>(ride).exit : r.get<Attraction>(ride).entrance;
+                const NodeId exit = exit_of(r, ride, off);
                 const NodeId spot = waiting_spot(paths, exit);
                 for (const entt::entity m : party.members)
                 {
@@ -2377,7 +2448,7 @@ namespace rct3::simulation
                     stride.to = at;
                     stride.progress.value = 1;
                     stride.lane_to = stride.lane_from;
-                    errand = { ErrandKind::Waiting, ride, 0 };
+                    errand = { .kind = ErrandKind::Waiting, .target = ride, .off = off };
                 }
             }
             else if (waiting)

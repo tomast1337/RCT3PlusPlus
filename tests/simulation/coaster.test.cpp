@@ -351,3 +351,28 @@ TEST_CASE("a ghost train crashes off the end of an unfinished track as any train
     CHECK(c.at == 80);
     CHECK(c.speed > 0); // Going as fast as it left
 }
+
+TEST_CASE("a train on a circuit with another station stops there, and goes on round when set off again")
+{
+    Coaster c = hill();
+    c.fixed_speed = 4;
+    c.stops = { 50 };
+    c.running = true;
+    for (int i = 0; i < 100 && c.running; ++i)
+        CHECK_FALSE(drive(c, 0.25f));
+    CHECK_FALSE(c.running);
+    CHECK(standing_at(c) == 1);
+    CHECK(c.travelled == doctest::Approx(50));
+    CHECK(track_point(c, c.at).x == track_point(c, 60).x);
+    c.running = true;
+    bool back = false;
+    for (int i = 0; i < 100 && !back; ++i)
+        back = drive(c, 0.25f);
+    CHECK(back);
+    CHECK(standing_at(c) == 0);
+    CHECK(c.next_stop == 0);
+    // A lap is timed without its stops.
+    const auto lap = lap_seconds(c);
+    REQUIRE(lap);
+    CHECK(*lap == doctest::Approx(25).epsilon(0.02));
+}

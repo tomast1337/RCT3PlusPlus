@@ -218,6 +218,10 @@ namespace rct3::simulation
         entt::entity target = entt::null; ///< The attraction, when heading for one, queueing or riding
         std::uint32_t rest = 0;           ///< Ticks until the guest next considers what to do
         Seconds queued { };               ///< In the queue so far, while queueing
+        /// Of a ride with more than one station, the one queued at or boarded at (0 the first, k its k-th stop),
+        /// and the one to get off at
+        std::uint8_t station = 0;
+        std::uint8_t off = 0;
     };
 
     /// What a guest thinks, numbered as saved parks number their guests' thoughts, so the game's language
@@ -360,6 +364,18 @@ namespace rct3::simulation
         Stopping,
     };
 
+    /// A station of a ride after its first, on a track whose trains stop at each: guests queue, board and get off
+    /// there as at the first.
+    struct Stop
+    {
+        NodeId entrance = kNoNode;
+        std::vector<NodeId> line { };        ///< As CycleRide::line
+        NodeId exit = kNoNode;               ///< Where riders get off; none lets no one off here
+        std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
+        Seconds loading { };                 ///< The train standing here has been loading
+        std::size_t saved = 0;               ///< Its place among the saved ride's stations
+    };
+
     struct CycleRide
     {
         std::uint32_t capacity = 8; ///< Guests a cycle
@@ -389,6 +405,9 @@ namespace rct3::simulation
         float per_hour = 0;                   ///< Riders an hour, smoothed over the last departures; 0 before two
         bool synced = false;                  ///< Its train is ready and waits for those at the stations beside it
         bool released = false;                ///< Those are ready too: it leaves with them
+        /// Its stations after the first (whose queue, line and exit are those above), in the order its trains
+        /// come to them; empty for a ride with one
+        std::vector<Stop> stops { };
     };
 
     /// The ways riders walk on and off a ride, in the park's space, worked out from the ride's models where it

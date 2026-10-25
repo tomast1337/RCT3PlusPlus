@@ -424,9 +424,19 @@ namespace rct3::simulation
             if (auto* cycle = r.try_get<CycleRide>(e))
             {
                 const auto ride = std::ranges::find(rides.rides, attraction.saved, [](const save::Ride& x) { return x.base.id; });
-                if (ride == rides.rides.end() || ride->stations.empty() || !cycle->queue.empty())
+                if (ride == rides.rides.end() || ride->stations.empty())
                     continue;
-                const auto links = ride_links(world.paths, ride->stations.front());
+                for (Stop& stop : cycle->stops)
+                {
+                    const auto links = stop.saved < ride->stations.size() && stop.queue.empty() ? ride_links(world.paths, ride->stations[stop.saved]) : std::nullopt;
+                    if (!links || (links->entrance == stop.entrance && links->line == stop.line && links->exit == stop.exit))
+                        continue;
+                    stop.entrance = links->entrance;
+                    stop.line = links->line;
+                    stop.exit = links->exit;
+                    ++changed;
+                }
+                const auto links = cycle->queue.empty() ? ride_links(world.paths, ride->stations.front()) : std::nullopt;
                 if (!links || (links->entrance == attraction.entrance && links->line == cycle->line && links->exit == cycle->exit))
                     continue;
                 attraction.entrance = links->entrance;
@@ -594,6 +604,7 @@ namespace rct3::simulation
                 train.travelled = 0;
             }
             train.running = train.travelled > 0;
+            train.next_stop = static_cast<std::size_t>(std::ranges::count_if(train.stops, [&](float stop) { return stop < train.travelled; }));
             train.launched = train.travelled >= train.train_length;
             train.speed = train.running ? saved.speed : 0;
             out.trains.push_back(train);
@@ -791,9 +802,72 @@ namespace rct3::simulation
             cycle.splash = splashes(ride.base.symbol);
             if (i < guests.size() && guests[i])
                 cycle.room = *guests[i];
+            std::optional<Coaster> stopping = coaster != nullptr ? std::optional(*coaster) : std::nullopt;
+            // A circuit with more than one station: its trains set off from the first station and stop at each of
+            // the others in turn, each found as the run of station track nearest its entrance.
+            if (stopping && stopping->shuttle == Shuttle::None && stopping->closed && ride.stations.size() > 1 && stopping->points.size() == stopping->kinds.size())
+            {
+                struct Run
+                {
+                    float end = -1; ///< Along the track, where a train waits at its far end; -1 for one round the track's end
+                    std::vector<glm::vec3> points { };
+                };
+                std::vector<Run> runs;
+                const auto& kinds = stopping->kinds;
+                for (std::size_t k = 0; k < kinds.size(); ++k)
+                {
+                    if (kinds[k] != Stretch::Station)
+                        continue;
+                    if (k == 0 || kinds[k - 1] != Stretch::Station)
+                        runs.emplace_back();
+                    runs.back().points.push_back(stopping->points[k]);
+                    if (k + 1 < kinds.size() && kinds[k + 1] != Stretch::Station)
+                        runs.back().end = stopping->distance[k + 1];
+                }
+                const auto run_of = [&](const save::Station& station) -> std::optional<std::size_t> {
+                    if (!station.entrance_spot)
+                        return std::nullopt;
+                    const glm::vec2 at = world.paths.origin + (glm::vec2(station.entrance_spot->col, station.entrance_spot->row) + 0.5f) * world.paths.tile_size;
+                    std::optional<std::size_t> best;
+                    float nearest = std::numeric_limits<float>::max();
+                    for (std::size_t k = 0; k < runs.size(); ++k)
+                        for (const glm::vec3& p : runs[k].points)
+                            if (const float d = glm::distance(at, glm::vec2(p.x, p.z)); d < nearest)
+                            {
+                                nearest = d;
+                                best = k;
+                            }
+                    return best && runs[*best].end >= 0 ? best : std::nullopt;
+                };
+                if (const auto first = run_of(ride.stations.front()))
+                {
+                    const float start = runs[*first].end;
+                    const float length = stopping->length();
+                    std::vector<std::pair<float, Stop>> others;
+                    for (std::size_t k = 1; k < ride.stations.size(); ++k)
+                    {
+                        const auto run = run_of(ride.stations[k]);
+                        auto station = run && *run != *first ? ride_links(world.paths, ride.stations[k]) : std::nullopt;
+                        // shortcut: a train runs past a station no path reaches, upgrade if it should stop there empty
+                        if (!station)
+                            continue;
+                        const float on = std::fmod(runs[*run].end - start + length, length);
+                        if (std::ranges::none_of(others, [&](const auto& o) { return o.first == on; }))
+                            others.push_back({ on, Stop { .entrance = station->entrance, .line = std::move(station->line), .exit = station->exit, .saved = k } });
+                    }
+                    std::ranges::sort(others, { }, &std::pair<float, Stop>::first);
+                    stopping->start = start;
+                    stopping->at = start;
+                    for (auto& [on, stop] : others)
+                    {
+                        stopping->stops.push_back(on);
+                        cycle.stops.push_back(std::move(stop));
+                    }
+                }
+            }
             r.emplace<CycleRide>(e, std::move(cycle));
-            if (coaster)
-                r.emplace<Trains>(e, trains_of(*coaster, ride));
+            if (stopping)
+                r.emplace<Trains>(e, trains_of(*stopping, ride));
             if (ride.base.time_since_crash >= 0)
                 r.emplace<Wrecks>(e, Wrecks { .since = { ride.base.time_since_crash } });
             r.emplace<Upkeep>(e, upkeep_of(ride));
@@ -1024,14 +1098,21 @@ namespace rct3::simulation
         const auto view = r.view<const Pose, const Visitor>();
         auto guests = view | std::ranges::to<std::vector<entt::entity>>();
         std::ranges::sort(guests);
-        // Each queue tile of a ride's line, by node: the ride and how far the tile is from the front.
+        // Each queue tile of a ride's lines, by node: the ride and how far the tile is from the front, and the
+        // station's line it is on.
         std::unordered_map<NodeId, std::pair<entt::entity, std::size_t>> lines;
+        std::unordered_map<NodeId, std::uint8_t> stations;
         const auto ride_view = r.view<const CycleRide>();
         for (const entt::entity e : ride_view)
         {
-            const auto& line = r.get<CycleRide>(e).line;
-            for (std::size_t k = 0; k < line.size(); ++k)
-                lines.emplace(line[k], std::pair { e, k });
+            const auto& cycle = r.get<CycleRide>(e);
+            for (std::size_t station = 0; station <= cycle.stops.size(); ++station)
+            {
+                const auto& line = station == 0 ? cycle.line : cycle.stops[station - 1].line;
+                for (std::size_t k = 0; k < line.size(); ++k)
+                    if (lines.emplace(line[k], std::pair { e, k }).second)
+                        stations.emplace(line[k], static_cast<std::uint8_t>(station));
+            }
         }
         std::vector<std::pair<std::size_t, entt::entity>> waiting; // By tile from the front, then guest
         std::size_t started = 0;
@@ -1051,7 +1132,7 @@ namespace rct3::simulation
                 start_walking(world, e, *at);
                 auto& stride = r.get<Stride>(e);
                 stride.along.value = static_cast<float>(on->second.second);
-                r.get<Errand>(e) = { ErrandKind::Queueing, on->second.first, 0 };
+                r.get<Errand>(e) = { .kind = ErrandKind::Queueing, .target = on->second.first, .station = stations.at(*at) };
                 waiting.emplace_back(on->second.second, e);
             }
             ++started;
@@ -1059,7 +1140,11 @@ namespace rct3::simulation
         // Those nearer the front were there first.
         std::ranges::stable_sort(waiting, { }, &std::pair<std::size_t, entt::entity>::first);
         for (const auto& [_, e] : waiting)
-            r.get<CycleRide>(r.get<Errand>(e).target).queue.push_back(e);
+        {
+            const Errand& errand = r.get<Errand>(e);
+            auto& cycle = r.get<CycleRide>(errand.target);
+            (errand.station == 0 ? cycle.queue : cycle.stops[errand.station - 1].queue).push_back(e);
+        }
         return started;
     }
 

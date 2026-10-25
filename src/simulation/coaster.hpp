@@ -64,6 +64,9 @@ namespace rct3::simulation
         float train_length = 10;
         int cars = 1;    ///< In the train, each as long as the others
         float start = 0; ///< Where the train's front waits to set off, at the station's end
+        /// On a circuit with more than one station, how far on from `start` the train stops at each of the others,
+        /// nearest first; it waits at each and goes on round
+        std::vector<float> stops { };
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
         int passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
@@ -75,11 +78,12 @@ namespace rct3::simulation
         bool ghost = false;
         // The train
         bool running = false;
-        float at = 0;          ///< Distance of the front of the train
-        float travelled = 0;   ///< Since it set off
-        float speed = 0;       ///< Along the track
-        float slow = 0;        ///< Seconds it has been all but stopped away from a chain or station
-        bool launched = false; ///< Its tail has left the platform since it set off, so it is pushed no more there
+        float at = 0;              ///< Distance of the front of the train
+        float travelled = 0;       ///< Since it set off
+        std::size_t next_stop = 0; ///< Of `stops`, the next it comes to; past one, it stands there until set off
+        float speed = 0;           ///< Along the track
+        float slow = 0;            ///< Seconds it has been all but stopped away from a chain or station
+        bool launched = false;     ///< Its tail has left the platform since it set off, so it is pushed no more there
         // A shuttle's train
         int passed = 0;   ///< Times it has come into the station since it set off
         float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
@@ -113,11 +117,15 @@ namespace rct3::simulation
 
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
-    /// back to it for the last time), where it stops. A train that runs off an end of a track with two ends is
-    /// left crashed instead.
+    /// back to it for the last time), where it stops. At one of its other stops it stops too, no longer running,
+    /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
-    /// How long a lap of `coaster` takes from a standing start, by driving a copy of it; nothing if the train
+    /// The station `coaster`'s train stands at, if it stands at one: 0 at its start, k at the k-th of its stops.
+    [[nodiscard]] std::optional<std::size_t> standing_at(const Coaster& coaster);
+
+    /// How long a lap of `coaster` takes from a standing start, without stopping on the way, by driving a copy of
+    /// it; nothing if the train
     /// does not come round within `most` seconds.
     [[nodiscard]] std::optional<float> lap_seconds(Coaster coaster, float most = 1200);
 

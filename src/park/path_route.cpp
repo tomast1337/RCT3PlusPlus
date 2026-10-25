@@ -116,6 +116,13 @@ namespace rct3::park
                 return 0.0F;
             return std::abs(static_cast<float>(at.col - first.spot.col) * line_dy - static_cast<float>(at.row - first.spot.row) * line_dx) / line_length;
         };
+        // The lower end of the route: where its first piece starts, or the goal's height.
+        FootpathBuilder at_goal;
+        start_at(at_goal, goal);
+        const auto start_piece = first.started ? std::nullopt : next_piece(from, grid);
+        const std::int32_t first_height = first.started ? first.height : start_piece ? start_piece->start : 0;
+        const std::int32_t floor = std::min(first_height, goal_height.value_or(next_piece(at_goal, grid)->start));
+        const auto dip_cost = [&](const NextPiece& piece) { return kRouteDipCost * std::max(0, floor - std::min(piece.start, piece.end)); };
         const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
         const auto estimate = [&](save::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
         using Open = std::pair<std::int64_t, std::size_t>;
@@ -170,7 +177,7 @@ namespace rct3::park
                     next.on_slope = b.slope != PathSlope::Flat;
                     next.parent = at;
                     next.step = { heading, b.slope, *piece };
-                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
+                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + dip_cost(*piece) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
                     const std::uint64_t key = key_of(next);
                     if (const auto known = best.find(key); known != best.end() && known->second <= next.cost)
                         continue;

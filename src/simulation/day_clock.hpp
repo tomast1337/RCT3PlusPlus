@@ -79,6 +79,8 @@ namespace rct3::simulation
     struct DayClock
     {
         DayWindow window;
+        DayMode mode = DayMode::ParkHours; ///< Which window `window` is
+        DayWindow park_hours;              ///< The park's opening hours, the window of ParkHours
         DayTransition transition = DayTransition::Instant;
         float time = 0.5f;  ///< Where the park is in its day
         float shown = 0.5f; ///< What the sky and the light show; behind `time` while Cycle catches up
@@ -89,6 +91,10 @@ namespace rct3::simulation
     /// A clock at `time` (a stored value; anything outside 0..1 is ignored), moved into the window when it
     /// lies outside it, showing the time it is at.
     [[nodiscard]] DayClock start_day(std::optional<float> time, DayWindow window, DayTransition transition);
+
+    /// Switches the clock to `mode`'s window. The Day and Night modes start their window from the beginning;
+    /// the park's hours keep the time when it lies in them. The look gets there as the transition says.
+    void change_mode(DayClock& clock, DayMode mode);
 
     /// Moves the clock on by `seconds` of real time at normal speed.
     void advance(DayClock& clock, float seconds);

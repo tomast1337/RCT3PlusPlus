@@ -155,3 +155,55 @@ TEST_CASE("cycle runs the shown time on through the skipped hours")
     advance(c, seconds_for(1));
     CHECK(c.shown == c.time);
 }
+
+TEST_CASE("changing the mode moves the clock into the new window")
+{
+    const DayWindow park = opening_hours(9 * 60, 22 * 60);
+    DayClock clock = start_day(hours(12), park, DayTransition::Instant);
+    clock.park_hours = park;
+
+    change_mode(clock, DayMode::AlwaysNight);
+    CHECK(clock.mode == DayMode::AlwaysNight);
+    CHECK(clock.window == kAlwaysNightWindow);
+    CHECK(clock.time == doctest::Approx(kAlwaysNightWindow.open));
+    CHECK(clock.shown == doctest::Approx(clock.time));
+
+    SUBCASE("day starts its window even from inside it")
+    {
+        change_mode(clock, DayMode::AlwaysDay);
+        advance(clock, seconds_for(1));
+        change_mode(clock, DayMode::AlwaysDay);
+        CHECK(clock.time == doctest::Approx(kAlwaysDayWindow.open));
+    }
+    SUBCASE("park hours keep a time that lies in them")
+    {
+        change_mode(clock, DayMode::AlwaysDay);
+        advance(clock, seconds_for(2));
+        const float before = clock.time;
+        change_mode(clock, DayMode::ParkHours);
+        CHECK(clock.window == park);
+        CHECK(clock.time == doctest::Approx(before));
+    }
+    SUBCASE("park hours move a time outside them to opening")
+    {
+        change_mode(clock, DayMode::ParkHours);
+        CHECK(clock.time == doctest::Approx(park.open));
+    }
+}
+
+TEST_CASE("changing the mode leaves the look to the transition")
+{
+    const DayWindow park = opening_hours(9 * 60, 22 * 60);
+    DayClock blend = start_day(hours(12), park, DayTransition::Blend);
+    blend.park_hours = park;
+    change_mode(blend, DayMode::AlwaysNight);
+    CHECK(blend.fade == doctest::Approx(1));
+    CHECK(blend.faded == doctest::Approx(hours(12)));
+
+    DayClock cycle = start_day(hours(12), park, DayTransition::Cycle);
+    cycle.park_hours = park;
+    change_mode(cycle, DayMode::AlwaysNight);
+    CHECK(cycle.shown == doctest::Approx(hours(12)));
+    advance(cycle, 60);
+    CHECK(cycle.shown == doctest::Approx(cycle.time));
+}

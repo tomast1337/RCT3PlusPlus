@@ -79,6 +79,23 @@ namespace rct3::simulation
         return clock;
     }
 
+    void change_mode(DayClock& clock, DayMode mode)
+    {
+        clock.mode = mode;
+        clock.window = day_window(mode, clock.park_hours);
+        if (mode != DayMode::ParkHours || !in_window(clock.window, clock.time))
+            clock.time = clock.window.open;
+        // Cycle's shown time catches up by itself; Blend fades from the old look, as when the window starts again.
+        if (clock.transition == DayTransition::Instant)
+            clock.shown = clock.time;
+        else if (clock.transition == DayTransition::Blend)
+        {
+            clock.faded = clock.shown;
+            clock.fade = 1;
+            clock.shown = clock.time;
+        }
+    }
+
     void advance(DayClock& clock, float seconds)
     {
         if (!(seconds > 0))

@@ -378,7 +378,11 @@ namespace rct3::scene
                 hours = simulation::opening_hours(park->park.opening_minutes, park->park.closing_minutes);
             const std::optional<std::int32_t> mode = world.time ? world.time->day_night_mode : std::nullopt;
             const std::optional<float> time = world.time ? std::optional(world.time->day_fraction) : std::nullopt;
-            return simulation::start_day(time, simulation::day_window(simulation::day_mode(mode), hours), simulation::day_transition(options.choice(config::GameOption::DayNight)));
+            const simulation::DayMode day_mode = simulation::day_mode(mode);
+            simulation::DayClock clock = simulation::start_day(time, simulation::day_window(day_mode, hours), simulation::day_transition(options.choice(config::GameOption::DayNight)));
+            clock.mode = day_mode;
+            clock.park_hours = hours;
+            return clock;
         }
 
         constexpr float kTicketSpot = 1; ///< Along an entrance without a spot of its own, towards the ride
@@ -669,7 +673,10 @@ namespace rct3::scene
         if (saved)
         {
             scene.camera = saved->camera;
-            scene.day = simulation::start_day(saved->progress.day_time, scene.day.window, scene.day.transition);
+            const simulation::DayClock from_file = scene.day;
+            scene.day = simulation::start_day(saved->progress.day_time, from_file.window, from_file.transition);
+            scene.day.mode = from_file.mode;
+            scene.day.park_hours = from_file.park_hours;
         }
         begin(ParkLoadStage::Ground);
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(world->paths, scene.grid);

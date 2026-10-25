@@ -11,6 +11,7 @@
 // and colours) comes as the page's controls.
 #pragma once
 
+#include "save/model/design.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "ui/money_text.hpp"
@@ -275,6 +276,10 @@ namespace rct3::ui
 
     /// The page of `tab`, at `section` when the page has several.
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
+
+    /// What a saved design's browser says of it, worded as a ride's results are: the ground it covers, its
+    /// price, its ratings when it was rated and its test results when it was tested.
+    [[nodiscard]] std::vector<InfoLine> design_lines(const save::DesignSummary& design, const StringTable& strings, const InfoUnits& units);
 
     /// A state the open-or-close tab offers.
     struct StateChoice

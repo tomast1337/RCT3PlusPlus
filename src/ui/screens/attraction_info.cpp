@@ -824,6 +824,34 @@ namespace rct3::ui
         return strings::to_utf16(name);
     }
 
+    std::vector<InfoLine> design_lines(const save::DesignSummary& design, const StringTable& strings, const InfoUnits& units)
+    {
+        InfoPage page;
+        add(page, strings, "AttractionResultsDialogLabel_SpaceRequired", ascii(std::format("{} x {}", design.width, design.length)));
+        add(page, strings, "AttractionResultsDialogLabel_Cost", money_text(units.currency, design.cost));
+        if (design.assessment.valid)
+        {
+            add(page, strings, "AttractionResultsDialogLabel_Excitement", rating(design.assessment.excitement, strings));
+            add(page, strings, "AttractionResultsDialogLabel_Intensity", rating(design.assessment.intensity, strings));
+            add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(design.assessment.nausea, strings));
+        }
+        if (const auto& lap = design.results)
+        {
+            add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time));
+            add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
+            add(page, strings, "AttractionResultsDialogLabel_MaxNegativeVerticalG", force(lap->max_negative_vertical));
+            add(page, strings, "AttractionResultsDialogLabel_MaxLateralG", force(lap->max_lateral));
+            add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time));
+            add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
+            add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
+        }
+        return std::move(page.lines);
+    }
+
     std::u16string rating_word(float value, const StringTable& strings)
     {
         const auto step = std::ranges::find_if(kRatingSteps, [&](float top) { return value < top; });

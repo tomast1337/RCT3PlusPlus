@@ -19,6 +19,8 @@ namespace rct3::ui
 
         constexpr std::string_view kCustomTrack = "RideSelectionWindow_BuildCustomTrack";
         constexpr std::string_view kPlaceAttraction = "RideSelectionWindow_BuildAttraction";
+        constexpr std::string_view kDesignsAvailable = "RideSelectionWindow_DesignsAvailable";
+        constexpr std::u16string_view kNumber = u"%NUMBER%";
         /// The badge of items that came with an expansion, by the expansion's number less one.
         constexpr std::string_view kBadgePrefix = "ObjectSelectionWindow_AOPBadge_";
         constexpr int kBadges = 2;
@@ -295,7 +297,7 @@ namespace rct3::ui
         return strings::to_utf16(std::format("{} x {}", item.width, item.length));
     }
 
-    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency)
+    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts)
     {
         std::vector<PickerRow> rows;
         std::map<std::pair<std::string, std::string>, std::size_t> headings; // by set icon and name
@@ -312,6 +314,13 @@ namespace rct3::ui
             {
                 case park::BuildKind::TrackedRide:
                     row.size = std::u16string(strings.get(kCustomTrack));
+                    if (const auto designs = design_counts.find(item.symbol); designs != design_counts.end())
+                    {
+                        std::u16string available(strings.get(kDesignsAvailable));
+                        if (const auto at = available.find(kNumber); at != std::u16string::npos)
+                            available.replace(at, kNumber.size(), strings::to_utf16(std::to_string(designs->second)));
+                        row.size = std::move(available);
+                    }
                     break;
                 case park::BuildKind::FlatRide:
                     row.size = std::u16string(strings.get(kPlaceAttraction));

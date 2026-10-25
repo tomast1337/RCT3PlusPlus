@@ -78,6 +78,18 @@ declare namespace park {
     /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`
      *  for its camera to open (as saved messages number them). */
     function postMessage(key: string, ride?: number, tab?: number): void;
+    /** The park's messages, oldest first: each one's text key and the name it was posted about. */
+    function messages(): { key: string; name: string }[];
+    /** The calendar, in units of 90 a week and 360 a month. */
+    function date(): number;
+    /** Moves the calendar to `units`; the clock of the day runs on as it was. */
+    function setDate(units: number): void;
+    /** The scenario's VIP goals: their level, which celebrity, when they next visit, the months they stay,
+     *  whether a visit went well and whether the player was told a month ahead. */
+    function vipGoals(): { level: number; who: number; next: number; months: number; met: boolean; toldMonth: boolean }[];
+    /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, and
+     *  their place in people.list() once they are shown. */
+    function vips(): { name: string; col: number; row: number; patience: number; leaving: boolean; gone: boolean; shown: number | null }[];
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */
@@ -298,6 +310,8 @@ declare namespace stalls {
 declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them. */
     function list(): { name: string; staff: boolean }[];
+    /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
+    function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */
     function rename(i: number, name: string): void;
 }

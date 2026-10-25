@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The enclosure list's fence tools. With a fence picked, pressing the ground and dragging marks a rectangle of
+// The enclosure list's fence tools, and putting down animals. With a fence picked, pressing the ground and dragging marks a rectangle of
 // tiles; letting go makes it an enclosure fenced with that fence, or adds it to the enclosures it takes in or
 // touches (park/enclosures.hpp). With the list's delete tool, letting go takes the tiles out of enclosures.
 // Every new length of fence is paid for at the fence's price; an area with land the park does not own
@@ -20,7 +20,8 @@ namespace rct3::scene
 
     struct ParkScene;
 
-    /// Takes out the fence tool for `item` when it is an enclosure fence or the delete tool; false otherwise.
+    /// Takes out the fence tool for `item` when it is an enclosure fence or the delete tool, or the tool putting
+    /// down an animal of the animal list; false otherwise.
     bool start_enclosing(ParkScene& scene, const park::BuildItem& item);
 
     /// Puts the fence tool away.
@@ -32,6 +33,12 @@ namespace rct3::scene
     /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
     /// keeper, who starts at the hut.
     void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site);
+
+    /// Makes the animals' shapes again after animals came or went.
+    void animals_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// Moves the animals' shapes to where the animals are now.
+    void place_animals(ParkScene& scene);
 
     /// Builds the enclosures' fences again after they changed.
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.

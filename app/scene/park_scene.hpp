@@ -208,10 +208,10 @@ namespace rct3::scene
     };
 
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
-    /// with the delete tool out of one.
+    /// with the delete tool out of one. Or an animal from the animal list, put down where the button goes up.
     struct EnclosureTool
     {
-        std::optional<park::BuildItem> fence;             ///< The fence or the delete tool picked; none while put away
+        std::optional<park::BuildItem> item;              ///< The fence, delete tool or animal picked; none while put away
         std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
         std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
@@ -650,7 +650,10 @@ namespace rct3::scene
         ParkMap map;                                                    ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
-        EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out
+        EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
+        /// The animals as drawn, one shape each, and the simulated animal each shape is.
+        park::MovingMeshes animal_meshes;
+        std::vector<entt::entity> animals_shown;
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed

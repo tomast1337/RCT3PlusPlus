@@ -349,3 +349,9 @@ declare namespace structures {
     /** How many tiles the picking out tool has marked. */
     function marked(): number;
 }
+
+declare namespace animals {
+    /** The park's animals, with their species, the enclosure they live in, whether they are still in their crate,
+     *  their health from 0 to 1, and the point of the map they stand on, in tiles. */
+    function list(): { species: string; enclosure: number; crated: boolean; health: number; at: { col: number; row: number } }[];
+}

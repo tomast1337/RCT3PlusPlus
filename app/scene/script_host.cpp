@@ -12,6 +12,7 @@
 #include "scene/front_end_scene.hpp"
 #include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
@@ -703,6 +704,17 @@ namespace rct3::scene
                 const save::ZooAnimal& saved = park.people.zoo_animals[park.drawn_animals.saved[i]];
                 const glm::vec3 at(park.drawn_animals.placed[i].world[3]);
                 out.push_back({ { "species", saved.species }, { "adult", saved.is_adult }, { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 }, { "up", at.y - g.height_at(at.x, at.z).value_or(0) } });
+            }
+            return out;
+        });
+        engine_.define("animals.list", [this](const Json&) {
+            const ParkScene& park = park_of(park_);
+            const save::TerrainGrid& g = park.grid;
+            Json out = Json::array();
+            for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
+            {
+                const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
+                out.push_back({ { "species", animal.species }, { "enclosure", animal.enclosure }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "health", animal.health.value }, { "at", tile } });
             }
             return out;
         });

@@ -3,7 +3,8 @@
 // Animal enclosures. In a park of the Wild! expansion the park keeps which tiles each enclosure takes, and its
 // fences stand again round them when it loads. There, a drag with a fence from the enclosure list fences the
 // tiles round, paid for. An animal house goes only inside it, with its keeper's hut and a keeper, who walks
-// about the enclosure. A drag with the list's delete tool takes some of the tiles out again.
+// about the enclosure. An animal goes only inside it too, coming in a crate. A drag with the list's delete tool
+// takes some of the tiles out again.
 //
 //   ./nob script scripts/tests/enclosures.ts -- --no-audio
 
@@ -96,6 +97,26 @@ camera.look({ col: k.col, row: k.row }, { col: k.col + 3, row: k.row + 5, up: 4 
 await frames(5);
 await screenshot("enclosure_shelter_keeper");
 camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
+
+// An animal from the animal list comes down only inside an enclosure, paid for, in a crate that opens after a while.
+expect(build.pick("WildAnimals/WildAnimals", "zebra"), "the zebra in the animal list");
+const before = park.cash()!;
+await pointer.click(...on_view(c0 + 2, r0 - 2));
+await frames(3);
+expect(animals.list().length === 0, "no animal put down outside the enclosure");
+await pointer.click(...on_view(c0 + 3, r0 + 2));
+await frames(3);
+build.stop();
+const zebra = () => animals.list()[0];
+expect(animals.list().length === 1 && zebra().crated, "the zebra in its crate");
+expect(Math.floor(zebra().at.col) === c0 + 3 && Math.floor(zebra().at.row) === r0 + 2, `the crate where it was put, not ${JSON.stringify(zebra().at)}`);
+expect(park.cash()! < before, "the zebra paid for");
+camera.look({ col: c0 + 3.5, row: r0 + 2.5 }, { col: c0 + 5, row: r0 + 7, up: 4 });
+await frames(10);
+await screenshot("enclosure_crate");
+await until(() => !zebra().crated, 3000, "the crate opened");
+camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
+await frames(5);
 expect(build.pick("", "EnclosureDelete"), "the enclosure delete tool");
 await pointer.drag(on_view(c0 + 4, r0), on_view(c0 + 4, r0 + 3), 6);
 await frames(3);

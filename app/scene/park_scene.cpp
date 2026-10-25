@@ -2347,7 +2347,8 @@ namespace rct3::scene
                 .wind = scene.park.wind,
                 .splashing_car = splashing,
             };
-            advance_park_lens(scene.lens, around, true, elapsed);
+            // As the game has it, drops are drawn only where refraction is.
+            advance_park_lens(scene.lens, around, options.flag(config::GameOption::WaterDroplets) && options.flag(config::GameOption::Refraction), elapsed);
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { refresh_zoo_animals(scene); });

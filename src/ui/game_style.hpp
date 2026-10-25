@@ -14,6 +14,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/construction_panel.hpp"
+#include "ui/screens/delete_area_panel.hpp"
 #include "ui/screens/design_browser.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/footpath_panel.hpp"
@@ -764,6 +765,18 @@ namespace rct3::ui::game_skins
 
     /// From the screen's bottom edge to the bottom-left panels: over the tool row and its open menu.
     inline constexpr float kOverToolRow = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
+
+    /// The area delete tool's panel, over the tool row at the left.
+    [[nodiscard]] inline DeleteAreaPanelStyle delete_area_panel_style()
+    {
+        return {
+            .back = "CircularPanelDialog",
+            .button = std::string(kMenuButtonSmall),
+            .clear = "GUI2_DeleteSelection_ClearIcon",
+            .remove = "GUI2_DeleteSelection_DeleteIcon",
+            .bottom = kOverToolRow,
+        };
+    }
 
     /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
     /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable

@@ -17,6 +17,7 @@
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/sky_look.hpp"
+#include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -45,6 +46,7 @@
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/attraction_info.hpp"
+#include "ui/screens/delete_area_panel.hpp"
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_menus.hpp"
@@ -104,6 +106,8 @@ namespace rct3::scene
         constexpr std::string_view kDemolishText = "SingleItemDeleteEditor_AI_Message";
         constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
+        constexpr std::string_view kDeleteAreaName = "delete_area";
+        constexpr glm::vec4 kDeleteMarkColour { 1.0f, 0.35f, 0.3f, 0.9f };
 
         // How far the controls move the camera.
         constexpr float kDragPan = 0.0025f;     ///< Per pixel, times the distance
@@ -766,7 +770,9 @@ namespace rct3::scene
         /// Puts the delete menu's tool away.
         void stop_deleting(ParkScene& scene)
         {
-            scene.deleting = { };
+            if (auto panel = scene.desktop->root().find(kDeleteAreaName))
+                panel->close();
+            scene.deleting = DeleteTools { .drawn = scene.deleting.drawn }; // The marks go on the next frame
         }
 
         /// Pulls props `indices` of the objects down with the delete tools, paying what their kinds say pulling one
@@ -1584,6 +1590,35 @@ namespace rct3::scene
             return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
         }
 
+        /// Deletes what stands on the tiles from `a` to `b`: props and paths at once, and asks once about every
+        /// ride and stall with a part there.
+        void delete_area(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile a, save::Tile b)
+        {
+            const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
+            std::vector<std::size_t> props;
+            std::vector<park::AttractionRef> attractions;
+            for (std::size_t i = 0; i < scene.objects.size(); ++i)
+            {
+                const save::PlacedObject& o = scene.objects[i];
+                if (o.hidden || !inside(o.col, o.row))
+                    continue;
+                if (const auto owner = scene.attractions.find(o.id); owner != scene.attractions.end())
+                {
+                    if (!std::ranges::contains(attractions, owner->second))
+                        attractions.push_back(owner->second);
+                }
+                else if (clickable_prop(scene, o))
+                    props.push_back(i);
+            }
+            std::vector<std::uint64_t> paths;
+            for (const save::PathTile& p : scene.footpaths.paths)
+                if (inside(p.col, p.row))
+                    paths.push_back(p.id);
+            delete_props(device, scene, assets, props);
+            delete_paths(device, scene, assets, paths);
+            ask_demolish(scene, *assets.strings, assets.palette, std::move(attractions));
+        }
+
         /// What putting a broken path item back new costs: the price of the object it stands as.
         std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
         {
@@ -1870,6 +1905,45 @@ namespace rct3::scene
             footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right, input.shift, input.control);
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
+            // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
+            DeleteTools& deleting = scene.deleting;
+            const bool area = deleting.tool == DeleteTools::Tool::Area;
+            const auto tile = area && !over ? ground_tile(scene, pointer.position, { view.width(), view.height() }) : std::nullopt;
+            if (area && pointer.down && !input.right && !input.middle && (deleting.dragging || tile))
+            {
+                if (!deleting.dragging)
+                    deleting.corner = tile;
+                deleting.dragging = true;
+                if (tile)
+                    deleting.other = tile;
+            }
+            else
+                deleting.dragging = false;
+            if (auto panel = desktop.root().find_as<ui::DeleteAreaPanel>(kDeleteAreaName); panel && area)
+            {
+                panel->set_marked(deleting.corner.has_value());
+                const auto asked = panel->take_action();
+                if (asked == ui::DeleteAreaAction::Delete && deleting.corner && deleting.other)
+                    delete_area(device, scene, assets, *deleting.corner, *deleting.other);
+                if (asked)
+                {
+                    deleting.corner.reset();
+                    deleting.other.reset();
+                }
+            }
+            std::optional<std::array<std::int32_t, 4>> marks;
+            if (area && deleting.corner && deleting.other)
+                marks = std::array { std::min(deleting.corner->col, deleting.other->col), std::min(deleting.corner->row, deleting.other->row), std::max(deleting.corner->col, deleting.other->col), std::max(deleting.corner->row, deleting.other->row) };
+            else if (tile)
+                marks = std::array { tile->col, tile->row, tile->col, tile->row };
+            if (marks != deleting.drawn)
+            {
+                park::TerrainMesh mesh;
+                if (marks)
+                    park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], park::TilePart::Whole, kDeleteMarkColour);
+                set_view_lines(device, scene.delete_marks, mesh);
+                deleting.drawn = marks;
+            }
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
                 scene.press = pointer.position;
@@ -1880,7 +1954,7 @@ namespace rct3::scene
                 const ui::Rect screen = desktop.root().rect();
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
-                if (painting_patrol(scene) || land_tool(scene))
+                if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -2664,6 +2738,8 @@ namespace rct3::scene
                     stop_deleting(scene);
                     if (!out)
                         scene.deleting.tool = tool;
+                    if (!out && tool == DeleteTools::Tool::Area)
+                        desktop.root().add<ui::DeleteAreaPanel>(std::string(kDeleteAreaName), skins::delete_area_panel_style(), *assets.strings);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);

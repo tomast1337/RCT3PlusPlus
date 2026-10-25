@@ -54,6 +54,8 @@ namespace rct3::ui
         constexpr std::string_view kSurfaceDetail = "Rct3pp_SurfaceDetail";
         constexpr std::string_view kSurfaceDetailHelp = "Rct3pp_SurfaceDetailHelp";
         constexpr std::string_view kTextureDetailHelp = "Rct3pp_TextureDetailHelp";
+        constexpr std::string_view kRenderScale = "Rct3pp_RenderScale";
+        constexpr std::string_view kRenderScaleHelp = "Rct3pp_RenderScaleHelp";
 
         constexpr std::string_view kAutoDetect = "AutoDetectLabel";
         constexpr std::string_view kAutoDetectTip = "GameOptionsDialog_GraphicsDetailLevel";
@@ -373,6 +375,7 @@ namespace rct3::ui
         resolution_ = &top.list(str(strings, "GameOptionsDialog_ScreenResolution"), std::move(sizes), { }, "GameOptionsDialog_ScreenResolution");
         resolution_->select(choices_.screen_size);
         resolution_->enabled = !choices_.screen_sizes.empty();
+        top.number(O::RenderScale, str(strings, kRenderScale), str(strings, kRenderScaleHelp));
         top.choice(O::GraphicsQuality, str(strings, "QualityVsPerformanceLabel"), items(strings, { "QualityVsPerformance_HighPerformance", "QualityVsPerformance_Performance", "QualityVsPerformance_Balanced", "QualityVsPerformance_Quality", "QualityVsPerformance_HighQuality", "QualityVsPerformance_Custom" }));
         graphics_top_ = &top;
 

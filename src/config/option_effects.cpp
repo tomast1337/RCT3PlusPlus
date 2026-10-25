@@ -16,6 +16,7 @@ namespace rct3::config
             O::Currency,         // Money in the park's windows
             O::DistanceUnits,    // Lengths and speeds
             O::TemperatureUnits, // The weather
+            O::Brightness,       // The whole screen as it shows
             O::GameVolume,       // The master volume
             O::MusicVolume,
             O::InterfaceVolume,
@@ -64,7 +65,8 @@ namespace rct3::config
             O::AmbientOcclusion,
             O::ParticleBudget,
             O::LightShafts,
-            O::AntiAliasing,  // The screen's passes
+            O::AntiAliasing, // The screen's passes
+            O::RenderScale,
             O::SurfaceDetail, // The lit shaders
             O::TextureDetail, // When a park loads
         };

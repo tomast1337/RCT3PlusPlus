@@ -21,10 +21,11 @@ namespace rct3::ui
         return std::max(1.0f, std::floor(height / kScaleStepHeight));
     }
 
-    /// The scale the user chose, else the automatic one for a window `height` pixels tall.
-    [[nodiscard]] inline float interface_scale(float height, std::optional<float> chosen)
+    /// The scale the user chose, else the automatic one for a screen `height` pixels tall, drawn at `render`
+    /// times the window's pixels: the interface keeps its size in the window whatever the render scale.
+    [[nodiscard]] inline float interface_scale(float height, std::optional<float> chosen, float render = 1)
     {
-        return chosen.value_or(auto_scale(height));
+        return chosen.value_or(auto_scale(height / render)) * render;
     }
 
 } // namespace rct3::ui

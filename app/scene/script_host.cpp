@@ -230,6 +230,12 @@ namespace rct3::scene
             open_ = a[0].get<std::string>();
             return Json(nullptr);
         });
+        engine_.define("render.live", [this](const Json&) -> Json {
+            if (device_ == nullptr)
+                throw std::runtime_error("no device");
+            const render::FrameStats stats = device_->stats();
+            return { { "buffers", stats.buffers }, { "pipelines", stats.pipelines }, { "textures", stats.textures } };
+        });
         engine_.define("park.loaded", [this](const Json&) { return Json(park_ != nullptr); });
         engine_.define("park.cash", [this](const Json&) -> Json {
             if (park_ == nullptr)

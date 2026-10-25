@@ -55,6 +55,11 @@ declare namespace career {
     function map(): boolean;
 }
 
+declare namespace render {
+    /** What is alive on the device as the last frame ended. */
+    function live(): { buffers: number; pipelines: number; textures: number };
+}
+
 declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
     function open(path: string): Promise<void>;

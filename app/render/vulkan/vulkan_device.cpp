@@ -1251,6 +1251,9 @@ namespace rct3::render::vulkan
         present.pImageIndices = &image_index_;
         const VkResult result = vkQueuePresentKHR(queue_, &present);
 
+        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
+        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
+        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
         last_stats_ = frame_stats_;
         frame_index_ = (frame_index_ + 1) % kFramesInFlight;
         state_ = State::Idle;

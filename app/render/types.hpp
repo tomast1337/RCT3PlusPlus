@@ -422,6 +422,9 @@ namespace rct3::render
         std::uint32_t draws = 0;
         std::uint64_t primitives = 0;
         std::uint64_t transient_bytes = 0; ///< Allocated with `allocate_transient`
+        std::uint32_t buffers = 0;         ///< Alive as the frame ended
+        std::uint32_t pipelines = 0;
+        std::uint32_t textures = 0;
     };
 
 } // namespace rct3::render

@@ -91,7 +91,8 @@ namespace rct3::render
         /// Human-readable adapter name, for logs.
         [[nodiscard]] virtual std::string_view device_name() const = 0;
 
-        /// Size of the screen in pixels. Follows the window; may change between frames.
+        /// Size of the screen in pixels: the window's times the render scale. Follows the window; may change
+        /// between frames.
         [[nodiscard]] virtual Extent screen_extent() const = 0;
 
         /// Size the scene draws at: the view's when one is set, else the screen's.
@@ -100,8 +101,27 @@ namespace rct3::render
             return view_ ? view_->size : screen_extent();
         }
 
+        /// The screen is drawn at the window's size times `scale`, then stretched over the window as the frame
+        /// ends, so the game can draw at fewer or more pixels than the window has. From the next frame.
+        void set_render_scale(float scale)
+        {
+            render_scale_ = scale;
+        }
+
+        [[nodiscard]] float render_scale() const
+        {
+            return render_scale_;
+        }
+
+        /// How bright the stretched screen shows: 0.5 as drawn, lower darker, higher brighter. Screenshots are
+        /// taken before it, as drawn.
+        void set_brightness(float brightness)
+        {
+            brightness_ = brightness;
+        }
+
         /// Passes into the screen draw into `view` only, which then acts as the whole screen for drawing and
-        /// copy_screen; the interface (draw_ui) still covers the whole screen. None for the whole screen.
+        /// copy_screen; the interface (draw_ui) still covers the whole screen. In the screen's pixels; none for the whole screen.
         void set_view(std::optional<ScreenView> view)
         {
             view_ = view;
@@ -170,8 +190,13 @@ namespace rct3::render
         /// ImGui::NewFrame.
         virtual void ui_new_frame() = 0;
 
-        /// Finishes the ImGui frame and draws it into the current pass.
+        /// Finishes the ImGui frame; it is drawn over the stretched screen as the frame ends, in the window's
+        /// pixels. During a pass.
         virtual void draw_ui() = 0;
+
+    protected:
+        float render_scale_ = 1;
+        float brightness_ = 0.5f;
 
     private:
         std::optional<ScreenView> view_;

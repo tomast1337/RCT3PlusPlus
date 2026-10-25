@@ -46,6 +46,8 @@
         "SurfaceDetailHelp": "Grain gives textures fine detail up close, where they would look blurred, at almost no cost. Grain and relief also makes height from the light and dark of each texture, so brick, rock and paths catch the sun near the camera; it costs more to draw and takes effect when a park is loaded.",
         "TextureDetailHelp": "How sharp the park's textures are. Lower uses smaller textures, which take less memory to draw. Takes effect when a park is loaded.",
         "SurfaceDetailOff": "Off",
+        "RenderScale": "Render scale (%)",
+        "RenderScaleHelp": "How many pixels the game draws, as a share of the window's, stretched to fill it. Below 100 is faster and softer; above 100 is sharper and slower.",
         "AmbientOcclusion": "Ambient occlusion",
         "AmbientOcclusionHelp": "Creases, corners and the ground under things are darker where less of the sky reaches them. Costs a little more to draw.",
         "ParticleBudget": "Particles",

@@ -24,7 +24,7 @@ namespace rct3::scene
         {
             const render::Extent extent = device.extent();
             list.clear();
-            list.set_scale(ui::interface_scale(static_cast<float>(extent.height), chosen));
+            list.set_scale(ui::interface_scale(static_cast<float>(extent.height), chosen, device.render_scale()));
             return { 0, 0, static_cast<float>(extent.width) / list.scale(), static_cast<float>(extent.height) / list.scale() };
         }
 

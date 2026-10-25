@@ -124,10 +124,11 @@ namespace rct3::render::vulkan
             pick_device();
             create_device();
             create_swapchain();
-            create_depth();
             create_frames();
             create_pipeline_layout();
             create_samplers();
+            create_screen();
+            create_present_pipeline();
             if (config_.ui)
                 init_ui();
         }
@@ -162,6 +163,8 @@ namespace rct3::render::vulkan
             destroy(reading_);
             for (auto& [_, t] : textures_)
                 destroy(t);
+            destroy_screen();
+            vkDestroyPipeline(device_, present_pipeline_, nullptr);
             for (auto& [_, p] : pipelines_)
             {
                 vkDestroyPipeline(device_, p.pipeline, nullptr);
@@ -430,40 +433,27 @@ namespace rct3::render::vulkan
         }
     }
 
-    // One depth buffer serves both frames in flight: the barrier at the start of each frame orders its depth
-    // writes after the previous frame's.
-    void VulkanDevice::create_depth()
+    // The window's size times the render scale, within what the device can make.
+    void VulkanDevice::create_screen()
     {
-        VkImageCreateInfo image { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        image.imageType = VK_IMAGE_TYPE_2D;
-        image.format = kDepthFormat;
-        image.extent = { extent_.width, extent_.height, 1 };
-        image.mipLevels = 1;
-        image.arrayLayers = 1;
-        image.samples = VK_SAMPLE_COUNT_1_BIT;
-        image.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // For copy_screen
-        image.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        check(vkCreateImage(device_, &image, nullptr, &depth_image_), "vkCreateImage");
-
-        VkMemoryRequirements needs;
-        vkGetImageMemoryRequirements(device_, depth_image_, &needs);
-        VkMemoryAllocateInfo alloc { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-        alloc.allocationSize = needs.size;
-        alloc.memoryTypeIndex = find_memory_type(needs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        check(vkAllocateMemory(device_, &alloc, nullptr, &depth_memory_), "vkAllocateMemory");
-        check(vkBindImageMemory(device_, depth_image_, depth_memory_, 0), "vkBindImageMemory");
-
-        VkImageViewCreateInfo view { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-        view.image = depth_image_;
-        view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        view.format = kDepthFormat;
-        view.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
-        check(vkCreateImageView(device_, &view, nullptr, &depth_view_), "vkCreateImageView");
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(gpu_, &props);
+        const auto scaled = [&](std::uint32_t side) { return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<float>(side) * render_scale_)), 1u, props.limits.maxImageDimension2D); };
+        const auto made = create_texture({ .width = scaled(extent_.width), .height = scaled(extent_.height), .label = "screen", .target = true });
+        if (!made)
+            throw std::runtime_error(std::format("screen: {}", made.error()));
+        screen_ = textures_.extract(made->id).mapped();
         create_multisample();
     }
 
-    // Like the depth buffer, the multisampled images serve both frames in flight.
+    void VulkanDevice::destroy_screen()
+    {
+        destroy_multisample();
+        destroy(screen_);
+        screen_ = { };
+    }
+
+    // Like the screen, the multisampled images serve both frames in flight.
     void VulkanDevice::create_multisample()
     {
         if (samples_ <= 1)
@@ -472,7 +462,7 @@ namespace rct3::render::vulkan
             VkImageCreateInfo info { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             info.imageType = VK_IMAGE_TYPE_2D;
             info.format = format;
-            info.extent = { extent_.width, extent_.height, 1 };
+            info.extent = { screen_.extent.width, screen_.extent.height, 1 };
             info.mipLevels = 1;
             info.arrayLayers = 1;
             info.samples = static_cast<VkSampleCountFlagBits>(samples_);
@@ -536,35 +526,22 @@ namespace rct3::render::vulkan
         destroy_multisample();
         samples_ = samples;
         create_multisample();
-        if (ui_ready_)
-        {
-            ImGui_ImplVulkan_PipelineInfo info = ui_pipeline_info();
-            ImGui_ImplVulkan_CreateMainPipeline(&info);
-        }
     }
 
     ImGui_ImplVulkan_PipelineInfo VulkanDevice::ui_pipeline_info() const
     {
         ImGui_ImplVulkan_PipelineInfo info { };
-        info.MSAASamples = static_cast<VkSampleCountFlagBits>(samples_);
+        // Drawn into the window after the screen is stretched into it: one sample, no depth.
+        info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         info.PipelineRenderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
         info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
         info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &color_format_;
-        info.PipelineRenderingCreateInfo.depthAttachmentFormat = kDepthFormat;
         return info;
     }
 
-    // Destroys the swapchain and everything sized to it.
+    // Destroys the swapchain; the screen goes on its own.
     void VulkanDevice::destroy_swapchain()
     {
-        destroy_multisample();
-        vkDestroyImageView(device_, depth_view_, nullptr);
-        vkDestroyImage(device_, depth_image_, nullptr);
-        vkFreeMemory(device_, depth_memory_, nullptr);
-        depth_view_ = VK_NULL_HANDLE;
-        depth_image_ = VK_NULL_HANDLE;
-        depth_memory_ = VK_NULL_HANDLE;
-
         for (VkImageView v : views_)
             vkDestroyImageView(device_, v, nullptr);
         for (VkSemaphore s : render_finished_)
@@ -588,8 +565,9 @@ namespace rct3::render::vulkan
         }
         vkDeviceWaitIdle(device_);
         destroy_swapchain();
+        destroy_screen();
         create_swapchain();
-        create_depth();
+        create_screen();
     }
 
     void VulkanDevice::create_frames()
@@ -852,6 +830,13 @@ namespace rct3::render::vulkan
     void VulkanDevice::begin_frame()
     {
         assert(state_ == State::Idle);
+        // A new render scale makes the screen anew; the window keeps its swapchain.
+        if (const auto side = [&](std::uint32_t w) { return std::max(1u, static_cast<std::uint32_t>(std::lround(static_cast<float>(w) * render_scale_))); }; side(extent_.width) != screen_.extent.width || side(extent_.height) != screen_.extent.height)
+        {
+            vkDeviceWaitIdle(device_);
+            destroy_screen();
+            create_screen();
+        }
         Frame& frame = frames_[frame_index_];
         check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
         if (frame.timings != VK_NULL_HANDLE && frame.stamps > 0 && profiling::enabled())
@@ -890,12 +875,13 @@ namespace rct3::render::vulkan
         if (frame.timings != VK_NULL_HANDLE)
             vkCmdResetQueryPool(frame.commands, frame.timings, 0, kMostStamps);
 
-        image_barrier(frame.commands, images_[image_index_], VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+        // The screen was last read by the previous frame's stretch.
+        image_barrier(frame.commands, screen_.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
         constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
         // The depth buffer is also written by the resolve of a multisampled depth, as colour output.
         constexpr VkPipelineStageFlags2 kDepthWriters = kDepthStages | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
         constexpr VkAccessFlags2 kDepthWrites = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-        image_barrier(frame.commands, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthWriters, kDepthWrites, kDepthWriters, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | kDepthWrites });
+        image_barrier(frame.commands, screen_.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthWriters, kDepthWrites, kDepthWriters, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | kDepthWrites });
         if (samples_ > 1)
         {
             image_barrier(frame.commands, multi_color_image_, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
@@ -903,6 +889,7 @@ namespace rct3::render::vulkan
         }
 
         frame_stats_ = { };
+        ui_drawn_ = false;
         state_ = State::InFrame;
     }
 
@@ -925,17 +912,17 @@ namespace rct3::render::vulkan
             constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
             image_barrier(cmd, pass_target_->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, kDepthStages, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT });
         }
-        const VkExtent2D area = pass_target_ != nullptr ? pass_target_->extent : extent_;
+        const VkExtent2D area = pass_target_ != nullptr ? pass_target_->extent : screen_.extent;
 
         VkRenderingAttachmentInfo color { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        color.imageView = pass_target_ != nullptr ? pass_target_->view : views_[image_index_];
+        color.imageView = pass_target_ != nullptr ? pass_target_->view : screen_.view;
         color.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         color.loadOp = pass.clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color.clearValue.color = { { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a } };
 
         VkRenderingAttachmentInfo depth { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        depth.imageView = pass_target_ != nullptr ? pass_target_->depth_view : depth_view_;
+        depth.imageView = pass_target_ != nullptr ? pass_target_->depth_view : screen_.depth_view;
         depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depth.loadOp = pass.clear || pass_target_ != nullptr ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         depth.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1061,23 +1048,20 @@ namespace rct3::render::vulkan
 
     VkRect2D VulkanDevice::screen_area() const
     {
+        const VkExtent2D screen = screen_.extent;
         if (!view())
-            return { { 0, 0 }, extent_ };
+            return { { 0, 0 }, screen };
         // Kept inside the screen, which may have shrunk since the view was set.
-        const std::uint32_t x = std::min(view()->x, extent_.width);
-        const std::uint32_t y = std::min(view()->y, extent_.height);
-        return { { static_cast<std::int32_t>(x), static_cast<std::int32_t>(y) }, { std::min(view()->size.width, extent_.width - x), std::min(view()->size.height, extent_.height - y) } };
+        const std::uint32_t x = std::min(view()->x, screen.width);
+        const std::uint32_t y = std::min(view()->y, screen.height);
+        return { { static_cast<std::int32_t>(x), static_cast<std::int32_t>(y) }, { std::min(view()->size.width, screen.width - x), std::min(view()->size.height, screen.height - y) } };
     }
 
     void VulkanDevice::draw_ui()
     {
         assert(state_ == State::InPass);
         ImGui::Render();
-        if (!ui_ready_)
-            return;
-        const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-        set_viewport(cmd, screen_area()); // ImGui leaves its own viewport behind
+        ui_drawn_ = ui_ready_;
     }
 
     void VulkanDevice::end_pass()
@@ -1104,14 +1088,14 @@ namespace rct3::render::vulkan
             return false;
         const Texture& t = found->second;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        const VkImage screen = images_[image_index_];
+        const VkImage screen = screen_.image;
         constexpr VkPipelineStageFlags2 kDepthStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
         constexpr VkAccessFlags2 kDepthAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         constexpr VkAccessFlags2 kColorAccess = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
         // Earlier reads of the target finish before it is written; the screen goes back to drawing afterwards.
         image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
         // Depth is written by drawing, or by the resolve of a multisampled depth as colour output.
-        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kDepthStages | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        image_barrier(cmd, screen_.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kDepthStages | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
         image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
         image_barrier(cmd, t.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
         VkImageCopy region { };
@@ -1121,9 +1105,9 @@ namespace rct3::render::vulkan
         region.extent = { extent().width, extent().height, 1 };
         vkCmdCopyImage(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
         region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        vkCmdCopyImage(cmd, depth_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vkCmdCopyImage(cmd, screen_.depth_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
         image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, kColorAccess });
-        image_barrier(cmd, depth_image_, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, kDepthStages, kDepthAccess });
+        image_barrier(cmd, screen_.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, kDepthStages, kDepthAccess });
         image_barrier(cmd, t.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         image_barrier(cmd, t.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         return true;
@@ -1144,7 +1128,7 @@ namespace rct3::render::vulkan
                 return false;
             target = &found->second;
         }
-        const VkExtent2D size = target != nullptr ? target->extent : extent_;
+        const VkExtent2D size = target != nullptr ? target->extent : extent_; // The window, as it shows
         try
         {
             reading_ = make_buffer(VkDeviceSize { size.width } * size.height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -1155,22 +1139,19 @@ namespace rct3::render::vulkan
             return false;
         }
         reading_extent_ = size;
+        if (target == nullptr)
+        {
+            reading_window_ = true; // Copied as the frame ends, once the screen is in the window
+            return true;
+        }
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         VkBufferImageCopy region { };
         region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
         region.imageExtent = { size.width, size.height, 1 };
-        if (target != nullptr)
-        {
-            // A target's pass left it ready for sampling; it goes back to that.
-            image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
-            vkCmdCopyImageToBuffer(cmd, target->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
-            image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
-            return true;
-        }
-        const VkImage screen = images_[image_index_];
-        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
-        vkCmdCopyImageToBuffer(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
-        image_barrier(cmd, screen, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+        // A target's pass left it ready for sampling; it goes back to that.
+        image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+        vkCmdCopyImageToBuffer(cmd, target->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+        image_barrier(cmd, target->image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
         return true;
     }
 
@@ -1183,7 +1164,51 @@ namespace rct3::render::vulkan
     {
         assert(state_ == State::InFrame);
         Frame& frame = frames_[frame_index_];
-        image_barrier(frame.commands, images_[image_index_], VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0 });
+        const VkCommandBuffer cmd = frame.commands;
+        const VkImage window = images_[image_index_];
+        // The screen stretched over the window through the brightness curve, then the developer windows on top.
+        image_barrier(cmd, screen_.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT });
+        image_barrier(cmd, window, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT });
+        VkRenderingAttachmentInfo color { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        color.imageView = views_[image_index_];
+        color.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // The triangle covers it all
+        color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
+        rendering.renderArea = { { 0, 0 }, extent_ };
+        rendering.layerCount = 1;
+        rendering.colorAttachmentCount = 1;
+        rendering.pColorAttachments = &color;
+        vkCmdBeginRendering(cmd, &rendering);
+        const VkViewport viewport { 0, 0, static_cast<float>(extent_.width), static_cast<float>(extent_.height), 0, 1 };
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &rendering.renderArea);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, present_pipeline_);
+        constexpr std::size_t kLinearClamp = static_cast<std::size_t>(Filter::Linear) * 2 + static_cast<std::size_t>(AddressMode::Clamp);
+        const std::array<VkDescriptorSet, 2> sets { screen_.set, sampler_sets_[kLinearClamp] };
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 2, sets.data(), 0, nullptr);
+        // Curve: each channel raised to a power, 1 at the middle setting, from 2 (darker) to 1/2 (lighter).
+        const glm::vec4 curve { std::exp2(1.0f - 2.0f * std::clamp(brightness_, 0.0f, 1.0f)), 0, 0, 0 };
+        vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof curve, &curve);
+        vkCmdDraw(cmd, 3, 1, 0, 0);
+        if (ui_drawn_)
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+        vkCmdEndRendering(cmd);
+        VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkAccessFlags2 access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        if (std::exchange(reading_window_, false))
+        {
+            image_barrier(cmd, window, VK_IMAGE_ASPECT_COLOR_BIT, { layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stage, access, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
+            VkBufferImageCopy region { };
+            region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            region.imageExtent = { reading_extent_.width, reading_extent_.height, 1 };
+            vkCmdCopyImageToBuffer(cmd, window, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+            layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            stage = VK_PIPELINE_STAGE_2_COPY_BIT;
+            access = 0;
+        }
+        image_barrier(cmd, window, VK_IMAGE_ASPECT_COLOR_BIT, { layout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, stage, access, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0 });
         check(vkEndCommandBuffer(frame.commands), "vkEndCommandBuffer");
 
         const VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;

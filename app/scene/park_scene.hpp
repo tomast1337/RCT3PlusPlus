@@ -599,6 +599,7 @@ namespace rct3::scene
 
     /// Each kind's detail and draw distance, from the graphics options.
     [[nodiscard]] park::LevelScales level_scales(const config::GameOptions& options);
+
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
 

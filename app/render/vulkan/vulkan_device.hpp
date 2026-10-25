@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The Vulkan backend. Needs Vulkan 1.3 (dynamic rendering, synchronization2). Two frames in flight, one
-// depth buffer, swapchain recreated when the window changes size. Buffers live in host-visible memory for
+// screen (colour and depth, at the render scale) stretched into the swapchain as each frame ends, swapchain
+// recreated when the window changes size. Buffers live in host-visible memory for
 // now; a staging path and an allocator come with bigger meshes. Textures are uploaded through a staging
 // buffer and the call waits for the copy, which suits loading but not streaming.
 #pragma once
@@ -38,7 +39,7 @@ namespace rct3::render::vulkan
         }
         [[nodiscard]] Extent screen_extent() const override
         {
-            return { extent_.width, extent_.height };
+            return { screen_.extent.width, screen_.extent.height };
         }
 
         [[nodiscard]] std::expected<BufferHandle, std::string> create_buffer(const BufferDesc& desc) override;
@@ -165,7 +166,9 @@ namespace rct3::render::vulkan
         void pick_device();
         void create_device();
         void create_swapchain();
-        void create_depth();
+        void create_screen();
+        void destroy_screen();
+        void create_present_pipeline();
         void create_frames();
         void create_pipeline_layout();
         void create_samplers();
@@ -212,18 +215,23 @@ namespace rct3::render::vulkan
         std::vector<VkImageView> views_;
         std::vector<VkSemaphore> render_finished_; // One per swapchain image
 
-        // What read_screen asked for: the screen copied into reading_ by the frame, read as the frame ends.
+        // What read_screen asked for: the screen copied into reading_ by the frame, read as the frame ends. For the
+        // whole screen, the window is copied once the screen is stretched into it.
         Buffer reading_;
+        bool reading_window_ = false;
         VkExtent2D reading_extent_ { };
         std::optional<ScreenPixels> read_; ///< Until taken
 
         static constexpr VkFormat kDepthFormat = VK_FORMAT_D32_SFLOAT;
-        VkImage depth_image_ = VK_NULL_HANDLE;
-        VkDeviceMemory depth_memory_ = VK_NULL_HANDLE;
-        VkImageView depth_view_ = VK_NULL_HANDLE;
+        // The screen the passes draw into: a target the window's size times the render scale, not in textures_.
+        // One serves both frames in flight: the barriers at the start of each frame order its writes after the
+        // previous frame's reads.
+        Texture screen_;
+        VkPipeline present_pipeline_ = VK_NULL_HANDLE;
+        bool ui_drawn_ = false; ///< draw_ui was called this frame
 
-        // With more than one sample, the screen's passes draw into these and resolve into the swapchain image and
-        // depth_view_ as each ends, so later passes and copy_screen find the screen as without.
+        // With more than one sample, the screen's passes draw into these and resolve into screen_ as each ends,
+        // so later passes and copy_screen find the screen as without.
         std::uint32_t samples_ = 1;
         std::uint32_t pass_samples_ = 1; ///< Of the open pass
         VkImage multi_color_image_ = VK_NULL_HANDLE;

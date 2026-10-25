@@ -63,6 +63,7 @@ namespace rct3::config
         // Graphics
         GraphicsQuality, ///< 0 to 4 from fastest to finest, 5 custom
         AntiAliasing,    ///< 0 none, then each level the device offers
+        RenderScale,     ///< Per cent of the window's pixels the game draws, stretched over the window
         Shadows,         ///< 0 none, 1 static, 2 dynamic
         BlendShadows,    ///< Shadows move smoothly between drawings from the sun, rather than step
         ShowDetailLevels,

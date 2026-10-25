@@ -64,6 +64,12 @@ namespace
     const std::uint32_t kShaftsFrag[] =
 #include "shafts.frag.inc"
         ;
+    const std::uint32_t kPresentVert[] =
+#include "present.vert.inc"
+        ;
+    const std::uint32_t kPresentFrag[] =
+#include "present.frag.inc"
+        ;
 
 } // namespace
 
@@ -306,7 +312,7 @@ namespace rct3::render::vulkan
             {
                 VkImageCreateInfo depth = image;
                 depth.format = kDepthFormat;
-                depth.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | (desc.readable_depth ? VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0);
+                depth.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | (desc.readable_depth ? VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0);
                 check(vkCreateImage(device_, &depth, nullptr, &t.depth_image), "vkCreateImage");
                 vkGetImageMemoryRequirements(device_, t.depth_image, &needs);
                 alloc.allocationSize = needs.size;
@@ -497,6 +503,62 @@ namespace rct3::render::vulkan
         const std::uint32_t id = next_id_++;
         pipelines_.emplace(id, std::move(made));
         return PipelineHandle { id };
+    }
+
+    // Draws into the window alone: one sample, no depth, no vertices (app/shaders/present.slang).
+    void VulkanDevice::create_present_pipeline()
+    {
+        const VkShaderModule vert = make_shader(device_, kPresentVert);
+        const VkShaderModule frag = make_shader(device_, kPresentFrag);
+        VkPipelineShaderStageCreateInfo stages[2] { };
+        stages[0] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+        stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        stages[0].module = vert;
+        stages[0].pName = "main";
+        stages[1] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+        stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        stages[1].module = frag;
+        stages[1].pName = "main";
+        const VkPipelineVertexInputStateCreateInfo vertex_input { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+        VkPipelineInputAssemblyStateCreateInfo assembly { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+        assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkPipelineViewportStateCreateInfo viewport { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+        viewport.viewportCount = 1;
+        viewport.scissorCount = 1;
+        VkPipelineRasterizationStateCreateInfo raster { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+        raster.polygonMode = VK_POLYGON_MODE_FILL;
+        raster.cullMode = VK_CULL_MODE_NONE;
+        raster.lineWidth = 1.0f;
+        VkPipelineMultisampleStateCreateInfo multisample { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+        multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        VkPipelineColorBlendAttachmentState attachment { };
+        attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        VkPipelineColorBlendStateCreateInfo blend { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+        blend.attachmentCount = 1;
+        blend.pAttachments = &attachment;
+        const VkDynamicState dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamic { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+        dynamic.dynamicStateCount = 2;
+        dynamic.pDynamicStates = dynamic_states;
+        VkPipelineRenderingCreateInfo rendering { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+        rendering.colorAttachmentCount = 1;
+        rendering.pColorAttachmentFormats = &color_format_;
+        VkGraphicsPipelineCreateInfo info { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+        info.pNext = &rendering;
+        info.stageCount = 2;
+        info.pStages = stages;
+        info.pVertexInputState = &vertex_input;
+        info.pInputAssemblyState = &assembly;
+        info.pViewportState = &viewport;
+        info.pRasterizationState = &raster;
+        info.pMultisampleState = &multisample;
+        info.pColorBlendState = &blend;
+        info.pDynamicState = &dynamic;
+        info.layout = pipeline_layout_;
+        const VkResult made = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &info, nullptr, &present_pipeline_);
+        vkDestroyShaderModule(device_, vert, nullptr);
+        vkDestroyShaderModule(device_, frag, nullptr);
+        check(made, "vkCreateGraphicsPipelines");
     }
 
     std::pair<VkPipeline, VkPipeline> VulkanDevice::build_pipeline(const PipelineDesc& desc, VkSampleCountFlagBits samples)

@@ -12,6 +12,6 @@ TEST_CASE("the options nothing reads yet are the ones not acted on")
     CHECK_FALSE(inert.test(static_cast<std::size_t>(GameOption::Fullscreen)));
     CHECK_FALSE(inert.test(static_cast<std::size_t>(GameOption::MusicVolume)));
     CHECK_FALSE(inert.test(static_cast<std::size_t>(GameOption::Refraction)));
-    CHECK(inert.test(static_cast<std::size_t>(GameOption::Brightness)));
+    CHECK(inert.test(static_cast<std::size_t>(GameOption::AnimalDetail)));
     CHECK_FALSE(inert.test(static_cast<std::size_t>(GameOption::Bloom)));
 }

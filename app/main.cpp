@@ -1027,6 +1027,9 @@ int main(int argc, char** argv)
                 p.inside = true;
                 return p;
             }
+            // From the window's pixels to the screen's, which the render scale makes fewer or more.
+            p.x *= device->render_scale();
+            p.y *= device->render_scale();
             if (const auto& v = device->view())
             {
                 p.x -= static_cast<float>(v->x);
@@ -1122,7 +1125,8 @@ int main(int argc, char** argv)
                     {
                         const prof::Scope zone("DeveloperWindows");
                         const render::ScreenView view = dock_developer_windows();
-                        device->set_view(view);
+                        const auto scaled = [&](std::uint32_t n) { return static_cast<std::uint32_t>(std::lround(static_cast<float>(n) * device->render_scale())); };
+                        device->set_view(render::ScreenView { scaled(view.x), scaled(view.y), { scaled(view.size.width), scaled(view.size.height) } });
                         developer_window("Profiler", [&] { draw_profiler(*device); });
                         developer_window("Log", draw_log);
                         if (park)
@@ -1244,6 +1248,8 @@ int main(int argc, char** argv)
                     {
                         const auto level = static_cast<std::size_t>(front->live->options.choice(config::GameOption::AntiAliasing));
                         device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
+                        device->set_render_scale(front->live->options.get(config::GameOption::RenderScale) / 100);
+                        device->set_brightness(front->live->options.get(config::GameOption::Brightness));
                     }
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
                     if (phase == Phase::Intro)

@@ -33,7 +33,7 @@ namespace rct3::scene
 
         float scale_for(const render::Device& device, const FrontEndScene& scene)
         {
-            return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale);
+            return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale, device.render_scale());
         }
 
     } // namespace

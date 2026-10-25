@@ -51,3 +51,22 @@ TEST_CASE("guests bring cash and bank around the park's averages, or the tuning'
         CHECK(sum / static_cast<double>(count) == doctest::Approx(static_cast<double>(cash.value)).epsilon(0.05));
     }
 }
+
+TEST_CASE("a cash machine gives a guest no more than their bank has left, and nothing once it is empty")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto machine = park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
+    const auto g = park.guest({ 0, 0 }, { .cash = 100, .bank = 2000 });
+    auto& r = park.world().registry;
+    CHECK(park.run_until([&] { return r.get<Wallet>(g).cash.value > 100; }, 60));
+    const Wallet& w = r.get<Wallet>(g);
+    CHECK(w.cash.value == 2100);
+    CHECK(w.bank.value == 0);
+    CHECK(w.withdrawn.value == 2000);
+    // Spent down again, they have nothing more to draw.
+    r.get<Wallet>(g).cash.value = 100;
+    park.run_seconds(120);
+    CHECK(r.get<Attraction>(machine).customers == 1);
+    CHECK(r.get<Wallet>(g).cash.value == 100);
+}

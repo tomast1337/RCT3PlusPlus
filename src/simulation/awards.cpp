@@ -175,7 +175,7 @@ namespace rct3::simulation
             for (const save::Station& station : stations)
                 if (!spot && station.entrance_spot)
                     spot = station.entrance_spot;
-            if (!spot)
+            if (!spot || base.demolished)
                 return;
             const auto theme = theme_of.find(key(base.overlay_path));
             attractions.push_back({ static_cast<float>(spot->col), static_cast<float>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object });

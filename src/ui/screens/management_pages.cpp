@@ -579,7 +579,7 @@ namespace rct3::ui
             {
                 const save::Ride& r = f.rides->rides[i];
                 const bool facility = r.kind == save::RideKind::Special;
-                if ((tab == AttractionListTab::Rides && facility) || (tab == AttractionListTab::Facilities && !facility) || tab == AttractionListTab::Stalls)
+                if ((tab == AttractionListTab::Rides && facility) || (tab == AttractionListTab::Facilities && !facility) || tab == AttractionListTab::Stalls || r.base.demolished)
                     continue;
                 TableRow row = common_row(r.base, { ManagementRow::Kind::Ride, i });
                 if (rides)
@@ -609,6 +609,8 @@ namespace rct3::ui
                 return;
             for (std::size_t i = 0; i < f.rides->stalls.size(); ++i)
             {
+                if (f.rides->stalls[i].base.demolished)
+                    continue;
                 TableRow row = common_row(f.rides->stalls[i].base, { ManagementRow::Kind::Stall, i });
                 others(row, f.rides->stalls[i].base);
                 page.rows.push_back(std::move(row));

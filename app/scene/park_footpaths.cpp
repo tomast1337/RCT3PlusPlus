@@ -315,7 +315,7 @@ namespace rct3::scene
         std::vector<std::pair<save::PathTile, std::uint64_t>> doors; // The door's tile, as path, and the path joining it
         for (const save::Ride& ride : scene.rides.rides)
         {
-            for (const save::Station& station : ride.stations)
+            for (const save::Station& station : ride.base.demolished ? std::span<const save::Station> { } : std::span(ride.stations))
             {
                 for (const auto& door : { station.entrance_spot, station.exit_spot })
                 {

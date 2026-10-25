@@ -197,7 +197,7 @@ namespace rct3::scene
         {
             RidePlacing& p = scene.placing;
             std::erase_if(p.unjoined, [&](std::size_t i) {
-                if (i >= scene.rides.rides.size())
+                if (i >= scene.rides.rides.size() || scene.rides.rides[i].base.demolished)
                     return true;
                 save::Ride& ride = scene.rides.rides[i];
                 // A tracked ride runs its train round the course it was built with.
@@ -241,7 +241,7 @@ namespace rct3::scene
             });
             // A stall serves from the path on the tile it faces.
             std::erase_if(p.unjoined_stalls, [&](std::size_t i) {
-                if (i >= scene.rides.stalls.size())
+                if (i >= scene.rides.stalls.size() || scene.rides.stalls[i].base.demolished)
                     return true;
                 save::RideModel one;
                 one.stalls.push_back(scene.rides.stalls[i]);
@@ -741,6 +741,7 @@ namespace rct3::scene
                 stall.base.name = park::numbered_name(scene.rides.stalls, stall.base.symbol);
                 // Built closed: the game sets no state when a stall goes down, so it opens from its window.
                 stall.base.state = save::AttractionState::Closed;
+                stall.base.flags = save::AttractionCommon::kNeverOpened;
                 stall.base.placement = object;
                 stall.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
                 // It serves the tile it faces.
@@ -772,6 +773,7 @@ namespace rct3::scene
             ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
             // Built closed, as in the game: the player tests it and opens it from its window.
             ride.base.state = save::AttractionState::Closed;
+            ride.base.flags = save::AttractionCommon::kNeverOpened;
             // A show ride knows the tricks the game's main file names for its kind (each has a picture there,
             // "<trick>Skin"), and puts on the first two after its idle until its window changes
             // them.

@@ -127,7 +127,7 @@ namespace rct3::scene
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::Ride& ride = scene.rides.rides[r];
-                if (q.hidden.contains(ride.base.id))
+                if (q.hidden.contains(ride.base.id) || ride.base.demolished)
                     continue;
                 for (const save::Station& station : ride.stations)
                 {

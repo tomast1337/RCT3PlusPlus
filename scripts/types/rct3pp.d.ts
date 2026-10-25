@@ -246,6 +246,8 @@ interface RideInfo {
     site: Spot | null;
     entrance: Spot | null;
     exit: Spot | null;
+    /** Whether it was pulled down; it keeps its place in the list. */
+    demolished: boolean;
     /** Whether the simulation runs it. The rest are there only when it does. */
     joined: boolean;
     customers?: number;
@@ -295,6 +297,8 @@ interface StallInfo {
     sync: boolean;
     /** Whether the info panel shows it. */
     shown: boolean;
+    /** Whether it was pulled down; it keeps its place in the list. */
+    demolished: boolean;
     /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
      * it does: the price it sells at, in hundredths, and whether it is open to guests there. */
     joined: boolean;

@@ -73,7 +73,7 @@ namespace rct3::simulation
         for (const save::Ride& ride : rides.rides)
         {
             // Only rides guests ride; facilities and exhibits never count.
-            if (ride.kind == save::RideKind::Special)
+            if (ride.kind == save::RideKind::Special || ride.base.demolished)
                 continue;
             RideRatingInput r;
             r.downtime_percent = ride.breakdown.downtime_percent();

@@ -84,6 +84,10 @@ namespace rct3::simulation
     /// quick and dear way; a handyman mends one for nothing, given time.
     void replace_broken(SimWorld& world);
 
+    /// Takes the ride or shop `attraction` out of the park: its queue walks off from its entrance, its riders
+    /// from its exit, and those on their way to it or waiting for it go on to something else.
+    void pull_down(SimWorld& world, entt::entity attraction);
+
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has
     /// no patrol, as they walk the whole park, or when there is no one in the role.
     [[nodiscard]] std::size_t uncovered_paths(const SimWorld& world, StaffRole role);

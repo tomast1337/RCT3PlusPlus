@@ -1234,6 +1234,17 @@ namespace rct3::scene
         return std::nullopt;
     }
 
+    std::int64_t track_cost(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets)
+    {
+        const auto overlay = ride_track_overlay(scene, ride);
+        const auto c = overlay ? load_catalogue(scene.building, *overlay, assets) : std::nullopt;
+        std::int64_t cost = 0;
+        for (const save::TrackPiece& piece : c ? scene.rides.rides[ride].track->pieces : std::vector<save::TrackPiece> { })
+            if (const auto shape = park::shape_named(*c, piece.symbol))
+                cost += shape->record.cost;
+        return cost;
+    }
+
     bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)
     {
         save::Ride& ride = scene.rides.rides[index];
@@ -1343,6 +1354,7 @@ namespace rct3::scene
         ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
+        ride.base.flags = save::AttractionCommon::kNeverOpened;
         ride.track.emplace().segments.resize(1);
         // One train of the first the ride's file lists, seated as its car models are; its window changes them
         // until it opens.

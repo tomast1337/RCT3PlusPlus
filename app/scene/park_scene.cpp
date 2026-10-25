@@ -8,6 +8,7 @@
 #include "ovl/overlay.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
+#include "park/demolish_refund.hpp"
 #include "park/edge_walls.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
@@ -737,6 +738,81 @@ namespace rct3::scene
                 wall_changed(device, scene, assets, *wall, false);
         }
 
+    } // namespace
+
+    void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, park::AttractionRef ref)
+    {
+        save::AttractionCommon* base = attraction_common(scene, ref);
+        if (base == nullptr || base->demolished)
+            return;
+        const bool ride = ref.kind == park::AttractionRef::Kind::Ride;
+        if (ride && scene.building.ride == ref.index)
+            close_track_building(scene);
+        stop_ride_placing(scene);
+        wait_for_build(scene);
+        // shortcut: a flat ride or a stall gives back its item's price by the tracked rides' rule; use what its
+        // kind's data says it is worth once that is read.
+        const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::PlacedObject::id) : scene.objects.end();
+        const auto model = main != scene.objects.end() ? scene.models.find(park::model_ref(*main)) : scene.models.end();
+        const bool tracked = ride && scene.rides.rides[ref.index].kind == save::RideKind::Tracked;
+        const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
+        const std::int64_t back = park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
+        // Its fence, which the park built round it, goes with it.
+        std::vector<save::PlacedObject> fence = ride ? park::ride_fences(scene.rides.rides[ref.index], model != scene.models.end() ? &model->second : nullptr, 0) : std::vector<save::PlacedObject> { };
+        std::set<std::uint64_t> parts;
+        for (const auto& [id, owner] : scene.attractions)
+            if (owner == ref)
+                parts.insert(id);
+        if (ride && scene.rides.rides[ref.index].track)
+            for (const save::TrackPiece& piece : scene.rides.rides[ref.index].track->pieces)
+                if (piece.platform)
+                    parts.insert(piece.platform->id);
+        std::optional<glm::vec3> at;
+        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        {
+            save::PlacedObject& o = scene.objects[i];
+            const bool fenced = o.fixture && std::ranges::any_of(fence, [&](const save::PlacedObject& f) { return o.symbol == f.symbol && o.overlay == f.overlay && o.col == f.col && o.row == f.row && o.rotation == f.rotation && o.base_height == f.base_height; });
+            if (o.hidden || !(parts.contains(o.id) || parts.contains(o.owner_ref) || fenced))
+                continue;
+            o.hidden = true;
+            at = at.value_or(tile_point(scene.grid, { o.col, o.row }));
+            std::erase_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object == i; });
+        }
+        for (const std::uint64_t id : parts)
+            scene.attractions.erase(id);
+        for (const auto [e, a] : scene.sim.registry.view<const simulation::Attraction>().each())
+            if (a.saved == base->id)
+            {
+                scene.ride_cars.erase(e);
+                scene.ride_seats.erase(e);
+                simulation::pull_down(scene.sim, e);
+                break;
+            }
+        if (ride && ref.index < scene.ride_entities.size())
+            scene.ride_entities[ref.index] = entt::null;
+        base->state = save::AttractionState::Closed;
+        base->demolished = true;
+        if (scene.park.cash)
+            *scene.park.cash += back;
+        if (at)
+            float_money(scene, *at, back);
+        if (scene.shown == ref)
+        {
+            scene.shown.reset();
+            if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName))
+                info->hide();
+        }
+        logging::logger("park").info("demolished {}, {} back", base->name, back);
+        scene.led_signs.stale = true;
+        scene.levels = { };
+        scene.since_rebuild = kObjectRebuildInterval;
+        scene.supports.stale = true;
+        objects_changed(scene);
+    }
+
+    namespace
+    {
+
         /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
         void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
         {
@@ -748,7 +824,7 @@ namespace rct3::scene
         std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, park::RideEye eye)
         {
             std::vector<std::size_t> seats;
-            for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size(); ++i)
+            for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size() && !scene.rides.rides.at(ride).base.demolished; ++i)
                 if (scene.car_spots[i].ride == ride && ride_eye(scene, i, eye))
                     seats.push_back(i);
             return seats;
@@ -821,7 +897,7 @@ namespace rct3::scene
         {
             std::vector<std::size_t> rides;
             for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                if (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0))
+                if (!scene.rides.rides[ride].base.demolished && (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0)))
                     rides.push_back(ride);
             return rides;
         }
@@ -1522,6 +1598,8 @@ namespace rct3::scene
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state)
     {
         attraction.state = state;
+        if (state == save::AttractionState::Open)
+            attraction.flags &= ~save::AttractionCommon::kNeverOpened;
         for (auto [_, a] : scene.sim.registry.view<simulation::Attraction>().each())
             if (a.saved == attraction.id)
             {
@@ -1985,7 +2063,8 @@ namespace rct3::scene
                 simulation::count_takings(scene.takings, scene.park.time, rides_taken, shops_taken);
                 std::vector<simulation::GoalRide> goal_rides;
                 for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
-                    goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
+                    if (!scene.rides.rides[i].base.demolished)
+                        goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
                 // shortcut: the park's value stays as saved, as the simulation does not value the park yet; work it out once it does.
                 const simulation::ParkFigures figures {
                     .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
@@ -2067,6 +2146,8 @@ namespace rct3::scene
                     f.food_kinds = static_cast<std::int32_t>(foods.size());
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
+                        if (scene.rides.rides[i].base.demolished)
+                            continue;
                         const save::Assessment& a = scene.rides.rides[i].assessment;
                         f.thrilling += a.valid && a.excitement > 5 && a.intensity > 5 ? 1 : 0;
                         const simulation::RideGroup group = i < scene.ride_groups.size() ? scene.ride_groups[i] : simulation::RideGroup::Other;
@@ -2646,7 +2727,11 @@ namespace rct3::scene
     {
         parkfile::SavedPark saved;
         saved.base = scene.base;
-        saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.placed, scene.footpaths.paths, scene.rides);
+        saved.rides = scene.rides;
+        // What was pulled down only keeps its place while the park is shown.
+        std::erase_if(saved.rides.rides, [](const save::Ride& r) { return r.base.demolished; });
+        std::erase_if(saved.rides.stalls, [](const save::Stall& s) { return s.base.demolished; });
+        saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.placed, scene.footpaths.paths, saved.rides);
         if (auto summary = save::read_summary(scene.base))
             saved.summary = std::move(*summary);
         // shortcut: the picture stays the original park's and the day is the week's first; draw the park and
@@ -2660,7 +2745,6 @@ namespace rct3::scene
         saved.paths = scene.footpaths.paths;
         saved.bins = scene.bins;
         saved.signs = scene.signs;
-        saved.rides = scene.rides;
         const simulation::ParkState& park = scene.park;
         saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time };
         saved.camera = scene.camera;
@@ -2673,6 +2757,8 @@ namespace rct3::scene
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
+        if (saved.shows)
+            std::erase_if(*saved.shows, [&](const save::RideShow& show) { return !std::ranges::contains(saved.rides.rides, show.ride, [](const save::Ride& r) { return r.base.id; }); });
         saved.waterfalls = scene.footpaths.waterfalls;
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)

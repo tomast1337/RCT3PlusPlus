@@ -483,6 +483,7 @@ namespace rct3::save
         ObjectId stall = 0;     ///< Back reference as stored
         ObjectId sale_item = 0; ///< Sale prototype object, 0 if none
         RideColours colours { };
+        std::uint32_t extras = 0; ///< Bit i: the i'th extra its kind can take goes on it
     };
 
     struct StallExtra

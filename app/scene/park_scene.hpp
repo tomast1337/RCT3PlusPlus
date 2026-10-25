@@ -457,6 +457,8 @@ namespace rct3::scene
         bool info_tracked = false;         ///< Whether info_tab is the tracked rides' one
         std::size_t info_section = 0;      ///< Of the open tab's page
         std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
+        park::CarriedKinds carried;        ///< What stalls sell and its extras, read when a stall's window first opens
+        bool carried_read = false;
         /// The tune each ride plays, by ride id, as ui::AttractionFacts::tune; none for no music.
         /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
         /// ride music is read from and written to saves.

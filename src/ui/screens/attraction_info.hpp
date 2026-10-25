@@ -11,6 +11,7 @@
 // and colours) comes as the page's controls.
 #pragma once
 
+#include "park/carried_goods.hpp"
 #include "save/model/design.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -173,6 +174,9 @@ namespace rct3::ui
         std::uint8_t graph_series = kSpeedOnly;
         /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`.
         std::vector<std::string> offers { };
+        /// The carried items and extras the install has, for their names, pictures and extras.
+        std::span<const park::CarriedKind> carried { };
+        std::span<const park::CarriedKind> carried_extras { };
     };
 
     struct GuestsSuited
@@ -185,7 +189,7 @@ namespace rct3::ui
     [[nodiscard]] GuestsSuited guests_suited(float intensity, std::span<const save::Guest> guests);
 
     /// Ids of the controls on an attraction's pages (InfoControl::id).
-    enum class AttractionControl : std::uint8_t
+    enum class AttractionControl : std::uint16_t
     {
         Price,          ///< A ride's admission, in hundredths
         Colours,        ///< Its pots
@@ -232,6 +236,10 @@ namespace rct3::ui
         ItemRemove = 96,  ///< Takes an item off the menu
         ItemAdd = 128,    ///< Puts one of AttractionFacts::offers on it, by place there
         ExtraLevel = 160, ///< How much of an extra goes on, by place in the setting list
+        ItemMove = 192,   ///< Moves an item to another place on the menu, the place as the value
+        ItemExtras = 224, ///< Which of an item's extras go on it, a bit each in its own order
+        ItemName = 256,   ///< An item's new name, as typed
+        ItemColour = 288, ///< An item's colour
     };
     inline constexpr std::size_t kMostListed = 32;
 
@@ -269,6 +277,9 @@ namespace rct3::ui
     inline constexpr int kPriceStep = 10;
     /// A stall item's price goes up to the most a ride's admission does, in smaller steps.
     inline constexpr int kItemPriceStep = 5;
+    /// The size of a stall's menu on its items page: our own width, and all the strip's height.
+    inline constexpr float kMenuWidth = 380;
+    inline constexpr float kMenuHeight = info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom;
 
     /// Speeds as the player reads them: so many of their unit to a metre a second, and the unit after a number.
     [[nodiscard]] float speed_scale(DistanceUnits units);

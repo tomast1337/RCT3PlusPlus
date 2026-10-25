@@ -181,6 +181,9 @@ namespace rct3::ui
     {
         if (painting_page_)
             close_palette();
+        // A menu shown again keeps where it was scrolled to.
+        const float scrolled = menu_ != nullptr ? menu_->scrolled() : 0;
+        menu_ = nullptr;
         controls_.clear();
         while (!body_->children().empty())
             (void)body_->remove(*body_->children().back());
@@ -416,6 +419,22 @@ namespace rct3::ui
         y = std::max(bottom[0], bottom[1]);
         if (split < page.lines.size())
             lines(split, page.lines.size());
+        if (page.menu)
+        {
+            menu_ = &body_->add<StallMenu>("StallMenu", style_.menu, *page.menu);
+            menu_->placement = top_left(0, y, page.width > 0 ? page.width : info_panel::kPageWidth, page.menu_height);
+            menu_->scroll_to(scrolled);
+            y += page.menu_height;
+            // Its pots open the colours as the page's own do.
+            for (const auto& [line, pots] : menu_->pots())
+            {
+                InfoControl c;
+                c.id = page.menu->ids[std::to_underlying(MenuAction::Colour)] + static_cast<int>(line);
+                c.kind = InfoControlKind::Paint;
+                c.paints = pots->colours;
+                controls_.emplace_back(std::move(c), pots);
+            }
+        }
         page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;
         place_page(std::nullopt);
         // An empty page has no strip.
@@ -437,7 +456,8 @@ namespace rct3::ui
         std::array<float, 2> aligned { halves ? 0.0f : info_panel::kValueColumn, 0.0f };
         for (const ValueRow& r : value_rows_)
             aligned[0] = std::max(aligned[0], needs(r.label->text));
-        for (std::size_t i = 0; i < controls_.size(); ++i)
+        // The menu's pots, after the page's controls, are its own to place.
+        for (std::size_t i = 0; i < control_rows_.size(); ++i)
             if (starts_row(controls_[i].first))
                 aligned[control_rows_[i].column] = std::max(aligned[control_rows_[i].column], needs(controls_[i].first.label));
         for (const ValueRow& r : value_rows_)
@@ -455,7 +475,7 @@ namespace rct3::ui
             r.filled->placement.offsets.x1 = aligned[0] + std::round(info_panel::kBarWidth * r.fill);
         }
         float x = 0;
-        for (std::size_t i = 0; i < controls_.size(); ++i)
+        for (std::size_t i = 0; i < control_rows_.size(); ++i)
         {
             const auto& [c, w] = controls_[i];
             const ControlRow& row = control_rows_[i];
@@ -521,6 +541,11 @@ namespace rct3::ui
 
     void InfoPanel::read_controls()
     {
+        if (menu_ != nullptr)
+        {
+            if (auto e = menu_->take_event())
+                change_now_ = InfoChange { menu_->view().ids[std::to_underlying(e->action)] + static_cast<int>(e->index), e->value, 0, std::move(e->text) };
+        }
         for (std::size_t i = 0; i < controls_.size(); ++i)
         {
             auto& [c, w] = controls_[i];

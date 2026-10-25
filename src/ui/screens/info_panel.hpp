@@ -12,6 +12,7 @@
 
 #include "core/maybe.hpp"
 #include "ui/panel_look.hpp"
+#include "ui/screens/stall_menu.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/colour_palette.hpp"
 #include "ui/widgets/dropdown.hpp"
@@ -76,6 +77,7 @@ namespace rct3::ui
         std::size_t palette_count = 32;
         std::size_t palette_columns = 8;
         SpinnerStyle spinner;   ///< Of a page's number controls
+        StallMenuStyle menu;    ///< Of a stall's menu
         DropdownStyle dropdown; ///< Of its lists
         std::string tick_box;   ///< Of its ticks
         std::string tick;
@@ -266,6 +268,9 @@ namespace rct3::ui
         std::vector<InfoControl> controls;             ///< Under the note
         std::optional<std::size_t> controls_after { }; ///< How many lines go over the controls; all when empty
         float width = 0;                               ///< Of the page; 0 for info_panel::kPageWidth
+        /// A stall's menu, under the controls; its changes come as the controls' do, by StallMenuView::ids.
+        std::optional<StallMenuView> menu { };
+        float menu_height = 0;
     };
 
     /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search
@@ -452,6 +457,7 @@ namespace rct3::ui
         std::vector<std::pair<InfoControl, Widget*>> controls_;
         std::optional<std::size_t> painting_page_;
         std::optional<InfoChange> change_now_;
+        StallMenu* menu_ = nullptr;
         float since_view_press_ = info_panel::kDoubleClickSeconds; ///< Since the round view was last pressed
         bool view_double_ = false;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;

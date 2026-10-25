@@ -256,8 +256,9 @@ interface StallInfo {
     overlay: string;
     site: Spot | null;
     open: boolean;
-    /** What it sells: each item's symbol with its tag, as "Burger:cid", and its price in hundredths. */
-    items: { item: string; price: number }[];
+    /** What it sells, in its menu's order: each item's symbol with its tag, as "Burger:cid", its price in
+     *  hundredths, its name as kept ("%ME%" for the item's own) and which of its extras go on, a bit each. */
+    items: { item: string; price: number; name: string; extras: number }[];
     /** How much of each extra it puts on: 0 none up to 4 loads, 5 as the guest picks. */
     extras: { extra: string; level: number }[];
     /** Whether changes to its menu go to every stall of its kind. */

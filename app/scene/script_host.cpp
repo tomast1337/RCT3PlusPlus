@@ -451,7 +451,7 @@ namespace rct3::scene
                 const save::Stall& stall = park.rides.stalls[i];
                 Json items = Json::array();
                 for (const save::StallItem& item : stall.items)
-                    items.push_back({ { "item", item.kind_symbol }, { "price", item.price } });
+                    items.push_back({ { "item", item.kind_symbol }, { "price", item.price }, { "name", item.name }, { "extras", item.extras } });
                 Json extras = Json::array();
                 for (const save::StallExtra& extra : stall.extras)
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });

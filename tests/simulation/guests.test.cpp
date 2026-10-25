@@ -151,7 +151,7 @@ TEST_CASE("children walk slower than grown-ups, and every step is counted toward
     park.run_seconds(5);
     const Pose& pose = r.get<Pose>(adult);
     CHECK(pose.walked.value > 0);
-    CHECK(pose.walked.value <= 5 * r.get<Stride>(adult).speed.value + 0.01f);
+    CHECK(pose.walked.value <= 5 * r.get<Stride>(adult).speed.value + kTuning.walking.personal_space.value); // And stepping clear of the child
 }
 
 TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for them to reach the front")
@@ -488,6 +488,33 @@ TEST_CASE("two strangers walking into each other step aside and pass")
     }
     CHECK(closest > 0.3f);
     CHECK(r.get<Pose>(a).position.x > r.get<Pose>(b).position.x); // Past each other
+}
+
+TEST_CASE("two people kept close in one cell are pushed apart every second tick")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto a = park.guest({ 0, 0 });
+    const auto b = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    const NodeId west = r.get<Stride>(a).from;
+    const NodeId east = r.get<Stride>(b).from;
+    // Standing either side of the middle of one cell, nearer than the space each keeps, put back every tick.
+    const float space = kTuning.walking.personal_space.value;
+    const glm::vec3 centre = park.world().paths.centre(west);
+    const glm::vec2 middle = (glm::floor(glm::vec2 { centre.x, centre.z } / space) + 0.5f) * space - glm::vec2 { centre.x, centre.z };
+    const auto stand = [&](glm::vec2 lane) { return Stride { .from = west, .to = east, .progress = 0, .speed = 0, .lane_from = lane, .lane_to = lane }; };
+    std::vector<bool> pushed;
+    for (int t = 0; t < 6; ++t)
+    {
+        r.get<Stride>(a) = stand(middle - glm::vec2 { 0.2f, 0 });
+        r.get<Stride>(b) = stand(middle + glm::vec2 { 0.2f, 0 });
+        park.run(1);
+        pushed.push_back(r.get<Stride>(a).lane_from != middle - glm::vec2 { 0.2f, 0 });
+        CHECK(pushed.back() == (r.get<Stride>(b).lane_from != middle + glm::vec2 { 0.2f, 0 })); // One cell, so the same ticks
+    }
+    for (std::size_t t = 1; t < pushed.size(); ++t)
+        CHECK(pushed[t] != pushed[t - 1]);
 }
 
 TEST_CASE("between steps a pose is drawn part way, turning the short way round")

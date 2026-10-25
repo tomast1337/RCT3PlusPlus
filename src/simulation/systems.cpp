@@ -1697,7 +1697,10 @@ namespace rct3::simulation
         // People walking the paths near one another step apart, a little at a time, and keep to the right so two
         // meeting head on go round each other. Only those in the same or a neighbouring cell of a grid as fine as
         // the space each keeps are compared. Those sitting, watching, showing how they feel or standing with their
-        // party stand still.
+        // party stand still. The grid is a checkerboard: each tick only those in cells of one colour step, twice as
+        // far, so half the searching is done for the same push (one crossing into the other colour may step twice running or
+        // miss two, which evens out). Each reads the others where they stood before
+        // anyone stepped and moves only themselves, so any split of the people can step at once.
         if (!paths.nodes().empty())
         {
             const float space = kTuning.walking.personal_space.value;
@@ -1716,12 +1719,15 @@ namespace rct3::simulation
             }
             std::ranges::sort(bodies, [](const auto& a, const auto& b) { return std::tie(a.cell, a.who) < std::tie(b.cell, b.who); });
             steps.assign(bodies.size(), glm::vec2 { 0.0f });
-            const float most = kTuning.walking.step_aside.value * dt;
+            const float most = 2 * kTuning.walking.step_aside.value * dt; // Every second tick
+            const int colour = static_cast<int>(world.tick % 2);
             share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
                 for (std::size_t i = begin; i < end; ++i)
                 {
                     const auto& me = bodies[i];
                     const glm::ivec2 cell { glm::floor(glm::vec2(me.at.x, me.at.z) / space) };
+                    if (((cell.x + cell.y) & 1) != colour)
+                        continue;
                     glm::vec2 away { 0.0f };
                     for (int dc = -1; dc <= 1; ++dc)
                     {

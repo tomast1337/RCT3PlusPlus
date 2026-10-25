@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstdio>
 #include <format>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -69,6 +70,22 @@ namespace rct3::ui
         info.slideshow = std::format("{}/{}Scenario{}", kSlideshow, pack_folder(strings, pack), number);
         info.file_part = strings::to_utf8(strings.get(std::format("{}_Filename", i)));
         return info;
+    }
+
+    std::u16string locked_design_help(const StringTable& strings, std::int32_t scenario, std::int32_t level)
+    {
+        std::u16string help(strings.get("TrackBrowser_LockedHelp"));
+        const auto ids = career_scenario_ids(strings, 0);
+        const auto index = static_cast<std::size_t>(scenario);
+        const std::u16string title = scenario >= 0 && index < ids.size() ? career_scenario(strings, 0, index, ids[index]).title : std::u16string { };
+        constexpr std::array<std::string_view, 3> kLevels = { "Difficulty_Apprentice", "Difficulty_Entrepreneur", "Difficulty_Tycoon" };
+        const std::u16string reach(level >= 0 && level < static_cast<std::int32_t>(kLevels.size()) ? strings.get(kLevels[static_cast<std::size_t>(level)]) : std::u16string_view { });
+        for (const auto& [mark, value] : { std::pair { std::u16string_view(u"%SCENARIO%"), &title }, std::pair { std::u16string_view(u"%LEVEL%"), &reach } })
+        {
+            for (std::size_t at = help.find(mark); at != std::u16string::npos; at = help.find(mark, at + value->size()))
+                help.replace(at, mark.size(), *value);
+        }
+        return help;
     }
 
     std::string career_park_folder(const StringTable& strings, int pack)

@@ -54,3 +54,15 @@ TEST_CASE("a scenario's park is the first file whose name holds its part, ignori
     CHECK_FALSE(find_career_park(files, "Lake"));
     CHECK_FALSE(find_career_park(files, ""));
 }
+
+TEST_CASE("a locked design's help names the scenario and the level that open it")
+{
+    StringTable strings;
+    strings.add("TrackBrowser_LockedHelp", u"Reach %LEVEL% in %SCENARIO%.");
+    strings.add("Scenario01_Lookup", u"Meadow");
+    strings.add("Scenario02_Lookup", u"Canyon");
+    strings.add("ScenarioCanyon_Title", u"Red Canyon");
+    strings.add("Difficulty_Entrepreneur", u"Entrepreneur");
+    CHECK(locked_design_help(strings, 1, 1) == u"Reach Entrepreneur in Red Canyon.");
+    CHECK(locked_design_help(strings, 5, 7) == u"Reach  in .");
+}

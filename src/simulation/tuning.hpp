@@ -73,7 +73,7 @@ namespace rct3::simulation::tuning
     struct Facilities
     {
         Money low_cash { 500 };  ///< A guest with less goes to a cash machine
-        Money withdraw { 5000 }; ///< A guest draws from one
+        Money withdraw { 5000 }; ///< A guest draws from one, up to what their bank has left
         Share tired { 0.45f };   ///< Energy below which a guest sits down on a bench they pass
         Chance sit_chance { 0.5 };
         Seconds sit { 30 };

@@ -142,7 +142,7 @@ namespace rct3::simulation
                 { hot, Product::Food, true },
                 { needs.bladder.value, Product::Toilet },
                 { mood.nausea.value, Product::FirstAid },
-                { wallet.cash.value < kTuning.facilities.low_cash.value ? 1.0f : 0.0f, Product::CashMachine },
+                { wallet.cash.value < kTuning.facilities.low_cash.value && wallet.bank.value > 0 ? 1.0f : 0.0f, Product::CashMachine },
             } };
             std::ranges::stable_sort(wants, std::greater { }, &Want::need);
             const Serve suits = hot >= kTuning.needs.want.value || temperature >= kTuning.weather.hot.value ? Serve::Cold : temperature < kTuning.weather.cold.value ? Serve::Hot : Serve::Any;
@@ -341,7 +341,7 @@ namespace rct3::simulation
                 // time in the park once its unit is settled.
                 const float hours = static_cast<float>(tick - r.get<Visitor>(g).arrived) * kTickSeconds / kSecondsPerHour;
                 chance += hours > 2 * kTuning.leaving.long_stay_hours ? 2 * kTuning.leaving.long_stay.value : hours > kTuning.leaving.long_stay_hours ? kTuning.leaving.long_stay.value : 0;
-                if (const auto* wallet = r.try_get<Wallet>(g); wallet != nullptr && wallet->cash.value < kTuning.facilities.low_cash.value && !cash_machine)
+                if (const auto* wallet = r.try_get<Wallet>(g); wallet != nullptr && wallet->cash.value < kTuning.facilities.low_cash.value && (!cash_machine || wallet->bank.value <= 0))
                     chance += kTuning.leaving.broke.value;
                 return chance;
             };
@@ -1883,7 +1883,13 @@ namespace rct3::simulation
             else if (umbrella)
                 r.emplace_or_replace<Umbrella>(guest);
             else
-                wallet.cash.value += kTuning.facilities.withdraw.value;
+            {
+                // As much as they draw, or what their bank has left.
+                const std::int64_t drawn = std::clamp(wallet.bank.value, std::int64_t { 0 }, kTuning.facilities.withdraw.value);
+                wallet.cash.value += drawn;
+                wallet.bank.value -= drawn;
+                wallet.withdrawn.value += drawn;
+            }
             mood.happiness.value = clamp01(mood.happiness.value + kTuning.needs.treat.value);
             // Something cold on a hot day or hot on a cold one pleases the more, and something cold cools.
             if ((shop.serve == Serve::Cold && (weather.temperature.value >= kTuning.weather.hot.value || mood.heat.value >= kTuning.needs.want.value)) || (shop.serve == Serve::Hot && weather.temperature.value < kTuning.weather.cold.value))

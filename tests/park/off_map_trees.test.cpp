@@ -94,3 +94,28 @@ TEST_CASE("a park without plants has no trees beyond it")
     const save::TerrainGrid g = flat(4, 0);
     CHECK(off_map_trees({ }, { }, g, land_rings(g), s).empty());
 }
+
+TEST_CASE("planting more adds groves beyond the edge and keeps those made")
+{
+    const save::TerrainGrid g = flat(20, 3);
+    ObjectModels models;
+    models.emplace("Things/Things|Pine", plant());
+    std::vector<save::PlacedObject> objects;
+    for (std::uint64_t i = 1; i <= 20; ++i)
+        objects.push_back(placed(i, "Pine"));
+    const LandRings land = land_rings(g);
+    random::RandomState s = random::stream(random::Seed { 1 }, random::RandomStream::Scenery);
+    const std::size_t made = off_map_groves(objects, models, g);
+    const auto first = off_map_trees(objects, models, g, land, s);
+    REQUIRE_FALSE(first.empty());
+    objects.insert(objects.end(), first.begin(), first.end());
+    // Those beyond the edge call for none of their own.
+    CHECK(off_map_groves(objects, models, g) == made);
+    CHECK(off_map_trees(objects, models, g, land, s, made).empty());
+    for (std::uint64_t i = 1; i <= 20; ++i)
+        objects.push_back(placed(500 + i, "Pine"));
+    CHECK(off_map_groves(objects, models, g) > made);
+    const auto more = off_map_trees(objects, models, g, land, s, made);
+    REQUIRE_FALSE(more.empty());
+    CHECK(more.front().id > first.back().id);
+}

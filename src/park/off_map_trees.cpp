@@ -46,6 +46,12 @@ namespace rct3::park
             tree.quadrant = right + 2 * down;
         }
 
+        /// A tree or plant standing in the park, not one beyond its edge.
+        bool park_tree(const save::PlacedObject& o, const ObjectModels& models, const save::TerrainGrid& grid)
+        {
+            return !o.hidden && o.free_standing() && grid.contains(o.col, o.row) && is_plant(o, models);
+        }
+
     } // namespace
 
     bool is_plant(const save::PlacedObject& object, const ObjectModels& models)
@@ -56,7 +62,13 @@ namespace rct3::park
         return model->second.sway > 0;
     }
 
-    std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery)
+    std::size_t off_map_groves(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    {
+        const auto trees = std::ranges::count_if(objects, [&](const save::PlacedObject& o) { return park_tree(o, models, grid); });
+        return std::min(kMaxGroves, static_cast<std::size_t>(std::ceil(static_cast<float>(trees) * kGrovesPerParkTree)));
+    }
+
+    std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery, std::size_t made)
     {
         std::vector<save::PlacedObject> out;
         std::vector<const save::PlacedObject*> kinds;
@@ -64,14 +76,14 @@ namespace rct3::park
         for (const save::PlacedObject& o : objects)
         {
             last_id = std::max(last_id, o.id);
-            if (!o.hidden && o.free_standing() && is_plant(o, models))
+            if (park_tree(o, models, grid))
                 kinds.push_back(&o);
         }
         if (kinds.empty() || grid.empty())
             return out;
 
         const auto groves = std::min(kMaxGroves, static_cast<std::size_t>(std::ceil(static_cast<float>(kinds.size()) * kGrovesPerParkTree)));
-        for (std::size_t g = 0; g < groves; ++g)
+        for (std::size_t g = made; g < groves; ++g)
         {
             // Picking a park tree, not a kind, makes the commoner kinds commoner outside too.
             const save::PlacedObject& kind = *kinds[random::below(scenery, kinds.size())];

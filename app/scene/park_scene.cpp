@@ -2503,6 +2503,10 @@ namespace rct3::scene
                         scene.photos.push_back({ park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
                 }
+                // Their money into the saved guests, for the Cash tab to show.
+                for (const ShownPerson& p : scene.shown_people)
+                    if (const auto* wallet = p.staff || p.saved >= scene.people.guests.size() || !scene.sim.registry.valid(p.guest) ? nullptr : scene.sim.registry.try_get<simulation::Wallet>(p.guest))
+                        scene.people.guests[p.saved].cash = parkfile::kept_cash(*wallet);
                 // New thoughts go into the guests' saved thoughts, newest first, for their windows to show.
                 for (ShownPerson& p : scene.shown_people)
                 {

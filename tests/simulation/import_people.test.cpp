@@ -21,6 +21,8 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     g.needs.toilet = 0.5f;
     g.mood_now.happiness = 0.9f;
     g.cash.current = 1500;
+    g.cash.bank = 9000;
+    g.cash.spent_rides = 400;
     people.guests.push_back(g);
     save::Guest outside = g;
     outside.in_park = false;
@@ -46,4 +48,6 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     CHECK(n.bladder.value == doctest::Approx(0.5f));
     CHECK(world.registry.get<simulation::Mood>(e).happiness.value == doctest::Approx(0.9f));
     CHECK(world.registry.get<simulation::Wallet>(e).cash.value == 1500);
+    CHECK(world.registry.get<simulation::Wallet>(e).bank.value == 9000);
+    CHECK(world.registry.get<simulation::Wallet>(e).spent_rides.value == 400);
 }

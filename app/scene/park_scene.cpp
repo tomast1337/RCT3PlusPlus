@@ -2402,6 +2402,37 @@ namespace rct3::scene
                 for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
                     (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income.value;
                 simulation::count_takings(scene.takings, scene.park.time, rides_taken, shops_taken);
+                {
+                    // The week's figures for the park's graphs.
+                    std::array<std::int32_t, 3> ages { };
+                    for (const auto [e, visitor] : scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
+                        ++ages[static_cast<std::size_t>(visitor.age)];
+                    std::int64_t intake = 0;
+                    if (const auto* gate = scene.sim.registry.ctx().find<simulation::Turnstile>())
+                        for (const std::uint32_t n : gate->in)
+                            intake += n;
+                    const std::int64_t income = rides_taken + shops_taken;
+                    const std::int64_t cash = scene.park.cash.value_or(0);
+                    // shortcut: the week the park was opened in counts nothing in, taken or made; keep the week's totals
+                    // in the park file to count it whole.
+                    auto& began = scene.week_began;
+                    if (!began.set)
+                        began = { .intake = intake, .income = income, .cash = cash, .set = true };
+                    simulation::close_week(
+                        scene.park_model,
+                        {
+                            .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                            .guests = scene.park.guests,
+                            .adults = ages[static_cast<std::size_t>(simulation::AgeGroup::Adult)],
+                            .teenagers = ages[static_cast<std::size_t>(simulation::AgeGroup::Teen)],
+                            .children = ages[static_cast<std::size_t>(simulation::AgeGroup::Child)],
+                            .intake = static_cast<std::int32_t>(intake - began.intake),
+                            .cash_less_loan = cash - scene.park.loan,
+                            .income = income - began.income,
+                            .profit = cash - began.cash,
+                        });
+                    began = { .intake = intake, .income = income, .cash = cash, .set = true };
+                }
                 std::vector<simulation::GoalRide> goal_rides;
                 for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
                     if (!scene.rides.rides[i].base.demolished)

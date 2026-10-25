@@ -58,6 +58,7 @@
 #include "scene/zoo_animals.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/park_graphs.hpp"
 #include "simulation/park_state.hpp"
 #include "simulation/sim_world.hpp"
 #include "ui/desktop.hpp"
@@ -435,6 +436,12 @@ namespace rct3::scene
         std::vector<simulation::RideGroup> ride_groups; ///< By ride, for the scenario's coaster goals and the awards
         std::int32_t awards_month = -1;                 ///< The calendar month the awards were last looked at in
         simulation::Takings takings;                    ///< Last month's, for the scenario's goals on money
+        /// The park's running totals as the week began, for its weekly graphs; unset until a week has ended.
+        struct
+        {
+            std::int64_t intake = 0, income = 0, cash = 0;
+            bool set = false;
+        } week_began;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
         /// Of rides built here whose train has not yet stood on its track, by ride (of rides): how each car of

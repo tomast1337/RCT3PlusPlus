@@ -70,6 +70,7 @@ namespace rct3::scene
     {
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
+        constexpr std::int32_t kClimbReach = 24; ///< How far, in height units, an item raised with Shift climbs to find room
         /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
         constexpr int kTurnSlot = 1;
         constexpr int kColourSlot = 2;
@@ -527,14 +528,32 @@ namespace rct3::scene
                 p.quadrant = (inside.x >= 0.5f ? 1 : 0) + (inside.y >= 0.5f ? 2 : 0);
                 p.lift = shift ? std::optional(RidePlacing::Lift { *hit, p.site->height }) : std::nullopt;
             }
-            const save::PlacedObject o = *ghost_object(p);
-            p.problem = park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
-            if (p.problem == park::SiteProblem::None && load_object_model(scene, p.models, assets, o))
-            {
+            const auto problem = [&] {
+                const save::PlacedObject o = *ghost_object(p);
+                if (!park::on_owned_land(o, squares, scene.grid))
+                    return park::SiteProblem::NotOwned;
+                if (!load_object_model(scene, p.models, assets, o))
+                    return park::SiteProblem::None;
                 // The room the item's solid squares take may not be taken already, by a solid item or a path.
                 const park::Clash clash = park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), p.solids, scene.footpaths.paths, scene.grid);
-                if (clash != park::Clash::None)
-                    p.problem = clash == park::Clash::Path ? park::SiteProblem::Path : park::SiteProblem::Blocked;
+                return clash == park::Clash::None ? park::SiteProblem::None : clash == park::Clash::Path ? park::SiteProblem::Path : park::SiteProblem::Blocked;
+            };
+            p.problem = problem();
+            // Raised with Shift into something, it climbs onto the top of what is there; with no room near, it
+            // drops back to where Shift went down.
+            if (shift && p.lift && (p.problem == park::SiteProblem::Blocked || p.problem == park::SiteProblem::Path))
+            {
+                const std::int32_t from = p.site->height;
+                for (std::int32_t step = 1; step <= kClimbReach && (p.problem == park::SiteProblem::Blocked || p.problem == park::SiteProblem::Path); ++step)
+                {
+                    p.site->height = from + step;
+                    p.problem = problem();
+                }
+                if (p.problem != park::SiteProblem::None)
+                {
+                    p.site->height = p.lift->height;
+                    p.problem = problem();
+                }
             }
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();

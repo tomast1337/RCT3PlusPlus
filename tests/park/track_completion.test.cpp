@@ -103,3 +103,28 @@ TEST_CASE("a track is finished only with pieces allowed where they stand")
     CHECK(std::ranges::all_of(*way, [&](const LaidPlacement& p) { return inside(p.object); }));
     CHECK(complete_track(pieces, tip, straight, goal, straight, g, [](const save::PlacedObject&) { return false; }, 1000).error() == CompletionFailure::NoWay);
 }
+
+TEST_CASE("a search run a few tries at a time finds the way a whole search does, nearer the goal as it goes")
+{
+    const save::TerrainGrid g = flat();
+    const std::vector pieces { piece("Straight", { -kTile / 2, 0, 0 }, { -1, 0, 0 }), piece("Turn", { 0, 0, kTile / 2 }, { 0, 0, 1 }) };
+    const LaidPiece straight { 0, false };
+    const save::PlacedObject first = at(5, 5);
+    const TrackTip goal = start_of(first, pieces[0], false, g);
+    const TrackTip tip = tip_of(first, pieces[0], false, g);
+    const auto whole = complete_track(pieces, tip, straight, goal, straight, g, anywhere, 1000);
+    REQUIRE(whole);
+
+    CompletionSearch search = start_completion(pieces, tip, straight, goal, straight, g, anywhere);
+    CHECK(nearest_way(search).empty());
+    auto found = search_on(search, 1);
+    REQUIRE_FALSE(found);
+    CHECK(search.tried == 1);
+    for (int i = 0; i < 1000 && !found; ++i)
+        found = search_on(search, 1);
+    REQUIRE(found);
+    REQUIRE(*found);
+    REQUIRE((*found)->size() == whole->size());
+    for (std::size_t i = 0; i < whole->size(); ++i)
+        CHECK((*found)->at(i).piece.index == whole->at(i).piece.index);
+}

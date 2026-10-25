@@ -44,9 +44,11 @@
 //                       there is no such ride; a ride built piece by piece opens its construction panel the
 //                       next frame. Scripts reach rides this way because the lists name their rows
 //                       by nothing a script can know
-//   build.construction() { ride, offered, piece, ghost, clashes } while the construction panel is open: its ride,
-//                       how many pieces fit where the track goes on, the one picked, whether it fits there and
-//                       whether it would take room something standing takes
+//   build.construction() { ride, offered, piece, ghost, clashes, completing, proposed, complaint } while the
+//                       construction panel is open: its ride, how many pieces fit where the track goes on, the
+//                       one picked, whether it fits there, whether it would take room something standing takes,
+//                       whether auto-complete is looking for a way, how many pieces the way it found lays, and
+//                       the string key of why the track was last not finished
 //   build.stop()        puts the placing tool away, as a right click does
 //   build.placing()     { step, problem, affordable } while something is being placed: step "ride", "entrance",
 //                       "exit" or "scenery"; problem "none", "not owned", "path" or "blocked"

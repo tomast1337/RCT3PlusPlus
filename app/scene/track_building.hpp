@@ -25,6 +25,7 @@
 #include "park/object_models.hpp"
 #include "park/ride_cars.hpp"
 #include "park/track_choice.hpp"
+#include "park/track_completion.hpp"
 #include "park/track_pieces.hpp"
 #include "park/track_split.hpp"
 #include "render/device.hpp"
@@ -138,6 +139,11 @@ namespace rct3::scene
         /// ride's state, and whether the construction strip was hidden.
         std::optional<std::tuple<bool, save::AttractionState, bool>> tabs_for;
         std::string preview_item; ///< The piece shown on the round panel's disc
+        /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
+        /// it found shows until a second click on the button lays it, or any other action turns it down.
+        std::optional<park::CompletionSearch> completing;
+        std::vector<park::LaidPlacement> proposed;
+        float clock = 0; ///< Seconds the panel has been open, which the button flashes by
     };
 
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
@@ -180,8 +186,9 @@ namespace rct3::scene
     [[nodiscard]] std::vector<save::TrackPiece> station_pieces(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// Handles the panel's events, and for a track with no pieces the ground tile `pointed` at (none while the
-    /// pointer is off the ground) and the turn commands. Call once per update after the interface.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands);
+    /// pointer is off the ground) and the turn commands. Call once per update after the interface, `elapsed`
+    /// seconds after the last.
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// Draws the ghost of the picked piece with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

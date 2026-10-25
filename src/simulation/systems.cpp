@@ -1990,7 +1990,8 @@ namespace rct3::simulation
                         {
                             const float d = train.at - (static_cast<float>(k) + 0.5f) * car;
                             const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * crashes.tumble;
-                            thrown.push_back({ .at = track_point(train, d), .velocity = track_way(train, d) * train.speed, .spin = spin });
+                            const glm::vec3 from = track_point(train, d);
+                            thrown.push_back({ .at = from, .from = from, .velocity = track_way(train, d) * train.speed, .spin = spin });
                         }
                         // Riders fill the cars front to back.
                         std::vector<entt::entity>& riders = fleet->riders[t];

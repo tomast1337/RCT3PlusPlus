@@ -11,6 +11,7 @@
 #include "audio/audio.hpp"
 #include "audio/ride_sounds.hpp"
 #include "config/game_install.hpp"
+#include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
 
 #include <array>
@@ -20,6 +21,7 @@
 #include <optional>
 #include <random>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -58,6 +60,11 @@ namespace rct3::scene
         std::vector<glm::vec3> car_were;                                          ///< By car, where last heard
         std::vector<audio::SoundBuffer> waterfall;                                ///< The waterfalls' loops
         std::vector<audio::VoiceHandle> waterfall_voices;                         ///< By waterfall of the park
+        std::vector<audio::SoundBuffer> explosions;                               ///< Of crashed trains' wrecks
+        std::vector<audio::SoundBuffer> burning;                                  ///< Loops of their fires
+        /// Of each wreck, by ride, train and car: its landings and state when last heard.
+        std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
+        std::map<entt::entity, audio::VoiceHandle> fires; ///< By ride: the loop of its burning wrecks
         std::minstd_rand random;
     };
 

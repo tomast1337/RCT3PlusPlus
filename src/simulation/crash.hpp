@@ -36,6 +36,7 @@ namespace rct3::simulation
     struct Wreck
     {
         glm::vec3 at { };
+        glm::vec3 from { }; ///< Where it left the track
         glm::vec3 velocity { };
         glm::vec3 spin { };              ///< Its tumble: the axis, as long as the radians a second
         glm::quat turned { 1, 0, 0, 0 }; ///< From how it sat on the track

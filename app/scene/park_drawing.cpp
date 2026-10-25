@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/chain_lifts.hpp"
+#include "park/daylight.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/person_mesh.hpp"
@@ -454,13 +455,10 @@ namespace rct3::scene
             // the scene if it ever shows in a profile.
             park::PersonRuns runs;
             const park::ObjectMesh mesh = park::person_mesh(*scene.person_models, placed, runs);
-            // Lit as the park is, without its shadows and lamps, which fall elsewhere.
-            render::SceneLight light = scene.light;
-            light.shadow_map = { };
-            light.shadow_view = { };
-            light.shadow_map_before = { };
-            light.lamps = { };
-            light.haze_rate = 0;
+            // Lit by the noon sun whatever the park's hour, so they look the same by night; no shadows, lamps or haze.
+            constexpr float kNoon = 0.5f; ///< Of a day from midnight
+            const park::Daylight noon = park::daylight(kNoon);
+            const render::SceneLight light { .sun_direction = noon.sun_direction, .sun = noon.sun, .sky = noon.sky, .ground = noon.ground };
             draw_transient(device, scene, mesh, scene.people_textures, park::view_projection(camera, 1), light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
         }
 

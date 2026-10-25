@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/party_info.hpp"
 
-#include "ui/money_text.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -112,25 +110,6 @@ namespace rct3::ui
                 page.lines.push_back(std::move(*line));
         }
 
-        // Their money between them.
-        void cash(InfoPage& page, const PartyFacts& f, const StringTable& strings, const InfoUnits& units)
-        {
-            const auto total = [&](std::int32_t save::Cash::* field) {
-                std::int64_t sum = 0;
-                for (const PersonFacts& m : f.members)
-                    sum += m.guest->cash.*field;
-                return money_text(units.currency, sum);
-            };
-            add(page, strings, "Guest_CashInPocket", total(&save::Cash::current));
-            add(page, strings, "Guest_CashSpent", total(&save::Cash::total_spent));
-            add(page, strings, "Guest_SpentOnRides", total(&save::Cash::spent_rides), true);
-            add(page, strings, "Guest_SpentOnFood", total(&save::Cash::spent_food), true);
-            add(page, strings, "Guest_SpentOnDrink", total(&save::Cash::spent_drink), true);
-            add(page, strings, "Guest_SpentOnSouvenirs", total(&save::Cash::spent_souvenirs), true);
-            add(page, strings, "Guest_PaidToEnterPark", total(&save::Cash::spent_park_entry));
-            add(page, strings, "Guest_CashWithdrawn", total(&save::Cash::withdrawn));
-        }
-
         // A row for each, what they are doing beside their name; the leader's in its own colour.
         void members(InfoPage& page, const PartyFacts& f, const StringTable& strings)
         {
@@ -159,7 +138,9 @@ namespace rct3::ui
             return page;
         const auto kind = static_cast<std::size_t>(facts.kind.value_or(-1));
         page.title = kind < kKinds.size() ? text(strings, kKinds[kind]) : text(strings, "GuestDetails_GroupHelp");
-        page.heading = person_name(facts.members.front(), strings);
+        // Not over the cash rows, which fill the page as in the guest window.
+        if (tab != PartyTab::Cash)
+            page.heading = person_name(facts.members.front(), strings);
         switch (tab)
         {
             case PartyTab::Rides:
@@ -169,7 +150,7 @@ namespace rct3::ui
                 stats(page, facts, strings, units);
                 break;
             case PartyTab::Cash:
-                cash(page, facts, strings, units);
+                cash_lines(page, facts.members, strings, units); // The guest window's rows, each summed over them
                 break;
             case PartyTab::Members:
                 members(page, facts, strings);

@@ -345,6 +345,21 @@ namespace rct3::save
         WorldPoint3 flow { };      ///< Unit direction the water runs across the ground, from `top` to `bottom`
     };
 
+    /// The park's animal enclosures: which enclosure each tile belongs to, and what fence each is built with.
+    /// The fence's panels are not kept; they are built again from the tiles.
+    struct EnclosureMap
+    {
+        std::int32_t cols = 0;
+        std::int32_t rows = 0;
+        std::vector<std::int32_t> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; -1 outside one
+        std::vector<std::string> fences { }; ///< Of each enclosure, the kind of fence it has; empty for a place unused
+
+        [[nodiscard]] std::int32_t at(std::int32_t col, std::int32_t row) const noexcept
+        {
+            return col >= 0 && row >= 0 && col < cols && row < rows ? tiles[static_cast<std::size_t>(row * cols + col)] : -1;
+        }
+    };
+
     /// What a sign placed in the park says.
     struct SignState
     {
@@ -464,6 +479,7 @@ namespace rct3::save
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
         std::vector<PoolWater> pool_water { };
         std::vector<Waterfall> waterfalls { };
+        EnclosureMap enclosures { };
         std::optional<Weather> weather { };
         std::optional<std::int32_t> sky_background { }; ///< Background (sky box) index
         std::optional<WorldTime> time { };

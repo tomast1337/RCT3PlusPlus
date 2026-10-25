@@ -110,6 +110,15 @@ namespace rct3::save
             constexpr std::string_view kWaterfallTop = "HiWaterPos";
             constexpr std::string_view kWaterfallBottom = "LoWaterPos";
             constexpr std::string_view kWaterfallFlow = "Dir";
+            // Animal enclosures: a grid of tiles, each naming its enclosure, and the enclosures.
+            constexpr std::string_view kEnclosureClass = "EnclosureManager";
+            constexpr std::string_view kEnclosureCols = "Cols";
+            constexpr std::string_view kEnclosureRows = "Rows";
+            constexpr std::string_view kEnclosureTiles = "Tiles";
+            constexpr std::string_view kEnclosureTileRegion = "Region";
+            constexpr std::string_view kEnclosureRegions = "Regions";
+            constexpr std::string_view kEnclosureValid = "Valid";
+            constexpr std::string_view kEnclosureEntry = "Entry";
             constexpr std::string_view kCameraPos = "Pos";
             constexpr std::string_view kCameraOr = "Or";
         } // namespace names
@@ -481,6 +490,7 @@ namespace rct3::save
             Camera,
             Pool,
             Waterfall,
+            Enclosures,
         };
 
         // Typed reads over a decoded value. Missing attributes and attributes kept raw give empty results.
@@ -876,6 +886,8 @@ namespace rct3::save
                 kinds[i] = Kind::Pool;
             else if (name == names::kWaterfallClass)
                 kinds[i] = Kind::Waterfall;
+            else if (name == names::kEnclosureClass)
+                kinds[i] = Kind::Enclosures;
             else if (std::ranges::find(names::kPathClasses, name) != std::end(names::kPathClasses))
             {
                 kinds[i] = Kind::Path;
@@ -1050,6 +1062,30 @@ namespace rct3::save
                             .flow = point_of(o.find(names::kWaterfallFlow)),
                         });
                     break;
+                case Kind::Enclosures:
+                {
+                    EnclosureMap& e = m.enclosures;
+                    e.cols = std::max(0, int_or(o.find(names::kEnclosureCols)));
+                    e.rows = std::max(0, int_or(o.find(names::kEnclosureRows)));
+                    if (const auto regions = o.find(names::kEnclosureRegions); regions && regions->kind() == ValueKind::List)
+                        for (const Value& r : regions->items())
+                            e.fences.push_back(get_bool(r.field(names::kEnclosureValid)).value_or(false) ? resolver.surface(get_ref(r.field(names::kEnclosureEntry)).value_or(0)) : std::string());
+                    const auto tiles = o.find(names::kEnclosureTiles);
+                    // A grid that does not fit its size is left empty.
+                    if (!tiles || tiles->kind() != ValueKind::List || tiles->items().size() != static_cast<std::size_t>(e.cols) * static_cast<std::size_t>(e.rows))
+                    {
+                        e = { };
+                        break;
+                    }
+                    e.tiles.reserve(tiles->items().size());
+                    for (const Value& t : tiles->items())
+                    {
+                        const std::int32_t region = int_or(t.field(names::kEnclosureTileRegion), -1);
+                        // A tile of a place unused, or of none, is outside.
+                        e.tiles.push_back(region >= 0 && static_cast<std::size_t>(region) < e.fences.size() && !e.fences[static_cast<std::size_t>(region)].empty() ? region : -1);
+                    }
+                    break;
+                }
             }
         }
 

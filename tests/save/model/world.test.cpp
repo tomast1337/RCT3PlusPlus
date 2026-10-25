@@ -204,6 +204,7 @@ namespace
         kPool,
         kDesignScenery,
         kWaterfall,
+        kEnclosures,
     };
 
     Attr u8a(const char* n)
@@ -268,6 +269,7 @@ namespace
             { "PoolSegment", { i32a("Col"), i32a("Depth"), { "Prototype", "bool", 1, { } }, i32a("Row"), i32a("SegmentType"), i32a("SurfaceHeight") } },
             { "SceneryItemPlacementSingle", { colours("FlexiColourField"), refa("Owner"), refa("SIDDatabaseEntry"), refa("SceneryItem"), { "SceneryItemDataField", "struct", 20, { i32a("CORNER"), i32a("DIRECTION"), i32a("HEIGHT"), i32a("POSX"), i32a("POSZ") } } } },
             { "WaterfallBody", { { "Dir", "vector3", 12, { } }, { "HiWaterPos", "vector3", 12, { } }, { "LoWaterPos", "vector3", 12, { } }, { "StartPosLeft", "vector3", 12, { } }, { "StartPosRight", "vector3", 12, { } } } },
+            { "EnclosureManager", { i32a("Cols"), { "Regions", "list", 0, { refa("Entry"), { "Valid", "bool", 1, { } } } }, i32a("Rows"), { "Tiles", "list", 0, { i32a("BrokenState"), i32a("Region") } } } },
         };
     }
 
@@ -965,4 +967,41 @@ TEST_CASE("load_world: waterfalls, from their lip down to where they land")
     CHECK(w.bottom.x == 12);
     CHECK(w.lip_left.z == 8);
     CHECK(w.lip_right.z == 0);
+}
+
+TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
+{
+    // Three places, the middle one unused; a 3x2 grid with tiles of the first and the third, and one of the unused.
+    Bytes regions;
+    regions.u32(3).u64(60).u8(1).u64(60).u8(0).u64(61).u8(1);
+    Bytes tiles;
+    tiles.u32(6);
+    for (const std::int32_t region : { 0, 0, -1, 2, 1, 2 })
+        tiles.i32(0).i32(region);
+    Bytes p;
+    p.i32(3).blob(regions).i32(2).blob(tiles);
+    Bytes wood, wire;
+    wood.text(u"Wood");
+    wire.text(u"Electric");
+    const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), { kSurface, 60, wood }, { kSurface, 61, wire }, Obj { kEnclosures, 700, p } });
+    REQUIRE(l->world);
+    const EnclosureMap& e = l->world->enclosures;
+    CHECK(e.cols == 3);
+    CHECK(e.rows == 2);
+    CHECK(e.fences == std::vector<std::string> { "Wood", "", "Electric" });
+    CHECK(e.tiles == std::vector<std::int32_t> { 0, 0, -1, 2, -1, 2 });
+    CHECK(e.at(2, 1) == 2);
+    CHECK(e.at(3, 0) == -1);
+}
+
+TEST_CASE("load_world: an enclosure grid that does not fit its size is left empty")
+{
+    Bytes tiles;
+    tiles.u32(1).i32(0).i32(0);
+    Bytes p;
+    p.i32(3).blob(Bytes().u32(0)).i32(2).blob(tiles);
+    const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), Obj { kEnclosures, 700, p } });
+    REQUIRE(l->world);
+    CHECK(l->world->enclosures.tiles.empty());
+    CHECK(l->world->enclosures.cols == 0);
 }

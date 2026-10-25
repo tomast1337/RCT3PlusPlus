@@ -596,6 +596,8 @@ namespace rct3::scene
         }
         if (scene.bloom || shafts.strength > 0.0f)
             profiling::section("Glow", [&] { draw_park_glow(device, scene.glow, scene.bloom, shafts); });
+        if (!scene.lens.water.drops.empty())
+            profiling::section("LensDrops", [&] { draw_park_lens(device, scene.lens); });
 
         const profiling::Scope zone("Interface");
         scene.list.clear();

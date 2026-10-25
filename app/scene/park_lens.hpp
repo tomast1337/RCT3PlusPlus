@@ -12,11 +12,22 @@
 #include "render/device.hpp"
 
 #include <glm/mat4x4.hpp>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <optional>
+#include <vector>
 
 namespace rct3::scene
 {
+
+    /// A corner of a drop's quad on the screen (app/shaders/lens_drops.slang).
+    struct LensCorner
+    {
+        glm::vec2 position { }; ///< Clip space
+        glm::vec4 colour { };
+        glm::vec2 uv { };
+    };
 
     struct ParkLens
     {
@@ -31,6 +42,7 @@ namespace rct3::scene
         float rain_due = 0;                  ///< Drops the rain owes the lens, landed once whole
         float splash_wait = 0;               ///< Seconds before another splash can land
         float clock = 0;                     ///< Seconds, for the wind's slow turning
+        std::vector<LensCorner> corners;     ///< The drops' quads, kept from frame to frame
     };
 
     /// What the lens sees of the park this frame.
@@ -48,6 +60,8 @@ namespace rct3::scene
 
     /// Wets the lens as `around` says and moves its water on by `seconds`; all water goes when `on` is false.
     void advance_park_lens(ParkLens& lens, const LensSurroundings& around, bool on, float seconds);
+    /// Draws the water on the lens over the screen. Call between passes of the screen; leaves a screen pass open.
+    void draw_park_lens(render::Device& device, ParkLens& lens);
     void destroy_park_lens(render::Device& device, ParkLens& lens);
 
 } // namespace rct3::scene

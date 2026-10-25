@@ -672,6 +672,16 @@ int main(int argc, char** argv)
         }
         out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
         {
+            // The park's cash over the run: what guests paid in, less the staff's wages.
+            const auto* receipts = r.ctx().find<simulation::Receipts>();
+            const std::int64_t in = receipts ? receipts->paid.value : 0;
+            const std::int64_t wages = payroll ? payroll->paid.value : 0;
+            if (state.cash)
+                out.info("money: park cash {:.2f} to {:.2f}; guests paid {:.2f}, wages {:.2f}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - wages) / 100, static_cast<double>(in) / 100, static_cast<double>(wages) / 100);
+            else
+                out.info("money: unlimited; guests paid {:.2f}, wages {:.2f}", static_cast<double>(in) / 100, static_cast<double>(wages) / 100);
+        }
+        {
             float happy = 0, lazy = 0, load = 0;
             std::size_t count = 0, resting = 0;
             for (const auto [_, staff] : world.registry.view<const simulation::Staff>().each())

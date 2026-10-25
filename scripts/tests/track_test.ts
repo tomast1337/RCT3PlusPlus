@@ -2,9 +2,9 @@
 //
 // Lays a saved design the install offers for a corkscrew coaster on the game's blank landscape, picked in the
 // designs' window. The construction panel's ring carries the construction crane, which hides and shows the
-// strip of controls, and the ride's closed flag; no test light. A piece clicked mid-track is then taken out,
-// leaving a gap built on into. Before that, the circuit is opened at its last piece and tested, a ghost train
-// running to the open end, and auto-complete closes it again.
+// strip of controls, and the ride's closed flag; no test light. Its doors are placed, a straight piece clicked
+// mid-track is taken out, leaving a gap built on into, and the ride tested: a ghost train runs to the gap.
+// Auto-complete then closes the gap again.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
 
@@ -82,15 +82,37 @@ if (build.construction() === undefined) {
 }
 expect(build.construction()?.ride === coaster, "the construction panel back");
 
-// Demolish opens the circuit at its last piece. Auto-complete looks for a way round to the station from there, shows
-// the way it found and lays it on a second click.
-const laid = rides.list()[build.construction()!.ride].pieces ?? 0;
+// A click on a piece of the circuit picks it to build over, and demolish takes it out, opening the circuit.
+const ride = build.construction()!.ride;
+const before = rides.list()[ride].pieces ?? 0;
+// A straight piece near the entrance, off the station, so the station stays whole and auto-complete can lay a way
+// across the gap: looked for on the tiles round the entrance.
+const door = rides.list()[ride].entrance!;
+const straight = () => {
+    const at = build.construction()?.selected;
+    const name = typeof at === "number" ? rides.list()[ride].track?.[at] ?? "" : "";
+    return name.startsWith("Straight");
+};
+camera.look({ col: door.col + 0.5, row: door.row + 0.5 }, { col: door.col + 0.5, row: door.row + 12.5, up: 25 });
+await frames(5);
+for (let i = 0; i < 81 && !straight(); ++i) {
+    const at = map.screen(door.col + (i % 9) - 4, door.row + Math.floor(i / 9) - 4);
+    if (at === undefined)
+        continue;
+    await pointer.click(at.x, at.y);
+    await frames(3);
+}
+expect(straight(), "a straight piece picked mid-track");
+await screenshot("picked");
 await ui.click("placing/body/construction/demolish");
 await frames(5);
-expect(rides.list()[build.construction()!.ride].pieces === laid - 1, "the circuit opened at its last piece");
-// Tested while its circuit is open, the ride sends a ghost of its train from the station to the open end. Closing
-// it stops the test.
+expect(build.construction()?.selected === null, "building back at the open end");
+expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
+expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
+expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
 
+// Tested while its track has a gap, the ride sends a ghost of its train from the station to the gap. Closing it
+// stops the test.
 const refused = rides.setState(build.construction()!.ride, "testing");
 expect(refused == null, `the unfinished track tested, not refused with ${refused}`);
 await frames(10);
@@ -101,33 +123,16 @@ expect(rides.setState(build.construction()!.ride, "closed") == null, "the ride c
 await frames(3);
 expect(build.construction()?.testing === false, "the test train gone once the ride is closed");
 
+// Auto-complete looks for a way across the gap round to the station, shows the way it found and lays it on a
+// second click.
 await ui.click("placing/body/construction/complete");
 await frames(1);
 expect(build.construction()?.completing === true || (build.construction()?.proposed ?? 0) > 0, "auto-complete looking for a way");
 await until(() => build.construction()?.completing === false, 600, "auto-complete done");
 expect((build.construction()?.proposed ?? 0) > 0, `a way found round to the station, not ${build.construction()?.complaint}`);
-expect(rides.list()[build.construction()!.ride].pieces === laid - 1, "the way not laid before the second click");
+expect(rides.list()[ride].pieces === before - 1, "the way not laid before the second click");
 await screenshot("proposed");
 await ui.click("placing/body/construction/complete");
 await frames(5);
 expect(build.construction()?.proposed === 0, "the way taken");
-expect(rides.list()[build.construction()!.ride].pieces! >= laid, "the way laid, closing the circuit");
-
-// A click on a piece of the circuit picks it to build over, and demolish takes it out, opening the circuit.
-const ride = build.construction()!.ride;
-const before = rides.list()[ride].pieces ?? 0;
-// The design is laid round the point clicked; look a little round it for a piece.
-for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++i) {
-    await pointer.click(0.48 + 0.01 * (i % 5), 0.43 + 0.01 * Math.floor(i / 5));
-    await frames(3);
-}
-expect(typeof build.construction()?.selected === "number", "a piece picked mid-track");
-await screenshot("picked");
-await ui.click("placing/body/construction/demolish");
-await frames(5);
-expect(build.construction()?.selected === null, "building back at the open end");
-expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
-expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
-expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
-
-
+expect(rides.list()[ride].pieces! >= before, "the way laid, closing the circuit");

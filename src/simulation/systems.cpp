@@ -1312,6 +1312,91 @@ namespace rct3::simulation
         r.destroy(attraction);
     }
 
+    bool pick_up(SimWorld& world, entt::entity person)
+    {
+        entt::registry& r = world.registry;
+        if (!r.valid(person) || r.any_of<Left, Held, Dropped, RideWalk>(person) || !r.all_of<Errand, Stride, Pose, Dice>(person))
+            return false;
+        Errand& errand = r.get<Errand>(person);
+        if (errand.kind == ErrandKind::Riding)
+            return false;
+        if (errand.kind == ErrandKind::Queueing && r.valid(errand.target))
+            if (auto* ride = r.try_get<CycleRide>(errand.target))
+                std::erase(ride->queue, person);
+        // Out of their party: the next member leads, and one left on their own goes about alone.
+        if (const auto* member = r.try_get<Member>(person); member != nullptr && r.valid(member->party))
+        {
+            const entt::entity e = member->party;
+            Party& party = r.get<Party>(e);
+            std::erase(party.members, person);
+            if (party.leader == person && !party.members.empty())
+            {
+                party.leader = party.members.front();
+                if (Errand& next = r.get<Errand>(party.leader); next.kind == ErrandKind::Following)
+                    next = { ErrandKind::Wandering, entt::null, 0 };
+            }
+            if (party.members.size() < 2)
+            {
+                for (const entt::entity m : party.members)
+                {
+                    r.remove<Member>(m);
+                    if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting)
+                        alone = { ErrandKind::Wandering, entt::null, 0 };
+                }
+                r.destroy(e);
+            }
+        }
+        r.remove<Member>(person);
+        // A mechanic drops the job in hand, and another is sent.
+        if (auto* staff = r.try_get<Staff>(person))
+        {
+            if (auto* upkeep = r.valid(staff->ride) ? r.try_get<Upkeep>(staff->ride) : nullptr; upkeep != nullptr && upkeep->mechanic == person)
+                upkeep->mechanic = entt::null;
+            staff->ride = entt::null;
+            staff->busy = { };
+            staff->resting = false;
+        }
+        auto& dice = r.get<Dice>(person).state;
+        const auto& holding = kTuning.holding;
+        const Held held { .height = { static_cast<float>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value) };
+        if (r.all_of<Visitor>(person))
+        {
+            constexpr std::array kSay { ThoughtKind::PickedUpHappy, ThoughtKind::PickedUpNeutral, ThoughtKind::PickedUpSad };
+            think(r, person, kSay[random::below(dice, kSay.size())], entt::null, static_cast<float>(world.tick) * kTickSeconds);
+        }
+        r.remove<Errand, Stride, Linger, Gesture>(person);
+        r.emplace<Held>(person, held);
+        return true;
+    }
+
+    bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground)
+    {
+        entt::registry& r = world.registry;
+        if (!r.valid(person) || !r.all_of<Held, Pose>(person))
+            return false;
+        // The path under them, else the nearest one they may walk on.
+        // shortcut: off the paths they walk straight to it, over whatever lies between; route round
+        // scenery once the ground is walkable.
+        std::optional<NodeId> node = world.paths.nearest(ground);
+        const auto& nodes = world.paths.nodes();
+        if (!node || nodes[*node].queue || nodes[*node].removed || std::abs(nodes[*node].height - ground.y) > 1)
+        {
+            node.reset();
+            float best = std::numeric_limits<float>::max();
+            for (NodeId n = 0; n < nodes.size(); ++n)
+                if (const float d = glm::distance(world.paths.centre(n), ground); !nodes[n].queue && !nodes[n].removed && d < best)
+                {
+                    best = d;
+                    node = n;
+                }
+        }
+        if (!node)
+            return false;
+        r.remove<Held>(person);
+        r.emplace<Dropped>(person, Dropped { .ground = ground.y, .node = *node });
+        return true;
+    }
+
     std::size_t uncovered_paths(const SimWorld& world, StaffRole role)
     {
         std::vector<const Patrol*> areas;
@@ -2063,6 +2148,35 @@ namespace rct3::simulation
             r.remove<RideWalk>(g);
             if (off && r.valid(ride) && r.all_of<CycleRide>(ride))
                 let_out(r, paths, g, ride, gesture);
+        }
+
+        phase.emplace("Let go");
+        // Those the player let go of fall to the ground, then walk straight to the path they go on from.
+        for (const entt::entity e : sorted(r.view<Dropped>()))
+        {
+            auto& drop = r.get<Dropped>(e);
+            auto& pose = r.get<Pose>(e);
+            if (pose.position.y > drop.ground)
+            {
+                drop.fall.value = std::min(drop.fall.value + kTuning.holding.gravity * dt, kTuning.holding.fastest_fall.value);
+                pose.position.y = std::max(pose.position.y - drop.fall.value * dt, drop.ground);
+                continue;
+            }
+            const glm::vec3 to = paths.centre(drop.node) - pose.position;
+            const float left = glm::length(glm::vec2(to.x, to.z));
+            if (left > kLaneReach)
+            {
+                const auto* visitor = r.try_get<Visitor>(e);
+                const float pace = (visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)] : Stride { }.speed).value * dt;
+                pose.heading.value = std::atan2(to.x, to.z);
+                pose.position += glm::vec3 { to.x, 0, to.z } * (std::min(pace, left) / left); // Over the ground they landed on
+                continue;
+            }
+            const NodeId node = drop.node;
+            const Dice dice = r.get<Dice>(e); // Going on as they were, not from the start again
+            r.remove<Dropped>(e);
+            start_walking(world, e, node);
+            r.get<Dice>(e) = dice;
         }
 
         phase.emplace("Rides");

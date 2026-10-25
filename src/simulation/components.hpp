@@ -264,7 +264,10 @@ namespace rct3::simulation
         GaveUpQueue = 131,
         QueueTooLong = 201, ///< Put off a ride by its queue, before joining
         Soaked = 191,
-        Disaster = 62,     ///< Saw a ride crash
+        Disaster = 62, ///< Saw a ride crash
+        PickedUpHappy = 71,
+        PickedUpNeutral = 72,
+        PickedUpSad = 73,
         BeenInjured = 163, ///< Thrown from a crashed ride, or knocked over by its blast
     };
 
@@ -575,6 +578,22 @@ namespace rct3::simulation
         Seconds pause { };
         bool off = false;
         std::optional<GestureKind> gesture { }; ///< Shown once off, on the paths
+    };
+
+    /// A person the player has picked up, hanging under the cursor: out of the simulation's walking, queueing
+    /// and parties till let go. Where they hang is the player's to move (Pose).
+    struct Held
+    {
+        Distance height { }; ///< Over the ground under them
+        bool happy = false;  ///< Enjoying it, or cross
+    };
+
+    /// A person let go of: falling to `ground`, then walking straight to `node` to go on from there.
+    struct Dropped
+    {
+        float ground = 0; ///< World height they land at
+        Pace fall { };    ///< Downwards, now
+        NodeId node = kNoNode;
     };
 
     /// What a bin holds, in pieces of rubbish.

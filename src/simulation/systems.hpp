@@ -148,6 +148,15 @@ namespace rct3::simulation
     /// with tastes from `band`. Returns its members.
     std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
 
+    /// The player picks `person` up, guest or staff, out of what they were doing: a guest leaves their queue
+    /// and their party, a mechanic the ride they were going to. False, and nothing done, for one who cannot be
+    /// picked up now: on a ride, in a booth, gone home or held already.
+    bool pick_up(SimWorld& world, entt::entity person);
+
+    /// The player lets a held person go over `ground`, a point on the ground or a path: they fall to it and walk
+    /// to the nearest path to go on from. False, and still held, where there are no paths to walk to.
+    bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
+
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);
 

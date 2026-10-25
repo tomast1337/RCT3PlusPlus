@@ -22,6 +22,7 @@
 #include "profiling/profiler.hpp"
 #include "save/model/design.hpp"
 #include "save/save_file.hpp"
+#include "scene/park_particles.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
 #include "scene/ride_placing.hpp"
@@ -116,7 +117,7 @@ namespace rct3::scene
         constexpr std::size_t kCompletionTries = 20000;
         constexpr std::size_t kCompletionTriesPerFrame = 300;
         constexpr float kFlashSeconds = 0.4f; ///< The found way's button is lit, then dim, this long
-        constexpr float kTestWait = 3;        ///< Seconds a test train stands at the open end
+        constexpr float kTestWait = 3;        ///< Seconds a test train stands stuck before it sets off again
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
         constexpr float kCloses = 0.1f;
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
@@ -374,8 +375,8 @@ namespace rct3::scene
             return park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), taken, scene.footpaths.paths, scene.grid) != park::Clash::None;
         }
 
-        /// Makes the park's own trains of `ride` ghosts, which stop at an open end of the track rather than crash,
-        /// or real trains again.
+        /// Makes the park's own trains of `ride` ghosts, whose crash off an open end of the track harms nothing and
+        /// is not the park's, or real trains again.
         void ghost_trains(ParkScene& scene, std::size_t ride, bool ghost)
         {
             const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
@@ -1986,10 +1987,10 @@ namespace rct3::scene
         }
         if (changed)
             refresh(scene, b, assets);
-        // While the panel has the ride, its own trains are ghosts too, so none crashes off a track being built.
+        // While the panel has the ride, its own trains are ghosts too, so a crash off a track being built is only shown.
         ghost_trains(scene, *b.ride, true);
         // A test of a track that is not yet a circuit, of a ride the park does not run yet: no train runs it, so a
-        // ghost of its first train does, stopping where it ends. Once the park runs the ride, its own trains test it.
+        // ghost of its first train does, crashing off its end. Once the park runs the ride, its own trains test it.
         const save::Ride& tested = scene.rides.rides.at(*b.ride);
         const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
         const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !tested.trains.empty() && scene.car_fits.contains(*b.ride) && assets.install;
@@ -2028,10 +2029,24 @@ namespace rct3::scene
         if (b.test)
         {
             TrackBuilding::GhostTrain& t = *b.test;
-            simulation::drive(t.train, elapsed);
-            // Stood at the open end a while, it is back at the station and sets off again.
-            if (!t.train.running && (t.waited += elapsed) >= kTestWait)
+            if (!t.train.crashed)
+                simulation::drive(t.train, elapsed);
+            if (t.train.crashed && t.wrecks.empty())
+                t.wrecks = simulation::thrown_cars(t.train, t.dice);
+            // shortcut: wrecks fly through what stands in the park until the park has run, upgrade if a test with
+            // the park paused should hit scenery too.
+            const auto* standing = scene.sim.registry.ctx().find<simulation::WreckSurroundings>();
+            const simulation::WreckSurroundings around = standing != nullptr ? *standing : simulation::WreckSurroundings { .ground = [&scene](glm::vec2 p) { return scene.grid.height_at(p.x, p.y).value_or(0.0f); } };
+            for (simulation::Wreck& wreck : t.wrecks)
+                if (simulation::fly(wreck, elapsed, around) == simulation::WreckEvent::BlewUp)
+                    for (const std::string_view effect : { "CoasterExplosion", "CoasterSmoke" })
+                        fire_park_particles(scene.particles, effect, wreck.at, glm::vec3(0, 1, 0));
+            // Its wrecks gone, or stuck a while short of the end, it is back at the station and sets off again.
+            const bool gone = t.train.crashed && std::ranges::all_of(t.wrecks, [](const simulation::Wreck& w) { return w.state == simulation::WreckState::Gone; });
+            if (gone || (!t.train.crashed && !t.train.running && (t.waited += elapsed) >= kTestWait))
             {
+                t.train.crashed = false;
+                t.wrecks.clear();
                 t.train.at = t.train.start;
                 t.train.travelled = 0;
                 t.train.launched = false;
@@ -2041,7 +2056,16 @@ namespace rct3::scene
             }
             std::vector<glm::mat4> places;
             for (std::size_t i = 0; i < t.stood.size(); ++i)
-                places.push_back(park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at));
+            {
+                glm::mat4 place = park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
+                // Crashed, each car flies and tumbles as its wreck does, and is gone with it.
+                if (const simulation::Wreck* wreck = t.train.crashed && i < t.wrecks.size() ? &t.wrecks[i] : nullptr)
+                {
+                    const glm::vec3 left(place[3]);
+                    place = wreck->state == simulation::WreckState::Gone ? glm::mat4(0.0f) : glm::translate(glm::mat4(1.0f), left + wreck->at - wreck->from) * glm::mat4_cast(wreck->turned) * glm::translate(glm::mat4(1.0f), -left) * place;
+                }
+                places.push_back(place);
+            }
             // shortcut: the joints of cars on arms ride at rest with their car, upgrade if a test should swing them
             // as the park does.
             for (const std::size_t car : t.joints)

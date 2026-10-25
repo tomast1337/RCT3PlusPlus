@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/coaster.hpp"
 
+#include "simulation/tuning.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -67,6 +69,22 @@ namespace rct3::simulation
         const std::size_t i = point_at(c, wrap(c, d));
         const glm::vec3 run = c.points[i + 1] - c.points[i];
         return glm::length(run) > 0 ? glm::normalize(run) : glm::vec3(0, 0, 1);
+    }
+
+    std::vector<Wreck> thrown_cars(const Coaster& c, random::RandomState& dice)
+    {
+        const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)); };
+        const std::size_t cars = static_cast<std::size_t>(std::max(c.cars, 1));
+        const float car = c.train_length / static_cast<float>(cars);
+        std::vector<Wreck> thrown;
+        for (std::size_t k = 0; k < cars; ++k)
+        {
+            const float d = c.at - (static_cast<float>(k) + 0.5f) * car;
+            const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * kTuning.crashes.tumble;
+            const glm::vec3 from = track_point(c, d);
+            thrown.push_back({ .at = from, .from = from, .velocity = track_way(c, d) * c.speed, .spin = spin, .ghost = c.ghost });
+        }
+        return thrown;
     }
 
     bool chain_at(const Coaster& c, float at)
@@ -203,8 +221,7 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
-            // Run off either end of its track, the train crashes there, going as fast as it left; a ghost's run
-            // ends there instead, stopped dead as if by buffers.
+            // Run off either end of its track, the train crashes there, going as fast as it left.
             if (two_ends(c))
             {
                 const float to = c.at + moved;
@@ -213,9 +230,7 @@ namespace rct3::simulation
                 {
                     moved = kept - c.at;
                     c.at = kept;
-                    if (c.ghost)
-                        c.speed = 0;
-                    c.crashed = !c.ghost;
+                    c.crashed = true;
                     c.running = false;
                     return false;
                 }

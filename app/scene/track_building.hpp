@@ -147,17 +147,20 @@ namespace rct3::scene
         std::vector<park::LaidPlacement> proposed;
         float clock = 0; ///< Seconds the panel has been open, which the button flashes by
         /// While the ride is testing and its track is not yet a circuit, a see-through copy of its first train
-        /// runs from the station to the open end, where it stops, and after a while sets off again. It runs on the
-        /// clock's time rather than the park's, so it runs while the park is paused.
+        /// runs from the station to the open end and crashes off it, its see-through wrecks flying, blowing up and
+        /// burning as a crashed train's do, though they hurt no one; once they are gone it sets off again. It runs
+        /// on the clock's time rather than the park's, so it runs while the park is paused.
         struct GhostTrain
         {
             simulation::Coaster train;
             std::vector<park::CarSpot> spots;
-            std::vector<glm::mat4> stood;    ///< Where each car stood, by car
-            float stood_at = 0;              ///< Where the train's front stood
-            float waited = 0;                ///< Seconds it has stood at the open end
-            park::MovingMeshes meshes;       ///< The cars, then the joints of those on arms
-            std::vector<std::size_t> joints; ///< The car each joint rides with, in the order of the meshes
+            std::vector<glm::mat4> stood;                   ///< Where each car stood, by car
+            float stood_at = 0;                             ///< Where the train's front stood
+            float waited = 0;                               ///< Seconds it has stood still short of the open end
+            std::vector<simulation::Wreck> wrecks;          ///< Its cars, once crashed, front to back
+            random::RandomState dice = random::seeded({ }); ///< How its wrecks tumble
+            park::MovingMeshes meshes;                      ///< The cars, then the joints of those on arms
+            std::vector<std::size_t> joints;                ///< The car each joint rides with, in the order of the meshes
         };
         std::optional<GhostTrain> test;
     };

@@ -1937,7 +1937,7 @@ namespace rct3::simulation
                 for (std::vector<Wreck>& cars : wrecks->trains)
                 {
                     for (Wreck& wreck : cars)
-                        if (fly(wreck, dt, around) == WreckEvent::BlewUp)
+                        if (fly(wreck, dt, around) == WreckEvent::BlewUp && !wreck.ghost)
                             for (const auto [g, pose, errand, visitor] : r.view<const Pose, const Errand, const Visitor>().each())
                                 if (errand.kind != ErrandKind::Riding && errand.kind != ErrandKind::Queueing && glm::distance(pose.position, wreck.at) < crashes.blast.value)
                                 {
@@ -1976,23 +1976,19 @@ namespace rct3::simulation
                     if (drive(train, dt, room_ahead(fleet->trains, t)))
                         unload(fleet->riders[t]);
                     // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
-                    // closes. Guests who see it think it a disaster.
+                    // closes. Guests who see it think it a disaster. A ghost's crash is only shown: it is not the
+                    // park's, and closes nothing.
                     if (train.crashed)
                     {
                         wrecks = &r.get_or_emplace<Wrecks>(e);
                         wrecks->trains.resize(fleet->trains.size());
                         std::vector<Wreck>& thrown = wrecks->trains[t];
                         auto& dice = r.get<Dice>(e).state;
+                        thrown = thrown_cars(train, dice);
+                        if (train.ghost)
+                            continue;
                         const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)); };
-                        const std::size_t cars = static_cast<std::size_t>(std::max(train.cars, 1));
-                        const float car = train.train_length / static_cast<float>(cars);
-                        for (std::size_t k = 0; k < cars; ++k)
-                        {
-                            const float d = train.at - (static_cast<float>(k) + 0.5f) * car;
-                            const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * crashes.tumble;
-                            const glm::vec3 from = track_point(train, d);
-                            thrown.push_back({ .at = from, .from = from, .velocity = track_way(train, d) * train.speed, .spin = spin });
-                        }
+                        const std::size_t cars = thrown.size();
                         // Riders fill the cars front to back.
                         std::vector<entt::entity>& riders = fleet->riders[t];
                         const std::size_t seats = std::max<std::size_t>((ride.capacity + cars - 1) / cars, 1);

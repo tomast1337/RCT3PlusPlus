@@ -213,13 +213,19 @@ namespace rct3::scene
         std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;
         const auto crash_heard = [&](glm::vec3 at, float level) { return audio::PlayParams { .volume = kCrashLevel * level, .at = at, .near = kCrashNear, .far = kCrashFar }; };
+        // By ride, or none for the construction panel's test train, the wrecks of each train.
+        std::vector<std::pair<entt::entity, std::span<const std::vector<simulation::Wreck>>>> crashed;
         for (const auto [e, wrecks] : r.view<const simulation::Wrecks>().each())
+            crashed.emplace_back(e, wrecks.trains);
+        if (scene.building.test)
+            crashed.emplace_back(entt::null, std::span(&scene.building.test->wrecks, 1));
+        for (const auto& [e, trains] : crashed)
         {
             std::optional<glm::vec3> fire;
-            for (std::size_t t = 0; t < wrecks.trains.size(); ++t)
-                for (std::size_t k = 0; k < wrecks.trains[t].size(); ++k)
+            for (std::size_t t = 0; t < trains.size(); ++t)
+                for (std::size_t k = 0; k < trains[t].size(); ++k)
                 {
-                    const simulation::Wreck& wreck = wrecks.trains[t][k];
+                    const simulation::Wreck& wreck = trains[t][k];
                     const auto key = std::tuple { e, t, k };
                     const auto was = sounds.wrecks_heard.find(key);
                     const auto [landings, state] = was != sounds.wrecks_heard.end() ? was->second : std::pair { 0, simulation::WreckState::Flying };

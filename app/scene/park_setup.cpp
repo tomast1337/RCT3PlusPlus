@@ -1018,8 +1018,8 @@ namespace rct3::scene
             for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
                 tools.set_available(
                     entry.item,
-                    entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports
-                        || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                    entry.item == ui::ToolItem::DeleteOne || entry.item == ui::ToolItem::DeleteArea || entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights
+                        || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || ui::build_list(entry.item) || ui::management_topic(entry.item));
         }
         scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
         // Both round panels stand over the tool row, as the path and land panels do.

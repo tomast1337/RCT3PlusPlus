@@ -593,6 +593,21 @@ namespace rct3::scene
             return found != f.styles.end() ? &*found : nullptr;
         }
 
+        /// Reads the path and queue styles once, for the panel or for paying back paths taken away.
+        void read_styles(ParkFootpaths& f, const ui::InterfaceAssets& assets)
+        {
+            if (!f.styles.empty() || !assets.install)
+                return;
+            for (const std::string_view folder : { park::kPathStyleFolder, park::kQueueStyleFolder })
+            {
+                if (const auto found = assets.install->find(folder))
+                {
+                    std::vector<park::PathStyle> more = park::folder_path_styles(*found);
+                    f.styles.insert(f.styles.end(), std::make_move_iterator(more.begin()), std::make_move_iterator(more.end()));
+                }
+            }
+        }
+
         /// Pays back what laying `path` cost, floating it up from there.
         void refund(ParkScene& scene, const save::PathTile& path)
         {
@@ -1152,17 +1167,7 @@ namespace rct3::scene
         {
             f.loaded = true;
             const std::size_t skins = ui::add_extra_skins(device, assets, kIconFiles);
-            if (assets.install)
-            {
-                for (const std::string_view folder : { park::kPathStyleFolder, park::kQueueStyleFolder })
-                {
-                    if (const auto found = assets.install->find(folder))
-                    {
-                        std::vector<park::PathStyle> more = park::folder_path_styles(*found);
-                        f.styles.insert(f.styles.end(), std::make_move_iterator(more.begin()), std::make_move_iterator(more.end()));
-                    }
-                }
-            }
+            read_styles(f, assets);
             logging::logger("park").info("{} path and queue styles, {} pictures", f.styles.size(), skins);
             park::GroundImages arrow;
             const auto tool = assets.install ? assets.install->find(park::kPathToolFile) : std::nullopt;
@@ -1698,6 +1703,24 @@ namespace rct3::scene
             return false;
         f.sell = f.paths[under->path].id;
         return true;
+    }
+
+    std::optional<std::uint64_t> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size)
+    {
+        if (size.x <= 0 || size.y <= 0)
+            return std::nullopt;
+        const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
+        const auto under = park::path_under(park::view_ray(scene.camera, size.x / size.y, ndc), scene.footpaths.paths, scene.grid, ground_faded(scene));
+        return under ? std::optional(scene.footpaths.paths[under->path].id) : std::nullopt;
+    }
+
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
+    {
+        if (ids.empty())
+            return;
+        read_styles(scene.footpaths, assets);
+        take_paths(device, scene, assets, ids);
+        scene.footpaths.dirty = true;
     }
 
     bool drop_footpath_trail(ParkScene& scene)

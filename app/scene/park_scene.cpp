@@ -102,6 +102,8 @@ namespace rct3::scene
         constexpr std::string_view kDemolishName = "demolish_question";
         constexpr std::string_view kDemolishTitle = "SingleItemDeleteEditor_AI_Title";
         constexpr std::string_view kDemolishText = "SingleItemDeleteEditor_AI_Message";
+        constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
+        constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
 
         // How far the controls move the camera.
         constexpr float kDragPan = 0.0025f;     ///< Per pixel, times the distance
@@ -759,6 +761,71 @@ namespace rct3::scene
             std::erase_if(scene.signs, [&](const save::SignState& s) { return s.object_ref == id; });
             if (wall)
                 wall_changed(device, scene, assets, *wall, false);
+        }
+
+        /// Puts the delete menu's tool away.
+        void stop_deleting(ParkScene& scene)
+        {
+            scene.deleting = { };
+        }
+
+        /// Pulls props `indices` of the objects down with the delete tools, paying what their kinds say pulling one
+        /// down costs (or gets back). The park entrance stays, and nothing goes when the park cannot pay; either
+        /// is told in a box.
+        void delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices)
+        {
+            std::vector<std::size_t> going;
+            std::int64_t cost = 0;
+            bool entrance = false;
+            for (const std::size_t i : indices)
+            {
+                const auto model = scene.models.find(park::model_ref(scene.objects.at(i)));
+                if (model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance))
+                    entrance = true;
+                else
+                {
+                    going.push_back(i);
+                    cost += model != scene.models.end() ? model->second.removal_cost : 0;
+                }
+            }
+            if (entrance)
+                scene.prizes.emplace_back(kEntranceStays);
+            if (going.empty())
+                return;
+            if (cost > 0 && scene.park.cash && *scene.park.cash < cost)
+            {
+                scene.prizes.emplace_back(kNoMoney);
+                return;
+            }
+            const save::PlacedObject& first = scene.objects[going.front()];
+            if (scene.park.cash)
+                *scene.park.cash -= cost;
+            if (cost != 0)
+                float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost);
+            for (const std::size_t i : going)
+                destroy_prop(device, scene, assets, i);
+        }
+
+        /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles.
+        void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
+        {
+            std::vector<std::pair<std::int32_t, std::int32_t>> tiles;
+            for (const save::PathTile& p : scene.footpaths.paths)
+                if (std::ranges::contains(ids, p.id))
+                    tiles.emplace_back(p.col, p.row);
+            std::ranges::sort(tiles);
+            std::vector<std::size_t> extras;
+            for (std::size_t i = 0; i < scene.objects.size(); ++i)
+            {
+                const save::PlacedObject& o = scene.objects[i];
+                if (o.hidden || !std::ranges::binary_search(tiles, std::pair { o.col, o.row }))
+                    continue;
+                const auto model = scene.models.find(park::model_ref(o));
+                if (model != scene.models.end() && model->second.category >= std::to_underlying(park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(park::ItemCategory::PathFeature))
+                    extras.push_back(i);
+            }
+            delete_props(device, scene, assets, extras);
+            remove_footpaths(device, scene, assets, ids);
         }
 
     } // namespace
@@ -1815,6 +1882,17 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (painting_patrol(scene) || land_tool(scene))
                     ;
+                else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
+                {
+                    // An attraction is asked about first; a prop or a path goes at once, and the tool stays out.
+                    const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
+                    if (picked.attraction)
+                        ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
+                    else if (picked.prop)
+                        delete_props(device, scene, assets, std::span(&*picked.prop, 1));
+                    else if (const auto path = footpath_at(scene, pointer.position, { screen.width(), screen.height() }))
+                        delete_paths(device, scene, assets, std::span(&*path, 1));
+                }
                 else if (still && !over && (ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
@@ -1845,6 +1923,8 @@ namespace rct3::scene
                     ;
                 else if (ride_placing(scene))
                     stop_ride_placing(scene); // A right click puts the placing away, as in the game
+                else if (scene.deleting.tool != DeleteTools::Tool::None)
+                    stop_deleting(scene);
                 else if (land_tool(scene))
                 {
                     if (!delete_waterfall(scene, pointer.position, { screen.width(), screen.height() }))
@@ -2005,6 +2085,7 @@ namespace rct3::scene
                 {
                     close_footpath_panel(scene); // One tool panel at the bottom left at a time
                     stop_land_tools(scene);
+                    stop_deleting(scene);
                 }
             }
         }
@@ -2558,6 +2639,7 @@ namespace rct3::scene
                 close_track_building(scene); // One tool panel at the bottom left at a time
                 stop_ride_placing(scene);
                 stop_land_tools(scene);
+                stop_deleting(scene);
                 toggle_footpath_panel(device, scene, assets, options);
             }
             if (const auto item = tools->take_item())
@@ -2567,8 +2649,21 @@ namespace rct3::scene
                     close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
+                    stop_deleting(scene);
                     using enum LandTools::Tool;
                     toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? Shape : (*item == ui::ToolItem::PaintGround ? Paint : (*item == ui::ToolItem::Water ? Water : Waterfall)), assets);
+                }
+                else if (*item == ui::ToolItem::DeleteOne || *item == ui::ToolItem::DeleteArea)
+                {
+                    close_track_building(scene);
+                    stop_ride_placing(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                    const auto tool = *item == ui::ToolItem::DeleteOne ? DeleteTools::Tool::One : DeleteTools::Tool::Area;
+                    const bool out = scene.deleting.tool == tool;
+                    stop_deleting(scene);
+                    if (!out)
+                        scene.deleting.tool = tool;
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
@@ -2635,6 +2730,7 @@ namespace rct3::scene
                     close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
+                    stop_deleting(scene);
                     building = picked->kind != park::BuildKind::Scenery;
                 }
                 else if (new_tracked_ride(scene, *picked, assets))
@@ -2642,6 +2738,7 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
+                    stop_deleting(scene);
                     building = true;
                 }
                 // Building a ride puts the build menus away, as in the game; scenery keeps its list out for the

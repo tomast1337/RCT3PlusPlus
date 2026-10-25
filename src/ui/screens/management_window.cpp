@@ -126,34 +126,82 @@ namespace rct3::ui
         float bottom = 0;
         for (const ManagementButton& b : shown.buttons)
             bottom = std::max(bottom, (b.text.empty() ? style_.icon_button_size : style_.button_height) + style_.gap);
+        plot_ = nullptr;
+        graph_ = shown.graph;
+        series_ticks_.clear();
+        axis_.fill(nullptr);
         if (!shown.graph.empty())
         {
             if (y > 0)
                 y += style_.gap;
-            // The series' names under the plot, a few to a row. A page with nothing under its graph gives the
-            // graph all the room down to the buttons.
+            // The series' ticks and names under the plot, a few to a row, and under the plot the marks' words. A
+            // page with nothing under its graph gives the graph all the room down to the buttons.
             const std::size_t n = shown.graph.size();
             const std::size_t per_row = n <= kSeriesPerRow ? n : (n + 1) / 2;
             const std::size_t name_rows = (n + per_row - 1) / per_row;
-            const float names = static_cast<float>(name_rows) * style_.line_height;
+            const bool marked = std::ranges::any_of(shown.graph_ticks, [](const InfoTick& t) { return !t.label.empty(); });
+            const float names = static_cast<float>(name_rows) * style_.line_height + (marked ? style_.line_height : 0);
             const bool fill = shown.columns.empty() && shown.note.empty();
+            // Half a line above for the top number's upper half; the plot's top and bottom, each an anchor and an
+            // offset down the page.
+            const float top = y + style_.line_height / 2;
+            const float bottom_anchor = fill ? 1 : 0;
+            const float plot_bottom = fill ? -bottom - names - 1 : top + style_.plot_height;
+            // A share of the way down the plot, as an anchor and an offset.
+            const auto down = [&](float share) { return std::pair(share * bottom_anchor, top + share * (plot_bottom - top)); };
             LinePlot& plot = lines_->add<LinePlot>("graph");
-            plot.placement = fill ? Placement { { 0, 0, 1, 1 }, { 0, y, 0, -bottom - names - 1 } } : band(0, 1, y, style_.plot_height);
+            plot.placement = { { 0, 0, 1, bottom_anchor }, { style_.axis_width, top, 0, plot_bottom } };
             plot.background = style_.plot_background;
-            plot.zero_colour = style_.plot_zero;
+            plot.rule_colour = style_.plot_rule;
+            plot.slots = shown.graph_slots;
+            for (const InfoTick& t : shown.graph_ticks)
+                plot.ticks.push_back({ t.back, !t.label.empty() });
+            plot_ = &plot;
+            for (std::size_t k = 0; k < axis_.size(); ++k)
+            {
+                const auto [anchor, offset] = down(static_cast<float>(k) / 4);
+                Label& number = lines_->add<Label>(std::format("axis{}", k), std::u16string { }, FontRole::Tiny);
+                number.placement = { { 0, anchor, 0, anchor }, { 0, offset - style_.line_height / 2, style_.axis_width - style_.gap / 2, offset + style_.line_height / 2 } };
+                number.style.colour = style_.text_colour;
+                number.style.horizontal = Align::End;
+                number.style.vertical = Align::Centre;
+                axis_[k] = &number;
+            }
+            // Under the plot: the marks' words, centred on them, then the ticks.
+            const auto [under_anchor, under] = down(1);
+            for (std::size_t k = 0; k < shown.graph_ticks.size(); ++k)
+            {
+                const InfoTick& t = shown.graph_ticks[k];
+                if (t.label.empty())
+                    continue;
+                // Across the plot, which starts axis_width in from the page's left.
+                const float across = plot_x(t.back, plot.span(), 1);
+                const float x = style_.axis_width * (1 - across);
+                Label& word = lines_->add<Label>(std::format("mark{}", k), t.label, FontRole::Tiny);
+                word.placement = { { across, under_anchor, across, under_anchor }, { x - 30, under + 1, x + 30, under + 1 + style_.line_height } };
+                word.style.colour = style_.text_colour;
+                word.style.horizontal = Align::Centre;
+            }
+            const float names_top = under + 1 + (marked ? style_.line_height : 0);
             for (std::size_t i = 0; i < n; ++i)
             {
                 const Color colour = style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
-                plot.series.push_back({ shown.graph[i].values, colour });
                 const float column = static_cast<float>(i % per_row);
                 const float row = static_cast<float>(i / per_row);
                 const float across = static_cast<float>(per_row);
-                Placement where = band(column / across, (column + 1) / across, y + style_.plot_height + 1 + row * style_.line_height, style_.line_height);
-                if (fill)
-                    where = { { column / across, 1, (column + 1) / across, 1 }, { 0, -bottom - names + row * style_.line_height, 0, -bottom - names + (row + 1) * style_.line_height } };
-                label(keyed_name(shown.graph[i].key, shown.graph[i].key.empty() ? "series" : "", i), shown.graph[i].name, where, colour);
+                const float row_top = names_top + row * style_.line_height;
+                const std::string key = keyed_name(shown.graph[i].key, shown.graph[i].key.empty() ? "series" : "", i);
+                Tickbox& tick = lines_->add<Tickbox>(std::format("{}_tick", key), style_.tick_box, style_.tick);
+                tick.placement = { { column / across, under_anchor, column / across, under_anchor }, { 0, row_top + (style_.line_height - style_.tick_size) / 2, style_.tick_size, row_top + (style_.line_height + style_.tick_size) / 2 } };
+                tick.ticked = !std::ranges::contains(hidden_, shown.graph[i].key);
+                series_ticks_.push_back(&tick);
+                Label& name = lines_->add<Label>(key, shown.graph[i].name, FontRole::Small);
+                name.placement = { { column / across, under_anchor, (column + 1) / across, under_anchor }, { style_.tick_size + 4, row_top, 0, row_top + style_.line_height } };
+                name.style.colour = colour;
             }
-            y += style_.plot_height + 1 + names;
+            fill_graph();
+            if (!fill)
+                y = under + 1 + names;
         }
         if (!shown.note.empty())
         {
@@ -234,6 +282,27 @@ namespace rct3::ui
         choosing_ = i;
     }
 
+    void ManagementWindow::fill_graph()
+    {
+        if (plot_ == nullptr)
+            return;
+        plot_->series.clear();
+        const InfoSeries* focus = nullptr;
+        for (std::size_t i = 0; i < graph_.size(); ++i)
+        {
+            const InfoSeries& s = graph_[i];
+            if (std::ranges::contains(hidden_, s.key))
+                continue;
+            const Color colour = style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
+            plot_->series.push_back({ .values = s.values, .colour = colour, .full = s.full, .centred = s.centred });
+            if (focus == nullptr || s.key == focus_)
+                focus = &s;
+        }
+        for (std::size_t k = 0; k < axis_.size(); ++k)
+            if (axis_[k] != nullptr)
+                axis_[k]->text = focus != nullptr && k < focus->axis.size() ? focus->axis[k] : std::u16string { };
+    }
+
     void ManagementWindow::close_choices()
     {
         for (Button* b : choices_)
@@ -271,6 +340,18 @@ namespace rct3::ui
                 table_->select(std::nullopt);
             }
             tabs_[i]->on = true; // Pressing the open tab leaves it open
+        }
+        for (std::size_t i = 0; i < series_ticks_.size() && i < graph_.size(); ++i)
+        {
+            if (!series_ticks_[i]->take_change())
+                continue;
+            const std::string& key = graph_[i].key;
+            std::erase(hidden_, key);
+            if (series_ticks_[i]->ticked)
+                focus_ = key;
+            else
+                hidden_.push_back(key);
+            fill_graph();
         }
         for (std::size_t j = 0; j < choices_.size(); ++j)
         {

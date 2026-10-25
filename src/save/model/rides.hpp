@@ -196,7 +196,11 @@ namespace rct3::save
         std::optional<TestResults> combined { };    ///< Multi-station result, newer files only
     };
 
-    /// Per-ride history graphs of the last test lap (samples; at most 200).
+    /// Samples a second in a ride's graphs.
+    inline constexpr std::size_t kGraphSamplesPerSecond = 10;
+
+    /// Per-ride graphs of the last lap run, newest sample first (at most 200 in a save): speed in m/s, altitude in
+    /// metres, forces in m/s^2.
     struct RideGraphs
     {
         std::vector<float> speed { }, acceleration { }, altitude { }, vertical_g { }, lateral_g { };

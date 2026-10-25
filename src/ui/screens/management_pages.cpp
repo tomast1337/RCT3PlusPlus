@@ -136,10 +136,12 @@ namespace rct3::ui
             return amount ? money(units, std::llround(*amount)) : std::u16string(kDash);
         }
 
-        std::vector<float> oldest_first(const save::Series& series)
+        /// The weeks gone of a park's series, oldest first: its newest sample is the week still running.
+        std::vector<float> weeks_gone(const save::Series& series)
         {
-            // Series keep their newest sample first.
-            return { series.samples.rbegin(), series.samples.rend() };
+            if (series.samples.size() < 2)
+                return { };
+            return { series.samples.rbegin(), series.samples.rend() - 1 };
         }
 
         template<std::size_t N> std::vector<ManagementTab> tabs(const std::array<TabSpec, N>& specs, const StringTable& strings)
@@ -165,10 +167,36 @@ namespace rct3::ui
             return { .staff = &s, .people = f.people, .rides = f.rides };
         }
 
-        void add_series(ManagementPage& page, const StringTable& strings, std::string_view key, const save::Series& series)
+        /// Adds a weekly series to a page's graph, on a scale up to `full` (its own when 0), its numbers counts or
+        /// amounts of money. The graph spans the weeks the longest series keeps.
+        void add_series(ManagementPage& page, const StringTable& strings, const InfoUnits& units, std::string_view key, const save::Series& series, bool money_values, float full = 0)
         {
-            if (!series.empty())
-                page.graph.push_back({ text(strings, key), oldest_first(series), std::string(key) });
+            if (series.empty())
+                return;
+            std::vector<float> values = weeks_gone(series);
+            const bool centred = std::ranges::any_of(values, [](float v) { return v < 0; });
+            if (full <= 0)
+                full = full_scale(values);
+            std::vector<std::u16string> axis;
+            for (const float v : axis_values(full, centred))
+                axis.push_back(money_values ? money(units, std::llround(v)) : whole(std::lround(v)));
+            page.graph.push_back({ .name = text(strings, key), .values = std::move(values), .key = std::string(key), .full = full, .centred = centred, .axis = std::move(axis) });
+            if (series.capacity > 1)
+                page.graph_slots = std::max<std::size_t>(page.graph_slots, series.capacity - 1);
+        }
+
+        /// Marks along a weekly graph where each month began, named by the month, back from the week before
+        /// `time`'s.
+        void month_ticks(ManagementPage& page, const StringTable& strings, const simulation::ParkState* state)
+        {
+            if (state == nullptr)
+                return;
+            for (std::size_t back = 0; back < page.graph_slots; ++back)
+            {
+                const save::CalendarDate date = save::GameClock::split(state->time - static_cast<float>(back + 1) * save::GameClock::kUnitsPerWeek);
+                if (date.week == 0)
+                    page.graph_ticks.push_back({ static_cast<float>(back), short_month(strings, date.month) });
+            }
         }
 
         // ----- park operations -----
@@ -207,18 +235,26 @@ namespace rct3::ui
             page.buttons.push_back({ "Staff_JobIsMaintenanceIcon", { }, text(strings, "Rct3pp_ReplaceBrokenHelp"), f.broken_items > 0 && affordable });
         }
 
-        void park_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
+        void park_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
+            if (f.park != nullptr && f.park->has_finance)
+                add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
             if (f.park != nullptr && f.park->has_park)
             {
-                add_series(page, strings, "Graph_ParkRating", f.park->park.park_rating);
-                add_series(page, strings, "Graph_Guests", f.park->park.guests_in_park);
-                add_series(page, strings, "Graph_GuestIntake", f.park->park.guest_intake);
+                const save::Park& p = f.park->park;
+                // The guests by age share the scale of all of them, so they read against it.
+                const float guests = full_scale(weeks_gone(p.guests_in_park));
+                add_series(page, strings, units, "Graph_AdultsInPark", p.adults_in_park, false, guests);
+                add_series(page, strings, units, "Graph_TeenagersInPark", p.teenagers_in_park, false, guests);
+                add_series(page, strings, units, "Graph_ChildrenInPark", p.children_in_park, false, guests);
+                add_series(page, strings, units, "Graph_Guests", p.guests_in_park, false, guests);
+                add_series(page, strings, units, "Graph_GuestIntake", p.guest_intake, false);
+                add_series(page, strings, units, "Graph_PublicityLevel", p.publicity_level, false);
+                add_series(page, strings, units, "Graph_ParkRating", p.park_rating, false);
             }
-            if (f.park != nullptr && f.park->has_finance)
-                add_series(page, strings, "Graph_ParkValue", f.park->finance.park_value);
             if (page.graph.empty())
                 page.note = text(strings, kNotRead);
+            month_ticks(page, strings, f.state);
         }
 
         void park_campaigns(ManagementPage& page, const StringTable& strings)
@@ -343,7 +379,7 @@ namespace rct3::ui
             }
         }
 
-        void finance_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
+        void finance_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             if (f.park == nullptr || !f.park->has_finance)
             {
@@ -351,14 +387,15 @@ namespace rct3::ui
                 return;
             }
             const save::Finance& m = f.park->finance;
-            add_series(page, strings, "Graph_CashLessLoan", m.cash_less_loan);
-            add_series(page, strings, "Graph_ParkValue", m.park_value);
-            add_series(page, strings, "Graph_WeeklyProfit", m.weekly_profit);
-            add_series(page, strings, "Graph_CompanyValue", m.company_value);
-            add_series(page, strings, "Graph_Income", m.income);
-            add_series(page, strings, "Graph_MoneySpent", m.expenditure);
+            add_series(page, strings, units, "Graph_CashLessLoan", m.cash_less_loan, true);
+            add_series(page, strings, units, "Graph_ParkValue", m.park_value, true);
+            add_series(page, strings, units, "Graph_WeeklyProfit", m.weekly_profit, true);
+            add_series(page, strings, units, "Graph_CompanyValue", m.company_value, true);
+            add_series(page, strings, units, "Graph_Income", m.income, true);
+            add_series(page, strings, units, "Graph_MoneySpent", m.expenditure, true);
             if (page.graph.empty())
                 page.note = text(strings, kNotRead);
+            month_ticks(page, strings, f.state);
         }
 
         // ----- staff -----
@@ -855,7 +892,7 @@ namespace rct3::ui
                 if (tab == 0)
                     park_view(page, facts, strings, units);
                 else if (tab == 1)
-                    park_graphs(page, facts, strings);
+                    park_graphs(page, facts, strings, units);
                 else if (tab == 2)
                     park_campaigns(page, strings);
                 else
@@ -865,7 +902,7 @@ namespace rct3::ui
                 if (tab == 0)
                     finance_summary(page, facts, strings, units);
                 else
-                    finance_graphs(page, facts, strings);
+                    finance_graphs(page, facts, strings, units);
                 break;
             case ManagementTopic::Staff:
                 staff_list(page, std::min(tab, kStaffTabs.size() - 1), facts, strings);

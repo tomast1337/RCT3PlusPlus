@@ -34,12 +34,17 @@ namespace rct3::ui
         return ascii(std::format("{}:{:02} {}m", (hour + 11) % 12 + 1, m % 60, hour < 12 ? 'a' : 'p'));
     }
 
+    std::u16string short_month(const StringTable& strings, std::int32_t month)
+    {
+        return std::u16string(strings.get(std::format("{}{}", kShortMonth, month)));
+    }
+
     std::u16string date_text(const StringTable& strings, std::int32_t day, std::int32_t month, std::int32_t year)
     {
         std::u16string out;
         if (day > 0)
             out = ascii(std::format("{} ", day));
-        out += strings.get(std::format("{}{}", kShortMonth, month));
+        out += short_month(strings, month);
         out += u", ";
         out += strings.get(kYear);
         out += ascii(std::format(" {}", year));

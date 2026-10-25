@@ -276,13 +276,21 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     const InfoPage graphs = attraction_page(AttractionTab::Graphs, f, s, { });
     REQUIRE(graphs.graph.size() == 4);
     CHECK(graphs.graph[0].name == u"Speed");
-    CHECK(graphs.graph[0].values.size() == 3);
-    // Speed alone shows at first, its numbers up the left in km/h from the top; a tick for each series.
+    // Saved newest first, drawn oldest first.
+    REQUIRE(graphs.graph[0].values.size() == 3);
+    CHECK(graphs.graph[0].values.front() == doctest::Approx(3 * 3.6f));
+    CHECK(graphs.graph[0].full == doctest::Approx(20));
+    // A mark each second, the first one timed.
+    REQUIRE(graphs.graph_ticks.size() == 1);
+    CHECK(graphs.graph_ticks[0].back == 2);
+    CHECK(graphs.graph_ticks[0].label == u"0:00");
+    // Speed alone shows at first, its numbers up the left in km/h from its round full value; a tick for each
+    // series.
     CHECK(graphs.graph[0].shown);
     CHECK_FALSE(graphs.graph[1].shown);
     REQUIRE(graphs.graph_axis.size() == 5);
-    CHECK(graphs.graph_axis.front() == u"10.80 km/h");
-    CHECK(graphs.graph_axis.back() == u"3.60 km/h");
+    CHECK(graphs.graph_axis.front() == u"20 km/h");
+    CHECK(graphs.graph_axis.back() == u"0 km/h");
     REQUIRE(graphs.controls.size() == 4);
     CHECK(graphs.controls[0].id == control_id(AttractionControl::AltitudeSeries));
     CHECK(graphs.controls[0].series == 1u);
@@ -292,7 +300,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     AttractionFacts heights = f;
     heights.graph_series = 0b10;
     ride.graphs.altitude = { 2, 4 };
-    CHECK(attraction_page(AttractionTab::Graphs, heights, s, { }).graph_axis.front() == u"4.00 m");
+    CHECK(attraction_page(AttractionTab::Graphs, heights, s, { }).graph_axis.front() == u"5.0 m");
 }
 
 TEST_CASE("a flat ride's operating mode page sets how many times round it runs, and has no waits")

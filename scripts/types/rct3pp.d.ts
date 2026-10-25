@@ -34,7 +34,8 @@ declare namespace pointer {
 }
 
 declare namespace ui {
-    /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown. */
+    /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
+     * `on` for a toggle button or a tick box. */
     function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;

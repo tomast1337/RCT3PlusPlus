@@ -184,6 +184,7 @@ namespace rct3::ui
         std::array<std::optional<IconState>, construction_panel::kToggles> toggles { };
         bool can_demolish = false;
         bool can_complete = false;        ///< The track has an open end to finish from
+        bool complete_dim = false;        ///< Its button is dimmed: it flashes over a way found, waiting for a click
         std::optional<bool> new_segment;  ///< None when the track is one stretch; else whether another can begin now
         std::optional<std::size_t> split; ///< Of the split pictures, the one shown; none on a ride of one track
         bool heights = false;             ///< The track's heights are shown

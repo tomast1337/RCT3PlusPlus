@@ -225,6 +225,7 @@ namespace rct3::ui
         }
         demolish_->enabled = view_.can_demolish;
         complete_->enabled = view_.can_complete;
+        complete_->icon_colour = view_.complete_dim ? hex("#606060") : kWhite;
         new_segment_->visible = view_.new_segment.has_value();
         new_segment_->enabled = view_.new_segment.value_or(false);
         split_->visible = view_.split.has_value();

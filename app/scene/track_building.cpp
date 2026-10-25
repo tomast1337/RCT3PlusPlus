@@ -111,8 +111,10 @@ namespace rct3::scene
         constexpr std::string_view kCompleteHelp = "ATE_TT_Autocomplete";
         constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
         constexpr std::string_view kSplitHelp = "ATE_TT_Split";
-        /// Ends tried before finishing a track gives up, a few seconds at most.
+        /// Ends tried before finishing a track gives up, and each frame, a few seconds at most.
         constexpr std::size_t kCompletionTries = 20000;
+        constexpr std::size_t kCompletionTriesPerFrame = 300;
+        constexpr float kFlashSeconds = 0.4f; ///< The found way's button is lit, then dim, this long
         /// How near a piece's end must come to where the first piece starts to close the track, in park units.
         constexpr float kCloses = 0.1f;
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
@@ -579,6 +581,7 @@ namespace rct3::scene
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             v.can_demolish = ride.track && !ride.track->pieces.empty();
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride) && !b.selected;
+            v.complete_dim = !b.proposed.empty() && std::fmod(b.clock, 2 * kFlashSeconds) >= kFlashSeconds;
             v.heights = b.heights;
             v.heights_locked = scene.show_ride_heights;
             const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
@@ -880,47 +883,64 @@ namespace rct3::scene
             refresh(scene, b, assets);
         }
 
-        /// Lays the pieces that bring the open end round to where the first piece starts, closing the track, or
-        /// says why it cannot: no way found, too long looking, or not enough money for them all.
+        /// Shows `way` as the ghost, the pieces it lays.
+        void show_way(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, std::span<const park::LaidPlacement> way)
+        {
+            std::vector<save::PlacedObject> shown;
+            for (const park::LaidPlacement& p : way)
+            {
+                save::PlacedObject o = p.object;
+                o.overlay = b.overlay;
+                if (load_object_model(scene, b.models, assets, o))
+                    shown.push_back(std::move(o));
+            }
+            b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
+            for (park::GroundVertex& v : b.ghost_mesh.vertices)
+                v.colour *= kGhostTint;
+        }
+
+        /// A click on auto-complete: starts looking for a way round to the station, stops looking while it looks,
+        /// and lays the way found, paid for if the park has the money.
         void complete(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
             const park::PieceCatalogue* c = catalogue(b);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const auto last = last_piece(scene, b);
-            if (c == nullptr || !b.tip || !last || !ride.track || b.backward || b.selected)
-                return;
-            const save::TrackPiece& first = stretch_start(*ride.track);
-            const auto objects = object_indices(scene);
-            const auto object = objects.find(first.scenery);
-            const auto shape = park::shape_named(*c, first.symbol);
-            if (object == objects.end() || !shape)
-                return;
-            const park::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
-            // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
-            // laid in thought in its way too if a found way does.
-            const park::SolidTiles taken = taken_room(scene, b);
-            const auto way = park::complete_track(
-                c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid,
-                [&](save::PlacedObject o) {
-                    o.overlay = b.overlay;
-                    return !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
-                },
-                kCompletionTries);
-            if (!way)
+            if (b.completing)
             {
-                b.complaint = way.error() == park::CompletionFailure::OutOfTries ? "RideAutoCompleteOutOfTime" : "RideAutoCompleteNoSolution";
+                b.completing.reset();
                 return;
             }
+            if (c == nullptr || !b.tip || !last || !ride.track || b.backward || b.selected)
+                return;
+            if (b.proposed.empty())
+            {
+                const save::TrackPiece& first = stretch_start(*ride.track);
+                const auto objects = object_indices(scene);
+                const auto object = objects.find(first.scenery);
+                const auto shape = park::shape_named(*c, first.symbol);
+                if (object == objects.end() || !shape)
+                    return;
+                const park::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
+                // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
+                // laid in thought in its way too if a found way does.
+                b.completing = park::start_completion(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, taken = taken_room(scene, b)](save::PlacedObject o) {
+                    o.overlay = b.overlay;
+                    return !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
+                });
+                return;
+            }
+            const std::vector<park::LaidPlacement> way = std::exchange(b.proposed, { });
             std::int64_t cost = 0;
-            for (const park::LaidPlacement& p : *way)
+            for (const park::LaidPlacement& p : way)
                 cost += c->pieces[p.piece.index].record.cost;
             if (scene.park.cash && *scene.park.cash < cost)
             {
                 b.complaint = "RideAutoCompleteNotEnoughCash";
                 return;
             }
-            logging::logger("park").info("track finished with {} pieces", way->size());
-            for (const park::LaidPlacement& p : *way)
+            logging::logger("park").info("track finished with {} pieces", way.size());
+            for (const park::LaidPlacement& p : way)
             {
                 const park::PieceShape& laid = c->pieces[p.piece.index];
                 save::PlacedObject o = p.object;
@@ -930,6 +950,7 @@ namespace rct3::scene
                 b.picked = p.piece;
                 b.ghost = park::PiecePlacement { o, park::tip_of(o, laid, p.piece.reversed, scene.grid) };
                 b.off_water = false; // The way was found on water
+                b.clashes = false;   // and clear of what stands
                 build(scene, b, assets);
             }
         }
@@ -1153,6 +1174,8 @@ namespace rct3::scene
         scene.building.ghost.reset();
         scene.building.ghost_mesh = { };
         scene.building.tabs_for.reset();
+        scene.building.completing.reset();
+        scene.building.proposed.clear();
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
@@ -1420,6 +1443,8 @@ namespace rct3::scene
         TrackBuilding& b = scene.building;
         if (!b.ride)
             return false;
+        b.completing.reset();
+        b.proposed.clear();
         save::Ride& ride = scene.rides.rides.at(*b.ride);
         const park::PieceCatalogue* c = catalogue(b);
         if (c == nullptr || !ride.track)
@@ -1715,9 +1740,10 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands)
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed)
     {
         TrackBuilding& b = scene.building;
+        b.clock += elapsed;
         auto browser = scene.desktop->root().find_as<ui::DesignBrowser>(kBrowserName);
         if (b.design_picture && !browser)
         {
@@ -1835,6 +1861,11 @@ namespace rct3::scene
                 break;
             b.complaint.clear();
             using enum ui::ConstructionAction;
+            if (event->action != Complete)
+            {
+                b.completing.reset();
+                b.proposed.clear();
+            }
             switch (event->action)
             {
                 case Curve:
@@ -1906,8 +1937,29 @@ namespace rct3::scene
             }
             changed = true;
         }
+        if (b.completing)
+        {
+            if (const auto found = park::search_on(*b.completing, kCompletionTriesPerFrame))
+            {
+                if (*found)
+                    b.proposed = std::move(**found);
+                else
+                    b.complaint = "RideAutoCompleteNoSolution";
+                b.completing.reset();
+            }
+            else if (b.completing->tried >= kCompletionTries)
+            {
+                b.complaint = "RideAutoCompleteOutOfTime";
+                b.completing.reset();
+            }
+            changed = true;
+        }
         if (changed)
             refresh(scene, b, assets);
+        if (b.completing)
+            show_way(scene, b, assets, park::nearest_way(*b.completing));
+        else if (!b.proposed.empty())
+            show_way(scene, b, assets, b.proposed);
         ghost_textures(device, scene, b.ghost_mesh);
         panel->show(panel_view(scene, b, assets, currency, units));
         // The disc shows the piece to lay alone, turning, with its price across it.

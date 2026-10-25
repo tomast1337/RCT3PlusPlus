@@ -157,7 +157,8 @@ namespace rct3::ui
         bool seats = false;
         /// Of a show ride, what it puts on.
         const save::RideShow* show = nullptr;
-        /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside.
+        /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside; of a flat
+        /// ride, whether it is placed.
         std::optional<bool> station { };
         /// Of a tracked ride whose trains can still be changed, how far.
         std::optional<TrainLimits> trains { };

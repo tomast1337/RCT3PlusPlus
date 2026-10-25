@@ -397,6 +397,9 @@ namespace rct3::scene
                     f.graph_series = series->second;
                 const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
+                // A flat ride's doors go round the ground it stands on.
+                if (f.ride->kind == save::RideKind::Flat)
+                    f.station = f.ride->base.spot.has_value();
                 if (f.ride->kind == save::RideKind::Tracked)
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
@@ -1755,14 +1758,15 @@ namespace rct3::scene
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
             const auto door = [](const ui::InfoChange& c) { return c.id == ui::control_id(ui::AttractionControl::Entrance) || c.id == ui::control_id(ui::AttractionControl::Exit); };
-            // A tracked ride's entrance or exit goes beside its station, placed as its kind's item has it.
+            // A tracked ride's entrance or exit goes beside its station, a flat ride's round its ground, placed as its
+            // kind's item has it; a flat ride takes its own item, whose size it stands on.
             const auto start_door = [&](std::size_t ride, bool exit) {
                 const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
                 std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
                 const auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); });
                 const auto any = std::ranges::find_if(items, [](const park::BuildItem& i) { return !i.entrance.empty(); });
-                const auto item = kind != items.end() ? kind : any;
+                const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::RideKind::Flat ? kind : any;
                 return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);
             };
             // A closed circuit goes on to its doors, the entrance first, while its window shows, as in the game.

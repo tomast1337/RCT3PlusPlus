@@ -337,6 +337,16 @@ namespace rct3::scene
             park_of(park_).park.time = a[0].get<float>();
             return Json(nullptr);
         });
+        engine_.define("park.weather", [this](const Json&) { return Json(save::to_string(park_of(park_).park.weather)); });
+        engine_.define("park.setWeather", [this](const Json& a) -> Json {
+            for (std::int32_t raw = 0; a.size() == 1 && a[0].is_string() && raw <= 6; ++raw)
+                if (const save::WeatherType w = save::weather_type_from(raw); a[0].get<std::string>() == save::to_string(w))
+                {
+                    park_of(park_).park.weather = w;
+                    return Json(nullptr);
+                }
+            throw std::invalid_argument("park.setWeather takes the name of a weather, such as \"light rain\"");
+        });
         engine_.define("park.vipGoals", [this](const Json&) {
             Json out = Json::array();
             for (const save::Condition& c : park_of(park_).park_model.objectives.conditions)
@@ -422,6 +432,11 @@ namespace rct3::scene
                 throw std::invalid_argument(std::format("options.set: no option {}", a[0].get<std::string>()));
             front_->live->options.set(info->option, a[1].get<float>());
             return Json(nullptr);
+        });
+        engine_.define("camera.lens", [this](const Json&) -> Json {
+            const auto& drops = park_of(park_).lens.water.drops;
+            const auto sheets = std::ranges::count(drops, true, &park::LensDrop::sheet);
+            return { { "drops", static_cast<std::int64_t>(drops.size()) - sheets }, { "sheets", sheets } };
         });
         engine_.define("camera.riding", [this](const Json&) -> Json {
             const ParkScene& park = park_of(park_);

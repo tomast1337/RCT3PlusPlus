@@ -80,6 +80,10 @@ declare namespace park {
     function postMessage(key: string, ride?: number, tab?: number): void;
     /** The park's messages, oldest first: each one's text key and the name it was posted about. */
     function messages(): { key: string; name: string }[];
+    /** The weather now, as "sunny", "cloudy", "light rain", "heavy rain", "thunderstorm" and the rest. */
+    function weather(): string;
+    /** Sets the weather now, by one of the names weather() gives. */
+    function setWeather(name: string): void;
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */
@@ -110,6 +114,8 @@ declare namespace camera {
     function view(): { yaw: number; pitch: number; distance: number; target: [number, number, number]; eye: [number, number, number] };
     /** Looks at `at` from `from`; without `from`, keeps the way it faces and how far back it is. */
     function look(at: MapPoint, from?: MapPoint): void;
+    /** The water on the camera's lens: its drops and its sheets of water. */
+    function lens(): { drops: number; sheets: number };
     /** Riding along in a car: its ride's place in rides.list(), the car (on a flat ride, the seat or fixed camera; going with a person, ride is -1 and car their place in
      *  people.list()), and once it
      *  is seen from, the rider's eyes in world units and the way they look. Undefined while the view is overhead. */

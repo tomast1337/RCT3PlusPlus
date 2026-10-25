@@ -1501,6 +1501,18 @@ namespace rct3::scene
         const std::vector<TrackBuilding::DesignDoor> doors = std::exchange(b.design_doors, { });
         const std::optional<save::Ride> settings = std::exchange(b.design_ride, std::nullopt);
         const std::int64_t cash = scene.park.cash.value_or(0);
+        // shortcut: a design's pieces are not checked against each other, as it was built whole in the game and
+        // our rule refuses some of its pieces that pass close; check them too once the rule matches the game's.
+        park::SolidTiles standing;
+        if (!design.empty())
+        {
+            std::vector<save::PlacedObject> others;
+            std::ranges::copy_if(scene.objects, std::back_inserter(others), [&](const save::PlacedObject& o) {
+                const auto of = scene.attractions.find(o.id);
+                return of == scene.attractions.end() || of->second.kind != park::AttractionRef::Kind::Ride || of->second.index != *b.ride;
+            });
+            standing = park::solid_tiles(others, scene.models, scene.grid);
+        }
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
             if (i > 0)
@@ -1513,6 +1525,9 @@ namespace rct3::scene
                 if (!load_object_model(scene, b.models, assets, placed->object))
                     break;
                 b.picked = park::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), design[i].reversed };
+                // Refused where it would clash with what stands, as a piece built by hand is; the flag left by the
+                // last refresh is the offered piece's, not this one's.
+                b.clashes = clashes(scene, standing, placed->object);
                 b.ghost = std::move(*placed);
             }
             const std::size_t laid = ride.track->pieces.size();

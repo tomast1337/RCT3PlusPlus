@@ -602,6 +602,14 @@ namespace rct3::scene
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
 
+    /// Why attraction `ref` cannot be put in `state`, as a string key: a ride by its track and doors, a stall when
+    /// its menu is empty; nothing when it can.
+    [[nodiscard]] std::optional<std::string> state_refusal(const ParkScene& scene, park::AttractionRef ref, save::AttractionState state);
+    /// The states the open-or-close tab of `ref` offers, in the order its choices fan out.
+    [[nodiscard]] std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref);
+    /// Those choices as the tab fans them: each greyed, with why as its help, when `state_refusal` refuses it.
+    [[nodiscard]] std::vector<ui::InfoChoice> state_fan(const ParkScene& scene, park::AttractionRef ref, const ui::StringTable& strings);
+
     /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
     /// key of why not.
     [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state);

@@ -453,13 +453,7 @@ namespace rct3::scene
                 tab.slot = t.slot;
                 tab.action = t.action;
                 if (t.tab == ui::AttractionTab::State)
-                {
-                    for (const ui::StateChoice& c : ui::state_choices(kind))
-                    {
-                        const bool now = c.state == f.common->state;
-                        tab.choices.push_back({ std::string(now ? c.disabled_icon : c.icon), std::u16string(assets.strings->get(c.help)), !now });
-                    }
-                }
+                    tab.choices = state_fan(scene, ref, *assets.strings);
                 scene.shown_tabs.push_back(t.tab);
             }
             // The open-or-close tab has no page of its own.
@@ -1339,24 +1333,54 @@ namespace rct3::scene
             }
     }
 
-    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state)
+    std::optional<std::string> state_refusal(const ParkScene& scene, park::AttractionRef ref, save::AttractionState state)
     {
-        save::Ride& r = scene.rides.rides.at(ride);
+        if (ref.kind == park::AttractionRef::Kind::Stall)
+        {
+            if (state == save::AttractionState::Open && scene.rides.stalls.at(ref.index).items.empty())
+                return "CantOpenStallNoItems";
+            return std::nullopt;
+        }
+        const std::size_t ride = ref.index;
         const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
-        auto refused = park::open_refusal(r, rules, state, scene.building.ride == ride, course);
+        return park::open_refusal(scene.rides.rides.at(ride), rules, state, scene.building.ride == ride, course);
+    }
+
+    std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
+    {
+        if (ref.kind == park::AttractionRef::Kind::Stall)
+            return ui::state_choices(ui::AttractionKind::Stall);
+        const bool tested = ref.index >= scene.track_rules.size() || !scene.track_rules[ref.index].never_tested;
+        return ui::state_choices(ui::attraction_kind(scene.rides.rides.at(ref.index)), tested);
+    }
+
+    std::vector<ui::InfoChoice> state_fan(const ParkScene& scene, park::AttractionRef ref, const ui::StringTable& strings)
+    {
+        std::vector<ui::InfoChoice> fan;
+        for (const ui::StateChoice& c : state_choices(scene, ref))
+        {
+            // Greyed only where the attraction cannot be put in that state, saying why; the state it is in stays live.
+            const auto refused = state_refusal(scene, ref, c.state);
+            fan.push_back({ std::string(refused ? c.disabled_icon : c.icon), std::u16string(strings.get(refused ? *refused : c.help)), !refused });
+        }
+        return fan;
+    }
+
+    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state)
+    {
+        auto refused = state_refusal(scene, { .kind = park::AttractionRef::Kind::Ride, .index = ride }, state);
         if (!refused)
-            set_attraction_state(scene, r.base, state);
+            set_attraction_state(scene, scene.rides.rides.at(ride).base, state);
         return refused;
     }
 
     std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::AttractionState state)
     {
-        save::Stall& s = scene.rides.stalls.at(stall);
-        if (state == save::AttractionState::Open && s.items.empty())
-            return "CantOpenStallNoItems";
-        set_attraction_state(scene, s.base, state);
-        return std::nullopt;
+        auto refused = state_refusal(scene, { .kind = park::AttractionRef::Kind::Stall, .index = stall }, state);
+        if (!refused)
+            set_attraction_state(scene, scene.rides.stalls.at(stall).base, state);
+        return refused;
     }
 
     void stage_show(ParkScene& scene, const save::RideShow& show)
@@ -1627,8 +1651,7 @@ namespace rct3::scene
             {
                 // Put in the state picked, then shown again for the state tab's new look.
                 const ui::AttractionFacts f = facts(scene, *scene.shown);
-                const ui::AttractionKind kind = f.stall ? ui::AttractionKind::Stall : ui::attraction_kind(*f.ride);
-                const std::vector<ui::StateChoice> states = ui::state_choices(kind);
+                const std::vector<ui::StateChoice> states = state_choices(scene, *scene.shown);
                 if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
                     const save::AttractionState state = states[choice->second].state;

@@ -171,6 +171,7 @@ TEST_CASE("rides can be tested as well as opened and closed, other attractions o
     CHECK(stall[0].state == save::AttractionState::Open);
     CHECK(stall[1].state == save::AttractionState::Closed);
     CHECK(state_choices(AttractionKind::Facility).size() == 2);
+    CHECK(state_choices(AttractionKind::Tracked, false).size() == 2);
 }
 
 TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one")

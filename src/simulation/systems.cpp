@@ -1835,6 +1835,7 @@ namespace rct3::simulation
             {
                 const float last = static_cast<float>(ride.line.size() - 1);
                 float side_ahead = 0;
+                float along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
                 for (std::size_t k = 0; k < ride.queue.size(); ++k)
                 {
                     if (!r.valid(ride.queue[k]))
@@ -1850,12 +1851,16 @@ namespace rct3::simulation
                         stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (0.2f + 0.8f * fixed_share(ride.queue[k], Side));
                     side_ahead = stride.side.value;
                     // Off their even place by a little, so the line is not spaced like a ruler.
-                    const float place_in_line = std::clamp((static_cast<float>(k) + kTuning.queues.gap_spread.value * (fixed_share(ride.queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value, 0.0f, last);
+                    // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
+                    // their own gap to open is not walked up past or into.
+                    const float even = (static_cast<float>(k) + kTuning.queues.gap_spread.value * (fixed_share(ride.queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
+                    const float place_in_line = std::clamp(std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
                     // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
                     const bool was_moving = stride.from != stride.to;
                     const bool moving = stride.along.value > place_in_line && (was_moving || stride.along.value - place_in_line > kTuning.queues.shuffle.value);
                     if (moving)
                         stride.along.value = std::max(stride.along.value - stride.speed.value * dt / paths.tile_size, place_in_line);
+                    along_ahead = stride.along.value;
                     // Between the tile behind and the one ahead, facing the front.
                     const auto behind = static_cast<std::size_t>(std::ceil(stride.along.value));
                     const auto ahead = static_cast<std::size_t>(std::floor(stride.along.value));

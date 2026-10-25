@@ -83,7 +83,7 @@ namespace rct3::render::vulkan
         {
             std::span<const std::uint32_t> vertex;
             std::span<const std::uint32_t> fragment;
-            bool cutout = false; ///< The fragment stage's specialisation constant 0
+            std::int32_t mode = 0; ///< The fragment stage's specialisation constant 0 (lit.slang)
         };
 
         ShaderCode shader_code(Shader shader)
@@ -99,11 +99,15 @@ namespace rct3::render::vulkan
                 case Shader::Lit:
                     return { kLitVert, kLitFrag };
                 case Shader::LitCutout:
-                    return { kLitVert, kLitFrag, true };
+                    return { kLitVert, kLitFrag, 1 };
                 case Shader::LitCrossing:
                     return { kLitCrossingVert, kLitFrag };
                 case Shader::LitCrossingCutout:
-                    return { kLitCrossingVert, kLitFrag, true };
+                    return { kLitCrossingVert, kLitFrag, 1 };
+                case Shader::LitLayerAdded:
+                    return { kLitVert, kLitFrag, 2 };
+                case Shader::LitLayerMultiplied:
+                    return { kLitVert, kLitFrag, 3 };
                 case Shader::Shape:
                     return { kShapeVert, kShapeFrag };
                 case Shader::Water:
@@ -582,9 +586,8 @@ namespace rct3::render::vulkan
             stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             stages[1].module = frag;
             stages[1].pName = "main";
-            const VkBool32 cutout = code.cutout ? VK_TRUE : VK_FALSE;
-            const VkSpecializationMapEntry entry { 0, 0, sizeof cutout };
-            const VkSpecializationInfo specialisation { 1, &entry, sizeof cutout, &cutout };
+            const VkSpecializationMapEntry entry { 0, 0, sizeof code.mode };
+            const VkSpecializationInfo specialisation { 1, &entry, sizeof code.mode, &code.mode };
             stages[1].pSpecializationInfo = &specialisation;
 
             VkVertexInputBindingDescription binding { 0, desc.layout.stride, VK_VERTEX_INPUT_RATE_VERTEX };

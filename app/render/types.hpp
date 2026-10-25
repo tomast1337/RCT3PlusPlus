@@ -196,6 +196,12 @@ namespace rct3::render
         LitCrossing,
         /// LitCrossing, with TexturedCutout's holes.
         LitCrossingCutout,
+        /// Lit, over two pictures: the first extra texture, in place of the noise, is a second picture read at
+        /// the same coordinate, which `DrawCommand::scroll` moves for the first picture only, so the two run at
+        /// their own speeds. Its colour, lit, is added to the result; its alpha multiplies the first's.
+        LitLayerAdded,
+        /// LitLayerAdded, with the second picture multiplying the first, colour and alpha, before the light.
+        LitLayerMultiplied,
         /// A water surface. Inputs as Lit, with location 1's alpha how see-through the water is and location 2's
         /// first value the depth of water under the point. `DrawCommand::texture` is a tiling picture of waves
         /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
@@ -228,7 +234,7 @@ namespace rct3::render
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.
     [[nodiscard]] constexpr bool lit_shader(Shader shader)
     {
-        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout;
+        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitLayerMultiplied;
     }
 
     enum class Topology : std::uint8_t

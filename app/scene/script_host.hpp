@@ -105,10 +105,11 @@ namespace rct3::scene
             float x = 0;
             float y = 0;
             bool down = false;
+            bool right = false;
+            bool middle = false;
             bool shift = false;
             bool control = false;
             float wheel = 0; ///< Notches turned this frame, positive away from the user
-            bool right = false;
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         /// The career scenario the script asked to start, once: the game and the scenario's place.
@@ -138,6 +139,7 @@ namespace rct3::scene
         std::optional<glm::vec2> at_; ///< Share of the view
         bool down_ = false;
         bool right_ = false;
+        bool middle_ = false;
         bool shift_ = false;
         float wheel_ = 0;
         bool control_ = false;

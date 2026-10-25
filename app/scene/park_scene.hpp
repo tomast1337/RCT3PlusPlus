@@ -6,9 +6,11 @@
 // window that leads through the tutorial. Leaving the tutorial asks first; the owner then goes back to the
 // front end.
 //
-// The camera, as in the game's normal mode: the right button drags the ground along, the middle button (or
-// both) turns and tilts, the wheel zooms, and the keys the player bound to the game's camera commands do the
-// same from the keyboard. With the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
+// The camera moves as the control mode option says. In the normal mode the right button drags the ground
+// along, the middle button (or both) turns and tilts, the wheel zooms, and the keys the player bound to the
+// game's camera commands do the same from the keyboard. The isometric mode looks down from one of the map's
+// four diagonals at a fixed tilt, and right with left (or the turn keys) turns it a quarter at a time. With
+// the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
 // round panel that tells about it; a click on open water starts a ripple there. The Files menu's options and
 // about items are left for the owner to open (park_windows.hpp).
@@ -81,6 +83,15 @@
 
 namespace rct3::scene
 {
+
+    /// The mouse buttons holding a drag of the camera.
+    enum class DragButtons : std::uint8_t
+    {
+        None,
+        Right,
+        Both, ///< Right and left
+        Middle,
+    };
 
     /// The pointer and the keys that act for as long as they are held, in framebuffer pixels.
     struct ParkInput
@@ -541,12 +552,16 @@ namespace rct3::scene
         ui::DrawList list;
         std::optional<float> scale;
         ui::Point last_pointer;
-        float zoom_pending = 0; ///< Wheel zoom still to roll in, as notches towards the screen (negative away)
-        bool turning = false;
-        bool dragging = false;
-        int zooming = 0;             ///< From the keys: 1 in, -1 out
-        bool hover_pickable = false; ///< A click would open a panel on what is under the pointer
-        float since_hover_pick = 0;  ///< Seconds since that was looked at
+        float zoom_pending = 0;                                     ///< Wheel zoom still to roll in, as notches towards the screen (negative away)
+        bool turning = false;                                       ///< The camera is being turned by a drag
+        bool dragging = false;                                      ///< The camera is being slid by a drag
+        DragButtons drag_buttons = DragButtons::None;               ///< Of the drag moving the camera
+        park::ControlMode control_mode = park::ControlMode::Normal; ///< The camera last moved in
+        int iso_step = 0;                                           ///< Isometric's diagonal, any whole number taken round the four
+        float iso_drag = 0;                                         ///< Isometric: pixels across the turning drag has gone since it last turned
+        int zooming = 0;                                            ///< From the keys: 1 in, -1 out
+        bool hover_pickable = false;                                ///< A click would open a panel on what is under the pointer
+        float since_hover_pick = 0;                                 ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
         std::vector<std::string> prizes;                                ///< Text keys of prizes won and not yet shown, oldest first

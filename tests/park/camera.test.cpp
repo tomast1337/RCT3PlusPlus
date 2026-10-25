@@ -244,3 +244,34 @@ TEST_CASE("a rider looks round from their seat, the way the seat is turned")
     CHECK(look_round_limited({ 7, 3 }).y == doctest::Approx(kRideLookMostPitch));
     CHECK(look_round_limited({ 7, 0 }).x == doctest::Approx(7 - glm::two_pi<float>()));
 }
+
+TEST_CASE("isometric faces along the four diagonals, any step taken round them")
+{
+    CHECK(isometric_yaw(0) == doctest::Approx(glm::quarter_pi<float>()));
+    CHECK(isometric_yaw(1) - isometric_yaw(0) == doctest::Approx(glm::half_pi<float>()));
+    CHECK(isometric_yaw(4) == doctest::Approx(isometric_yaw(0)));
+    CHECK(isometric_yaw(-1) == doctest::Approx(isometric_yaw(3)));
+    CHECK(((isometric_step(isometric_yaw(2) + 0.3f) % 4) + 4) % 4 == 2);
+}
+
+TEST_CASE("a turn towards a way to face goes the shorter way round and stops there")
+{
+    CHECK(yaw_towards(0, 1, 0.25f) == doctest::Approx(0.25f));
+    CHECK(yaw_towards(0, 1, 2) == doctest::Approx(1));
+    // From just short of a full turn to just past none: forwards, not back round.
+    CHECK(yaw_towards(6.0f, 0.2f, 0.1f) == doctest::Approx(6.1f));
+}
+
+TEST_CASE("looking round from the eye keeps the eye where it is, and flying moves it the way it looks")
+{
+    ParkCamera c;
+    c.target = { 10, 2, 10 };
+    const glm::vec3 before = eye(c);
+    const ParkCamera t = turned_at_eye(c, 0.5f, -0.3f);
+    CHECK(glm::length(eye(t) - before) < 1e-3f);
+    CHECK(t.yaw == doctest::Approx(c.yaw + 0.5f));
+    const ParkCamera f = flown(c, { 0, 0, 2 });
+    CHECK(glm::length(eye(f) - before) == doctest::Approx(2));
+    CHECK(eye(f).y < before.y); // Tilted down, forward goes down too
+    CHECK(flown(c, { 0, 3, 0 }).target.y == doctest::Approx(c.target.y + 3));
+}

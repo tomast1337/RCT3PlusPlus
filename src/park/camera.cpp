@@ -203,7 +203,7 @@ namespace rct3::park
         return pending * (1 - std::exp(std::log(0.05f) * elapsed / seconds));
     }
 
-    ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid)
+    ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid, bool lifted)
     {
         if (grid.empty())
             return camera;
@@ -215,7 +215,40 @@ namespace rct3::park
         camera.target.x = std::clamp(camera.target.x, x0, x1);
         camera.target.z = std::clamp(camera.target.z, z0, z1);
         if (const auto h = grid.height_at(camera.target.x, camera.target.z))
-            camera.target.y = *h;
+            camera.target.y = lifted ? std::max(camera.target.y, *h) : *h;
+        return camera;
+    }
+
+    float isometric_yaw(int step)
+    {
+        return glm::quarter_pi<float>() + static_cast<float>(((step % 4) + 4) % 4) * glm::half_pi<float>();
+    }
+
+    int isometric_step(float yaw)
+    {
+        return static_cast<int>(std::lround((yaw - glm::quarter_pi<float>()) / glm::half_pi<float>()));
+    }
+
+    float yaw_towards(float from, float to, float most)
+    {
+        const float full = glm::two_pi<float>();
+        const float left = std::remainder(to - from, full); // In -pi..pi: the shorter way
+        return std::abs(left) <= most ? from + left : from + std::copysign(most, left);
+    }
+
+    ParkCamera turned_at_eye(ParkCamera camera, float yaw, float pitch)
+    {
+        const glm::vec3 at = eye(camera);
+        camera = turned(camera, yaw, pitch, true);
+        camera.target += at - eye(camera);
+        return camera;
+    }
+
+    ParkCamera flown(ParkCamera camera, glm::vec3 by)
+    {
+        const glm::vec3 forward = glm::normalize(camera.target - eye(camera));
+        const glm::vec3 right = glm::normalize(glm::vec3 { forward.z, 0, -forward.x });
+        camera.target += right * by.x + glm::vec3 { 0, by.y, 0 } + forward * by.z;
         return camera;
     }
 

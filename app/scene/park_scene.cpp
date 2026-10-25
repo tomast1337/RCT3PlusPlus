@@ -1947,6 +1947,31 @@ namespace rct3::scene
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating });
+                // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
+                // standing in the park, each as the box it is clicked in.
+                // shortcut: wrecks fly through the tracked rides, their own and others', with their stations and
+                // fences; upgrade if they should hit other rides' track.
+                scene.sim.registry.ctx().insert_or_assign(
+                    simulation::WreckSurroundings {
+                        .ground = [&scene](glm::vec2 p) { return scene.grid.height_at(p.x, p.y).value_or(0.0f); },
+                        .struck =
+                            [&scene](glm::vec3 p) {
+                                if (scene.pick_boxes_of != scene.objects.size())
+                                {
+                                    scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
+                                    scene.pick_boxes_of = scene.objects.size();
+                                }
+                                return std::ranges::any_of(scene.pick_boxes, [&](const park::PickBox& box) {
+                                    if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
+                                        return false;
+                                    const save::PlacedObject& o = scene.objects[box.index];
+                                    const auto owner = scene.attractions.find(o.id);
+                                    const bool tracked = owner != scene.attractions.end() && owner->second.kind == park::AttractionRef::Kind::Ride && owner->second.index < scene.rides.rides.size() && scene.rides.rides[owner->second.index].track;
+                                    const glm::vec3 local(box.back * glm::vec4(p, 1));
+                                    return !o.hidden && !o.fixture && !tracked && glm::all(glm::greaterThanEqual(local, box.low)) && glm::all(glm::lessThanEqual(local, box.high));
+                                });
+                            },
+                    });
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
@@ -2052,10 +2077,25 @@ namespace rct3::scene
                         continue;
                     save::Ride& ride = scene.rides.rides[i];
                     ride.base.time_since_crash = wrecks->since.value;
+                    // Each wreck goes up in flames and smoke as it blows up.
+                    for (std::size_t t = 0; t < wrecks->trains.size(); ++t)
+                        for (std::size_t k = 0; k < wrecks->trains[t].size(); ++k)
+                        {
+                            const simulation::Wreck& wreck = wrecks->trains[t][k];
+                            const auto key = std::tuple { scene.ride_entities[i], t, k };
+                            if (wreck.state == simulation::WreckState::Flying)
+                                scene.wrecks_blown.erase(key);
+                            else if (wreck.state == simulation::WreckState::Burning && scene.wrecks_blown.insert(key).second)
+                                for (const std::string_view effect : { "CoasterExplosion", "CoasterSmoke" })
+                                    fire_park_particles(scene.particles, effect, wreck.at, glm::vec3(0, 1, 0));
+                        }
                     auto& [crashes, dangers] = scene.crashes_seen[scene.ride_entities[i]];
                     if (wrecks->crashes == crashes)
                         continue;
                     crashes = wrecks->crashes;
+                    // Riders were hurt when more counts as dangerous than the crash of an open ride itself.
+                    const bool hurt = wrecks->dangers - dangers > (ride.base.state == save::AttractionState::Open ? 1u : 0u);
+                    simulation::post(scene.park.messages, { .text_key = hurt ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id });
                     ride.base.state = save::AttractionState::Closed;
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
                     events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);

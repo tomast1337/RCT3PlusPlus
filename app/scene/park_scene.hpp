@@ -72,7 +72,9 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -478,6 +480,7 @@ namespace rct3::scene
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
         /// Of each ride whose trains have crashed, the crashes and dangers (simulation::Wrecks) already taken in.
         std::unordered_map<entt::entity, std::pair<std::uint32_t, std::uint32_t>> crashes_seen;
+        std::set<std::tuple<entt::entity, std::size_t, std::size_t>> wrecks_blown; ///< By ride, train and car: wrecks shown blowing up
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;
         /// Whether the view rides along in a car, on a flat ride or with a person.

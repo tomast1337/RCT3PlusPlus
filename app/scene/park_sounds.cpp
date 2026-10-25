@@ -28,6 +28,11 @@ namespace rct3::scene
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
         constexpr float kRideLevel = 0.7f;
+        constexpr float kCrashLevel = 1;        ///< Of the game volume, a wreck blowing up
+        constexpr float kLandingLevel = 0.4f;   ///< Of that, one landing
+        constexpr float kFireLevel = 0.5f;      ///< Of that, its fire burning
+        constexpr float kCrashNear = 20;        ///< World units from a wreck it is heard full loud
+        constexpr float kCrashFar = 250;        ///< And no longer heard
         constexpr float kChainFade = 0.5f;      ///< Seconds the chain's loop takes to come in and to die away
         constexpr float kWaterfallLevel = 0.6f; ///< Of full loudness.
         constexpr float kWaterfallNear = 10;    ///< World units from where it lands a waterfall is heard full loud.
@@ -97,6 +102,10 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < kScreams.size(); ++i)
                     s.screams[i] = sounds_named(items, kScreams[i]);
             }
+        constexpr std::array<std::string_view, 4> kExplosions { "CoasterExplosion01", "CoasterExplosion02", "CoasterExplosion03", "CoasterExplosion04" };
+        s.explosions = main(kExplosions);
+        constexpr std::array<std::string_view, 2> kBurning { "CoasterBurn01", "CoasterBurn02" };
+        s.burning = main(kBurning);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
         s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
@@ -199,6 +208,47 @@ namespace rct3::scene
                 play_any(engine, sounds.retches[visitor.age == simulation::AgeGroup::Child ? 0 : visitor.female ? 1 : 2], sounds.random, params);
         }
         sounds.heard = std::move(heard);
+
+        // Crashed trains' wrecks: heard landing, softer, and blowing up, and their fires burning where they lie.
+        std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
+        std::map<entt::entity, audio::VoiceHandle> fires;
+        const auto crash_heard = [&](glm::vec3 at, float level) { return audio::PlayParams { .volume = kCrashLevel * level, .at = at, .near = kCrashNear, .far = kCrashFar }; };
+        for (const auto [e, wrecks] : r.view<const simulation::Wrecks>().each())
+        {
+            std::optional<glm::vec3> fire;
+            for (std::size_t t = 0; t < wrecks.trains.size(); ++t)
+                for (std::size_t k = 0; k < wrecks.trains[t].size(); ++k)
+                {
+                    const simulation::Wreck& wreck = wrecks.trains[t][k];
+                    const auto key = std::tuple { e, t, k };
+                    const auto was = sounds.wrecks_heard.find(key);
+                    const auto [landings, state] = was != sounds.wrecks_heard.end() ? was->second : std::pair { 0, simulation::WreckState::Flying };
+                    if (wreck.state == simulation::WreckState::Burning && state == simulation::WreckState::Flying)
+                        play_any(engine, sounds.explosions, sounds.random, crash_heard(wreck.at, 1));
+                    else if (wreck.state == simulation::WreckState::Flying && wreck.landings > landings)
+                        play_any(engine, sounds.explosions, sounds.random, crash_heard(wreck.at, kLandingLevel));
+                    if (wreck.state == simulation::WreckState::Burning)
+                        fire = wreck.at;
+                    wrecks_heard[key] = { wreck.landings, wreck.state };
+                }
+            const auto burning = sounds.fires.find(e);
+            audio::VoiceHandle voice = burning != sounds.fires.end() ? burning->second : audio::VoiceHandle { };
+            if (burning != sounds.fires.end())
+                sounds.fires.erase(burning);
+            if (!fire)
+                continue;
+            if (!engine.is_playing(voice))
+            {
+                audio::PlayParams params = crash_heard(*fire, kFireLevel);
+                params.loop = true;
+                voice = play_any(engine, sounds.burning, sounds.random, params);
+            }
+            fires[e] = voice;
+        }
+        for (const auto& [_, voice] : sounds.fires)
+            engine.stop(voice); // Burnt out
+        sounds.fires = std::move(fires);
+        sounds.wrecks_heard = std::move(wrecks_heard);
 
         // Riders screaming, one voice a train at most, from its first car.
         if (sounds.car_were.size() != scene.car_places.size() || elapsed <= 0)
@@ -317,6 +367,9 @@ namespace rct3::scene
         for (const audio::VoiceHandle voice : sounds.waterfall_voices)
             engine.stop(voice);
         sounds.waterfall_voices.clear();
+        for (const auto& [_, voice] : sounds.fires)
+            engine.stop(voice);
+        sounds.fires.clear();
         silence_trains(engine, sounds);
     }
 

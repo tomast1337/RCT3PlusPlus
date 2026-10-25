@@ -477,6 +477,22 @@ namespace rct3::scene
                 const float at = train.at + (train.running ? train.speed * scene.sim_time : 0.0f);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
                 place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
+                // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
+                // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
+                // shortcut: drawn as it was, not burnt; upgrade if a burnt look turns up among the cars' textures.
+                if (train.crashed)
+                {
+                    const auto* wrecks = scene.sim.registry.try_get<simulation::Wrecks>(ride);
+                    const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const park::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));
+                    const auto* wreck = wrecks != nullptr && spot.train < wrecks->trains.size() && car < wrecks->trains[spot.train].size() ? &wrecks->trains[spot.train][car] : nullptr;
+                    if (wreck == nullptr || wreck->state == simulation::WreckState::Gone)
+                        place = glm::mat4(0.0f);
+                    else
+                    {
+                        const glm::vec3 left(place[3]);
+                        place = glm::translate(glm::mat4(1.0f), left + wreck->at - wreck->from) * glm::mat4_cast(wreck->turned) * glm::translate(glm::mat4(1.0f), -left) * place;
+                    }
+                }
             }
             scene.car_places[i] = place;
         }

@@ -351,5 +351,6 @@ TEST_CASE("a ghost train stops at the end of an unfinished track instead of cras
         end = std::max(end, c.at);
     }
     CHECK_FALSE(c.crashed);
+    CHECK_FALSE(c.running);
     CHECK(end == 80);
 }

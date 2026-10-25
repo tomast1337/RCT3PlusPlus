@@ -21,6 +21,7 @@
 
 #include "config/game_install.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/ride_cars.hpp"
@@ -32,6 +33,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/build_menus.hpp"
+#include "simulation/coaster.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/attraction_info.hpp"
 
@@ -144,6 +146,20 @@ namespace rct3::scene
         std::optional<park::CompletionSearch> completing;
         std::vector<park::LaidPlacement> proposed;
         float clock = 0; ///< Seconds the panel has been open, which the button flashes by
+        /// While the ride is testing and its track is not yet a circuit, a see-through copy of its first train
+        /// runs from the station to the open end, where it stops, and after a while sets off again. It runs on the
+        /// clock's time rather than the park's, so it runs while the park is paused.
+        struct GhostTrain
+        {
+            simulation::Coaster train;
+            std::vector<park::CarSpot> spots;
+            std::vector<glm::mat4> stood;    ///< Where each car stood, by car
+            float stood_at = 0;              ///< Where the train's front stood
+            float waited = 0;                ///< Seconds it has stood at the open end
+            park::MovingMeshes meshes;       ///< The cars, then the joints of those on arms
+            std::vector<std::size_t> joints; ///< The car each joint rides with, in the order of the meshes
+        };
+        std::optional<GhostTrain> test;
     };
 
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
@@ -190,7 +206,7 @@ namespace rct3::scene
     /// seconds after the last.
     void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed);
 
-    /// Draws the ghost of the picked piece with `transform` and `light`.
+    /// Draws the ghost of the picked piece, and any test train, with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     // Shared with path building, which places objects the same way.

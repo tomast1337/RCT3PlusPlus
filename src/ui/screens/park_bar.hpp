@@ -9,9 +9,15 @@
 // the park itself; park_bar_values() writes it from the park's state. A press on a speed button is a
 // request: the owner takes the speed asked for with take_speed() and puts it in the park's state. A notch in
 // the middle of the bar lets the pointer through to the message drawer behind it.
+//
+// Where the player may choose how the day goes (in a sandbox), a button after the objectives button shows
+// the day's mode; pressing it opens the three modes in an arc below it, and picking one is a request the owner
+// takes with take_day_mode(). The money narrows to make room. A double click on the money asks for the
+// finances, taken with take_finances().
 #pragma once
 
 #include "save/model/world.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/park_rating.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/money_text.hpp"
@@ -43,6 +49,8 @@ namespace rct3::ui
         /// One for each kind of weather, in the order of save::WeatherType.
         std::array<std::string, 7> weather_icons;
         std::string forecast_arrow;
+        /// The day's modes, in the order of simulation::DayMode.
+        std::array<std::string, 3> day_mode_icons;
         Color text_colour = hex("#ffffff");
         Color rating_back = hex("#00000080");
         Color rating_low = hex("#d8402c");  ///< The rating bar's colour at no rating
@@ -62,6 +70,8 @@ namespace rct3::ui
         /// The weather on its way, shown after an arrow; nothing when it stays the same.
         std::optional<save::WeatherType> forecast;
         std::u16string date;
+        /// The day's mode, when the player may change it; nothing hides the day mode button.
+        std::optional<simulation::DayMode> day_mode;
     };
 
     namespace park_bar
@@ -104,6 +114,16 @@ namespace rct3::ui
         {
             return std::exchange(asked_, std::nullopt);
         }
+        /// The day mode picked since the last call.
+        [[nodiscard]] std::optional<simulation::DayMode> take_day_mode()
+        {
+            return std::exchange(asked_day_, std::nullopt);
+        }
+        /// True once for each double click on the money since the last call.
+        [[nodiscard]] bool take_finances()
+        {
+            return std::exchange(asked_finances_, false);
+        }
 
         [[nodiscard]] Button& objective_button() const
         {
@@ -113,6 +133,19 @@ namespace rct3::ui
         [[nodiscard]] Button& speed_button(std::size_t i) const
         {
             return *speeds_.at(i);
+        }
+        [[nodiscard]] Button& day_mode_button() const
+        {
+            return *day_mode_;
+        }
+        /// Of the arc below the day mode button, in the order of simulation::DayMode.
+        [[nodiscard]] Button& day_mode_choice(std::size_t i) const
+        {
+            return *day_choices_.at(i);
+        }
+        [[nodiscard]] Button& money() const
+        {
+            return *money_;
         }
         [[nodiscard]] const Label& date() const
         {
@@ -139,17 +172,26 @@ namespace rct3::ui
 
     private:
         void show_speed();
+        /// Places the left part's items, with room for the day mode button when it shows.
+        void place_left();
 
         ParkBarStyle style_;
         const StringTable& strings_;
         simulation::GameSpeed speed_;
         std::optional<simulation::GameSpeed> asked_;
+        std::optional<simulation::DayMode> asked_day_;
+        bool asked_finances_ = false;
+        float since_money_click_ = 1000; ///< Seconds since the money was last clicked; long ago at first
         std::optional<float> rating_;
         Button* objective_ = nullptr;
+        Button* day_mode_ = nullptr;
+        std::array<Button*, 3> day_choices_ { };
         std::array<Button*, 4> speeds_ { };
-        Label* money_ = nullptr;
+        Button* money_ = nullptr;
         Label* guests_ = nullptr;
+        Panel* thumb_down_ = nullptr;
         Panel* rating_area_ = nullptr;
+        Panel* thumb_up_ = nullptr;
         Label* temperature_ = nullptr;
         Panel* weather_ = nullptr;
         Panel* arrow_ = nullptr;

@@ -502,7 +502,9 @@ namespace rct3::simulation
                     break;
                 case MultiplePoweredLaunch:
                     c.shuttle = Shuttle::Swing;
-                    c.passes = 4 * circuits; // Two swings out and back, each circuit
+                    // As counted in the original game: through the station eight times more than twice its circuits,
+                    // which fits the runs timed there in two parks of two and three circuits.
+                    c.passes = 2 * circuits + 8;
                     break;
                 case UpwardsLaunch:
                 case FreefallDrop:

@@ -27,6 +27,15 @@ namespace rct3::simulation
         std::vector<bool> guarded { };                                       ///< By tile: guards keep vandals off it
         std::vector<NodeId> ring { }, next { };
         std::vector<std::size_t> seated { }; ///< By tile: guests on its benches
+        /// A person walking the paths, in the grid cell they stand in, for keeping people apart.
+        struct Body
+        {
+            std::int64_t cell = 0;
+            glm::vec3 at { 0.0f };
+            entt::entity who = entt::null;
+        };
+        std::vector<Body> bodies { };     ///< By cell, then entity
+        std::vector<glm::vec2> steps { }; ///< Each body's step aside this tick
     };
 
     struct SimWorld

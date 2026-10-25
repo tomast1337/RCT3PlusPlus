@@ -12,6 +12,8 @@
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
+#include "scene/track_building.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/park_messages.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/land_panel.hpp"
@@ -37,6 +39,7 @@ namespace rct3::scene
         constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units.
 
         constexpr std::string_view kPanelName = "land_panel";
+        constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
 
         /// A tab's tools by their pictures, `usable` the first of them that work so far.
         ui::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
@@ -182,7 +185,7 @@ namespace rct3::scene
                     whole(*middle);
                 else if (middle)
                 {
-                    for (const save::Tile t : park::brush_tiles(*middle, l.brush, true, scene.grid.width, scene.grid.height))
+                    for (const save::Tile t : park::brush_tiles(*middle, l.brush, l.tool != LandTools::Tool::Buy, scene.grid.width, scene.grid.height))
                         whole(t);
                 }
             }
@@ -374,6 +377,56 @@ namespace rct3::scene
                 scene.footpaths.waterfalls.push_back(*fall);
         }
 
+        /// The fence round the park's land built again, and the staff kept to that land, after it changed.
+        /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
+        void land_owned_changed(ParkScene& scene, const ui::InterfaceAssets& assets)
+        {
+            simulation::keep_staff_in(scene.sim, scene.grid);
+            wait_for_build(scene);
+            for (save::PlacedObject& o : scene.objects)
+                if (std::ranges::contains(scene.fence_panels, o.id))
+                    o.hidden = true;
+            scene.fence_panels.clear();
+            const save::Park& park = scene.park_model.park;
+            park::BoundaryFence fence = park::boundary_fence(park.fence_symbol, park.fence_overlay, scene.grid, scene.footpaths.paths, last_id(scene));
+            if (!fence.pieces.empty() && load_object_model(scene, scene.placing.models, assets, fence.pieces.front()))
+            {
+                const auto& colours = scene.models.at(park::model_key(fence.pieces.front())).default_colours;
+                for (save::PlacedObject& panel : fence.pieces)
+                {
+                    panel.colours = colours;
+                    scene.fence_panels.push_back(panel.id);
+                    scene.objects.push_back(std::move(panel));
+                }
+                scene.leans.merge(fence.leans);
+            }
+            objects_changed(scene);
+        }
+
+        /// A press with the buying tool: buys what is on sale under the brush, once for each tile the pointer moves to.
+        void buy(ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        {
+            LandTools& l = scene.land;
+            const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
+            if (!spot)
+                return;
+            const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            if (l.tile == tile || !scene.grid.contains(tile.col, tile.row))
+                return;
+            l.tile = tile;
+            const save::Finance& prices = scene.park_model.finance;
+            const std::int32_t price = l.buying == park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost;
+            const park::LandBought bought = park::buy_land(scene.grid, park::brush_tiles(tile, l.brush, false, scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
+            if (bought.short_of_cash)
+                say(scene, kNoMoney);
+            if (bought.tiles == 0)
+                return;
+            if (scene.park.cash)
+                *scene.park.cash -= bought.spent;
+            float_money(scene, tile_point(scene.grid, tile), -bought.spent);
+            land_owned_changed(scene, assets);
+        }
+
         void read_surfaces(LandTools& l, const ui::InterfaceAssets& assets)
         {
             if (std::exchange(l.surfaces_read, true) || !assets.install)
@@ -411,7 +464,15 @@ namespace rct3::scene
                 panel = scene.desktop->root().add<ui::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(assets.palette), strings);
             std::vector<ui::LandTab> tabs;
             ui::LandPick chosen;
-            if (l.tool == LandTools::Tool::Paint)
+            if (l.tool == LandTools::Tool::Buy)
+            {
+                ui::LandTab buying { "ParkInfoIcon_BuyLand", std::u16string(strings.get("Park_BuyLandHelp")), 2, { } };
+                buying.tools.push_back({ "ParkInfoIcon_BuyLand", std::u16string(strings.get("Park_BuyLandHelp")), true });
+                buying.tools.push_back({ "ParkInfoIcon_BuyConstructionRites", std::u16string(strings.get("Park_BuyConstructionRitesHelp")), true });
+                tabs.push_back(std::move(buying));
+                chosen = { 0, l.buying == park::LandBuy::Rights ? 1U : 0U };
+            }
+            else if (l.tool == LandTools::Tool::Paint)
             {
                 ui::LandTab base { "Land_Brush_Paint_Base", std::u16string(strings.get("Land_Brush_Paint_BaseHelp")), 4, { } };
                 for (const park::GroundSurface& s : l.surfaces)
@@ -453,6 +514,14 @@ namespace rct3::scene
             read_surfaces(scene.land, assets);
         if (tool != LandTools::Tool::Water && tool != LandTools::Tool::Waterfall)
             open_panel(scene, assets);
+    }
+
+    void buy_land_tool(ParkScene& scene, park::LandBuy what, const ui::InterfaceAssets& assets)
+    {
+        stop_land_tools(scene);
+        scene.land.tool = LandTools::Tool::Buy;
+        scene.land.buying = what;
+        open_panel(scene, assets);
     }
 
     void stop_land_tools(ParkScene& scene)
@@ -499,7 +568,7 @@ namespace rct3::scene
     void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
     {
         LandTools& l = scene.land;
-        if (auto panel = panel_of(scene); panel && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint))
+        if (auto panel = panel_of(scene); panel && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint || l.tool == LandTools::Tool::Buy))
         {
             if (panel->take_closed())
             {
@@ -507,7 +576,12 @@ namespace rct3::scene
                 return;
             }
             l.brush = panel->brush();
-            if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Paint)
+            if (const auto pick = panel->take_pick(); pick && l.tool == LandTools::Tool::Buy)
+            {
+                l.tile.reset();
+                l.buying = pick->tool == 1 ? park::LandBuy::Rights : park::LandBuy::Land;
+            }
+            else if (pick && l.tool == LandTools::Tool::Paint)
             {
                 l.tile.reset();
                 if (pick->tab == kCliffTab)
@@ -546,6 +620,8 @@ namespace rct3::scene
             paint(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Waterfall)
             pick_lake(scene, at, size, over);
+        else if (l.tool == LandTools::Tool::Buy)
+            buy(scene, assets, at, size, over);
         else
             pour(device, scene, assets, at, size, over);
         mark(device, scene, at, size, over);

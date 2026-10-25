@@ -106,10 +106,11 @@ namespace rct3::simulation
         Share time { 0.5f }; ///< Of the day, from midnight
     };
 
-    /// Where guests come into the park and leave it.
+    /// Where guests come into the park and leave it; none come in while the park is closed.
     struct ParkGate
     {
         NodeId node = kNoNode;
+        bool closed = false;
     };
 
     /// The path tiles under the park's entrances, in the registry's context: staff never step onto them, so they

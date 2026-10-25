@@ -1624,6 +1624,13 @@ namespace rct3::scene
             ask_demolish(scene, *assets.strings, assets.palette, std::move(attractions));
         }
 
+        /// Whether the object is one of the park's entrances, which a click opens the park's window on.
+        bool park_entrance(const ParkScene& scene, const save::PlacedObject& o)
+        {
+            const auto model = scene.models.find(park::model_ref(o));
+            return !o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
+        }
+
         /// What putting a broken path item back new costs: the price of the object it stands as.
         std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
         {
@@ -1691,7 +1698,7 @@ namespace rct3::scene
             }
             const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
                 const save::PlacedObject& o = scene.objects[i];
-                return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o));
+                return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
             });
             std::vector<glm::mat4> placements;
             if (scene.show_people)
@@ -1982,7 +1989,14 @@ namespace rct3::scene
                     else if (picked.attraction)
                         open_info(scene, *info, *picked.attraction, assets, options);
                     else if (picked.prop)
-                        open_prop(scene, *info, *picked.prop, assets, options);
+                    {
+                        // An entrance opens the park's window, and its own panel too on the park's land.
+                        const save::PlacedObject& o = scene.objects[*picked.prop];
+                        if (park_entrance(scene, o))
+                            open_management_window(desktop, ui::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+                        if (clickable_prop(scene, o))
+                            open_prop(scene, *info, *picked.prop, assets, options);
+                    }
                     else
                         ripple_at(scene, pointer.position, { screen.width(), screen.height() });
                 }
@@ -2860,6 +2874,30 @@ namespace rct3::scene
             else if (r.kind == ui::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
                 set_attraction_state(scene, scene.rides.stalls[r.index].base, *asks.state_all);
         }
+        if (asks.park_open)
+        {
+            auto& flags = scene.park_model.park.flags.raw;
+            flags = *asks.park_open ? flags | std::to_underlying(save::ParkFlag::Open) : flags & ~std::to_underlying(save::ParkFlag::Open);
+            for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
+                gate.closed = !*asks.park_open;
+        }
+        // Each press goes to the next entrance, round to the first.
+        if (asks.centre_entrance)
+        {
+            std::vector<std::size_t> entrances;
+            for (std::size_t i = 0; i < scene.objects.size(); ++i)
+                if (park_entrance(scene, scene.objects[i]))
+                    entrances.push_back(i);
+            if (!entrances.empty())
+            {
+                const save::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
+                const glm::vec2 middle = park::footprint_middle(o, scene.models.at(park::model_ref(o)).squares);
+                scene.camera.target = { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, scene.camera.target.y, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
+                scene.camera = park::on_ground(scene.camera, scene.grid);
+            }
+        }
+        if (asks.buy_land || asks.buy_rights)
+            buy_land_tool(scene, asks.buy_rights ? park::LandBuy::Rights : park::LandBuy::Land, assets);
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && (!scene.park.cash || *scene.park.cash >= facts.replace_cost))
         {

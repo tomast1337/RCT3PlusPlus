@@ -34,6 +34,10 @@ namespace rct3::scene
     {
         std::optional<ui::ManagementRow> row; ///< The row activated
         bool replace_broken = false;          ///< Replace every broken path item (ui::kReplaceBrokenButton)
+        std::optional<bool> park_open;        ///< Open the park, or close it (ui::kOpenCloseParkButton)
+        bool centre_entrance = false;         ///< Take the view to the next entrance (ui::kCentreEntranceButton)
+        bool buy_land = false;                ///< Take out the tool buying land (ui::kBuyLandButton)
+        bool buy_rights = false;              ///< Or building rights (ui::kBuyRightsButton)
         /// Put every attraction in `listed` in this state (ui::kOpenCloseAllButton)
         std::optional<save::AttractionState> state_all;
         std::vector<ui::ManagementRow> listed;

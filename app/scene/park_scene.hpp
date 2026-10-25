@@ -305,10 +305,12 @@ namespace rct3::scene
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
-        park::ModelPictures pictures; ///< For painting the batches new levels bring
-        park::Leans leans;            ///< Of the built pieces that follow a slope
-        park::Fitted fitted;          ///< Of the built pieces placed off the tile grid
-        park::Broken broken_objects;  ///< Path items vandals have broken, drawn so
+        park::ModelPictures pictures;            ///< For painting the batches new levels bring
+        park::Leans leans;                       ///< Of the built pieces that follow a slope
+        park::Fitted fitted;                     ///< Of the built pieces placed off the tile grid
+        park::Broken broken_objects;             ///< Path items vandals have broken, drawn so
+        std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
+        std::size_t entrance_centred = 0;        ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;

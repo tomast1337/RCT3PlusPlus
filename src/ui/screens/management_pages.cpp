@@ -194,10 +194,11 @@ namespace rct3::ui
                 page.note = text(strings, "FinancialSummary_EntranceFee_CannotBeChanged_TT");
 
             const bool open = m != nullptr && m->park.flags.has(save::ParkFlag::Open);
-            page.buttons.push_back(stub(open ? "Attraction_General_Open" : "Attraction_General_Closed", { }, text(strings, "Park_OpenCloseHelp")));
-            page.buttons.push_back(stub("ParkInfoIcon_PointCameraAtEntrance", { }, text(strings, "Park_CentreViewHelp")));
-            page.buttons.push_back(stub("ParkInfoIcon_BuyLand", { }, text(strings, "Park_BuyLandHelp")));
-            page.buttons.push_back(stub("ParkInfoIcon_BuyConstructionRites", { }, text(strings, "Park_BuyConstructionRitesHelp")));
+            const bool for_sale = m != nullptr && !m->park.flags.has(save::ParkFlag::LandPurchaseLocked);
+            page.buttons.push_back({ open ? "Attraction_General_Open" : "Attraction_General_Closed", { }, text(strings, "Park_OpenCloseHelp"), m != nullptr, { { "Attraction_Button_Open", text(strings, "TT_AttractionDialogIconOpenButton") }, { "Attraction_Button_Closed", text(strings, "TT_AttractionDialogIconClosedButton") } } });
+            page.buttons.push_back({ "ParkInfoIcon_PointCameraAtEntrance", { }, text(strings, "Park_CentreViewHelp"), true });
+            page.buttons.push_back({ "ParkInfoIcon_BuyLand", { }, text(strings, "Park_BuyLandHelp"), for_sale });
+            page.buttons.push_back({ "ParkInfoIcon_BuyConstructionRites", { }, text(strings, "Park_BuyConstructionRitesHelp"), for_sale });
             std::u16string broken = whole(f.broken_items);
             if (f.broken_items > 0)
                 broken += u" (" + money(units, f.replace_cost) + u")";

@@ -72,6 +72,14 @@ namespace rct3::ui
     /// The park operations window's tab of the awards won and fines received.
     inline constexpr std::size_t kAwardsTab = 3;
 
+    /// The park operations window's first page's buttons, by their place among its buttons: opening or closing
+    /// the park by the place of its choice (open first), taking the view to the next of its entrances, and
+    /// buying land or building rights.
+    inline constexpr std::size_t kOpenCloseParkButton = 0;
+    inline constexpr std::size_t kCentreEntranceButton = 1;
+    inline constexpr std::size_t kBuyLandButton = 2;
+    inline constexpr std::size_t kBuyRightsButton = 3;
+
     /// The button on the park operations window's first page that replaces every broken path item at its full
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
     inline constexpr std::size_t kReplaceBrokenButton = 4;

@@ -37,6 +37,7 @@
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/vip.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/extra_skins.hpp"
@@ -59,6 +60,7 @@
 #include <filesystem>
 #include <format>
 #include <future>
+#include <map>
 #include <set>
 #include <span>
 #include <string>
@@ -492,6 +494,16 @@ namespace rct3::scene
                 f.uncovered_paths = simulation::uncovered_paths(scene.sim, staff.role);
                 if (staff.role == simulation::StaffRole::Handyman)
                     f.items_mended = staff.mended;
+            }
+            const auto& r = scene.sim.registry;
+            if (const ShownPerson& p = scene.shown_people[shown]; !p.staff && p.guest != entt::null && r.valid(p.guest) && r.all_of<simulation::Vip>(p.guest))
+            {
+                const auto& vip = r.get<simulation::Vip>(p.guest);
+                const auto& goals = scene.park_model.objectives.conditions;
+                const auto goal = std::ranges::find(goals, vip.goal, &save::Condition::id);
+                const float happiness = r.all_of<simulation::Mood>(p.guest) ? r.get<simulation::Mood>(p.guest).happiness.value : 0.0f;
+                if (goal != goals.end() && goal->vip)
+                    f.vip = { vip.patience.value, simulation::vip_opinion(vip, *goal->vip, happiness) };
             }
             return f;
         }
@@ -1872,6 +1884,8 @@ namespace rct3::scene
             name_cheats(scene, assets, asked->first, asked->second);
         if (const auto asked = std::exchange(scene.info_requested, std::nullopt); asked && info)
             open_info(scene, *info, *asked, assets, options);
+        if (const auto asked = std::exchange(scene.person_requested, std::nullopt); asked && info && *asked < scene.shown_people.size())
+            open_person(scene, *info, *asked, assets, options);
         // The Construction tab has no page: it opens the panel that builds the ride's track.
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
         {
@@ -2131,6 +2145,26 @@ namespace rct3::scene
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                         simulation::step(scene.sim);
                 });
+                // The scenario's VIPs: told of, let in, looking round and judging the park as they go.
+                std::map<std::string_view, std::int32_t, std::less<>> theme_of; // Of each themed item, by symbol
+                const auto themed = [&](glm::vec3 at, std::int32_t theme, std::int32_t reach) {
+                    if (theme_of.empty() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                        for (const park::BuildItem& item : scene.build.items.get())
+                            if (item.style_index >= 0)
+                                theme_of.try_emplace(item.symbol, item.style_index);
+                    const save::TerrainGrid& g = scene.grid;
+                    if (g.tile_size_x <= 0 || g.tile_size_z <= 0)
+                        return 0;
+                    const glm::ivec2 tile { static_cast<int>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
+                    // shortcut: the theme numbers of a VIP goal are taken to be the build catalogue's; check them
+                    // against a level whose VIP wants a theme if themed areas are never found.
+                    return static_cast<std::int32_t>(std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) {
+                        const auto found = theme_of.find(o.symbol);
+                        return found != theme_of.end() && found->second == theme && std::abs(o.col - tile.x) <= reach && std::abs(o.row - tile.y) <= reach;
+                    }));
+                };
+                const auto name = [&](std::uint8_t who) { return strings::to_utf8(assets.strings->get(simulation::vip_name_key(who))); };
+                simulation::advance_vips(scene.sim, scene.park_model.objectives, scene.park.time, game_seconds, scene.park.messages, { .name = name, .themed = themed });
                 // The guests in the park now, coming in at the gate and going home, for the bar and the rating.
                 const auto inside = scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>);
                 scene.park.guests = static_cast<std::int32_t>(std::ranges::distance(inside.begin(), inside.end()));

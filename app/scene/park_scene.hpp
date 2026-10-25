@@ -242,6 +242,7 @@ namespace rct3::scene
         save::PersonType type = save::PersonType::Adult;
         save::Sex sex = save::Sex::Male;
         std::uint8_t section = 0; ///< As a part group's
+        std::uint8_t vip = 0;     ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
     };
 
     /// A photo of a player's guest to draw: where from, and the start of its file name.
@@ -373,6 +374,7 @@ namespace rct3::scene
         float ride_pull = 0;        ///< How far the wheel has pulled the view back off its mount, in notches
         /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
         std::optional<std::pair<std::size_t, std::u16string>> rename_requested;
+        std::optional<std::size_t> person_requested;         ///< Of a person in `shown_people`, their window asked by a script
         park::Seat seat;                                     ///< Its rider's eyes, while riding
         float seat_across = park::kRideWideView;             ///< How far across the screen the rider's view takes in
         park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden

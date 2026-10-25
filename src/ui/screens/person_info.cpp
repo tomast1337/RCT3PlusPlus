@@ -597,7 +597,14 @@ namespace rct3::ui
                 break;
             case PersonTab::Stats:
                 if (facts.guest != nullptr)
+                {
                     guest_stats(page, *facts.guest, strings);
+                    if (facts.vip)
+                    {
+                        add_half(page, strings, "VIP_Temprement", percent(facts.vip->first));
+                        add_half(page, strings, "VIP_ParkOpinion", percent(facts.vip->second));
+                    }
+                }
                 else if (facts.staff != nullptr)
                     staff_stats(page, *facts.staff, facts.items_mended, strings);
                 break;

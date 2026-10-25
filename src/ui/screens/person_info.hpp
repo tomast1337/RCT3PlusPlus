@@ -21,6 +21,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::ui
@@ -66,6 +67,8 @@ namespace rct3::ui
         std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
         std::optional<std::uint32_t> items_mended { };
+        /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
+        std::optional<std::pair<float, float>> vip { };
 
         [[nodiscard]] std::optional<const save::Person&> person() const
         {

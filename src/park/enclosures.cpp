@@ -107,4 +107,14 @@ namespace rct3::park
         return static_cast<std::int32_t>(std::ranges::count(map.tiles, region));
     }
 
+    std::int32_t enclosure_under(const save::EnclosureMap& map, save::Tile corner, std::array<std::int32_t, 2> span) noexcept
+    {
+        const std::int32_t first = map.at(corner.col, corner.row);
+        for (std::int32_t row = corner.row; row < corner.row + span[1]; ++row)
+            for (std::int32_t col = corner.col; col < corner.col + span[0]; ++col)
+                if (map.at(col, row) != first)
+                    return -1;
+        return first;
+    }
+
 } // namespace rct3::park

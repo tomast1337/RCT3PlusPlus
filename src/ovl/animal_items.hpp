@@ -18,6 +18,7 @@ namespace rct3::ovl
     {
         std::string_view name;    ///< Symbol name without the tag
         std::string_view scenery; ///< "sid" item the shelter is placed as; it holds the name, icon and price
+        std::string_view hut;     ///< "sid" item of the keeper's hut placed with it; empty for none
     };
 
     /// Shelters of one part of an overlay: pointer symbols tagged "asd", whose first field refers to the

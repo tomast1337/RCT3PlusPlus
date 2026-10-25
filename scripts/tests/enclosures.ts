@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Animal enclosures. In a park of the Wild! expansion the park keeps which tiles each enclosure takes, and its
-// fences stand again round them when it loads. There, a drag with a fence from the enclosure
-// list fences the tiles round, paid for; a drag with the list's delete tool takes some of them out again.
+// fences stand again round them when it loads. There, a drag with a fence from the enclosure list fences the
+// tiles round, paid for. An animal house goes only inside it, with its keeper's hut and a keeper, who walks
+// about the enclosure. A drag with the list's delete tool takes some of the tiles out again.
 //
 //   ./nob script scripts/tests/enclosures.ts -- --no-audio
 
@@ -64,10 +65,41 @@ expect(fenced() === panels.length + 18, `a five by four enclosure fenced, not ${
 log("fence paid", cash - park.cash()!);
 expect(park.cash()! < cash, "the fence paid for");
 await screenshot("enclosure_built");
-expect(build.pick("", "EnclosureDelete"), "the enclosure delete tool");
-await pointer.drag(on_view(c0 + 3, r0), on_view(c0 + 4, r0 + 3), 6);
+
+// An animal house goes only inside an enclosure; its keeper's hut goes up beside it and a keeper is hired.
+const keepers = () => people.list().filter((p) => p.staff).length;
+const staff = keepers();
+expect(build.pick("Enclosures/Shelters/Shelters", "CattleShelter"), "the cattle shelter in the enclosure list");
+pointer.move(...on_view(c0, r0)); // Over the fence
 await frames(3);
-expect(fenced() === panels.length + 14, `three by four left, not ${fenced() - panels.length} panels`);
+expect(build.placing()?.problem === "off enclosure", `the shelter refused outside the enclosure, not ${build.placing()?.problem}`);
+pointer.move(...on_view(c0 + 1, r0 + 1));
+await frames(3);
+expect(build.placing()?.problem === "none", `the shelter fits inside, not ${build.placing()?.problem}`);
+await pointer.click(...on_view(c0 + 1, r0 + 1));
+await frames(3);
+build.stop();
+await frames(10);
+const huts = map.objects().filter((o) => o.symbol === "WardensShed" && o.col >= c0 && o.col < c0 + 5 && o.row >= r0 && o.row < r0 + 4);
+expect(map.objects().some((o) => o.symbol === "CattleShelter" && o.col >= c0 && o.row >= r0), "the shelter placed");
+expect(huts.length === 1, `one keeper's hut in the enclosure, not ${huts.length}`);
+await until(() => keepers() === staff + 1, 300, "a keeper hired");
+const keeper = () => people.list().filter((p) => p.staff).at(-1)!;
+log("keeper at", JSON.stringify(keeper().at));
+const hut = huts[0];
+// Out in the open part of the enclosure, beside the house.
+await until(() => keeper().at!.col >= c0 + 3.3 || (keeper().at!.row >= r0 + 3.3 && Math.abs(keeper().at!.col - hut.col - 0.5) > 0.8), 6000, "the keeper out in the open");
+const k = keeper().at!;
+log("keeper at", JSON.stringify(k));
+expect(map.tile(Math.floor(k.col), Math.floor(k.row))?.enclosure === map.tile(c0, r0)!.enclosure, "the keeper in their enclosure");
+camera.look({ col: k.col, row: k.row }, { col: k.col + 3, row: k.row + 5, up: 4 });
+await frames(5);
+await screenshot("enclosure_shelter_keeper");
+camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 14, up: 20 });
+expect(build.pick("", "EnclosureDelete"), "the enclosure delete tool");
+await pointer.drag(on_view(c0 + 4, r0), on_view(c0 + 4, r0 + 3), 6);
+await frames(3);
+expect(fenced() === panels.length + 16, `four by four left, not ${fenced() - panels.length} panels`);
 build.stop();
 await frames(60);
 await screenshot("enclosure_cut");

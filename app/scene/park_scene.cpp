@@ -10,6 +10,7 @@
 #include "park/daylight.hpp"
 #include "park/demolish_refund.hpp"
 #include "park/edge_walls.hpp"
+#include "park/enclosures.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
@@ -35,6 +36,7 @@
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
 #include "scene/track_building.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
@@ -2598,9 +2600,36 @@ namespace rct3::scene
                                 });
                             },
                     });
+                // The animals and their keepers walk the enclosures' tiles.
+                const save::TerrainGrid& g = scene.grid;
+                const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
+                const simulation::AnimalGround animal_ground {
+                    .height = [&g](glm::vec2 p) { return g.height_at(p.x, p.y).value_or(0.0f); },
+                    .enclosure =
+                        [&](glm::vec2 p) {
+                            const glm::ivec2 t = tile_of(p);
+                            return scene.enclosures.at(t.x, t.y);
+                        },
+                    .somewhere = [&](std::int32_t which, random::RandomState& dice) -> std::optional<glm::vec2> {
+                        const auto tiles = static_cast<std::uint64_t>(park::enclosure_size(scene.enclosures, which));
+                        if (tiles == 0)
+                            return std::nullopt;
+                        for (std::uint64_t i = 0, pick = random::below(dice, tiles); i < scene.enclosures.tiles.size(); ++i)
+                            if (scene.enclosures.tiles[i] == which && pick-- == 0)
+                            {
+                                const auto col = static_cast<float>(i % static_cast<std::size_t>(scene.enclosures.cols)) + static_cast<float>(random::unit(dice));
+                                const auto row = static_cast<float>(i / static_cast<std::size_t>(scene.enclosures.cols)) + static_cast<float>(random::unit(dice));
+                                return glm::vec2 { g.origin_x + col * g.tile_size_x, g.origin_z + row * g.tile_size_z };
+                            }
+                        return std::nullopt;
+                    },
+                };
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
+                    {
                         simulation::step(scene.sim);
+                        simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds });
+                    }
                 });
                 // A coaster's lap just run becomes its graphs.
                 for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)

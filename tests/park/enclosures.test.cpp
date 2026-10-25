@@ -77,3 +77,16 @@ TEST_CASE("enclosures: taking out every tile ends the enclosure, its place used 
     CHECK(enclose(map, g, { 0, 4 }, { 0, 4 }, "Electric") == 0);
     CHECK(enclosure_fences(map, g, 0).pieces.size() == 12);
 }
+
+TEST_CASE("enclosures: an animal house fits only wholly inside one enclosure")
+{
+    const save::TerrainGrid g = flat(8, 8);
+    save::EnclosureMap map;
+    (void)enclose(map, g, { 0, 0 }, { 3, 3 }, "Wood");
+    (void)enclose(map, g, { 5, 0 }, { 7, 3 }, "Chain");
+    CHECK(enclosure_under(map, { 1, 1 }, { 3, 3 }) == 0);
+    CHECK(enclosure_under(map, { 2, 2 }, { 3, 3 }) == -1); // Over the edge
+    CHECK(enclosure_under(map, { 5, 1 }, { 3, 2 }) == 1);
+    CHECK(enclosure_under(map, { 3, 0 }, { 3, 1 }) == -1); // Across the gap into the other
+    CHECK(enclosure_under(map, { 0, 5 }, { 1, 1 }) == -1);
+}

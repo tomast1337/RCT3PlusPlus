@@ -222,7 +222,7 @@ declare namespace build {
     /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean; ghost: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure"; affordable: boolean; ghost: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */
@@ -333,9 +333,10 @@ declare namespace zooAnimals {
 }
 
 declare namespace people {
-    /** The people shown in the park, guests and staff, in the order the park keeps them. */
-    /** With, for those the simulation walks, where they are (tiles, and world height `up`) and what they are at. */
-    function list(): { name: string; staff: boolean; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "held" | "dropped" | "still" }[];
+    /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
+     *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
+     *  `up`) and what they are at. */
+    function list(): { name: string; staff: boolean; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "held" | "dropped" | "still" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

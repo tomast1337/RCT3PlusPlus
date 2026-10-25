@@ -9,17 +9,19 @@ using namespace rct3::test;
 using rct3::ovl::read_animal_toys;
 using rct3::ovl::read_shelters;
 
-TEST_CASE("a shelter refers to the scenery item it is placed as")
+TEST_CASE("a shelter refers to the scenery item it is placed as, and its keeper's hut")
 {
     Pool pool;
     pool.add("Den:asd");
     pool.add("DenHouse:sid");
-    std::vector<std::byte> bytes(0x10, std::byte { 0 });
-    const auto overlay = make_record_overlay(5, pool, "Den:asd", bytes, { { 0, "DenHouse:sid" } });
+    pool.add("Shed:sid");
+    std::vector<std::byte> bytes(0x14, std::byte { 0 });
+    const auto overlay = make_record_overlay(5, pool, "Den:asd", bytes, { { 0, "DenHouse:sid" }, { 0x10, "Shed:sid" } });
     const auto items = read_shelters(overlay, overlay.common());
     REQUIRE(items.size() == 1);
     CHECK(items[0].name == "Den");
     CHECK(items[0].scenery == "DenHouse");
+    CHECK(items[0].hut == "Shed");
 }
 
 TEST_CASE("an animal toy has a name, icon, shape and price")

@@ -9,6 +9,7 @@
 #include "park/boundary_fence.hpp"
 #include "save/model/world.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -35,6 +36,9 @@ namespace rct3::park
     /// shortcut: an enclosure cut in two stays one, fenced round both halves; split it when animals choose
     /// which half they are in.
     void unenclose(save::EnclosureMap& map, save::Tile a, save::Tile b);
+
+    /// The enclosure all `span` tiles from `corner` are in; -1 when they are not all in the same one.
+    [[nodiscard]] std::int32_t enclosure_under(const save::EnclosureMap& map, save::Tile corner, std::array<std::int32_t, 2> span) noexcept;
 
     /// How many tiles enclosure `region` has.
     [[nodiscard]] std::int32_t enclosure_size(const save::EnclosureMap& map, std::int32_t region) noexcept;

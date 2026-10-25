@@ -109,7 +109,7 @@ namespace rct3::park
         BuildKind kind = BuildKind::Scenery;
         std::string symbol;  ///< Without its tag
         std::string overlay; ///< Relative to the install, '/' separated, without ".common.ovl"
-        std::string scenery; ///< Rides and shops: the scenery item they are placed as
+        std::string scenery; ///< Rides and shops: the scenery item they are placed as. Shelters: their keeper's hut
         /// Rides placed whole or built along a track: the scenery items of their entrance and exit, and the
         /// overlay they are in: their own theme's, else the plain theme's; empty when neither has one.
         std::string entrance, exit, door_overlay;

@@ -2,6 +2,8 @@
 #include "park/chain_lifts.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
+#include "park/person_mesh.hpp"
+#include "park/person_motions.hpp"
 #include "park/sun_view.hpp"
 #include "park/water_flow.hpp"
 #include "park/waterfall_mesh.hpp"
@@ -424,6 +426,44 @@ namespace rct3::scene
             panel.show_view(ui::texture_id(target));
         }
 
+        constexpr render::Color kPeopleViewBack = render::hex("#f2f2f2"); ///< Near white behind people shown alone
+
+        /// Draws the people `shown` (of the shown people) as they are now, alone in a row at the middle of the
+        /// world, seen from a view turning round them as the build list's previews turn.
+        void draw_people_alone(render::Device& device, const ParkScene& scene, std::span<const std::size_t> shown)
+        {
+            if (!scene.person_models)
+                return;
+            constexpr float kGap = 0.7f;    ///< Between neighbours in the row
+            constexpr float kHeight = 2.0f; ///< Of the box the view fits, a tall adult's and a little over
+            const float first = -0.5f * kGap * static_cast<float>(shown.size() - 1);
+            std::vector<park::PlacedPerson> placed;
+            for (std::size_t k = 0; k < shown.size(); ++k)
+            {
+                if (shown[k] >= scene.shown_people.size())
+                    continue;
+                // Seated on a ride they stand idle instead.
+                park::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(park::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = park::motion::kIdle, .time = scene.clock });
+                pose.level = 0;
+                pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<float>(k), 0, 0));
+                placed.push_back(pose);
+            }
+            const std::array<glm::vec3, 2> box { glm::vec3(first - kGap / 2, 0, -kGap / 2), glm::vec3(kGap / 2 - first, kHeight, kGap / 2) };
+            const park::ParkCamera camera = park::framed(box, kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            // shortcut: posed and built afresh each frame the panel shows, a few small allocations; keep the lists in
+            // the scene if it ever shows in a profile.
+            park::PersonRuns runs;
+            const park::ObjectMesh mesh = park::person_mesh(*scene.person_models, placed, runs);
+            // Lit as the park is, without its shadows and lamps, which fall elsewhere.
+            render::SceneLight light = scene.light;
+            light.shadow_map = { };
+            light.shadow_view = { };
+            light.shadow_map_before = { };
+            light.lamps = { };
+            light.haze_rate = 0;
+            draw_transient(device, scene, mesh, scene.people_textures, park::view_projection(camera, 1), light, [&](const park::ObjectBatch&) { return scene.object_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; });
+        }
+
         /// Draws the first photo waiting into the photo target and asks for its pixels, for the app to save.
         void draw_photo(render::Device& device, ParkScene& scene)
         {
@@ -468,8 +508,9 @@ namespace rct3::scene
         if (!scene.footpaths.waterfalls.empty() || !scene.waterfall_mesh.indices.empty())
             profiling::section("Waterfalls", [&] { park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh); });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
+        // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
         if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop))
-            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", scene.horizon, [&] { draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", scene.shown_person ? kPeopleViewBack : scene.horizon, [&] { scene.shown_person ? draw_people_alone(device, scene, std::array { *scene.shown_person }) : draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.

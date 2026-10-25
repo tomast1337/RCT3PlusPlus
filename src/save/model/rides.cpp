@@ -285,6 +285,7 @@ namespace rct3::save
             constexpr std::string_view kSaleItem = "SaleItem";
             constexpr std::string_view kItemColours[3] = { "FlexiColour0", "FlexiColour1", "FlexiColour2" };
             constexpr std::string_view kExtraSetting = "Setting";
+            constexpr std::string_view kItemExtras = "Extras";
             constexpr std::string_view kSyncStalls = "SyncStallsOfSameType";
         } // namespace id
 
@@ -1210,6 +1211,7 @@ namespace rct3::save
                         .stall = v[id::kItemStall].ref(),
                         .sale_item = live(v[id::kSaleItem]),
                         .colours = { static_cast<std::uint8_t>(v[id::kItemColours[0]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[1]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[2]].integer()) },
+                        .extras = static_cast<std::uint32_t>(v[id::kItemExtras].integer()),
                     };
                     if (std::optional<const Object&> kind = si.item_asset != 0 ? index_.find(si.item_asset) : std::nullopt)
                         if (auto k = decode(*kind))

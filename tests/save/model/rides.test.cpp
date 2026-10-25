@@ -335,7 +335,7 @@ namespace
             ref("RideTrainInstance"), i32("WhichCar"), i32("NCars"), i32("WhichRideTrainCar"), i32("State"), i32("NumPeepsInCar"), structure("Stats", { f32("Distance"), f32("Speed"), vec3("Pos"), flag("PosValid"), ref("TrackPiece") }),
         };
         s.classes["StallInstance"] = { ref("AIDDatabaseEntry"), str("Name"), i32("State"), i32("TotalProfit"), str("StallSymbolName"), ref("Scenery"), i32("Direction"), ref_list("ShopItems"), ref_list("ShopExtras") };
-        s.classes["ShopItemInstance"] = { ref("CIDEntry"), i32("Price"), i32("TotalSold"), str("Name"), ref("Stall"), ref("SaleItem"), i32("FlexiColour0") };
+        s.classes["ShopItemInstance"] = { ref("CIDEntry"), i32("Price"), i32("TotalSold"), str("Name"), ref("Stall"), ref("SaleItem"), i32("FlexiColour0"), i32("Extras") };
         s.classes["ShopExtraInstance"] = { ref("CIDEntry"), i32("Setting") };
         return s;
     }
@@ -712,7 +712,7 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
     stall.s("Name", u"Shop").i("State", 2).i("TotalProfit", -80).s("StallSymbolName", u"Invented:sta");
     stall.r("Scenery", 310).i("Direction", 3).refs("ShopItems", { 301, 302, kStale }).refs("ShopExtras", { 303 });
     Obj i1 { "ShopItemInstance", 301, { } };
-    i1.r("CIDEntry", 310).i("Price", 120).i("TotalSold", 4).s("Name", u"%ME%").r("Stall", 300);
+    i1.r("CIDEntry", 310).i("Price", 120).i("TotalSold", 4).s("Name", u"%ME%").r("Stall", 300).i("Extras", 5);
     Obj i2 { "ShopItemInstance", 302, { } };
     i2.r("Stall", 12345).i("Price", 50).i("FlexiColour0", 9);
     Obj e1 { "ShopExtraInstance", 303, { } };
@@ -730,6 +730,8 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
     CHECK(s.items[0].price == 120);
     CHECK(s.items[0].total_sold == 4);
     CHECK(s.items[0].item_asset == 310);
+    CHECK(s.items[0].extras == 5);
+    CHECK(s.items[1].extras == 0);
     CHECK(s.items[1].colours[0] == 9);
     REQUIRE(s.extras.size() == 1);
     CHECK(s.extras[0].level == 2);

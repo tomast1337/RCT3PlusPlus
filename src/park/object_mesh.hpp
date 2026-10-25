@@ -79,7 +79,7 @@ namespace rct3::park
     /// id, so a straight piece such as a fence panel follows a slope. Upright lines stay upright.
     using Leans = std::map<std::uint64_t, glm::vec2>;
     /// The whole transform from model to park of some objects, by object id, for built pieces placed off
-    /// the tile grid, turned any way or stretched (see track_supports.hpp). Others stand by their tile.
+    /// the tile grid, turned any way or stretched (see support_columns.hpp). Others stand by their tile.
     using Fitted = std::map<std::uint64_t, glm::mat4>;
     /// The run of the lift chains some objects show, by object id: their ride's place in the ride list plus 1,
     /// negative when the piece is laid against its section's own way (chain_lifts.hpp).

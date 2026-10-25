@@ -78,10 +78,11 @@ TEST_CASE("support points are read from the item's point records")
     CHECK(p.group == 4);
 }
 
-TEST_CASE("items that neither want nor carry columns and are no track have no footprint")
+TEST_CASE("every item with squares has a footprint, as columns stop at it, but joined coaster pieces do not")
 {
-    CHECK_FALSE(support_footprint(item(0x1, 3)));
+    CHECK(support_footprint(item(0x1, 3)));
     CHECK(support_footprint(item(0x100, 3)));
+    CHECK_FALSE(support_footprint(item((1u << 26) | 0x1, 3)));
 }
 
 TEST_CASE("column facings turn with the item")

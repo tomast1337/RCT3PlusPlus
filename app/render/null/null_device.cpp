@@ -215,6 +215,9 @@ namespace rct3::render::null
     void NullDevice::end_frame()
     {
         assert(state_ == State::InFrame);
+        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
+        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
+        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
         last_stats_ = frame_stats_;
         state_ = State::Idle;
         // Nothing is drawn, so the screen reads as black.

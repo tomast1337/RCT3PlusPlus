@@ -27,6 +27,7 @@
 //                       the front screen's menus fly in. park.ready() waits for the park
 //   career.map()        whether the career map is shown, with no park open
 //   park.loaded()       whether a park is open; park.ready() waits until one is
+//   render.live()       { buffers, pipelines, textures } alive on the device as the last frame ended
 //   park.cash()         hundredths of the currency, or undefined in a park without money
 //   camera.look(at, from)  looks at the map point `at` from `from`, or as now when `from` is left out; map
 //                       points are { col, row, up }: tiles, with fractions between, and world units above the

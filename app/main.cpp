@@ -1190,8 +1190,10 @@ int main(int argc, char** argv)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
                             prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, static_cast<float>(delta)); });
-                        // Leaving, or loading another park in its place: its loading screen shows next.
-                        if (rct3::scene::take_park_leave(*park) || park_requests.park)
+                        // Leaving, or loading another park in its place (asked for here or by a script): its loading
+                        // screen shows next.
+                        const bool leave = rct3::scene::take_park_leave(*park);
+                        if (leave || park_requests.park || park_to_load)
                         {
                             const prof::Scope zone("LeavePark");
                             rct3::scene::close_park_windows(*device, *park, *front);
@@ -1200,8 +1202,11 @@ int main(int argc, char** argv)
                             if (audio && park_sounds)
                                 rct3::scene::stop_park_sounds(*audio, *park_sounds);
                             park_sounds.reset();
-                            park_to_load = std::move(park_requests.park);
-                            park_game = park_requests.game;
+                            if (park_requests.park)
+                            {
+                                park_to_load = std::move(park_requests.park);
+                                park_game = park_requests.game;
+                            }
                         }
                     }
                     else if (phase == Phase::Running && (widgets || front))

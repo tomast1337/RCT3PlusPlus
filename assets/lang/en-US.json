@@ -44,6 +44,7 @@
         "BlendShadowsHelp": "Shadows move smoothly as the sun crosses the sky, rather than in small steps. Costs a little more to draw.",
         "SurfaceDetail": "Surface detail",
         "SurfaceDetailHelp": "Grain gives textures fine detail up close, where they would look blurred, at almost no cost. Grain and relief also makes height from the light and dark of each texture, so brick, rock and paths catch the sun near the camera; it costs more to draw and takes effect when a park is loaded.",
+        "TextureDetailHelp": "How sharp the park's textures are. Lower uses smaller textures, which take less memory to draw. Takes effect when a park is loaded.",
         "SurfaceDetailOff": "Off",
         "AmbientOcclusion": "Ambient occlusion",
         "AmbientOcclusionHelp": "Creases, corners and the ground under things are darker where less of the sky reaches them. Costs a little more to draw.",

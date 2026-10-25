@@ -53,6 +53,7 @@ namespace rct3::ui
         constexpr std::string_view kBlendShadowsHelp = "Rct3pp_BlendShadowsHelp";
         constexpr std::string_view kSurfaceDetail = "Rct3pp_SurfaceDetail";
         constexpr std::string_view kSurfaceDetailHelp = "Rct3pp_SurfaceDetailHelp";
+        constexpr std::string_view kTextureDetailHelp = "Rct3pp_TextureDetailHelp";
 
         constexpr std::string_view kAutoDetect = "AutoDetectLabel";
         constexpr std::string_view kAutoDetectTip = "GameOptionsDialog_GraphicsDetailLevel";
@@ -414,7 +415,7 @@ namespace rct3::ui
         rows.level(O::DetailBlendBand, str(strings, "GameOptionsDialog_SceneryItemLODBlend"), str(strings, kBlendBandHelp));
         rows.tick(O::CompressTextures, str(strings, "GameOptionsDialog_TextureCompress"), str(strings, "GameOptionsDialog_TextureCompress_TT"));
         rows.tick(O::AggressiveDepthBias, str(strings, "GameOptionsDialog_AggressiveZBias"), str(strings, "GameOptionsDialog_AggressiveZBiasHelp"));
-        rows.level(O::TextureDetail, str(strings, "GameOptionsDialog_TextureLOD"), str(strings, "GameOptionsDialog_TextureLODHelp"));
+        rows.level(O::TextureDetail, str(strings, "GameOptionsDialog_TextureLOD"), str(strings, kTextureDetailHelp));
         rows.choice(O::SurfaceDetail, str(strings, kSurfaceDetail), items(strings, { "Rct3pp_SurfaceDetailOff", "Rct3pp_SurfaceDetailRelief", "Rct3pp_SurfaceDetailGrain" }), str(strings, kSurfaceDetailHelp));
         rows.section();
         rows.tick(O::Bloom, str(strings, "GameOptionsDialog_Bloom"), str(strings, "GameOptionsDialog_Bloom_TT"));

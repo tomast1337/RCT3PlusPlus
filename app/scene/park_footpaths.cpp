@@ -17,6 +17,7 @@
 #include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "simulation/import_park.hpp"
 #include "ui/extra_skins.hpp"
@@ -256,6 +257,7 @@ namespace rct3::scene
         {
             if (images.empty())
                 return;
+            fit_texture_detail(scene, images);
             if (scene.relief_maps)
                 park::add_relief_maps(images);
             auto uploaded = ui::upload_textures(device, images);

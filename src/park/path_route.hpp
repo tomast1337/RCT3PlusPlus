@@ -14,7 +14,11 @@
 // routes run straight, kRouteSlopeCost for each sloping piece so routes keep level where they can, and
 // kRouteCutCost for each unit of ground cut away under each piece. Asked to go straight, a route instead turns
 // for free and pays kRouteLineCost for each tile its pieces stand off the line from its start to the goal, so it
-// runs as a staircase along that line rather than an L with one corner. Tunnel pieces cut nothing, so where the
+// runs as a staircase along that line rather than an L with one corner.
+//
+// A piece standing lower than both ends of the route pays kRouteDipCost for each unit it stands below the lower
+// end. That is more than a raised piece costs for each unit it stands above the ground, so across a dip a route
+// bridges it level rather than ramp down into it and up again. Tunnel pieces cut nothing, so where the
 // ground stands high a route goes under it rather than cut a deep trench. With cutting off, a route goes over
 // or round a hill, or through it where it can reach a tunnel without cutting; with it on, it may cut its way
 // down to a tunnel or through.
@@ -38,6 +42,8 @@ namespace rct3::park
     inline constexpr std::int64_t kRouteSlopeCost = 100;
     inline constexpr std::int64_t kRouteCutCost = 200;
     inline constexpr std::int64_t kRouteLineCost = 200;
+    inline constexpr std::int64_t kRouteDipCost = 1000;
+    static_assert(kRouteDipCost > kRaisedPieceCost, "a level bridge has to cost less than a dip");
     /// Pieces looked at before a search gives up.
     inline constexpr std::size_t kRouteSearchLimit = 60000;
 

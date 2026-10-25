@@ -8,7 +8,9 @@
 // buttons; any of them may be missing. The table fills what the rest leaves of the window. The window does not
 // know what it shows: the owner hears which tab the player picked through take_tab() and gives the page with
 // show_page(), again whenever what it shows has changed. The window sorts the table's rows itself, by the
-// heading the player pressed last on that tab, and keeps the scroll and the selection across new pages.
+// heading the player pressed last on that tab, and keeps the scroll and the selection across new pages. A
+// graph has a tick box by each series' name to show or hide it; the numbers up its left are those of the series
+// ticked last, and which series are hidden is kept across new pages.
 #pragma once
 
 #include "core/maybe.hpp"
@@ -17,8 +19,10 @@
 #include "ui/widgets/column_table.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/line_plot.hpp"
+#include "ui/widgets/tickbox.hpp"
 #include "ui/widgets/window.hpp"
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -46,15 +50,19 @@ namespace rct3::ui
         float value_column = 0.55f; ///< Of the page's width, where values start
         float pair_gap = 12;        ///< Between the two half lines of a row
         float plot_height = 90;
+        float axis_width = 64; ///< Of the numbers left of a graph
+        std::string tick_box;  ///< Skins of a graph's series' tick boxes
+        std::string tick;
+        float tick_size = 13;
         float gap = 6;               ///< Between the parts of a page
         std::string button;          ///< Skin family of the buttons under a page
         Rect button_inset;           ///< Of their text; see Button::text_inset
         float button_height = 22;    ///< Of a button with text
         float icon_button_size = 34; ///< Width and height of a button with an icon and no text
         /// The colours of a graph's series, in turn.
-        std::vector<Color> series_colours { hex("#2484be"), hex("#e0402a"), hex("#3aa83a"), hex("#e0a020"), hex("#8a4fc0"), hex("#20a0a0") };
+        std::vector<Color> series_colours { hex("#2484be"), hex("#e0402a"), hex("#3aa83a"), hex("#e0a020"), hex("#8a4fc0"), hex("#20a0a0"), hex("#c04080"), hex("#707070") };
         Color plot_background = hex("#ffffffa0");
-        Color plot_zero = hex("#00000040");
+        Color plot_rule = hex("#7f7f7f60"); ///< Of a graph's level lines and ticks
     };
 
     /// A tab: the skin of its picture and its name, shown as its help and beside the tabs while it is open.
@@ -79,6 +87,8 @@ namespace rct3::ui
     {
         std::vector<InfoLine> lines;
         std::vector<InfoSeries> graph;
+        std::vector<InfoTick> graph_ticks;
+        std::size_t graph_slots = 0;      ///< Samples across the graph; see LinePlot::slots
         std::vector<TableColumn> columns; ///< No table without any
         std::vector<TableRow> rows;
         std::optional<std::size_t> sort; ///< The column the rows are sorted by until the player picks one
@@ -151,6 +161,8 @@ namespace rct3::ui
         /// Fans out the choices of button `i` beside it.
         void open_choices(std::size_t i);
         void close_choices();
+        /// Gives the graph the series that are ticked and its numbers those of the one in focus.
+        void fill_graph();
 
         ManagementWindowStyle style_;
         std::vector<Button*> tabs_;
@@ -159,6 +171,12 @@ namespace rct3::ui
         Widget* page_ = nullptr;
         Widget* lines_ = nullptr; ///< The page's lines, graph, buttons and note, made again with each page
         ColumnTable* table_ = nullptr;
+        LinePlot* plot_ = nullptr;
+        std::vector<InfoSeries> graph_;      ///< The page's graph's series, as plot_ draws them when ticked
+        std::vector<Tickbox*> series_ticks_; ///< By graph_
+        std::array<Label*, 5> axis_ { };     ///< Numbers up the graph's left, top first
+        std::vector<std::string> hidden_;    ///< Keys of the series the player unticked
+        std::string focus_;                  ///< Key of the series the player ticked last; the first when none
         std::vector<Button*> buttons_;
         std::vector<std::vector<InfoChoice>> button_choices_; ///< Of each of buttons_
         std::vector<Button*> choices_;                        ///< Fanned out beside the button choosing_

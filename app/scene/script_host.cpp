@@ -16,6 +16,7 @@
 #include "strings/unicode.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
 #include <array>
@@ -169,6 +170,8 @@ namespace rct3::scene
             Json found { { "x", (r.x0 + r.x1) / 2 * across }, { "y", (r.y0 + r.y1) / 2 * down }, { "left", r.x0 * across }, { "top", r.y0 * down }, { "right", r.x1 * across }, { "bottom", r.y1 * down } };
             if (const auto* b = dynamic_cast<const ui::Button*>(as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
+            if (const auto* t = dynamic_cast<const ui::Tickbox*>(as_pointer(w)); t != nullptr)
+                found["on"] = t->ticked;
             return found;
         });
         engine_.define("ui.children", [this](const Json& a) -> Json {

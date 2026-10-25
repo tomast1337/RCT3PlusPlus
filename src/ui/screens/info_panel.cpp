@@ -310,13 +310,30 @@ namespace rct3::ui
                 n.style.horizontal = Align::End;
                 n.style.vertical = Align::Centre;
             }
+            // Across the longest series, shown or not, so the marks stay put as series are ticked.
+            for (const InfoSeries& series : page.graph)
+                plot.slots = std::max(plot.slots, series.values.size());
+            // The marks along the bottom, their words just inside it, centred on them.
+            for (std::size_t i = 0; i < page.graph_ticks.size(); ++i)
+            {
+                const InfoTick& t = page.graph_ticks[i];
+                plot.ticks.push_back({ t.back, !t.label.empty() });
+                if (t.label.empty())
+                    continue;
+                // Kept inside the plot, clear of the numbers up its left.
+                const float x = left + std::clamp(plot_x(t.back, plot.span(), plot_width), 20.0f, plot_width - 20);
+                Label& word = line(std::format("mark{}", i), t.label, 0, 0, FontRole::Tiny);
+                word.placement = top_left(x - 20, y + plot_height - info_panel::kLineHeight, 40, info_panel::kLineHeight);
+                word.style.horizontal = Align::Centre;
+                word.style.vertical = Align::End;
+            }
             const float width = std::floor(info_panel::kPageWidth / static_cast<float>(page.graph.size()));
             y += plot_height + 1;
             for (std::size_t i = 0; i < page.graph.size(); ++i)
             {
                 const Color colour = series_colour(i);
                 if (page.graph[i].shown)
-                    plot.series.push_back({ page.graph[i].values, colour });
+                    plot.series.push_back({ .values = page.graph[i].values, .colour = colour, .full = page.graph[i].full, .centred = page.graph[i].centred });
                 if (!page.graph_axis.empty())
                     continue;
                 Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, FontRole::Small);

@@ -20,6 +20,8 @@ namespace rct3::ui
 {
 
     [[nodiscard]] std::u16string clock_text(std::int32_t minutes, bool twelve_hour);
+    /// The short name of the calendar's `month`, 0 for its first.
+    [[nodiscard]] std::u16string short_month(const StringTable& strings, std::int32_t month);
     [[nodiscard]] std::u16string date_text(const StringTable& strings, std::int32_t day, std::int32_t month, std::int32_t year);
     [[nodiscard]] std::u16string guests_text(const StringTable& strings, std::int32_t guests);
 

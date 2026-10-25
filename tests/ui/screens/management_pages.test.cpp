@@ -33,6 +33,7 @@ namespace
         s.add("GuestStats_NumGuests", u"Number of guests:");
         s.add("Month0", u"Spring");
         s.add("Month7", u"Autumn");
+        s.add("ShortMonth1", u"Apr");
         s.add("Money_ShopSales", u"Shop sales");
         s.add("ObjectiveCondition_ForManyMonths0", u"Held for");
         s.add("ObjectiveCondition_ForManyMonths1", u"months.");
@@ -105,6 +106,48 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     REQUIRE(sales != page.rows.end());
     CHECK(sales->cells[1] == money(1500));
     CHECK(sales->cells[2] == money(-700));
+}
+
+TEST_CASE("a weekly graph leaves out the week still running, oldest first, with a mark where each month began")
+{
+    const StringTable s = test_strings();
+    save::ParkModel park;
+    park.has_park = true;
+    park.park.guests_in_park = { .samples = { 50, 40, 20 }, .capacity = 64 };
+    park.park.adults_in_park = { .samples = { 30, 10, 5 }, .capacity = 64 };
+    simulation::ParkState state;
+    state.time = 5 * save::GameClock::kUnitsPerWeek; // The second week of the second month
+    const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
+    REQUIRE(page.graph.size() == 2);
+    const auto guests = std::ranges::find(page.graph, std::string("Graph_Guests"), &InfoSeries::key);
+    REQUIRE(guests != page.graph.end());
+    CHECK(guests->values == std::vector<float> { 20, 40 });
+    // The guests by age read on the scale of all of them.
+    CHECK(guests->full == doctest::Approx(50));
+    CHECK(page.graph[0].key == "Graph_AdultsInPark");
+    CHECK(page.graph[0].full == doctest::Approx(50));
+    CHECK(page.graph[0].axis.front() == u"50");
+    CHECK(page.graph[0].axis.back() == u"0");
+    CHECK(page.graph_slots == 63);
+    // The week gone began the month.
+    REQUIRE_FALSE(page.graph_ticks.empty());
+    CHECK(page.graph_ticks[0].back == 0);
+    CHECK(page.graph_ticks[0].label == u"Apr");
+}
+
+TEST_CASE("a weekly graph of money that went below nought has nought across its middle")
+{
+    const StringTable s = test_strings();
+    save::ParkModel park;
+    park.has_finance = true;
+    park.finance.weekly_profit = { .samples = { 0, -300, 100 }, .capacity = 64 };
+    const ManagementPage page = management_page(ManagementTopic::Finances, 1, { .park = &park }, s, kUnits);
+    REQUIRE(page.graph.size() == 1);
+    CHECK(page.graph[0].centred);
+    CHECK(page.graph[0].full == doctest::Approx(500));
+    REQUIRE(page.graph[0].axis.size() == 5);
+    CHECK(page.graph[0].axis[2] == money(0));
+    CHECK(page.graph[0].axis[4] == money(-500));
 }
 
 TEST_CASE("the staff tabs list one job each, the first everyone")

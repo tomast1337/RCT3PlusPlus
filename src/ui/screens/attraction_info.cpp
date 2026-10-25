@@ -94,7 +94,6 @@ namespace rct3::ui
         constexpr std::pair<float, float> kLaunchSpeeds { 4, 50 };
         constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
         constexpr int kMostTrackCircuits = 20;
-        constexpr int kAxisNumbers = 5;
         constexpr float kMaintenancePageWidth = 440;
         constexpr float kModePageWidth = 680;
         constexpr float kSpeedWidth = 100;
@@ -624,16 +623,16 @@ namespace rct3::ui
             for (std::size_t i = 0; i < all.size(); ++i)
             {
                 const auto& [key, values, scale, unit, id] = all[i];
-                InfoSeries series { .name = text(strings, key), .values = *values, .key = std::string(key), .shown = (shown >> i & 1) != 0 };
+                // Saved newest first; drawn oldest first.
+                InfoSeries series { .name = text(strings, key), .values = { values->rbegin(), values->rend() }, .key = std::string(key), .shown = (shown >> i & 1) != 0 };
                 for (float& v : series.values)
                     v *= scale;
-                // The numbers up the left follow the first series shown, which the plot stretches top to bottom.
+                series.full = full_scale(series.values);
+                series.centred = std::ranges::any_of(series.values, [](float v) { return v < 0; });
+                // The numbers up the left follow the first series shown; whole numbers on a scale of ten or more.
                 if (series.shown && page.graph_axis.empty() && !series.values.empty())
-                {
-                    const auto [low, high] = std::ranges::minmax(series.values);
-                    for (int k = 0; k < kAxisNumbers; ++k)
-                        page.graph_axis.push_back(ascii(std::format("{:.2f} ", high - (high - low) * static_cast<float>(k) / (kAxisNumbers - 1))) + unit);
-                }
+                    for (const float v : axis_values(series.full, series.centred))
+                        page.graph_axis.push_back(ascii(std::format("{:.{}f} ", v, series.full >= 10 ? 0 : 1)) + unit);
                 ticks[i] = tick(id, key, series.name, series.shown);
                 ticks[i].series = i;
                 ticks[i].column = i < 2 ? 0 : 1; // Speed and altitude down the left, the forces down the right
@@ -644,7 +643,16 @@ namespace rct3::ui
                 page.controls.push_back(std::move(ticks[i]));
             // With none ticked, the left holds no numbers but the names still go to the ticks.
             if (page.graph_axis.empty())
-                page.graph_axis.assign(kAxisNumbers, std::u16string { });
+                page.graph_axis.assign(axis_values(1, false).size(), std::u16string { });
+            // A mark each second of the lap, and every five the time from the graph's start.
+            // shortcut: a saved graph that kept only the end of a long lap is timed from where it starts; time it
+            // from the lap's start once the save's count of the lap's samples is read.
+            const std::size_t samples = std::ranges::max({ g.speed.size(), g.altitude.size(), g.vertical_g.size(), g.lateral_g.size() });
+            for (std::size_t at = 0; at < samples; at += save::kGraphSamplesPerSecond)
+            {
+                const std::size_t second = at / save::kGraphSamplesPerSecond;
+                page.graph_ticks.push_back({ static_cast<float>(samples - 1 - at), second % 5 == 0 ? ascii(std::format("{}:{:02}", second / 60, second % 60)) : std::u16string { } });
+            }
         }
 
         void thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)

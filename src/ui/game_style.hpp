@@ -499,6 +499,8 @@ namespace rct3::ui::game_skins
         s.table.selection_skin = kSelectedRow;
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
+        s.tick_box = kTickbox;
+        s.tick = kTick;
         return s;
     }
 

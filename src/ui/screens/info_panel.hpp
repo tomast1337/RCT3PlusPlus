@@ -196,9 +196,20 @@ namespace rct3::ui
     struct InfoSeries
     {
         std::u16string name;
-        std::vector<float> values;
-        std::string key = { }; ///< Its name's string key, which its widget is named by
-        bool shown = true;     ///< Drawn, or left out while keeping its colour
+        std::vector<float> values; ///< Oldest first
+        std::string key = { };     ///< Its name's string key, which its widget is named by
+        bool shown = true;         ///< Drawn, or left out while keeping its colour
+        float full = 0;            ///< Top of its scale; 0 to work it out from its values (see LinePlot)
+        bool centred = false;      ///< Its scale has zero across the middle
+        /// Numbers up the graph's left, top first, when it is the series in focus.
+        std::vector<std::u16string> axis = { };
+    };
+
+    /// A mark along the bottom of a graph, `back` samples before the newest one; one with a label is longer.
+    struct InfoTick
+    {
+        float back = 0;
+        std::u16string label = { };
     };
 
     enum class InfoControlKind : std::uint8_t
@@ -265,6 +276,7 @@ namespace rct3::ui
         /// Numbers up the graph's left, top first, evenly apart from its top to its bottom; with them, the names
         /// under the graph are left to the controls.
         std::vector<std::u16string> graph_axis;
+        std::vector<InfoTick> graph_ticks;
         std::vector<InfoControl> controls;             ///< Under the note
         std::optional<std::size_t> controls_after { }; ///< How many lines go over the controls; all when empty
         float width = 0;                               ///< Of the page; 0 for info_panel::kPageWidth

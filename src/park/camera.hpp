@@ -104,7 +104,29 @@ namespace rct3::park
     /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
     /// box fills a square view without leaving it.
     [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);
-    /// Kept over the map, its target on the surface.
-    [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid);
+    /// Kept over the map, its target on the surface; or, `lifted`, no lower than the surface.
+    [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid, bool lifted = false);
+
+    /// The choices of the control mode option, in its order: how the mouse and the keys move the camera.
+    enum class ControlMode
+    {
+        Advanced,  ///< Turns round the point under the pointer when a drag starts
+        Freelook,  ///< Flies the eye about
+        Isometric, ///< Looks down from one of four diagonals at a fixed tilt
+        Normal,
+    };
+
+    inline constexpr float kIsometricPitch = glm::quarter_pi<float>(); ///< Isometric's tilt, half way down
+    /// Isometric's way to face for `step` (any whole number, taken round the four): along a diagonal of the map.
+    [[nodiscard]] float isometric_yaw(int step);
+    /// The nearest of isometric's steps to `yaw`.
+    [[nodiscard]] int isometric_step(float yaw);
+    /// `from` turned towards `to` by at most `most` radians, the shorter way round.
+    [[nodiscard]] float yaw_towards(float from, float to, float most);
+    /// Turned by `yaw` and tilted by `pitch` radians round its own eye, which stays put; only stopping short of
+    /// looking straight up or down.
+    [[nodiscard]] ParkCamera turned_at_eye(ParkCamera camera, float yaw, float pitch);
+    /// Moved `by` world units along the way it looks: x to its right, y up, z forward (tilted with the view).
+    [[nodiscard]] ParkCamera flown(ParkCamera camera, glm::vec3 by);
 
 } // namespace rct3::park

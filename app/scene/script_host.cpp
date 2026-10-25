@@ -137,6 +137,12 @@ namespace rct3::scene
             (!a.empty() && a[0] == "right" ? right_ : down_) = false;
             return Json(nullptr);
         });
+        engine_.define("pointer.button", [this](const Json& a) {
+            if (a.size() < 2 || !a[0].is_string() || !a[1].is_boolean() || (a[0] != "right" && a[0] != "middle"))
+                throw std::invalid_argument("pointer.button takes \"right\" or \"middle\" and whether it is held");
+            (a[0] == "right" ? right_ : middle_) = a[1].get<bool>();
+            return Json(nullptr);
+        });
         engine_.define("pointer.shift", [this](const Json& a) {
             shift_ = !a.empty() && a[0].is_boolean() && a[0].get<bool>();
             return Json(nullptr);
@@ -366,6 +372,21 @@ namespace rct3::scene
                 return Json(nullptr);
             }
             park_->camera = park::looking(world_point(g, a[1]), at);
+            return Json(nullptr);
+        });
+        engine_.define("camera.view", [this](const Json&) -> Json {
+            const park::ParkCamera& c = park_of(park_).camera;
+            const glm::vec3 e = park::eye(c);
+            return { { "yaw", c.yaw }, { "pitch", c.pitch }, { "distance", c.distance }, { "target", { c.target.x, c.target.y, c.target.z } }, { "eye", { e.x, e.y, e.z } } };
+        });
+        engine_.define("options.set", [this](const Json& a) {
+            if (front_ == nullptr || a.size() < 2 || !a[0].is_string() || !a[1].is_number())
+                throw std::invalid_argument("options.set takes an option's name and a number, with the game running");
+            const auto& table = config::game_options_table();
+            const auto info = std::ranges::find(table, a[0].get<std::string>(), &config::GameOptionInfo::name);
+            if (info == table.end())
+                throw std::invalid_argument(std::format("options.set: no option {}", a[0].get<std::string>()));
+            front_->live->options.set(info->option, a[1].get<float>());
             return Json(nullptr);
         });
         engine_.define("camera.riding", [this](const Json&) -> Json {
@@ -715,7 +736,7 @@ namespace rct3::scene
         if (!at_)
             return std::nullopt;
         const render::Extent view = device.extent();
-        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_, control_, wheel_, right_ };
+        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, right_, middle_, shift_, control_, wheel_ };
     }
 
     void ScriptHost::write(const std::string& line, bool error)

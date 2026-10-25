@@ -19,6 +19,8 @@ declare namespace pointer {
     /** Holds the left button down, or the right one with "right". */
     function press(button?: "right"): void;
     function release(button?: "right"): void;
+    /** Holds the right or the middle button down, or lets it go. */
+    function button(which: "right" | "middle", held: boolean): void;
     /** Holds Shift down with the pointer, or lets it go. */
     function shift(on: boolean): void;
     /** Holds Control down with the pointer, or lets it go. */
@@ -85,7 +87,15 @@ interface MapPoint {
     up?: number;
 }
 
+declare namespace options {
+    /** Sets the game option saved as `name` (such as "camera_mode") to `value`, kept in its range. */
+    function set(name: string, value: number): void;
+}
+
 declare namespace camera {
+    /** The overhead camera: radians it faces (0 along +Z) and looks down, how far back it is, and the point it
+     *  looks at and its eye, in world units. */
+    function view(): { yaw: number; pitch: number; distance: number; target: [number, number, number]; eye: [number, number, number] };
     /** Looks at `at` from `from`; without `from`, keeps the way it faces and how far back it is. */
     function look(at: MapPoint, from?: MapPoint): void;
     /** Riding along in a car: its ride's place in rides.list(), the car (on a flat ride, the seat or fixed camera; going with a person, ride is -1 and car their place in

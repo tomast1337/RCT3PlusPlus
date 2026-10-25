@@ -106,6 +106,8 @@ namespace rct3::scene
         constexpr float kWheelSeconds = 0.25f; ///< How long a notch takes to roll in, nearly all of it
         constexpr float kKeyZoom = 2.5f;       ///< Times per second
         constexpr float kKeyTurn = 1.5f;       ///< Radians per second
+        constexpr float kIsoTurnDrag = 60;     ///< Interface units across, times the sensitivity option, that turn isometric a quarter
+        constexpr float kIsoTurnSpeed = 3.5f;  ///< Radians a second isometric turns at
 
         constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
 
@@ -117,27 +119,71 @@ namespace rct3::scene
             scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         }
 
-        void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, bool edge_scroll, float elapsed)
+        void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
         {
+            using park::ControlMode;
             const ui::Point p = input.pointer.position;
             const float dx = p.x - scene.last_pointer.x;
             const float dy = p.y - scene.last_pointer.y;
             scene.last_pointer = p;
-
-            // A drag starts away from the windows and goes on wherever the pointer then goes.
-            const bool turn = input.middle || (input.right && input.pointer.down);
-            const bool drag = input.right && !turn;
-            scene.turning = turn && (scene.turning || !over_interface);
-            scene.dragging = drag && (scene.dragging || !over_interface);
+            const auto mode = static_cast<ControlMode>(options.choice(config::GameOption::CameraMode));
+            const float scale = scene.scale.value_or(1);
 
             park::ParkCamera c = scene.camera;
+            if (mode == ControlMode::Isometric && scene.control_mode != mode)
+            {
+                scene.iso_step = park::isometric_step(c.yaw);
+                c.pitch = park::kIsometricPitch;
+            }
+            scene.control_mode = mode;
+
+            // A drag starts away from the windows and goes on wherever the pointer then goes. Which buttons hold
+            // it decides what it does: the right one, the right with the left, or the middle one.
+            const DragButtons buttons = input.middle ? DragButtons::Middle : input.right && input.pointer.down ? DragButtons::Both : input.right ? DragButtons::Right : DragButtons::None;
+            scene.drag_buttons = scene.drag_buttons != DragButtons::None || !over_interface ? buttons : DragButtons::None;
+            const DragButtons held = scene.drag_buttons;
             const bool free = scene.free_camera;
-            if (scene.turning)
-                c = park::turned(c, dx * kDragTurn, dy * kDragTurn, free);
-            else if (scene.dragging)
-                c = park::panned(c, -dx * kDragPan * c.distance, dy * kDragPan * c.distance);
-            if (!over_interface)
-                scene.zoom_pending += input.pointer.wheel.y;
+            scene.turning = false;
+            scene.dragging = false;
+            const auto turn = [&](float yaw, float pitch) {
+                c = park::turned(c, yaw, pitch, free);
+                scene.turning = true;
+            };
+            const auto pan = [&](float right, float forward) {
+                c = park::panned(c, right, forward);
+                scene.dragging = true;
+            };
+            const float wheel = over_interface ? 0 : input.pointer.wheel.y; // Notches to zoom
+
+            switch (mode)
+            {
+                case ControlMode::Isometric:
+                    if (held == DragButtons::Right)
+                        pan(-dx * kDragPan * c.distance, dy * kDragPan * c.distance);
+                    else if (held == DragButtons::Both)
+                    {
+                        // Far enough across, the view turns a quarter; then the drag counts afresh.
+                        scene.iso_drag += dx;
+                        const float needed = options.get(config::GameOption::IsometricRotation) * kIsoTurnDrag * scale;
+                        if (std::abs(scene.iso_drag) >= needed)
+                        {
+                            scene.iso_step += scene.iso_drag > 0 ? 1 : -1;
+                            scene.iso_drag = 0;
+                        }
+                        scene.turning = true;
+                    }
+                    if (held != DragButtons::Both)
+                        scene.iso_drag = 0;
+                    break;
+                default:
+                    if (held == DragButtons::Middle || held == DragButtons::Both)
+                        turn(dx * kDragTurn, dy * kDragTurn);
+                    else if (held == DragButtons::Right)
+                        pan(-dx * kDragPan * c.distance, dy * kDragPan * c.distance);
+                    break;
+            }
+
+            scene.zoom_pending += wheel;
             if (scene.zoom_pending != 0)
             {
                 const float notches = park::zoom_step(scene.zoom_pending, elapsed, kWheelSeconds);
@@ -151,9 +197,8 @@ namespace rct3::scene
             const float step = kKeyPan * c.distance * elapsed;
             float right = (input.right_key ? step : 0) - (input.left_key ? step : 0);
             float forward = (input.up_key ? step : 0) - (input.down_key ? step : 0);
-            if (edge_scroll && input.in_window && !over_interface && !scene.turning && !scene.dragging)
+            if (options.flag(config::GameOption::AutoScrollAtEdge) && input.in_window && !over_interface && held == DragButtons::None)
             {
-                const float scale = scene.scale.value_or(1);
                 const ui::Rect screen = scene.desktop->root().rect();
                 const glm::vec2 push = park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand * scale);
                 right += push.x * step;
@@ -165,7 +210,20 @@ namespace rct3::scene
                 c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed), free);
             const float yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
             const float pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
-            if (yaw != 0 || pitch != 0)
+            if (mode == ControlMode::Isometric)
+            {
+                // The turn keys and the game's isometric turn commands step a quarter, once the last turn is done.
+                const float goal = park::isometric_yaw(scene.iso_step);
+                const bool settled = std::abs(std::remainder(c.yaw - goal, glm::two_pi<float>())) < 1e-3f;
+                int keyed = settled ? static_cast<int>(yaw) : 0;
+                for (const ui::PlayCommand command : input.commands)
+                    if (command == ui::PlayCommand::RotateIsometric || command == ui::PlayCommand::ReverseIsometric)
+                        keyed = command == ui::PlayCommand::ReverseIsometric ? -1 : 1;
+                scene.iso_step += keyed;
+                c.yaw = park::yaw_towards(c.yaw, park::isometric_yaw(scene.iso_step), kIsoTurnSpeed * elapsed);
+                c.pitch = park::kIsometricPitch;
+            }
+            else if (yaw != 0 || pitch != 0)
                 c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
             scene.camera = free ? c : park::on_ground(c, scene.grid);
         }
@@ -1506,7 +1564,7 @@ namespace rct3::scene
                 ride_action(scene, assets, *action);
         }
         if (!scene.riding_along())
-            profiling::section("Camera", [&] { move_camera(scene, input, over, options.flag(config::GameOption::AutoScrollAtEdge), elapsed); });
+            profiling::section("Camera", [&] { move_camera(scene, input, over, options, elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
         auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName);
         // What a click would open, for the pointer's look; not looked at every frame, as picking walks the park.

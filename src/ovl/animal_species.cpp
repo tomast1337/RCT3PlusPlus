@@ -20,8 +20,8 @@ namespace rct3::ovl
 
         // An animal's own block.
         constexpr std::size_t kVariantSize = 0x34;
-        constexpr std::size_t kVariantModel = 0x04;
-        constexpr std::size_t kVariantMotions = 0x08;
+        constexpr std::size_t kVariantModel = 0x00;
+        constexpr std::size_t kVariantMotions = 0x04;
         constexpr std::size_t kVariantPrice = 0x14;
         constexpr std::size_t kVariantRarity = 0x18;
         constexpr std::size_t kVariantDescription = 0x1C;

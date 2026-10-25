@@ -35,7 +35,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
         put(p, { price, bits(0.7f) });
         std::copy(p.begin(), p.end(), bytes.begin() + static_cast<std::ptrdiff_t>(start + 0x14));
     }
-    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0xC, "WombatDesc:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40 + 0x04, "BigWombat:mdl" }, { 0x40 + 0x08, "wombat:wad" }, { 0x40 + 0x1C, "BigWombat:txt" }, { 0x40 + 0x30, "WombatAdult:gsi" }, { 0x74 + 0x1C, "SmallWombat:txt" }, { 0x74 + 0x30, "WombatYoung:gsi" } });
+    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0xC, "WombatDesc:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40, "BigWombat:mdl" }, { 0x40 + 0x04, "wombat:wad" }, { 0x40 + 0x1C, "BigWombat:txt" }, { 0x40 + 0x30, "WombatAdult:gsi" }, { 0x74 + 0x1C, "SmallWombat:txt" }, { 0x74 + 0x30, "WombatYoung:gsi" } });
     const auto items = read_animal_species(overlay, overlay.common());
     REQUIRE(items.size() == 1);
     CHECK(items[0].name == "wombat");

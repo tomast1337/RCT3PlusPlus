@@ -18,6 +18,7 @@
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -99,8 +100,8 @@ namespace rct3::simulation
     /// import_paths.
     std::size_t import_litter(SimWorld& world, const save::PeopleModel& people, float now);
 
-    /// The bins, benches and signs, each standing on the placed object of `objects` it names, that stand on a path tile, with what each bin holds.
-    /// Returns how many came over. Call after import_paths.
+    /// The bins, benches and signs, each standing on the placed object of `objects` it names, that stand on a path tile, with what each bin holds;
+    /// a no-entry sign bars its side of its tile to guests. Returns how many came over. Call after import_paths.
     /// shortcut: lamps carry nothing in saves that marks them out, so vandals leave them be; upgrade when path
     /// items are told apart by their models.
     std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
@@ -133,9 +134,17 @@ namespace rct3::simulation
     /// on the path tile it stands on or one beside it, for guests to stop at. Returns how many came over. Call
     /// after import_paths.
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);
-    /// The first park entrance `is_gate` picks out, as the gate guests come in and leave by, at the path tile it
-    /// stands on or one beside it. entt::null when there is none on the paths. Call after import_paths.
-    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate);
+    /// The park entrances `squares_of` picks out, giving the tiles each covers along its own X and Z: the first, at
+    /// the path tile it stands on or one beside it, as the gate guests come in and leave by; and the path tiles
+    /// under every one of them as EntrancePaths. entt::null when none is on the paths. Call after import_paths,
+    /// then keep_staff_in.
+    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<std::array<std::int32_t, 2>>(const save::PlacedObject&)>& squares_of);
+    /// Keeps staff off the path tiles on land the park does not own and off those under its entrances, and lets
+    /// them onto the others. Call after import_gate, and again when the park's land changes.
+    void keep_staff_in(SimWorld& world, const save::TerrainGrid& grid);
+    /// The side of its path tile, as the network numbers them, that a no-entry sign standing as `sign` bars: the
+    /// side its front faces.
+    [[nodiscard]] std::size_t no_entry_side(const save::PlacedObject& sign);
 
     /// Sets the park's own mix of parties (PartyMix) from the scenario's, when the save carries one.
     void import_party_mix(SimWorld& world, const save::GroupMix& mix);

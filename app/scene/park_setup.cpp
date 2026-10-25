@@ -1147,10 +1147,13 @@ namespace rct3::scene
                         return std::nullopt;
                     return model->second.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight;
                 });
-                simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
                     const auto model = scene.models.find(park::model_ref(o));
-                    return model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
+                    if (model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))
+                        return std::nullopt;
+                    return model->second.squares;
                 });
+                simulation::keep_staff_in(scene.sim, scene.grid);
                 if (park_model && park_model->group_mix)
                     simulation::import_party_mix(scene.sim, *park_model->group_mix);
                 const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);

@@ -173,16 +173,16 @@ namespace rct3::simulation
             return ride(false);
         }
 
-        /// The next tile for a wandering guest at `at`, not back where they came from unless it is the only way.
-        NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, const Patrol* patrol = nullptr)
+        /// The next tile for `who` wandering at `at`, not back where they came from unless it is the only way.
+        NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const Patrol* patrol = nullptr)
         {
             std::array<NodeId, 4> ways { };
             std::size_t count = 0;
             for (const NodeId n : paths.nodes()[at].next)
-                if (n != kNoNode && n != came && !paths.nodes()[n].queue && (patrol == nullptr || patrol->covers(paths.nodes()[n].tile)))
+                if (n != kNoNode && n != came && !paths.nodes()[n].queue && paths.may_step(at, n, who) && (patrol == nullptr || patrol->covers(paths.nodes()[n].tile)))
                     ways[count++] = n;
             if (count == 0)
-                return came != kNoNode ? came : at;
+                return came != kNoNode && paths.may_step(at, came, who) ? came : at;
             return ways[random::below(dice.state, count)];
         }
 
@@ -910,7 +910,7 @@ namespace rct3::simulation
                 std::optional<std::vector<NodeId>> best;
                 auto who = free.end();
                 for (auto m = free.begin(); m != free.end(); ++m)
-                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride)); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
+                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride), Walker::Staff); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
                     {
                         best = std::move(way);
                         who = m;
@@ -998,7 +998,7 @@ namespace rct3::simulation
                                 best = d;
                                 home = n;
                             }
-                    if (auto way = home != kNoNode ? paths.route(from, home) : std::nullopt; way && !way->empty())
+                    if (auto way = home != kNoNode ? paths.route(from, home, Walker::Staff) : std::nullopt; way && !way->empty())
                         stride.route = std::move(*way);
                     return !stride.route.empty();
                 };
@@ -1071,11 +1071,11 @@ namespace rct3::simulation
                     // rest of the time staff wander. No way back to a patrol off the paths: wander the park as if
                     // they had none.
                     const Patrol* keep_to = inside ? patrol : nullptr;
-                    NodeId next = wander(paths, at, came != at ? came : kNoNode, dice, keep_to);
+                    NodeId next = wander(paths, at, came != at ? came : kNoNode, dice, Walker::Staff, keep_to);
                     const auto work_on = [&](NodeId n) { return (sweeps ? litter_on(n) : 0) + (mends ? static_cast<std::size_t>(std::ranges::count_if(items(n), [&](entt::entity i) { return r.get<PathItem>(i).broken; })) : 0); };
                     if (sweeps || mends)
                         for (const NodeId n : paths.nodes()[at].next)
-                            if (n != kNoNode && !paths.nodes()[n].queue && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && work_on(n) > work_on(next))
+                            if (n != kNoNode && !paths.nodes()[n].queue && paths.may_step(at, n, Walker::Staff) && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && work_on(n) > work_on(next))
                                 next = n;
                     stride.to = next;
                     stride.progress.value = 0;
@@ -1595,7 +1595,7 @@ namespace rct3::simulation
                             stride.progress.value = 1;
                         }
                         else if (errand.kind == ErrandKind::Wandering)
-                            stride.to = wander(paths, at, came, dice);
+                            stride.to = wander(paths, at, came, dice, Walker::Guest);
                     }
                     if (stride.to == at)
                         stride.lane_to = stride.lane_from;

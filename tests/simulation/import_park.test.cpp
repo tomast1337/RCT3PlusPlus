@@ -375,3 +375,41 @@ TEST_CASE("rides whose stations stand side by side on one level are linked, othe
     CHECK_FALSE(r.all_of<simulation::StationNeighbours>(rides[2]));
     CHECK_FALSE(r.all_of<simulation::StationNeighbours>(rides[3]));
 }
+
+TEST_CASE("a no-entry sign bars the side its front faces; staff are kept off land not owned and the entrance")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 5;
+    grid.height = 1;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(5);
+    for (int c = 0; c < 4; ++c)
+        grid.cells[static_cast<std::size_t>(c)].flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+    for (int c = 0; c < 5; ++c)
+    {
+        save::PathTile p;
+        p.kind = save::PathKind::Ground;
+        p.col = static_cast<std::uint8_t>(c);
+        (void)simulation::add_path(world, p, grid);
+    }
+    const auto at = [&](int c) { return *world.paths.find({ c, 0, 0 }); };
+    CHECK(world.paths.nodes()[at(4)].staff_kept_off); // Not the park's
+    CHECK_FALSE(world.paths.nodes()[at(3)].staff_kept_off);
+
+    // An entrance two tiles across its own X, turned a quarter so they lie along the row: columns 2 and 3.
+    const std::array<save::PlacedObject, 2> objects { save::PlacedObject { .id = 1, .col = 2, .row = 0, .rotation = 1 }, save::PlacedObject { .id = 2, .col = 1, .row = 0 } };
+    REQUIRE(simulation::import_gate(world, objects, [](const save::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<std::int32_t, 2> { 1, 2 }) : std::nullopt; }) != entt::null);
+    simulation::keep_staff_in(world, grid);
+    CHECK(world.paths.nodes()[at(2)].staff_kept_off);
+    CHECK(world.paths.nodes()[at(3)].staff_kept_off);
+    CHECK_FALSE(world.paths.nodes()[at(1)].staff_kept_off);
+
+    // Unturned, a sign's front faces lower columns.
+    const std::array<save::SignState, 1> signs { save::SignState { .object_ref = 2, .kind = 1 } };
+    CHECK(simulation::import_path_items(world, objects, { }, { }, signs) == 1);
+    CHECK(world.paths.nodes()[at(1)].no_entry == 1U << 2);
+    CHECK_FALSE(world.paths.may_step(at(0), at(1), simulation::Walker::Guest));
+    CHECK(world.paths.may_step(at(2), at(1), simulation::Walker::Guest));
+}

@@ -107,6 +107,17 @@ namespace rct3::simulation
             return std::nullopt;
         }
 
+        /// Whether staff are kept off node `n`: off the park's land, or under one of its entrances.
+        bool kept_from_staff(const SimWorld& world, const save::TerrainGrid& grid, NodeId n)
+        {
+            const PathTileSpot& t = world.paths.nodes()[n].tile;
+            // Without terrain the whole park is its own.
+            if (!grid.empty() && (!grid.contains(t.col, t.row) || (grid.at(t.col, t.row).ownership() != save::Ownership::Owned && grid.at(t.col, t.row).ownership() != save::Ownership::OwnedRights)))
+                return true;
+            const auto* under = world.registry.ctx().find<EntrancePaths>();
+            return under != nullptr && std::ranges::contains(under->nodes, n);
+        }
+
         /// The path node beside `spot` nearest its height, trying the side `facing` first; queue tiles only with
         /// `queues`, otherwise footpaths only. kNoNode when none touches it.
         NodeId beside(const PathNetwork& paths, const save::PlacementSpot& spot, std::uint8_t facing, bool queues)
@@ -364,6 +375,7 @@ namespace rct3::simulation
         const NodeId id = world.paths.add(spot, path.kind == save::PathKind::Queue, height, line);
         world.paths.set_line(id, line);
         world.paths.set_sloped(id, path.elevation && park::path_rise(path.elevation->slope) > 0);
+        world.paths.keep_staff_off(id, kept_from_staff(world, grid, id));
         return id;
     }
 
@@ -647,20 +659,51 @@ namespace rct3::simulation
         return added;
     }
 
-    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<bool(const save::PlacedObject&)>& is_gate)
+    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<std::array<std::int32_t, 2>>(const save::PlacedObject&)>& squares_of)
     {
+        const PathNetwork& paths = world.paths;
+        entt::entity gate = entt::null;
+        EntrancePaths under;
         for (const save::PlacedObject& o : objects)
         {
-            if (o.hidden || !is_gate(o))
+            const auto squares = o.hidden ? std::nullopt : squares_of(o);
+            if (!squares)
                 continue;
-            if (const auto at = path_by(world.paths, o))
+            const auto at = path_by(paths, o);
+            if (at && gate == entt::null)
             {
-                const entt::entity e = world.registry.create();
-                world.registry.emplace<ParkGate>(e, *at);
-                return e;
+                gate = world.registry.create();
+                world.registry.emplace<ParkGate>(gate, *at);
+            }
+            if (at)
+                under.nodes.push_back(*at);
+            // A quarter turn either way lays the entrance's X along the park's rows.
+            const bool across = (o.rotation & 1) != 0;
+            const std::int32_t span_col = (*squares)[across ? 1 : 0];
+            const std::int32_t span_row = (*squares)[across ? 0 : 1];
+            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            {
+                const PathNode& node = paths.nodes()[n];
+                if (!node.removed && !node.queue && node.tile.col >= o.col && node.tile.col < o.col + span_col && node.tile.row >= o.row && node.tile.row < o.row + span_row && !std::ranges::contains(under.nodes, n))
+                    under.nodes.push_back(n);
             }
         }
-        return entt::null;
+        world.registry.ctx().insert_or_assign(std::move(under));
+        return gate;
+    }
+
+    void keep_staff_in(SimWorld& world, const save::TerrainGrid& grid)
+    {
+        for (NodeId n = 0; n < world.paths.nodes().size(); ++n)
+            world.paths.keep_staff_off(n, kept_from_staff(world, grid, n));
+    }
+
+    std::size_t no_entry_side(const save::PlacedObject& sign)
+    {
+        // The front faces lower columns unturned, then a quarter clockwise each: higher rows, higher columns,
+        // lower rows (park::turned_x); the network numbers the sides +col, +row, -col, -row.
+        constexpr std::array<std::size_t, 4> kSide { 2, 1, 0, 3 };
+        return kSide[static_cast<std::size_t>(((sign.rotation % 4) + 4) % 4)];
     }
 
     void import_party_mix(SimWorld& world, const save::GroupMix& mix)
@@ -861,7 +904,8 @@ namespace rct3::simulation
         for (const std::uint64_t bench : benches)
             add(bench, PathItemKind::Bench);
         for (const save::SignState& s : signs)
-            add(s.object_ref, PathItemKind::Sign);
+            if (const entt::entity e = add(s.object_ref, PathItemKind::Sign); e != entt::null && s.kind == 1)
+                world.paths.set_no_entry(r.get<PathItem>(e).node, no_entry_side(*objects.at(s.object_ref)), true);
         return added;
     }
 

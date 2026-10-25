@@ -112,6 +112,13 @@ namespace rct3::simulation
         NodeId node = kNoNode;
     };
 
+    /// The path tiles under the park's entrances, in the registry's context: staff never step onto them, so they
+    /// never walk out of the park.
+    struct EntrancePaths
+    {
+        std::vector<NodeId> nodes;
+    };
+
     /// A guest who has gone home. Kept, without what made them move, for whoever still shows them.
     struct Left
     {

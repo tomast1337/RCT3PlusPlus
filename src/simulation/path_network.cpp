@@ -197,13 +197,31 @@ namespace rct3::simulation
         return { origin.x + (static_cast<float>(t.col) + 0.5f) * tile_size, nodes_[node].height, origin.y + (static_cast<float>(t.row) + 0.5f) * tile_size };
     }
 
-    std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to) const
+    bool PathNetwork::may_step(NodeId from, NodeId to, Walker who) const
     {
-        auto found = route_nearest(from, std::span(&to, 1));
+        const PathNode& a = nodes_[from];
+        const PathNode& b = nodes_[to];
+        if (who == Walker::Staff)
+            return !b.staff_kept_off || a.staff_kept_off;
+        // The sides of `to` the step comes in across: the one facing back, or the two round the corner it cuts.
+        std::uint8_t across = 0;
+        for (std::size_t k = 0; k < 4; ++k)
+        {
+            if (a.next[k] == to)
+                across |= static_cast<std::uint8_t>(1U << ((k + 2) % 4));
+            if (a.corner[k] == to)
+                across |= static_cast<std::uint8_t>((1U << ((k + 2) % 4)) | (1U << ((k + 3) % 4)));
+        }
+        return (b.no_entry & across) == 0;
+    }
+
+    std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to, Walker who) const
+    {
+        auto found = route_nearest(from, std::span(&to, 1), who);
         return found ? std::optional(std::move(found->second)) : std::nullopt;
     }
 
-    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets) const
+    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets, Walker who) const
     {
         if (from >= nodes_.size())
             return std::nullopt;
@@ -241,7 +259,7 @@ namespace rct3::simulation
                 if (so_far > length[at])
                     continue;
                 const auto step = [&](NodeId n, float cost) {
-                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || so_far + cost >= length[n])
+                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || so_far + cost >= length[n] || !may_step(at, n, who))
                         return;
                     length[n] = so_far + cost;
                     came[n] = at;
@@ -263,7 +281,7 @@ namespace rct3::simulation
             open.pop_front();
             for (const NodeId n : nodes_[at].next)
             {
-                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget))
+                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || !may_step(at, n, who))
                     continue;
                 came[n] = at;
                 if (target[n] != kNotTarget)

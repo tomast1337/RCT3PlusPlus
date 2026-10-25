@@ -155,9 +155,9 @@ int main(int argc, char** argv)
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
     std::vector<std::optional<park::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<std::uint32_t>> guests_room;
-    std::map<std::uint64_t, simulation::PathItemKind> sights; // Placed objects guests stop at
-    std::set<std::uint64_t> gates;                            // Park entrances
-    std::map<std::uint64_t, std::uint32_t> facility_kinds;    // Special attractions' kinds, by attraction
+    std::map<std::uint64_t, simulation::PathItemKind> sights;   // Placed objects guests stop at
+    std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
+    std::map<std::uint64_t, std::uint32_t> facility_kinds;      // Special attractions' kinds, by attraction
     if (game)
     {
         const auto install = config::open_game_install(game);
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
             if (const auto model = loader.load(o.symbol, o.overlay); model && park::is_sight(model->category))
                 sights.emplace(o.id, model->photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight);
             else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
-                gates.insert(o.id);
+                gates.emplace(o.id, model->squares);
         for (const save::Ride& ride : rides->rides)
             if (ride.kind == save::RideKind::Special)
                 if (const auto file = install->find(std::format("{}.common.ovl", ride.base.overlay_path)))
@@ -294,7 +294,14 @@ int main(int argc, char** argv)
         const auto found = sights.find(o.id);
         return found != sights.end() ? std::optional(found->second) : std::nullopt;
     });
-    const bool gate = simulation::import_gate(world, world_model->objects, [&](const save::PlacedObject& o) { return gates.contains(o.id); }) != entt::null;
+    const bool gate = simulation::import_gate(
+                          world, world_model->objects,
+                          [&](const save::PlacedObject& o) {
+                              const auto found = gates.find(o.id);
+                              return found != gates.end() ? std::optional(found->second) : std::nullopt;
+                          })
+        != entt::null;
+    simulation::keep_staff_in(world, world_model->terrain);
     if (park_model && park_model->group_mix)
         simulation::import_party_mix(world, *park_model->group_mix);
     out.info("facilities {:d}  sights {:d}  gate {}", facilities, sight_count, gate ? "yes" : "none");

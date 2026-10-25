@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// render::Shader::Lit, and LitCutout with the constant set: then pixels under half opacity are not drawn.
+// render::Shader::Lit, with the constant 1 LitCutout: pixels under half opacity are not drawn; 2 LitLayerAdded and
+// 3 LitLayerMultiplied: a second picture in place of the noise, added after the light or multiplied before it.
 // Positions and normals are in world space.
 import common;
 
-[[vk::constant_id(0)]] const bool kCutout = false;
+[[vk::constant_id(0)]] const int kMode = 0;
 
 [[vk::binding(0, 0)]] Texture2D u_texture;
 [[vk::binding(0, 1)]] SamplerState u_sampler;
 // render::SceneLight's shadow: the depth seen from the sun, and how it was seen (render/types.hpp).
 [[vk::binding(0, 2)]] Texture2D u_shadow;
 [[vk::binding(0, 3)]] Texture2D u_sun_view;
-// Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1.
+// Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1; the second picture when layered.
 [[vk::binding(0, 4)]] Texture2D u_variation;
 // An older drawing of the shadow, mixed in as sun_direction.w says; the second row of u_sun_view says how.
 [[vk::binding(0, 5)]] Texture2D u_shadow_before;
@@ -273,6 +274,10 @@ float4 fragment_main(LitVaryings f) : SV_Target
 {
     if (crossed_out(f))
         discard;
+    // Layered, the scroll moves the first picture only: the second is read where the mesh puts it.
+    float4 layer = float4(0.0);
+    if (kMode >= 2)
+        layer = u_variation.Sample(u_sampler, f.uv - float2(0.0, frac(u_draw.sky.w)));
     // Lit as the normal says, from whichever side the surface is seen. Turning the normal to face the eye would
     // darken everything above the eye whose normal tilts up (roofs, the cards of trees, which are seen from below
     // there) along a hard line at the horizon. Without a normal, face up.
@@ -287,7 +292,7 @@ float4 fragment_main(LitVaryings f) : SV_Target
     // The flags are small whole numbers, so their bits can be read straight.
     const uint flags = uint(u_draw.sky.w);
     const int detail = int((flags >> 2) & 3u);
-    const bool variation_given = (flags & 1u) != 0u;
+    const bool variation_given = kMode < 2 && (flags & 1u) != 0u;
     const bool relief_given = (flags & 2u) != 0u;
     float3 along_u = float3(0.0);
     float3 along_v = float3(0.0);
@@ -304,13 +309,15 @@ float4 fragment_main(LitVaryings f) : SV_Target
     const float2 uv = framed ? lerp(f.uv, shifted(f, n, along_u, along_v), near) : f.uv;
     // Read with the unshifted coordinate's changes, so the shift does not change the mip level.
     float4 color = (detail >= 2 ? u_texture.SampleGrad(u_sampler, uv, duv1, duv2) : u_texture.Sample(u_sampler, f.uv)) * f.color;
+    if (kMode == 3)
+        color *= layer;
     if (abs(f.cross.y) > 1.5)
         color.rgb = lerp(color.rgb, f.cross.y > 0.0 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.0, 1.0), 0.6);
     if (variation_given)
         color.rgb *= variation(f.world);
     if (detail >= 1)
         color.rgb *= grain(f.uv);
-    if (kCutout)
+    if (kMode == 1)
     {
         if (color.a < 0.5)
             discard;
@@ -361,6 +368,10 @@ float4 fragment_main(LitVaryings f) : SV_Target
     }
     if ((flags & 16u) != 0u)
         shaded += color.rgb * lamplight(f.world, n);
+    // The added picture is lit too, so it does not glow at night, and held under full white.
+    static const float kLayerAdded = 0.6;
+    if (kMode == 2)
+        shaded += layer.rgb * kLayerAdded * min(ambient + direct, float3(1.0));
     shaded = eased_off(shaded);
     // Haze: beyond its start, far surfaces fade towards the haze colour. The distance is the depth from the eye,
     // which the perspective divide leaves in the position's w.

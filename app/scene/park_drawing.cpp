@@ -16,6 +16,7 @@
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -198,7 +199,33 @@ namespace rct3::scene
             if (parts.water)
                 profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water); });
             if (parts.water && parts.see_through)
-                profiling::section("Waterfalls", [&] { draw_transient(device, scene, scene.waterfall_mesh, scene.object_textures, transform, light, [&](const park::ObjectBatch&) { return scene.see_through_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Waterfalls", [&] {
+                    // As draw_transient, each picture with its second (park/waterfall_mesh.hpp).
+                    const park::ObjectMesh& mesh = scene.waterfall_mesh;
+                    if (mesh.indices.empty())
+                        return;
+                    const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
+                    const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
+                    if (!vertices || !indices)
+                        return;
+                    for (const park::ObjectBatch& batch : mesh.batches)
+                    {
+                        const auto picture = std::ranges::find(park::kWaterfallPictures, batch.texture, &park::WaterfallPicture::key);
+                        const auto texture = scene.object_textures.find(batch.texture);
+                        const auto layer = scene.object_textures.find(picture->layer_key);
+                        render::DrawCommand draw { .pipeline = picture->multiplied ? scene.waterfall_multiplied_pipeline : scene.waterfall_added_pipeline, .vertices = *vertices, .indices = *indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
+                        draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
+                        // Without its second picture, drawn alone.
+                        if (layer != scene.object_textures.end())
+                            draw.extra_textures[0] = layer->second.handle;
+                        else
+                            draw.pipeline = scene.see_through_pipeline;
+                        draw.address = render::AddressMode::Repeat;
+                        draw.light = light;
+                        draw.scroll = park::waterfall_layer_scroll(*picture, scene.park_clock);
+                        device.draw(draw);
+                    }
+                });
             if (scene.show_scenery && parts.scenery && parts.see_through)
                 profiling::section("SeeThrough", [&] { draw_objects(true); });
             if (parts.ghosts)

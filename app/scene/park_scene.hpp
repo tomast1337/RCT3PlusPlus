@@ -351,9 +351,11 @@ namespace rct3::scene
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
-        ovl::RgbaImage flow_picture;     ///< The flowing water's, still; empty without one (park/water_flow.hpp)
-        std::uint32_t flow_shift = 0;    ///< Rows it is rolled by on the GPU
-        park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        ovl::RgbaImage flow_picture;                          ///< The flowing water's, still; empty without one (park/water_flow.hpp)
+        std::uint32_t flow_shift = 0;                         ///< Rows it is rolled by on the GPU
+        park::ObjectMesh waterfall_mesh;                      ///< The waterfalls' water, built again each frame as it runs
+        render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
+        render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;
         park::ObjectMesh sky_mesh; ///< Built again each frame round the eye
         ui::UiTextures sky_textures;

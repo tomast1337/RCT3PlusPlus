@@ -122,6 +122,12 @@ namespace rct3::park
 
     } // namespace
 
+    float waterfall_layer_scroll(const WaterfallPicture& picture, float seconds)
+    {
+        const float s = -seconds * picture.layer_lag; // v falls as the water runs
+        return s - std::floor(s);
+    }
+
     glm::vec3 waterfall_point(const save::Waterfall& fall, float along)
     {
         return point(shape_of(fall), along);

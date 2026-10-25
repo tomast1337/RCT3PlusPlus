@@ -524,27 +524,10 @@ namespace rct3::scene
             p.problem = park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::None : park::SiteProblem::NotOwned;
             if (p.problem == park::SiteProblem::None && load_object_model(scene, p.models, assets, o))
             {
-                // The room the item's solid squares take may not be taken already, by a solid item or a path: two
-                // items share a tile when they take different quarters or edges of it, or stand at other heights.
-                const park::SolidTiles mine = park::solid_tiles(std::span(&o, 1), scene.models, scene.grid);
-                for (const auto& [key, spans] : mine.tiles)
-                {
-                    const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
-                    const auto there = p.solids.tiles.find(key);
-                    for (const park::SolidSpan& s : spans)
-                    {
-                        if (there != p.solids.tiles.end() && std::ranges::any_of(there->second, [&](const park::SolidSpan& t) { return (t.room & s.room) != 0 && t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
-                            p.problem = park::SiteProblem::Blocked;
-                    }
-                    for (const save::PathTile& path : scene.footpaths.paths)
-                    {
-                        // shortcut: a path's height is taken at one edge, so a slope's lower end may pass under an
-                        // item; take its lowest edge if that shows.
-                        const auto deck = park::edge_height(path, scene.grid, 0);
-                        if (path.col == tile.col && path.row == tile.row && deck && park::blocked(mine, tile, *deck, *deck))
-                            p.problem = park::SiteProblem::Path;
-                    }
-                }
+                // The room the item's solid squares take may not be taken already, by a solid item or a path.
+                const park::Clash clash = park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), p.solids, scene.footpaths.paths, scene.grid);
+                if (clash != park::Clash::None)
+                    p.problem = clash == park::Clash::Path ? park::SiteProblem::Path : park::SiteProblem::Blocked;
             }
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();

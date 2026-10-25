@@ -110,21 +110,6 @@ namespace rct3::park
             return std::pair { low, high };
         }
 
-        /// Where a spot on `object` lies in the park, in tiles from the grid's corner: the footprint is laid
-        /// out round its middle, its squares and thirds running along the model's -X and -Z.
-        glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
-        {
-            const glm::vec2 x = turned_x(object.rotation);
-            const glm::vec2 z { -x.y, x.x };
-            const auto along = [&](int i) {
-                const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];
-                return static_cast<float>(spot.square[static_cast<std::size_t>(i)]) + (static_cast<float>(spot.cell[static_cast<std::size_t>(i)]) + within) / kCells;
-            };
-            const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
-            const float v = along(1) - static_cast<float>(footprint.z_squares) / 2;
-            return footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
-        }
-
         glm::vec3 in_park(const save::TerrainGrid& grid, glm::vec2 tiles, float y)
         {
             return { grid.world_x(0) + tiles.x * grid.tile_size_x, y, grid.world_z(0) + tiles.y * grid.tile_size_z };
@@ -223,6 +208,19 @@ namespace rct3::park
         };
 
     } // namespace
+
+    glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
+    {
+        const glm::vec2 x = turned_x(object.rotation);
+        const glm::vec2 z { -x.y, x.x };
+        const auto along = [&](int i) {
+            const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];
+            return static_cast<float>(spot.square[static_cast<std::size_t>(i)]) + (static_cast<float>(spot.cell[static_cast<std::size_t>(i)]) + within) / kCells;
+        };
+        const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
+        const float v = along(1) - static_cast<float>(footprint.z_squares) / 2;
+        return footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
+    }
 
     std::vector<Tile> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint)
     {

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // What stands in a path's way besides other paths. A scenery item says, per square of its footprint, whether
-// the square is solid and which levels over the item's base it fills; level n fills the world unit from n to
-// n + 1 over the base. A path piece may not pass through a solid square's levels, and keeps kPathHeadroom clear
+// the square is solid and which levels over the item's base it fills, from its lowest to under its highest; level
+// n fills the world unit from n to n + 1 over the base. Track pieces and other supported items also say which
+// thirds of the square they fill, across and along. A path piece may not pass through a solid square's levels, and keeps kPathHeadroom clear
 // over its top for guests to walk.
 //
 // Some items never block: fences, which stand along a tile's edges; path pieces, which paths check among themselves; the support columns, which are
@@ -43,12 +44,17 @@ namespace rct3::park
         return static_cast<std::uint8_t>(0x10U << (turns & 3));
     }
 
-    /// Levels filled on one tile, in world units, and the room of the tile they fill.
+    /// Every third of a tile, as bits 3 * row + column in the park's own directions.
+    inline constexpr std::uint16_t kAllThirds = 0x1FF;
+
+    /// Levels filled on one tile, in world units, the room of the tile they fill and, for items whose squares
+    /// say so, which thirds of it.
     struct SolidSpan
     {
         float low = 0;
         float high = 0;
         std::uint8_t room = kWholeTile;
+        std::uint16_t thirds = kAllThirds;
     };
 
     /// What fills each tile, by tile (row << 16 | column).
@@ -66,5 +72,17 @@ namespace rct3::park
     /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it. What
     /// stands only along the tile's edges never does.
     [[nodiscard]] bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high);
+
+    enum class Clash : std::uint8_t
+    {
+        None,
+        Solid, ///< A solid item takes some of the same room
+        Path,  ///< A path runs through it
+    };
+
+    /// What `mine`, the solid squares of an item about to stand, would clash with: the room `solids` take
+    /// already, or a path of `paths`. Two items share a tile when they take different quarters or edges of it,
+    /// or stand at other heights.
+    [[nodiscard]] Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
 } // namespace rct3::park

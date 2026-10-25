@@ -35,8 +35,6 @@ namespace rct3::park
     /// The pieces of `pieces` that carry a track on from `tip`, whose last piece is `last`, to `goal`: the
     /// open end a piece before its `first` piece would leave (start_of), laying only pieces `allowed` lets
     /// stand where they would. Tries at most `tries` ends.
-    // shortcut: the way may run through the ground, scenery and the track itself; check room for each piece
-    // once building checks it for pieces laid by hand.
     [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, const std::function<bool(const save::PlacedObject&)>& allowed, std::size_t tries);
 
 } // namespace rct3::park

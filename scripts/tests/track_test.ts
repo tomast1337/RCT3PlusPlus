@@ -67,3 +67,4 @@ await frames(5);
 expect(build.construction()?.selected === null, "building back at the open end");
 expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
 expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
+expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");

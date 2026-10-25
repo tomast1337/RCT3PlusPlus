@@ -48,6 +48,11 @@ namespace rct3::park
     /// The tile under each square of `object`'s footprint, row by row like the footprint's squares.
     [[nodiscard]] std::vector<std::pair<int, int>> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint);
 
+    /// Where a spot on `object` lies in the park, in tiles from the grid's corner, at the middle of its third
+    /// when `middle_of_third`: the footprint is laid out round its middle, its squares and thirds running along
+    /// the model's -X and -Z.
+    [[nodiscard]] glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third);
+
     using SupportTile = std::pair<int, int>;
 
     /// What a built piece belongs to.

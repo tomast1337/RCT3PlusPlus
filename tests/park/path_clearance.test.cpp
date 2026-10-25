@@ -28,13 +28,13 @@ namespace
         return g;
     }
 
-    /// One item of `category` standing on tile (2, 1), filling levels 0 to 3 of its one square.
+    /// One item of `category` standing on tile (2, 1), filling levels 0 to 3 of its one square, so up to 4.
     std::pair<std::vector<save::PlacedObject>, ObjectModels> one_item(ItemCategory category)
     {
         ObjectModel model;
         model.category = std::to_underlying(category);
         model.ground_height = false;
-        model.solid = { std::array<std::int32_t, 2> { 0, 3 } };
+        model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
         model.levels = { { 100, { }, { } } };
         save::PlacedObject o;
         o.id = 1;
@@ -105,4 +105,40 @@ TEST_CASE("items in different quarters or along different edges of a tile take d
     CHECK((half_room(1) & half_room(3)) == 0);
     CHECK(half_room(0) == (quarter_room(0) | quarter_room(2))); // Quarters on the -X side
     CHECK((edge_room(2) & kWholeTile) == 0);
+}
+
+TEST_CASE("an item clashes with one in the same room of a tile, not with one beside or on top of it")
+{
+    const save::TerrainGrid g = owned_grid(5, 3);
+    const auto [objects, models] = one_item(ItemCategory::TrackPiece);
+    const SolidTiles standing = solid_tiles(objects, models, g);
+    CHECK(clash(standing, standing, { }, g) == Clash::Solid);
+
+    auto [beside, beside_models] = one_item(ItemCategory::TrackPiece);
+    beside[0].col = 3;
+    CHECK(clash(solid_tiles(beside, beside_models, g), standing, { }, g) == Clash::None);
+
+    auto [above, above_models] = one_item(ItemCategory::TrackPiece);
+    above[0].base_height = 4;
+    CHECK(clash(solid_tiles(above, above_models, g), standing, { }, g) == Clash::None);
+}
+
+TEST_CASE("pieces of track filling other thirds of a tile pass each other, turned as they stand")
+{
+    const save::TerrainGrid g = owned_grid(5, 3);
+    const auto piece = [&](std::uint32_t cells, std::int32_t rotation) {
+        auto [objects, models] = one_item(ItemCategory::TrackPiece);
+        SupportFootprint f;
+        f.x_squares = 1;
+        f.z_squares = 1;
+        f.track = true;
+        f.squares = { SupportSquare { .low = 0, .high = 4, .cells = cells } };
+        models.begin()->second.supports = f;
+        objects[0].rotation = rotation;
+        return solid_tiles(objects, models, g);
+    };
+    const SolidTiles corner = piece(0b011'000'000, 0); // Two thirds along one side
+    const std::uint32_t round = 0b111'011'001;         // Takes the same two, unless turned half round
+    CHECK(clash(piece(round, 2), corner, { }, g) == Clash::None);
+    CHECK(clash(piece(round, 0), corner, { }, g) == Clash::Solid);
 }

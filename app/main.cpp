@@ -1183,7 +1183,7 @@ int main(int argc, char** argv)
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
-                            prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, front->live->options.get(config::GameOption::GameVolume), static_cast<float>(delta)); });
+                            prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, static_cast<float>(delta)); });
                         // Leaving, or loading another park in its place: its loading screen shows next.
                         if (rct3::scene::take_park_leave(*park) || park_requests.park)
                         {

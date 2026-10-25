@@ -8,9 +8,14 @@
 // hungry, thirsty and tired, lonely without others of its kind in the enclosure, and now and then leaves dung.
 // It eats and drinks at the troughs of a house in its enclosure, sleeps beside them, and otherwise strolls
 // about. Empty troughs, a long thirst or hunger, and dung piling up wear its health down; it mends otherwise.
-// The keeper fills the troughs again after a while, or sooner once they run low, and clears the dung. All the
-// rates are our own.
+// The keeper fills the troughs again after a while, or sooner once they run low, and clears the dung.
+//
+// An animal standing where there is no enclosure has escaped: one let out of its crate there, or one whose
+// enclosure was taken from under it. The park posts a message as it gets out. It roams about, and a keeper
+// goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
+// opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
+#include "simulation/park_messages.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/units.hpp"
 
@@ -18,6 +23,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace rct3::simulation
 {
@@ -53,6 +59,7 @@ namespace rct3::simulation
         Strolling, ///< On the way to `goal`, about the enclosure
         Filling,   ///< On the way to the troughs, or filling them
         Clearing,  ///< On the way to dung, or clearing it
+        Catching,  ///< After an escaped animal, or taking it home in its crate
     };
 
     /// A keeper's work, beside their Staff with the Keeper role.
@@ -61,8 +68,8 @@ namespace rct3::simulation
         entt::entity house = entt::null; ///< The house whose enclosure they keep
         KeeperJob job = KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
-        entt::entity dung = entt::null; ///< What they are clearing
-        Seconds busy { };               ///< Left at the job in hand where it is done, or standing about
+        entt::entity target = entt::null; ///< The dung they are clearing, or the animal they are catching
+        Seconds busy { };                 ///< Left at the job in hand where it is done, or standing about
     };
 
     /// What an animal is doing.
@@ -80,6 +87,7 @@ namespace rct3::simulation
     {
         std::string species { };     ///< The symbol of its species
         std::string overlay { };     ///< The overlay its species is in
+        std::string name { };        ///< As the park's messages call it
         std::int32_t enclosure = -1; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };
@@ -89,7 +97,8 @@ namespace rct3::simulation
         Share tiredness { };
         Share loneliness { };
         Share health { 1 };
-        Seconds dung_in { }; ///< Till it next leaves dung
+        Seconds dung_in { };  ///< Till it next leaves dung
+        bool escaped = false; ///< Out of every enclosure
     };
 
     /// Dung an animal left in its enclosure.
@@ -122,6 +131,8 @@ namespace rct3::simulation
         Seconds filling { 5 };     ///< The keeper at the troughs
         Seconds clearing { 3 };    ///< The keeper at a dung
         int stroll_tries = 8;      ///< Spots picked for a stroll before giving up till later
+        float roam = 4;            ///< Farthest an escaped animal wanders at a time, in world units
+        Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -132,7 +143,10 @@ namespace rct3::simulation
     /// `animal` in its crate at `at`. Returns it.
     entt::entity add_animal(SimWorld& world, const Animal& animal, glm::vec3 at);
 
-    /// Moves the animals and their keepers on by `dt`.
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt);
+    /// The message posted as an animal escapes; its subject's name is the animal's.
+    inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
+
+    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape.
+    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages);
 
 } // namespace rct3::simulation

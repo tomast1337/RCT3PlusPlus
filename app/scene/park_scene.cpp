@@ -2628,7 +2628,7 @@ namespace rct3::scene
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                     {
                         simulation::step(scene.sim);
-                        simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds });
+                        simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
                     }
                 });
                 // A coaster's lap just run becomes its graphs.

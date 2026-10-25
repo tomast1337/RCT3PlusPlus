@@ -714,7 +714,7 @@ namespace rct3::scene
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
             {
                 const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
-                out.push_back({ { "species", animal.species }, { "enclosure", animal.enclosure }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "health", animal.health.value }, { "at", tile } });
+                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "enclosure", animal.enclosure }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile } });
             }
             return out;
         });

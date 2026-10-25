@@ -30,10 +30,16 @@ namespace
         };
     }
 
-    void run(SimWorld& world, const AnimalGround& ground, float seconds)
+    void run(SimWorld& world, const AnimalGround& ground, float seconds, ParkMessages& messages)
     {
         for (float t = 0; t < seconds; t += 0.25f)
-            step_animals(world, ground, { 0.25f });
+            step_animals(world, ground, { 0.25f }, messages);
+    }
+
+    void run(SimWorld& world, const AnimalGround& ground, float seconds)
+    {
+        ParkMessages messages;
+        run(world, ground, seconds, messages);
     }
 } // namespace
 
@@ -173,4 +179,57 @@ TEST_CASE("animals: an animal alone grows lonely; one with its own kind about do
     CHECK(r.get<Animal>(alone).loneliness.value > 0.2f);
     CHECK(r.get<Animal>(a).loneliness.value == 0);
     CHECK(r.get<Animal>(b).loneliness.value == 0);
+}
+
+TEST_CASE("animals: an animal let out of its crate outside every enclosure escapes, and the park says so")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    ParkMessages messages;
+    const entt::entity e = add_animal(world, { .species = "zebu", .name = "Zebu" }, { 7, 0, 2 });
+    run(world, ground, kAnimalRates.crated.value + 1, messages);
+    const Animal& animal = world.registry.get<Animal>(e);
+    CHECK(animal.escaped);
+    REQUIRE(messages.list.size() == 1);
+    CHECK(messages.list.front().text_key == kAnimalEscaped);
+    CHECK(messages.list.front().subject_name == "Zebu");
+    run(world, ground, 20, messages);
+    CHECK(messages.list.size() == 1); // Said once
+}
+
+TEST_CASE("animals: an animal whose enclosure is taken from under it escapes")
+{
+    SimWorld world;
+    AnimalGround ground = two_pens();
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = 0 }, { 1, 0, 1 });
+    run(world, ground, kAnimalRates.crated.value + 1);
+    CHECK_FALSE(world.registry.get<Animal>(e).escaped);
+    ground.enclosure = [](glm::vec2) { return -1; };
+    run(world, ground, 1);
+    CHECK(world.registry.get<Animal>(e).escaped);
+}
+
+TEST_CASE("animals: a keeper crates an escaped animal and takes it back to their enclosure, where it comes out again")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)add_animal_house(world, { .enclosure = 1, .troughs = { 13, 0, 2 }, .low = { 13.5f, 0 }, .high = { 14, 4 } }, { 12, 0, 2 });
+    const entt::entity e = add_animal(world, { .species = "zebu" }, { 7, 0, 2 });
+    auto& r = world.registry;
+    run(world, ground, kAnimalRates.crated.value + 1);
+    REQUIRE(r.get<Animal>(e).escaped);
+    bool caught = false;
+    for (int i = 0; i < 240 && !caught; ++i)
+    {
+        run(world, ground, 1);
+        const Animal& animal = r.get<Animal>(e);
+        caught = !animal.escaped && animal.enclosure == 1;
+    }
+    REQUIRE(caught);
+    const glm::vec3 at = r.get<Pose>(e).position;
+    CHECK(ground.enclosure({ at.x, at.z }) == 1);
+    CHECK(r.get<Animal>(e).job == AnimalJob::Crated);
+    run(world, ground, kAnimalRates.crated.value + 1);
+    CHECK(r.get<Animal>(e).job != AnimalJob::Crated);
+    CHECK_FALSE(r.get<Animal>(e).escaped);
 }

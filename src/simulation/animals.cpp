@@ -62,6 +62,13 @@ namespace rct3::simulation
             return static_cast<float>(random::between(dice, 1.0, static_cast<double>(kRates.idle.value)));
         }
 
+        /// A spot an escaped animal at `at` wanders to, anywhere near.
+        glm::vec3 roam_spot(glm::vec3 at, random::RandomState& dice)
+        {
+            const auto off = [&] { return static_cast<float>(random::between(dice, -static_cast<double>(kRates.roam), static_cast<double>(kRates.roam))); };
+            return { at.x + off(), 0.0f, at.z + off() };
+        }
+
         void rise(Share& need, Seconds dt, Seconds full)
         {
             need.value = std::min(1.0f, need.value + dt.value / full.value);
@@ -97,7 +104,7 @@ namespace rct3::simulation
         return e;
     }
 
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt)
+    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages)
     {
         auto& r = world.registry;
         const auto houses = r.view<AnimalHouse>();
@@ -143,6 +150,12 @@ namespace rct3::simulation
                     animal.job = AnimalJob::Idle;
                 continue;
             }
+            // Where it stands decides its enclosure; in none, it is out.
+            const std::int32_t standing = ground.enclosure ? ground.enclosure({ pose.position.x, pose.position.z }) : animal.enclosure;
+            if (standing < 0 && !animal.escaped)
+                post(messages, { .text_key = std::string(kAnimalEscaped), .subject_name = animal.name });
+            animal.escaped = standing < 0;
+            animal.enclosure = standing;
             rise(animal.hunger, dt, kRates.hungry);
             rise(animal.thirst, dt, kRates.thirsty);
             if (animal.job != AnimalJob::Sleeping)
@@ -156,7 +169,7 @@ namespace rct3::simulation
             else
                 rise(animal.loneliness, dt, kRates.lonely);
             animal.dung_in.value -= dt.value;
-            if (animal.dung_in.value <= 0)
+            if (animal.dung_in.value <= 0 && !animal.escaped)
             {
                 animal.dung_in = kRates.dung;
                 dropped.emplace_back(pose.position, animal.enclosure);
@@ -189,7 +202,7 @@ namespace rct3::simulation
                         animal.goal = house->troughs;
                         animal.busy = kRates.sleeping;
                     }
-                    else if (const auto spot = stroll_spot(r, ground, animal.enclosure, dice.state))
+                    else if (const auto spot = animal.escaped ? std::optional(roam_spot(pose.position, dice.state)) : stroll_spot(r, ground, animal.enclosure, dice.state))
                     {
                         animal.job = AnimalJob::Strolling;
                         animal.goal = *spot;
@@ -252,7 +265,24 @@ namespace rct3::simulation
                     duty.busy.value -= dt.value;
                     if (duty.busy.value > 0)
                         break;
-                    // The troughs first, when due or running low; then the dung nearest.
+                    // An escaped animal first, the nearest no other keeper is after; then the troughs when due or
+                    // running low; then the dung nearest.
+                    entt::entity loose = entt::null;
+                    for (const auto [a, animal, at] : r.view<const Animal, const Pose>().each())
+                    {
+                        const bool chased = std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return k != e && r.get<const KeeperDuty>(k).target == a; });
+                        if (animal.escaped && animal.job != AnimalJob::Crated && !chased && (loose == entt::null || glm::distance(at.position, pose.position) < glm::distance(r.get<Pose>(loose).position, pose.position)))
+                            loose = a;
+                    }
+                    if (loose != entt::null)
+                    {
+                        // shortcut: the keeper walks up and crates the animal; the darts from the air and the
+                        // player carrying the crate home come once the pick-up hand can lift crates.
+                        duty.job = KeeperJob::Catching;
+                        duty.target = loose;
+                        duty.busy = kRates.catching;
+                        break;
+                    }
                     if (house->since_fed.value >= kRates.feeding.value || house->food.value <= kRates.refill.value || house->water.value <= kRates.refill.value)
                     {
                         duty.job = KeeperJob::Filling;
@@ -267,7 +297,7 @@ namespace rct3::simulation
                     if (nearest != entt::null)
                     {
                         duty.job = KeeperJob::Clearing;
-                        duty.dung = nearest;
+                        duty.target = nearest;
                         duty.goal = r.get<Pose>(nearest).position;
                         duty.busy = kRates.clearing;
                     }
@@ -287,10 +317,43 @@ namespace rct3::simulation
                         duty.busy.value = idle_seconds(dice.state);
                     }
                     break;
+                case KeeperJob::Catching:
+                {
+                    Animal* animal = r.valid(duty.target) ? r.try_get<Animal>(duty.target) : nullptr;
+                    if (animal == nullptr)
+                    {
+                        duty.job = KeeperJob::Idle;
+                        duty.target = entt::null;
+                        break;
+                    }
+                    Pose& caught = r.get<Pose>(duty.target);
+                    if (animal->job != AnimalJob::Crated)
+                    {
+                        // After it till close enough, then into a crate where it stands, long enough to be carried home.
+                        if (!walk_towards(pose, caught.position, kRates.keeper_pace, dt, ground))
+                            break;
+                        animal->job = AnimalJob::Crated;
+                        animal->busy.value = kRates.catching.value + kRates.crated.value;
+                        break;
+                    }
+                    duty.busy.value -= dt.value;
+                    if (duty.busy.value > 0)
+                        break;
+                    const glm::vec3 home = stroll_spot(r, ground, house->enclosure, dice.state).value_or(house->troughs);
+                    const glm::vec2 flat { home.x, home.z };
+                    caught.position = caught.was = { home.x, ground.height ? ground.height(flat) : home.y, home.z };
+                    animal->enclosure = house->enclosure;
+                    animal->escaped = false;
+                    animal->busy = kRates.crated;
+                    duty.target = entt::null;
+                    duty.job = KeeperJob::Idle;
+                    duty.busy.value = idle_seconds(dice.state);
+                    break;
+                }
                 case KeeperJob::Filling:
                 case KeeperJob::Clearing:
                     // Another keeper may have cleared the dung on the way.
-                    if (duty.job == KeeperJob::Clearing && !r.valid(duty.dung))
+                    if (duty.job == KeeperJob::Clearing && !r.valid(duty.target))
                     {
                         duty.job = KeeperJob::Idle;
                         break;
@@ -308,8 +371,8 @@ namespace rct3::simulation
                         house->since_fed = { };
                     }
                     else
-                        r.destroy(duty.dung);
-                    duty.dung = entt::null;
+                        r.destroy(duty.target);
+                    duty.target = entt::null;
                     duty.job = KeeperJob::Idle;
                     duty.busy.value = idle_seconds(dice.state);
                     break;

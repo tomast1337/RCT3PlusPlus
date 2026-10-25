@@ -348,7 +348,7 @@ int main(int argc, char** argv)
     const simulation::ParkState state = simulation::park_state(park_model ? &*park_model : nullptr, *world_model);
     auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(state));
     const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
-    const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating });
+    const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating, .guest_cash = { park_model && park_model->has_finance ? park_model->finance.average_guest_cash : 0 }, .guest_bank = { park_model && park_model->has_finance ? park_model->finance.average_guest_bank_funds : 0 } });
     if (weather == "rain" || weather == "storm")
         sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")

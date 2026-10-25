@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <format>
+#include <limits>
 #include <map>
 #include <unordered_set>
 
@@ -88,7 +89,13 @@ namespace rct3::parkfile
                 g.leader = r.get<Party>(member->party).leader == e;
             }
             if (g.look >= 0)
+            {
                 in_park[static_cast<std::size_t>(g.look)] = true;
+                // The rest of their money goes with their page, where the original keeps it.
+                save::Cash& c = model.guests[static_cast<std::size_t>(g.look)].cash;
+                const auto i32 = [](Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
+                c = { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
+            }
         }
         for (std::size_t i = 0; i < model.guests.size(); ++i)
             model.guests[i].in_park = in_park[i];
@@ -114,7 +121,12 @@ namespace rct3::parkfile
             r.emplace<Pose>(e, g.position, g.heading, g.position, g.heading);
             r.emplace<Needs>(e, g.needs);
             r.emplace<Mood>(e, g.mood);
-            r.emplace<Wallet>(e, g.cash);
+            Wallet& wallet = r.emplace<Wallet>(e, g.cash);
+            if (g.look >= 0 && static_cast<std::size_t>(g.look) < people.model.guests.size())
+            {
+                const save::Cash& c = people.model.guests[static_cast<std::size_t>(g.look)].cash;
+                wallet = { .cash = { g.cash }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } };
+            }
             if (g.taste)
                 r.emplace<Taste>(e, *g.taste);
         }

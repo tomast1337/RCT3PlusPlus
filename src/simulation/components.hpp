@@ -185,6 +185,8 @@ namespace rct3::simulation
         Money entrance_fee { };
         std::uint32_t pool_squares = 0;  ///< Squares of pool water
         std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
+        Money guest_cash { };            ///< What guests bring in on average; none for the tuning's
+        Money guest_bank { };            ///< What cash machines can give them on average; none for the tuning's
     };
 
     /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
@@ -197,6 +199,15 @@ namespace rct3::simulation
     struct Wallet
     {
         Money cash { };
+        Money bank { };      ///< What cash machines can still give them
+        Money withdrawn { }; ///< What cash machines have given them
+        /// What they have paid the park in all, and for each kind of thing; toilets and first aid count in all only.
+        Money spent { };
+        Money spent_entry { };
+        Money spent_rides { };
+        Money spent_food { };
+        Money spent_drink { };
+        Money spent_souvenirs { };
     };
 
     // ----- guests on the move -----

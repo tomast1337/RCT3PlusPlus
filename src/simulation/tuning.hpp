@@ -157,7 +157,9 @@ namespace rct3::simulation::tuning
         Factor fair_fee { 1.5 };         ///< On what the rides are worth over their prices
         Share mood { 0.7f };             ///< Happiness guests come in with
         Share teen_tolerance { 0.75f };
-        Money cash { 5000 };
+        Money cash { 5000 };        ///< What a guest brings in, where the park sets no average
+        Money bank { 10000 };       ///< What cash machines can give a guest, where the park sets no average
+        Share cash_spread { 0.2f }; ///< How far either side of the average a guest's cash and bank lie
     };
 
     /// The intensity of rides a kind of party likes, 0..1 as rides are rated: the middle of each guest's

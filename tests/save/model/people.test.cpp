@@ -325,7 +325,7 @@ TEST_CASE("a minimal guest decodes into typed fields")
     CHECK(p.holder.id == 13);
     CHECK(guest->group.id == 12);
     CHECK(guest->favourite_ride.id == 11);
-    CHECK(guest->cash.arrival == 9000);
+    CHECK(guest->cash.bank == 9000);
     CHECK(guest->cash.current == 800);
     CHECK(guest->cash.total_spent == 150);
     CHECK(guest->needs.food == 0.75f);
@@ -375,7 +375,7 @@ TEST_CASE("missing attributes take defaults")
     CHECK_FALSE(guest->pool_need.has_value());
     CHECK_FALSE(guest->price_modifier.has_value());
     CHECK(guest->group.is_none());
-    CHECK(guest->cash.arrival == 0);
+    CHECK(guest->cash.bank == 0);
 }
 
 TEST_CASE("uninitialised fill becomes the default or none")

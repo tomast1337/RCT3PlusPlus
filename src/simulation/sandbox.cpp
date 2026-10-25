@@ -103,7 +103,7 @@ namespace rct3::simulation
         r.emplace<Pose>(e, world_.paths.centre(n), 0.0f);
         r.emplace<Needs>(e, setup.hunger, setup.thirst, setup.bladder);
         r.emplace<Mood>(e, setup.happiness, setup.energy, setup.nausea);
-        r.emplace<Wallet>(e, setup.cash);
+        r.emplace<Wallet>(e, Money { setup.cash }, Money { setup.bank });
         start_walking(world_, e, n);
         return e;
     }

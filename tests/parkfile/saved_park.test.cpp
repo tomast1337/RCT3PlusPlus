@@ -182,7 +182,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Pose>(ann, Pose { .position = { 1, 0, 2 }, .heading = 0.5f });
     r.emplace<Needs>(ann, Needs { .hunger = 0.25f });
     r.emplace<Mood>(ann);
-    r.emplace<Wallet>(ann, 500);
+    r.emplace<Wallet>(ann, Wallet { .cash = { 500 }, .bank = { 4000 }, .spent = { 300 }, .spent_rides = { 300 } });
     r.emplace<Taste>(ann, 0.1f, 0.7f);
     const entt::entity bob = r.create();
     r.emplace<Visitor>(bob, Visitor { .name = "Bob" });
@@ -237,6 +237,8 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(l.get<Pose>(ann2).heading.value == 0.5f);
     CHECK(l.get<Needs>(ann2).hunger.value == 0.25f);
     CHECK(l.get<Wallet>(ann2).cash.value == 500);
+    CHECK(l.get<Wallet>(ann2).bank.value == 4000);
+    CHECK(l.get<Wallet>(ann2).spent_rides.value == 300);
     CHECK(l.get<Taste>(ann2).most.value == 0.7f);
     CHECK(l.get<Visitor>(bob2).name == "Bob");
     CHECK(people.guests[1 - first].look == -1);

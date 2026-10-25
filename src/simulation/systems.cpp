@@ -636,7 +636,11 @@ namespace rct3::simulation
             const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
             const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
             r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f));
-            r.emplace<Wallet>(guest, kTuning.arrivals.cash.value);
+            // Around the park's averages, each on its own.
+            const auto* draw = r.ctx().find<Draw>();
+            const auto around = [&](Money average, Money fallback) { return Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
+            const Money cash = around(draw != nullptr ? draw->guest_cash : Money { }, kTuning.arrivals.cash);
+            r.emplace<Wallet>(guest, cash, around(draw != nullptr ? draw->guest_bank : Money { }, kTuning.arrivals.bank));
             start_walking(world, guest, at);
             ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
         }

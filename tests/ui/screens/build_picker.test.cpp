@@ -67,6 +67,19 @@ TEST_CASE("picking a row marks it and gives its item once")
     CHECK(two.tooltip == u"Two");
 }
 
+TEST_CASE("a row is named by its key and picking it again gives its item again")
+{
+    PickerRow one = row(u"One", 7);
+    one.key = "Bench";
+    Fixture f({ one });
+    const auto bench = f.picker->find("content/list/view/content/Bench");
+    REQUIRE(bench.has_value());
+    f.press(*bench);
+    CHECK(f.picker->take_picked() == 7u);
+    f.press(*bench);
+    CHECK(f.picker->take_picked() == 7u);
+}
+
 TEST_CASE("an item's help tells its name, size and price, a line each")
 {
     PickerRow r = row(u"Carousel", 1);

@@ -83,6 +83,8 @@ TEST_CASE("rows are the items of one list the park offers, in name order, sets u
     REQUIRE(rows.size() == 3);
     CHECK(rows[0].name == u"Apple");
     CHECK(rows[0].item == 1);
+    CHECK(rows[0].key == "Apple");
+    CHECK(rows[1].key == "SetName");
     CHECK(rows[0].price.empty());
     CHECK(rows[1].name == u"Brick set");
     CHECK(rows[1].icon == "SetIcon");

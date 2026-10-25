@@ -112,6 +112,11 @@ namespace rct3::scene
     /// The tile of the ground under `at`, in a view of `size`.
     [[nodiscard]] std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
 
+    /// The height of something raised or sunk with Shift, the pointer's ray now being `ray`: its `height` when
+    /// Shift went down with the pointer meeting the park at `at`, moved as far as the ray has moved up or down an
+    /// upright plane through `at`, square to the view. Nothing while the view looks straight down.
+    [[nodiscard]] std::optional<std::int32_t> lifted_height(const park::Ray& ray, glm::vec3 at, std::int32_t height);
+
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole, stalls and scenery are left alone; false for those.
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);

@@ -477,6 +477,12 @@ namespace rct3::scene
                     on.base_height = *surface;
                     on.force_absolute_height = true;
                 }
+                // Raised with Shift, never under the ground.
+                if (b.raised)
+                {
+                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride_site(*b.aim, shape.record.squares, b.turns, scene.grid).height });
+                    on.force_absolute_height = true;
+                }
                 b.tip = park::start_of(on, shape, b.picked->reversed, scene.grid);
             }
             b.ghost = park::place_after(*b.tip, shape, b.picked->reversed, scene.grid);
@@ -1556,6 +1562,12 @@ namespace rct3::scene
                 piece.holding_time = design[i].holding_time;
             }
         }
+        // The height Shift gave the first piece goes with it; a track begun again starts on the ground.
+        if (!ride.track->pieces.empty())
+        {
+            b.raised.reset();
+            b.lift.reset();
+        }
         if (!design.empty() && ride.track->pieces.size() == design.size())
         {
             // It runs as the design was set to run, in the design's colours.
@@ -1626,6 +1638,8 @@ namespace rct3::scene
         b.selected.reset();
         b.aim.reset();
         b.turns = 0;
+        b.raised.reset();
+        b.lift.reset();
         b.tip = track_tip(scene, b);
         b.arm = std::ranges::any_of(scene.arm_cars, [&](const ParkScene::ArmCar& a) { return scene.car_spots[a.car].ride == ride; });
         b.arm_piece = 0;
@@ -1772,7 +1786,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, std::optional<save::Tile> pointed, std::span<const ui::PlayCommand> commands, float elapsed)
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
@@ -1871,8 +1885,25 @@ namespace rct3::scene
         }
         if (const save::Ride& ride = scene.rides.rides.at(*b.ride); opening(ride))
         {
-            // The pointer off the ground, say over the panel, leaves the first piece where it was aimed.
-            if (pointed && pointed != b.aim)
+            // The pointer off the ground, say over the panel, leaves the first piece where it was aimed. With Shift held
+            // the piece stays on its tile and rises or sinks with the pointer, as scenery does.
+            const auto ray = !over && size.x > 0 && size.y > 0 ? std::optional(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
+            if (!shift || !b.ghost || !ray)
+                b.lift.reset();
+            if (b.lift)
+            {
+                if (const auto height = lifted_height(*ray, b.lift->at, b.lift->height); height && height != b.raised)
+                {
+                    b.raised = height;
+                    changed = true;
+                }
+            }
+            else if (shift && b.ghost && ray)
+            {
+                if (const auto distance = park::ground_hit(*ray, scene.grid))
+                    b.lift = TrackBuilding::Lift { ray->origin + ray->direction * *distance, b.ghost->object.base_height.value_or(0) };
+            }
+            else if (const auto pointed = ray ? ground_tile(scene, at, size) : std::nullopt; pointed && pointed != b.aim)
             {
                 b.aim = pointed;
                 changed = true;

@@ -67,6 +67,16 @@ namespace rct3::scene
         return save::Tile { col, row };
     }
 
+    std::optional<std::int32_t> lifted_height(const park::Ray& ray, glm::vec3 at, std::int32_t height)
+    {
+        const glm::vec3 across = glm::normalize(glm::vec3 { ray.direction.x, 0.0f, ray.direction.z });
+        const float along = glm::dot(ray.direction, across);
+        if (!(along > 1e-4f))
+            return std::nullopt;
+        const float y = ray.origin.y + ray.direction.y * glm::dot(at - ray.origin, across) / along;
+        return height + static_cast<std::int32_t>(std::lround(y - at.y));
+    }
+
     namespace
     {
         /// How far under an object's top the pointer may meet its box and still count as on the top.
@@ -436,16 +446,10 @@ namespace rct3::scene
                 v.colour *= tint;
             ghost_textures(device, scene, p.ghost_mesh);
         };
-        // While Shift is held the height follows the pointer up and down an upright plane through where Shift
-        // went down, square to the view.
+        // While Shift is held the height follows the pointer up and down, not below the ground.
         const auto follow_lift = [&](const park::Ray& ray) {
-            const glm::vec3 across = glm::normalize(glm::vec3 { ray.direction.x, 0.0f, ray.direction.z });
-            const float along = glm::dot(ray.direction, across);
-            if (along > 1e-4f)
-            {
-                const float y = ray.origin.y + ray.direction.y * glm::dot(p.lift->at - ray.origin, across) / along;
-                p.site->height = std::max(p.ground, p.lift->height + static_cast<std::int32_t>(std::lround(y - p.lift->at.y)));
-            }
+            if (const auto height = lifted_height(ray, p.lift->at, p.lift->height))
+                p.site->height = std::max(p.ground, *height);
         };
         if (p.step == RidePlacing::Step::Scenery)
         {

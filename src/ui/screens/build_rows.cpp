@@ -308,6 +308,7 @@ namespace rct3::ui
                 continue;
             PickerRow row;
             row.name = name_of(strings, item.name_text, item.symbol);
+            row.key = item.symbol;
             row.icon = item.icon;
             row.item = i;
             switch (item.kind)
@@ -372,6 +373,7 @@ namespace rct3::ui
             {
                 PickerRow heading;
                 heading.name = name_of(strings, group_text, group_icon);
+                heading.key = group_text.empty() ? group_icon : group_text;
                 heading.icon = group_icon;
                 heading.item = i;
                 heading.rank = heading_rank;

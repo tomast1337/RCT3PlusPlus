@@ -117,7 +117,7 @@ namespace rct3::ui
     {
         for (const PickerRow& r : rows)
         {
-            auto& view = list_->content().add<BuildPickerRow>("row", style_, r, heading);
+            auto& view = list_->content().add<BuildPickerRow>(r.key.empty() ? "row" : r.key, style_, r, heading);
             rows_.push_back(&view);
             add_rows(r.children, &view);
         }

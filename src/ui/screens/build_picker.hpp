@@ -69,6 +69,7 @@ namespace rct3::ui
     struct PickerRow
     {
         std::u16string name;
+        std::string key;                 ///< Its widget's name: the item's symbol, or a heading's text or icon
         std::string icon;                ///< Skin
         std::u16string size;             ///< Second line of the help, under the name
         std::u16string price;            ///< Third line; empty when the item has no price

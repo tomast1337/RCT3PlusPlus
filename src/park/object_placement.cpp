@@ -13,6 +13,25 @@ namespace rct3::park
         return kDirections[static_cast<std::size_t>(((turns % 4) + 4) % 4)];
     }
 
+    std::optional<std::int32_t> snapped_turns(Positioning positioning, glm::vec2 at)
+    {
+        switch (positioning)
+        {
+            case Positioning::Edge:
+            case Positioning::Half:
+                // Turns face -X, +Z, +X, -Z in turn (turned_x).
+                if (at.y > at.x)
+                    return at.x + at.y >= 1 ? 1 : 0;
+                return at.x + at.y >= 1 ? 2 : 3;
+            case Positioning::Corner:
+                if (at.x >= 0.5f)
+                    return at.y >= 0.5f ? 1 : 2;
+                return at.y >= 0.5f ? 0 : 3;
+            default:
+                return std::nullopt;
+        }
+    }
+
     glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares)
     {
         // A quarter turn either way lays the model's X along the park's Z.

@@ -196,6 +196,10 @@ namespace rct3::scene
             Area,
         };
         Tool tool = Tool::None;
+        std::optional<save::Tile> corner; ///< Of the area marked, where the drag began
+        std::optional<save::Tile> other;  ///< And the opposite corner, where it is now or ended
+        bool dragging = false;
+        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
@@ -544,6 +548,7 @@ namespace rct3::scene
         std::unordered_map<entt::entity, std::int64_t> income_seen; ///< Of each attraction's takings, what has floated up
         ViewLines grid_lines;                                       ///< The tile grid over the ground, while the view menu shows it
         ViewLines contour_lines;                                    ///< Likewise the contours
+        ViewLines delete_marks;                                     ///< The tiles the area delete tool marked
         ViewLines land_marks;                                       ///< What the land tool out would work on
         park::ParkCamera view_camera;                               ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                          ///< The round view is drawn into

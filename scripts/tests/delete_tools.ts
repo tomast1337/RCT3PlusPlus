@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The delete menu's tools on the game's blank landscape. With the single item tool out, a click on a stall asks
-// before pulling it down, a bench on the road and a bare piece of road go at once with no question, road under a bin takes the bin along, and the tool stays out until it is picked again.
+// before pulling it down, a bench on the road and a bare piece of road go at once with no question, road under a
+// bin takes the bin along, and the tool stays out until it is picked again. With the area tool, a drag marks
+// tiles; Clear forgets them, and Delete takes the road and the bench there at once and asks about the stall
+// standing there.
 //
 //   ./nob script scripts/tests/delete_tools.ts -- --no-audio
 
@@ -96,4 +99,53 @@ await frames(2);
 await click(road[3].col, road[3].row);
 expect(map.paths().length === pieces - 2, "the road kept once the tool is put away");
 await screenshot("delete_tool");
+
+// The area tool: a stall beside the road and a bench on it, then the road there and both marked.
+expect(build.pick("Style/Vanilla/Style", "Bench"), "a bench in the scenery lists");
+await frames(2);
+await click(road[7].col, road[7].row);
+build.stop();
+expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked again`);
+await frames(2);
+const aside = { col: road[7].col - 1, row: road[7].row - 2 };
+pointer.move(map.screen(aside.col, aside.row)!.x, map.screen(aside.col, aside.row)!.y);
+await frames(3);
+expect(build.placing()?.problem === "none", `the second stall placeable beside the road, not ${build.placing()?.problem}`);
+await click(aside.col, aside.row);
+const second = stalls.list().length - 1;
+expect(second > stall, "the second stall placed");
+await ui.click("info/close").catch(() => undefined);
+await frames(2);
+const before = { paths: map.paths().length, items: park.pathItems().length };
+
+if (!ui.find("tools/Delete/GUI2_DeleteSelection"))
+    await ui.click("tools/Delete/Obj_Delete");
+await ui.click("tools/Delete/GUI2_DeleteSelection");
+await frames(2);
+expect(ui.find("delete_area") !== undefined, "the area panel out");
+// From the road below the bench to past the stall.
+const site = stalls.list()[second].site!;
+const corner = { col: Math.min(site.col, gate.col) - 1, row: Math.min(site.row, road[7].row) - 1 };
+const from = map.screen(road[6].col + 1, road[6].row)!;
+const to = map.screen(corner.col, corner.row)!;
+const marked = map.paths().filter((p) => p.col >= corner.col && p.col <= road[6].col + 1 && p.row >= corner.row && p.row <= road[6].row).length;
+await pointer.drag([from.x, from.y], [to.x, to.y], 10);
+await frames(3);
+await screenshot("delete_area_marked");
+// Clear forgets the marks and deletes nothing.
+await ui.click("delete_area/GUI2_DeleteSelection_ClearIcon");
+await frames(2);
+expect(map.paths().length === before.paths && park.pathItems().length === before.items, "nothing gone on Clear");
+await pointer.drag([from.x, from.y], [to.x, to.y], 10);
+await frames(3);
+await ui.click("delete_area/GUI2_DeleteSelection_DeleteIcon");
+await frames(2);
+expect(map.paths().length === before.paths - marked, `the ${marked} tiles of road marked gone (${before.paths} then ${map.paths().length})`);
+expect(park.pathItems().length === before.items - 1, "the bench gone");
+expect(ui.find("demolish_question") !== undefined, "the question asked for the stall in the area");
+await screenshot("delete_area_question");
+await ui.click("demolish_question/content/GUI2MiniDialog_Confirm");
+await frames(3);
+expect(stalls.list()[second].demolished, "the second stall pulled down");
+await screenshot("delete_area");
 quit(0);

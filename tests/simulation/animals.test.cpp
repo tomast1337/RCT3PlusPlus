@@ -245,6 +245,10 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
     out.first_names = "Zia";
     out.is_adult = true;
     out.health = 0.5f;
+    out.food = 0.75f; // Fed, as the park keeps it
+    out.drink = 0.5f;
+    out.social = 1;
+    out.tiredness = 0.25f;
     out.world = { 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 2, 0, 3, 1 }; // Facing along x, at (2, 0, 3)
     save::ZooAnimal crated = out;
     crated.in_crate = true;
@@ -260,6 +264,10 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
         const Pose& pose = animals.get<const Pose>(e);
         CHECK(a.name == "Zia");
         CHECK(a.health.value == 0.5f);
+        CHECK(a.hunger.value == 0.25f);
+        CHECK(a.thirst.value == 0.5f);
+        CHECK(a.loneliness.value == 0);
+        CHECK(a.tiredness.value == 0.25f);
         if (pose.position.x == 2)
         {
             CHECK(a.job == AnimalJob::Idle);
@@ -272,4 +280,28 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
             CHECK(a.enclosure == 1);
         }
     }
+}
+
+TEST_CASE("animals: a park's keepers each keep a house of their own in the enclosure the park gave them")
+{
+    SimWorld world;
+    auto& r = world.registry;
+    const auto keeper_at = [&](glm::vec3 at) {
+        const entt::entity e = r.create();
+        r.emplace<Staff>(e, Staff { .role = StaffRole::Keeper });
+        r.emplace<Pose>(e, Pose { .position = at });
+        return e;
+    };
+    const entt::entity a = keeper_at({ 1, 0, 1 });
+    const entt::entity b = keeper_at({ 1, 0, 1 }); // Nearer the first house too, which a has
+    const entt::entity c = keeper_at({ 1, 0, 1 }); // Given an enclosure with no house
+    const std::array houses { AnimalHouse { .object = 1, .enclosure = 0, .troughs = { 1, 0, 2 } }, AnimalHouse { .object = 2, .enclosure = 0, .troughs = { 3, 0, 3 } }, AnimalHouse { .object = 3, .enclosure = 1, .troughs = { 11, 0, 2 } } };
+    const std::array keepers { std::pair { a, 0 }, std::pair { b, 0 }, std::pair { c, 5 } };
+    import_animal_houses(world, houses, keepers);
+    CHECK(r.view<const AnimalHouse>().size() == 3);
+    REQUIRE(r.all_of<KeeperDuty>(a));
+    REQUIRE(r.all_of<KeeperDuty>(b));
+    CHECK(r.get<AnimalHouse>(r.get<KeeperDuty>(a).house).object == 1);
+    CHECK(r.get<AnimalHouse>(r.get<KeeperDuty>(b).house).object == 2);
+    CHECK_FALSE(r.all_of<KeeperDuty>(c));
 }

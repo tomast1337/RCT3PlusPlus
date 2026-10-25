@@ -1196,11 +1196,41 @@ namespace rct3::scene
                 else
                 {
                     const save::TerrainGrid& g = scene.grid;
-                    simulation::import_animals(scene.sim, scene.people.zoo_animals, [&](glm::vec2 p) {
+                    const auto enclosure_at = [&](glm::vec2 p) {
                         const auto col = g.tile_size_x > 0 ? static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
                         const auto row = g.tile_size_z > 0 ? static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
                         return scene.enclosures.at(col, row);
-                    });
+                    };
+                    // The park's own animal houses, beside the keepers' huts the park placed with them.
+                    // shortcut: a house's ground is taken as its model's tiles round the tile it is placed on, with
+                    // its troughs there too; read the saved troughs' places if animals end up eating off the house.
+                    constexpr std::string_view kShelters = "Enclosures\\Shelters\\Shelters"; // As the park names it
+                    constexpr std::string_view kHut = "WardensShed";
+                    std::vector<simulation::AnimalHouse> houses;
+                    for (const save::PlacedObject& o : scene.objects)
+                    {
+                        // The park keeps two records of each house, alike but for their ids.
+                        if (o.overlay != kShelters || o.symbol == kHut || std::ranges::any_of(houses, [&](const simulation::AnimalHouse& h) { return h.troughs == tile_point(g, { o.col, o.row }); }))
+                            continue;
+                        const auto model = scene.models.find(park::model_key(o));
+                        std::array<std::int32_t, 2> span = model != scene.models.end() ? model->second.squares : std::array<std::int32_t, 2> { 1, 1 };
+                        if (o.rotation % 2 != 0)
+                            std::swap(span[0], span[1]);
+                        const glm::vec3 middle = tile_point(g, { o.col, o.row });
+                        const glm::vec2 half { static_cast<float>(span[0]) * g.tile_size_x / 2, static_cast<float>(span[1]) * g.tile_size_z / 2 };
+                        simulation::AnimalHouse house { .object = o.id, .enclosure = enclosure_at({ middle.x, middle.z }), .troughs = middle, .low = glm::vec2 { middle.x, middle.z } - half, .high = glm::vec2 { middle.x, middle.z } + half };
+                        const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<std::int32_t>::max(); });
+                        if (hut != scene.objects.end() && hut->symbol == kHut && std::abs(hut->col - o.col) + std::abs(hut->row - o.row) <= span[0] + span[1])
+                            house.hut = hut->id;
+                        houses.push_back(house);
+                    }
+                    // Each keeper keeps the enclosure the park gave them.
+                    std::vector<std::pair<entt::entity, std::int32_t>> keepers;
+                    for (std::size_t i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
+                        if (const auto* work = std::get_if<save::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
+                            keepers.emplace_back(staff[i], work->enclosure_id);
+                    simulation::import_animal_houses(scene.sim, houses, keepers);
+                    simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at);
                 }
                 if (!scene.sim.registry.view<const simulation::Animal>().empty())
                 {

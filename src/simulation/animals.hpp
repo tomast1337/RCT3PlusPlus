@@ -27,6 +27,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace rct3::simulation
 {
@@ -116,11 +117,11 @@ namespace rct3::simulation
     struct AnimalRates
     {
         Seconds crated { 8 };      ///< In the crate before it opens
-        float animal_pace = 0.8f;  ///< World units a second an animal walks
-        float keeper_pace = 1.1f;  ///< And a keeper
+        float animal_pace = 1.4f;  ///< World units a second an animal walks
+        float keeper_pace = 1.8f;  ///< And a keeper
         Seconds idle { 6 };        ///< Longest anybody stands about between strolls
-        Seconds hungry { 240 };    ///< From fed to starving
-        Seconds thirsty { 180 };   ///< From watered to parched
+        Seconds hungry { 400 };    ///< From fed to starving
+        Seconds thirsty { 300 };   ///< From watered to parched
         Seconds sleepy { 400 };    ///< From rested to worn out
         Seconds lonely { 300 };    ///< From content to lonely, with no others of its kind about
         Share wants { 0.5f };      ///< A need this high sends it to the troughs or to sleep
@@ -128,7 +129,7 @@ namespace rct3::simulation
         Seconds sleeping { 20 };   ///< Beside them
         Share meal { 0.1f };       ///< Of a trough an animal empties as it eats or drinks
         Seconds dung { 120 };      ///< Between one dung and the next
-        int dung_limit = 3;        ///< Dung in its enclosure beyond this wears its health down
+        int dung_limit = 3;        ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
         Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
         Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
         Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
@@ -153,6 +154,11 @@ namespace rct3::simulation
 
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
+
+    /// A park's own animal houses, and its keepers: each keeper, with the enclosure the park gave them, keeps
+    /// the nearest house in it that no other keeper has yet, else the nearest in it. A keeper with no house in
+    /// their enclosure is left without work.
+    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
     void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);

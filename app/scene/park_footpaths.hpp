@@ -124,6 +124,7 @@ namespace rct3::scene
         std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
         bool routing = false;                              ///< The panel's route tab was on last frame
         bool straight = false;                             ///< The panel's straight tab was on last frame
+        int brush_size = 1;                                ///< The panel's brush size last frame
         std::optional<save::Tile> route_goal;              ///< With routing on: the tile pointed at
         std::optional<std::int32_t> route_goal_height;     ///< And the height of the raised path pointed at there
         std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes

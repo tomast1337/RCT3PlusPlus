@@ -11,7 +11,7 @@
 // left, go straight on or turn right, five slopes from steps down to steps up, a switch to cut into the
 // ground and a button that takes the last piece away. A line under them tells what the control under the
 // pointer does. The band along the strip's top shows what the owner gives it, such as the chosen style and its
-// price. The disc shows the chosen style's picture.
+// price. The disc shows the chosen style's picture, and at its foot the size of the square a stroke paints.
 //
 // The panel keeps no park state. The owner gives it the styles with show(), says which controls can be used
 // with set_controls(), and hears through take_control() and take_style() what the player pressed.
@@ -22,6 +22,7 @@
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
+#include "ui/widgets/spinner.hpp"
 
 #include <array>
 #include <cstddef>
@@ -51,6 +52,7 @@ namespace rct3::ui
         std::string paths_icon;
         std::string queues_icon;
         std::string straight_icon;
+        SpinnerStyle size; ///< The brush's size at the disc's foot
         /// Strings keys of the tabs' help, in the order above.
         std::array<std::string, 7> tab_help; ///< Controls, follow, route, remove, paths, queues, straight
         /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
@@ -109,7 +111,8 @@ namespace rct3::ui
         inline constexpr float kStyleCell = 36; ///< A style's picture and the room round it
         inline constexpr float kStyleIcon = 40; ///< Of the styles' own pictures
         inline constexpr float kLineHeight = 15;
-        inline constexpr float kDiscIcon = 56; ///< The chosen style's picture on the disc
+        inline constexpr float kDiscIcon = 56;  ///< The chosen style's picture on the disc
+        inline constexpr int kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
     } // namespace footpath_panel
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
@@ -184,6 +187,11 @@ namespace rct3::ui
         [[nodiscard]] bool straight() const
         {
             return straight_->on;
+        }
+        /// Tiles along each side of the square a stroke paints round the pointer's tile.
+        [[nodiscard]] int brush() const
+        {
+            return size_->value();
         }
         /// Clicks take paths away rather than lay them.
         [[nodiscard]] bool removing() const
@@ -271,6 +279,7 @@ namespace rct3::ui
         Button* paths_tab_ = nullptr;
         Button* queues_tab_ = nullptr;
         Button* straight_ = nullptr;
+        Spinner* size_ = nullptr;
         Widget* body_ = nullptr;
         std::array<Button*, kFootpathControls> controls_ { };
         std::array<bool, kFootpathControls> usable_ { };

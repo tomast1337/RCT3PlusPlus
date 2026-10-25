@@ -35,6 +35,18 @@ namespace rct3::park
         return line;
     }
 
+    std::vector<save::Tile> brush_square(save::Tile centre, int size)
+    {
+        std::vector<save::Tile> square;
+        const int low = -(size - 1) / 2;
+        for (int row = low; row < low + size; ++row)
+        {
+            for (int col = low; col < low + size; ++col)
+                square.push_back({ centre.col + col, centre.row + row });
+        }
+        return square;
+    }
+
     DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
     {
         DragPlan plan;

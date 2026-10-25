@@ -505,11 +505,21 @@ namespace rct3::scene
             // shortcut: strokes lay paths on the ground only, no queues or raised runs; upgrade with the A-to-B route.
             if (!f.style || *f.style >= f.styles.size() || f.styles[*f.style].queue)
                 return std::nullopt;
-            if (!f.brush.empty())
-                return park::plan_drag(f.brush, scene.grid, f.paths, f.solids);
-            if (!f.hover_tile)
+            if (f.brush.empty() && !f.hover_tile)
                 return std::nullopt;
-            park::DragPlan plan = park::plan_drag(std::span(&*f.hover_tile, 1), scene.grid, f.paths, f.solids);
+            // Each tile of the stroke paints the brush's square round it.
+            std::vector<save::Tile> area;
+            for (const save::Tile spot : f.brush.empty() ? std::span(&*f.hover_tile, 1) : std::span(f.brush))
+            {
+                for (const save::Tile t : park::brush_square(spot, f.brush_size))
+                {
+                    if (!std::ranges::contains(area, t))
+                        area.push_back(t);
+                }
+            }
+            park::DragPlan plan = park::plan_drag(area, scene.grid, f.paths, f.solids);
+            if (!f.brush.empty())
+                return plan;
             return plan.lay.empty() ? std::nullopt : std::optional(std::move(plan));
         }
 
@@ -526,6 +536,8 @@ namespace rct3::scene
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
                 return { };
             const auto cost = static_cast<std::int32_t>(next_cost(f.styles[*f.style]));
+            // shortcut: routes are one tile wide whatever the brush size; widen them once raised runs beside each
+            // other can be checked lane by lane.
             if (auto route = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, f.solids, f.straight))
                 return { std::move(route), false };
             auto through = park::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, std::nullopt, f.straight);
@@ -897,7 +909,7 @@ namespace rct3::scene
                 park::start_at(f.builder, last);
             save::Tile low = last;
             save::Tile high = last;
-            for (const save::Tile spot : brush)
+            for (const save::Tile spot : plan->lay)
             {
                 low = { std::min(low.col, spot.col), std::min(low.row, spot.row) };
                 high = { std::max(high.col, spot.col), std::max(high.row, spot.row) };
@@ -1245,6 +1257,11 @@ namespace rct3::scene
             f.routing = panel->routing();
             f.route_goal.reset();
             f.route_goal_height.reset();
+            f.dirty = true;
+        }
+        if (panel->brush() != f.brush_size)
+        {
+            f.brush_size = panel->brush();
             f.dirty = true;
         }
         if (panel->straight() != f.straight)

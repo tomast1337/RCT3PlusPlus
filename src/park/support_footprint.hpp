@@ -78,7 +78,8 @@ namespace rct3::park
         bool track = false;           ///< A piece of ride track; columns standing on it keep a level clear
     };
 
-    /// What `item` asks for, or offers to columns from above; nothing when it does neither and is no track.
+    /// What `item` asks for, or offers to columns from above; nothing when columns pass by it, as they do by
+    /// items with no footprint and those flagged for it.
     [[nodiscard]] std::optional<SupportFootprint> support_footprint(const ovl::SceneryItem& item);
 
 } // namespace rct3::park

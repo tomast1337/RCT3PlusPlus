@@ -4,7 +4,7 @@
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_furniture.hpp"
-#include "park/track_supports.hpp"
+#include "park/support_columns.hpp"
 
 #include <algorithm>
 #include <utility>

@@ -17,6 +17,7 @@ namespace rct3::park
         constexpr std::uint32_t kAlternateTiles = 0x200;
         constexpr std::uint32_t kByPoints = 0x400;
         constexpr std::uint32_t kCapped = 0x800;
+        constexpr std::uint32_t kNoColumnsMeet = 1u << 26; ///< Joined coaster pieces: columns neither hold them up nor stop at them
         constexpr std::uint32_t kTrackType = 18;
 
         // Square flags.
@@ -67,7 +68,7 @@ namespace rct3::park
         f.wants_supports = (item.flags & kWantsSupports) != 0;
         f.carries_columns = (item.flags & kCarriesColumns) != 0;
         f.track = item.type == kTrackType;
-        if ((!f.wants_supports && !f.carries_columns && !f.track) || item.squares.empty())
+        if ((item.flags & kNoColumnsMeet) != 0 || item.squares.empty())
             return std::nullopt;
         f.by_points = (item.flags & kByPoints) != 0;
         f.alternate_tiles = (item.flags & kAlternateTiles) != 0;

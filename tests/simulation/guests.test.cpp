@@ -574,6 +574,31 @@ TEST_CASE("those waiting for a ride stand in a ring beside its exit, and go on t
         CHECK(r.get<Errand>(g).kind == ErrandKind::Following);
 }
 
+TEST_CASE("two parties waiting by one exit each stand round a spot of their own")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 3, 0 } });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> waiting;
+    for (int p = 0; p < 2; ++p)
+    {
+        const auto leader = park.guest({ 6, 0 });
+        std::vector<entt::entity> all { leader };
+        for (int i = 0; i < 2; ++i)
+            all.push_back(waiting.emplace_back(park.guest({ 6, 0 }, { .nausea = 0.9f })));
+        park.party(all);
+        r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    }
+    park.run_seconds(20);
+    for (std::size_t i = 0; i < waiting.size(); ++i)
+    {
+        CHECK(r.get<Errand>(waiting[i]).kind == ErrandKind::Waiting);
+        for (std::size_t k = i + 1; k < waiting.size(); ++k)
+            CHECK(glm::distance(r.get<Pose>(waiting[i]).position, r.get<Pose>(waiting[k]).position) > 0.3f);
+    }
+}
+
 TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")
 {
     Sandbox park;

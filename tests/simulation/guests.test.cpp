@@ -713,6 +713,27 @@ TEST_CASE("walkers keep an even pace and a steady way through tiles, their party
     }
 }
 
+TEST_CASE("party members walk each in a place of their own, not inside one another")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 40, 0 });
+    std::vector<entt::entity> members;
+    for (int i = 0; i < 6; ++i)
+        members.push_back(park.guest({ 0, 0 }));
+    park.party(members);
+    auto& r = park.world().registry;
+    park.run_seconds(15); // Time to spread out from where they all came in
+    float closest = 100;
+    for (int t = 0; t < 400; ++t)
+    {
+        park.run(1);
+        for (std::size_t i = 0; i < members.size(); ++i)
+            for (std::size_t k = i + 1; k < members.size(); ++k)
+                closest = std::min(closest, glm::distance(r.get<Pose>(members[i]).position, r.get<Pose>(members[k]).position));
+    }
+    CHECK(closest > 0.45f);
+}
+
 TEST_CASE("a ride being tested runs empty, and guests are let on only once it is open")
 {
     Sandbox park;

@@ -190,11 +190,21 @@ namespace rct3::simulation
             return paths.centre(node) + glm::vec3(lane.x, 0.0f, lane.y);
         }
 
-        /// A lane near `was`, so walkers drift across the path rather than zigzag from tile to tile.
-        glm::vec2 new_lane(Dice& dice, glm::vec2 was)
+        /// The lane next after `was` on the way to `want`, at most a lane's drift across, so walkers never cut
+        /// sharply over the path.
+        glm::vec2 lane_towards(glm::vec2 was, glm::vec2 want)
+        {
+            const float most = kTuning.walking.lane_drift.value;
+            return glm::clamp(was + glm::clamp(want - was, -most, most), -kLaneReach, kLaneReach);
+        }
+
+        /// A lane near `was`, so walkers drift across the path rather than zigzag from tile to tile. A party
+        /// member keeps `slot` off their party's middle, and the middle drifts so the whole ring stays on the path.
+        glm::vec2 new_lane(Dice& dice, glm::vec2 was, glm::vec2 slot = { })
         {
             const glm::vec2 drift { static_cast<float>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)), static_cast<float>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)) };
-            return glm::clamp(was + drift, -kLaneReach, kLaneReach);
+            const float reach = kLaneReach - glm::length(slot);
+            return lane_towards(was, glm::clamp(was - slot + drift, -reach, reach) + slot);
         }
 
         float step_length(const PathNetwork& paths, const Stride& s)
@@ -247,6 +257,14 @@ namespace rct3::simulation
                 return { 0, 1 };
             const auto& members = r.get<Party>(member->party).members;
             return { static_cast<std::size_t>(std::ranges::find(members, guest) - members.begin()), members.size() };
+        }
+
+        /// Where a guest walks off their party's middle: their place in a ring, so no two members walk in one
+        /// another. Nowhere off it for a guest on their own.
+        glm::vec2 party_slot(const entt::registry& r, entt::entity guest)
+        {
+            const auto [place, of] = place_in_party(r, guest);
+            return of > 1 ? ring_lane(place, of) : glm::vec2 { 0.0f };
         }
 
         /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
@@ -1550,7 +1568,7 @@ namespace rct3::simulation
                     if (stride.to == at)
                         stride.lane_to = stride.lane_from;
                     else if (!ringed)
-                        stride.lane_to = new_lane(dice, stride.lane_from);
+                        stride.lane_to = new_lane(dice, stride.lane_from, party_slot(r, movers[i]));
                     walk_on(paths, stride, left);
                     place(paths, stride, pose);
                 }
@@ -1558,14 +1576,14 @@ namespace rct3::simulation
         }
 
         phase.emplace("Followers");
-        // Followers take their leader's step, each in a lane of their own.
+        // Followers take their leader's step, each in their own place round the party's middle.
         {
-            const auto view = r.view<Errand, Stride, Pose, Dice, const Member>();
+            const auto view = r.view<Errand, Stride, Pose, const Member>();
             const auto followers = sorted(view);
             share(workers, followers.size(), [&](std::size_t begin, std::size_t end) {
                 for (std::size_t i = begin; i < end; ++i)
                 {
-                    auto [errand, stride, pose, dice, member] = view.get(followers[i]);
+                    auto [errand, stride, pose, member] = view.get(followers[i]);
                     if (errand.kind != ErrandKind::Following)
                         continue;
                     stride.fresh = false;
@@ -1632,7 +1650,9 @@ namespace rct3::simulation
                             stride.to = lead.to;
                             stride.progress.value = lead.progress.value;
                         }
-                        stride.lane_to = stride.to != stride.from ? new_lane(dice, stride.lane_from) : stride.lane_from;
+                        // Towards their place round the party's middle, which the leader's lane gives.
+                        if (stride.to != stride.from)
+                            stride.lane_to = lane_towards(stride.lane_from, lead.lane_to - party_slot(r, party.leader) + party_slot(r, followers[i]));
                         if (stride.from == stride.to)
                             break;
                     }

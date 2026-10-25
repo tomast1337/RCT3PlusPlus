@@ -149,7 +149,7 @@ namespace rct3::scene
         }
         objects_changed(scene);
         w.stale = false; // That was only the supports
-        logging::logger("park").info("supports on {} tiles built again in {} us", tiles.size(), std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
+        logging::logger("park").debug("supports on {} tiles built again in {} us", tiles.size(), std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
     }
 
 } // namespace rct3::scene

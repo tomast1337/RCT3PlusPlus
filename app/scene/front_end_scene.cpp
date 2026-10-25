@@ -104,7 +104,7 @@ namespace rct3::scene
         scene.live->front->update();
         ui::FrontEnd& front = *scene.live->front;
         // A custom scenario started from one of the scenarios to start from is saved with the custom scenarios.
-        const ParkGame files = front.file_folder() == config::UserFolder::Careers ? scene.careers.game : ParkGame { .folder = front.file_folder() };
+        const ParkGame files = front.file_folder() == config::UserFolder::Careers ? scene.careers.game : ParkGame { .folder = front.file_folder(), .sandbox = front.file_folder() == config::UserFolder::Parks };
         if (auto picked = update_save_browser(device, scene.saves, front.file_dialog(), front.file_dialogs_opened(), files))
         {
             scene.park_to_play = std::move(picked);
@@ -142,7 +142,7 @@ namespace rct3::scene
             if (const auto start = picker->take_start())
             {
                 scene.park_to_play = scene.assets.install->find(picker->tutorial(*start).park);
-                scene.game_to_play = { };
+                scene.game_to_play = { .sandbox = false };
             }
         }
         if (scene.live->front->take_options_closed())

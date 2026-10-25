@@ -324,6 +324,16 @@ namespace rct3::simulation::tuning
         float tumble = 4;           ///< Radians a second a wreck tumbles at most
     };
 
+    /// People the player picks up and lets go of.
+    struct Holding
+    {
+        Distance lowest { 3 };   ///< A held person hangs at least this far over the ground under the cursor
+        Distance highest { 5 };  ///< and at most this far
+        float gravity = 9.8f;    ///< World units a second a falling person speeds up by, each second
+        Pace fastest_fall { 6 }; ///< Most they fall at
+        Chance happy { 0.6 };    ///< Of a held person enjoying it; the rest hang there cross
+    };
+
     /// Guests of honour (VIPs) judging the park on their visit; the tolerances and targets they are weighed
     /// against come from the scenario.
     struct Vips
@@ -369,6 +379,7 @@ namespace rct3::simulation::tuning
         Crashes crashes;
         Vips vips;
         Transport transport;
+        Holding holding;
     };
 
 } // namespace rct3::simulation::tuning

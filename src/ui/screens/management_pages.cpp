@@ -177,6 +177,9 @@ namespace rct3::ui
             const bool centred = std::ranges::any_of(values, [](float v) { return v < 0; });
             if (full <= 0)
                 full = full_scale(values);
+            // Money reads in whole units at least, so a series of nought or a few cents is not on a scale of one.
+            if (money_values)
+                full = std::max(full, 100.0f);
             std::vector<std::u16string> axis;
             for (const float v : axis_values(full, centred))
                 axis.push_back(money_values ? money(units, std::llround(v)) : whole(std::lround(v)));
@@ -193,7 +196,11 @@ namespace rct3::ui
                 return;
             for (std::size_t back = 0; back < page.graph_slots; ++back)
             {
-                const save::CalendarDate date = save::GameClock::split(state->time - static_cast<float>(back + 1) * save::GameClock::kUnitsPerWeek);
+                // Nothing before the calendar began.
+                const float time = state->time - static_cast<float>(back + 1) * save::GameClock::kUnitsPerWeek;
+                if (time < 0)
+                    break;
+                const save::CalendarDate date = save::GameClock::split(time);
                 if (date.week == 0)
                     page.graph_ticks.push_back({ static_cast<float>(back), short_month(strings, date.month) });
             }
@@ -237,10 +244,10 @@ namespace rct3::ui
 
         void park_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            if (f.park != nullptr && f.park->has_finance)
-                add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
-            if (f.park != nullptr && f.park->has_park)
+            // Graphs come from the series alone: a park without its records has them once the simulation starts them.
+            if (f.park != nullptr)
             {
+                add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
                 const save::Park& p = f.park->park;
                 // The guests by age share the scale of all of them, so they read against it.
                 const float guests = full_scale(weeks_gone(p.guests_in_park));
@@ -381,7 +388,7 @@ namespace rct3::ui
 
         void finance_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            if (f.park == nullptr || !f.park->has_finance)
+            if (f.park == nullptr)
             {
                 page.note = text(strings, kNotRead);
                 return;

@@ -724,6 +724,18 @@ namespace rct3::ui::game_skins
         s.tick_box = kTickbox;
         s.tick = kTick;
         s.button = kTextButton;
+        // A stall's menu: the lists' rows, the page's boxes and pots, and the game's bin for what goes off it.
+        s.menu.rows = row_bands(p);
+        s.menu.bar = scroll_bar_style(p, Orientation::Vertical);
+        s.menu.price = s.spinner;
+        s.menu.paint = s.paint;
+        s.menu.paint.face.clear();
+        s.menu.tick_box = kTickbox;
+        s.menu.tick = kTick;
+        s.menu.bin = "GUI2LoadSave_DeleteCampaign";
+        s.menu.picked = p.selection;
+        s.menu.text_colour = p.text;
+        s.menu.help_colour = p.text_on_band;
         return s;
     }
 

@@ -46,7 +46,7 @@ namespace
         save::RideModel rides;
     };
 
-    Park park()
+    Park sample_park()
     {
         Park p;
         p.rides.rides = { ride(7, "Twister"), ride(8, "#RideNameZoom#") };
@@ -99,7 +99,7 @@ namespace
 
 TEST_CASE("guests and staff have their own tabs, in the order of their places on the ring")
 {
-    const Park p = park();
+    const Park p = sample_park();
     const auto guests = person_tabs(guest(p));
     const auto workers = person_tabs(staff(p));
     CHECK(guests.size() > workers.size());
@@ -111,7 +111,7 @@ TEST_CASE("guests and staff have their own tabs, in the order of their places on
 TEST_CASE("a member of staff is named by their job where the save leaves its mark")
 {
     const StringTable s = table();
-    const Park p = park();
+    const Park p = sample_park();
     CHECK(person_name(guest(p), s) == u"Ada");
     CHECK(person_name(staff(p), s) == u"Fixer 2");
 }
@@ -119,7 +119,7 @@ TEST_CASE("a member of staff is named by their job where the save leaves its mar
 TEST_CASE("what a person is doing names where they are heading")
 {
     const StringTable s = table();
-    Park p = park();
+    Park p = sample_park();
     CHECK(person_doing(guest(p), s) == u"Off to Zoom!");
     p.people.guests[0].person.state = save::PersonState::Wandering;
     CHECK(person_doing(guest(p), s) == u"Strolling");
@@ -131,7 +131,7 @@ TEST_CASE("a guest's pages tell their rides, what they carry, how they feel and 
 {
     const StringTable s = table();
     const InfoUnits units { };
-    const Park p = park();
+    const Park p = sample_park();
 
     const InfoPage rides = person_page(PersonTab::Rides, guest(p), s, units);
     CHECK(rides.title == u"Ada");
@@ -162,7 +162,7 @@ TEST_CASE("a guest without a favourite says so, and a member of staff shows thei
 {
     const StringTable s = table();
     const InfoUnits units { };
-    Park p = park();
+    Park p = sample_park();
     p.people.guests[0].favourite_ride = { };
     CHECK(value(person_page(PersonTab::Rides, guest(p), s, units), u"Best:") == u"Nothing yet");
     CHECK(value(person_page(PersonTab::Stats, staff(p), s, units), u"Mended:") == u"5");
@@ -177,7 +177,7 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     s.add("StaffTasks_FixRides", u"Mend");
     s.add("Entertainer_SubType_Alien", u"Martian");
     const InfoUnits units { };
-    Park p = park();
+    Park p = sample_park();
     save::Staff& mechanic = p.people.staff[0];
     mechanic.task_flags = 2;
     mechanic.wage_level = 2;
@@ -233,7 +233,7 @@ TEST_CASE("a member of staff the simulation walks has their patrol area on their
     s.add("Rct3pp_PatrolTiles", u"Area:");
     s.add("Rct3pp_PatrolWholePark", u"All of it");
     const InfoUnits units { };
-    Park p = park();
+    Park p = sample_park();
     PersonFacts f = staff(p);
     const auto without = person_page(PersonTab::Tasks, f, s, units).controls.size();
 

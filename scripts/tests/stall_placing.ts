@@ -54,7 +54,7 @@ log("placed", JSON.stringify(stall));
 expect(stall.site?.col === road!.col + 1 && stall.site?.row === road!.row && stall.site?.direction === 1, `it on the tile beside the road, facing it (${JSON.stringify(stall.site)})`);
 expect(stall.name === "%ME% 1", `it named after its kind, not ${stall.name}`);
 expect(!stall.open, "it built closed");
-expect(JSON.stringify(stall.items) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
+expect(JSON.stringify(stall.items.map((i) => ({ item: i.item, price: i.price }))) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
 // The road runs past the tile it faces, so the park runs it at once, closed.
 await frames(2);
@@ -68,21 +68,52 @@ const opened = stalls.setState(at, "open");
 expect(opened == null && menu().selling === true, `it opened (${opened}, ${JSON.stringify(menu())})`);
 await ui.click("info/Stall_ItemsIcon");
 await frames(2);
-await ui.click("info/body/Stall_Synchronize");
+await ui.click("info/body/StallMenu/Stall_Synchronize");
+await frames(2);
 expect(menu().sync, "its synchronise tick on");
-for (let i = 0; i < kind.goods.length; ++i) {
-    await ui.click("info/body/ItemRemove0");
+// The menu: goods stacked up from the bin at its bottom-left, a row for each item, its handle left of its name.
+// Places are fractions of the screen; the synchronise tick is one cell of the strip across and down.
+const pane = ui.find("info/body/StallMenu")!;
+const tick = ui.find("info/body/StallMenu/Stall_Synchronize")!;
+const across = tick.right - tick.left;
+const down = tick.bottom - tick.top;
+const bin: [number, number] = [pane.left + across / 2, pane.bottom - down / 2];
+const good = (i: number): [number, number] => [bin[0], bin[1] - down * (i + 1)];
+const handle = (i: number): [number, number] => {
+    const name = ui.find(`info/body/StallMenu/menu/view/content/ItemName${i}`)!;
+    return [name.left - across / 2, name.y];
+};
+await frames(2);
+await screenshot("stall_menu");
+if (kind.goods.length > 1) {
+    // Dragged by its handle below the next item, the first item moves down one.
+    const second = handle(1);
+    await pointer.drag(handle(0), [second[0] + across * 3, second[1] + down * 0.4], 8);
+    await frames(2);
+    expect(menu().items[1].item === `${kind.goods[0].item}:cid`, `the first item moved down one (${JSON.stringify(menu().items)})`);
+}
+// Dragged onto the bin, an item goes off; a click on a handle and then on the bin takes one off too.
+await pointer.drag(handle(0), bin, 8);
+await frames(2);
+for (let i = 1; i < kind.goods.length; ++i) {
+    const [x, y] = handle(0);
+    await pointer.click(x, y);
     await frames(1);
+    await pointer.click(bin[0], bin[1]);
+    await frames(2);
 }
 expect(menu().items.length === 0 && !menu().open, `it emptied and closed (${JSON.stringify(menu())})`);
 expect(stalls.setState(at, "open") === "CantOpenStallNoItems", "a stall with nothing to sell refused opening");
-if (kind.goods.length > 1) {
-    await ui.click("info/body/ItemAdd1");
-    await frames(1);
-    const back = menu();
-    expect(back.items.length === 1 && back.items[0].item === `${kind.goods[1].item}:cid` && back.items[0].price === kind.goods[1].price, `its second item back on (${JSON.stringify(back)})`);
-    expect(back.price === kind.goods[1].price, "the park selling it at that item's price");
-}
+// A click on a good puts it on; one dragged onto the pane goes in where it drops.
+await pointer.click(...good(kind.goods.length - 1));
+await frames(2);
+expect(menu().items.length === 1 && menu().items[0].item === `${kind.goods[kind.goods.length - 1].item}:cid`, `its last good back on (${JSON.stringify(menu().items)})`);
+const first = handle(0);
+await pointer.drag(good(0), [first[0] + across * 4, first[1] - down * 0.4], 8);
+await frames(2);
+const back = menu();
+expect(back.items.length === 2 && back.items[0].item === `${kind.goods[0].item}:cid` && back.items[0].price === kind.goods[0].price, `its first good dragged on before it (${JSON.stringify(back)})`);
+expect(back.price === kind.goods[0].price, "the park selling it at that item's price");
 expect(stalls.setState(at, "open") == null && menu().selling === true, "it opened again");
 // The park's objects are built again a few times a second, beside the frame; a frame here takes far less.
 camera.look({ col: road!.col + 1.5, row: road!.row + 0.5 }, { col: road!.col + 1.5, row: road!.row + 4.5, up: 8 });

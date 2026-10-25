@@ -5,6 +5,7 @@
 #include "config/game_saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
+#include "ovl/overlay.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
 #include "park/edge_walls.hpp"
@@ -38,6 +39,7 @@
 #include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/attraction_info.hpp"
@@ -54,6 +56,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <filesystem>
 #include <format>
 #include <future>
 #include <set>
@@ -229,6 +232,8 @@ namespace rct3::scene
                     if (const park::BuildItem* kind = stall_kind(scene, *f.stall))
                         for (const park::BuildItem::Goods& g : kind->goods)
                             f.offers.push_back(std::format("{}:cid", g.item));
+                    f.carried = scene.carried.items;
+                    f.carried_extras = scene.carried.extras;
                 }
             }
             else if (ref.index < scene.rides.rides.size())
@@ -364,6 +369,25 @@ namespace rct3::scene
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
                 f.sign = &*sign;
             return f;
+        }
+
+        /// Reads what stalls sell, for their menus, and adds its pictures to the interface's.
+        void load_carried(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
+        {
+            scene.carried_read = true;
+            const auto folder = assets.install ? assets.install->find("CarriedItems") : std::nullopt;
+            if (!folder)
+                return;
+            std::vector<std::string> files;
+            for (const std::filesystem::path& path : park::carried_overlays(*folder))
+            {
+                if (const auto overlay = ovl::Overlay::load(path))
+                    park::add_carried_kinds(*overlay, scene.carried);
+                files.push_back(std::format("{}/{}", folder->filename().string(), path.filename().string()));
+            }
+            const std::vector<std::string_view> names(files.begin(), files.end());
+            const std::size_t skins = ui::add_extra_skins(device, assets, names);
+            logging::logger("park").info("{} carried items, {} extras, {} pictures", scene.carried.items.size(), scene.carried.extras.size(), skins);
         }
 
         void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
@@ -894,7 +918,6 @@ namespace rct3::scene
             else if (stall != nullptr)
             {
                 const std::size_t index = ref.index;
-                const std::size_t had = stall->items.size();
                 if (change.id == ui::control_id(SyncStalls))
                     stall->sync = change.value != 0;
                 else if (const auto item = ui::listed(change.id, ItemPrice); item && *item < stall->items.size())
@@ -908,8 +931,17 @@ namespace rct3::scene
                         return;
                     const park::BuildItem::Goods& g = kind->goods[*added];
                     // shortcut: it goes on at its kind's own price, as a new stall's items do; upgrade alongside them.
-                    stall->items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                    const auto at = stall->items.begin() + std::clamp<std::ptrdiff_t>(change.value, 0, std::ssize(stall->items));
+                    stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 }
+                else if (const auto moved = ui::listed(change.id, ItemMove); moved && *moved < stall->items.size())
+                    park::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
+                else if (const auto ticked = ui::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
+                    stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
+                else if (const auto named = ui::listed(change.id, ItemName); named && *named < stall->items.size())
+                    stall->items[*named].name = strings::to_utf8(change.text);
+                else if (const auto painted = ui::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::RideColours { }.size())
+                    stall->items[*painted].colours[change.pot] = static_cast<std::uint8_t>(change.value);
                 else if (const auto extra = ui::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
                     stall->extras[*extra].level = change.value;
                 else
@@ -927,8 +959,8 @@ namespace rct3::scene
                         set_attraction_state(scene, s.base, save::AttractionState::Closed);
                     simulation::restock(scene.sim, s);
                 }
-                // Items on or off the menu change the page's rows.
-                if (stall->items.size() != had)
+                // The menu's rows follow what changed; a price typed in stays as it is.
+                if (!ui::listed(change.id, ItemPrice))
                     show_info_page(scene, panel, assets, options);
             }
             else if (ride == nullptr)
@@ -1433,6 +1465,14 @@ namespace rct3::scene
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings, assets.palette);
             keys.presses.erase(escape.begin(), escape.end());
+        }
+
+        // A stall's window shows what it sells by name and picture once those are read.
+        if (!scene.carried_read && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Stall)
+        {
+            load_carried(device, scene, assets);
+            if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName))
+                show_info_page(scene, *info, assets, options);
         }
 
         ui::PointerState pointer = input.pointer;

@@ -3,6 +3,9 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <optional>
+#include <span>
+#include <utility>
 
 using namespace rct3;
 using namespace rct3::ui;
@@ -407,11 +410,12 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     stall.items = { sweets, sweets };
     const AttractionFacts shop { &stall.base, nullptr, &stall, { 1 } };
     const InfoPage items = attraction_page(AttractionTab::Items, shop, s, { });
-    // The synchronise tick, then a price and a button to take it off for each item.
-    REQUIRE(items.controls.size() == 5);
-    CHECK(items.controls[3].id == control_id(AttractionControl::ItemPrice, 1));
-    CHECK(items.controls[3].label == u"Sweets");
-    CHECK(items.controls[3].value == 90);
+    // The menu: a line for each item, with its name and price.
+    REQUIRE(items.menu.has_value());
+    REQUIRE(items.menu->lines.size() == 2);
+    CHECK(items.menu->lines[1].name == u"Sweets");
+    CHECK(items.menu->lines[1].price == 90);
+    CHECK(items.menu->ids[std::to_underlying(MenuAction::Price)] == control_id(AttractionControl::ItemPrice));
     const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
     CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
     // A stall has no tune; its name, state, two buttons and its paint.
@@ -426,18 +430,30 @@ TEST_CASE("a stall's items page offers what its kind sells and is not yet on its
     stall.items = { save::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
     AttractionFacts f { &stall.base, nullptr, &stall, { } };
     f.offers = { "Burger:cid", "MedBurger:cid", "LrgBurger:cid" };
-    const InfoPage page = attraction_page(AttractionTab::Items, f, table(), { });
-    REQUIRE(page.controls.size() == 5);
-    CHECK(page.controls[0].id == control_id(AttractionControl::SyncStalls));
-    CHECK(page.controls[0].value == 1);
-    CHECK(page.controls[1].maximum == kMostRidePrice);
-    CHECK(page.controls[1].step == kItemPriceStep);
-    CHECK(page.controls[2].id == control_id(AttractionControl::ItemRemove, 0));
-    // Offers keep their places in the kind's list, so the first one left is the second.
-    CHECK(page.controls[3].id == control_id(AttractionControl::ItemAdd, 1));
-    CHECK(page.controls[3].label == u"MedBurger");
-    CHECK(listed(page.controls[4].id, AttractionControl::ItemAdd) == 2);
-    CHECK_FALSE(listed(page.controls[4].id, AttractionControl::ItemPrice));
+    const park::CarriedKind burger { .symbol = "Burger:cid", .name_text = "CarriedItem_Hamburger", .icon = "BurgerIcon", .extras = { "Ketchup:ced", "Relish:ced" } };
+    f.carried = std::span(&burger, 1);
+    stall.extras = { save::StallExtra { .kind_symbol = "Ketchup:ced", .level = 1 } };
+    stall.items[0].extras = 1;
+    StringTable s = table();
+    s.add("CarriedItem_Hamburger", u"Hamburger");
+    const InfoPage page = attraction_page(AttractionTab::Items, f, s, { });
+    REQUIRE(page.menu.has_value());
+    const StallMenuView& menu = *page.menu;
+    CHECK(menu.sync);
+    CHECK(menu.most_price == kMostRidePrice);
+    CHECK(menu.price_step == kItemPriceStep);
+    // Every good the kind sells stays on the strip, named as its item is when known.
+    REQUIRE(menu.goods.size() == 3);
+    CHECK(menu.goods[0].name == u"Hamburger");
+    CHECK(menu.goods[0].icon == "BurgerIcon");
+    CHECK(menu.goods[1].name == u"MedBurger");
+    REQUIRE(menu.lines.size() == 1);
+    CHECK(menu.lines[0].icon == "BurgerIcon");
+    CHECK(menu.lines[0].ticked == 1);
+    // The item's first extra is the stall's first; its second the stall does not offer.
+    REQUIRE(menu.lines[0].extras.size() == 2);
+    CHECK(menu.lines[0].extras[0] == std::optional<std::size_t>(0));
+    CHECK_FALSE(menu.lines[0].extras[1].has_value());
 }
 
 TEST_CASE("a stall's extras page sets how much of each extra goes on")

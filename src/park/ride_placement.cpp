@@ -82,12 +82,25 @@ namespace rct3::park
                 copy.price = item.price;
                 copy.name = item.name;
                 copy.colours = item.colours;
+                copy.extras = item.extras;
             }
             to.items = std::move(items);
             for (save::StallExtra& extra : to.extras)
                 if (const auto same = std::ranges::find(source.extras, extra.kind_symbol, &save::StallExtra::kind_symbol); same != source.extras.end())
                     extra.level = same->level;
         }
+    }
+
+    void move_item(save::Stall& stall, std::size_t from, std::size_t to)
+    {
+        if (from >= stall.items.size())
+            return;
+        to = std::min(to, stall.items.size() - 1);
+        const auto at = stall.items.begin();
+        if (from < to)
+            std::rotate(at + static_cast<std::ptrdiff_t>(from), at + static_cast<std::ptrdiff_t>(from) + 1, at + static_cast<std::ptrdiff_t>(to) + 1);
+        else
+            std::rotate(at + static_cast<std::ptrdiff_t>(to), at + static_cast<std::ptrdiff_t>(from), at + static_cast<std::ptrdiff_t>(from) + 1);
     }
 
     std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)

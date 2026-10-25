@@ -242,3 +242,24 @@ TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
     CHECK(stalls[2].items.empty());
     CHECK(stalls[2].extras[0].level == 0);
 }
+
+TEST_CASE("an item moved on a stall's menu takes its new place, the others closing up behind it")
+{
+    save::Stall stall;
+    for (const char* kind : { "A:cid", "B:cid", "C:cid", "D:cid" })
+        stall.items.push_back({ .kind_symbol = kind });
+    const auto order = [&] {
+        std::string out;
+        for (const save::StallItem& i : stall.items)
+            out += i.kind_symbol.front();
+        return out;
+    };
+    park::move_item(stall, 0, 2);
+    CHECK(order() == "BCAD");
+    park::move_item(stall, 3, 0);
+    CHECK(order() == "DBCA");
+    park::move_item(stall, 1, 9);
+    CHECK(order() == "DCAB");
+    park::move_item(stall, 9, 0);
+    CHECK(order() == "DCAB");
+}

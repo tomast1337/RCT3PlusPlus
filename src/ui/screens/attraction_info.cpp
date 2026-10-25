@@ -3,6 +3,7 @@
 
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/screens/stall_menu.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -272,9 +273,22 @@ namespace rct3::ui
             page.controls_after = 0;
         }
 
-        std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings)
+        /// What `kinds` knows of the carried item or extra `symbol`, matched in any case.
+        const park::CarriedKind* carried(std::span<const park::CarriedKind> kinds, std::string_view symbol)
         {
-            return item.name.starts_with(kNumbered) || item.name.empty() ? kind_name(stall.base.symbol, strings) : strings::to_utf16(item.name);
+            const auto found = std::ranges::find_if(kinds, [&](const park::CarriedKind& k) { return strings::equals_ignoring_case(k.symbol, symbol); });
+            return found == kinds.end() ? nullptr : &*found;
+        }
+
+        /// An item's name: as the player named it, else after what it is.
+        std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings, std::span<const park::CarriedKind> kinds)
+        {
+            if (!item.name.starts_with(kNumbered) && !item.name.empty())
+                return strings::to_utf16(item.name);
+            const park::CarriedKind* k = carried(kinds, item.kind_symbol);
+            if (k == nullptr || !strings.contains(k->name_text))
+                return kind_name(stall.base.symbol, strings);
+            return text(strings, k->name_text) + strings::to_utf16(std::string_view(item.name).substr(std::min(item.name.size(), kNumbered.size())));
         }
 
         void customers(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
@@ -307,7 +321,7 @@ namespace rct3::ui
             {
                 std::u16string label = sold;
                 if (const auto at = label.find(ascii(kSoldName)); at != std::u16string::npos)
-                    label.replace(at, kSoldName.size(), item_name(item, *f.stall, strings));
+                    label.replace(at, kSoldName.size(), item_name(item, *f.stall, strings, f.carried));
                 page.lines.push_back({ std::move(label), count(item.total_sold), true });
             }
         }
@@ -690,44 +704,76 @@ namespace rct3::ui
             return symbol.empty() ? missing() : strings::to_utf16(symbol.substr(0, symbol.find(':')));
         }
 
-        // shortcut: buttons take items off the menu and put them on, where the game drags them; upgrade with
-        // dragging between panes.
-        void items(InfoPage& page, const save::Stall& stall, const std::vector<std::string>& offers, const StringTable& strings)
+        /// `text` with `mark` in it replaced by `with`.
+        std::u16string filled(std::u16string text, std::u16string_view mark, std::u16string_view with)
         {
-            InfoControl sync;
-            sync.id = control_id(AttractionControl::SyncStalls);
-            sync.name = "Stall_Synchronize";
-            sync.kind = InfoControlKind::Tick;
-            sync.label = text(strings, "Stall_Synchronize");
-            sync.value = stall.sync ? 1 : 0;
-            page.controls.push_back(std::move(sync));
+            if (const auto at = text.find(mark); at != std::u16string::npos)
+                text.replace(at, mark.size(), with);
+            return text;
+        }
+
+        void items(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
+        {
+            const save::Stall& stall = *f.stall;
+            const auto name_of = [&](std::span<const park::CarriedKind> kinds, std::string_view symbol) {
+                const park::CarriedKind* k = carried(kinds, symbol);
+                return k != nullptr && strings.contains(k->name_text) ? text(strings, k->name_text) : symbol_name(symbol);
+            };
+            const auto icon_of = [&](std::span<const park::CarriedKind> kinds, std::string_view symbol) {
+                const park::CarriedKind* k = carried(kinds, symbol);
+                return k != nullptr ? k->icon : std::string { };
+            };
+            StallMenuView m;
+            m.sync = stall.sync;
+            m.sync_help = text(strings, "Stall_Synchronize");
+            m.bin_help = text(strings, "StallItemsWindow_TrashCan");
+            m.handle_help = text(strings, "StallItemLine_Drag");
+            m.most_price = kMostRidePrice;
+            m.price_step = kItemPriceStep;
+            m.longest_name = kLongestAttractionName;
+            using enum AttractionControl;
+            m.ids = { control_id(ItemAdd), control_id(ItemRemove), control_id(ItemMove), control_id(ItemPrice), control_id(ItemExtras), control_id(ItemName), control_id(SyncStalls), control_id(ItemColour) };
+            for (std::size_t i = 0; i < f.offers.size() && i < kMostListed; ++i)
+            {
+                const std::u16string name = name_of(f.carried, f.offers[i]);
+                m.goods.push_back({ name, icon_of(f.carried, f.offers[i]), filled(text(strings, "StallItemsWindow_DragOn"), u"%ITEM%", name) });
+            }
+            // Each extra's picture over its ticks says how much of it goes on, as its own page sets.
+            for (const save::StallExtra& e : stall.extras)
+            {
+                const std::u16string level = e.level >= 0 && std::cmp_less(e.level, kExtraLevels.size()) ? text(strings, kExtraLevels[static_cast<std::size_t>(e.level)]) : missing();
+                const std::u16string name = name_of(f.carried_extras, e.kind_symbol);
+                m.extras.push_back({ name, icon_of(f.carried_extras, e.kind_symbol), name + u" : " + level });
+            }
             for (std::size_t i = 0; i < stall.items.size() && i < kMostListed; ++i)
             {
-                page.controls.push_back(price(control_id(AttractionControl::ItemPrice, i), std::format("ItemPrice{}", i), item_name(stall.items[i], stall, strings), stall.items[i].price, kMostRidePrice, kItemPriceStep));
-                InfoControl remove;
-                remove.id = control_id(AttractionControl::ItemRemove, i);
-                remove.name = std::format("ItemRemove{}", i);
-                remove.kind = InfoControlKind::Button;
-                remove.text = u"-";
-                remove.help = text(strings, "StallItemsWindow_TrashCan");
-                remove.beside = true;
-                page.controls.push_back(std::move(remove));
+                const save::StallItem& item = stall.items[i];
+                const park::CarriedKind* k = carried(f.carried, item.kind_symbol);
+                MenuLine l;
+                l.name = item_name(item, stall, strings, f.carried);
+                l.icon = k != nullptr ? k->icon : std::string { };
+                l.price = static_cast<int>(std::clamp<std::int64_t>(item.price, 0, kMostRidePrice));
+                l.ticked = item.extras;
+                // shortcut: the profit is shown unknown, as the item's own cost is not read; upgrade once it is.
+                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", missing());
+                if (k != nullptr)
+                {
+                    for (const std::string& extra : k->extras)
+                    {
+                        const auto offered = std::ranges::find_if(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); });
+                        l.extras.push_back(offered == stall.extras.end() ? std::nullopt : std::optional(static_cast<std::size_t>(offered - stall.extras.begin())));
+                        l.tick_help.push_back(filled(filled(text(strings, "StallItemLine_Check"), u"%EXTRA%", name_of(f.carried_extras, extra)), u"%ITEM%", l.name));
+                    }
+                    // shortcut: one pot, its first colour, for every item that takes the player's colours; upgrade
+                    // once how many each takes is read.
+                    if (k->paintable)
+                        l.paints = { item.colours[0] };
+                }
+                m.lines.push_back(std::move(l));
             }
-            for (std::size_t i = 0; i < offers.size() && i < kMostListed; ++i)
-            {
-                if (std::ranges::contains(stall.items, offers[i], &save::StallItem::kind_symbol))
-                    continue;
-                InfoControl add;
-                add.id = control_id(AttractionControl::ItemAdd, i);
-                add.name = std::format("ItemAdd{}", i);
-                add.kind = InfoControlKind::Button;
-                add.label = symbol_name(offers[i]);
-                add.text = u"+";
-                add.help = text(strings, "StallItemsWindow_DragOn");
-                if (const auto at = add.help.find(u"%ITEM%"); at != std::u16string::npos)
-                    add.help.replace(at, 6, add.label);
-                page.controls.push_back(std::move(add));
-            }
+            page.menu = std::move(m);
+            page.width = kMenuWidth;
+            page.menu_height = kMenuHeight;
         }
 
     } // namespace
@@ -1024,7 +1070,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Items:
                 if (f.stall)
-                    items(page, *f.stall, f.offers, strings);
+                    items(page, f, strings);
                 break;
             case AttractionTab::Thoughts:
                 if (f.ride)

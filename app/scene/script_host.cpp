@@ -620,6 +620,13 @@ namespace rct3::scene
             park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
         });
+        engine_.define("stalls.show", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
+                throw std::invalid_argument("stalls.show takes a stall's place in stalls.list()");
+            park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Stall, a[0].get<std::size_t>() };
+            return Json(nullptr);
+        });
         engine_.define("people.rename", [this](const Json& a) {
             ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size() || !a.at(1).is_string())

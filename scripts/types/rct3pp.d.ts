@@ -308,6 +308,8 @@ interface StallInfo {
 
 declare namespace stalls {
     function list(): StallInfo[];
+    /** Opens stall `i` of list() in the info panel, as a click on it does. */
+    function show(i: number): void;
     /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why it stays as it was (nothing on its menu). */
     function setState(i: number, state: "closed" | "open"): string | null;

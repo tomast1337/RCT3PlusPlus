@@ -99,6 +99,9 @@ namespace rct3::scene
         constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kOk = "SMB_Label_OK";
         constexpr std::string_view kPrizeName = "prize_won"; ///< The box telling a prize won, one at a time
+        constexpr std::string_view kDemolishName = "demolish_question";
+        constexpr std::string_view kDemolishTitle = "SingleItemDeleteEditor_AI_Title";
+        constexpr std::string_view kDemolishText = "SingleItemDeleteEditor_AI_Message";
 
         // How far the controls move the camera.
         constexpr float kDragPan = 0.0025f;     ///< Per pixel, times the distance
@@ -125,6 +128,26 @@ namespace rct3::scene
                 return;
             const ui::QuestionBoxStyle style = skins::question_box_style(palette);
             scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+        }
+
+        /// Asks whether to pull `refs` down, naming them; the answer comes back in the park's update.
+        void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<park::AttractionRef> refs)
+        {
+            if (refs.empty() || scene.desktop->root().find(kDemolishName))
+                return;
+            std::u16string names;
+            for (const park::AttractionRef ref : refs)
+            {
+                const save::AttractionCommon& a = ref.kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
+                names += (names.empty() ? u"" : u", ") + ui::attraction_name(a, strings);
+            }
+            std::u16string text(strings.get(kDemolishText));
+            if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
+                text.replace(at, 6, names);
+            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
+            auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kDemolishName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+            box.title = std::u16string(strings.get(kDemolishTitle));
+            scene.demolish_asked = std::move(refs);
         }
 
         void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
@@ -1875,6 +1898,8 @@ namespace rct3::scene
                     info->hide();
                 }
             }
+            else if (change && scene.shown && change->id == ui::control_id(ui::AttractionControl::Demolish))
+                ask_demolish(scene, *assets.strings, assets.palette, { *scene.shown });
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
@@ -2673,6 +2698,12 @@ namespace rct3::scene
         {
             if (const auto answer = question->take_answer())
                 scene.leave = scene.leave || *answer == 0;
+        }
+        if (auto question = desktop.root().find_as<ui::QuestionBox>(kDemolishName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                for (const park::AttractionRef ref : std::exchange(scene.demolish_asked, { }))
+                    demolish(scene, assets, ref);
         }
         // Prizes won are told in a box each, as the player closes the one before.
         if (auto box = desktop.root().find_as<ui::QuestionBox>(kPrizeName))

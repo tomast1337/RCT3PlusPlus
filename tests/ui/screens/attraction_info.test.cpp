@@ -398,7 +398,8 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(details.controls[1].beside);
     CHECK(details.controls[1].value == 0);
     CHECK_FALSE(details.controls[3].beside);
-    CHECK_FALSE(details.controls[3].enabled);
+    CHECK(details.controls[3].id == control_id(AttractionControl::Demolish));
+    CHECK(details.controls[3].enabled);
     CHECK(details.controls[4].id == control_id(AttractionControl::Locate));
     CHECK(details.controls[4].beside);
 

@@ -570,6 +570,7 @@ namespace rct3::scene
         float since_hover_pick = 0;                                 ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
+        std::vector<park::AttractionRef> demolish_asked;                ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                                ///< Text keys of prizes won and not yet shown, oldest first
         std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_windows.hpp)
         std::unique_ptr<ui::OptionsSession> options;                    ///< The options window over the park, once opened

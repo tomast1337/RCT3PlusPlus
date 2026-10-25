@@ -21,6 +21,7 @@ career.start(0);
 await park.ready();
 await until(() => ui.find("tools/Files") !== undefined, 300, "the tool row");
 expect(park.cash() !== undefined, "the scenario to have money");
+expect(ui.find("bar/day_mode") === undefined, "no day mode button outside a sandbox");
 await screenshot("scenario_started");
 
 await click_tool("Files");

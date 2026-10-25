@@ -3,7 +3,8 @@
 // Lays a saved design the install offers for a corkscrew coaster on the game's blank landscape, picked in the
 // designs' window. The construction panel's ring carries the construction crane, which hides and shows the
 // strip of controls, and the ride's closed flag; no test light. Its doors are placed, a straight piece clicked
-// mid-track is taken out, leaving a gap built on into, and the ride tested: a ghost train runs to the gap.
+// mid-track is taken out, leaving a gap built on into, and the ride tested: a ghost train runs to the gap. Once
+// a path joins it to the park, its own train, tested with the panel open, stops at the gap rather than crash.
 // Auto-complete then closes the gap again.
 //
 //   ./nob script scripts/tests/track_test.ts -- --no-audio
@@ -85,13 +86,17 @@ expect(build.construction()?.ride === coaster, "the construction panel back");
 // A click on a piece of the circuit picks it to build over, and demolish takes it out, opening the circuit.
 const ride = build.construction()!.ride;
 const before = rides.list()[ride].pieces ?? 0;
-// A straight piece near the entrance, off the station, so the station stays whole and auto-complete can lay a way
+// A straight piece near the entrance, off the station and not just past it, so the station stays whole and auto-complete can lay a way
 // across the gap: looked for on the tiles round the entrance.
 const door = rides.list()[ride].entrance!;
 const straight = () => {
     const at = build.construction()?.selected;
-    const name = typeof at === "number" ? rides.list()[ride].track?.[at] ?? "" : "";
-    return name.startsWith("Straight");
+    const track = rides.list()[ride].track ?? [];
+    if (typeof at !== "number")
+        return false;
+    // Not just past the station, which would leave the train no track to run on.
+    const before = track[(at + track.length - 1) % track.length] ?? "";
+    return (track[at] ?? "").startsWith("Straight") && !before.startsWith("Station");
 };
 camera.look({ col: door.col + 0.5, row: door.row + 0.5 }, { col: door.col + 0.5, row: door.row + 12.5, up: 25 });
 await frames(5);
@@ -111,17 +116,64 @@ expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
 expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
 expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
 
-// Tested while its track has a gap, the ride sends a ghost of its train from the station to the gap. Closing it
-// stops the test.
-const refused = rides.setState(build.construction()!.ride, "testing");
-expect(refused == null, `the unfinished track tested, not refused with ${refused}`);
+// Tested while its track has a gap, before the park runs it, a ghost of its train runs from the station to the gap.
+// Closing the ride stops the test.
+expect(rides.setState(ride, "testing") == null, "the unfinished track tested");
 await frames(10);
 expect(build.construction()?.testing === true, "a test train running the unfinished track");
-await frames(120);
+const from = build.construction()?.testAt ?? 0;
+await frames(60);
+expect((build.construction()?.testAt ?? 0) > from, "the test train moving along the track");
 await screenshot("testing");
-expect(rides.setState(build.construction()!.ride, "closed") == null, "the ride closed again");
+expect(rides.setState(ride, "closed") == null, "the ride closed again");
 await frames(3);
 expect(build.construction()?.testing === false, "the test train gone once the ride is closed");
+
+// A path beside the entrance, so the park runs the ride and its own train: tried on each side of it till one lays.
+await ui.click("tools/Paths/Obj_Paths");
+await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
+await ui.toggle("footpaths/follow", false);
+for (const [dc, dr] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+    if (rides.list()[ride].joined)
+        break;
+    const col = door.col + dc;
+    const r = door.row + dr;
+    camera.look({ col: col + 0.5, row: r + 0.5 }, { col: col + 0.5, row: r + 10.5, up: 30 });
+    await frames(5);
+    const at = map.screen(col, r);
+    if (at === undefined)
+        continue;
+    pointer.move(at.x, at.y);
+    await frames(10);
+    await pointer.click(at.x, at.y);
+    await frames(30);
+}
+build.stop();
+await until(() => rides.list()[ride].joined, 300, "the ride run by the park");
+rides.show(ride);
+await frames(5);
+await ui.click("info/Attraction_Construction");
+await frames(5);
+expect(build.construction()?.ride === ride, "the construction panel back on the ride");
+
+// Tested again while the panel has it, the park's own train runs to the gap and stops there rather than crash.
+expect(rides.setState(ride, "testing") == null, "the ride the park runs tested");
+const stood = rides.list()[ride].cars![0];
+await ui.click("bar/Top_SuperFastForward");
+// Run till it crashes, or stops where it was a while ago, out of the station: at the gap.
+let last = stood;
+let stopped = false;
+for (let i = 0; i < 300 && (rides.list()[ride].crashes ?? 0) === 0 && !stopped; ++i) {
+    await frames(60);
+    const now = rides.list()[ride].cars![0];
+    stopped = now.col === last.col && now.row === last.row && (now.col !== stood.col || now.row !== stood.row);
+    last = now;
+}
+await ui.click("bar/Top_Play");
+expect(stopped, "the park's train run out of the station and stopped");
+expect((rides.list()[ride].crashes ?? 0) === 0, "no train crashed while the panel has the ride");
+expect(rides.setState(ride, "closed") == null, "the ride closed once more");
+await frames(3);
 
 // Auto-complete looks for a way across the gap round to the station, shows the way it found and lays it on a
 // second click.

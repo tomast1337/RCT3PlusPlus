@@ -153,6 +153,21 @@ TEST_CASE("a column needs room above the ground and no ground path under it")
     CHECK(support_columns(park.objects, park.models, paths, flat_grid(4, 2), girders(), 0).pieces.empty());
 }
 
+TEST_CASE("a raised path or queue piece reaching the ground keeps the column off it; one above the ground does not")
+{
+    Park park;
+    park.add("OverPath", track_square(), 2, 2, 10);
+    save::PathTile low;
+    low.kind = save::PathKind::Queue;
+    low.col = 2;
+    low.row = 2;
+    low.elevation = save::PathElevation { .slope = 1, .quantised_height = 0 };
+    CHECK(support_columns(park.objects, park.models, std::vector { low }, flat_grid(4, 2), girders(), 0).pieces.empty());
+    save::PathTile high = low;
+    high.elevation = save::PathElevation { .slope = 0, .quantised_height = 5 };
+    CHECK_FALSE(support_columns(park.objects, park.models, std::vector { high }, flat_grid(4, 2), girders(), 0).pieces.empty());
+}
+
 TEST_CASE("a column stands on track below only when that track or the set allows, a level clear of it")
 {
     Park park;

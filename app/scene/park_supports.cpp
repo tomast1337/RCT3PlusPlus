@@ -2,7 +2,6 @@
 #include "scene/park_supports.hpp"
 
 #include "logging/log.hpp"
-#include "park/ground_queues.hpp"
 #include "park/support_columns.hpp"
 #include "scene/park_scene.hpp"
 
@@ -31,7 +30,7 @@ namespace rct3::scene
             std::vector<std::pair<int, int>> out;
             for (const save::PathTile& p : scene.footpaths.paths)
             {
-                if (!p.elevation || park::is_ground_queue(p))
+                if (park::path_at_ground(p, scene.grid))
                     out.emplace_back(p.col, p.row);
             }
             std::ranges::sort(out);

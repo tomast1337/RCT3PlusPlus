@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support_columns.hpp"
 
+#include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/object_placement.hpp"
+#include "park/queue_fences.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -247,12 +249,25 @@ namespace rct3::park
         return out;
     }
 
+    bool path_at_ground(const save::PathTile& path, const save::TerrainGrid& grid)
+    {
+        if (!path.elevation || is_ground_queue(path))
+            return true;
+        if (!grid.contains(path.col, path.row))
+            return false;
+        const save::TerrainCell& cell = grid.at(path.col, path.row);
+        const auto height = static_cast<float>(path.elevation->quantised_height);
+        const float rise = path_rise(path.elevation->slope);
+        const float low = slope_falls(path.elevation->slope) ? height - rise : height;
+        return low <= cell.max_height() && low + rise >= cell.min_height();
+    }
+
     BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles)
     {
         std::set<Tile> ground_paths;
         for (const save::PathTile& p : paths)
         {
-            if (!p.elevation || is_ground_queue(p))
+            if (path_at_ground(p, grid))
                 ground_paths.emplace(p.col, p.row);
         }
         const auto wanted = [&](const Tile& t) { return !tiles || tiles->contains(t); };

@@ -29,6 +29,20 @@ const span = (lines - 1) * gap;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 300, "the tool row");
+
+// A sandbox lets the player choose the day's mode: the bar's button opens the modes, and a pick closes them.
+/** Picks the day mode `mode` from the bar. */
+async function day_mode(mode: string): Promise<void> {
+    await ui.click("bar/day_mode");
+    await until(() => ui.find(`bar/day_mode/${mode}`) !== undefined, 30, "the day modes");
+    await ui.click(`bar/day_mode/${mode}`);
+    await until(() => ui.find(`bar/day_mode/${mode}`) === undefined, 30, "the day modes to close");
+}
+await until(() => ui.find("bar/day_mode") !== undefined, 30, "a day mode button in a sandbox");
+await day_mode("night");
+await frames(300);
+await screenshot("night");
+await day_mode("park_hours");
 const { width, height } = map.size();
 const c0 = (width - span) >> 1;
 const r0 = (height - span) >> 1;

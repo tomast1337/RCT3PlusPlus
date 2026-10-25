@@ -6,6 +6,7 @@
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
+#include "park/enclosures.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
 #include "park/off_map_trees.hpp"
@@ -15,6 +16,7 @@
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
 #include "park/water_fill.hpp"
+#include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -259,7 +261,8 @@ namespace rct3::scene
 
     bool start_ride_placing(ParkScene& scene, const park::BuildItem& item)
     {
-        const bool scenery = item.kind == park::BuildKind::Scenery && !item.symbol.empty();
+        // An animal house is placed as scenery is, inside an enclosure.
+        const bool scenery = (item.kind == park::BuildKind::Scenery || item.kind == park::BuildKind::Shelter) && !item.symbol.empty();
         // A stall is placed whole as a flat ride is, without doors.
         const bool whole = item.kind == park::BuildKind::FlatRide || (item.kind == park::BuildKind::Shop && item.stall);
         if (!scenery && (!whole || item.scenery.empty() || item.width == 0 || item.length == 0))
@@ -559,6 +562,8 @@ namespace rct3::scene
                 const save::PlacedObject o = *ghost_object(p);
                 if (!park::on_owned_land(o, squares, scene.grid))
                     return park::SiteProblem::NotOwned;
+                if (p.item->kind == park::BuildKind::Shelter && park::enclosure_under(scene.enclosures, { p.site->col, p.site->row }, p.site->span) < 0)
+                    return park::SiteProblem::OffEnclosure;
                 if (!load_object_model(scene, p.models, assets, o))
                     return park::SiteProblem::None;
                 // The room the item's solid squares take may not be taken already, by a solid item or a path.
@@ -694,6 +699,8 @@ namespace rct3::scene
         {
             // The tool stays out for the next one, as in the game.
             const std::uint64_t id = add_object(scene, *o);
+            if (p.item->kind == park::BuildKind::Shelter)
+                house_placed(scene, assets, scene.objects.back(), *p.item, *p.site);
             // What guests use on the paths is theirs at once.
             const park::ObjectModel& model = scene.models.at(park::model_key(*o));
             const auto category = model.category;

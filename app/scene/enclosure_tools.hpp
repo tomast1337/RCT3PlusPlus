@@ -9,7 +9,9 @@
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "park/ride_placement.hpp"
 #include "render/device.hpp"
+#include "save/model/world.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/widget.hpp"
 
@@ -26,6 +28,10 @@ namespace rct3::scene
 
     /// Marks the tiles under a drag at `at`, in a view of `size`, while `down`; works on them when it ends.
     void update_enclosing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
+
+    /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
+    /// keeper, who starts at the hut.
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site);
 
     /// Builds the enclosures' fences again after they changed.
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.

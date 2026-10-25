@@ -613,6 +613,7 @@ namespace rct3::simulation
         Guard,    ///< Keeps vandals off the paths near them
         Other,    ///< Walks the paths, nothing more yet
         Vendor,   ///< Sells at a stall or a ride's entrance, standing at their post off the paths
+        Keeper,   ///< Looks after an animal enclosure, inside it off the paths
     };
 
     /// A handyman's tasks among the task flags, numbered as saved parks number them.

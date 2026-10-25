@@ -162,6 +162,7 @@ namespace rct3::park
                 const ovl::SceneryItem& s = *it->second;
                 BuildItem item = item_of(BuildKind::Shelter, it->first);
                 item.part = EnclosurePart::Shelters;
+                item.scenery = e.hut;
                 item.name_text = s.name_text;
                 item.icon = s.icon;
                 item.price = s.cost;

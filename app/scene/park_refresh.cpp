@@ -14,6 +14,7 @@
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -339,6 +340,15 @@ namespace rct3::scene
             const simulation::Pose at = simulation::between_steps(r.get<simulation::Pose>(shown.guest), scene.sim_time / simulation::kTickSeconds);
             if (r.all_of<simulation::Left>(shown.guest))
                 return std::nullopt; // Gone home
+            // A keeper walks about their enclosure off the paths.
+            if (r.all_of<simulation::KeeperDuty>(shown.guest))
+            {
+                const bool walking = r.get<simulation::KeeperDuty>(shown.guest).job != simulation::KeeperJob::Idle;
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.motion = walking ? park::motion::kWalk : park::motion::kIdle;
+                pose.time = walking && shown.pace > 0 ? at.walked.value / shown.pace : shown.saved_time + clock * shown.speed;
+                return pose;
+            }
             if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
             {
                 std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
@@ -678,6 +688,32 @@ namespace rct3::scene
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
                     look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
                 shown.pose.motion = park::motion::kWalk;
+            }
+            // Keepers hired with animal houses since, in the keepers' clothes.
+            for (const auto [e, staff, duty] : r.view<const simulation::Staff, const simulation::KeeperDuty>().each())
+            {
+                if (!scene.simulate || !scene.known_guests.insert(e).second)
+                    continue;
+                std::array<const Outfit*, 3> worn { };
+                for (const Outfit& o : scene.wardrobe)
+                    if (o.type == save::PersonType::AnimalKeeper && worn[o.section] == nullptr)
+                        worn[o.section] = &o;
+                if (std::ranges::contains(worn, nullptr))
+                    continue;
+                save::Staff& kept = scene.people.staff.emplace_back();
+                kept.kind = save::StaffKind::AnimalKeeper;
+                kept.person.type = save::PersonType::AnimalKeeper;
+                kept.person.name = std::format("Keeper {}", scene.people.staff.size());
+                save::Appearance& a = kept.person.appearance;
+                a.head = { worn[0]->id };
+                a.body = { worn[1]->id };
+                a.legs = { worn[2]->id };
+                ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .staff = true, .saved = scene.people.staff.size() - 1, .guest = e });
+                shown.pose.look.head = worn[0]->set;
+                shown.pose.look.body = worn[1]->set;
+                shown.pose.look.legs = worn[2]->set;
+                shown.pose.motion = park::motion::kWalk;
+                shown.pose.world = glm::translate(glm::mat4(1.0f), r.get<simulation::Pose>(e).position); // Where they stand while the park is still
             }
             // The pace of each shown person's walk, measured once for each legs set.
             if (scene.person_models)

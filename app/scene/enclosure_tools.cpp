@@ -8,6 +8,7 @@
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
+#include "simulation/animals.hpp"
 
 #include <algorithm>
 #include <array>
@@ -117,6 +118,54 @@ namespace rct3::scene
             set_view_lines(device, scene.enclosure_marks, mesh);
             t.drawn = marks;
         }
+    }
+
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site)
+    {
+        const std::int32_t enclosure = park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
+        // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
+        // faces first.
+        // shortcut: a tile is taken when an object's corner is on it; check the hut's footprint against solid
+        // items if huts end up inside large ones.
+        const auto free = [&](save::Tile t) { return scene.enclosures.at(t.col, t.row) == enclosure && std::ranges::none_of(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && !o.fixture && o.col == t.col && o.row == t.row; }); };
+        std::optional<save::Tile> spot;
+        for (std::int32_t side = 0; side < 4 && !spot; ++side)
+        {
+            const std::int32_t way = (side + site.turns) % 4; // 0 past the last row, then round
+            const std::int32_t across = way % 2 == 0 ? site.span[0] : site.span[1];
+            for (std::int32_t i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
+            {
+                const save::Tile t = way == 0 ? save::Tile { site.col + i, site.row + site.span[1] } : way == 1 ? save::Tile { site.col + site.span[0], site.row + i } : way == 2 ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
+                if (free(t))
+                    spot = t;
+            }
+        }
+        const save::Tile middle { site.col + site.span[0] / 2, site.row + site.span[1] / 2 };
+        const save::TerrainGrid& g = scene.grid;
+        const glm::vec2 low { g.world_x(site.col), g.world_z(site.row) };
+        const glm::vec2 high = low + glm::vec2 { static_cast<float>(site.span[0]) * g.tile_size_x, static_cast<float>(site.span[1]) * g.tile_size_z };
+        simulation::AnimalHouse home { .object = house.id, .enclosure = enclosure, .troughs = tile_point(g, middle), .low = low, .high = high };
+        if (spot && !item.scenery.empty())
+        {
+            save::PlacedObject hut;
+            hut.symbol = item.scenery;
+            hut.overlay = item.overlay;
+            hut.col = spot->col;
+            hut.row = spot->row;
+            hut.base_height = park::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turns, scene.grid).height;
+            hut.rotation = site.turns;
+            hut.id = last_id(scene) + 1;
+            hut.owner_ref = hut.id;
+            if (load_object_model(scene, scene.placing.models, assets, hut))
+            {
+                hut.colours = scene.models.at(park::model_key(hut)).default_colours;
+                home.hut = hut.id;
+                scene.placed.insert(hut.id);
+                scene.objects.push_back(std::move(hut));
+                objects_changed(scene);
+            }
+        }
+        (void)simulation::add_animal_house(scene.sim, home, tile_point(scene.grid, spot.value_or(middle)));
     }
 
     void enclosures_changed(ParkScene& scene, const ui::InterfaceAssets& assets)

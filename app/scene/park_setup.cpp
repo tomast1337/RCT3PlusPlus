@@ -293,6 +293,13 @@ namespace rct3::scene
                     type = std::to_underlying(save::PersonType::Special);
                     sex = vip;
                 }
+                // Animal keepers, hired with each animal house, wear their own.
+                const bool keeper = name == "AnimalKeeper";
+                if (keeper)
+                {
+                    type = std::to_underlying(save::PersonType::AnimalKeeper);
+                    sex = std::to_underlying(save::Sex::Male);
+                }
                 if (type == std::string_view::npos || sex == std::string_view::npos)
                     continue;
                 for (const auto& file : std::filesystem::directory_iterator(age.path(), error))
@@ -300,7 +307,7 @@ namespace rct3::scene
                     constexpr std::string_view kStub = "_Stub.common.ovl";
                     constexpr std::array<std::string_view, 3> kSections { "_Head", "_Body", "_Legs" };
                     const std::string file_name = file.path().filename().string();
-                    if ((vip == 0 && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
+                    if ((vip == 0 && !keeper && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
                         continue;
                     const std::string_view symbol = std::string_view(file_name).substr(0, file_name.size() - kStub.size());
                     const auto section = std::ranges::find_if(kSections, [&](std::string_view s) { return symbol.ends_with(s); });

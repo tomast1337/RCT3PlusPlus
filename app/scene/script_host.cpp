@@ -10,6 +10,7 @@
 #include "random/generator.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
+#include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
@@ -583,7 +584,14 @@ namespace rct3::scene
                 park.build.asked = *found;
                 park.build.asked_designs = a.size() > 2 && a[2] == "designs";
             }
-            return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found) || start_enclosing(park, *found);
+            // One tool out at a time, as a pick from a list has it.
+            if (start_enclosing(park, *found))
+            {
+                stop_ride_placing(park);
+                return true;
+            }
+            stop_enclosing(park);
+            return found->kind == park::BuildKind::TrackedRide || start_ride_placing(park, *found);
         });
         engine_.define("build.construction", [this](const Json&) -> Json {
             const TrackBuilding& b = park_of(park_).building;
@@ -667,7 +675,10 @@ namespace rct3::scene
             for (const ShownPerson& p : park.shown_people)
             {
                 const save::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
-                Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff } };
+                const glm::vec3 standing = standing_at(park, p);
+                const save::TerrainGrid& g = park.grid;
+                const Json tile = g.tile_size_x > 0 && g.tile_size_z > 0 ? Json { { "col", (standing.x - g.origin_x) / g.tile_size_x }, { "row", (standing.z - g.origin_z) / g.tile_size_z } } : Json(nullptr);
+                Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff }, { "at", tile } };
                 // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 const auto& r = park.sim.registry;
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
@@ -712,7 +723,7 @@ namespace rct3::scene
             if (!p.item)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
-            constexpr std::array<std::string_view, 7> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path" };
+            constexpr std::array<std::string_view, 8> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path", "off enclosure" };
             Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "ghost", !p.ghost_mesh.vertices.empty() } };
             if (p.site)
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };

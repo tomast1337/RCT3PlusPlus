@@ -10,7 +10,8 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kShelterTag = "asd";
-        constexpr std::size_t kShelterSize = 4;
+        constexpr std::size_t kShelterSize = 0x14; // up to and including the hut
+        constexpr std::size_t kShelterHut = 0x10;
 
         constexpr std::string_view kToyTag = "wai";
         constexpr std::size_t kToySize = 0x58; // up to and including the description
@@ -41,7 +42,7 @@ namespace rct3::ovl
         std::vector<ShelterItem> items;
         each_item(overlay, part, kShelterTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t at) {
             if (const auto record = ItemRecord::open(space, refs, at, kShelterSize))
-                items.push_back({ name, record->ref(0, "sid") });
+                items.push_back({ name, record->ref(0, "sid"), record->ref(kShelterHut, "sid") });
         });
         return items;
     }

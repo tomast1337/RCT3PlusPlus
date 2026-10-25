@@ -1204,6 +1204,34 @@ namespace rct3::simulation
             item.broken = false;
     }
 
+    void pull_down(SimWorld& world, entt::entity attraction)
+    {
+        entt::registry& r = world.registry;
+        if (!r.valid(attraction) || !r.all_of<Attraction>(attraction))
+            return;
+        const NodeId entrance = r.get<Attraction>(attraction).entrance;
+        const NodeId exit = r.all_of<CycleRide>(attraction) ? exit_of(r, attraction) : entrance;
+        for (const auto [guest, errand, stride, pose] : r.view<Errand, Stride, Pose>().each())
+        {
+            if (errand.target != attraction)
+                continue;
+            const ErrandKind was = errand.kind;
+            // A party goes on together behind its leader, who picks somewhere else to go.
+            const auto* member = r.try_get<Member>(guest);
+            const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
+            errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+            r.remove<RideWalk>(guest);
+            // Out of the queue at its entrance, riders off at its exit; those on their way walk on from where they are.
+            if (was == ErrandKind::Queueing && entrance != kNoNode)
+                stop_at(world.paths, entrance, stride, pose);
+            else if (was == ErrandKind::Riding && exit != kNoNode)
+                stop_at(world.paths, exit, stride, pose);
+            else
+                stride.route.clear();
+        }
+        r.destroy(attraction);
+    }
+
     std::size_t uncovered_paths(const SimWorld& world, StaffRole role)
     {
         std::vector<const Patrol*> areas;

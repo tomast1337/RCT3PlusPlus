@@ -200,7 +200,7 @@ namespace rct3::scene
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::Ride& ride = scene.rides.rides[r];
-                if (!ride.track || (!scene.show_ride_heights && r != built))
+                if (!ride.track || ride.base.demolished || (!scene.show_ride_heights && r != built))
                     continue;
                 for (const save::TrackPiece& p : ride.track->pieces)
                 {

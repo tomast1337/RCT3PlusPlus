@@ -137,6 +137,10 @@ namespace rct3::save
         ObjectId placement = 0;                ///< World placement record (stalls, flat rides, facilities), 0 if none
         std::optional<PlacementSpot> spot { }; ///< Where that record puts its object; absent without one
         std::uint8_t facing = 0;               ///< Quarter turns, 0..3
+        /// Pulled down this session; never stored. It keeps its place so lists by attraction index stay put,
+        /// and saving leaves it out.
+        bool demolished = false;
+        static constexpr std::uint32_t kNeverOpened = 1u << 6;
     };
 
     /// One of the ten statistics slots. Stored as a ring whose head is not identified, so file order is kept.

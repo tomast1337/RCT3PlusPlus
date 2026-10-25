@@ -834,3 +834,32 @@ TEST_CASE("of two rides as near, guests do not always take the same one")
     CHECK(r.get<Attraction>(one).customers > 0);
     CHECK(r.get<Attraction>(other).customers > 0);
 }
+
+TEST_CASE("pulling a ride down sends its riders and its queue off on the paths")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Spinner", { 4, 0 }, 200, { .capacity = 2, .cycle_seconds = 600 });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+        r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+        guests.push_back(g);
+    }
+    park.run(2);
+    REQUIRE(r.get<Errand>(guests[0]).kind == ErrandKind::Riding);
+    REQUIRE(r.get<Errand>(guests[2]).kind == ErrandKind::Queueing);
+
+    pull_down(park.world(), ride);
+    CHECK_FALSE(r.valid(ride));
+    for (const auto g : guests)
+    {
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Wandering);
+        CHECK(park.world().paths.nearest(r.get<Pose>(g).position).has_value());
+    }
+    park.run_seconds(30);
+    for (const auto g : guests)
+        CHECK(park.world().paths.nearest(r.get<Pose>(g).position).has_value());
+}

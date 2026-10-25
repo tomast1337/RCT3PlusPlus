@@ -644,6 +644,11 @@ namespace rct3::scene
     /// Whether a box of the park's interface has the keyboard, so typed letters are not the game's keys.
     [[nodiscard]] bool typing(const ParkScene& scene);
 
+    /// Pulls attraction `ref` down: it goes from the park with its doors, track and fence, its guests walk off
+    /// (out of its queue at the entrance, riders off at the exit), and what it is worth comes back. It keeps its
+    /// place in the scene's rides or stalls, marked, and saving leaves it out.
+    void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, park::AttractionRef ref);
+
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
 

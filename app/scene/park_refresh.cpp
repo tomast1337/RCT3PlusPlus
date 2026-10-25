@@ -494,6 +494,9 @@ namespace rct3::scene
                     }
                 }
             }
+            // Pulled down, its cars go with it.
+            if (spot.ride < scene.rides.rides.size() && scene.rides.rides[spot.ride].base.demolished)
+                place = glm::mat4(0.0f);
             scene.car_places[i] = place;
         }
         // Riding along, the view looks out from the rider's eyes in the car where it is now, at the track as far

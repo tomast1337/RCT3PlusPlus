@@ -536,7 +536,7 @@ namespace rct3::scene
                 for (const save::StallExtra& extra : stall.extras)
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
                 const bool shown = park.shown && park.shown->kind == park::AttractionRef::Kind::Stall && park.shown->index == i;
-                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false } };
+                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished } };
                 for (const auto [_, a] : park.sim.registry.view<const simulation::Attraction>().each())
                     if (a.saved == stall.base.id)
                     {
@@ -674,7 +674,7 @@ namespace rct3::scene
             {
                 const save::Ride& ride = park.rides.rides[i];
                 const save::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false }, { "fence", ride.fence_symbol } };
+                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished } };
                 if (ride.track)
                 {
                     one["pieces"] = ride.track->pieces.size();

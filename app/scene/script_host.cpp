@@ -635,6 +635,15 @@ namespace rct3::scene
                         one["riders"] = riders;
                         one["ratings"] = { c->excitement.value, c->intensity.value, c->nausea.value };
                     }
+                    if (const auto* wrecks = registry.try_get<simulation::Wrecks>(e))
+                    {
+                        Json flying = Json::array();
+                        for (const auto& cars : wrecks->trains)
+                            for (const simulation::Wreck& w : cars)
+                                flying.push_back({ { "col", (w.at.x - park.grid.origin_x) / park.grid.tile_size_x }, { "row", (w.at.z - park.grid.origin_z) / park.grid.tile_size_z }, { "up", w.at.y - park.grid.height_at(w.at.x, w.at.z).value_or(0) }, { "state", w.state == simulation::WreckState::Flying ? "flying" : w.state == simulation::WreckState::Burning ? "burning" : "gone" } });
+                        one["crashes"] = wrecks->crashes;
+                        one["wrecks"] = std::move(flying);
+                    }
                 }
                 rides.push_back(std::move(one));
             }

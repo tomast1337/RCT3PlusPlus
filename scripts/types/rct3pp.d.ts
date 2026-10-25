@@ -236,6 +236,9 @@ interface RideInfo {
     riders?: number;
     /** Excitement, intensity and nausea, 0..1. */
     ratings?: [number, number, number];
+    /** Rides whose trains have crashed: how often, and where the wrecks of the crashed trains are now. */
+    crashes?: number;
+    wrecks?: (MapPoint & { state: "flying" | "burning" | "gone" })[];
 }
 
 declare namespace rides {

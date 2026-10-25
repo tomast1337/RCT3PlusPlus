@@ -1013,6 +1013,7 @@ namespace rct3::scene
             m.missing.insert(object.symbol);
         if (!model)
             return false;
+        wait_for_build(scene); // The build beside the frame reads the models
         scene.models.emplace(key, std::move(*model));
         for (const auto& [name, picture] : m.loader->pictures())
             scene.pictures.try_emplace(name, picture);
@@ -1022,6 +1023,7 @@ namespace rct3::scene
     void objects_changed(ParkScene& scene)
     {
         scene.supports.stale = true;
+        wait_for_build(scene); // The build beside the frame reads the anchors written here
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         scene.lamps_due = true;

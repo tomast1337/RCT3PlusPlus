@@ -178,7 +178,7 @@ namespace rct3::scene
     /// Makes sure the model of `object` is loaded, reading it through its overlay's own index kept in `cache`.
     bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object);
 
-    /// Hands the scene's objects to the mesh builder again after a change.
+    /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
     void objects_changed(ParkScene& scene);
 
     /// Waits for a mesh build that is reading the objects, before they change.

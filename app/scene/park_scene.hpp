@@ -207,6 +207,16 @@ namespace rct3::scene
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
     };
 
+    /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
+    /// with the delete tool out of one.
+    struct EnclosureTool
+    {
+        std::optional<park::BuildItem> fence;             ///< The fence or the delete tool picked; none while put away
+        std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
+        std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
+        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+    };
+
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
     struct FloatingMoney
     {
@@ -581,6 +591,7 @@ namespace rct3::scene
         ViewLines grid_lines;                                       ///< The tile grid over the ground, while the view menu shows it
         ViewLines contour_lines;                                    ///< Likewise the contours
         ViewLines delete_marks;                                     ///< The tiles the area delete tool marked
+        ViewLines enclosure_marks;                                  ///< The tiles the enclosure tool marks
         ViewLines land_marks;                                       ///< What the land tool out would work on
         park::ParkCamera view_camera;                               ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                          ///< The round view is drawn into
@@ -639,6 +650,7 @@ namespace rct3::scene
         ParkMap map;                                                    ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
+        EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed

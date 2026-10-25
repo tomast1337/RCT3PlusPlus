@@ -119,3 +119,13 @@ TEST_CASE("wild rides draw teens' parties, gentle ones families; a park's own mi
     for (const auto [e, party] : r.view<const Party>().each())
         CHECK(r.get<Visitor>(party.leader).age == AgeGroup::Adult);
 }
+
+TEST_CASE("nobody comes in while the park is closed")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    auto& r = park.world().registry;
+    r.emplace<ParkGate>(r.create(), ParkGate { .node = park.world().paths.find({ 0, 0, 0 }).value(), .closed = true });
+    park.run_seconds(600);
+    CHECK(r.view<const Visitor>().empty());
+}

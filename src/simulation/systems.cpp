@@ -678,7 +678,7 @@ namespace rct3::simulation
                 if (!r.all_of<Dice>(gate))
                     r.emplace<Dice>(gate, dice_for(world, gate));
                 auto& dice = r.get<Dice>(gate).state;
-                if (!random::chance(dice, arrivals * dt))
+                if (!random::chance(dice, arrivals * dt) || r.get<ParkGate>(gate).closed)
                     continue;
                 admit_party(world, dice, r.get<ParkGate>(gate).node);
             }

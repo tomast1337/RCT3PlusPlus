@@ -903,11 +903,13 @@ namespace rct3::scene
                 built.insert(built.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
             }
             log.info("{} ride fences", ride_fences);
-            // shortcut: built once on loading; rebuild it when land can be bought or sold, or a path laid across
-            // the park's edge.
+            // shortcut: built again when land is bought, not when a path is laid across the park's edge; follow
+            // paths too when they can be laid there.
             static const std::string kNoFence;
             park::BoundaryFence boundary = park::boundary_fence(park_model ? park_model->park.fence_symbol : kNoFence, park_model ? park_model->park.fence_overlay : kNoFence, scene.grid, world->paths, largest_id());
             log.info("{} park fence panels", boundary.pieces.size());
+            for (const save::PlacedObject& panel : boundary.pieces)
+                scene.fence_panels.push_back(panel.id);
             const std::size_t first_panel = built.size();
             const std::size_t panels = boundary.pieces.size();
             built.insert(built.end(), std::make_move_iterator(boundary.pieces.begin()), std::make_move_iterator(boundary.pieces.end()));
@@ -1154,6 +1156,8 @@ namespace rct3::scene
                     return model->second.squares;
                 });
                 simulation::keep_staff_in(scene.sim, scene.grid);
+                for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
+                    gate.closed = park_model && park_model->has_park && !park_model->park.flags.has(save::ParkFlag::Open);
                 if (park_model && park_model->group_mix)
                     simulation::import_party_mix(scene.sim, *park_model->group_mix);
                 const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), parkfile::place_staff(scene.sim, *kept), kept->staff) : simulation::import_staff(scene.sim, scene.people);

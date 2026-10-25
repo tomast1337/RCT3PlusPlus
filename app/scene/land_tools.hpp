@@ -44,12 +44,17 @@
 // While a tool is out, marks on the ground show what it would work on: the tiles under the brush, the tile
 // being poured on, or the one tile, edge or corner a tile tool picks.
 //
+// Buying land: the park window's buy land and buy rights buttons open the panel with a tab of the two. Pressing
+// the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
+// paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
+//
 // Every change is paid for. A right click puts either tool away.
 #pragma once
 
 #include "park/ground_shapes.hpp"
 #include "park/ground_smoothing.hpp"
 #include "park/ground_textures.hpp"
+#include "park/land_buying.hpp"
 #include "park/path_clearance.hpp"
 #include "park/tile_shaping.hpp"
 #include "render/device.hpp"
@@ -78,6 +83,7 @@ namespace rct3::scene
             Paint,
             Water,
             Waterfall,
+            Buy,
         };
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
@@ -107,10 +113,13 @@ namespace rct3::scene
         std::uint64_t passes = 0;                ///< Of smoothing, the seed of each pass
         std::optional<std::size_t> upper_lake;   ///< Of a waterfall: the lake picked first, of the park's water
         save::Tile upper_tile;                   ///< Where it was picked
+        park::LandBuy buying = park::LandBuy::Land;
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.
     void toggle_land_tool(ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets);
+    /// Takes out the tool that buys `what` of the land on sale, opening the panel on it.
+    void buy_land_tool(ParkScene& scene, park::LandBuy what, const ui::InterfaceAssets& assets);
     void stop_land_tools(ParkScene& scene);
     [[nodiscard]] bool land_tool(const ParkScene& scene);
 

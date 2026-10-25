@@ -94,9 +94,18 @@ namespace rct3::scene
             if (picked || window->page_age() >= kRefresh)
                 show(*window, topic, facts, strings, units);
             // Hiring and the other buttons do nothing yet.
-            if (const auto button = window->take_button(); button && topic == ui::ManagementTopic::ParkOperations && window->tab() == 0 && *button == ui::kReplaceBrokenButton)
-                asks.replace_broken = true;
-            if (const auto choice = window->take_choice(); choice && topic == ui::ManagementTopic::Attractions && choice->first == ui::kOpenCloseAllButton && choice->second < ui::kOpenCloseAllStates.size())
+            const bool park_page = topic == ui::ManagementTopic::ParkOperations && window->tab() == 0;
+            if (const auto button = window->take_button(); button && park_page)
+            {
+                asks.replace_broken = *button == ui::kReplaceBrokenButton;
+                asks.centre_entrance = *button == ui::kCentreEntranceButton;
+                asks.buy_land = *button == ui::kBuyLandButton;
+                asks.buy_rights = *button == ui::kBuyRightsButton;
+            }
+            const auto choice = window->take_choice();
+            if (choice && park_page && choice->first == ui::kOpenCloseParkButton)
+                asks.park_open = choice->second == 0;
+            if (choice && topic == ui::ManagementTopic::Attractions && choice->first == ui::kOpenCloseAllButton && choice->second < ui::kOpenCloseAllStates.size())
             {
                 asks.state_all = ui::kOpenCloseAllStates[choice->second];
                 for (const ui::TableRow& r : ui::management_page(topic, window->tab(), facts, strings, units).rows)

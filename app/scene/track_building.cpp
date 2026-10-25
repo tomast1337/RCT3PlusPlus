@@ -18,6 +18,7 @@
 #include "park/track_rules.hpp"
 #include "park/track_split.hpp"
 #include "park/water_fill.hpp"
+#include "profiling/profiler.hpp"
 #include "save/save_file.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -321,6 +322,7 @@ namespace rct3::scene
         /// Recomputes what fits the open end, the piece picked and its ghost.
         void refresh(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
+            const profiling::Scope zone("Ghost");
             const park::PieceCatalogue* c = catalogue(b);
             b.candidates.clear();
             b.picked.reset();
@@ -597,6 +599,7 @@ namespace rct3::scene
         /// become, each laid where the one it replaces started, and measures the track's course again.
         void track_changed(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
+            const profiling::Scope zone("TrackChanged");
             const park::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (c == nullptr || !ride.track)
@@ -1022,6 +1025,7 @@ namespace rct3::scene
 
     void objects_changed(ParkScene& scene)
     {
+        const profiling::Scope zone("ObjectsChanged");
         scene.supports.stale = true;
         wait_for_build(scene); // The build beside the frame reads the anchors written here
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);

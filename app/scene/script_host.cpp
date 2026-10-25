@@ -129,12 +129,12 @@ namespace rct3::scene
             wheel_ = number(a, 0);
             return Json(nullptr);
         });
-        engine_.define("pointer.press", [this](const Json&) {
-            down_ = true;
+        engine_.define("pointer.press", [this](const Json& a) {
+            (!a.empty() && a[0] == "right" ? right_ : down_) = true;
             return Json(nullptr);
         });
-        engine_.define("pointer.release", [this](const Json&) {
-            down_ = false;
+        engine_.define("pointer.release", [this](const Json& a) {
+            (!a.empty() && a[0] == "right" ? right_ : down_) = false;
             return Json(nullptr);
         });
         engine_.define("pointer.shift", [this](const Json& a) {
@@ -578,7 +578,7 @@ namespace rct3::scene
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
             constexpr std::array<std::string_view, 7> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path" };
-            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable } };
+            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "ghost", !p.ghost_mesh.vertices.empty() } };
             if (p.site)
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;
@@ -713,7 +713,7 @@ namespace rct3::scene
         if (!at_)
             return std::nullopt;
         const render::Extent view = device.extent();
-        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_, control_, wheel_ };
+        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, shift_, control_, wheel_, right_ };
     }
 
     void ScriptHost::write(const std::string& line, bool error)

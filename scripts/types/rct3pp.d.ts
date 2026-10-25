@@ -16,18 +16,19 @@ declare function quit(code?: number): void;
 
 declare namespace pointer {
     function move(x: number, y: number): void;
-    function press(): void;
-    function release(): void;
+    /** Holds the left button down, or the right one with "right". */
+    function press(button?: "right"): void;
+    function release(button?: "right"): void;
     /** Holds Shift down with the pointer, or lets it go. */
     function shift(on: boolean): void;
     /** Holds Control down with the pointer, or lets it go. */
     function control(on: boolean): void;
     /** Turns the wheel `notches` for one frame, positive away from the user. */
     function wheel(notches: number): void;
-    /** Moves to (x, y), presses and lets go. */
-    function click(x: number, y: number): Promise<void>;
-    /** Presses at `from`, moves to `to` over `count` frames and lets go. */
-    function drag(from: [number, number], to: [number, number], count?: number): Promise<void>;
+    /** Moves to (x, y), presses and lets go; the right button with "right". */
+    function click(x: number, y: number, button?: "right"): Promise<void>;
+    /** Presses at `from`, moves to `to` over `count` frames and lets go; the right button with "right". */
+    function drag(from: [number, number], to: [number, number], count?: number, button?: "right"): Promise<void>;
 }
 
 declare namespace ui {
@@ -185,7 +186,7 @@ declare namespace build {
     /** Puts the placing tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, and what keeps it from where the pointer is; undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path"; affordable: boolean; ghost: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */

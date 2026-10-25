@@ -1021,6 +1021,7 @@ int main(int argc, char** argv)
                 p.x = held->x;
                 p.y = held->y;
                 p.left = held->down;
+                p.right = held->right;
                 p.shift = held->shift;
                 p.control = held->control;
                 p.wheel_y = held->wheel;

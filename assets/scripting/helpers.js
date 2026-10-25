@@ -5,24 +5,24 @@ globalThis.until = async (check, limit = 300, what = "the wait") => {
     }
     if (!check()) throw new Error(`${what} timed out after ${limit} frames`);
 };
-pointer.drag = async (from, to, count = 10) => {
+pointer.drag = async (from, to, count = 10, button) => {
     pointer.move(from[0], from[1]);
     await frames(1);
-    pointer.press();
+    pointer.press(button);
     for (let i = 1; i <= count; ++i) {
         await frames(1);
         pointer.move(from[0] + (to[0] - from[0]) * i / count, from[1] + (to[1] - from[1]) * i / count);
     }
     await frames(1);
-    pointer.release();
+    pointer.release(button);
     await frames(1);
 };
-pointer.click = async (x, y) => {
+pointer.click = async (x, y, button) => {
     pointer.move(x, y);
     await frames(1);
-    pointer.press();
+    pointer.press(button);
     await frames(1);
-    pointer.release();
+    pointer.release(button);
     await frames(1);
 };
 ui.toggle = async (path, on) => {

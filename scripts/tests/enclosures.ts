@@ -114,6 +114,9 @@ await frames(10);
 await screenshot("enclosure_crate");
 await until(() => !zebra().crated, 3000, "the crate opened");
 expect(!zebra().escaped, "the zebra at home in its enclosure");
+camera.look({ col: zebra().at.col, row: zebra().at.row, up: 1 }, { col: zebra().at.col + 2.5, row: zebra().at.row + 2.5, up: 2.5 });
+await frames(10);
+await screenshot("zebra_out");
 
 // One put down outside every enclosure gets out as its crate opens; the park says so, and the keeper goes after
 // it, crates it and takes it home.

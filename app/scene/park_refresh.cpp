@@ -10,7 +10,6 @@
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
-#include "scene/enclosure_tools.hpp"
 #include "scene/park_patrol.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -618,8 +617,6 @@ namespace rct3::scene
         profiling::section("Rides", [&] { swing_rides(scene, eye, view); });
         profiling::section("Mesh", [&] {
             park::move_meshes(scene.car_meshes, scene.car_mesh_places);
-            if (!scene.animals_shown.empty())
-                place_animals(scene);
             scene.rider_places.resize(scene.rider_cars.size());
             for (std::size_t k = 0; k < scene.rider_cars.size(); ++k)
                 scene.rider_places[k] = carrier_place(scene, scene.rider_cars[k]);

@@ -2357,7 +2357,7 @@ namespace rct3::scene
             advance_park_lens(scene.lens, around, options.flag(config::GameOption::WaterDroplets) && options.flag(config::GameOption::Refraction), elapsed);
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
-        profiling::section("ZooAnimals", [&] { refresh_zoo_animals(scene); });
+        profiling::section("ZooAnimals", [&] { place_animals(scene); });
         auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
         if (bar)
         {

@@ -651,9 +651,6 @@ namespace rct3::scene
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
         EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
-        /// The animals as drawn, one shape each, and the simulated animal each shape is.
-        park::MovingMeshes animal_meshes;
-        std::vector<entt::entity> animals_shown;
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed

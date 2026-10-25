@@ -9,6 +9,7 @@
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
+#include "scene/zoo_animals.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/systems.hpp"
@@ -75,7 +76,8 @@ namespace rct3::scene
         {
             const glm::vec3 at = tile_point(scene.grid, tile);
             const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
-            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
+            // shortcut: every animal bought is a grown one; offer young ones once the animal list shows them.
+            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .male = random::below(scene.looks, 2) == 0, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
             if (scene.park.cash)
                 *scene.park.cash -= item.price;
             float_money(scene, at, -item.price);
@@ -206,48 +208,6 @@ namespace rct3::scene
             }
         }
         (void)simulation::add_animal_house(scene.sim, home, tile_point(scene.grid, spot.value_or(middle)));
-    }
-
-    save::PlacedObject animal_crate()
-    {
-        save::PlacedObject crate;
-        crate.symbol = "Crate01";
-        crate.overlay = "WildAnimals/Crates/Crates";
-        return crate;
-    }
-
-    void animals_changed(render::Device& device, ParkScene& scene)
-    {
-        // shortcut: every animal is drawn as the same closed crate, standing where the animal is; draw each
-        // species' own model, moving as the animal does, once animal models can be read. This is the one place
-        // the animals' shapes are made; place_animals moves them.
-        save::PlacedObject crate = animal_crate();
-        scene.animals_shown.clear();
-        std::vector<save::PlacedObject> shapes;
-        if (scene.models.contains(park::model_key(crate)))
-            for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
-            {
-                scene.animals_shown.push_back(e);
-                crate.id = shapes.size() + 1;
-                shapes.push_back(crate);
-            }
-        scene.animal_meshes = park::moving_meshes(shapes, scene.models, scene.grid);
-        add_textures(device, scene, scene.animal_meshes.mesh.batches);
-        place_animals(scene);
-    }
-
-    void place_animals(ParkScene& scene)
-    {
-        const auto& r = scene.sim.registry;
-        std::vector<glm::mat4> places;
-        places.reserve(scene.animals_shown.size());
-        for (const entt::entity e : scene.animals_shown)
-        {
-            const auto* pose = r.valid(e) ? r.try_get<simulation::Pose>(e) : nullptr;
-            const simulation::Pose at = pose != nullptr ? simulation::between_steps(*pose, scene.sim_time / simulation::kTickSeconds) : simulation::Pose { };
-            places.push_back(pose != nullptr ? glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f)) : glm::mat4(0.0f));
-        }
-        park::move_meshes(scene.animal_meshes, places);
     }
 
     void enclosures_changed(ParkScene& scene, const ui::InterfaceAssets& assets)

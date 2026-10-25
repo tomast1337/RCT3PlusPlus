@@ -86,9 +86,11 @@ namespace rct3::simulation
     /// An animal of a species, bought into an enclosure.
     struct Animal
     {
-        std::string species { };     ///< The symbol of its species
-        std::string overlay { };     ///< The overlay its species is in
-        std::string name { };        ///< As the park's messages call it
+        std::string species { }; ///< The symbol of its species
+        std::string overlay { }; ///< The overlay its species is in
+        std::string name { };    ///< As the park's messages call it
+        bool adult = true;
+        bool male = false;
         std::int32_t enclosure = -1; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };

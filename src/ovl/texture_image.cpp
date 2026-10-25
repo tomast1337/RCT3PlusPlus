@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
+#include <cmath>
 #include <cstring>
 
 namespace rct3::ovl
@@ -269,6 +271,46 @@ namespace rct3::ovl
             put(image.pixels[i + 3]);
         }
         return out;
+    }
+
+    int texture_halvings(float detail, std::uint32_t width, std::uint32_t height)
+    {
+        if (width == 0 || height == 0)
+            return 0;
+        const int doublings = std::bit_width(std::max(width, height)) - 1;
+        const int kept = static_cast<int>(std::ceil(static_cast<float>(doublings) * std::clamp(detail, 0.0f, 1.0f)));
+        return std::min(doublings - kept, static_cast<int>(std::bit_width(std::min(width, height))) - 1);
+    }
+
+    RgbaImage halved(RgbaImage image, int times)
+    {
+        for (int t = 0; t < times && image.width > 1 && image.height > 1 && image.pixels.size() == std::size_t { image.width } * image.height * 4; ++t)
+        {
+            RgbaImage half { .width = image.width / 2, .height = image.height / 2, .pixels = std::vector<std::uint8_t>(std::size_t { image.width / 2 } * (image.height / 2) * 4) };
+            for (std::uint32_t y = 0; y < half.height; ++y)
+            {
+                for (std::uint32_t x = 0; x < half.width; ++x)
+                {
+                    std::array<std::uint32_t, 4> sum { };
+                    for (const std::uint32_t sy : { 2 * y, std::min(2 * y + 1, image.height - 1) })
+                    {
+                        for (const std::uint32_t sx : { 2 * x, std::min(2 * x + 1, image.width - 1) })
+                        {
+                            const std::uint8_t* p = &image.pixels[(std::size_t { sy } * image.width + sx) * 4];
+                            for (std::size_t c = 0; c < 3; ++c)
+                                sum[c] += p[c] * p[3];
+                            sum[3] += p[3];
+                        }
+                    }
+                    std::uint8_t* out = &half.pixels[(std::size_t { y } * half.width + x) * 4];
+                    for (std::size_t c = 0; c < 3; ++c)
+                        out[c] = static_cast<std::uint8_t>(sum[3] > 0 ? (sum[c] + sum[3] / 2) / sum[3] : 0);
+                    out[3] = static_cast<std::uint8_t>((sum[3] + 2) / 4);
+                }
+            }
+            image = std::move(half);
+        }
+        return image;
     }
 
 } // namespace rct3::ovl

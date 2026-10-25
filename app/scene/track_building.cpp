@@ -1076,6 +1076,7 @@ namespace rct3::scene
                 filled.pixels[i] = 255;
             pictures.insert_or_assign(ghost_texture(batch), std::move(filled));
         }
+        fit_texture_detail(scene, pictures);
         if (scene.relief_maps)
             park::add_relief_maps(pictures); // The pictures stay for the object once it is built
         std::erase_if(pictures, [&](const auto& entry) { return scene.object_textures.contains(entry.first); });

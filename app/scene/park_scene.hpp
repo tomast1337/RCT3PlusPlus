@@ -260,6 +260,7 @@ namespace rct3::scene
         /// Relief maps are made for the pictures loaded, as the Surface detail option was when the park loaded:
         /// they cost memory and loading time, so a park loaded without them gets them only when loaded again.
         bool relief_maps = false;
+        float texture_detail = 1; ///< As the option was when the park loaded (fit_texture_detail)
         /// How quickly far land fades into haze, per world unit beyond its start. The default leaves the hills
         /// round the park about half hidden; weather can raise it for misty or rainy days, or set 0 for none.
         float haze_rate = 0.0004f;

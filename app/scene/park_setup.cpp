@@ -199,7 +199,9 @@ namespace rct3::scene
                     for (const park::ModelPart& part : scene.umbrellas[i]->levels.front().parts)
                         batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, { }, part.blend, 0, 0 });
             }
-            if (auto uploaded = ui::upload_textures(device, park::paint_batches(batches, loader.pictures())))
+            auto pictures = park::paint_batches(batches, loader.pictures());
+            fit_texture_detail(scene, pictures);
+            if (auto uploaded = ui::upload_textures(device, pictures))
                 scene.people_textures.merge(*uploaded);
             else
                 logging::logger("park").warning("umbrella pictures: {}", uploaded.error());
@@ -304,7 +306,13 @@ namespace rct3::scene
                 }
             }
             library.close_files();
-            if (auto uploaded = ui::upload_textures(device, library.pictures()))
+            park::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own
+            if (scene.texture_detail < 1)
+            {
+                shrunk = library.pictures();
+                fit_texture_detail(scene, shrunk);
+            }
+            if (auto uploaded = ui::upload_textures(device, scene.texture_detail < 1 ? shrunk : library.pictures()))
                 scene.people_textures = std::move(*uploaded);
             else
                 logging::logger("park").warning("people pictures: {}", uploaded.error());
@@ -428,6 +436,12 @@ namespace rct3::scene
         return found != textures.end() ? found->second.handle : render::TextureHandle { };
     }
 
+    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images)
+    {
+        for (auto& [name, image] : images)
+            image = ovl::halved(std::move(image), ovl::texture_halvings(scene.texture_detail, image.width, image.height));
+    }
+
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
     void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches)
     {
@@ -441,6 +455,7 @@ namespace rct3::scene
         if (missing.empty())
             return;
         auto pictures = park::paint_batches(missing, scene.pictures);
+        fit_texture_detail(scene, pictures);
         if (scene.relief_maps)
             park::add_relief_maps(pictures);
         auto uploaded = ui::upload_textures(device, pictures);
@@ -633,6 +648,7 @@ namespace rct3::scene
         scene.base = *bytes;
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         scene.relief_maps = scene.surface_detail >= 2;
+        scene.texture_detail = options.get(config::GameOption::TextureDetail);
         scene.grid = std::move(world->terrain);
         scene.seed = seed;
         scene.file = path;
@@ -738,6 +754,7 @@ namespace rct3::scene
             else if (!*added)
                 log.warning("{}: no ground picture", name);
         }
+        fit_texture_detail(scene, images);
         if (scene.relief_maps)
             park::add_relief_maps(images, kGroundRelief);
         auto textures = ui::upload_textures(device, images);

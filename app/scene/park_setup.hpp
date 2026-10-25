@@ -4,6 +4,7 @@
 // names of the windows it puts up, and uploading meshes and pictures.
 #pragma once
 
+#include "park/ground_textures.hpp"
 #include "park/object_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/ui_textures.hpp"
@@ -39,6 +40,9 @@ namespace rct3::scene
 
     /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
     render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name);
+
+    /// Shrinks the park's pictures to the texture detail it loaded with (ovl::texture_halvings), before upload.
+    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images);
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
     void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches);

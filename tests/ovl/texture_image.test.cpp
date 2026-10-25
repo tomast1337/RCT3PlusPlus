@@ -369,3 +369,25 @@ TEST_CASE("TGA output is an uncompressed 32-bit image with the top row first")
     CHECK(encode_tga(image).empty());
     CHECK(encode_tga(RgbaImage { }).empty());
 }
+
+TEST_CASE("texture detail keeps a share of an image's doublings")
+{
+    CHECK(texture_halvings(1, 256, 256) == 0);
+    CHECK(texture_halvings(0.5f, 256, 256) == 4); // 256 to 16
+    CHECK(texture_halvings(0, 256, 64) == 6);     // The short side stops at one pixel
+    CHECK(texture_halvings(0.75f, 100, 100) == 1);
+    CHECK(texture_halvings(0.5f, 0, 0) == 0);
+}
+
+TEST_CASE("halving averages each two by two, weighting colour by alpha")
+{
+    RgbaImage image { .width = 2, .height = 2 };
+    image.pixels = { 200, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 255 };
+    const RgbaImage half = halved(image, 1);
+    REQUIRE(half.width == 1);
+    REQUIRE(half.height == 1);
+    CHECK(half.pixels == std::vector<std::uint8_t> { 150, 0, 0, 128 });
+    CHECK(halved(image, 0).pixels == image.pixels);
+    RgbaImage odd { .width = 3, .height = 1, .pixels = std::vector<std::uint8_t>(12, 255) };
+    CHECK(halved(odd, 1).width == 3); // A side of one pixel is not halved
+}

@@ -176,9 +176,24 @@ namespace rct3::scene
     };
 
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
-    /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. Whether
-    /// its riders sit on arms.
+    /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. On a course
+    /// with a station the cars are as many as its shortest station takes, and the trains as many as the course
+    /// takes (park::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
     bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
+
+    /// Reads, the first time it is asked of the tracked ride `index`, the trains its kind offers and the car
+    /// counts its train allows (the scene's train_choices and train_limits).
+    void ready_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index);
+
+    /// Stands the trains of the tracked ride `index` at its station: the first's front where trains set off, each
+    /// other queued behind the one before. Nothing for a ride whose cars are not fitted (car_fits) or whose course
+    /// runs no train.
+    void stand_trains(ParkScene& scene, std::size_t index);
+
+    /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at
+    /// its station, and has the park run them and draw their cars. False, and nothing changed, while riders are
+    /// aboard or when no train can be found.
+    bool set_trains(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Gives the tracked ride `index` one train of the kind named `train_name`, as many cars long as that kind
     /// usually is, and sets the ride's limits to the kind's. Whether its riders sit on arms; nothing when the

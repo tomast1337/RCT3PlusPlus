@@ -409,7 +409,7 @@ namespace rct3::ui
             add(page, strings, "AttractionVehicleDialogLabelCapacity", capacity);
             if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
             {
-                // Number boxes, greyed once the ride runs in the park: then its trains stay as they are.
+                // Number boxes, greyed while the ride is open: then its trains stay as they are.
                 const auto number = [&](AttractionControl id, std::string_view key, int value, int fewest, int most) {
                     InfoControl c;
                     c.id = control_id(id);
@@ -422,7 +422,8 @@ namespace rct3::ui
                     page.controls.push_back(std::move(c));
                 };
                 const int trains = static_cast<int>(ride.trains.size());
-                const int cars = static_cast<int>(ride.trains.front().cars.size());
+                // Passenger cars, without the links between them.
+                const int cars = ride.cars_per_train > 0 ? ride.cars_per_train : static_cast<int>(ride.trains.front().cars.size());
                 number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", cars, f.trains ? f.trains->fewest_cars : cars, f.trains ? f.trains->most_cars : cars);
                 number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", trains, f.trains ? 1 : trains, f.trains ? f.trains->most_trains : trains);
                 InfoControl kind;

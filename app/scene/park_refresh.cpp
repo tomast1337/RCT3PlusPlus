@@ -529,8 +529,9 @@ namespace rct3::scene
                     }
                 }
             }
-            // Pulled down, its cars go with it.
-            if (spot.ride < scene.rides.rides.size() && scene.rides.rides[spot.ride].base.demolished)
+            // Pulled down, its cars go with it; a kept train the park does not run (a shuttle runs one) is not shown
+            // standing on the course the one it runs goes along.
+            if ((spot.ride < scene.rides.rides.size() && scene.rides.rides[spot.ride].base.demolished) || (fleet && !boats && spot.train >= fleet->trains.size()))
                 place = glm::mat4(0.0f);
             scene.car_places[i] = place;
         }

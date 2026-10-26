@@ -250,6 +250,13 @@ interface RideInfo {
     /** Rides with a track: how many trains it has, and cars in each. */
     trains?: number;
     carsPerTrain?: number;
+    /** Rides with a track: passenger cars in each train, without the links between them. */
+    passengerCars?: number;
+    /** Ridden by the park: how many of the simulation's attractions are this ride (1 unless taken on twice). */
+    simulated?: number;
+    /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
+    running?: number;
+    moving?: number;
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
     /** Rides with a track: the platform pieces of its stations, in track order. */

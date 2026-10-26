@@ -8,6 +8,7 @@
 #include "park/object_mesh.hpp"
 #include "save/model/rides.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -40,6 +41,12 @@ namespace rct3::park
         std::vector<CarSpot> spots;             ///< By piece
         Fitted fitted;                          ///< Where each piece stands, by id
     };
+
+    /// The design slot of each car, front to back, of a train of `cars` passenger cars whose design fills the
+    /// slots `filled`. The slots hold its front, second, middle, second-to-last and last car, then a link
+    /// coupled between each two cars. A car whose slot is empty is a middle car, and one with no middle car the
+    /// front car; with no link the cars are coupled straight.
+    [[nodiscard]] std::vector<std::size_t> car_slots(int cars, const std::array<bool, 6>& filled);
 
     /// The cars of `rides` whose place the park kept, with ids from `last_id` + 1.
     [[nodiscard]] RideCars ride_cars(std::span<const save::Ride> rides, std::uint64_t last_id);

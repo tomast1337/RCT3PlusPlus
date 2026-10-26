@@ -766,20 +766,18 @@ namespace rct3::simulation
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
                     world.registry.ctx().emplace<RoomElsewhere>().guests += *guests[i];
             };
-            if (!timing || ride.stations.empty() || !ride.stations.front().entrance_spot)
+            // Tested or open, a tracked ride's trains run a whole circuit or a shuttle's track without doors or paths,
+            // as a test run needs neither; guests come once its doors are on the paths (relink_attractions).
+            const bool runs_alone = coaster != nullptr && (coaster->closed || coaster->shuttle != Shuttle::None) && ride.base.state != save::AttractionState::Closed;
+            auto links = timing && !ride.stations.empty() && ride.stations.front().entrance_spot ? ride_links(world.paths, ride.stations.front()) : std::nullopt;
+            if (!timing || (!links && !runs_alone))
             {
                 elsewhere();
                 continue;
             }
-            auto links = ride_links(world.paths, ride.stations.front());
-            if (!links)
-            {
-                elsewhere();
-                continue;
-            }
-            const NodeId entrance = links->entrance;
-            const NodeId exit = links->exit;
-            std::vector<NodeId> line = std::move(links->line);
+            const NodeId entrance = links ? links->entrance : kNoNode;
+            const NodeId exit = links ? links->exit : kNoNode;
+            std::vector<NodeId> line = links ? std::move(links->line) : std::vector<NodeId> { };
             auto& r = world.registry;
             const entt::entity e = r.create();
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
@@ -847,8 +845,9 @@ namespace rct3::simulation
                     std::vector<std::pair<float, Stop>> others;
                     for (std::size_t k = 1; k < ride.stations.size(); ++k)
                     {
+                        // A ride whose first station no path reaches takes guests at none (relink_attractions)
                         const auto run = run_of(ride.stations[k]);
-                        auto station = run && *run != *first ? ride_links(world.paths, ride.stations[k]) : std::nullopt;
+                        auto station = links && run && *run != *first ? ride_links(world.paths, ride.stations[k]) : std::nullopt;
                         // shortcut: a train runs past a station no path reaches, upgrade if it should stop there empty
                         if (!station)
                             continue;
@@ -1063,8 +1062,9 @@ namespace rct3::simulation
     {
         auto& r = world.registry;
         std::unordered_map<save::ObjectId, entt::entity> ride_of;
+        // Not a ride run with no doors on the paths, as its riders would have nowhere to get off.
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
-            if (rides[i] != entt::null)
+            if (rides[i] != entt::null && r.get<Attraction>(rides[i]).entrance != kNoNode)
                 ride_of.emplace(saved.rides[i].base.id, rides[i]);
         std::size_t seated = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)

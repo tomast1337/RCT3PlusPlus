@@ -766,6 +766,7 @@ namespace rct3::scene
                     one["pieces"] = ride.track->pieces.size();
                     one["trains"] = ride.trains.size();
                     one["carsPerTrain"] = ride.trains.empty() ? 0 : ride.trains.front().cars.size();
+                    one["passengerCars"] = ride.cars_per_train;
                     Json symbols = Json::array();
                     for (const save::TrackPiece& p : ride.track->pieces)
                         symbols.push_back(p.symbol);
@@ -798,6 +799,16 @@ namespace rct3::scene
                 if (e != entt::null && registry.valid(e))
                 {
                     one["joined"] = true;
+                    // How many of the simulation's attractions are this ride: one, unless it was taken on twice.
+                    std::size_t simulated = 0;
+                    for (const auto [_, a] : registry.view<const simulation::Attraction>().each())
+                        simulated += a.saved == ride.base.id ? 1 : 0;
+                    one["simulated"] = simulated;
+                    if (const auto* fleet = registry.try_get<simulation::Trains>(e))
+                    {
+                        one["running"] = fleet->trains.size();
+                        one["moving"] = std::ranges::count_if(fleet->trains, [](const simulation::Coaster& c) { return c.running; });
+                    }
                     if (const auto* a = registry.try_get<simulation::Attraction>(e))
                     {
                         one["customers"] = a->customers;

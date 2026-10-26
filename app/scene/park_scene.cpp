@@ -440,31 +440,26 @@ namespace rct3::scene
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                     f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
-                    // Its trains can change until it joins the running park.
-                    // shortcut: cars are not held to what its station's length takes, upgrade with stations that
-                    // trains stop along.
+                    // Its trains can change while it is not open, as in the game, and while none of them has riders
+                    // aboard (set_trains).
+                    const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
+                    const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
+                    const bool aboard = fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); });
                     const auto limits = scene.train_limits.find(ref.index);
-                    const auto fits = scene.car_fits.find(ref.index);
-                    if (limits != scene.train_limits.end() && fits != scene.car_fits.end())
+                    if (limits != scene.train_limits.end() && f.ride->base.state != save::AttractionState::Open && !aboard)
                     {
                         const auto choices = scene.train_choices.find(ref.index);
                         f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
-                        f.trains->most_trains = course ? park::trains_fitting(*course, fits->second) : 1;
-                        // Kept a block apart, it takes one train fewer than it has blocks: each ends at a station,
-                        // lift or block brake.
-                        if (course && f.ride->options.block_sectioned && course->kinds.size() > 1)
-                        {
-                            const auto ends_block = [](park::CourseKind k) { return k != park::CourseKind::Plain && k != park::CourseKind::Launch && k != park::CourseKind::Brake; };
-                            const std::size_t last = course->kinds.size() - 1; // The last kind is past the track's end
-                            int blocks = 0;
-                            for (std::size_t i = 0; i < last; ++i)
-                            {
-                                const park::CourseKind next = i + 1 < last ? course->kinds[i + 1] : course->kinds.front();
-                                blocks += ends_block(course->kinds[i]) && next != course->kinds[i] ? 1 : 0;
-                            }
-                            f.trains->most_trains = std::min(f.trains->most_trains, std::max(blocks - 1, 1));
-                        }
+                        // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
+                        std::vector<park::CarFit> kept;
+                        for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
+                            kept.push_back({ .length = car.length });
+                        const auto fits = scene.car_fits.find(ref.index);
+                        const park::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::TrackRules { };
+                        // A shuttle runs one (fit_trains).
+                        const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
+                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
                     }
                 }
             }
@@ -649,7 +644,12 @@ namespace rct3::scene
             else if (scene.shown_person)
                 panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
             else if (scene.shown)
+            {
+                // A tracked ride's train limits are read the first time its window shows them.
+                if (scene.shown->kind == park::AttractionRef::Kind::Ride && assets.install)
+                    ready_trains(scene, *assets.install, scene.shown->index);
                 panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
+            }
         }
 
         /// The round view of a person: looking at them from where the player looks from, turning from there.
@@ -1415,16 +1415,12 @@ namespace rct3::scene
                 ride->options.max_wait = change.value;
             else if (change.id == ui::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
-            else if ((change.id == ui::control_id(Trains) || change.id == ui::control_id(Cars)) && scene.car_fits.contains(ref.index) && assets.install)
+            else if ((change.id == ui::control_id(Trains) || change.id == ui::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install)
             {
                 const bool trains = change.id == ui::control_id(Trains);
-                scene.building.arm = fit_trains(scene, *assets.install, ref.index, trains ? change.value : std::max(ride->train_count, 1), trains ? std::max(ride->cars_per_train, 1) : change.value) || scene.building.arm;
-                // Longer trains fit fewer times round the track.
-                const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
-                if (const int most = course ? park::trains_fitting(*course, scene.car_fits[ref.index]) : 1; ride->train_count > most)
-                    fit_trains(scene, *assets.install, ref.index, most, ride->cars_per_train);
+                (void)set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
             }
-            else if (change.id == ui::control_id(CarKind) && scene.car_fits.contains(ref.index) && assets.install && !ride->trains.empty())
+            else if (change.id == ui::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install && !ride->trains.empty())
             {
                 // The next kind of train its kind runs, round to the first after the last.
                 const std::vector<std::string>& choices = scene.train_choices[ref.index];
@@ -1432,8 +1428,8 @@ namespace rct3::scene
                 const std::string_view now = symbol.substr(0, symbol.find(':'));
                 const auto at = std::ranges::find_if(choices, [&](const std::string& c) { return strings::equals_ignoring_case(c, now); });
                 if (choices.size() > 1)
-                    if (const auto arm = use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
-                        scene.building.arm = *arm || scene.building.arm;
+                    if (use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
+                        (void)set_trains(device, scene, *assets.install, ref.index, ride->train_count, ride->cars_per_train);
             }
             else if (change.id == ui::control_id(Circuits))
             {
@@ -1875,6 +1871,8 @@ namespace rct3::scene
         auto refused = state_refusal(scene, { .kind = park::AttractionRef::Kind::Ride, .index = ride }, state);
         if (!refused)
             set_attraction_state(scene, scene.rides.rides.at(ride).base, state);
+        if (!refused && state != save::AttractionState::Closed && scene.rides.rides[ride].kind == save::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
+            scene.readying.push_back(ride);
         return refused;
     }
 
@@ -1942,6 +1940,21 @@ namespace rct3::scene
         {
             load_carried(device, scene, assets);
             if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName))
+                show_info_page(scene, *info, assets, options);
+        }
+
+        // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
+        // circuit, or a shuttle's track. A test of an unfinished track runs a ghost (track_building.hpp).
+        for (const std::size_t ride : std::exchange(scene.readying, { }))
+        {
+            const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
+            const save::Ride& r = scene.rides.rides[ride];
+            const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
+            if (!assets.install || r.base.demolished || r.mode == save::OperatingMode::MiniGolf || !coaster || !(coaster->closed || coaster->shuttle != simulation::Shuttle::None))
+                continue;
+            if (set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train) && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+                scene.placing.unjoined.push_back(ride);
+            if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
         }
 

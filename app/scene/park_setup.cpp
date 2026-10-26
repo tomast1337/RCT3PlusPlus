@@ -130,21 +130,7 @@ namespace rct3::scene
             const std::vector<std::string> folders = object_folders(install, objects);
             const auto views = folders | std::ranges::to<std::vector<std::string_view>>();
             park::AssetIndex index = park::AssetIndex::scan(install.root(), views);
-            // Overlays the scanned ones take assets from, and those they take from in turn.
-            std::set<std::string, std::less<>> tried_files;
-            for (auto missing = index.missing_references(); !missing.empty(); missing = index.missing_references())
-            {
-                bool added = false;
-                for (const std::string& reference : missing)
-                {
-                    if (!tried_files.insert(reference).second)
-                        continue;
-                    if (const auto file = install.find(std::format("{}.common.ovl", reference)))
-                        added = index.add_file(*file) || added;
-                }
-                if (!added)
-                    break;
-            }
+            add_referenced(index, install);
             park::ModelLoader loader(index);
             std::map<std::string, bool, std::less<>> tried;
             for (std::size_t i = 0; i < objects.size(); ++i)
@@ -536,6 +522,24 @@ namespace rct3::scene
         }
     }
 
+    void add_referenced(park::AssetIndex& index, const config::GameInstall& install)
+    {
+        std::set<std::string, std::less<>> tried_files;
+        for (auto missing = index.missing_references(); !missing.empty(); missing = index.missing_references())
+        {
+            bool added = false;
+            for (const std::string& reference : missing)
+            {
+                if (!tried_files.insert(reference).second)
+                    continue;
+                if (const auto file = install.find(std::format("{}.common.ovl", reference)))
+                    added = index.add_file(*file) || added;
+            }
+            if (!added)
+                break;
+        }
+    }
+
     void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count)
     {
         std::uint64_t last = 0;
@@ -567,6 +571,37 @@ namespace rct3::scene
             scene.car_mesh_places.insert(scene.car_mesh_places.end(), arm.joints.size(), scene.car_places[arm.car]);
         profiling::section("Mesh", [&] { park::move_meshes(scene.car_meshes, scene.car_mesh_places); });
         add_textures(device, scene, scene.car_meshes.mesh.batches);
+    }
+
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    {
+        // Each car's place once the ride's own are gone, by its place now.
+        std::vector<std::optional<std::size_t>> kept(scene.cars.size());
+        std::size_t next = 0;
+        for (std::size_t i = 0; i < scene.cars.size(); ++i)
+            if (scene.car_spots[i].ride != ride_index)
+                kept[i] = next++;
+            else
+                scene.saved_cars.erase(scene.cars[i].id);
+        for (std::size_t i = scene.cars.size(); i-- > 0;)
+            if (!kept[i])
+            {
+                scene.cars.erase(scene.cars.begin() + static_cast<std::ptrdiff_t>(i));
+                scene.car_spots.erase(scene.car_spots.begin() + static_cast<std::ptrdiff_t>(i));
+            }
+        std::erase_if(scene.arm_cars, [&](const ParkScene::ArmCar& arm) { return !kept[arm.car]; });
+        for (ParkScene::ArmCar& arm : scene.arm_cars)
+            arm.car = *kept[arm.car];
+        for (auto& [_, cars] : scene.ride_cars)
+        {
+            std::erase_if(cars, [&](std::size_t car) { return !kept[car]; });
+            for (std::size_t& car : cars)
+                car = *kept[car];
+        }
+        if (scene.riding)
+            scene.riding = kept[*scene.riding];
+        add_ride_cars(device, scene, install, ride_index, 1);
+        board_tracked_ride(device, scene, install, ride_index);
     }
 
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)

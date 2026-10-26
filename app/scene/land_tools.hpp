@@ -31,11 +31,11 @@
 // outright, each tile paid for. The cliff tab paints the faces of the cliffs on the tiles under the brush
 // the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
-// Water: press on a tile and move the pointer up or down to raise or lower the water there, a step for each
-// kSlopeDragStep moved. Starting on a lake moves its level; starting on dry ground pours a new one from the
-// tile's lowest corner. The water spreads over every tile it can reach below its level (park/water_fill.hpp)
-// and takes in the lakes it meets. It only spreads over land the park owns outright without paths on the
-// ground; where it would go further it stops rising.
+// Water: a click on the ground pours a lake up to the height clicked, rounded up to a whole unit, so clicking
+// higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water_fill.hpp)
+// and takes in the lakes it meets. A click on a lake takes it away, with its waterfalls. Water only goes on land
+// the park owns outright without paths on the ground, and never under a higher lake; a message says when it
+// cannot. Water is free.
 //
 // Waterfalls: click one lake, then another; water pours from the higher over its nearest straight edge into the
 // lower (park/waterfall_making.hpp), or a message says why it cannot. A right click on a waterfall deletes it;
@@ -48,7 +48,7 @@
 // the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
 // paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
 //
-// Every change is paid for. A right click puts either tool away.
+// Every other change is paid for. A right click puts either tool away.
 #pragma once
 
 #include "park/ground_shapes.hpp"
@@ -88,13 +88,10 @@ namespace rct3::scene
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
-        int steps = 0;                 ///< Taken in this stroke, up positive
         std::size_t tile_tool = 0;     ///< The tile tool chosen, by its place in its tab
         park::TileStroke stroke;       ///< Of a tile tool
         std::vector<glm::vec3> marked; ///< Where the marks on the ground were made, to make them again only on a change
         park::SolidTiles solids;
-        save::WaterLayer water_before;             ///< As the water stroke found it
-        float level_before = 0;                    ///< Of the water on the pressed tile, as the stroke found it
         std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0;                 ///< Chosen, of `surfaces`

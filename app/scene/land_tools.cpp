@@ -3,8 +3,10 @@
 
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
+#include "park/camera.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/ground_brush.hpp"
+#include "park/object_pick.hpp"
 #include "park/ride_placement.hpp"
 #include "park/water_fill.hpp"
 #include "park/waterfall_making.hpp"
@@ -33,14 +35,14 @@ namespace rct3::scene
     {
         // Prices, in hundredths: painting one tile.
         constexpr std::int32_t kPaintCost = 50;
-        constexpr std::int32_t kWaterCost = 100; ///< A step of a lake's level
-        constexpr float kShapeCost = 25;         ///< A height unit of one corner point moved by a brush
-        constexpr float kSmoothRate = 2.5f;      ///< Of the way to where a smoothing brush wants the ground, a second
-        constexpr float kSmoothPass = 0.05f;     ///< Seconds between smoothing passes
-        constexpr float kWaterStep = 1;          ///< Of a lake's level, in park units.
+        constexpr float kShapeCost = 25;     ///< A height unit of one corner point moved by a brush
+        constexpr float kSmoothRate = 2.5f;  ///< Of the way to where a smoothing brush wants the ground, a second
+        constexpr float kSmoothPass = 0.05f; ///< Seconds between smoothing passes
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
+        constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
+        constexpr float kInFront = 0.01f; ///< Back along the pointer's ray from the ground it meets, in world units
 
         /// A tab's tools by their pictures, `usable` the first of them that work so far.
         ui::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
@@ -297,56 +299,49 @@ namespace rct3::scene
                 rebuild_ground(device, scene, assets);
         }
 
-        /// Sets the water filled from the held tile to its level `steps` from the stroke's start; false when it
-        /// may not go there.
-        bool flood(ParkScene& scene, int steps)
-        {
-            LandTools& l = scene.land;
-            if (!affordable(scene, kWaterCost))
-                return false;
-            const auto& paths = scene.footpaths.paths;
-            const auto allowed = [&](save::Tile t) { return park::owned_outright(scene.grid.at(t)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
-            const auto lake = park::fill_water(scene.grid, *l.tile, l.level_before + static_cast<float>(steps) * kWaterStep, allowed);
-            if (!lake)
-                return false;
-            // The lakes the new water reaches, and the one it was poured in, become part of it.
-            save::WaterLayer water = l.water_before;
-            std::erase_if(water.bodies, [&](const save::WaterBody& b) { return park::holds(b, *l.tile) || std::ranges::any_of(lake->tris, [&](const save::WaterTri& t) { return park::holds(b, { t.col, t.row }); }); });
-            if (!lake->tris.empty())
-                water.bodies.push_back(*lake);
-            scene.footpaths.water = std::move(water);
-            pay(scene, kWaterCost, *l.tile);
-            l.steps = steps;
-            return true;
-        }
-
-        void pour(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
-        {
-            LandTools& l = scene.land;
-            if (!l.tile)
-            {
-                l.tile = over ? std::nullopt : ground_tile(scene, at, size);
-                if (!l.tile)
-                    return;
-                l.press_y = at.y;
-                l.steps = 0;
-                l.water_before = scene.footpaths.water;
-                const auto& bodies = l.water_before.bodies;
-                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, *l.tile); });
-                l.level_before = lake != bodies.end() ? lake->level : std::floor(scene.grid.at(l.tile->col, l.tile->row).min_height());
-            }
-            const auto wanted = static_cast<int>(std::lround((l.press_y - at.y) / park::kSlopeDragStep));
-            bool moved = false;
-            // One step at a time, so the water stops at the last level it could reach.
-            while (l.steps != wanted && flood(scene, l.steps + (wanted > l.steps ? 1 : -1)))
-                moved = true;
-            if (moved)
-                rebuild_ground(device, scene, assets);
-        }
-
         void say(ParkScene& scene, std::string_view key)
         {
             simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(key) });
+        }
+
+        /// A click with the water tool: takes the lake clicked away, or pours one up to the height clicked.
+        void pour(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        {
+            LandTools& l = scene.land;
+            if (l.tile || over || size.x <= 0 || size.y <= 0)
+                return; // Once a press
+            const save::TerrainGrid& g = scene.grid;
+            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+            const auto distance = park::ground_hit(ray, g);
+            if (!distance)
+                return;
+            // The water starts on the tile the pointer was over just before meeting the ground: the one in front of
+            // a cliff wall clicked, else the one clicked.
+            const glm::vec3 front = ray.origin + ray.direction * (*distance - kInFront);
+            const save::Tile tile { static_cast<int>(std::floor((front.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((front.z - g.origin_z) / g.tile_size_z)) };
+            if (!g.contains(tile.col, tile.row))
+                return;
+            l.tile = tile;
+            const float height = ray.origin.y + ray.direction.y * *distance;
+            const auto& paths = scene.footpaths.paths;
+            const auto allowed = [&](save::Tile t) { return park::owned_outright(g.at(t)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
+            const auto& bodies = scene.footpaths.water.bodies;
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, *l.tile); });
+            if (lake != bodies.end() && height < lake->level)
+            {
+                // The ground clicked is under the lake: the click was on its surface.
+                if (!allowed(*l.tile))
+                    return say(scene, kWaterRefused);
+                park::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, g, *l.tile);
+                show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+            }
+            // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
+            // falls get a yes/no question
+            else if (auto poured = park::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
+                scene.footpaths.water = std::move(*poured);
+            else
+                return say(scene, kWaterRefused);
+            rebuild_ground(device, scene, assets);
         }
 
         /// A click with the waterfall tool: picks the first lake, or makes the waterfall to the second.
@@ -537,7 +532,6 @@ namespace rct3::scene
         l.tile.reset();
         l.solids = { };
         l.before = { };
-        l.water_before = { };
         l.stroke = { };
         l.upper_lake.reset();
     }

@@ -4,6 +4,9 @@
 // the level that can be reached from it, crossing from tile to tile where both sides of the shared edge have a
 // corner below the level. Each such tile holds water in its triangles that dip below the level, as the saved
 // water bodies keep it.
+//
+// The water tool pours with a click: up to the height clicked, rounded up to a whole unit, taking in the lakes
+// the flood reaches. Clicking a lake takes it away, with the waterfalls pouring from or into it.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -12,6 +15,7 @@
 #include <functional>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace rct3::park
 {
@@ -19,6 +23,14 @@ namespace rct3::park
     /// The water body filled from tile `col`, `row` to `level`. Its triangles are empty when the tile has no
     /// corner below the level. Nothing when the flood reaches a tile `allowed` refuses.
     [[nodiscard]] std::optional<save::WaterBody> fill_water(const save::TerrainGrid& grid, save::Tile tile, float level, const std::function<bool(save::Tile)>& allowed);
+
+    /// The park's `water` after pouring on `tile` up to `level` rounded up to a whole unit: one new lake that
+    /// takes in the lakes it reaches. `water` as it was when that holds no water; nothing when the flood reaches a
+    /// tile `allowed` refuses or a lake standing higher.
+    [[nodiscard]] std::optional<save::WaterLayer> pour_water(const save::WaterLayer& water, const save::TerrainGrid& grid, save::Tile tile, float level, const std::function<bool(save::Tile)>& allowed);
+
+    /// Takes the lake holding `tile` out of `water`, and the `falls` pouring from or into it; whether there was one.
+    bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, const save::TerrainGrid& grid, save::Tile tile);
 
     /// Whether `body` holds water on tile `col`, `row`.
     [[nodiscard]] bool holds(const save::WaterBody& body, save::Tile tile);

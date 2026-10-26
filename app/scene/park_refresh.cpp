@@ -126,6 +126,8 @@ namespace rct3::scene
             return std::nullopt;
         }
 
+        /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
+        const std::array<std::int32_t, kGaits> kGaitMotions { park::motion::kWalk, park::motion_number("run").value_or(park::motion::kWalk), park::motion_number("walktired").value_or(park::motion::kWalk), park::motion_number("walksick").value_or(park::motion::kWalk), park::motion_number("walktoilet").value_or(park::motion::kWalk) };
         /// How guests walk holding an umbrella up, as the game's motions name it.
         const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
@@ -217,6 +219,16 @@ namespace rct3::scene
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
                 pose.motion = kRideMotion;
+                // In a coaster's car they sit as the car seats them, reacting to the ride.
+                if (seat->first < scene.cars.size())
+                    if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end() && model->second.seating)
+                        if (const auto motions = park::rider_motions(*model->second.seating))
+                        {
+                            const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
+                            // In RideReaction's order.
+                            const std::array by_reaction { motions->wait, motions->ride, motions->hands_up, motions->cover_eyes, motions->strained };
+                            pose.motion = by_reaction[std::to_underlying(thrill != nullptr ? thrill->reaction : simulation::RideReaction::Calm)];
+                        }
                 by_car[seat->first].push_back(pose);
             }
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {
@@ -352,7 +364,7 @@ namespace rct3::scene
                 const bool walking = r.get<simulation::KeeperDuty>(shown.guest).job != simulation::KeeperJob::Idle;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = walking ? park::motion::kWalk : park::motion::kIdle;
-                pose.time = walking && shown.pace > 0 ? at.walked.value / shown.pace : shown.saved_time + clock * shown.speed;
+                pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
             if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
@@ -387,8 +399,8 @@ namespace rct3::scene
                 const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
-                if (held == nullptr && !falling && shown.pace > 0)
-                    pose.time = at.walked.value / shown.pace;
+                if (held == nullptr && !falling && shown.paces[0] > 0)
+                    pose.time = at.walked.value / shown.paces[0];
                 if (held == nullptr && !falling)
                     gestured(r.try_get<simulation::Gesture>(shown.guest));
                 return pose;
@@ -401,13 +413,18 @@ namespace rct3::scene
             const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
             const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause.value > 0;
             const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
+            // Out on the paths they go in their gait, running or dragging their feet; on the way on to a ride
+            // or in its queue they walk.
+            const bool own_gait = kind == simulation::ErrandKind::Wandering || kind == simulation::ErrandKind::Heading || kind == simulation::ErrandKind::Waiting || kind == simulation::ErrandKind::Following;
+            const auto gait = std::to_underlying(own_gait && ride_walk == nullptr ? stride.gait : simulation::Gait::Walk);
+            const std::size_t way = shown.paces[gait] > 0 ? gait : 0;
             // The walk goes as far into its motion as the ground covered allows, so the feet stay put
             // however fast the guest goes.
-            if (walking && shown.pace > 0)
-                pose.time = at.walked.value / shown.pace;
+            if (walking && shown.paces[way] > 0)
+                pose.time = at.walked.value / shown.paces[way];
             // People are modelled facing +z, which the heading turns towards the way they go.
             pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-            pose.motion = walking ? park::motion::kWalk : chat_motion(scene, shown);
+            pose.motion = walking ? kGaitMotions[way] : chat_motion(scene, shown);
             if (at_ticket)
             {
                 pose.motion = kTicketMotion;
@@ -428,6 +445,8 @@ namespace rct3::scene
                 pose.motion = kUmbrellaMotion;
                 if (!walking)
                     pose.time = 0;
+                else if (shown.paces[0] > 0)
+                    pose.time = at.walked.value / shown.paces[0]; // Their walk's step, whatever their gait
             }
         }
         return pose;
@@ -815,14 +834,15 @@ namespace rct3::scene
                 for (ShownPerson& shown : scene.shown_people)
                 {
                     const park::PartSet* legs = shown.pose.look.legs;
-                    if (shown.pace > 0 || legs == nullptr)
+                    if (shown.paces[0] > 0 || legs == nullptr)
                         continue;
-                    auto [pace, fresh] = scene.walk_paces.try_emplace(legs, 0.0f);
+                    auto [paces, fresh] = scene.walk_paces.try_emplace(legs);
                     if (fresh)
-                        for (const std::size_t piece : legs->levels[0].fixed)
-                            if (const auto measured = park::walk_pace(scene.person_models->piece(piece)); measured && pace->second == 0)
-                                pace->second = *measured;
-                    shown.pace = pace->second;
+                        for (std::size_t gait = 0; gait < kGaits; ++gait)
+                            for (const std::size_t piece : legs->levels[0].fixed)
+                                if (const auto measured = park::walk_pace(scene.person_models->piece(piece), kGaitMotions[gait]); measured && paces->second[gait] == 0)
+                                    paces->second[gait] = *measured;
+                    shown.paces = paces->second;
                 }
             }
             park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);

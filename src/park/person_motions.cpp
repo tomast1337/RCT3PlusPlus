@@ -435,6 +435,39 @@ namespace rct3::park
         return it->number;
     }
 
+    std::optional<RiderMotions> rider_motions(std::uint8_t seating)
+    {
+        // By the names of each seating's motions; empty where it has none of that kind.
+        struct Names
+        {
+            std::uint8_t seating = 0;
+            std::string_view ride, wait, hands_up, cover_eyes, strained;
+        };
+        constexpr std::array kSeatings = std::to_array<Names>({
+            { 0, "ridestand", "ridestandwait", "handsupstandloop", "covereyesstandloop", "geforcestand" },
+            { 2, "ridecar", "", "", "", "" },
+            { 3, "ridelay", "ridelaywait", "handsuplayloop", "covereyeslayloop", "geforcelay" },
+            { 4, "ridebike", "", "", "", "geforcebike" },
+            { 5, "ridecar", "", "", "", "" },
+            { 6, "ridehorse", "", "", "", "" },
+            { 9, "ridesitvreel", "", "handsupvreelloop", "covereyesvreelloop", "geforcevreel" },
+            { 10, "ridesitharnessloop", "ridesitharnesswait", "handsupharnessloop", "covereyesharnessloop", "geforceharness" },
+            { 11, "ridesitbarloop", "ridesitbarwait", "handsupbarloop", "covereyesbarloop", "geforcebar" },
+            { 13, "ridesitharnessfeetdangleloop", "ridesitharnessfeetdanglewait", "handsupharnessfeetdangleloop", "covereyesharnessfeetdangleloop", "geforceharnessfeetdangle" },
+            { 14, "ridehorsesteeple", "", "handsuphorsesteepleloop", "covereyeshorsesteepleloop", "geforcehorsesteeple" },
+            { 18, "ridedinghyloop", "", "handsupdinghyloop", "", "geforcedinghy" },
+            { 19, "ridelayfrontloop", "", "handsuplayfrontloop", "", "geforcelayfront" },
+        });
+        const auto* names = std::ranges::find(kSeatings, seating, &Names::seating);
+        if (names == kSeatings.end())
+            return std::nullopt;
+        // shortcut: the loops only, raising hands and covering eyes in a blink; upgrade with their in and out
+        // motions played as a rider's reaction changes.
+        const std::int32_t ride = motion_number(names->ride).value_or(motion::kIdle);
+        const auto or_ride = [&](std::string_view name) { return name.empty() ? ride : motion_number(name).value_or(ride); };
+        return RiderMotions { .ride = ride, .wait = or_ride(names->wait), .hands_up = or_ride(names->hands_up), .cover_eyes = or_ride(names->cover_eyes), .strained = or_ride(names->strained) };
+    }
+
     bool motion_repeats(std::int32_t number)
     {
         return !std::ranges::binary_search(kOnce, number);

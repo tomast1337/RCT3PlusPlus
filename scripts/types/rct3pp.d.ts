@@ -358,9 +358,10 @@ declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
      *  `up`) and what they are at ("waiting": for the rest of their party, standing with the others; "buying":
-     *  at a stall's counter while they wait; "thrown": by a crash, still in the air). A seller has the id of the
-     *  object of the stall or ride entrance they serve at as `post`. */
-    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "held" | "dropped" | "thrown" | "still" }[];
+     *  at a stall's counter while they wait; "thrown": by a crash, still in the air), how they go on foot
+     *  (`gait`) and, seated on a coaster, how they react to it. A seller has the id of the object of the stall
+     *  or ride entrance they serve at as `post`. */
+    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "held" | "dropped" | "thrown" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

@@ -738,12 +738,19 @@ namespace rct3::scene
                 const auto& r = park.sim.registry;
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
                 {
-                    const glm::vec3 at = r.get<simulation::Pose>(p.guest).position;
                     const auto* errand = r.try_get<simulation::Errand>(p.guest);
+                    const glm::vec3 at = errand != nullptr && errand->kind == simulation::ErrandKind::Riding ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
                     person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? (r.get<simulation::Dropped>(p.guest).thrown ? "thrown" : "dropped") : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : errand->kind == simulation::ErrandKind::Waiting ? "waiting" : errand->kind == simulation::ErrandKind::Buying ? "buying" : "walking";
+                    // How they go on foot, and seated on a coaster how they react to it.
+                    constexpr std::array<std::string_view, 5> kGaits { "walk", "run", "weary", "queasy", "bursting" };
+                    constexpr std::array<std::string_view, 5> kReactions { "waiting", "calm", "hands up", "covering eyes", "strained" };
+                    if (const auto* stride = r.try_get<simulation::Stride>(p.guest))
+                        person["gait"] = kGaits[std::to_underlying(stride->gait)];
+                    if (const auto* thrill = r.try_get<simulation::Thrill>(p.guest); thrill != nullptr && errand != nullptr && errand->kind == simulation::ErrandKind::Riding && !r.all_of<simulation::RideWalk>(p.guest))
+                        person["reaction"] = kReactions[std::to_underlying(thrill->reaction)];
                 }
                 out.push_back(std::move(person));
             }

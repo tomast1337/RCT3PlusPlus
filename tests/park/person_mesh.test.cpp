@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person_mesh.hpp"
 
+#include "park/person_motions.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -94,10 +96,10 @@ TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath 
     }
     legs.mesh.animations.push_back(walk);
     // Three of the four steps slide the foot back 0.1 in 0.25 s; the last brings it forward again.
-    const auto pace = park::walk_pace(legs);
+    const auto pace = park::walk_pace(legs, park::motion::kWalk);
     REQUIRE(pace.has_value());
     CHECK(*pace == doctest::Approx(0.4f));
 
     legs.mesh.animations.clear();
-    CHECK_FALSE(park::walk_pace(legs).has_value());
+    CHECK_FALSE(park::walk_pace(legs, park::motion::kWalk).has_value());
 }

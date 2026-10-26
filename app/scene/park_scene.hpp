@@ -75,6 +75,7 @@
 #include "ui/screens/tool_menus.hpp"
 #include "ui/ui_textures.hpp"
 
+#include <array>
 #include <expected>
 #include <filesystem>
 #include <functional>
@@ -260,13 +261,17 @@ namespace rct3::scene
         bool allowed = false;          ///< They may be let go there
     };
 
+    /// Ways of going on foot, as simulation::Gait numbers them.
+    inline constexpr std::size_t kGaits = 5;
+
     /// A person as the park shows it.
     struct ShownPerson
     {
         park::PlacedPerson pose;
-        float saved_time = 0;            ///< Into its motion, when the park was saved
-        float speed = 1;                 ///< How fast its motion plays
-        float pace = 0;                  ///< Ground its legs' walk covers in a second of the motion; 0 unknown
+        float saved_time = 0; ///< Into its motion, when the park was saved
+        float speed = 1;      ///< How fast its motion plays
+        /// Ground its legs cover in a second of each way of going on foot (by simulation::Gait); 0 unknown
+        std::array<float, kGaits> paces { };
         bool walking = false;            ///< Walkers stand still in their stride until people move
         bool staff = false;              ///< A member of staff rather than a guest
         std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
@@ -496,8 +501,8 @@ namespace rct3::scene
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.
         std::vector<glm::mat4> seat_carriers;
-        std::optional<park::PersonLibrary> person_models; ///< Of the park's people
-        std::map<const park::PartSet*, float> walk_paces; ///< Of each legs set measured so far, 0 for none
+        std::optional<park::PersonLibrary> person_models;                     ///< Of the park's people
+        std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
         std::vector<ShownPerson> shown_people;

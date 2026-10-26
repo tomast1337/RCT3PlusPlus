@@ -216,13 +216,13 @@ namespace rct3::park
         return sum / static_cast<float>(posed.size());
     }
 
-    std::optional<float> walk_pace(const PieceModel& legs)
+    std::optional<float> walk_pace(const PieceModel& legs, std::int32_t number)
     {
         // Over each step from key to key, the lowest point is a foot on the ground; its slide back (people face
         // +z) over the step's time is the walker's speed. The middle value leaves out the steps where the feet
         // swap.
         const ovl::FrameMesh& mesh = legs.mesh;
-        const std::size_t walk = legs.motions[motion::kWalk];
+        const std::size_t walk = legs.motions[number];
         if (mesh.points == 0 || walk >= mesh.animations.size())
             return std::nullopt;
         const ovl::FrameAnimation& motion = mesh.animations[walk];

@@ -105,20 +105,37 @@ TEST_CASE("guests pay the entrance fee at the gate, and a party that cannot is t
     }
 }
 
-TEST_CASE("a guest short of the price is helped out by their party, the richest first")
+TEST_CASE("a guest short of a ride's price is helped out by their party")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto ride = park.flat_ride("Spinner", { 8, 0 }, 300, { .capacity = 8, .cycle_seconds = 5, .excitement = 0.6f });
+    const auto child = park.guest({ 0, 0 }, { .cash = 100 });
+    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
+    park.party({ child, parent });
+    auto& r = park.world().registry;
+    r.get<Errand>(child) = { ErrandKind::Heading, ride, 0 };
+    CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers >= 1; }, 60));
+    CHECK(r.get<Wallet>(child).cash.value == 0);
+    CHECK(r.get<Wallet>(parent).spent_rides.value >= 200); // Their share, and their own fare if they came along
+    CHECK(r.get<Wallet>(parent).cash.value == 1000 - r.get<Wallet>(parent).spent_rides.value);
+}
+
+TEST_CASE("at a stall each member of a party pays for their own, and one short of the price goes without")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 8, 0 });
     const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 300);
     const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
     const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 100 });
-    const auto teen = park.guest({ 0, 0 }, { .cash = 150 });
+    const auto teen = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 350 });
     park.party({ parent, child, teen });
     auto& r = park.world().registry;
-    CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
-    CHECK(r.get<Needs>(child).thirst.value < 0.05f);
-    CHECK(r.get<Wallet>(child).cash.value == 0);
-    CHECK(r.get<Wallet>(parent).cash.value == 800);
-    CHECK(r.get<Wallet>(teen).cash.value == 150);
-    CHECK(r.get<Wallet>(parent).spent_drink.value == 200);
+    CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers >= 1; }, 60));
+    park.run(1);
+    CHECK(r.get<Attraction>(stand).customers == 1); // Only the teen
+    CHECK(r.get<Wallet>(parent).cash.value == 1000);
+    CHECK(r.get<Wallet>(teen).cash.value == 50);
+    CHECK(r.get<Wallet>(child).cash.value == 100);
+    CHECK(r.get<Needs>(child).thirst.value > 0.8f);
 }

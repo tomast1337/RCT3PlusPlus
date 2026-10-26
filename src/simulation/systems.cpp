@@ -1366,7 +1366,7 @@ namespace rct3::simulation
                 for (const entt::entity m : party.members)
                 {
                     r.remove<Member>(m);
-                    if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting)
+                    if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting || alone.kind == ErrandKind::Buying)
                         alone = { ErrandKind::Wandering, entt::null, 0 };
                 }
                 r.destroy(e);
@@ -1715,7 +1715,7 @@ namespace rct3::simulation
                     // A leader is the only one to write their party, so this is safe beside the other guests.
                     const auto* member = r.try_get<Member>(movers[i]);
                     Party* party = member != nullptr && r.get<Party>(member->party).leader == movers[i] ? &r.get<Party>(member->party) : nullptr;
-                    if (party != nullptr && party->huddle > 0)
+                    if (party != nullptr && party->huddle > 0 && errand.kind == ErrandKind::Wandering)
                     {
                         --party->huddle;
                         continue; // Standing with the others
@@ -2015,6 +2015,7 @@ namespace rct3::simulation
 
         phase.emplace("Arrivals");
         // 3. Arrivals, in entity order. A leader's followers arrive with them.
+        // Whether `guest` bought something at stall `at`, from their own cash: a party pays together only for rides.
         const auto buy = [&](entt::entity guest, entt::entity at, const Shop& shop, bool chose) {
             auto& attraction = r.get<Attraction>(at);
             auto& wallet = r.get<Wallet>(guest);
@@ -2024,14 +2025,14 @@ namespace rct3::simulation
             const bool umbrella = shop.product == Product::Umbrella;
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
             if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
-                return; // Came along without wanting anything
+                return false; // Came along without wanting anything
             Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
-            if (!attraction.open || !pay(r, guest, attraction.price, on))
+            if (!attraction.open || wallet.cash.value < attraction.price.value || !pay(r, guest, attraction.price, on))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 if (attraction.open)
                     think(r, guest, ThoughtKind::CantAfford, at, now);
-                return;
+                return false;
             }
             attraction.income.value += attraction.price.value;
             ++attraction.customers;
@@ -2055,6 +2056,7 @@ namespace rct3::simulation
                 mood.heat.value = 0;
             if (shop.product == Product::Drink || shop.product == Product::Food)
                 r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
+            return true;
         };
         for (std::size_t i = 0; i < movers.size(); ++i)
         {
@@ -2072,9 +2074,13 @@ namespace rct3::simulation
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
                 errand = { ErrandKind::Wandering, entt::null, ticks(kConsumeSeconds) };
-                buy(guest, arrived[i], *shop, !r.all_of<Member>(guest));
+                // In a party, those who bought stay at the counter a moment; the others wait nearby (5.).
+                const Errand served { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
+                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)) && r.all_of<Member>(guest))
+                    errand = served;
                 for (const entt::entity m : followers)
-                    buy(m, arrived[i], *shop, false);
+                    if (buy(m, arrived[i], *shop, false))
+                        r.get<Errand>(m) = served;
             }
             else if (r.all_of<ParkGate>(arrived[i]))
             {
@@ -2703,8 +2709,9 @@ namespace rct3::simulation
         }
 
         phase.emplace("Parties");
-        // 5. Parties: while some are in a ride's queue or on it, the others walk to its exit and wait; once all
-        // are off, they go on together behind the leader.
+        // 5. Parties: while some are busy (in a ride's queue or on it, at a stall's counter, sitting on a bench), the
+        // others walk to a tile near there and wait; once all are back they stand together a moment, then go on
+        // behind the leader.
         std::vector<bool> taken(paths.nodes().size(), false); // Tiles parties wait on
         for (const auto [e, party] : r.view<const Party>().each())
             if (party.gather < taken.size())
@@ -2712,46 +2719,69 @@ namespace rct3::simulation
         for (const entt::entity e : sorted(r.view<Party>()))
         {
             Party& party = r.get<Party>(e);
-            entt::entity ride = entt::null;
-            std::uint8_t off_at = 0; // The station those on it get off at
+            entt::entity busy_at = entt::null; // The ride, stall or bench sitter keeping them
+            NodeId near = kNoNode;             // And the tile the rest wait by
+            std::uint8_t off_at = 0;           // The station those on a ride get off at
             bool waiting = false;
             for (const entt::entity m : party.members)
             {
-                const Errand& errand = r.get<Errand>(m);
-                if (errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding)
+                Errand& errand = r.get<Errand>(m);
+                if (errand.kind == ErrandKind::Buying && (errand.rest == 0 || --errand.rest == 0))
+                    errand = { .kind = ErrandKind::Waiting, .target = errand.target };
+                if ((errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding) && r.valid(errand.target) && r.all_of<CycleRide>(errand.target))
                 {
-                    ride = errand.target;
+                    busy_at = errand.target;
                     off_at = errand.off;
+                    near = exit_of(r, busy_at, off_at);
+                }
+                else if (errand.kind == ErrandKind::Buying || (r.all_of<Linger>(m) && r.get<Linger>(m).at == PathItemKind::Bench))
+                {
+                    busy_at = errand.kind == ErrandKind::Buying ? errand.target : m;
+                    near = r.get<Stride>(m).from;
                 }
                 waiting = waiting || errand.kind == ErrandKind::Waiting;
             }
-            if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
+            if (near != kNoNode && party.gather >= taken.size())
             {
-                const NodeId exit = exit_of(r, ride, off_at);
-                if (party.gather >= taken.size())
-                {
-                    party.gather = gather_spot(paths, exit, taken);
-                    taken[party.gather] = true;
-                }
+                party.gather = gather_spot(paths, near, taken);
+                taken[party.gather] = true;
+            }
+            if (busy_at != entt::null || (waiting && party.gather < taken.size()))
+            {
                 const NodeId spot = party.gather;
+                bool back = busy_at == entt::null; // All standing with the others, or where they cannot leave
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
                     auto& stride = r.get<Stride>(m);
-                    // Those going to wait, and riders just off, who walk over to the others.
-                    const bool off = errand.kind == ErrandKind::Waiting && stride.route.empty() && stride.progress.value >= 1 && stride.to == exit && spot != exit;
-                    if (errand.kind != ErrandKind::Following && !(m == party.leader && errand.kind == ErrandKind::Wandering) && !off)
+                    if (r.all_of<Linger>(m))
+                        continue; // Sitting it out
+                    // Those going to wait, and those done, who walk over to the others.
+                    const bool still = errand.kind == ErrandKind::Waiting && stride.route.empty() && (stride.progress.value >= 1 || stride.from == stride.to);
+                    const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot);
+                    if (!joins)
+                    {
+                        back = back && still;
                         continue;
+                    }
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
                     stride.route = paths.route(at, spot).value_or(std::vector<NodeId> { });
                     stride.from = at;
                     stride.to = at;
                     stride.progress.value = 1;
                     stride.lane_to = stride.lane_from;
-                    errand = { .kind = ErrandKind::Waiting, .target = ride, .off = off_at };
+                    back = back && stride.route.empty();
+                    if (errand.kind != ErrandKind::Waiting)
+                        errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
                 }
+                if (!back)
+                    party.huddle = 0;
+                else if (party.huddle == 0)
+                    party.huddle = ticks(kTuning.walking.regroup.value);
+                if (!back || --party.huddle > 0)
+                    continue;
             }
-            else if (waiting)
+            if (waiting)
             {
                 party.gather = kNoNode;
                 const Errand was = r.get<Errand>(party.leader);

@@ -74,7 +74,7 @@ TEST_CASE("a hill at the edge rolls on and settles at the edge's mean height")
         CHECK(m.vertices[i].position.y == doctest::Approx(level).epsilon(0.05));
 }
 
-TEST_CASE("the edge shows the park's mix of surfaces, which gives way to the commonest going out")
+TEST_CASE("the edge shows the park's mix of surfaces")
 {
     save::TerrainGrid g = flat(4, 4, 0);
     cell(g, 1, 0).surface = 7;
@@ -82,19 +82,30 @@ TEST_CASE("the edge shows the park's mix of surfaces, which gives way to the com
     REQUIRE(m.batches.size() == 2);
     CHECK(m.batches[0].index == 1);
     CHECK(m.batches[1].index == 7);
-    CHECK(m.batches[1].count < m.batches[0].count);
     const std::size_t points = m.vertices.size() / 2; // Each layer has every point
     // Edge point 1 touches tiles 0 and 1 of the first row: half of each. The upper layer covers half of
     // the lower, which is opaque.
     CHECK(m.vertices[1].colour.a == doctest::Approx(1));
     CHECK(m.vertices[points + 1].colour.a == doctest::Approx(0.5f));
-    // Far out, but before the fade, there is next to none of surface 7.
-    const std::size_t ring = 16;
+}
+
+TEST_CASE("a stretch of paint at the edge goes on out to the horizon beside it, and only there")
+{
+    save::TerrainGrid g = flat(16, 16, 0);
+    for (int col = 4; col < 12; ++col)
+        cell(g, col, 0).surface = 7;
+    const TerrainMesh m = surrounding_land(g);
+    REQUIRE(m.batches.size() == 2);
+    const std::size_t points = m.vertices.size() / 2;
+    const std::size_t ring = 64; // Points round a 16 by 16 map's edge
+    // The last ring before the land fades.
     std::size_t k = 1;
-    while (m.vertices[(k + 1) * ring].position.x > -kSurroundFadeStart)
+    while (m.vertices[(k + 1) * ring].position.z > -kSurroundFadeStart)
         ++k;
-    CHECK(m.vertices[points + k * ring + 1].colour.a < 0.01f);
-    CHECK(m.vertices[k * ring + 1].colour.a == doctest::Approx(1));
+    REQUIRE(k > 5);
+    // Out from the middle of the stretch (edge point 8) it is still mostly that paint; across the map, none.
+    CHECK(m.vertices[points + k * ring + 8].colour.a > 0.5f);
+    CHECK(m.vertices[points + k * ring + 40].colour.a < 0.01f);
 }
 
 TEST_CASE("the land at the edge is lit as the park's ground there")

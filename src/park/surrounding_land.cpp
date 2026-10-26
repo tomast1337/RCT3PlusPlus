@@ -232,18 +232,13 @@ namespace rct3::park
         const std::size_t rings = distances.size();
         const auto at = [&](std::size_t k, std::size_t i) { return k * n + i % n; };
 
-        // The surfaces round the edge as the park's ground shows them, and the commonest one.
+        // The surfaces round the edge as the park's ground shows them: its land's paint only, not paths or cliffs.
         std::map<std::uint8_t, std::vector<float>> shares;
-        std::map<std::uint8_t, std::size_t> counts;
         for (const EdgePoint p : edge)
         {
             const EdgeCorner c = edge_corner(grid, p);
-            const std::uint8_t surface = grid.at(c.col, c.row).surface;
-            ++counts[surface];
-            if (!shares.contains(surface))
-                shares[surface].resize(n * rings);
+            shares[grid.at(c.col, c.row).surface].resize(n * rings);
         }
-        const std::uint8_t commonest = std::ranges::max_element(counts, { }, [](const auto& c) { return c.second; })->first;
         for (auto& [surface, share] : shares)
         {
             for (std::size_t i = 0; i < n; ++i)
@@ -254,12 +249,10 @@ namespace rct3::park
         const LandRings shape = land_rings(grid, water);
         for (std::size_t k = 1; k < rings; ++k)
         {
-            for (auto& [surface, share] : shares)
+            for (auto& [_, share] : shares)
             {
                 const std::vector<float> inside = smoothed({ share.begin() + static_cast<std::ptrdiff_t>((k - 1) * n), share.begin() + static_cast<std::ptrdiff_t>(k * n) }, kSurroundSmoothing);
-                const float settled = surface == commonest ? kSurroundSettle : 0;
-                for (std::size_t i = 0; i < n; ++i)
-                    share[at(k, i)] = inside[i] * (1 - kSurroundSettle) + settled;
+                std::ranges::copy(inside, share.begin() + static_cast<std::ptrdiff_t>(k * n));
             }
         }
         const float x0 = grid.world_x(0);

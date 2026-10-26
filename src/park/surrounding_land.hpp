@@ -5,9 +5,9 @@
 // last by a step that grows, and each holds as many points as the edge, spread along its sides the same
 // way. The first ring is the edge itself, with the park ground's own heights, light and mix of surfaces
 // there, so the two join without a seam. Going out, the heights are smoothed along each ring and settle
-// towards the edge's average height, so hills at the edge roll on and flatten; the surfaces blur along the
-// ring the same way and give way to the edge's commonest one, so a path or a field at the edge does not
-// stretch away to the horizon. The land is lit smoothly and fades out with distance into whatever is drawn
+// towards the edge's average height, so hills at the edge roll on and flatten; the land's paint at the edge
+// goes on out to the horizon, blurring along the ring the same way, so each stretch of the edge's paint
+// carries on beyond it. Only the land's own surfaces go out, never the paths or cliff faces on it. The land is lit smoothly and fades out with distance into whatever is drawn
 // behind it.
 //
 // As on the park's ground, each surface is a layer, lowest index first, and each layer's vertex alpha is
@@ -40,8 +40,6 @@ namespace rct3::park
     inline constexpr float kSurroundKeep = 0.75f;
     /// How many times each ring's heights and surfaces are smoothed along it.
     inline constexpr int kSurroundSmoothing = 3;
-    /// How much of each next ring is the edge's commonest surface rather than the ring inside's mix.
-    inline constexpr float kSurroundSettle = 0.35f;
     /// How far under the sea the land beyond the edge stays.
     inline constexpr float kSeaDepth = 3;
     /// How far from the edge the sea goes: past the far plane wherever the eye is over the map.

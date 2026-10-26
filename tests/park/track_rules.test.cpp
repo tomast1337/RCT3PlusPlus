@@ -137,7 +137,7 @@ TEST_CASE("a pattern lays its piece backwards when asked, unless the piece keeps
     CHECK(apply_patterns(pieces, { LaidPiece { 0 } }, patterns, false) == std::vector<LaidPiece> { { 0 } });
 }
 
-TEST_CASE("a ride whose station is shorter than its train, or whose cable lift is missing, does not open")
+TEST_CASE("a ride whose cable lift is missing does not open; one whose station is shorter than its train, or whose closed course was laid unclosed, does")
 {
     using K = CourseKind;
     TrackCourse course;
@@ -150,11 +150,10 @@ TEST_CASE("a ride whose station is shorter than its train, or whose cable lift i
     r.trains[0].length = 5;
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
     r.trains[0].length = 7;
-    CHECK(open_refusal(r, TrackRules { }, kTest, false, course) == "RideStationTooShort");
-    // Golfers walk their station; with no course known nothing is measured.
-    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false));
-    r.mode = save::OperatingMode::MiniGolf;
-    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, false, course));
+    // A course that comes round to its start is a circuit, however its pieces were laid.
+    r.track->circuit = false;
+    CHECK_FALSE(open_refusal(r, TrackRules { .circuit_only = true }, kTest, false, course));
 
     // Its station pieces count before the park keeps the station.
     save::Ride bare = r;

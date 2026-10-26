@@ -53,6 +53,7 @@ namespace rct3::park
         rules.one_piece = (stored.flags & kOnePiece) != 0;
         rules.min_pieces = stored.min_pieces;
         rules.circuit_only = stored.circuit_only;
+        rules.most_trains = stored.most_trains;
         rules.entrances = stored.entrances;
         rules.exits = stored.exits;
         rules.car_rotation = stored.car_rotation;
@@ -93,7 +94,7 @@ namespace rct3::park
         if (state == save::AttractionState::Closed || ride.kind == save::RideKind::Special)
             return std::nullopt;
         const bool test = state == save::AttractionState::Testing;
-        const bool circuit = ride.track && ride.track->circuit;
+        const bool circuit = (ride.track && ride.track->circuit) || (course && course->closed);
         if (ride.kind == save::RideKind::Tracked)
         {
             const std::size_t pieces = ride.track ? ride.track->pieces.size() : 0;
@@ -110,9 +111,8 @@ namespace rct3::park
                 return "CannotTestTrackedRide";
             if (!test && editing)
                 return "CannotOpenTrackedRideWhileEditing";
-            // Golfers walk their station, so it need not hold a train.
-            if (course && !ride.trains.empty() && ride.mode != save::OperatingMode::MiniGolf && std::ranges::any_of(station_runs(*course), [&](float run) { return run < ride.trains.front().length; }))
-                return "RideStationTooShort";
+            // A station shorter than the train is no reason to refuse: its trains are shortened to fit, or run as
+            // short as their kind allows (cars_fitting).
             // shortcut: the hill may stand anywhere on the track, not only on a straight downhill run back from a
             // station; upgrade when building offers the hill piece away from one.
             if (course && ride.mode == save::OperatingMode::ReverseCableLiftHill && !course->reverse_lift)

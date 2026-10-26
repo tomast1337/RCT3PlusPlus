@@ -60,6 +60,7 @@ namespace rct3::park
         bool may_be_split = false; ///< Its track may be in several unjoined parts
         std::optional<std::uint32_t> min_pieces;
         bool circuit_only = false;
+        std::optional<std::uint32_t> most_trains; ///< Most trains it may run at once; none when its file sets no limit
         /// Entrances and exits it needs: 0 one per station, 1 any number, 2 exactly one (placing another
         /// moves it), 3 at least one, 4 none.
         std::uint32_t entrances = 3;

@@ -212,6 +212,10 @@ namespace rct3::scene
                 // A tracked ride runs its train round the course it was built with. Trains made here stand at its
                 // station, from where they run up to it in turn.
                 const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;
+                // An unfinished track waits while the panel builds it: a test of it runs a ghost till then.
+                if (scene.building.ride == i && course && !course->closed)
+                    if (const auto runs = simulation::coaster_of(*course, ride); runs && runs->shuttle == simulation::Shuttle::None)
+                        return false;
                 stand_trains(scene, i);
                 const std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
                 save::RideModel one;

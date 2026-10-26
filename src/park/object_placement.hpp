@@ -59,6 +59,9 @@ namespace rct3::park
     /// when both sides are odd, a tile's corner when both are even.
     [[nodiscard]] glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares);
 
+    /// The tile under square (x, z) of a footprint of `squares`, counted along the object's own X and Z.
+    [[nodiscard]] save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z);
+
     /// Whether `object` stands on the ground rather than at a height of its own.
     [[nodiscard]] bool on_ground(const save::PlacedObject& object);
 

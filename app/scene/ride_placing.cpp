@@ -766,6 +766,7 @@ namespace rct3::scene
                 // One stall a pick: the tool goes away and the stall's window opens, as in the game.
                 scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Stall, p.ride };
                 stop_ride_placing(scene);
+                refresh_pavings(scene);
                 rebuild_ground(device, scene, assets);
                 return true;
             }
@@ -830,7 +831,7 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };
-                refresh_ride_floors(scene);
+                refresh_pavings(scene);
                 rebuild_ground(device, scene, assets);
                 return true;
             }
@@ -863,7 +864,7 @@ namespace rct3::scene
         }
         p.door.reset();
         p.ghost_mesh = { };
-        refresh_ride_floors(scene);
+        refresh_pavings(scene);
         rebuild_ground(device, scene, assets);
         return true;
     }

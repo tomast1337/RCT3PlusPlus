@@ -649,28 +649,59 @@ TEST_CASE("those waiting for a ride stand in a ring beside its exit, and go on t
         CHECK(r.get<Errand>(g).kind == ErrandKind::Following);
 }
 
-TEST_CASE("two parties waiting by one exit each stand round a spot of their own")
+TEST_CASE("two parties waiting by one exit each stand on a tile of their own")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 3, 0 } });
     auto& r = park.world().registry;
-    std::vector<entt::entity> waiting;
-    for (int p = 0; p < 2; ++p)
+    std::vector<std::vector<entt::entity>> waiting(2);
+    for (auto& those : waiting)
     {
         const auto leader = park.guest({ 6, 0 });
         std::vector<entt::entity> all { leader };
         for (int i = 0; i < 2; ++i)
-            all.push_back(waiting.emplace_back(park.guest({ 6, 0 }, { .nausea = 0.9f })));
+            all.push_back(those.emplace_back(park.guest({ 6, 0 }, { .nausea = 0.9f })));
         park.party(all);
         r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
     }
     park.run_seconds(20);
+    for (const auto& those : waiting)
+        for (const auto g : those)
+        {
+            CHECK(r.get<Errand>(g).kind == ErrandKind::Waiting);
+            CHECK(r.get<Stride>(g).to == r.get<Stride>(those.front()).to);
+        }
+    CHECK(r.get<Stride>(waiting[0].front()).to != r.get<Stride>(waiting[1].front()).to);
+}
+
+TEST_CASE("a party waits on a tile away from the queue, the bigger party in a wider ring, all facing in")
+{
+    Sandbox park;
+    // The exit at (3, 0) has a queue alongside the tile at (2, 0), so they wait at (4, 0).
+    park.path({ 0, 0 }, { 6, 0 }).queue({ 2, 1 }, { 2, 3 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 60, .exit = glm::ivec2 { 3, 0 } });
+    const auto leader = park.guest({ 6, 0 });
+    std::vector<entt::entity> waiting;
+    for (int i = 0; i < 7; ++i)
+        waiting.push_back(park.guest({ 6, 0 }, { .nausea = 0.9f }));
+    std::vector<entt::entity> all { leader };
+    all.insert(all.end(), waiting.begin(), waiting.end());
+    park.party(all);
+    auto& r = park.world().registry;
+    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    park.run_seconds(30);
+    const glm::vec3 middle = park.world().paths.centre(*park.world().paths.nearest({ 16, 0, 0 }));
     for (std::size_t i = 0; i < waiting.size(); ++i)
     {
-        CHECK(r.get<Errand>(waiting[i]).kind == ErrandKind::Waiting);
+        const auto g = waiting[i];
+        REQUIRE(r.get<Errand>(g).kind == ErrandKind::Waiting);
+        const glm::vec3 at = r.get<Pose>(g).position;
+        CHECK(glm::distance(glm::vec2(at.x, at.z), glm::vec2(middle.x, middle.z)) > 1.0f); // Eight make a wide ring
+        const float facing = std::atan2(middle.x - at.x, middle.z - at.z) - r.get<Pose>(g).heading.value;
+        CHECK(std::cos(facing) > 0.99f);
         for (std::size_t k = i + 1; k < waiting.size(); ++k)
-            CHECK(glm::distance(r.get<Pose>(waiting[i]).position, r.get<Pose>(waiting[k]).position) > 0.3f);
+            CHECK(glm::distance(at, r.get<Pose>(waiting[k]).position) > 0.8f);
     }
 }
 

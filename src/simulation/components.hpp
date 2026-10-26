@@ -294,6 +294,7 @@ namespace rct3::simulation
         entt::entity leader = entt::null;
         std::vector<entt::entity> members { }; ///< The leader among them
         std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting
+        NodeId gather = kNoNode;               ///< The tile it waits on for those still busy, none of another party's
     };
 
     struct Member

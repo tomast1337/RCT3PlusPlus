@@ -614,6 +614,7 @@ namespace rct3::scene
                      { "offered", b.candidates.size() },
                      { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) },
                      { "ghost", b.ghost.has_value() },
+                     { "arrows", !track_arrows(park_of(park_)).vertices.empty() },
                      { "ghostAt", b.ghost ? Json { { "col", b.ghost->object.col }, { "row", b.ghost->object.row }, { "height", b.ghost->object.base_height.value_or(0) } } : Json(nullptr) },
                      { "clashes", b.clashes },
                      { "completing", b.completing.has_value() },
@@ -734,7 +735,7 @@ namespace rct3::scene
                 return nullptr;
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
             constexpr std::array<std::string_view, 8> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path", "off enclosure" };
-            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "ghost", !p.ghost_mesh.vertices.empty() } };
+            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
             if (p.site)
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;

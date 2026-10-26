@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "park/bone_poses.hpp"
+#include "park/build_arrows.hpp"
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
 #include "park/enclosures.hpp"
@@ -860,10 +861,20 @@ namespace rct3::scene
         return true;
     }
 
+    park::TerrainMesh stall_arrow(const ParkScene& scene)
+    {
+        const RidePlacing& p = scene.placing;
+        constexpr float kArrowLift = 0.04f; ///< Over the ground or path under it, so it shows
+        if (!p.item || p.item->kind != park::BuildKind::Shop || !p.item->stall || p.step != RidePlacing::Step::Ride || !p.site || p.ghost_mesh.vertices.empty())
+            return { };
+        return park::facing_arrow(p.site->col, p.site->row, static_cast<float>(p.site->height) + kArrowLift, static_cast<std::uint8_t>(p.site->turns), scene.grid);
+    }
+
     void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         if (scene.placing.item && !scene.placing.ghost_mesh.vertices.empty())
             draw_ghost_mesh(device, scene, scene.placing.ghost_mesh, transform, light);
+        draw_build_arrow(device, scene, stall_arrow(scene), park::kStallArrowPicture, transform);
     }
 
 } // namespace rct3::scene

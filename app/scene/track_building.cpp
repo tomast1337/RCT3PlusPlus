@@ -9,6 +9,7 @@
 #include "ovl/ride_train.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/asset_index.hpp"
+#include "park/build_arrows.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
 #include "park/relief_maps.hpp"
@@ -22,6 +23,7 @@
 #include "profiling/profiler.hpp"
 #include "save/model/design.hpp"
 #include "save/save_file.hpp"
+#include "scene/park_footpaths.hpp"
 #include "scene/park_particles.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -2391,10 +2393,21 @@ namespace rct3::scene
         }
     }
 
+    park::TerrainMesh track_arrows(const ParkScene& scene)
+    {
+        const TrackBuilding& b = scene.building;
+        if (!b.ride || !b.ghost || !b.tip)
+            return { };
+        return park::track_arrows(*b.tip, b.ghost->next, !b.backward);
+    }
+
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         if (scene.building.ride)
+        {
             draw_ghost_mesh(device, scene, scene.building.ghost_mesh, transform, light);
+            draw_build_arrow(device, scene, track_arrows(scene), { }, transform);
+        }
         if (scene.building.test)
             draw_ghost_mesh(device, scene, scene.building.test->meshes.mesh, transform, light);
     }

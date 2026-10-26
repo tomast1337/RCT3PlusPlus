@@ -237,7 +237,10 @@ namespace rct3::scene
     /// update after the interface, `elapsed` seconds after the last.
     void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
-    /// Draws the ghost of the picked piece, and any test train, with `transform` and `light`.
+    /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
+    [[nodiscard]] park::TerrainMesh track_arrows(const ParkScene& scene);
+
+    /// Draws the ghost of the picked piece and its arrows, and any test train, with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     // Shared with path building, which places objects the same way.

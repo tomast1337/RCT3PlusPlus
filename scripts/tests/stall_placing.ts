@@ -44,6 +44,8 @@ const onRoad = await hover(road!.col, road!.row);
 expect(onRoad.problem === "path", `the stall refused on the road, not ${onRoad.problem}`);
 const grass = await hover(road!.col + 1, road!.row);
 expect(grass.problem === "none", `the stall placeable beside the road, not ${grass.problem}`);
+expect(build.placing()?.arrow === true, "an arrow on the side the stall serves from");
+await screenshot("stall_arrow");
 await pointer.click(grass.x, grass.y);
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the stall stands");

@@ -433,6 +433,14 @@ namespace rct3::simulation
             return static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
         }
 
+        /// How far right of a line's middle a guest stands: to the other side from `ahead`, the one before them,
+        /// so a line of people fills its width two abreast.
+        float side_after(random::RandomState& dice, float ahead)
+        {
+            const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, 0.2, 1.0));
+            return ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
+        }
+
         void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose)
         {
             stride.from = node;
@@ -2094,14 +2102,13 @@ namespace rct3::simulation
                 // In at the far end of the line, with those of the party who want to come; the rest wait (phase 5).
                 // Each stands to the other side of the line's middle from the guest ahead.
                 const auto join = [&](entt::entity g) {
-                    auto& dice = r.get<Dice>(g).state;
                     const float ahead = queue.empty() || !r.valid(queue.back()) ? 0 : r.get<Stride>(queue.back()).side.value;
-                    const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, 0.2, 1.0));
+                    const float side = side_after(r.get<Dice>(g).state, ahead);
                     queue.push_back(g);
                     r.get<Errand>(g) = { .kind = ErrandKind::Queueing, .target = arrived[i], .station = static_cast<std::uint8_t>(station), .off = off };
                     auto& stride = r.get<Stride>(g);
                     stride.along.value = line.empty() ? 0 : static_cast<float>(line.size() - 1);
-                    stride.side.value = ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
+                    stride.side.value = side;
                 };
                 join(guest);
                 for (const entt::entity m : followers)
@@ -2276,6 +2283,7 @@ namespace rct3::simulation
             // Those getting off at `station`: where they meant to, or back where they got on.
             const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station) {
                 std::vector<bool> off(riders.size());
+                float side_ahead = 0;
                 for (std::size_t seat = 0; seat < riders.size(); ++seat)
                 {
                     const entt::entity guest = riders[seat];
@@ -2324,6 +2332,18 @@ namespace rct3::simulation
                     {
                         RideWalk walk { .points = walks->off[seat], .off = true, .gesture = gesture };
                         walk.points.push_back(paths.centre(exit_of(r, e)));
+                        // Each to a side of the way out as in a queue, so a load spills out abreast, not in one file:
+                        // from past the seat, across the way on from each point, back to the middle on the path.
+                        side_ahead = side_after(dice, side_ahead);
+                        for (std::size_t k = 1; k + 1 < walk.points.size(); ++k)
+                        {
+                            const glm::vec3 d = walk.points[k + 1] - walk.points[k];
+                            if (glm::length(glm::vec2(d.x, d.z)) > 0)
+                            {
+                                const glm::vec2 way = glm::normalize(glm::vec2(d.x, d.z));
+                                walk.points[k] += glm::vec3(-way.y, 0, way.x) * (side_ahead * kTuning.queues.way_out.value);
+                            }
+                        }
                         r.get<Pose>(guest).position = walk.points.front();
                         r.emplace_or_replace<RideWalk>(guest, std::move(walk));
                     }

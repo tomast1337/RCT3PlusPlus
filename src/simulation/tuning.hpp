@@ -61,6 +61,7 @@ namespace rct3::simulation::tuning
     {
         Tiles spacing { 0.08f };                      ///< Along the line from a guest to the one ahead
         Distance reach { 0.9f };                      ///< Farthest a queueing guest stands off the line's middle
+        Share way_out { 0.5f };                       ///< Of `reach`, how far riders walking off a ride keep off its way's middle: its steps and gates are narrower than a path
         Share gap_spread { 0.4f };                    ///< Of a gap, how far guests stand off their even places in line, all told
         Tiles shuffle { 0.12f };                      ///< The gap ahead opens this much before a guest steps up
         Seconds give_up_after { 480 };                ///< Of queueing, after which an unhappy guest may give up

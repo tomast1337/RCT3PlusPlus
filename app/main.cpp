@@ -1062,8 +1062,10 @@ int main(int argc, char** argv)
             window->poll_events();
 
             const double now = window->time();
-            const double delta = now - last_time;
-            prof::update(delta);
+            prof::update(now - last_time);
+            // A script's frame is always a sixtieth of a second, so what it waits for in frames is the same game time
+            // however fast the machine draws them.
+            const double delta = script ? 1.0 / 60 : now - last_time;
             last_time = now;
 
             prof::section("Frame", [&] {

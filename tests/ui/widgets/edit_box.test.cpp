@@ -185,6 +185,44 @@ TEST_CASE("the pointer places the caret and drags a selection")
     }
 }
 
+TEST_CASE("a double press selects a word, a triple one everything")
+{
+    FontSet fonts;
+    fonts.set(FontRole::Small, test_font());
+    Desktop desktop;
+    EditBox& box = desktop.root().add<EditBox>("box", u"big  wheel ride");
+    box.placement = top_left(0, 0, 200, 24);
+    desktop.layout({ 0, 0, 300, 100 });
+    const float x0 = box.padding.x0;
+    // Waits `wait` seconds, then presses at `x` and lets go.
+    const auto press = [&](float x, float wait = 0.1f) {
+        desktop.update({ { x0 + x, 10 }, false, true }, { wait, &fonts });
+        desktop.update({ { x0 + x, 10 }, true, true }, { 0, &fonts });
+        desktop.update({ { x0 + x, 10 }, false, true }, { 0, &fonts });
+    };
+
+    press(72);
+    press(72);
+    CHECK(box.selected_text() == u"wheel");
+    press(72);
+    CHECK(box.selected_text() == u"big  wheel ride");
+
+    SUBCASE("between words, the spaces")
+    {
+        press(41, 1);
+        press(41);
+        CHECK(box.selected_text() == u"  ");
+    }
+    SUBCASE("too slow or too far is a new press")
+    {
+        press(12, 1);
+        press(12, 0.5f);
+        CHECK_FALSE(box.has_selection());
+        press(72);
+        CHECK_FALSE(box.has_selection());
+    }
+}
+
 TEST_CASE("long text scrolls to keep the caret in view")
 {
     FontSet fonts;
@@ -254,6 +292,17 @@ TEST_CASE("paste goes in like typing")
         short_box.max_length = 4;
         paste(short_box, u"c\U0001F3A2d");
         CHECK(short_box.text == u"abc\U0001F3A2");
+    }
+    SUBCASE("a full box takes as much as the selection it replaces")
+    {
+        EditBox full("full", u"abcd");
+        full.max_length = 4;
+        paste(full, u"x");
+        CHECK(full.text == u"abcd");
+        full.set_caret(1);
+        full.set_caret(3, true);
+        paste(full, u"\u00e9\u00e8\u00ea");
+        CHECK(full.text == u"a\u00e9\u00e8d");
     }
     SUBCASE("only allowed characters")
     {

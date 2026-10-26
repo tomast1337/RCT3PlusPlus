@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A single line of text the user can type into. Pressing it gives it the keyboard focus and puts the caret
-// where it was pressed; dragging selects. While it has the focus:
+// where it was pressed; dragging selects, a double press selects a word and a triple one the whole line. While
+// it has the focus:
 //
 // - typed characters replace the selection or go in at the caret, as far as max_length and `allowed` let them;
 // - Left and Right move by a character, with Control by a word; Home and End go to the ends; Shift with any
@@ -114,7 +115,10 @@ namespace rct3::ui
         float blink_time_ = 0; // Since the last change or caret move
         bool pointer_pending_ = false;
         bool pointer_extends_ = false; // A drag, not a press
-        Point pointer_;                // Placed at the next update, which has the font
+        int presses_ = 0;              // In a row, each soon after the last and near it
+        float since_press_ = 0;        // Seconds
+        Point last_press_;
+        Point pointer_; // Placed at the next update, which has the font
         int commits_ = 0;
         int changes_ = 0;
         std::optional<std::u16string> copied_;

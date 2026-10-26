@@ -19,6 +19,8 @@ namespace rct3::ui
 
         constexpr float kBlinkPeriod = 1.0f; ///< Seconds; the caret shows for the first half
         constexpr float kCaretHalfWidth = 1.0f;
+        constexpr float kMultiPressSeconds = 0.4f; ///< A press this soon after the last adds to it
+        constexpr float kMultiPressReach = 4.0f;   ///< Units the pointer may move between them
 
         // The position `at` moved back to the start of the character it falls in.
         std::size_t boundary(const std::u16string& s, std::size_t at)
@@ -131,6 +133,10 @@ namespace rct3::ui
 
     void EditBox::on_press(Point p)
     {
+        const bool again = since_press_ <= kMultiPressSeconds && std::abs(p.x - last_press_.x) <= kMultiPressReach && std::abs(p.y - last_press_.y) <= kMultiPressReach;
+        presses_ = again ? presses_ + 1 : 1;
+        since_press_ = 0;
+        last_press_ = p;
         pointer_ = p;
         pointer_pending_ = true;
         pointer_extends_ = false;
@@ -320,6 +326,7 @@ namespace rct3::ui
         if (!has_keyboard_focus())
             composition_ = { };
         blink_time_ = std::fmod(blink_time_ + context.elapsed, kBlinkPeriod);
+        since_press_ += context.elapsed;
         caret_ = boundary(text, caret_);
         anchor_ = boundary(text, anchor_);
         const auto f = context.fonts ? context.fonts->get(font) : std::nullopt;
@@ -330,6 +337,23 @@ namespace rct3::ui
         {
             set_caret(position_at(*f, text, pointer_.x - box.x0 + scroll_), pointer_extends_);
             pointer_pending_ = false;
+            if (!pointer_extends_ && presses_ == 2)
+            {
+                // The word or the run of spaces the press is in, as Control+arrows step over them.
+                const bool space = caret_ < text.size() && is_space(text[caret_]);
+                std::size_t from = caret_;
+                while (from > 0 && is_space(text[from - 1]) == space)
+                    from = previous_char(text, from);
+                std::size_t to = caret_;
+                while (to < text.size() && is_space(text[to]) == space)
+                    to = next_char(text, to);
+                anchor_ = from;
+                caret_ = to;
+            }
+            else if (!pointer_extends_ && presses_ >= 3)
+            {
+                select_all();
+            }
         }
 
         // Keep the caret in view, and no empty room on the right while the text is wider than the box.
@@ -364,7 +388,7 @@ namespace rct3::ui
                 context.list.fill({ x0, top, x1, bottom }, composition_colour);
                 context.list.fill({ x0, bottom - 1, x1, bottom }, text_colour);
             }
-            else if (has_selection())
+            else if (has_selection() && has_keyboard_focus()) // As other programs do, only where keys go
             {
                 context.list.fill({ x_of(std::min(caret_, anchor_)), top, x_of(std::max(caret_, anchor_)), bottom }, selection_colour);
             }

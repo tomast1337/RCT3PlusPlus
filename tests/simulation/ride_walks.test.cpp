@@ -3,6 +3,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -81,4 +82,43 @@ TEST_CASE("the next rider steps up to the ticket spot once the one ahead has han
     // Both seated, in seats of their own, before it goes.
     REQUIRE(park.run_until([&] { return !r.all_of<RideWalk>(a) && !r.all_of<RideWalk>(b); }, 60));
     CHECK(glm::distance(r.get<Pose>(a).position, r.get<Pose>(b).position) == doctest::Approx(1.0f));
+}
+
+TEST_CASE("a load walks off abreast, each to a side of the way out within the way's width, and back to the path's middle")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 }).path({ 4, 1 }, { 4, 3 });
+    const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 3, .cycle_seconds = 10, .exit = glm::ivec2 { 4, 3 } });
+    auto& r = park.world().registry;
+    const glm::vec3 entrance = park.world().paths.centre(r.get<Attraction>(ride).entrance);
+    const glm::vec3 bend = entrance + glm::vec3(6, 0, 4);
+    std::vector<std::vector<glm::vec3>> on, off;
+    for (int seat = 0; seat < 3; ++seat)
+    {
+        on.push_back({ entrance + glm::vec3(6, 0, static_cast<float>(seat)) });
+        off.push_back({ on.back().front(), bend, bend + glm::vec3(0, 0, 4) });
+    }
+    r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = on, .off = off });
+    std::vector<entt::entity> load;
+    for (int i = 0; i < 3; ++i)
+    {
+        load.push_back(park.guest({ 4, 0 }, { .cash = 1000 }));
+        r.get<Errand>(load.back()) = { ErrandKind::Heading, ride, 0 };
+    }
+    REQUIRE(park.run_until([&] { return std::ranges::all_of(load, [&](entt::entity g) { return r.all_of<RideWalk>(g) && r.get<RideWalk>(g).off; }); }, 120));
+    const glm::vec3 exit = park.world().paths.centre(r.get<CycleRide>(ride).exit);
+    std::vector<float> sides;
+    for (const entt::entity g : load)
+    {
+        const auto& points = r.get<RideWalk>(g).points;
+        REQUIRE(points.size() == 4);
+        // Off along +z, so a side is along x; the seat stays where it is and the path join on its middle.
+        sides.push_back(points[1].x - bend.x);
+        CHECK(std::abs(sides.back()) <= kTuning.queues.reach.value * kTuning.queues.way_out.value + 1e-4f);
+        CHECK(std::abs(sides.back()) > 0);
+        CHECK(near(points.back(), exit));
+    }
+    CHECK(sides[0] != sides[1]);
+    CHECK(sides[1] != sides[2]);
+    CHECK(sides[0] != sides[2]);
 }

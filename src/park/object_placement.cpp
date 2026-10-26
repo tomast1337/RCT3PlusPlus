@@ -2,6 +2,7 @@
 #include "park/object_placement.hpp"
 
 #include <array>
+#include <cmath>
 
 namespace rct3::park
 {
@@ -39,6 +40,16 @@ namespace rct3::park
         const auto span_x = static_cast<float>(squares[across ? 1 : 0]);
         const auto span_z = static_cast<float>(squares[across ? 0 : 1]);
         return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
+    }
+
+    save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
+    {
+        const glm::vec2 middle = footprint_middle(object, squares);
+        const glm::vec2 along_x = turned_x(object.rotation);
+        const glm::vec2 along_z = turned_x(object.rotation + 3);
+        // Square indices grow along the model's -X and -Z, from the footprint's far corner.
+        const glm::vec2 centre = middle - (static_cast<float>(x) + 0.5f - static_cast<float>(squares[0]) / 2) * along_x - (static_cast<float>(z) + 0.5f - static_cast<float>(squares[1]) / 2) * along_z;
+        return { static_cast<int>(std::floor(centre.x)), static_cast<int>(std::floor(centre.y)) };
     }
 
     bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid)

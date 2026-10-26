@@ -991,6 +991,7 @@ namespace rct3::scene
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
         scene.supports.stale = true;
+        refresh_pavings(scene);
         objects_changed(scene);
     }
 
@@ -1907,8 +1908,8 @@ namespace rct3::scene
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
-        // The ground is built before the models that give the rides' floors their size are read.
-        if (scene.footpaths.floors_stale)
+        // The ground is built before the models that give the rides' and stalls' paving its size are read.
+        if (scene.footpaths.pavings_stale)
             profiling::section("Ground", [&] { rebuild_ground(device, scene, assets); });
         profiling::section("LedSigns", [&] { update_led_signs(device, scene, assets); });
         const float scale = scale_for(device, scene);

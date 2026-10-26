@@ -956,7 +956,7 @@ namespace rct3::scene
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
             add_ride_cars(device, scene, install, 0, scene.rides.rides.size());
             log.info("{} ride cars, {} on arms, {} vertices{}", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size(), scene.car_lamps ? ", some with lamps" : "");
-            refresh_ride_floors(scene);
+            refresh_pavings(scene);
         }
         if (options.flag(config::GameOption::OffMapTrees))
         {
@@ -969,12 +969,12 @@ namespace rct3::scene
         begin(ParkLoadStage::Scene);
         // The ground was drawn before the fences and walls were known; drawn again if one parts two paths.
         scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
-        scene.footpaths.floors_stale = scene.footpaths.floors_stale || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
-                                           return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
-                                               const auto edge = park::edge_height(p, scene.grid, side);
-                                               return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
-                                           });
-                                       });
+        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+                                            return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
+                                                const auto edge = park::edge_height(p, scene.grid, side);
+                                                return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
+                                            });
+                                        });
         scene.blend_band = options.get(config::GameOption::DetailBlendBand);
         scene.level_scales = level_scales(options);
         scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);

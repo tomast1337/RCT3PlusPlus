@@ -185,67 +185,154 @@ namespace
         return ride;
     }
 
-    std::optional<std::array<std::int32_t, 2>> two_by_three(std::uint64_t)
+    /// Two tiles along x from the spot.
+    std::vector<save::Tile> two_wide(const save::PlacementSpot& spot)
     {
-        return std::array<std::int32_t, 2> { 2, 3 };
+        return { { spot.col, spot.row }, { spot.col + 1, spot.row } };
     }
 } // namespace
 
-TEST_CASE("a flat ride's floor covers its footprint, turned with it")
+TEST_CASE("a door paves its tile, opening onto the ride in front and the path behind")
 {
-    const save::TerrainGrid g = flat_grid(10, 10);
-    std::array rides { flat_ride(2, 2, 0), flat_ride(2, 2, 1) };
-    save::Station& station = rides[0].stations.emplace_back();
-    station.entrance_spot = save::PlacementSpot { 8, 1, 5, 0, 0 };
-    station.exit_spot = save::PlacementSpot { 9, 2, 5, 2, 0 }; // Not level with its tile
-    const std::vector<RideFloor> floors = ride_floors(rides, two_by_three, g);
-    REQUIRE(floors.size() == 2);
-    CHECK(floors[0].doors == std::vector { std::array { 1, 5 } });
-    CHECK(floors[0].col1 - floors[0].col0 == 1);
-    CHECK(floors[0].row1 - floors[0].row0 == 2);
-    CHECK(floors[1].col1 - floors[1].col0 == 2);
-    CHECK(floors[1].row1 - floors[1].row0 == 1);
-    CHECK(floors[0].col0 == 2);
-    CHECK(floors[0].row0 == 2);
+    save::RideModel rides;
+    save::Ride& coaster = rides.rides.emplace_back();
+    coaster.kind = save::RideKind::Tracked;
+    save::Station& station = coaster.stations.emplace_back();
+    station.entrance_spot = save::PlacementSpot { 8, 3, 3, 2, 0 }; // Facing -X
+    station.exit_spot = save::PlacementSpot { 9, 5, 5, 0, 1 };     // Facing +Z
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    REQUIRE(pavings.size() == 2);
+    CHECK(pavings[0].tiles == std::vector { save::Tile { 3, 3 } });
+    CHECK(pavings[0].height == 2);
+    CHECK(pavings[0].entrance);
+    CHECK(pavings[0].source == save::Tile { 4, 3 });
+    CHECK(pavings[0].links == std::vector { save::Tile { 2, 3 }, save::Tile { 4, 3 } });
+    CHECK_FALSE(pavings[1].entrance);
+    CHECK(pavings[1].source == save::Tile { 5, 4 });
+
+    coaster.base.demolished = true;
+    CHECK(ride_pavings(rides, two_wide).empty());
 }
 
-TEST_CASE("a raised ride's floor stands at its height and is not paved; a sunk one or an unknown model has none")
+TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking like the path past its exit")
 {
-    const save::TerrainGrid g = flat_grid(10, 10);
-    const std::array rides { flat_ride(2, 2, 0, 3) };
-    const std::vector<RideFloor> floors = ride_floors(rides, two_by_three, g);
-    REQUIRE(floors.size() == 1);
-    CHECK(floors[0].raised == 3);
-    GroundPathMap map = ground_path_map({ }, g);
-    pave_ride_floors(map, floors);
-    CHECK_FALSE(has_ground_path(map, { 2, 2 }));
-    const std::array sunk { flat_ride(2, 2, 0, -3) };
-    CHECK(ride_floors(sunk, two_by_three, g).empty());
-    const std::array level { flat_ride(2, 2, 0) };
-    CHECK(ride_floors(level, [](std::uint64_t) { return std::optional<std::array<std::int32_t, 2>> { }; }, g).empty());
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back(flat_ride(2, 2, 0));
+    save::Station& station = ride.stations.emplace_back();
+    station.entrance_spot = save::PlacementSpot { 8, 1, 2, 0, 2 }; // Facing +X, into the ride
+    station.exit_spot = save::PlacementSpot { 9, 2, 3, 0, 3 };     // Facing -Z
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    REQUIRE(pavings.size() == 3);
+    const Paving& floor = pavings[2];
+    CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
+    CHECK(floor.source == save::Tile { 2, 4 });
+    CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
+
+    // Nothing when the footprint is unknown.
+    CHECK(ride_pavings(rides, [](const save::PlacementSpot&) { return std::vector<save::Tile> { }; }).size() == 2);
 }
 
-TEST_CASE("a floor is paved like the path its exit lets out onto, else plain")
+TEST_CASE("a stall paves its footprint and opens onto the side it faces")
 {
-    const save::TerrainGrid g = flat_grid(10, 10);
-    RideFloor floor { 2, 2, 3, 4, save::Tile { 1, 3 } };
-    GroundPathMap map = ground_path_map({ }, g);
-    pave_ride_floors(map, std::span(&floor, 1));
-    REQUIRE(map.styles.size() == 1);
-    CHECK(map.styles[0] == kRideFloorStyle);
-    CHECK(has_ground_path(map, { 3, 4 }));
-    CHECK_FALSE(has_ground_path(map, { 4, 4 }));
+    save::RideModel rides;
+    save::Stall& stall = rides.stalls.emplace_back();
+    stall.base.spot = save::PlacementSpot { 7, 4, 4, 0, 0 };
+    for (const auto& [facing, front] : { std::pair { 0, std::vector { save::Tile { 4, 3 }, save::Tile { 5, 3 } } }, { 1, { save::Tile { 3, 4 } } }, { 2, { save::Tile { 4, 5 }, save::Tile { 5, 5 } } }, { 3, { save::Tile { 6, 4 } } } })
+    {
+        stall.base.facing = static_cast<std::uint8_t>(facing);
+        const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+        REQUIRE(pavings.size() == 1);
+        CHECK(pavings[0].tiles.size() == 2);
+        CHECK(pavings[0].links == front);
+        CHECK(pavings[0].source == front.front());
+    }
+}
 
-    const std::array paths { ground(1, 3, "Marble") };
-    map = ground_path_map(paths, g);
-    pave_ride_floors(map, std::span(&floor, 1));
-    CHECK(map.styles == std::vector<std::string> { "Marble" });
-    CHECK(map.tiles[static_cast<std::size_t>(2 * map.width + 2)] == 0);
+TEST_CASE("a facility without doors paves its footprint, open on every side, in the plain style")
+{
+    save::RideModel rides;
+    save::Ride& toilet = rides.rides.emplace_back();
+    toilet.kind = save::RideKind::Special;
+    toilet.base.spot = save::PlacementSpot { 7, 4, 4, 0, 0 };
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    REQUIRE(pavings.size() == 1);
+    CHECK_FALSE(pavings[0].source);
+    CHECK(pavings[0].links.size() == 6);
+}
 
-    // Its doors are paved too, but never over a path, nor off the map.
-    floor.doors = { { 5, 5 }, { 1, 3 }, { 10, 2 } };
-    map = ground_path_map(paths, g);
-    pave_ride_floors(map, std::span(&floor, 1));
-    CHECK(has_ground_path(map, { 5, 5 }));
-    CHECK(map.tiles[static_cast<std::size_t>(3 * map.width + 1)] == 0);
+TEST_CASE("paving looks like the path at its source; only an entrance takes a queue, straight in; else the plain style")
+{
+    const save::TerrainGrid g = flat_grid(6, 6);
+    Paving door { .tiles = { { 2, 2 } }, .height = 0, .source = save::Tile { 3, 2 }, .links = { { 1, 2 }, { 3, 2 } } };
+
+    std::vector<PavedTile> laid = lay_pavings({ }, std::span(&door, 1), g);
+    REQUIRE(laid.size() == 1);
+    CHECK(laid[0].path.surface_name == kPavingStyle);
+    CHECK_FALSE(laid[0].path.elevation);
+
+    const std::array marble { ground(3, 2, "Marble") };
+    laid = lay_pavings(marble, std::span(&door, 1), g);
+    CHECK(laid[0].path.surface_name == "Marble");
+    CHECK(laid[0].path.col == 2);
+
+    save::PathTile queue = ground(3, 2, "QueueRed");
+    queue.kind = save::PathKind::Queue;
+    queue.queue = save::PathQueueInfo { .start_direction = 2, .end_direction = 3 };
+    queue.elevation = save::PathElevation { .slope = save::kSlopeOnGround };
+    const std::array queues { queue };
+    laid = lay_pavings(queues, std::span(&door, 1), g);
+    CHECK(laid[0].path.surface_name == kPavingStyle);
+    door.entrance = true;
+    laid = lay_pavings(queues, std::span(&door, 1), g);
+    CHECK(laid[0].path.surface_name == "QueueRed");
+    REQUIRE(laid[0].path.queue);
+    CHECK(laid[0].path.queue->start_direction == 0); // Heading on towards lower columns
+    CHECK(laid[0].path.queue->end_direction == 0);
+
+    // A path far off the paving's height does not count.
+    door.height = 4;
+    laid = lay_pavings(marble, std::span(&door, 1), g);
+    CHECK(laid[0].path.surface_name == kPavingStyle);
+}
+
+TEST_CASE("paving off level ground is raised at its height, and tiles holding a path keep it")
+{
+    save::TerrainGrid g = flat_grid(6, 6);
+    g.cells[static_cast<std::size_t>(2 * 6 + 3)].corners = { 0, 1, 0, 1 };
+    const Paving stall { .tiles = { { 2, 2 }, { 3, 2 }, { 4, 2 }, { 9, 9 } }, .height = 0 };
+    const std::array paths { ground(4, 2) };
+    const std::vector<PavedTile> laid = lay_pavings(paths, std::span(&stall, 1), g);
+    REQUIRE(laid.size() == 2);
+    CHECK_FALSE(laid[0].path.elevation);
+    REQUIRE(laid[1].path.elevation);
+    CHECK(laid[1].path.elevation->quantised_height == 0);
+    CHECK(laid[1].path.elevation->slope == 0);
+}
+
+TEST_CASE("paving joins only itself and its links, never a path beside it, fence or not")
+{
+    const save::TerrainGrid g = flat_grid(6, 6);
+    // A two-tile floor at row 2 with its door at (1, 2); a park path runs past along row 3 and on to the door.
+    const std::array pavings { Paving { .tiles = { { 2, 2 }, { 3, 2 } }, .links = { { 1, 2 } } }, Paving { .tiles = { { 1, 2 } }, .source = save::Tile { 0, 2 }, .links = { { 2, 2 }, { 0, 2 } } } };
+    std::vector<save::PathTile> paths { ground(0, 2), ground(1, 3), ground(2, 3), ground(3, 3) };
+    const std::vector<PavedTile> laid = lay_pavings(paths, pavings, g);
+    REQUIRE(laid.size() == 3);
+    for (const PavedTile& t : laid)
+        paths.push_back(t.path);
+    GroundPathMap map = ground_path_map(paths, g);
+    seal_pavings(map, laid, pavings);
+
+    CHECK(path_continues(map, g, { 2, 2 }, 1, 0));       // Within the floor
+    CHECK(path_continues(map, g, { 2, 2 }, -1, 0));      // Floor into its door
+    CHECK(path_continues(map, g, { 1, 2 }, -1, 0));      // Door onto the path behind it
+    CHECK(path_continues(map, g, { 0, 2 }, 1, 0));       // and back
+    CHECK_FALSE(path_continues(map, g, { 2, 2 }, 0, 1)); // Floor and the path running past
+    CHECK_FALSE(path_continues(map, g, { 2, 3 }, 0, -1));
+    CHECK_FALSE(path_continues(map, g, { 1, 2 }, 0, 1)); // Door and the path beside it
+    CHECK(may_join(map, { 1, 3 }, { 2, 3 }));
+
+    // The path past draws its edge along the floor: closed on the floor's side all the way.
+    const TerrainMesh alone = ground_path_mesh(ground_path_map(std::array { ground(1, 3), ground(2, 3), ground(3, 3) }, g), g);
+    const TerrainMesh beside = ground_path_mesh(map, g);
+    CHECK(vertices_of(beside, GroundPaint::PathA) + vertices_of(beside, GroundPaint::PathB) > vertices_of(alone, GroundPaint::PathA) + vertices_of(alone, GroundPaint::PathB));
 }

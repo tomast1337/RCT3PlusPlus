@@ -24,9 +24,11 @@
 // corner" bends the edge out at the tile's corner to meet path across the corner; a "notched" cell is
 // open on both sides with the corner cut away, for the inside of a turn.
 //
-// A flat ride standing on the ground is paved under its footprint and its doors as if path lay there: in the
-// style of the ground path its exit lets out onto, or a plain grey style while there is none, so the paving
-// joins the path.
+// Rides and stalls pave the ground they use as if path lay there: each door's tile, a stall's or facility's
+// footprint and a flat ride's floor. Paving takes the style of the path the door or stall opens onto, so it matches; an
+// entrance carries a queue straight on through. It joins only itself and the tiles it opens onto, never a
+// path that merely runs beside it, even where no fence stands between them. Where the ground is not level at
+// its height it is a raised deck instead.
 #pragma once
 
 #include "park/edge_walls.hpp"
@@ -39,9 +41,11 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::park
@@ -78,11 +82,13 @@ namespace rct3::park
     {
         int width = 0;
         int height = 0;
-        std::vector<std::string> styles;                  ///< System names, in the order first met
-        std::vector<std::int16_t> tiles;                  ///< Row by row: index into styles, or kNoPath
-        std::map<std::size_t, std::vector<float>> raised; ///< By tile index: heights the raised paths there end at
-        std::map<std::size_t, std::uint8_t> queues;       ///< By tile index: ground queue's open sides, bit per TileSide
-        EdgeWalls walls;                                  ///< That paths do not join across; set by the caller
+        std::vector<std::string> styles;                     ///< System names, in the order first met
+        std::vector<std::int16_t> tiles;                     ///< Row by row: index into styles, or kNoPath
+        std::map<std::size_t, std::vector<float>> raised;    ///< By tile index: heights the raised paths there end at
+        std::map<std::size_t, std::uint8_t> queues;          ///< By tile index: ground queue's open sides, bit per TileSide
+        EdgeWalls walls;                                     ///< That paths do not join across; set by the caller
+        std::vector<std::uint16_t> pavings;                  ///< Row by row: 1 + the paving a tile is laid by, 0 for a path of the park; empty when none
+        std::set<std::pair<std::size_t, std::size_t>> links; ///< Tile index pairs, both ways, that paving joins across
     };
 
     inline constexpr std::int16_t kNoPath = -1;
@@ -97,36 +103,58 @@ namespace rct3::park
     /// off the grid and ground paths without a style are left out.
     [[nodiscard]] GroundPathMap ground_path_map(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
-    /// The floor of a flat ride standing on the ground: its footprint, paved like the ground path that leads
-    /// away from its exit, or in kRideFloorStyle while none does.
-    struct RideFloor
+    /// Ground a ride or stall paves as if path lay there: a door's tile, a stall's footprint, a flat ride's floor.
+    /// It is paved like the path at `source`, or in kPavingStyle while there is none, and joins only itself and
+    /// the tiles in `links`, so it never runs into paths beside it.
+    struct Paving
     {
-        int col0 = 0; ///< Footprint, both ends in
-        int row0 = 0;
-        int col1 = -1;
-        int row1 = -1;
-        std::optional<save::Tile> beyond_exit;     ///< The tile the exit lets out onto
-        std::vector<std::array<int, 2>> doors { }; ///< The stations' entrance and exit tiles, paved alike
-        std::optional<std::int32_t> raised { };    ///< Height of a ride standing over the ground, whose floor is a raised deck there
+        std::vector<save::Tile> tiles { };
+        std::int32_t height = 0;              ///< Whole units, as placement spots store it
+        std::optional<save::Tile> source { }; ///< The tile whose path sets the style
+        bool entrance = false;                ///< A queue at `source` runs on through it, straight
+        std::vector<save::Tile> links { };    ///< The tiles beside it that it joins
     };
 
-    /// The plain grey path style floors take while their exit leads nowhere.
-    inline constexpr std::string_view kRideFloorStyle = "Asphalt";
+    /// The path style paving takes while its source holds no path: the first of the game's path styles.
+    inline constexpr std::string_view kPavingStyle = "Asphalt";
 
-    /// The floors of the flat rides among `rides` whose footprint lies level at their height, or wholly under it. `squares_of`
-    /// gives the squares (along its own X and Z) of the object a ride is placed as, or nothing when unknown.
-    [[nodiscard]] std::vector<RideFloor> ride_floors(std::span<const save::Ride> rides, const std::function<std::optional<std::array<std::int32_t, 2>>(std::uint64_t object)>& squares_of, const save::TerrainGrid& grid);
+    /// How far from a paving's height a path at its source may lie and still set its style, in whole units.
+    inline constexpr float kPavingReach = 1;
 
-    /// Lays `floors` into `map` as ground paths, so they draw and join as paths do. Tiles that already hold a
-    /// path keep it; raised floors are left out.
-    void pave_ride_floors(GroundPathMap& map, std::span<const RideFloor> floors);
+    /// The tiles a placed footprint stands on.
+    using FootprintOf = std::function<std::vector<save::Tile>(const save::PlacementSpot& spot)>;
+
+    /// What the attractions of `rides` pave: every door, every stall's and facility's footprint, every flat ride's
+    /// floor.
+    /// `footprint_of` gives the tiles a ride or stall stands on, only the squares it really fills; nothing when
+    /// unknown.
+    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of);
+
+    /// One tile of paving laid as a path, and the paving it belongs to.
+    struct PavedTile
+    {
+        save::PathTile path { };
+        std::size_t paving = 0;
+    };
+
+    /// The paths `pavings` lay: one per tile that holds no path of `paths` yet. A tile whose ground lies level at
+    /// the paving's height gets a ground path (or a ground queue running straight in); any other a flat raised one.
+    [[nodiscard]] std::vector<PavedTile> lay_pavings(std::span<const save::PathTile> paths, std::span<const Paving> pavings, const save::TerrainGrid& grid);
+
+    /// Marks the tiles laid in `map`, so each joins only its own paving and its links.
+    void seal_pavings(GroundPathMap& map, std::span<const PavedTile> laid, std::span<const Paving> pavings);
+
+    /// Whether the path on `tile` may join the one on `other` beside it: both are paths of the park, both are
+    /// paving of the same ride or stall, or one is paving that links to the other.
+    [[nodiscard]] bool may_join(const GroundPathMap& map, save::Tile tile, save::Tile other) noexcept;
 
     /// True when there is a ground path at (col, row); false off the map.
     [[nodiscard]] bool has_ground_path(const GroundPathMap& map, save::Tile tile) noexcept;
 
     /// True when the path on tile (col, row) carries on onto the tile (dc, dr) beside it (one step along x
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
-    /// ends level with this tile's ground at their shared edge; and no wall of `map` stands between them.
+    /// ends level with this tile's ground at their shared edge; the two may join (may_join); and no wall of `map`
+    /// stands between them, unless both are paving of one ride or stall.
     [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.

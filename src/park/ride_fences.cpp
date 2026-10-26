@@ -89,18 +89,13 @@ namespace rct3::park
             placed.col = spot.col;
             placed.row = spot.row;
             placed.rotation = spot.direction;
-            const glm::vec2 middle = footprint_middle(placed, item.squares);
-            const glm::vec2 along_x = turned_x(spot.direction);
-            const glm::vec2 along_z = turned_x(spot.direction + 3);
             for (int z = 0; z < zs; ++z)
             {
                 for (int x = 0; x < xs; ++x)
                 {
                     if (!inside(x, z))
                         continue;
-                    // Square indices grow along the model's -X and -Z, from the footprint's far corner.
-                    const glm::vec2 centre = middle - (static_cast<float>(x) + 0.5f - static_cast<float>(xs) / 2) * along_x - (static_cast<float>(z) + 0.5f - static_cast<float>(zs) / 2) * along_z;
-                    const Tile tile { static_cast<int>(std::floor(centre.x)), static_cast<int>(std::floor(centre.y)) };
+                    const Tile tile = square_tile(placed, item.squares, x, z);
 
                     // Each side, as the step to the neighbouring square and the edge's turn from the model's.
                     // A rectangle is fenced on its rim only (both sides of one a single square across); an outline

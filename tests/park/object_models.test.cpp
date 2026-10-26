@@ -44,3 +44,21 @@ TEST_CASE("the water picture is see-through, tiles and is never recoloured")
     // In the lakes' colour at its darkest.
     CHECK(water.palette[0].b == static_cast<std::uint8_t>(kWaterColour.b * 255));
 }
+
+TEST_CASE("a mesh is blended as its transparency says")
+{
+    CHECK(part_blend(0, "SIOpaqueUnlit") == PartBlend::Opaque);
+    CHECK(part_blend(1, "SIAlphaMask") == PartBlend::Cutout);
+    CHECK(part_blend(2, "SIAlpha") == PartBlend::Blended);
+    CHECK(part_blend(7, "") == PartBlend::Opaque);
+}
+
+TEST_CASE("a mesh of the depth filling style writes depth only, whatever its transparency")
+{
+    for (const std::uint32_t transparency : { 0u, 1u, 2u })
+    {
+        CHECK(part_blend(transparency, "SIFillZ") == PartBlend::DepthOnly);
+        CHECK(part_blend(transparency, "sifillz") == PartBlend::DepthOnly);
+    }
+    CHECK(part_blend(2, "SIFillZed") == PartBlend::Blended);
+}

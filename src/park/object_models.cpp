@@ -91,19 +91,6 @@ namespace rct3::park
             return it == map.end() ? nullptr : &it->second;
         }
 
-        PartBlend blend_of(std::uint32_t transparency)
-        {
-            switch (transparency)
-            {
-                case 1:
-                    return PartBlend::Cutout;
-                case 2:
-                    return PartBlend::Blended;
-                default:
-                    return PartBlend::Opaque;
-            }
-        }
-
         /// A mesh's sides value for drawing only the front of its triangles; 1 draws both. Of the shapes in the
         /// install, those marked so face the way their normals point all but 0.2% of the time, the rest 0.4.
         constexpr std::uint32_t kFrontOnly = 3;
@@ -111,7 +98,7 @@ namespace rct3::park
         template<typename Mesh, typename Index> ModelPart part_of(const Mesh& mesh, Index&& index)
         {
             ModelPart part;
-            part.blend = blend_of(mesh.transparency);
+            part.blend = part_blend(mesh.transparency, mesh.style);
             part.one_sided = mesh.sides == kFrontOnly;
             part.vertices.reserve(mesh.vertex_count);
             for (std::size_t i = 0; i < mesh.vertex_count; ++i)
@@ -467,8 +454,30 @@ namespace rct3::park
         return picture;
     }
 
+    PartBlend part_blend(std::uint32_t transparency, std::string_view style)
+    {
+        if (strings::equals_ignoring_case(style, "SIFillZ"))
+            return PartBlend::DepthOnly;
+        switch (transparency)
+        {
+            case 1:
+                return PartBlend::Cutout;
+            case 2:
+                return PartBlend::Blended;
+            default:
+                return PartBlend::Opaque;
+        }
+    }
+
     void ModelLoader::set_texture(ModelPart& part, std::string_view name, std::string_view style, std::string_view near)
     {
+        // Its picture is never read, and the files leave it undefined.
+        if (part.blend == PartBlend::DepthOnly)
+        {
+            part.texture.clear();
+            part.slots = 0;
+            return;
+        }
         if (strings::equals_ignoring_case(style, "SIWater"))
         {
             if (!pictures_.contains(kWaterPicture))

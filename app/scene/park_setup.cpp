@@ -1036,6 +1036,7 @@ namespace rct3::scene
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
                                        std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
                                        std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } },
+                                       std::pair { &scene.depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "depth-only objects" } }, std::pair { &scene.crossing_depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .colour_write = false, .label = "crossing depth-only objects" } },
                                        std::pair { &scene.waterfall_added_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfalls" } }, std::pair { &scene.waterfall_multiplied_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerMultiplied, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfall foam" } } })
         {
             auto made = device.create_pipeline(desc);
@@ -1344,7 +1345,7 @@ namespace rct3::scene
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.waterfall_added_pipeline, scene.waterfall_multiplied_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.waterfall_added_pipeline, scene.waterfall_multiplied_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

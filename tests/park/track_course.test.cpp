@@ -137,7 +137,7 @@ TEST_CASE("an arm holds each piece's angles at its middle and turns evenly betwe
     CHECK_FALSE(park::arm_angles_at(c, std::vector<std::optional<A>>(4), 12));
 }
 
-TEST_CASE("as many trains run as fill half the course with gaps between them, and always one")
+TEST_CASE("as many trains run as fill half the course with gaps between them, within its kind's and its blocks' limits, and always one")
 {
     park::TrackCourse c = corner();
     c.points.push_back({ 0, 0, 10 });
@@ -145,8 +145,28 @@ TEST_CASE("as many trains run as fill half the course with gaps between them, an
     c.kinds.push_back(park::CourseKind::Plain);
     // Trains of two cars 3 and 5 long take 8, and 10 with the gap after them: five fill the 50 of half the course.
     const std::array fits { park::CarFit { .length = 3 }, park::CarFit { .length = 5 } };
-    CHECK(park::trains_fitting(c, fits) == 5);
-    CHECK(park::trains_fitting(corner(), fits) == 1);
+    CHECK(park::trains_fitting(c, fits, false, std::nullopt) == 5);
+    CHECK(park::trains_fitting(corner(), fits, false, std::nullopt) == 1);
+    // Its kind may set fewer.
+    CHECK(park::trains_fitting(c, fits, false, 3u) == 3);
+    // Kept a block apart, one fewer than its blocks: a station and a block brake make two.
+    c.kinds = { park::CourseKind::Station, park::CourseKind::Plain, park::CourseKind::BlockBrake, park::CourseKind::Plain };
+    CHECK(park::trains_fitting(c, fits, true, std::nullopt) == 1);
+    c.kinds = { park::CourseKind::Station, park::CourseKind::Chain, park::CourseKind::BlockBrake, park::CourseKind::Plain };
+    CHECK(park::trains_fitting(c, fits, true, std::nullopt) == 2);
+}
+
+TEST_CASE("a train has as many cars as fit along its shortest station, within what its kind allows")
+{
+    park::TrackCourse c = corner();
+    c.kinds = { park::CourseKind::Station, park::CourseKind::Plain, park::CourseKind::Plain };
+    // A front car 3 long and the others 2 each: four take 9 of the station's 10.
+    const std::array lengths { 3.0f, 5.0f, 7.0f, 9.0f, 11.0f, 13.0f };
+    CHECK(park::cars_fitting(c, lengths, 1) == 4);
+    CHECK(park::cars_fitting(c, std::span(lengths).first(3), 1) == 3);
+    CHECK(park::cars_fitting(c, lengths, 5) == 0);
+    c.kinds[0] = park::CourseKind::Plain;
+    CHECK(park::cars_fitting(c, lengths, 1) == 6);
 }
 
 TEST_CASE("a track in several stretches runs along the first one with a station")

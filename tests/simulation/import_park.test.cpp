@@ -167,6 +167,44 @@ TEST_CASE("boats for hire carry their riders out and back, though their dock is 
     CHECK_FALSE(world.registry.all_of<simulation::Trains>(added[0]));
 }
 
+TEST_CASE("a coaster tested with no path to its doors runs its train, and takes no riders the park had on it")
+{
+    simulation::SimWorld world;
+    world.paths.add({ 0, 0, 0 });
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back();
+    ride.kind = save::RideKind::Tracked;
+    ride.base.id = 7;
+    ride.base.state = save::AttractionState::Testing;
+    ride.seats.resize(4);
+    ride.trains.emplace_back();
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 9, .row = 9 };
+    simulation::Coaster circuit;
+    circuit.distance = { 0, 10, 40, 70, 100 };
+    circuit.height = { 0, 0, 15, 0, 0 };
+    circuit.kinds = { simulation::Stretch::Station, simulation::Stretch::Chain, simulation::Stretch::Plain, simulation::Stretch::Plain, simulation::Stretch::Plain };
+    const std::array<std::optional<simulation::Coaster>, 1> coasters { circuit };
+    auto added = simulation::import_rides(world, rides, { }, coasters);
+    REQUIRE(world.registry.valid(added[0]));
+    CHECK(world.registry.get<simulation::Attraction>(added[0]).entrance == simulation::kNoNode);
+    CHECK(world.registry.get<simulation::Trains>(added[0]).trains.size() == 1);
+
+    save::PeopleModel people;
+    save::Guest& g = people.guests.emplace_back();
+    g.in_park = true;
+    g.person.id = 1;
+    g.person.state = save::PersonState::OnRide;
+    g.person.state_target.id = 7;
+    const auto guests = simulation::import_guests(world, people);
+    CHECK(simulation::board_saved_riders(world, people, guests, rides, added) == 0);
+
+    // Closed, it is left for the paths to reach, as before.
+    ride.base.state = save::AttractionState::Closed;
+    simulation::SimWorld other;
+    other.paths.add({ 0, 0, 0 });
+    CHECK(simulation::import_rides(other, rides, { }, coasters)[0] == entt::null);
+}
+
 TEST_CASE("guests the park had on a ride are put back on it, as many as it seats")
 {
     simulation::SimWorld world;

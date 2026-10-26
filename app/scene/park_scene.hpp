@@ -456,11 +456,13 @@ namespace rct3::scene
         } week_began;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
-        /// Of rides built here whose train has not yet stood on its track, by ride (of rides): how each car of
-        /// it sits on the track, by car.
+        /// Of tracked rides whose trains were made here (fit_trains), by ride (of rides): how each car of a train
+        /// sits on the track, by car.
         std::map<std::size_t, std::vector<park::CarFit>> car_fits;
-        /// Of tracked rides built here, by ride: how many cars their trains may have. Their trains can be changed
-        /// while they are also in car_fits.
+        /// Tracked rides put to test or opened since the last update, whose trains are made ready to run then.
+        std::vector<std::size_t> readying;
+        /// Of tracked rides whose window has shown or built them, by ride: how many cars their trains may have.
+        /// Their trains can be changed while they are not open.
         std::map<std::size_t, ui::TrainLimits> train_limits;
         /// Of the same rides: the trains their kind's file offers, by name, the first theirs at first.
         std::map<std::size_t, std::vector<std::string>> train_choices;
@@ -743,6 +745,10 @@ namespace rct3::scene
     /// Adds the cars of `count` rides from `from` (of scene.rides) to the scene, where the park keeps them; cars
     /// without a kept place are left out.
     void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count);
+
+    /// Has the scene's cars of ride `ride_index` (of scene.rides) be its trains' cars as they are now: those it had
+    /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars);

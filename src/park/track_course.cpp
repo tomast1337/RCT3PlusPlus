@@ -5,6 +5,7 @@
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <limits>
 #include <unordered_map>
 
 namespace rct3::park
@@ -223,12 +224,38 @@ namespace rct3::park
         return to * back * saved;
     }
 
-    int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits)
+    int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
     {
         float train = kTrainGap;
         for (const CarFit& fit : fits)
             train += fit.length;
-        return std::max(static_cast<int>(course.length() / 2 / train), 1);
+        int most = static_cast<int>(course.length() / 2 / train);
+        if (cap)
+            most = std::min(most, static_cast<int>(*cap));
+        if (blocks && course.kinds.size() > 1)
+        {
+            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake; };
+            const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
+            int count = 0;
+            for (std::size_t i = 0; i < last; ++i)
+            {
+                const CourseKind next = i + 1 < last ? course.kinds[i + 1] : course.kinds.front();
+                count += ends_block(course.kinds[i]) && next != course.kinds[i] ? 1 : 0;
+            }
+            most = std::min(most, count - 1);
+        }
+        return std::max(most, 1);
+    }
+
+    int cars_fitting(const TrackCourse& course, std::span<const float> lengths, int fewest)
+    {
+        const std::vector<float> runs = station_runs(course);
+        const float shortest = runs.empty() ? std::numeric_limits<float>::max() : std::ranges::min(runs);
+        int fit = 0;
+        for (int cars = std::max(fewest, 1); cars <= static_cast<int>(lengths.size()); ++cars)
+            if (lengths[static_cast<std::size_t>(cars - 1)] <= shortest)
+                fit = cars;
+        return fit;
     }
 
     void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front)

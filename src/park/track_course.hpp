@@ -90,8 +90,15 @@ namespace rct3::park
     inline constexpr float kTrainGap = 2;
 
     /// How many trains of cars fitted as `fits` (by car) `course` takes: as many as fill half of it queued
-    /// kTrainGap apart, so they have room to run (our own rule); at least one.
-    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits);
+    /// kTrainGap apart, so they have room to run (our own rule), no more than `cap` where the ride's kind sets
+    /// one, and when kept a block apart (`blocks`) one fewer than it has blocks, each ending at a station, lift
+    /// or block brake; at least one.
+    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
+
+    /// The most cars, `fewest` or more, a train may have and still stand along each station of `course`, where
+    /// `lengths` holds by count the length of a train of one car, of two, and so on up to the most it may have:
+    /// 0 when even `fewest` do not fit, the most when the course has no station.
+    [[nodiscard]] int cars_fitting(const TrackCourse& course, std::span<const float> lengths, int fewest);
 
     /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
     /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the

@@ -35,3 +35,13 @@ TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
     CHECK(front.y == doctest::Approx(2));
     CHECK(front.z == doctest::Approx(-5));
 }
+
+TEST_CASE("a train's cars take the front, second, middle, second-to-last and last designs, with links between")
+{
+    using S = std::vector<std::size_t>;
+    CHECK(car_slots(4, { true, false, true, false, true, true }) == S { 0, 5, 2, 5, 2, 5, 4 });
+    CHECK(car_slots(5, { true, true, true, true, true, false }) == S { 0, 1, 2, 3, 4 });
+    CHECK(car_slots(3, { true, false, false, false, true, true }) == S { 0, 5, 0, 5, 4 });
+    CHECK(car_slots(3, { true, false, false, false, false, false }) == S { 0, 0, 0 });
+    CHECK(car_slots(1, { true, true, true, true, true, true }) == S { 0 });
+}

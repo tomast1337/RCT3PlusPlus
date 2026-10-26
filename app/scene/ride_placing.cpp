@@ -201,22 +201,18 @@ namespace rct3::scene
             std::erase_if(p.unjoined, [&](std::size_t i) {
                 if (i >= scene.rides.rides.size() || scene.rides.rides[i].base.demolished)
                     return true;
-                save::Ride& ride = scene.rides.rides[i];
-                // A tracked ride runs its train round the course it was built with.
-                const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;
-                std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
-                // Trains built with the ride stand at its station, the first's front where trains set off and each
-                // other queued behind the one before, from where they run up to the station in turn.
-                if (const auto fits = scene.car_fits.find(i); coaster[0] && fits != scene.car_fits.end() && !ride.trains.empty())
+                // One the park runs already has its doors moved: its guests find them from the paths.
+                if (i < scene.ride_entities.size() && scene.ride_entities[i] != entt::null)
                 {
-                    float front = coaster[0]->start;
-                    for (save::Train& train : ride.trains)
-                    {
-                        park::stand_train(*course, train, fits->second, std::fmod(front + course->length(), course->length()));
-                        front -= train.length + park::kTrainGap;
-                    }
-                    coaster[0] = simulation::coaster_of(*course, ride);
+                    (void)simulation::relink_attractions(scene.sim, scene.rides);
+                    return true;
                 }
+                save::Ride& ride = scene.rides.rides[i];
+                // A tracked ride runs its train round the course it was built with. Trains made here stand at its
+                // station, from where they run up to it in turn.
+                const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;
+                stand_trains(scene, i);
+                const std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
                 save::RideModel one;
                 one.rides.push_back(ride);
                 const auto timings = simulation::flat_ride_timings(one, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
@@ -231,13 +227,8 @@ namespace rct3::scene
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::RideShow::ride); show != scene.shows.end())
                     stage_show(scene, *show);
                 seat_flat_ride(device, scene, i);
-                if (assets.install)
-                {
-                    scene.train_limits.erase(i);
-                    if (scene.car_fits.erase(i) > 0)
-                        add_ride_cars(device, scene, *assets.install, i, 1);
-                    board_tracked_ride(device, scene, *assets.install, i);
-                }
+                if (assets.install && ride.kind == save::RideKind::Tracked)
+                    replace_ride_cars(device, scene, *assets.install, i);
                 logging::logger("park").info("{} joins the paths", ride.base.name);
                 return true;
             });

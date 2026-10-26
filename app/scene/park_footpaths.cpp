@@ -3,6 +3,7 @@
 
 #include "config/game_options.hpp"
 #include "logging/log.hpp"
+#include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
@@ -413,6 +414,30 @@ namespace rct3::scene
         if (changed)
             objects_changed(scene);
         f.pavings_stale = false;
+        // The fences round the park and the enclosures lean with the ground as it is now.
+        std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
+        panels.insert(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
+        std::vector<std::pair<std::uint64_t, glm::vec2>> leaning;
+        for (const save::PlacedObject& o : scene.objects)
+        {
+            if (!panels.contains(o.id))
+                continue;
+            const glm::vec2 lean = park::panel_lean(scene.grid, o);
+            const auto was = scene.leans.find(o.id);
+            if (lean != (was != scene.leans.end() ? was->second : glm::vec2(0.0f)))
+                leaning.emplace_back(o.id, lean);
+        }
+        if (!leaning.empty())
+        {
+            wait_for_build(scene); // The build beside the frame reads the leans
+            for (const auto& [panel, lean] : leaning)
+            {
+                if (lean == glm::vec2(0.0f))
+                    scene.leans.erase(panel);
+                else
+                    scene.leans[panel] = lean;
+            }
+        }
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         park::GroundQueues queues = park::ground_queues(with, scene.grid);
         park::add_ground(mesh, std::move(queues.mesh));

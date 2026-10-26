@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/boundary_fence.hpp"
 
+#include "park/queue_fences.hpp"
+
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -68,4 +71,21 @@ TEST_CASE("a park fence panel on a slope leans with its edge")
     const BoundaryFence fence = boundary_fence("Chain", "", g, { }, 10);
     CHECK(fence.pieces.front().id == 11);
     CHECK_FALSE(fence.leans.empty());
+}
+
+TEST_CASE("a park fence panel's lean follows the ground under its edge as it is now")
+{
+    save::TerrainGrid g = small_park();
+    const BoundaryFence fence = boundary_fence("Chain", "", g, { }, 0);
+    const auto on = [&](TileSide side) {
+        const auto found = std::ranges::find_if(fence.pieces, [&](const save::PlacedObject& o) { return o.col == 1 && o.row == 1 && o.rotation == edge_turns(side); });
+        REQUIRE(found != fence.pieces.end());
+        return *found;
+    };
+    const save::PlacedObject back = on(TileSide::Back);
+    const save::PlacedObject left = on(TileSide::Left);
+    CHECK(panel_lean(g, back) == glm::vec2(0.0f));
+    g.cells[1 * 3 + 1].corners = { 0, 2, 1, 3 }; // Reshaped: up 2 along x, 1 along z, over a tile of 4
+    CHECK(panel_lean(g, back) == glm::vec2(0.5f, 0.0f));
+    CHECK(panel_lean(g, left) == glm::vec2(0.0f, 0.25f));
 }

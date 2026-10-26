@@ -52,8 +52,13 @@ async function clickRide(mode: string): Promise<void> {
     await frames(10);
     const at = map.screen(site.col + 1, site.row + 1);
     expect(at !== undefined, `the ride in sight in ${mode}`);
-    await pointer.click(at!.x, at!.y);
-    await frames(10);
+    // Riders swing over the ride, and a click on one rightly opens their window instead, so a few tries.
+    for (let i = 0; i < 5 && rides.shown()?.ride !== ride; ++i) {
+        rides.show(other);
+        await frames(1 + i * 7);
+        await pointer.click(at!.x, at!.y);
+        await frames(10);
+    }
     expect(rides.shown()?.ride === ride, `a click on the ride to open its window in ${mode}`);
     await screenshot(mode);
 }

@@ -701,7 +701,7 @@ int main(int argc, char** argv)
             out.info("staff: {:d}, happiness {:.2f}, laziness {:.2f}, at work {:.2f} of the time on average; {:d} resting now", count, mean(happy), mean(lazy), mean(load), resting);
         }
     }
-    std::array<std::size_t, 6> doing { };
+    std::array<std::size_t, 7> doing { };
     double happiness = 0;
     double thirst = 0;
     double hunger = 0;
@@ -715,7 +715,7 @@ int main(int argc, char** argv)
         ++count;
     }
     if (count > 0)
-        out.info("guests: wandering {:d} heading {:d} queueing {:d} riding {:d} following {:d} waiting {:d}  happiness {:.2f} thirst {:.2f} hunger {:.2f}", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
+        out.info("guests: wandering {:d} heading {:d} queueing {:d} riding {:d} following {:d} waiting {:d} buying {:d}  happiness {:.2f} thirst {:.2f} hunger {:.2f}", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], doing[6], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
     // How well parties keep together: followers' distance from their leader, and how far waiting members stand
     // from the exit of the ride their party is on.
     std::vector<float> apart;

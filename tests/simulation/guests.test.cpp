@@ -705,6 +705,57 @@ TEST_CASE("a party waits on a tile away from the queue, the bigger party in a wi
     }
 }
 
+TEST_CASE("at a stall those who buy stay at the counter while the rest of their party waits nearby, then all go on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 100);
+    const auto leader = park.guest({ 4, 0 }, { .thirst = 0.9f });
+    const auto thirsty = park.guest({ 4, 0 }, { .thirst = 0.9f });
+    const auto others = std::array { park.guest({ 4, 0 }), park.guest({ 4, 0 }) };
+    park.party({ leader, thirsty, others[0], others[1] });
+    auto& r = park.world().registry;
+    REQUIRE(park.run_until([&] { return r.get<Attraction>(stand).customers == 2; }, 30));
+    CHECK(r.get<Errand>(leader).kind == ErrandKind::Buying);
+    CHECK(r.get<Errand>(thirsty).kind == ErrandKind::Buying);
+    park.run_seconds(kTuning.facilities.served.value / 2);
+    const NodeId counter = r.get<Stride>(leader).from;
+    for (const auto g : others)
+    {
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Waiting);
+        CHECK(r.get<Stride>(g).to != counter);
+    }
+    // Served, the buyers join them, and once all stand together they go on behind the leader.
+    CHECK(park.run_until([&] { return r.get<Errand>(leader).kind == ErrandKind::Waiting; }, kTuning.facilities.served.value));
+    CHECK(park.run_until([&] { return r.get<Errand>(leader).kind == ErrandKind::Wandering; }, 30));
+    CHECK(r.get<Stride>(leader).from == r.get<Stride>(others[0]).to);
+    for (const auto g : { thirsty, others[0], others[1] })
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Following);
+    CHECK(r.get<Attraction>(stand).customers == 2);
+}
+
+TEST_CASE("while one of a party sits on a bench the others wait nearby, and all go on once they are up")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto sitter = park.guest({ 4, 0 });
+    const auto others = std::array { park.guest({ 4, 0 }), park.guest({ 4, 0 }) };
+    park.party({ sitter, others[0], others[1] });
+    auto& r = park.world().registry;
+    r.emplace<Linger>(sitter, PathItemKind::Bench, Seconds { 5 });
+    park.run_seconds(3);
+    for (const auto g : others)
+    {
+        CHECK(r.get<Errand>(g).kind == ErrandKind::Waiting);
+        CHECK(r.get<Stride>(g).to != r.get<Stride>(sitter).from);
+    }
+    // Up again, they walk over, stand with the others a moment and lead on.
+    CHECK(park.run_until([&] { return r.get<Errand>(others[0]).kind == ErrandKind::Following; }, 30));
+    CHECK(r.get<Errand>(others[1]).kind == ErrandKind::Following);
+    CHECK(r.get<Errand>(sitter).kind == ErrandKind::Wandering);
+    CHECK(r.get<Stride>(sitter).from == r.get<Stride>(others[0]).to);
+}
+
 TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")
 {
     Sandbox park;

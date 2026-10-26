@@ -221,7 +221,8 @@ namespace rct3::simulation
         Queueing,  ///< In the queue of the ride `target`
         Riding,    ///< On the ride `target`
         Following, ///< Walking beside their party's leader, who chooses where to go
-        Waiting,   ///< For the rest of their party to come off a ride, walking to its exit first
+        Waiting,   ///< For the rest of their party, on a tile near where those still busy are
+        Buying,    ///< At the stall `target`, served for `rest` ticks while the rest of their party waits
     };
 
     struct Errand
@@ -293,7 +294,7 @@ namespace rct3::simulation
     {
         entt::entity leader = entt::null;
         std::vector<entt::entity> members { }; ///< The leader among them
-        std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting
+        std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
         NodeId gather = kNoNode;               ///< The tile it waits on for those still busy, none of another party's
     };
 

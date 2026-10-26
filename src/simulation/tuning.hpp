@@ -52,6 +52,7 @@ namespace rct3::simulation::tuning
         Seconds longest_huddle { 20 };
         Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
         Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
+        Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
         std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others
@@ -84,6 +85,7 @@ namespace rct3::simulation::tuning
         std::size_t bench_seats = 3;
         Chance watch_chance { 0.3 }; ///< Of stopping at a sight passed
         Seconds watch { 15 };
+        Seconds served { 4 };                             ///< A party member at a stall's counter while the others wait
         PerSecond sight_cheer = PerSecond::over({ 300 }); ///< Happiness while watching
     };
 

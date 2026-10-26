@@ -68,6 +68,8 @@ namespace rct3::ui
         std::u16string text(strings.get(message.text_key));
         // An award's message is named by the award.
         const std::u16string name = message.award ? std::u16string(strings.get(simulation::award_name(*message.award))) : strings::to_utf16(message.subject_name);
+        if (const auto at = text.find(u"%d"); message.number && at != std::u16string::npos)
+            text.replace(at, 2, strings::to_utf16(std::to_string(*message.number)));
         // Fields are words between percent signs. The subject's name fills %NAME%, the field key any other.
         std::size_t from = 0;
         while (from < text.size())

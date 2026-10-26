@@ -83,6 +83,14 @@ TEST_CASE("a message's other field is filled from its field key")
     CHECK(message_text(m, strings) == u"Big Wheel broke down (doors jammed)");
 }
 
+TEST_CASE("a message's number fills its %d")
+{
+    StringTable strings;
+    strings.add("Crashed", u"A crash on %NAME% has injured %d people!");
+    simulation::ParkMessage m { .text_key = "Crashed", .subject_name = "Big Dipper", .number = 16 };
+    CHECK(message_text(m, strings) == u"A crash on Big Dipper has injured 16 people!");
+}
+
 TEST_CASE("an award's message is named by the award, a fine's too")
 {
     StringTable strings;

@@ -556,8 +556,8 @@ namespace rct3::scene
         std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
-        /// Of each ride whose trains have crashed, the crashes and dangers (simulation::Wrecks) already taken in.
-        std::unordered_map<entt::entity, std::pair<std::uint32_t, std::uint32_t>> crashes_seen;
+        /// Of each ride whose trains have crashed, the crashes, dangers and injured (simulation::Wrecks) already taken in.
+        std::unordered_map<entt::entity, std::tuple<std::uint32_t, std::uint32_t, std::uint32_t>> crashes_seen;
         std::set<std::tuple<entt::entity, std::size_t, std::size_t>> wrecks_blown; ///< By ride, train and car: wrecks shown blowing up
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<park::AttractionRef> construct_requested;

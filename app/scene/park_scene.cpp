@@ -2810,13 +2810,12 @@ namespace rct3::scene
                                 for (const std::string_view effect : { "CoasterExplosion", "CoasterSmoke" })
                                     fire_park_particles(scene.particles, effect, wreck.at, glm::vec3(0, 1, 0));
                         }
-                    auto& [crashes, dangers] = scene.crashes_seen[scene.ride_entities[i]];
+                    auto& [crashes, dangers, injured] = scene.crashes_seen[scene.ride_entities[i]];
                     if (wrecks->crashes == crashes)
                         continue;
                     crashes = wrecks->crashes;
-                    // Riders were hurt when more counts as dangerous than the crash of an open ride itself.
-                    const bool hurt = wrecks->dangers - dangers > (ride.base.state == save::AttractionState::Open ? 1u : 0u);
-                    simulation::post(scene.park.messages, { .text_key = hurt ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id });
+                    const std::uint32_t hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
+                    simulation::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
                     ride.base.state = save::AttractionState::Closed;
                     scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;

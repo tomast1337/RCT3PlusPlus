@@ -743,7 +743,7 @@ namespace rct3::scene
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
-                    person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? "dropped" : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : errand->kind == simulation::ErrandKind::Waiting ? "waiting" : errand->kind == simulation::ErrandKind::Buying ? "buying" : "walking";
+                    person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? (r.get<simulation::Dropped>(p.guest).thrown ? "thrown" : "dropped") : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : errand->kind == simulation::ErrandKind::Waiting ? "waiting" : errand->kind == simulation::ErrandKind::Buying ? "buying" : "walking";
                 }
                 out.push_back(std::move(person));
             }

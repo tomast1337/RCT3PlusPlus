@@ -119,4 +119,27 @@ namespace rct3::park
         return Clash::None;
     }
 
+    std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    {
+        constexpr float kGroundSlack = 0.05f; // Standing on the ground is not above it
+        for (std::size_t i = 0; i < items.size(); ++i)
+        {
+            const SolidTiles mine = solid_tiles(items.subspan(i, 1), models, grid);
+            const auto owned = [&](std::int32_t col, std::int32_t row, std::span<const SolidSpan> spans) {
+                if (!grid.contains(col, row))
+                    return false;
+                const save::TerrainCell& cell = grid.at(col, row);
+                const bool above = !spans.empty() && std::ranges::all_of(spans, [&](const SolidSpan& s) { return s.low > cell.max_height() + kGroundSlack; });
+                return cell.ownership() == save::Ownership::Owned || (cell.ownership() == save::Ownership::OwnedRights && above);
+            };
+            // An item without solid squares, by the tile it stands on.
+            bool unowned = mine.tiles.empty() && !owned(items[i].col, items[i].row, { });
+            for (const auto& [key, spans] : mine.tiles)
+                unowned = unowned || !owned(static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16), spans);
+            if (unowned || clash(mine, solids, paths, grid) != Clash::None)
+                return Refused { .item = i, .unowned = unowned };
+        }
+        return std::nullopt;
+    }
+
 } // namespace rct3::park

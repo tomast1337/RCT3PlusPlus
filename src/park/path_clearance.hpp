@@ -18,6 +18,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <unordered_map>
 #include <vector>
@@ -84,5 +85,18 @@ namespace rct3::park
     /// already, or a path of `paths`. Two items share a tile when they take different quarters or edges of it,
     /// or stand at other heights.
     [[nodiscard]] Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+
+    /// Which of a group of items may not stand, and why.
+    struct Refused
+    {
+        std::size_t item = 0;
+        bool unowned = false; ///< Off land the park owns, rather than in something's way
+    };
+
+    /// Of `items` (their models loaded) about to stand together, as a saved design's pieces and doors do, the first
+    /// that may not: one in the room `solids` take or a path's way, or on a tile the park does not own. Land bought
+    /// only to build over will do for what stands wholly above its ground. Nothing when every one may, so the group
+    /// is placed whole or not at all.
+    [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
 } // namespace rct3::park

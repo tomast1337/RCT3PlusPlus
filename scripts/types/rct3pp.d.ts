@@ -231,12 +231,13 @@ declare namespace build {
      * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool. */
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
-     * the one picked, whether it can be built there (and its arrows show) and the files of the saved designs of its kind (the
+     * the one picked, whether it can be built there (and its arrows show), whether it may not stand there (for a design,
+     * any of its pieces or doors) and whether for land the park does not own, the doors a design's ghost shows, and the files of the saved designs of its kind (the
      * player's own, then the install's), the piece clicked mid-track to build over (its place in the ride's
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
     /** What is being placed, what keeps it from where the pointer is, and whether a stall's facing arrow shows;

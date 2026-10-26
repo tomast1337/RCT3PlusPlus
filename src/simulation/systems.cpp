@@ -507,6 +507,46 @@ namespace rct3::simulation
         }
     } // namespace
 
+    Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice)
+    {
+        const auto& gaits = kTuning.gaits;
+        if (mood.nausea.value >= kTuning.sickness.sick.value)
+            return Gait::Queasy;
+        if (needs.bladder.value >= gaits.bursting.value)
+            return Gait::Bursting;
+        if (mood.energy.value < gaits.weary.value)
+            return Gait::Weary;
+        return random::chance(dice, gaits.run[std::to_underlying(age)].value * mood.energy.value) ? Gait::Run : Gait::Walk;
+    }
+
+    Pace gait_pace(Pace walk, Share energy, Gait gait)
+    {
+        const auto& gaits = kTuning.gaits;
+        const double by_gait = gait == Gait::Run ? gaits.run_pace.value : gait == Gait::Weary ? gaits.weary_pace.value : gait == Gait::Queasy ? gaits.queasy_pace.value : gait == Gait::Bursting ? gaits.bursting_pace.value : 1.0;
+        const double by_energy = gaits.drained.value + (gaits.fresh.value - gaits.drained.value) * std::clamp(energy.value, 0.0f, 1.0f);
+        return { static_cast<float>(walk.value * by_energy * by_gait) };
+    }
+
+    RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt)
+    {
+        const auto& k = kTuning.reactions;
+        if (!running || lifted)
+            return RideReaction::Waiting;
+        if (leanings.brace >= k.stoic.value && (feel.vertical > k.strain || std::abs(feel.lateral) > k.strain_across))
+            return RideReaction::Strained;
+        if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value && feel.slope < k.diving)
+            return RideReaction::CoverEyes;
+        bool hands = now == RideReaction::HandsUp && feel.vertical < k.hands_down && std::abs(feel.lateral) < k.hands_down;
+        if (!hands && leanings.hands >= (front ? k.timid_front : k.timid).value)
+        {
+            if (happiness.value > k.thrilled.value)
+                hands = random::chance(dice, k.hands_up.value * dt);
+            else if (feel.vertical < k.airtime)
+                hands = random::chance(dice, k.floating.value * dt);
+        }
+        return hands ? RideReaction::HandsUp : RideReaction::Calm;
+    }
+
     Pose between_steps(const Pose& pose, float along)
     {
         const float turn = std::remainder(pose.heading.value - pose.was_heading.value, 2 * glm::pi<float>());
@@ -1751,7 +1791,7 @@ namespace rct3::simulation
                     if (stride.from != stride.to)
                     {
                         const float length = step_length(paths, stride);
-                        stride.progress.value += length > 0 ? stride.speed.value * dt / length : 1;
+                        stride.progress.value += length > 0 ? gait_pace(stride.speed, mood.energy, stride.gait).value * dt / length : 1;
                         left = (stride.progress.value - 1) * length;
                     }
                     if (stride.progress.value < 1)
@@ -1766,6 +1806,8 @@ namespace rct3::simulation
                     stride.from = at;
                     stride.progress.value = 0;
                     stride.fresh = true;
+                    if (const auto* visitor = r.try_get<Visitor>(movers[i]))
+                        stride.gait = pick_gait(visitor->age, mood, needs, dice.state);
                     stride.lane_from = stride.lane_to;
                     bool ringed = false;
                     const auto link = stride.route.empty() ? std::nullopt : paths.link_between(at, stride.route.front());
@@ -1910,14 +1952,19 @@ namespace rct3::simulation
                         const float reach = kTuning.walking.catch_up.value * stride.speed.value * dt;
                         pose.position = glm::length(off) <= reach ? spot : pose.position + off * (reach / glm::length(off));
                         pose.heading.value = angle + glm::pi<float>();
+                        stride.gait = Gait::Walk;
                         stride.from = lead.to;
                         stride.to = lead.to;
                         stride.lane_from = stride.lane_to = glm::vec2(pose.position.x - middle.x, pose.position.z - middle.z);
                         continue;
                     }
                     // A tick's walk, hurrying to make up ground: on through tiles until it is spent or they are level
-                    // with the leader, never passing them.
-                    float left = kTuning.walking.catch_up.value * stride.speed.value * dt;
+                    // with the leader, never passing them. A tile or more behind they run; else they keep the
+                    // leader's step, running when the leader does.
+                    const bool behind = stride.to != lead.to && stride.to != lead.from;
+                    const Share energy = r.get<Mood>(followers[i]).energy;
+                    stride.gait = behind || lead.gait == Gait::Run ? Gait::Run : Gait::Walk;
+                    float left = (behind ? gait_pace(stride.speed, energy, Gait::Run).value : kTuning.walking.catch_up.value * stride.speed.value) * dt;
                     for (int tiles = 0; tiles < 3 && left > 0; ++tiles)
                     {
                         const bool in_step = stride.from == lead.from && stride.to == lead.to;
@@ -2519,10 +2566,41 @@ namespace rct3::simulation
                         fleet->lap_done = end_lap(fleet->lap);
                     if (t == 0 && train.crashed)
                         fleet->lap = { };
-                    if (round)
-                        unload(fleet->riders[t], 0);
-                    else if (const auto stop = standing_at(train); was_running && stop && *stop > 0)
+                    // Its riders react to the ride, seated in its cars front to back.
+                    if (const auto& riders = fleet->riders[t]; !riders.empty() && !train.crashed)
+                    {
+                        enum : std::uint64_t
+                        {
+                            Hands = 21,
+                            Brace = 22,
+                            Eyes = 23
+                        };
+                        const Felt feel = felt(train);
+                        const bool lifted = on_chain(train);
+                        const bool moving = train.running && std::abs(train.speed) >= kTuning.reactions.still;
+                        const std::size_t per_car = std::max<std::size_t>(ride.capacity / static_cast<std::size_t>(std::max(train.cars, 1)), 1);
+                        for (std::size_t seat = 0; seat < riders.size(); ++seat)
+                        {
+                            const entt::entity guest = riders[seat];
+                            const auto* mood = r.valid(guest) ? r.try_get<Mood>(guest) : nullptr;
+                            if (mood == nullptr)
+                                continue;
+                            const auto* taste = r.try_get<Taste>(guest);
+                            const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
+                            const Leanings leanings { .hands = fixed_share(guest, Hands), .brace = fixed_share(guest, Brace), .eyes = fixed_share(guest, Eyes) };
+                            auto& thrill = r.get_or_emplace<Thrill>(guest);
+                            thrill.reaction = react(thrill.reaction, feel, moving, lifted, mood->happiness, over, leanings, seat < per_car, r.get<Dice>(guest).state, dt);
+                        }
+                    }
+                    const auto stop = round ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
+                    if (stop && (round || *stop > 0))
+                    {
+                        // Stopped at a station: hands down for getting off.
+                        for (const entt::entity guest : fleet->riders[t])
+                            if (auto* thrill = r.valid(guest) ? r.try_get<Thrill>(guest) : nullptr)
+                                thrill->reaction = RideReaction::Waiting;
                         unload(fleet->riders[t], *stop);
+                    }
                     // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
                     // closes. Guests who see it think it a disaster. A ghost's crash is only shown: it is not the
                     // park's, and closes nothing.

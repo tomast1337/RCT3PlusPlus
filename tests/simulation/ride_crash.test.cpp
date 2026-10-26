@@ -97,7 +97,7 @@ TEST_CASE("a guest near a crash thinks it a disaster, and one beside a wreck blo
     const auto ride = unfinished(park);
     auto& r = park.world().registry;
     r.get<Attraction>(ride).testing = true;
-    const auto near = park.guest({ 3, 0 });
+    const auto near = park.guest({ 3, 0 }, { .nausea = 0.7f }); // Too queasy to queue for a ride, so on foot
     CHECK(park.run_until([&] { return r.all_of<Wrecks>(ride); }, 30));
     CHECK(thought(r, near, ThoughtKind::Disaster));
     CHECK_FALSE(r.get<Attraction>(ride).testing);

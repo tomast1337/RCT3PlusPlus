@@ -59,6 +59,43 @@ namespace rct3::simulation::tuning
         Factor keep_right { 1.0 };        ///< How much of stepping apart goes to the right, so two meeting head on pass
     };
 
+    /// How fast guests go in each gait, and when they take it.
+    struct Gaits
+    {
+        Factor drained { 0.8 }; ///< Of a guest's walk, with no energy left
+        Factor fresh { 1.15 };  ///< And with all their energy
+        /// Of a child, a teen and an adult with all their energy running the next stretch, each tile; fewer
+        /// as their energy goes. Fitted to saved parks, where about a quarter of children run, one teen in
+        /// twelve and few adults, at the half energy saved guests mostly have.
+        std::array<Chance, 3> run { Chance { 0.45 }, Chance { 0.16 }, Chance { 0.03 } };
+        Share weary { 0.2f };     ///< Energy below which a guest drags their feet
+        Share bursting { 0.85f }; ///< Bladder over which a guest hurries, legs together
+        Factor run_pace { 2.2 };  ///< Of their walk
+        Factor weary_pace { 0.7 };
+        Factor queasy_pace { 0.75 };
+        Factor bursting_pace { 1.1 };
+    };
+
+    /// Riders on coasters reacting to the ride.
+    struct Reactions
+    {
+        Share thrilled { 0.85f };                     ///< Happiness over which a rider throws their hands up
+        Frequency hands_up = Frequency::every({ 1 }); ///< A thrilled rider's chance of raising them, a second
+        Frequency floating = Frequency::every({ 2 }); ///< Any rider's, floating over a hill
+        float airtime = 0.3f;                         ///< Up through their seat, in g, under which riders float
+        float strain = 3.5f;                          ///< g up through their seat a rider braces against
+        float strain_across = 1.2f;                   ///< And sideways
+        float hands_down = 4.5f;                      ///< g, up or sideways, that brings raised hands down
+        /// Of riders, the share never raising their hands, in the front car and behind it.
+        Share timid_front { 0.3f };
+        Share timid { 0.5f };
+        Share stoic { 0.3f };     ///< Of riders, the share who never brace or tense up
+        Share too_wild { 0.15f }; ///< Ride intensity past what a rider likes that has them cover their eyes
+        Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
+        float diving = -0.5f;     ///< Of the track's way, the drop under which a car heads down
+        float still = 0.5f;       ///< m/s under which a train counts as standing, held at a brake or block
+    };
+
     /// Queues. Tuned by eye against busy saved parks, whose queue tiles hold 7 to 16 waiting guests two to four abreast.
     struct Queues
     {
@@ -365,6 +402,8 @@ namespace rct3::simulation::tuning
     {
         Needs needs;
         Walking walking;
+        Gaits gaits;
+        Reactions reactions;
         Gestures gestures;
         Queues queues;
         Facilities facilities;

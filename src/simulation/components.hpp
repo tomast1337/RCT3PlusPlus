@@ -304,13 +304,24 @@ namespace rct3::simulation
     };
 
     /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.
+    /// How a guest goes on foot: how fast, and how they look going.
+    enum class Gait : std::uint8_t
+    {
+        Walk,
+        Run,      ///< Full of beans, or catching up with their party
+        Weary,    ///< Worn out, dragging their feet
+        Queasy,   ///< Feeling sick
+        Bursting, ///< Needing the toilet badly
+    };
+
     struct Stride
     {
         NodeId from = kNoNode;
         NodeId to = kNoNode;
         Share progress { };
-        bool fresh = false; ///< Came to `from` this tick
-        Pace speed { 1.3f };
+        bool fresh = false;  ///< Came to `from` this tick
+        Pace speed { 1.3f }; ///< Their own walk, before their gait's pace (gait_pace)
+        Gait gait = Gait::Walk;
         /// How far off the tiles' middles, along x and z, the guest walks at `from` and at `to`, so people
         /// spread over the path instead of keeping to one line.
         glm::vec2 lane_from { 0.0f }, lane_to { 0.0f };
@@ -572,6 +583,22 @@ namespace rct3::simulation
     {
         GestureKind kind = GestureKind::Nod;
         Seconds left { };
+    };
+
+    /// How a rider on a coaster shows what they feel.
+    enum class RideReaction : std::uint8_t
+    {
+        Waiting,   ///< In the station or pulled up a lift
+        Calm,      ///< Sitting through it
+        HandsUp,   ///< Loving it, or floating over a hill
+        CoverEyes, ///< Too wild for them, going down
+        Strained,  ///< Pressed hard into their seat or sideways
+    };
+
+    /// A guest seated on a coaster's train, and how they react to the ride now.
+    struct Thrill
+    {
+        RideReaction reaction = RideReaction::Waiting;
     };
 
     /// A rider walking on to their seat from the ticket spot, or off it to the paths: still riding, but on

@@ -151,7 +151,8 @@ TEST_CASE("children walk slower than grown-ups, and every step is counted toward
     park.run_seconds(5);
     const Pose& pose = r.get<Pose>(adult);
     CHECK(pose.walked.value > 0);
-    CHECK(pose.walked.value <= 5 * r.get<Stride>(adult).speed.value + kTuning.walking.personal_space.value); // And stepping clear of the child
+    // At most running all the way, and stepping clear of the child.
+    CHECK(pose.walked.value <= 5 * gait_pace(r.get<Stride>(adult).speed, { 1 }, Gait::Run).value + kTuning.walking.personal_space.value);
 }
 
 TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for them to reach the front")

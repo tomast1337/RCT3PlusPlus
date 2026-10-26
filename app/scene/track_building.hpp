@@ -117,10 +117,12 @@ namespace rct3::scene
         /// On a ride of two tracks side by side, which open end is built on and with which pieces.
         park::SplitState split = park::SplitState::None;
         park::ObjectMesh ghost_mesh;
-        bool off_water = false; ///< The ghost's piece stands only on water, and some of it is on dry land
-        bool clashes = false;   ///< The ghost's piece takes room a solid item or a path takes
-        std::string complaint;  ///< String key: why the track was last not finished; cleared by the next action
-        bool arm = false;       ///< The ride's riders sit on arms, whose angles its pieces hold
+        bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
+        bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
+        bool unowned = false;        ///< Of those, it stands off land the park owns
+        std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
+        std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
+        bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
         std::uint64_t arm_piece = 0;
         std::size_t arm_back = 0; ///< The piece the arm strip sets, counted back from the last

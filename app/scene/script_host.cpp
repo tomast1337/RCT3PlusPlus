@@ -658,6 +658,8 @@ namespace rct3::scene
                      { "arrows", !track_arrows(park_of(park_)).vertices.empty() },
                      { "ghostAt", b.ghost ? Json { { "col", b.ghost->object.col }, { "row", b.ghost->object.row }, { "height", b.ghost->object.base_height.value_or(0) } } : Json(nullptr) },
                      { "clashes", b.clashes },
+                     { "unowned", b.unowned },
+                     { "ghostDoors", b.ghost_doors },
                      { "completing", b.completing.has_value() },
                      { "proposed", b.proposed.size() },
                      { "complaint", b.complaint },

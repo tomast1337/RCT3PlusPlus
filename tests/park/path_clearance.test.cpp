@@ -142,3 +142,44 @@ TEST_CASE("pieces of track filling other thirds of a tile pass each other, turne
     CHECK(clash(piece(round, 2), corner, { }, g) == Clash::None);
     CHECK(clash(piece(round, 0), corner, { }, g) == Clash::Solid);
 }
+
+TEST_CASE("a group of items is refused whole by its first item in the way, and placed whole when none is")
+{
+    const save::TerrainGrid g = owned_grid(6, 3);
+    const auto [standing, models] = one_item(ItemCategory::Stall); // On tile (2, 1)
+    const SolidTiles solids = solid_tiles(standing, models, g);
+    std::vector<save::PlacedObject> group(3, standing.front());
+    for (std::size_t i = 0; i < group.size(); ++i)
+        group[i].col = static_cast<std::int32_t>(i);
+    const auto refused = first_refused(group, models, solids, { }, g);
+    REQUIRE(refused.has_value());
+    CHECK(refused->item == 2);
+    CHECK_FALSE(refused->unowned);
+    group[2].col = 4;
+    CHECK_FALSE(first_refused(group, models, solids, { }, g).has_value());
+    group[2].base_height = 4; // On the stall's top
+    group[2].col = 2;
+    CHECK_FALSE(first_refused(group, models, solids, { }, g).has_value());
+}
+
+TEST_CASE("a group of items is refused whole by one off land the park owns; bought rights do for one above the ground")
+{
+    save::TerrainGrid g = owned_grid(6, 3);
+    const auto [one, models] = one_item(ItemCategory::Stall);
+    std::vector<save::PlacedObject> group(2, one.front());
+    group[0].col = 0;
+    group[1].col = 4;
+    g.at(4, 1).flags = 0;
+    const auto refused = first_refused(group, models, { }, { }, g);
+    REQUIRE(refused.has_value());
+    CHECK(refused->item == 1);
+    CHECK(refused->unowned);
+    group[1].col = 9; // Off the map
+    CHECK(first_refused(group, models, { }, { }, g)->unowned);
+    group[1].col = 4;
+    g.at(4, 1).flags = static_cast<std::uint8_t>(save::TileFlag::Owned) | static_cast<std::uint8_t>(save::TileFlag::RightsOnly);
+    CHECK(first_refused(group, models, { }, { }, g).has_value()); // On the ground
+    group[1].base_height = 2;
+    group[1].force_absolute_height = true;
+    CHECK_FALSE(first_refused(group, models, { }, { }, g).has_value());
+}

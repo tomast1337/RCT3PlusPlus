@@ -91,6 +91,7 @@ namespace rct3::scene
         constexpr std::array<std::string_view, park::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
+        constexpr std::string_view kNotOwned = "PlaceObject_NotOwned"; ///< A piece off land the park owns
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
         /// The roles track files give pieces (ovl::TrackSection::role) that have a picture of their own in the
         /// construction panel, and the picture.
@@ -317,6 +318,22 @@ namespace rct3::scene
             return SavedDesign { std::move(rides->rides.front()), world ? std::move(world->objects) : std::vector<save::PlacedObject> { } };
         }
 
+        /// A design's door `o`, moved and turned as the design's first piece `from` is to stand as `to`.
+        save::PlacedObject moved_door(save::PlacedObject o, const save::TrackPiece& from, const save::TrackPiece& to)
+        {
+            const int turns = (to.direction - from.direction + 4) % 4;
+            std::int32_t across = o.col - from.tile_x;
+            std::int32_t along = o.row - from.tile_z;
+            for (int t = 0; t < turns; ++t)
+                std::tie(across, along) = std::pair { along, -across };
+            o.col = to.tile_x + across;
+            o.row = to.tile_z + along;
+            o.rotation = (o.rotation + turns) % 4;
+            o.base_height = o.base_height.value_or(0) - from.height + to.height;
+            o.force_absolute_height = true;
+            return o;
+        }
+
         /// The file of the train named `train_name` among the install's cars.
         std::optional<std::filesystem::path> train_file(const config::GameInstall& install, std::string_view train_name)
         {
@@ -387,10 +404,11 @@ namespace rct3::scene
             return park::solid_tiles(others, scene.models, scene.grid);
         }
 
-        /// Whether `o`, its model loaded, would take room `taken` or a path takes.
+        /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, or stand off
+        /// land the park owns.
         bool clashes(const ParkScene& scene, const park::SolidTiles& taken, const save::PlacedObject& o)
         {
-            return park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), taken, scene.footpaths.paths, scene.grid) != park::Clash::None;
+            return park::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value();
         }
 
         /// Makes the park's own trains of `ride` ghosts, whose crash off an open end of the track harms nothing and
@@ -415,6 +433,8 @@ namespace rct3::scene
             b.ghost_mesh = { };
             b.off_water = false;
             b.clashes = false;
+            b.unowned = false;
+            b.ghost_doors = 0;
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
             b.backward = false;
@@ -511,22 +531,41 @@ namespace rct3::scene
             if (!load_object_model(scene, b.models, assets, o))
                 return;
             b.off_water = off_water(scene, b, assets, o);
-            b.clashes = clashes(scene, taken_room(scene, b), o);
-            // A design shows whole, as far as its pieces go on from the first.
+            // A design shows whole with its doors, and may be laid only whole: any piece or door that may not stand,
+            // or a piece that does not follow, refuses all of it.
             std::vector<save::PlacedObject> shown { o };
             park::TrackTip tip = b.ghost->next;
+            bool whole = true;
             for (std::size_t i = 1; starting && i < b.design.size(); ++i)
             {
                 const auto next = park::shape_named(*c, b.design[i].symbol);
                 auto placed = next ? park::place_after(tip, *next, b.design[i].reversed, scene.grid) : std::nullopt;
-                if (!placed)
+                if (placed)
+                    placed->object.overlay = b.overlay;
+                if (!placed || !load_object_model(scene, b.models, assets, placed->object))
+                {
+                    whole = false;
                     break;
-                placed->object.overlay = b.overlay;
-                if (!load_object_model(scene, b.models, assets, placed->object))
-                    break;
+                }
+                b.off_water = b.off_water || off_water(scene, b, assets, placed->object);
                 tip = placed->next;
                 shown.push_back(std::move(placed->object));
             }
+            const std::size_t pieces = shown.size();
+            if (starting && !b.design.empty() && whole)
+            {
+                const save::TrackPiece to { .tile_x = o.col, .tile_z = o.row, .height = o.base_height.value_or(0), .direction = static_cast<std::uint8_t>(o.rotation) };
+                for (const TrackBuilding::DesignDoor& door : b.design_doors)
+                {
+                    save::PlacedObject d = moved_door(door.object, b.design.front(), to);
+                    whole = whole && load_object_model(scene, b.models, assets, d);
+                    shown.push_back(std::move(d));
+                }
+            }
+            b.ghost_doors = shown.size() - pieces;
+            const auto refused = park::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
+            b.clashes = !whole || refused.has_value();
+            b.unowned = refused && refused->unowned;
             // Ghost track is held up as built track is, its supports ghosts too.
             if (const park::SupportSets* sets = support_sets(scene, assets))
             {
@@ -661,7 +700,7 @@ namespace rct3::scene
                 const park::PieceShape& shape = c->pieces[b.picked->index];
                 v.piece = piece_name(*assets.strings, shape.record.name);
                 if (!b.ghost || b.clashes)
-                    v.piece = assets.strings->get(kCannotPlace);
+                    v.piece = assets.strings->get(b.unowned ? kNotOwned : kCannotPlace);
                 else if (b.off_water)
                     v.piece = assets.strings->get("PlaceObject_MustBeOnWater");
                 if (!b.complaint.empty())
@@ -1643,6 +1682,9 @@ namespace rct3::scene
         }
         if (!b.ghost)
             return false;
+        // A design that may not stand where its ghost is stays in hand, none of it laid.
+        if (!b.design.empty() && (b.clashes || b.off_water))
+            return true;
         // A design is laid whole, piece after piece from the first, and paid for whatever the park has, then
         // its doors where they stood beside its stations. Its price is its pieces': the only scenery designs
         // keep is the style's standard entrance and exit, which their files price at nothing.
@@ -1712,21 +1754,9 @@ namespace rct3::scene
                 ride.queue_colours = settings->queue_colours;
             }
             // Moved and turned as the first piece was.
-            const save::TrackPiece& from = design.front();
-            const save::TrackPiece& to = ride.track->pieces.front();
-            const int turns = (to.direction - from.direction + 4) % 4;
             for (const TrackBuilding::DesignDoor& door : doors)
             {
-                save::PlacedObject o = door.object;
-                std::int32_t across = o.col - from.tile_x;
-                std::int32_t along = o.row - from.tile_z;
-                for (int t = 0; t < turns; ++t)
-                    std::tie(across, along) = std::pair { along, -across };
-                o.col = to.tile_x + across;
-                o.row = to.tile_z + along;
-                o.rotation = (o.rotation + turns) % 4;
-                o.base_height = o.base_height.value_or(0) - from.height + to.height;
-                o.force_absolute_height = true;
+                save::PlacedObject o = moved_door(door.object, design.front(), ride.track->pieces.front());
                 if (load_object_model(scene, b.models, assets, o))
                     place_station_door(scene, assets, *b.ride, door.station, o, *o.base_height, door.exit);
             }

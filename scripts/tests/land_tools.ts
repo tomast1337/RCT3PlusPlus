@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The land tools on the game's blank landscape: digs a pit with Shape ground, paints round it with Paint
-// ground and fills it with Water.
+// ground, fills it with Water by clicking its wall and takes the lake away again.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -89,17 +89,31 @@ expect(map.tile(col + 2, row)!.surface !== surface, "the ground beside the pit t
 
 await pick("Land_Water");
 
-const [wx, wy] = on_view(col, row);
+// A click on flat ground at a whole height holds no water.
+const [fx, fy] = on_view(col + 2, row);
+await pointer.click(fx, fy);
+await frames(2);
+expect(map.water().length === lakes, "no water from a click on flat ground");
 
-await pointer.drag([wx, wy], [wx, wy - 0.05], 40);
-
+// A click on the pit's far wall, halfway up: the lake rises to that height, rounded up.
+const foot = map.screen(col + 0.5, row + 0.98)!;
+const top = map.screen(col + 0.5, row + 1.02)!;
+await pointer.click((foot.x + top.x) / 2, (foot.y + top.y) / 2);
+await frames(2);
 const now = map.water();
-
-log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]));
-
+log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]), "level", map.tile(col, row)?.water);
 await screenshot("water");
-
 expect(now.length === lakes + 1, "a new lake in the pit");
+const level = map.tile(col, row)?.water ?? -1e9;
+expect(level > low(col, row) && level <= 0 && Number.isInteger(level), "the lake's level a whole unit between the pit's floor and its rim");
+
+// A click on the lake takes it away.
+const [lx, ly] = on_view(col, row);
+await pointer.click(lx, ly);
+await frames(2);
+log("lakes after clicking the lake:", map.water().length);
+await screenshot("water_removed");
+expect(map.water().length === lakes, "the lake taken away");
 
 // Brushes: a hill raised beside the pit, then a crater sunk on the other side.
 function high(col: number, row: number): number {

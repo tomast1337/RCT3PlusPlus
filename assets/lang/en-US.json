@@ -1,5 +1,6 @@
 {
     "Rct3pp": {
+        "WaterRefused": "Water can only go on land the park owns, away from paths, and not under a higher lake.",
         "PartyLeader": "Leads the party: chooses where they all go",
         "RatingHappiness": "Happy guests:",
         "GuestsSuited": "Guests it suits:",

@@ -51,6 +51,7 @@ TEST_CASE("a train off the end of its track crashes: the ride closes and its rid
     const auto& wrecks = r.get<Wrecks>(ride);
     CHECK(wrecks.crashes == 1);
     CHECK(wrecks.dangers == 2); // The crash of an open ride, and its car with a rider
+    CHECK(wrecks.injured == 1);
     REQUIRE(wrecks.trains.size() == 1);
     CHECK(wrecks.trains[0].size() == 2);
     CHECK(wrecks.trains[0][0].velocity.x > 4); // Flying on the way the train went
@@ -153,6 +154,7 @@ TEST_CASE("a ghost train's crash flies its wrecks but hurts no one, closes nothi
     CHECK(wrecks.trains[0][0].ghost);
     CHECK(wrecks.crashes == 0);
     CHECK(wrecks.dangers == 0);
+    CHECK(wrecks.injured == 0);
     CHECK(wrecks.since.value == -1);
     CHECK(r.get<Attraction>(ride).testing);
     CHECK_FALSE(thought(r, near, ThoughtKind::Disaster));

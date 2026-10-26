@@ -2558,6 +2558,7 @@ namespace rct3::simulation
                             velocity.y = std::max(velocity.y, 0.0f);
                             throw_person(r, guest, car.at, velocity, r.get<Stride>(guest).to);
                             think(r, guest, ThoughtKind::BeenInjured, e, now);
+                            ++wrecks->injured;
                         }
                         riders.clear();
                         for (const auto [g, pose, visitor, dice] : r.view<const Pose, const Visitor, const Dice>().each())

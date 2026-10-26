@@ -507,6 +507,7 @@ namespace rct3::simulation
         /// Dangerous happenings for the awards to count, since the run began: each crash of an open ride, and
         /// each car of it with riders.
         std::uint32_t dangers = 0;
+        std::uint32_t injured = 0; ///< Riders hurt in its crashes since the run began
     };
 
     // ----- litter, path items and staff -----

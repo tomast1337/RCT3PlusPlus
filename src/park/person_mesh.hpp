@@ -59,10 +59,11 @@ namespace rct3::park
     /// Where the left hand of `person` is, in their own space; nothing when their body has no socket for it.
     [[nodiscard]] std::optional<glm::vec3> left_hand(const PersonLibrary& library, const PlacedPerson& person);
 
-    /// How fast the walk of `legs` (a legs piece) carries a walker along, in park units for each second of the
-    /// motion: the speed at which a foot on the ground slides back beneath them. Played at this pace the feet
-    /// stay put. Nothing when the piece has no walk to measure.
-    [[nodiscard]] std::optional<float> walk_pace(const PieceModel& legs);
+    /// How fast the walk of `legs` (a legs piece), or its other way of going on foot `motion` (a run, a tired
+    /// walk), carries a walker along, in park units for each second of the motion: the speed at which a foot
+    /// on the ground slides back beneath them. Played at this pace the feet stay put. Nothing when the piece
+    /// has no such motion to measure.
+    [[nodiscard]] std::optional<float> walk_pace(const PieceModel& legs, std::int32_t motion);
 
     /// The triangles of people gathered for one picture.
     struct PersonRun

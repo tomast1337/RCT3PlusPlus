@@ -154,6 +154,8 @@ namespace rct3::park
         std::uint32_t seats = 0;
         /// Where each rider sits, model space, by seat number, from the first level with seats.
         std::vector<glm::mat4> seat_places;
+        /// Of a ride car, how its riders sit (ovl::RideCar::kind's low byte); nothing when the ride says.
+        std::optional<std::uint8_t> seating;
         /// Of a model its bones move: the bones and their motions, from the first level listing motions,
         /// whose vertices each name the bones that move them.
         std::optional<BoneRig> rig;

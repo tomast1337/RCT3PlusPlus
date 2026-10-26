@@ -26,6 +26,22 @@ namespace rct3::park
     /// The number of the motion named `name`, whatever its case. Nothing for a name not in the table.
     [[nodiscard]] std::optional<std::int32_t> motion_number(std::string_view name);
 
+    /// How a rider seated in a ride car moves: riding along, waiting at the station or up a lift, with their
+    /// hands up, covering their eyes, and pressed hard by the ride. Each by number; those a seating has no
+    /// motion for are its riding one.
+    struct RiderMotions
+    {
+        std::int32_t ride = 0;
+        std::int32_t wait = 0;
+        std::int32_t hands_up = 0;
+        std::int32_t cover_eyes = 0;
+        std::int32_t strained = 0;
+    };
+
+    /// The motions of riders seated as `seating` says (a ride car's seating number); nothing for a seating
+    /// not known.
+    [[nodiscard]] std::optional<RiderMotions> rider_motions(std::uint8_t seating);
+
     /// Whether motion `number` starts again from the beginning once it ends.
     [[nodiscard]] bool motion_repeats(std::int32_t number);
 

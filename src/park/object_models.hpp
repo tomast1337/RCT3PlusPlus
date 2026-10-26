@@ -46,7 +46,14 @@ namespace rct3::park
         Opaque,
         Cutout,  ///< Pixels are either drawn or not, by their alpha
         Blended, ///< See-through, drawn after everything solid
+        /// Writes depth only, after everything solid and before water and see-through parts, so what those draw
+        /// behind it stays hidden: a boat's lid keeps the water its hull sits in out of the boat.
+        DepthOnly,
     };
+
+    /// How a mesh with `transparency` (0 opaque, 1 cut out, 2 blended) and texture style `style` is blended. A
+    /// style that fills depth (SIFillZ) draws depth only, whatever its transparency says.
+    [[nodiscard]] PartBlend part_blend(std::uint32_t transparency, std::string_view style);
 
     struct ModelVertex
     {

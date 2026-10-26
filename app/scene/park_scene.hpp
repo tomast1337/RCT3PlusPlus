@@ -374,6 +374,8 @@ namespace rct3::scene
         render::PipelineHandle crossing_cutout_pipeline;      ///< Their parts with holes
         render::PipelineHandle crossing_see_through_pipeline; ///< Their blended parts
         render::PipelineHandle see_through_pipeline;          ///< Blended parts, drawn last without writing depth
+        render::PipelineHandle depth_only_pipeline;           ///< Parts that write depth only
+        render::PipelineHandle crossing_depth_only_pipeline;  ///< Those of crossing objects
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;

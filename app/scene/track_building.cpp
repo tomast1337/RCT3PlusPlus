@@ -2439,6 +2439,8 @@ namespace rct3::scene
             return;
         for (const park::ObjectBatch& batch : mesh.batches)
         {
+            if (batch.blend == park::PartBlend::DepthOnly) // It would hide the ghost's own insides
+                continue;
             const auto texture = scene.object_textures.find(ghost_texture(batch));
             render::DrawCommand draw;
             draw.pipeline = !solid || batch.blend == park::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);

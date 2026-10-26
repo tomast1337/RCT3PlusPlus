@@ -329,6 +329,8 @@ namespace rct3::scene
                 return;
             for (const park::ObjectBatch& batch : mesh.batches)
             {
+                if (batch.blend == park::PartBlend::DepthOnly)
+                    continue;
                 const bool board = batch.texture == sign.board;
                 const ui::UiTextures& textures = board ? scene.led_signs.textures : scene.object_textures;
                 const auto texture = textures.find(batch.texture);

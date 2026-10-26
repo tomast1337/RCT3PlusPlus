@@ -98,8 +98,10 @@ namespace rct3::scene
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
             if (parts.background)
                 profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            const auto pipeline_for = [&](const ShownObjects& shown, park::PartBlend blend) {
+            const auto pipeline_for = [&](const ShownObjects& shown, park::PartBlend blend, std::string_view texture = { }) {
                 const bool crossing = &shown != &scene.steady_objects;
+                if (texture == park::kChromePicture && blend != park::PartBlend::DepthOnly)
+                    return crossing ? scene.crossing_chrome_pipeline : scene.chrome_pipeline;
                 if (blend == park::PartBlend::Opaque)
                     return crossing ? scene.crossing_pipeline : scene.object_pipeline;
                 if (blend == park::PartBlend::Cutout)
@@ -110,7 +112,7 @@ namespace rct3::scene
             };
             const auto sided = [&](render::PipelineHandle pipeline, const park::ObjectBatch& batch) { return batch.one_sided ? scene.front_only.at(pipeline.id) : pipeline; };
             // Depth-only parts are left to their own pass, after the solid ones.
-            const auto object_pipeline = [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend), b); };
+            const auto object_pipeline = [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend, b.texture), b); };
             const auto depth_pipeline = [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::DepthOnly ? sided(scene.depth_only_pipeline, b) : render::PipelineHandle { }; };
             // Opaque and cut-out parts in the solid pass, the others in their own.
             const auto draw_shown = [&](const ShownObjects& shown, std::optional<park::PartBlend> pass) {
@@ -124,7 +126,7 @@ namespace rct3::scene
                     const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
                     const auto texture = textures.find(batch.texture);
                     render::DrawCommand draw;
-                    draw.pipeline = sided(pipeline_for(shown, batch.blend), batch);
+                    draw.pipeline = sided(pipeline_for(shown, batch.blend, batch.texture), batch);
                     draw.vertices = { shown.vertices };
                     draw.indices = { shown.indices };
                     draw.index_type = render::IndexType::U32;

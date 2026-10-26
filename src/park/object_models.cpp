@@ -469,8 +469,19 @@ namespace rct3::park
         }
     }
 
+    bool chrome_style(std::string_view style)
+    {
+        return strings::equals_ignoring_case(style, "SIOpaqueChrome");
+    }
+
     void ModelLoader::set_texture(ModelPart& part, std::string_view name, std::string_view style, std::string_view near)
     {
+        if (chrome_style(style))
+        {
+            part.texture = std::string(kChromePicture);
+            part.slots = 0;
+            return;
+        }
         // Its picture is never read, and the files leave it undefined.
         if (part.blend == PartBlend::DepthOnly)
         {

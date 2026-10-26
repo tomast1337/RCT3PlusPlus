@@ -111,6 +111,10 @@ namespace rct3::render::vulkan
                     return { kLitVert, kLitFrag, 2 };
                 case Shader::LitLayerMultiplied:
                     return { kLitVert, kLitFrag, 3 };
+                case Shader::LitChrome:
+                    return { kLitVert, kLitFrag, 4 };
+                case Shader::LitCrossingChrome:
+                    return { kLitCrossingVert, kLitFrag, 4 };
                 case Shader::Shape:
                     return { kShapeVert, kShapeFrag };
                 case Shader::Water:

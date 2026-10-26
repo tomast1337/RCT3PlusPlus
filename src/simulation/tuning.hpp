@@ -325,7 +325,9 @@ namespace rct3::simulation::tuning
         Distance blast { 6 };       ///< Guests on foot this near a wreck blowing up are knocked over
         Distance seen { 40 };       ///< Guests this near a crash think it a disaster
         Seconds knocked { 5 };      ///< A guest knocked over lies for, then gets up
-        Distance thrown { 2.5f };   ///< Riders land at most this far beside where their car left the track
+        Pace scatter { 2.5f };      ///< Thrown riders fly at most this much faster or slower than their car, each way
+        Pace blown { 6 };           ///< A blast throws those on foot beside it outwards at most this fast
+        Pace lofted { 5 };          ///< And up at most this fast
         float tumble = 4;           ///< Radians a second a wreck tumbles at most
     };
 

@@ -593,11 +593,14 @@ namespace rct3::simulation
         bool happy = false;  ///< Enjoying it, or cross
     };
 
-    /// A person let go of: falling to `ground`, then walking straight to `node` to go on from there.
+    /// A person let go of, or thrown by a crash: falling to `ground`, then walking straight to `node` to go on
+    /// from there. One thrown flies on across the ground as they fall, and lands knocked over.
     struct Dropped
     {
-        float ground = 0; ///< World height they land at
-        Pace fall { };    ///< Downwards, now
+        float ground = 0;    ///< World height they land at; under them as they fly, for one thrown
+        Pace fall { };       ///< Downwards, now; below 0 while thrown upwards
+        glm::vec2 drift { }; ///< World units a second across the ground, x and z
+        bool thrown = false; ///< Lands knocked over, and lies there a while before walking on
         NodeId node = kNoNode;
     };
 

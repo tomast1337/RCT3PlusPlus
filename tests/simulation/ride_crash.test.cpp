@@ -57,10 +57,36 @@ TEST_CASE("a train off the end of its track crashes: the ride closes and its rid
     CHECK(r.get<Trains>(ride).trains[0].crashed);
     CHECK(r.get<Trains>(ride).riders[0].empty());
     CHECK_FALSE(r.get<Attraction>(ride).open);
-    CHECK(r.get<Errand>(g).kind != ErrandKind::Riding);
-    CHECK(r.all_of<Gesture>(g));
-    CHECK(r.get<Gesture>(g).kind == GestureKind::Down);
     CHECK(thought(r, g, ThoughtKind::BeenInjured));
+}
+
+TEST_CASE("riders thrown from a crashed train fly on the way it went, land knocked over, then walk back to the paths")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = unfinished(park);
+    auto& r = park.world().registry;
+    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    CHECK(park.run_until([&] { return r.all_of<Wrecks>(ride); }, 30));
+    REQUIRE(r.all_of<Dropped>(g));
+    CHECK(r.get<Dropped>(g).thrown);
+    CHECK(r.get<Dropped>(g).drift.x > 0);     // On the way the train went
+    CHECK(r.get<Dropped>(g).fall.value <= 0); // Never thrown downwards
+    CHECK_FALSE(r.any_of<Errand, Stride>(g));
+    const float left = r.get<Pose>(g).position.x;
+    park.run(5);
+    CHECK(r.get<Pose>(g).position.x > left);
+    CHECK(park.run_until([&] { return !r.get<Dropped>(g).thrown; }, 20));
+    CHECK(r.get<Pose>(g).position.y == doctest::Approx(r.get<Dropped>(g).ground));
+    REQUIRE(r.all_of<Gesture>(g));
+    CHECK(r.get<Gesture>(g).kind == GestureKind::Down);
+    // Lying there, then up and back on the paths.
+    const glm::vec3 lying = r.get<Pose>(g).position;
+    park.run(10);
+    CHECK(r.get<Pose>(g).position == lying);
+    CHECK(park.run_until([&] { return !r.all_of<Dropped>(g); }, 60));
+    CHECK(r.all_of<Errand, Stride>(g));
 }
 
 TEST_CASE("a guest near a crash thinks it a disaster, and one beside a wreck blowing up is knocked over")
@@ -83,8 +109,12 @@ TEST_CASE("a guest near a crash thinks it a disaster, and one beside a wreck blo
         park.run(1);
     }
     CHECK(wreck.state == WreckState::Burning);
-    CHECK(r.all_of<Gesture>(near));
+    REQUIRE(r.all_of<Dropped>(near));
+    CHECK(r.get<Dropped>(near).thrown);
+    CHECK(r.get<Dropped>(near).fall.value < 0); // Thrown up
     CHECK(thought(r, near, ThoughtKind::BeenInjured));
+    CHECK(park.run_until([&] { return r.all_of<Gesture>(near); }, 20));
+    CHECK(r.get<Gesture>(near).kind == GestureKind::Down);
 }
 
 TEST_CASE("a crashed train is back in the station once its wrecks are gone and the ride opens again")

@@ -1338,6 +1338,67 @@ namespace rct3::simulation
         r.destroy(attraction);
     }
 
+    namespace
+    {
+        /// Takes `person` out of what they were doing on foot: out of the queue they stood in, out of their party,
+        /// and, a mechanic, off the job in hand.
+        void step_out(entt::registry& r, entt::entity person)
+        {
+            const Errand& errand = r.get<Errand>(person);
+            if (errand.kind == ErrandKind::Queueing && r.valid(errand.target))
+                if (auto* ride = r.try_get<CycleRide>(errand.target))
+                    std::erase(ride->queue, person);
+            // Out of their party: the next member leads, and one left on their own goes about alone.
+            if (const auto* member = r.try_get<Member>(person); member != nullptr && r.valid(member->party))
+            {
+                const entt::entity e = member->party;
+                Party& party = r.get<Party>(e);
+                std::erase(party.members, person);
+                if (party.leader == person && !party.members.empty())
+                {
+                    party.leader = party.members.front();
+                    if (Errand& next = r.get<Errand>(party.leader); next.kind == ErrandKind::Following)
+                        next = { ErrandKind::Wandering, entt::null, 0 };
+                }
+                if (party.members.size() < 2)
+                {
+                    for (const entt::entity m : party.members)
+                    {
+                        r.remove<Member>(m);
+                        if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting || alone.kind == ErrandKind::Buying)
+                            alone = { ErrandKind::Wandering, entt::null, 0 };
+                    }
+                    r.destroy(e);
+                }
+            }
+            r.remove<Member>(person);
+            // A mechanic drops the job in hand, and another is sent.
+            if (auto* staff = r.try_get<Staff>(person))
+            {
+                if (auto* upkeep = r.valid(staff->ride) ? r.try_get<Upkeep>(staff->ride) : nullptr; upkeep != nullptr && upkeep->mechanic == person)
+                    upkeep->mechanic = entt::null;
+                staff->ride = entt::null;
+                staff->busy = { };
+                staff->resting = false;
+            }
+        }
+
+        /// Throws `person`, on foot or just let out of a crashed ride, from `at` at `velocity`: they fly, land
+        /// knocked over, lie there a while, then walk to `node` and go on from there.
+        void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node)
+        {
+            if (!r.valid(person) || r.any_of<Left, Held, Dropped>(person) || !r.all_of<Errand, Stride, Pose>(person) || node == kNoNode)
+                return;
+            step_out(r, person);
+            r.remove<Errand, Stride, Linger, Gesture, RideWalk>(person);
+            auto& pose = r.get<Pose>(person);
+            pose.position = pose.was = at;
+            const auto* surroundings = r.ctx().find<WreckSurroundings>();
+            const float ground = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
+            r.emplace<Dropped>(person, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .thrown = true, .node = node });
+        }
+    } // namespace
+
     bool pick_up(SimWorld& world, entt::entity person)
     {
         entt::registry& r = world.registry;
@@ -1346,42 +1407,7 @@ namespace rct3::simulation
         Errand& errand = r.get<Errand>(person);
         if (errand.kind == ErrandKind::Riding)
             return false;
-        if (errand.kind == ErrandKind::Queueing && r.valid(errand.target))
-            if (auto* ride = r.try_get<CycleRide>(errand.target))
-                std::erase(ride->queue, person);
-        // Out of their party: the next member leads, and one left on their own goes about alone.
-        if (const auto* member = r.try_get<Member>(person); member != nullptr && r.valid(member->party))
-        {
-            const entt::entity e = member->party;
-            Party& party = r.get<Party>(e);
-            std::erase(party.members, person);
-            if (party.leader == person && !party.members.empty())
-            {
-                party.leader = party.members.front();
-                if (Errand& next = r.get<Errand>(party.leader); next.kind == ErrandKind::Following)
-                    next = { ErrandKind::Wandering, entt::null, 0 };
-            }
-            if (party.members.size() < 2)
-            {
-                for (const entt::entity m : party.members)
-                {
-                    r.remove<Member>(m);
-                    if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting || alone.kind == ErrandKind::Buying)
-                        alone = { ErrandKind::Wandering, entt::null, 0 };
-                }
-                r.destroy(e);
-            }
-        }
-        r.remove<Member>(person);
-        // A mechanic drops the job in hand, and another is sent.
-        if (auto* staff = r.try_get<Staff>(person))
-        {
-            if (auto* upkeep = r.valid(staff->ride) ? r.try_get<Upkeep>(staff->ride) : nullptr; upkeep != nullptr && upkeep->mechanic == person)
-                upkeep->mechanic = entt::null;
-            staff->ride = entt::null;
-            staff->busy = { };
-            staff->resting = false;
-        }
+        step_out(r, person);
         auto& dice = r.get<Dice>(person).state;
         const auto& holding = kTuning.holding;
         const Held held { .height = { static_cast<float>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value) };
@@ -2183,17 +2209,32 @@ namespace rct3::simulation
         }
 
         phase.emplace("Let go");
-        // Those the player let go of fall to the ground, then walk straight to the path they go on from.
+        // Those the player let go of fall to the ground, then walk straight to the path they go on from. Those
+        // a crash threw fly on as they fall, unslowed, and lie where they land till they get up.
+        const auto* surroundings = r.ctx().find<WreckSurroundings>();
         for (const entt::entity e : sorted(r.view<Dropped>()))
         {
             auto& drop = r.get<Dropped>(e);
             auto& pose = r.get<Pose>(e);
-            if (pose.position.y > drop.ground)
+            if (drop.thrown || pose.position.y > drop.ground)
             {
-                drop.fall.value = std::min(drop.fall.value + kTuning.holding.gravity * dt, kTuning.holding.fastest_fall.value);
+                drop.fall.value += kTuning.holding.gravity * dt;
+                if (!drop.thrown)
+                    drop.fall.value = std::min(drop.fall.value, kTuning.holding.fastest_fall.value);
+                pose.position += glm::vec3 { drop.drift.x, 0, drop.drift.y } * dt;
+                if (drop.thrown && surroundings != nullptr && surroundings->ground)
+                    drop.ground = surroundings->ground({ pose.position.x, pose.position.z });
                 pose.position.y = std::max(pose.position.y - drop.fall.value * dt, drop.ground);
+                if (pose.position.y <= drop.ground && drop.fall.value >= 0 && drop.thrown)
+                {
+                    drop.thrown = false;
+                    drop.drift = { };
+                    r.emplace_or_replace<Gesture>(e, GestureKind::Down, kTuning.crashes.knocked);
+                }
                 continue;
             }
+            if (r.all_of<Gesture>(e))
+                continue;
             const glm::vec3 to = paths.centre(drop.node) - pose.position;
             const float left = glm::length(glm::vec2(to.x, to.z));
             if (left > kLaneReach)
@@ -2421,12 +2462,24 @@ namespace rct3::simulation
                 {
                     for (Wreck& wreck : cars)
                         if (fly(wreck, dt, around) == WreckEvent::BlewUp && !wreck.ghost)
+                        {
+                            // Thrown outwards and up, they land knocked over and walk back to the path they were on.
+                            std::vector<entt::entity> blown;
                             for (const auto [g, pose, errand, visitor] : r.view<const Pose, const Errand, const Visitor>().each())
                                 if (errand.kind != ErrandKind::Riding && errand.kind != ErrandKind::Queueing && glm::distance(pose.position, wreck.at) < crashes.blast.value)
-                                {
-                                    r.emplace_or_replace<Gesture>(g, GestureKind::Down, crashes.knocked);
-                                    think(r, g, ThoughtKind::BeenInjured, e, now);
-                                }
+                                    blown.push_back(g);
+                            auto& dice = r.get<Dice>(e).state;
+                            for (const entt::entity g : blown)
+                            {
+                                const glm::vec3 at = r.get<Pose>(g).position;
+                                glm::vec2 away(at.x - wreck.at.x, at.z - wreck.at.z);
+                                away = glm::length(away) > 0.01f ? glm::normalize(away) : glm::vec2(1, 0);
+                                const float push = static_cast<float>(random::between(dice, 0.5, 1.0));
+                                const glm::vec3 velocity(away.x * crashes.blown.value * push, crashes.lofted.value * push, away.y * crashes.blown.value * push);
+                                throw_person(r, g, at, velocity, r.get<Stride>(g).to);
+                                think(r, g, ThoughtKind::BeenInjured, e, now);
+                            }
+                        }
                     if (std::ranges::all_of(cars, [](const Wreck& w) { return w.state == WreckState::Gone; }))
                         cars.clear();
                 }
@@ -2490,20 +2543,20 @@ namespace rct3::simulation
                         wrecks->dangers += (attraction.open ? 1 : 0) + static_cast<std::uint32_t>(std::min(cars, (riders.size() + seats - 1) / seats));
                         ++wrecks->crashes;
                         wrecks->since.value = 0;
-                        const auto* surroundings = r.ctx().find<WreckSurroundings>();
-                        // shortcut: riders land beside their car where it left the track and, once up, are back on
-                        // the paths at the ride's exit; upgrade when people fly and walk off the paths.
+                        // Riders fly out of their car as fast as it went, though never thrown downwards, land
+                        // knocked over and, once up, walk back to the ride's exit.
+                        // shortcut: they fly through what stands in the park and walk straight back over whatever
+                        // lies between; upgrade when people walk off the paths.
                         for (std::size_t seat = 0; seat < riders.size(); ++seat)
                         {
                             const entt::entity guest = riders[seat];
                             if (!r.valid(guest))
                                 continue;
                             let_out(r, paths, guest, e, std::nullopt);
-                            glm::vec3 at = thrown[std::min(seat / seats, cars - 1)].at + glm::vec3(spread(), 0, spread()) * crashes.thrown.value;
-                            at.y = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
-                            auto& pose = r.get<Pose>(guest);
-                            pose.position = pose.was = at;
-                            r.emplace_or_replace<Gesture>(guest, GestureKind::Down, crashes.knocked);
+                            const Wreck& car = thrown[std::min(seat / seats, cars - 1)];
+                            glm::vec3 velocity = car.velocity + glm::vec3(spread(), spread(), spread()) * crashes.scatter.value;
+                            velocity.y = std::max(velocity.y, 0.0f);
+                            throw_person(r, guest, car.at, velocity, r.get<Stride>(guest).to);
                             think(r, guest, ThoughtKind::BeenInjured, e, now);
                         }
                         riders.clear();

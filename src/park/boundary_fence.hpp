@@ -27,6 +27,10 @@ namespace rct3::park
     /// Whether the park owns `cell` outright.
     [[nodiscard]] bool owned_outright(const save::TerrainCell& cell) noexcept;
 
+    /// How a fence panel on a tile's edge leans with the ground under that edge as it is now: by the rise
+    /// between the edge's two corners, so it follows the ground when the ground is reshaped.
+    [[nodiscard]] glm::vec2 panel_lean(const save::TerrainGrid& grid, const save::PlacedObject& panel);
+
     /// The fence `symbol` from `overlay` round the land the park owns in `grid`, open where `paths` cross its
     /// edge. None when `symbol` is empty. New objects take ids after `last_id`.
     [[nodiscard]] BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::uint64_t last_id);

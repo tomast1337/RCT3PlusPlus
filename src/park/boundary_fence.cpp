@@ -14,6 +14,14 @@ namespace rct3::park
         return cell.has(save::TileFlag::Owned) && !cell.has(save::TileFlag::RightsOnly);
     }
 
+    glm::vec2 panel_lean(const save::TerrainGrid& grid, const save::PlacedObject& panel)
+    {
+        for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
+            if (edge_turns(side) == ((panel.rotation % 4) + 4) % 4)
+                return edge_lean(grid, { panel.col, panel.row }, side);
+        return { };
+    }
+
     BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::uint64_t last_id)
     {
         BoundaryFence out;
@@ -45,7 +53,7 @@ namespace rct3::park
                     o.col = col;
                     o.row = row;
                     o.rotation = edge_turns(side);
-                    if (const glm::vec2 lean = edge_lean(grid, { col, row }, side); lean != glm::vec2(0.0f))
+                    if (const glm::vec2 lean = panel_lean(grid, o); lean != glm::vec2(0.0f))
                         out.leans.emplace(o.id, lean);
                 }
             }

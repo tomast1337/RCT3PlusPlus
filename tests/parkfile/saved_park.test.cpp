@@ -144,11 +144,11 @@ TEST_CASE("a unit is laid out as its bare number, so parks saved before it was w
 
 TEST_CASE("a save keeps the park's objects and those the player built, not those loading makes")
 {
-    std::vector<save::PlacedObject> objects(9);
+    std::vector<save::PlacedObject> objects(10);
     for (std::size_t i = 0; i < objects.size(); ++i)
         objects[i].id = 10 + i;
     // 10 and 11 are the park's; 12 a support made on loading; 13 a path's deck; 14 a track piece; 15 a flat
-    // ride and 16 its entrance; 17 a tree the player planted; 18 one grown beyond the edge.
+    // ride and 16 its entrance; 17 a tree the player planted; 18 a stall; 19 one grown beyond the edge.
     std::vector<save::PathTile> paths(1);
     paths[0].elevation.emplace().scenery_ref = 13;
     save::RideModel rides;
@@ -156,8 +156,9 @@ TEST_CASE("a save keeps the park's objects and those the player built, not those
     save::Ride& flat = rides.rides.emplace_back();
     flat.base.spot = save::PlacementSpot { .object = 15 };
     flat.stations.emplace_back().entrance_spot = save::PlacementSpot { .object = 16 };
+    rides.stalls.emplace_back().base.spot = save::PlacementSpot { .object = 18 };
     const auto kept = parkfile::kept_objects(objects, 2, { 17 }, paths, rides);
-    REQUIRE(kept.size() == 7);
+    REQUIRE(kept.size() == 8);
     CHECK(kept[0].id == 10);
     CHECK(kept[1].id == 11);
     CHECK(kept[2].id == 13);
@@ -165,6 +166,7 @@ TEST_CASE("a save keeps the park's objects and those the player built, not those
     CHECK(kept[4].id == 15);
     CHECK(kept[5].id == 16);
     CHECK(kept[6].id == 17);
+    CHECK(kept[7].id == 18);
 }
 
 TEST_CASE("a save keeps the guests and staff, and loading puts them back")

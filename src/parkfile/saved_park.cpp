@@ -53,6 +53,11 @@ namespace rct3::parkfile
                     built.insert(spot->object);
             }
         }
+        for (const save::Stall& stall : rides.stalls)
+        {
+            if (stall.base.spot)
+                built.insert(stall.base.spot->object);
+        }
         std::vector<save::PlacedObject> kept;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {

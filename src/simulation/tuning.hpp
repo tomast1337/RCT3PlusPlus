@@ -51,6 +51,8 @@ namespace rct3::simulation::tuning
         Seconds shortest_huddle { 8 };
         Seconds longest_huddle { 20 };
         Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
+        Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
+        std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others
         Factor keep_right { 1.0 };        ///< How much of stepping apart goes to the right, so two meeting head on pass

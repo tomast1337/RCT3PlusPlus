@@ -269,21 +269,39 @@ namespace rct3::simulation
                 pose.heading.value = std::atan2(b.x - a.x, b.z - a.z);
         }
 
-        /// Where a party waits for those on a ride: a footpath tile beside its exit, off the riders' way; the exit
-        /// itself when it has none.
-        NodeId waiting_spot(const PathNetwork& paths, NodeId exit)
+        /// Where a party waits for those busy at an attraction: the nearest footpath tile to its way out `from`,
+        /// never `from` itself while there is another, that is not a queue, has no queue beside it and is not
+        /// `taken` by another party; failing that the nearest that is not a queue; failing that `from`.
+        NodeId gather_spot(const PathNetwork& paths, NodeId from, const std::vector<bool>& taken)
         {
-            for (const NodeId n : paths.nodes()[exit].next)
-                if (n != kNoNode && !paths.nodes()[n].queue)
-                    return n;
-            return exit;
+            const auto& nodes = paths.nodes();
+            std::vector<NodeId> seen { from };
+            NodeId fallback = kNoNode;
+            for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
+            {
+                const NodeId n = seen[k];
+                if (n != from)
+                {
+                    const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
+                    if (!by_queue && !taken[n])
+                        return n;
+                    fallback = fallback == kNoNode ? n : fallback;
+                }
+                for (const NodeId m : nodes[n].next)
+                    if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m))
+                        seen.push_back(m);
+            }
+            return fallback == kNoNode ? from : fallback;
         }
 
-        /// The lane of the `place`th of `of` standing together in a ring on a tile.
+        /// The lane of the `place`th of `of` standing together in a ring on a tile: the more of them, the wider
+        /// the ring, so neighbours keep apart.
         glm::vec2 ring_lane(std::size_t place, std::size_t of)
         {
-            const float angle = 2 * glm::pi<float>() * static_cast<float>(place) / static_cast<float>(std::max<std::size_t>(of, 1));
-            return kTuning.walking.huddle_radius.value * glm::vec2(std::sin(angle), std::cos(angle));
+            const float n = static_cast<float>(std::max<std::size_t>(of, 1));
+            const float radius = std::clamp(kTuning.walking.ring_gap.value * n / (2 * glm::pi<float>()), kTuning.walking.huddle_radius.value, kLaneReach);
+            const float angle = 2 * glm::pi<float>() * static_cast<float>(place) / n;
+            return radius * glm::vec2(std::sin(angle), std::cos(angle));
         }
 
         /// The guest's place among their party's members, and how many there are.
@@ -1737,14 +1755,11 @@ namespace rct3::simulation
                     {
                         stride.to = stride.route.front();
                         stride.route.erase(stride.route.begin());
-                        // Waiting for the others: in a ring with them on the last tile, round a spot of the
-                        // party's own there, so two parties waiting by one exit do not stand in one another.
+                        // Waiting for the others: in a ring with them round the middle of the party's own tile.
                         if (stride.route.empty() && errand.kind == ErrandKind::Waiting)
                         {
                             const auto [place, of] = place_in_party(r, movers[i]);
-                            const float off = kLaneReach - kTuning.walking.huddle_radius.value;
-                            const glm::vec2 middle = member == nullptr ? glm::vec2 { 0.0f } : off * glm::vec2(2 * fixed_share(member->party, 1) - 1, 2 * fixed_share(member->party, 2) - 1);
-                            stride.lane_to = middle + ring_lane(place, of);
+                            stride.lane_to = ring_lane(place, of);
                             ringed = true;
                         }
                     }
@@ -1754,6 +1769,9 @@ namespace rct3::simulation
                             arrived[i] = errand.target;
                         stride.to = at;
                         stride.progress.value = 1;
+                        // Standing in the ring, facing its middle.
+                        if (errand.kind == ErrandKind::Waiting && glm::length(stride.lane_from) > 0.01f)
+                            pose.heading.value = std::atan2(-stride.lane_from.x, -stride.lane_from.y);
                     }
                     else
                     {
@@ -1975,7 +1993,8 @@ namespace rct3::simulation
                     if (length <= 0)
                         continue;
                     const auto* member = r.try_get<Member>(me.who);
-                    if ((member != nullptr && r.get<Party>(member->party).huddle > 0) || r.any_of<Linger, Gesture>(me.who))
+                    const bool ringed = r.get<Errand>(me.who).kind == ErrandKind::Waiting && r.get<Stride>(me.who).route.empty();
+                    if ((member != nullptr && r.get<Party>(member->party).huddle > 0) || ringed || r.any_of<Linger, Gesture>(me.who))
                         continue; // Standing still, in the others' way
                     steps[i] = away / glm::length(away) * std::min(length, most);
                 }
@@ -2686,9 +2705,13 @@ namespace rct3::simulation
         phase.emplace("Parties");
         // 5. Parties: while some are in a ride's queue or on it, the others walk to its exit and wait; once all
         // are off, they go on together behind the leader.
+        std::vector<bool> taken(paths.nodes().size(), false); // Tiles parties wait on
+        for (const auto [e, party] : r.view<const Party>().each())
+            if (party.gather < taken.size())
+                taken[party.gather] = true;
         for (const entt::entity e : sorted(r.view<Party>()))
         {
-            const Party& party = r.get<Party>(e);
+            Party& party = r.get<Party>(e);
             entt::entity ride = entt::null;
             std::uint8_t off_at = 0; // The station those on it get off at
             bool waiting = false;
@@ -2705,7 +2728,12 @@ namespace rct3::simulation
             if (ride != entt::null && r.valid(ride) && r.all_of<CycleRide>(ride))
             {
                 const NodeId exit = exit_of(r, ride, off_at);
-                const NodeId spot = waiting_spot(paths, exit);
+                if (party.gather >= taken.size())
+                {
+                    party.gather = gather_spot(paths, exit, taken);
+                    taken[party.gather] = true;
+                }
+                const NodeId spot = party.gather;
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
@@ -2725,6 +2753,7 @@ namespace rct3::simulation
             }
             else if (waiting)
             {
+                party.gather = kNoNode;
                 const Errand was = r.get<Errand>(party.leader);
                 for (const entt::entity m : party.members)
                 {

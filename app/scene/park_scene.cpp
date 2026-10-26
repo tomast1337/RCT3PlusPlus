@@ -57,6 +57,7 @@
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/widgets/edit_box.hpp"
+#include "ui/widgets/label.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
@@ -1893,7 +1894,9 @@ namespace rct3::scene
 
     bool typing(const ParkScene& scene)
     {
-        return scene.desktop && dynamic_cast<const ui::EditBox*>(as_pointer(scene.desktop->keyboard_focus())) != nullptr;
+        // A label has the focus only while its text is selected for copying, and Control+C is a game key too.
+        const ui::Widget* focus = scene.desktop ? as_pointer(scene.desktop->keyboard_focus()) : nullptr;
+        return dynamic_cast<const ui::EditBox*>(focus) != nullptr || dynamic_cast<const ui::Label*>(focus) != nullptr;
     }
 
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size)

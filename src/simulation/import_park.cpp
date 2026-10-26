@@ -766,9 +766,10 @@ namespace rct3::simulation
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
                     world.registry.ctx().emplace<RoomElsewhere>().guests += *guests[i];
             };
-            // Tested or open, a tracked ride's trains run a whole circuit or a shuttle's track without doors or paths,
-            // as a test run needs neither; guests come once its doors are on the paths (relink_attractions).
-            const bool runs_alone = coaster != nullptr && (coaster->closed || coaster->shuttle != Shuttle::None) && ride.base.state != save::AttractionState::Closed;
+            // Tested or open, a tracked ride's trains run its track without doors or paths, round a whole circuit, a
+            // shuttle's track, or an unfinished one to its end, as a test run needs neither; guests come once its doors
+            // are on the paths (relink_attractions).
+            const bool runs_alone = coaster != nullptr && ride.base.state != save::AttractionState::Closed;
             auto links = timing && !ride.stations.empty() && ride.stations.front().entrance_spot ? ride_links(world.paths, ride.stations.front()) : std::nullopt;
             if (!timing || (!links && !runs_alone))
             {

@@ -1248,6 +1248,12 @@ namespace rct3::scene
     {
         if (scene.building.ride)
             ghost_trains(scene, *scene.building.ride, false);
+        // A ride left testing or open that the park does not run yet, as an unfinished one tested here, runs its own
+        // trains now; those of one it runs stop being ghosts.
+        const auto ride = scene.building.ride;
+        const bool run = ride && *ride < scene.ride_entities.size() && scene.ride_entities[*ride] != entt::null;
+        if (ride && !run && scene.rides.rides.at(*ride).base.state != save::AttractionState::Closed && !std::ranges::contains(scene.readying, *ride))
+            scene.readying.push_back(*ride);
         scene.building.ride.reset();
         scene.building.selected.reset();
         scene.building.ghost.reset();

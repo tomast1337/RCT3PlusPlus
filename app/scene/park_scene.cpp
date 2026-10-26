@@ -1947,15 +1947,17 @@ namespace rct3::scene
         }
 
         // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
-        // circuit, or a shuttle's track. A test of an unfinished track runs a ghost (track_building.hpp).
+        // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
+        // unfinished track, a test of it runs a ghost instead (track_building.hpp); closing the panel readies it again.
         for (const std::size_t ride : std::exchange(scene.readying, { }))
         {
             const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
             const save::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
-            if (!assets.install || r.base.demolished || r.mode == save::OperatingMode::MiniGolf || !coaster || !(coaster->closed || coaster->shuttle != simulation::Shuttle::None))
+            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || !coaster)
                 continue;
-            if (set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train) && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            const bool ghosted = !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
+            if (set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
@@ -2145,9 +2147,10 @@ namespace rct3::scene
                 else if (!over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });
             }
-            // The customers page follows the running park; it has no controls to lose a half-made change in.
+            // The customers page follows the running park; it has no controls to lose a half-made change in. Any page
+            // shows again once a crash closed its ride.
             scene.since_info_page += elapsed;
-            if (scene.shown && scene.simulate && scene.info_tab == ui::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)
+            if (scene.shown && (std::exchange(scene.shown_closed, false) || (scene.simulate && scene.info_tab == ui::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)))
             {
                 scene.since_info_page = 0;
                 show_info_page(scene, *info, assets, options);
@@ -2815,6 +2818,7 @@ namespace rct3::scene
                     const bool hurt = wrecks->dangers - dangers > (ride.base.state == save::AttractionState::Open ? 1u : 0u);
                     simulation::post(scene.park.messages, { .text_key = hurt ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id });
                     ride.base.state = save::AttractionState::Closed;
+                    scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
                     events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
                     dangers = wrecks->dangers;

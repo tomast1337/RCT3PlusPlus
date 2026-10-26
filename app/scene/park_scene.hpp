@@ -549,6 +549,7 @@ namespace rct3::scene
         /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
         std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
         float since_info_page = 0;                  ///< Seconds since a live page was shown again
+        bool shown_closed = false;                  ///< The park closed the ride shown, as a crash does, so its page shows again
         std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash

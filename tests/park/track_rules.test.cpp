@@ -73,6 +73,28 @@ TEST_CASE("a ride opens when its track and doors keep to its rules, and says why
     CHECK_FALSE(open_refusal(ride(6), rules, kTest, true));
 }
 
+TEST_CASE("an unfinished track with a station tests and opens, as one stretch; without a station, or in two, it does not")
+{
+    using K = CourseKind;
+    TrackCourse course;
+    course.points.resize(3);
+    course.distance = { 0, 6, 20 };
+    course.kinds = { K::Station, K::Plain, K::Plain };
+    course.closed = false;
+    const save::Ride r = ride(4, 1, false);
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, false, course));
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+    // Tested while it is built; opened only once it is not.
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, true, course));
+    CHECK(open_refusal(r, TrackRules { }, kOpen, true, course) == "CannotOpenTrackedRideWhileEditing");
+    CHECK(open_refusal(r, rules_with([](TrackRules& t) { t.circuit_only = true; }), kOpen, false, course) == "CannotOpenOrTestNotCircuit");
+    save::Ride split = r;
+    split.track->segments.resize(2);
+    CHECK(open_refusal(split, TrackRules { }, kTest, false, course) == "TrackedRideIsDisjoint");
+    course.kinds[0] = K::Plain;
+    CHECK(open_refusal(r, TrackRules { }, kTest, false, course) == "RideHasNoStation");
+}
+
 TEST_CASE("entrances and exits are counted as the ride's door rules say")
 {
     save::Ride two = ride(6, 2);

@@ -174,6 +174,9 @@ namespace rct3::park
         std::vector<ModelLight> lights;
         /// The particle effects it shows, found as its lamps are.
         std::vector<ModelEffect> effects;
+        /// Of a stall or a ride's entrance, where its seller stands, model space, facing +Z: its point or bone
+        /// named "vendor".
+        std::optional<glm::mat4> vendor_place;
     };
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).

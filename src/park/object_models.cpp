@@ -209,8 +209,9 @@ namespace rct3::park
             return lookup(entries(f.anims, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::BoneAnim>(ovl::read_bone_anims(o, p), &ovl::BoneAnimItem::anim); }), name);
         }
 
-        constexpr std::string_view kSeat = "peep";   ///< A bone so named and numbered is where a rider sits
-        constexpr std::string_view kView = "camera"; ///< And so a fixed camera on a ride
+        constexpr std::string_view kSeat = "peep";     ///< A bone so named and numbered is where a rider sits
+        constexpr std::string_view kView = "camera";   ///< And so a fixed camera on a ride
+        constexpr std::string_view kVendor = "vendor"; ///< A point or bone so named is where a seller stands
 
         /// Whether `bone` is named `kind` and a number.
         bool is_numbered(const ovl::Bone& b, std::string_view kind)
@@ -620,6 +621,8 @@ namespace rct3::park
                 const ovl::StaticShape* shape = add_static(level, lod.static_shape, visual_path);
                 if (shape == nullptr)
                     continue;
+                if (const auto vendor = std::ranges::find_if(shape->effects, [](const ovl::ShapeEffect& e) { return strings::equals_ignoring_case(e.name, kVendor); }); !model.vendor_place && vendor != shape->effects.end())
+                    model.vendor_place = column_matrix(vendor->transform);
                 if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;
@@ -644,6 +647,8 @@ namespace rct3::park
                     model.seat_places = numbered_places(*shape, kSeat);
                 if (model.view_places.empty())
                     model.view_places = numbered_places(*shape, kView);
+                if (const auto vendor = std::ranges::find_if(shape->bones, [](const ovl::Bone& b) { return strings::equals_ignoring_case(b.name, kVendor); }); !model.vendor_place && vendor != shape->bones.end())
+                    model.vendor_place = column_matrix(vendor->world);
                 // A car on an arm: each bone is carried by the nearest of the arm's joints it hangs from.
                 constexpr std::array<std::string_view, 4> kArmJoints { "ik_robotjoint01", "ik_robotjoint02", "ik_robotjoint03", "ik_robotjoint04" };
                 std::array<std::int32_t, 4> joint_bones;

@@ -335,8 +335,9 @@ declare namespace stalls {
 declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
-     *  `up`) and what they are at. */
-    function list(): { name: string; staff: boolean; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "held" | "dropped" | "still" }[];
+     *  `up`) and what they are at. A seller has the id of the object of the stall or ride entrance they serve
+     *  at as `post`. */
+    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "held" | "dropped" | "still" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

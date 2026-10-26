@@ -123,6 +123,9 @@ namespace rct3::simulation
     /// place in `people.staff`; one off the paths or on a queue starts from the nearest walkway, null only when the
     /// park has none. Call after import_paths.
     std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people);
+    /// A seller hired with a stall or a ride's entrance placed since, standing at `at` in their booth, paid as
+    /// other new staff are.
+    entt::entity add_vendor(SimWorld& world, glm::vec3 at);
 
     /// The facility of a special attraction's kind, as its item in the game's files stores it; nothing for
     /// kinds guests do not use yet.

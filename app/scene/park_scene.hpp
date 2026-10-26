@@ -713,6 +713,9 @@ namespace rct3::scene
     /// place in the scene's rides or stalls, marked, and saving leaves it out.
     void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, park::AttractionRef ref);
 
+    /// Fires the member of staff shown as `shown` of shown_people: they leave the park at once, as in the game.
+    void fire(ParkScene& scene, std::size_t shown);
+
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
 

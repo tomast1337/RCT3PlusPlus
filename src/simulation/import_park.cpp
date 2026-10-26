@@ -1042,6 +1042,17 @@ namespace rct3::simulation
         return out;
     }
 
+    entt::entity add_vendor(SimWorld& world, glm::vec3 at)
+    {
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        Staff staff { .role = StaffRole::Vendor };
+        set_wage_level(staff, staff.wage_level);
+        r.emplace<Staff>(e, staff);
+        r.emplace<Pose>(e, Pose { .position = at, .was = at });
+        return e;
+    }
+
     Departure departure_of(const save::OperatingOptions& options)
     {
         const bool listed = options.wait_for_load >= 0 && options.wait_for_load <= static_cast<std::int32_t>(LoadWait::Any);

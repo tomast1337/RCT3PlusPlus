@@ -118,6 +118,11 @@ namespace rct3::park
             {
                 const auto v = mesh.vertex(i);
                 part.vertices.push_back({ { v.position[0], v.position[1], v.position[2] }, { v.normal[0], v.normal[1], v.normal[2] }, { v.texcoord[0], v.texcoord[1] } });
+                if constexpr (requires { v.weights; })
+                {
+                    part.vertices.back().bones = v.bones;
+                    part.vertices.back().weights = v.weights;
+                }
             }
             part.indices.reserve(mesh.index_count);
             for (std::size_t i = 0; i + 2 < mesh.index_count; i += 3)
@@ -295,14 +300,14 @@ namespace rct3::park
         }
 
         /// `mesh` as one part per bone, each part taking the triangles whose first corner that bone carries most.
-        /// shortcut: a corner shared by bones follows the one with most weight, upgrade if seams show where parts
-        /// bend.
-        std::vector<ModelPart> parts_by_bone(const ovl::BoneMesh& mesh, ModelPart whole)
+        /// shortcut: a corner shared by bones follows the one with most weight, upgrade if an arm's joints show
+        /// seams.
+        std::vector<ModelPart> parts_by_bone(ModelPart whole)
         {
             std::vector<std::int32_t> carrier(whole.vertices.size(), 0);
             for (std::size_t i = 0; i < carrier.size(); ++i)
             {
-                const ovl::BoneVertex v = mesh.vertex(i);
+                const ModelVertex& v = whole.vertices[i];
                 carrier[i] = v.bones[static_cast<std::size_t>(std::ranges::max_element(v.weights) - v.weights.begin())];
             }
             std::map<std::int32_t, std::pair<ModelPart, std::vector<std::uint32_t>>> by_bone;
@@ -701,11 +706,10 @@ namespace rct3::park
                     ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
                     set_texture(part, mesh.texture, mesh.style, file->first);
                     part.board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
-                    if (rigged || !joint_of.empty())
-                        for (ModelPart& one : parts_by_bone(mesh, std::move(part)))
+                    if (!joint_of.empty())
+                        for (ModelPart& one : parts_by_bone(std::move(part)))
                         {
-                            if (!joint_of.empty())
-                                one.bone = one.bone >= 0 && one.bone < std::ssize(joint_of) ? joint_of[static_cast<std::size_t>(one.bone)] : -1;
+                            one.bone = one.bone >= 0 && one.bone < std::ssize(joint_of) ? joint_of[static_cast<std::size_t>(one.bone)] : -1;
                             level.parts.push_back(std::move(one));
                         }
                     else

@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/moving_meshes.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iterator>
 #include <map>
+#include <numeric>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -54,24 +57,28 @@ namespace rct3::park
 
     std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid)
     {
-        std::map<std::int32_t, ModelLevel> by_bone;
-        if (model.rig_level < model.levels.size())
-            for (const ModelPart& part : model.levels[model.rig_level].parts)
-                if (part.bone >= 0)
-                    by_bone[part.bone].parts.push_back(part);
         std::vector<ObjectMesh> alone;
-        std::vector<std::int32_t> bones;
-        ObjectModels one;
-        for (auto& [bone, level] : by_bone)
-        {
-            ObjectModel piece;
-            piece.positioning = model.positioning;
-            piece.levels = { std::move(level) };
-            one[model_key(object)] = std::move(piece);
-            alone.push_back(object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
-            bones.push_back(bone);
-        }
-        return { gathered_meshes(alone), std::move(bones) };
+        std::vector<VertexSkin> skins;
+        if (model.rig && model.rig_level < model.levels.size())
+            for (const ModelPart& part : model.levels[model.rig_level].parts)
+            {
+                ObjectModels one;
+                ObjectModel& piece = one[model_key(object)];
+                piece.positioning = model.positioning;
+                piece.levels = { ModelLevel { .distance = 0, .parts = { part }, .billboard = std::nullopt } };
+                alone.push_back(object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
+                // One part makes one run, so the piece keeps the part's vertex order, unless it was left out.
+                const std::size_t before = skins.size();
+                for (const ModelVertex& v : part.vertices)
+                    skins.push_back({ v.bones, v.weights });
+                skins.resize(before + alone.back().vertices.size());
+            }
+        MovingMeshes out = gathered_meshes(alone);
+        out.skins = std::move(skins);
+        std::vector<std::int32_t> bones(model.rig ? model.rig->parents.size() : 0);
+        std::iota(bones.begin(), bones.end(), 0);
+        out.places.assign(bones.size(), glm::mat4(1.0f));
+        return { std::move(out), std::move(bones) };
     }
 
     MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone)
@@ -114,6 +121,57 @@ namespace rct3::park
 
     void move_meshes(MovingMeshes& meshes, std::span<const glm::mat4> places)
     {
+        if (!meshes.skins.empty())
+        {
+            if (std::ranges::equal(meshes.places, places))
+                return;
+            meshes.places.assign(places.begin(), places.end());
+            if (places.empty())
+                return;
+            // Plain arithmetic, as below. Most vertices follow one bone whole and need no blend.
+            for (std::size_t v = 0; v < meshes.own.size() && v < meshes.skins.size(); ++v)
+            {
+                const VertexSkin& skin = meshes.skins[v];
+                glm::vec4 blend[4]; // Columns of the blended place, when there is a blend
+                const glm::vec4* c = &places[skin.bones[0] < places.size() ? skin.bones[0] : 0][0];
+                if (skin.weights[0] != 255)
+                {
+                    float m[16] { };
+                    float total = 0;
+                    for (std::size_t k = 0; k < 4; ++k)
+                    {
+                        if (skin.weights[k] == 0 || skin.bones[k] >= places.size())
+                            continue;
+                        const float w = static_cast<float>(skin.weights[k]) / 255.0f;
+                        const float* from = &places[skin.bones[k]][0][0];
+                        for (std::size_t e = 0; e < 16; ++e)
+                            m[e] += w * from[e];
+                        total += w;
+                    }
+                    if (total > 0)
+                    {
+                        for (std::size_t col = 0; col < 4; ++col)
+                            blend[col] = { m[col * 4], m[col * 4 + 1], m[col * 4 + 2], m[col * 4 + 3] };
+                        c = blend;
+                    }
+                }
+                const glm::vec3& p = meshes.own[v].position;
+                const glm::vec3& n = meshes.own[v].normal;
+                glm::vec3& to_p = meshes.mesh.vertices[v].position;
+                glm::vec3& to_n = meshes.mesh.vertices[v].normal;
+                to_p.x = c[0].x * p.x + c[1].x * p.y + c[2].x * p.z + c[3].x;
+                to_p.y = c[0].y * p.x + c[1].y * p.y + c[2].y * p.z + c[3].y;
+                to_p.z = c[0].z * p.x + c[1].z * p.y + c[2].z * p.z + c[3].z;
+                to_n.x = c[0].x * n.x + c[1].x * n.y + c[2].x * n.z;
+                to_n.y = c[0].y * n.x + c[1].y * n.y + c[2].y * n.z;
+                to_n.z = c[0].z * n.x + c[1].z * n.y + c[2].z * n.z;
+                // Blended turns shorten a normal.
+                const float length = c == blend ? std::sqrt(to_n.x * to_n.x + to_n.y * to_n.y + to_n.z * to_n.z) : 0.0f;
+                if (length > 0)
+                    to_n /= length;
+            }
+            return;
+        }
         std::uint32_t first = 0;
         for (std::size_t i = 0; i < meshes.ends.size() && i < places.size(); ++i)
         {

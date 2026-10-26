@@ -53,6 +53,10 @@ namespace rct3::park
         glm::vec3 position { 0.0f };
         glm::vec3 normal { 0.0f, 1.0f, 0.0f };
         glm::vec2 uv { 0.0f };
+        /// Of a model moved by bones, at its rig's level: up to four bones of the rig that move the vertex, and
+        /// how much each does, out of 255. Zero weights mean nothing.
+        std::array<std::uint8_t, 4> bones { };
+        std::array<std::uint8_t, 4> weights { };
     };
 
     struct ModelPart
@@ -63,8 +67,7 @@ namespace rct3::park
         bool one_sided = false; ///< Only the side its triangles face is drawn; the file marks the rest as both
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
-        /// Of a model moved by bones, at its rig's level: the bone of the rig that carries the whole part. Of a
-        /// car on an arm, at every level: the arm's joint that carries it, or -1 for the car itself.
+        /// Of a car on an arm, at every level: the arm's joint that carries it, or -1 for the car itself.
         std::int32_t bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
         bool chain = false; ///< A lift piece's chain, which moves along its picture as the lift runs (chain_lifts.hpp)
@@ -145,7 +148,7 @@ namespace rct3::park
         /// Where each rider sits, model space, by seat number, from the first level with seats.
         std::vector<glm::mat4> seat_places;
         /// Of a model its bones move: the bones and their motions, from the first level listing motions,
-        /// whose parts each name the bone that carries them.
+        /// whose vertices each name the bones that move them.
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one

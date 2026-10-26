@@ -7,6 +7,7 @@
 
 #include "park/object_mesh.hpp"
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -15,12 +16,23 @@
 namespace rct3::park
 {
 
+    /// The bones that move one vertex of a model moved by bones, as places in MovingMeshes::places, and how much
+    /// each does, out of 255.
+    struct VertexSkin
+    {
+        std::array<std::uint8_t, 4> bones { };
+        std::array<std::uint8_t, 4> weights { };
+    };
+
     struct MovingMeshes
     {
         ObjectMesh mesh;                 ///< All the objects where they were last put
         std::vector<GroundVertex> own;   ///< The vertices of `mesh` in their objects' own spaces
         std::vector<std::uint32_t> ends; ///< By object: one past its last vertex in `mesh`
-        std::vector<glm::mat4> places;   ///< By object: where it was last put
+        std::vector<glm::mat4> places;   ///< By object, or by bone when skinned: where it was last put
+        /// Of a model moved by bones: by vertex of `own`, the bones that move it. Empty when each object moves
+        /// whole.
+        std::vector<VertexSkin> skins;
     };
 
     /// The objects' shapes, each standing at the origin until moved. The joints of objects on arms (see
@@ -30,8 +42,8 @@ namespace rct3::park
     /// Shapes already built, each in its own space, as one mesh: batches drawn alike are gathered.
     [[nodiscard]] MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone);
 
-    /// The parts of `object` (whose model `model` has a rig) at its rig's level, one piece per bone in the
-    /// model's own space, each to be put where its bone is; with the bone of each piece.
+    /// The parts of `object` (whose model `model` has a rig) at its rig's level, in the model's own space, each
+    /// vertex skinned to the bones that move it; with the rig's bones, one per place to be given.
     [[nodiscard]] std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid);
 
     /// How each of an arm's joints, at rest at `joints` (model space, from the base out), moves what it carries
@@ -40,7 +52,8 @@ namespace rct3::park
     [[nodiscard]] std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees);
 
     /// Puts each object where `places` (model to world, by object) has it, leaving those already there.
-    /// Moves and turns only: a stretched place leaves the normals off.
+    /// Moves and turns only: a stretched place leaves the normals off. Skinned meshes take a place by bone
+    /// instead, and each vertex goes where its bones' places, blended by their weights, put it.
     void move_meshes(MovingMeshes& meshes, std::span<const glm::mat4> places);
 
 } // namespace rct3::park

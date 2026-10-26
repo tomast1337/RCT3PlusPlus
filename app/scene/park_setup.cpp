@@ -824,6 +824,14 @@ namespace rct3::scene
             else if (!*added)
                 log.warning("{}: no ground picture", name);
         }
+        // The arrows the path tool and stall placing lay on the ground, by their own names.
+        for (const std::string_view arrow : { park::kPathArrowPicture, park::kStallArrowPicture })
+        {
+            const auto tool = install.find(park::kPathToolFile);
+            const auto added = tool ? park::add_named_image(images, *tool, arrow, arrow) : std::expected<bool, std::string>(false);
+            if (!added || !*added)
+                log.warning("{}: no {}", park::kPathToolFile, arrow);
+        }
         fit_texture_detail(scene, images);
         if (scene.relief_maps)
             park::add_relief_maps(images, kGroundRelief);

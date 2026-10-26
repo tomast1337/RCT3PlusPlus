@@ -116,6 +116,11 @@ expect(build.construction()?.selected === null, "building back at the open end")
 expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
 expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
 expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
+expect(build.construction()?.arrows === true, "arrows where the gap's piece starts and ends");
+const gap = build.construction()!.ghostAt!;
+camera.look({ col: gap.col + 0.5, row: gap.row - 0.5, up: gap.height + 8 }, { col: gap.col + 0.5, row: gap.row + 3.5, up: gap.height + 18 });
+await frames(5);
+await screenshot("gap_arrows");
 
 // Tested while its track has a gap, before the park runs it, a ghost of its train runs from the station to the gap
 // and crashes off it, its wrecks flying as a crashed train's do. Closing the ride stops the test.

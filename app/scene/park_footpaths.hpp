@@ -58,6 +58,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -209,6 +210,10 @@ namespace rct3::scene
     [[nodiscard]] bool ground_faded(const ParkScene& scene);
 
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+
+    /// Draws a building arrow (see park/build_arrows.hpp) with ground picture `picture`, or with none when the
+    /// scene lacks it, steadily and in its own colours.
+    void draw_build_arrow(render::Device& device, const ParkScene& scene, const park::TerrainMesh& arrow, std::string_view picture, const glm::mat4& transform);
 
     /// Draws the next piece see-through when it is raised.
     void draw_raised_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

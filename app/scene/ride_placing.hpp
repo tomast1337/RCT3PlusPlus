@@ -142,6 +142,10 @@ namespace rct3::scene
     /// A click on the park while placing: places what the ghost shows. False when not placing.
     bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
 
+    /// The arrow a stall being placed shows on the side it serves from (see park/build_arrows.hpp); empty while
+    /// no stall's ghost shows.
+    [[nodiscard]] park::TerrainMesh stall_arrow(const ParkScene& scene);
+
     void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
 } // namespace rct3::scene

@@ -115,8 +115,6 @@ namespace rct3::scene
         constexpr float kGhostLift = 0.02f;
         /// Of the arrow over the next piece, so it shows over the piece's own picture.
         constexpr float kArrowLift = 0.04f;
-        /// The arrow's picture among the scene's ground pictures.
-        constexpr std::string_view kArrowKey = "PathArrow";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kPickStart = "Rct3pp_Paths_PickStart";
         constexpr std::string_view kNotOwned = "Rct3pp_Paths_NotOwned";
@@ -1137,12 +1135,6 @@ namespace rct3::scene
             const std::size_t skins = ui::add_extra_skins(device, assets, kIconFiles);
             read_styles(f, assets);
             logging::logger("park").info("{} path and queue styles, {} pictures", f.styles.size(), skins);
-            park::GroundImages arrow;
-            const auto tool = assets.install ? assets.install->find(park::kPathToolFile) : std::nullopt;
-            const auto added = tool ? park::add_named_image(arrow, *tool, park::kPathArrowPicture, kArrowKey) : std::expected<bool, std::string>(false);
-            if (!added || !*added)
-                logging::logger("park").warning("{}: no {}", park::kPathToolFile, park::kPathArrowPicture);
-            upload_ground(device, scene, arrow);
             const auto first = std::ranges::find_if(f.styles, [](const park::PathStyle& s) { return !s.queue; });
             if (first != f.styles.end())
                 f.style = static_cast<std::size_t>(first - f.styles.begin());
@@ -1718,8 +1710,9 @@ namespace rct3::scene
 
     namespace
     {
-        /// Draws `ghost` with the ground's pictures, or all of it with picture `only` when given.
-        void draw_ground_ghost(render::Device& device, const ParkScene& scene, const park::TerrainMesh& ghost, std::optional<std::string_view> only, const glm::mat4& transform, const render::SceneLight& light)
+        /// Draws `ghost` with the ground's pictures, or all of it with picture `only` when given (none when the scene
+        /// has no such picture), as a ghost unless `steady`.
+        void draw_ground_ghost(render::Device& device, const ParkScene& scene, const park::TerrainMesh& ghost, std::optional<std::string_view> only, const glm::mat4& transform, const render::SceneLight& light, bool steady = false)
         {
             if (ghost.indices.empty())
                 return;
@@ -1741,11 +1734,18 @@ namespace rct3::scene
                 draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
-                draw.light = ghost_light(light, scene.clock);
+                draw.light = steady ? light : ghost_light(light, scene.clock);
                 device.draw(draw);
             }
         }
     } // namespace
+
+    void draw_build_arrow(render::Device& device, const ParkScene& scene, const park::TerrainMesh& arrow, std::string_view picture, const glm::mat4& transform)
+    {
+        // In its own colours whatever the hour: no sun, no shade, no blinking.
+        const render::SceneLight flat { .sky = glm::vec3(1), .ground = glm::vec3(1) };
+        draw_ground_ghost(device, scene, arrow, picture, transform, flat, true);
+    }
 
     bool ground_faded(const ParkScene& scene)
     {
@@ -1755,8 +1755,8 @@ namespace rct3::scene
     void draw_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         draw_ground_ghost(device, scene, scene.footpaths.ghost, std::nullopt, transform, light);
-        if (scene.ground_textures.contains(kArrowKey))
-            draw_ground_ghost(device, scene, scene.footpaths.arrow, kArrowKey, transform, light);
+        if (scene.ground_textures.contains(park::kPathArrowPicture))
+            draw_ground_ghost(device, scene, scene.footpaths.arrow, park::kPathArrowPicture, transform, light);
     }
 
     void draw_raised_footpath_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)

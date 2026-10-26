@@ -421,7 +421,8 @@ namespace rct3::ui
                 for (std::size_t i = 0; i < f.people->staff.size(); ++i)
                 {
                     const save::Staff& s = f.people->staff[i];
-                    if (tab > 0 && s.kind != kStaffTabKinds.at(tab - 1))
+                    // Vendors stay out of the list of everyone, as the game hides them until their job is asked for.
+                    if (tab > 0 ? s.kind != kStaffTabKinds.at(tab - 1) : s.kind == save::StaffKind::Vendor)
                         continue;
                     const PersonFacts facts = staff_facts(f, s);
                     const auto kind = static_cast<std::size_t>(s.kind);

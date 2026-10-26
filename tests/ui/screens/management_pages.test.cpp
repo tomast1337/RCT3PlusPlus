@@ -165,11 +165,11 @@ TEST_CASE("a weekly graph has no month marks from before the calendar began")
     CHECK(page.graph_ticks[0].back == 1);
 }
 
-TEST_CASE("the staff tabs list one job each, the first everyone")
+TEST_CASE("the staff tabs list one job each, the first everyone but the vendors")
 {
     const StringTable s = test_strings();
     save::PeopleModel people;
-    for (const save::StaffKind kind : { save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::Handyman })
+    for (const save::StaffKind kind : { save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::Handyman, save::StaffKind::Vendor })
     {
         save::Staff member;
         member.kind = kind;
@@ -181,6 +181,9 @@ TEST_CASE("the staff tabs list one job each, the first everyone")
     REQUIRE(handymen.rows.size() == 2);
     CHECK(management_row(handymen.rows[1].id) == ManagementRow { ManagementRow::Kind::Staff, 2 });
     CHECK(management_page(ManagementTopic::Staff, 2, facts, s, kUnits).rows.size() == 1);
+    const ManagementPage vendors = management_page(ManagementTopic::Staff, 5, facts, s, kUnits);
+    REQUIRE(vendors.rows.size() == 1);
+    CHECK(management_row(vendors.rows[0].id) == ManagementRow { ManagementRow::Kind::Staff, 3 });
 }
 
 TEST_CASE("the guest statistics average over the guests in the park")

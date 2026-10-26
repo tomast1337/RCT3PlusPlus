@@ -33,3 +33,20 @@ TEST_CASE("labels draw in their role's font and skip roles without one")
     REQUIRE(list.batches().size() == 1);
     CHECK(list.batches()[0].texture == 9);
 }
+
+TEST_CASE("a copyable label is selected by a press and copied whole")
+{
+    Desktop desktop;
+    Label& name = desktop.root().add<Label>("name", u"Big Wheel \U0001F3A1");
+    name.placement = top_left(0, 0, 100, 20);
+    name.copyable = true;
+    desktop.layout({ 0, 0, 200, 100 });
+
+    desktop.update({ { 10, 10 }, true, true });
+    desktop.update({ { 10, 10 }, false, true });
+    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &name);
+    KeyboardState keys;
+    keys.presses.push_back({ Key::Copy, false, true });
+    desktop.update({ { 10, 10 }, false, true }, keys);
+    CHECK(desktop.take_clipboard() == u"Big Wheel \U0001F3A1");
+}

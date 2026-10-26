@@ -47,6 +47,8 @@ namespace rct3::ui
         title_ = &add<Label>("title", std::u16string { }, FontRole::Medium);
         title_->style.colour = style_.text_colour;
         title_->style.vertical = Align::Centre;
+        title_->copyable = true;
+        title_->selection_colour = hex("#ffffff60"); // The band is blue, as the usual tint is
         view_text_ = &add<Label>("view_text", std::u16string { }, FontRole::Medium);
         view_text_->style.colour = style_.text_colour;
         view_text_->style.horizontal = Align::Centre;

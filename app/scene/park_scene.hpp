@@ -707,7 +707,7 @@ namespace rct3::scene
     /// from and the player's changes. Guests, staff and the simulation are not kept.
     [[nodiscard]] std::vector<std::byte> save_park(const ParkScene& scene);
 
-    /// Whether a box of the park's interface has the keyboard, so typed letters are not the game's keys.
+    /// Whether a box of the park's interface has the keyboard, or selected text to copy, so keys are not the game's.
     [[nodiscard]] bool typing(const ParkScene& scene);
 
     /// Pulls attraction `ref` down: it goes from the park with its doors, track and fence, its guests walk off

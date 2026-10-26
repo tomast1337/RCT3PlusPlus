@@ -82,12 +82,11 @@ namespace rct3::simulation
         return glm::length(run) > 0 ? glm::normalize(run) : glm::vec3(0, 0, 1);
     }
 
-    void record(LapRecorder& lap, const Coaster& c, float seconds)
+    Felt felt(const Coaster& c)
     {
-        if (seconds <= 0)
-            return;
         // The track's way and its bend from points a little either side, so the corners between its points do
-        // not jolt: the push along it, and the turn's pull into the bend at the train's speed.
+        // not jolt: the turn's pull into the bend at the train's speed. A push along the track is felt along
+        // it, so neither up through the seats nor across them.
         constexpr float kReach = 2; ///< Metres either side
         const glm::vec3 here = track_point(c, c.at);
         const glm::vec3 ahead = track_point(c, c.at + kReach);
@@ -95,18 +94,25 @@ namespace rct3::simulation
         const glm::vec3 chord = ahead - behind;
         const glm::vec3 way = glm::length(chord) > 0 ? glm::normalize(chord) : track_way(c, c.at);
         const glm::vec3 bend = (ahead - 2.0f * here + behind) / (kReach * kReach);
-        const float push = lap.speed_before ? (c.speed - *lap.speed_before) / seconds : 0;
-        lap.speed_before = c.speed;
         // What riders feel: the train's acceleration less gravity's, up through their seats and across them.
-        const glm::vec3 felt = way * push + bend * c.speed * c.speed + glm::vec3(0, kGravity, 0);
+        const glm::vec3 pull = bend * c.speed * c.speed + glm::vec3(0, kGravity, 0);
         const glm::vec3 lean = glm::cross(track_up(c, c.at), way);
         const glm::vec3 across = glm::length(lean) > 1e-6f ? glm::normalize(lean) : glm::vec3(1, 0, 0);
         const glm::vec3 up = glm::cross(way, across);
+        return { .vertical = glm::dot(pull, up) / kGravity, .lateral = glm::dot(pull, across) / kGravity, .slope = way.y };
+    }
+
+    void record(LapRecorder& lap, const Coaster& c, float seconds)
+    {
+        if (seconds <= 0)
+            return;
+        const Felt forces = felt(c);
+        const glm::vec3 here = track_point(c, c.at);
         lap.seconds += seconds;
         lap.speed_sum += std::abs(c.speed) * seconds;
         lap.height_sum += here.y * seconds;
-        lap.vertical_sum += glm::dot(felt, up) * seconds;
-        lap.lateral_sum += glm::dot(felt, across) * seconds;
+        lap.vertical_sum += forces.vertical * kGravity * seconds;
+        lap.lateral_sum += forces.lateral * kGravity * seconds;
         constexpr float kSample = 1.0f / static_cast<float>(save::kGraphSamplesPerSecond);
         if (lap.seconds < kSample)
             return;

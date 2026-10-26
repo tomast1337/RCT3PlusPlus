@@ -45,6 +45,30 @@ namespace rct3::simulation
     /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.
     [[nodiscard]] Pose between_steps(const Pose& pose, float along);
 
+    /// The gait a guest of `age`, feeling as `mood` and `needs` have them, goes on in from a tile: worn out,
+    /// sick or bursting they show it, and otherwise now and then they run, children most and the fresher the
+    /// likelier. Drawn with `dice`.
+    [[nodiscard]] Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice);
+
+    /// The ground covered in a second by a guest whose own walk is `walk`, with `energy` left, in `gait`.
+    [[nodiscard]] Pace gait_pace(Pace walk, Share energy, Gait gait);
+
+    /// A coaster rider's own leanings, each a share fixed for the rider: towards raising their hands, bracing
+    /// against the forces and covering their eyes; the higher, the likelier.
+    struct Leanings
+    {
+        float hands = 0;
+        float brace = 0;
+        float eyes = 0;
+    };
+
+    /// How a rider reacting as `now` reacts `dt` seconds on, as the train they ride feels (`running` it is off
+    /// round the track, `lifted` up a lift chain): waiting at the station and up the lift; bracing against
+    /// strong forces; covering their eyes going down a ride `over` (intensity past what they like) too wild for
+    /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
+    /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
+    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
+
     /// Keeps a train this far behind the back of the one in front, metres; our own figure.
     inline constexpr float kBlockGap = 4.0f;
 

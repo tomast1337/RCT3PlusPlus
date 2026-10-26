@@ -126,13 +126,22 @@ namespace rct3::simulation
     /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
+    /// What riders of a train feel at its front, from the bend of the track at its speed and gravity: in g, up
+    /// through their seats and across them, and the track's way there (1 straight up, -1 straight down).
+    struct Felt
+    {
+        float vertical = 1;
+        float lateral = 0;
+        float slope = 0;
+    };
+    [[nodiscard]] Felt felt(const Coaster& coaster);
+
     /// A lap's graphs taken from a train as it runs: a sample each tenth of a second of its speed, height and the
     /// forces its riders feel, each the average over that tenth. The forces are in the track's own frame, so a
     /// banked turn presses riders into their seats rather than sideways.
     struct LapRecorder
     {
         float seconds = 0; ///< Into the sample being taken
-        std::optional<float> speed_before { };
         float speed_sum = 0, height_sum = 0, vertical_sum = 0, lateral_sum = 0;
         std::vector<float> speed, altitude, vertical, lateral; ///< Oldest first
     };

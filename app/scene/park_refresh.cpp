@@ -16,6 +16,7 @@
 #include "scene/park_view.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "ui/scale.hpp"
@@ -27,10 +28,15 @@
 #include <format>
 #include <future>
 #include <map>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <variant>
+#include <vector>
 
 namespace rct3::scene
 {
@@ -714,6 +720,87 @@ namespace rct3::scene
                 shown.pose.look.legs = worn[2]->set;
                 shown.pose.motion = park::motion::kWalk;
                 shown.pose.world = glm::translate(glm::mat4(1.0f), r.get<simulation::Pose>(e).position); // Where they stand while the park is still
+            }
+            // Sellers, as the game keeps them: one stands at each stall and ride entrance whose model has a place
+            // for them, from when it is built, and goes when it is pulled down or moved.
+            if (scene.simulate)
+            {
+                std::unordered_set<std::uint64_t> posts;
+                for (const save::Stall& stall : scene.rides.stalls)
+                    if (!stall.base.demolished && stall.base.spot && stall.base.spot->object != 0)
+                        posts.insert(stall.base.spot->object);
+                for (const save::Ride& ride : scene.rides.rides)
+                    for (const save::Station& station : ride.stations)
+                        if (!ride.base.demolished && station.entrance_spot && station.entrance_spot->object != 0)
+                            posts.insert(station.entrance_spot->object);
+                // Each seller's post, by their place in shown_people, and the objects of all posts.
+                std::vector<std::pair<std::size_t, std::uint64_t>> sellers;
+                for (std::size_t i = 0; i < scene.shown_people.size(); ++i)
+                {
+                    const ShownPerson& p = scene.shown_people[i];
+                    if (const auto* work = p.staff && p.saved < scene.people.staff.size() ? std::get_if<save::VendorWork>(&scene.people.staff[p.saved].work) : nullptr; work != nullptr && !work->scenery_item.is_none())
+                        sellers.emplace_back(i, work->scenery_item.id);
+                }
+                std::unordered_set<std::uint64_t> wanted = posts;
+                for (const auto& [i, post] : sellers)
+                    wanted.insert(post);
+                std::unordered_map<std::uint64_t, const save::PlacedObject*> found;
+                for (const save::PlacedObject& o : scene.objects)
+                    if (wanted.contains(o.id))
+                        found.emplace(o.id, &o);
+                // A seller goes with their object.
+                std::unordered_set<std::uint64_t> served;
+                for (const auto& [i, post] : sellers | std::views::reverse)
+                {
+                    if (const auto at = found.find(post); at != found.end() && !at->second->hidden)
+                        served.insert(post);
+                    else
+                        fire(scene, i);
+                }
+                std::int32_t number = 0;
+                for (const save::Staff& s : scene.people.staff)
+                    if (s.kind == save::StaffKind::Vendor)
+                        number = std::max(number, s.type_id);
+                for (const std::uint64_t post : posts)
+                {
+                    const auto object = found.find(post);
+                    const auto model = object != found.end() && !object->second->hidden ? scene.models.find(park::model_key(*object->second)) : scene.models.end();
+                    if (served.contains(post) || model == scene.models.end() || !model->second.vendor_place)
+                        continue;
+                    const save::Sex sex = random::below(scene.looks, 2) == 0 ? save::Sex::Male : save::Sex::Female;
+                    std::array<const Outfit*, 3> worn { };
+                    for (const Outfit& o : scene.wardrobe)
+                        if (o.type == save::PersonType::Vendor && o.sex == sex && worn[o.section] == nullptr)
+                            worn[o.section] = &o;
+                    if (std::ranges::contains(worn, nullptr))
+                        continue;
+                    const glm::mat4 place = park::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
+                    const entt::entity e = simulation::add_vendor(scene.sim, glm::vec3(place[3]));
+                    scene.known_guests.insert(e);
+                    save::Staff& kept = scene.people.staff.emplace_back();
+                    kept.kind = save::StaffKind::Vendor;
+                    kept.type_id = ++number;
+                    kept.work = save::VendorWork { .scenery_item = { post } };
+                    kept.person.type = save::PersonType::Vendor;
+                    kept.person.sub_type = std::to_underlying(sex);
+                    kept.person.name = std::format("%ME% {}", number); // As the game names them, after their job
+                    kept.person.position = { place[3].x, place[3].y, place[3].z };
+                    save::Appearance& a = kept.person.appearance;
+                    a.head = { worn[0]->id };
+                    a.body = { worn[1]->id };
+                    a.legs = { worn[2]->id };
+                    ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .staff = true, .saved = scene.people.staff.size() - 1, .guest = e });
+                    shown.pose.look.head = worn[0]->set;
+                    shown.pose.look.body = worn[1]->set;
+                    shown.pose.look.legs = worn[2]->set;
+                    for (std::size_t i = 0; i < shown.pose.look.colours.size(); ++i)
+                        shown.pose.look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
+                    shown.pose.world = place;
+                    // Stored a row per axis, which is a column each here.
+                    for (glm::length_t c = 0; c < 4; ++c)
+                        for (glm::length_t r = 0; r < 4; ++r)
+                            kept.person.world[static_cast<std::size_t>(c * 4 + r)] = place[c][r];
+                }
             }
             // The pace of each shown person's walk, measured once for each legs set.
             if (scene.person_models)

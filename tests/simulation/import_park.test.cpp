@@ -284,6 +284,17 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
 }
 
+TEST_CASE("a seller hired with a placed stall stands in their booth, off the paths, paid as new staff are")
+{
+    simulation::SimWorld world;
+    const entt::entity seller = simulation::add_vendor(world, { 3, 1, 4 });
+    const auto& staff = world.registry.get<simulation::Staff>(seller);
+    CHECK(staff.role == simulation::StaffRole::Vendor);
+    CHECK(staff.wage.value > 0);
+    CHECK(world.registry.get<simulation::Pose>(seller).position == glm::vec3 { 3, 1, 4 });
+    CHECK_FALSE(world.registry.all_of<simulation::Stride>(seller));
+}
+
 TEST_CASE("paths laid and taken away come and go from the network; walkers and rides catch up")
 {
     simulation::SimWorld world;

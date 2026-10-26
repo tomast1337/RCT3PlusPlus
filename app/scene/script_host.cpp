@@ -31,6 +31,7 @@
 #include <map>
 #include <span>
 #include <sstream>
+#include <variant>
 
 namespace rct3::scene
 {
@@ -686,6 +687,9 @@ namespace rct3::scene
                 const save::TerrainGrid& g = park.grid;
                 const Json tile = g.tile_size_x > 0 && g.tile_size_z > 0 ? Json { { "col", (standing.x - g.origin_x) / g.tile_size_x }, { "row", (standing.z - g.origin_z) / g.tile_size_z } } : Json(nullptr);
                 Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff }, { "at", tile } };
+                // A seller's post: the object of the stall or ride entrance they serve at.
+                if (const auto* work = p.staff && p.saved < park.people.staff.size() ? std::get_if<save::VendorWork>(&park.people.staff[p.saved].work) : nullptr; work != nullptr)
+                    person["post"] = work->scenery_item.id;
                 // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 const auto& r = park.sim.registry;
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))

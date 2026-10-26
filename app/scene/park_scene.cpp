@@ -1539,22 +1539,6 @@ namespace rct3::scene
             scene.since_people_levels = kObjectRebuildInterval;
         }
 
-        /// Fires the member of staff shown as `shown`: they leave the park at once, as in the game.
-        void fire(ParkScene& scene, std::size_t shown)
-        {
-            change_people(scene);
-            const std::size_t saved = scene.shown_people.at(shown).saved;
-            if (const entt::entity walker = scene.shown_people[shown].guest; walker != entt::null)
-                scene.sim.registry.destroy(walker);
-            scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
-            scene.people.staff.erase(scene.people.staff.begin() + static_cast<std::ptrdiff_t>(saved));
-            for (ShownPerson& p : scene.shown_people)
-            {
-                if (p.staff && p.saved > saved)
-                    --p.saved;
-            }
-        }
-
         /// After a person of `shown_people` is renamed `name`: the name the game keeps for its guest camera cheat
         /// puts the view with them, from their eyes.
         void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t shown, std::u16string_view name)
@@ -1814,6 +1798,29 @@ namespace rct3::scene
             return shown;
         }
     } // namespace
+
+    void fire(ParkScene& scene, std::size_t shown)
+    {
+        change_people(scene);
+        const std::size_t saved = scene.shown_people.at(shown).saved;
+        if (const entt::entity walker = scene.shown_people[shown].guest; walker != entt::null)
+            scene.sim.registry.destroy(walker);
+        scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
+        scene.people.staff.erase(scene.people.staff.begin() + static_cast<std::ptrdiff_t>(saved));
+        for (ShownPerson& p : scene.shown_people)
+        {
+            if (p.staff && p.saved > saved)
+                --p.saved;
+        }
+        // Those the view and the window follow keep to them; one gone takes them away.
+        for (std::optional<std::size_t>* followed : { &scene.shown_person, &scene.riding_person })
+        {
+            if (*followed == shown)
+                followed->reset();
+            else if (*followed && **followed > shown)
+                --**followed;
+        }
+    }
 
     void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state)
     {

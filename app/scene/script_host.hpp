@@ -62,7 +62,7 @@
 //   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does;
 //                       null once changed, else the string key of why it stays (a track without a station...)
 //   rides.show(i)       opens ride `i`'s window, as clicking the ride does
-//   people.list()       each person shown in the park: { name, staff }
+//   people.list()       each person shown in the park: { name, staff, post? } (post: a seller's object)
 //   people.rename(i, name)  renames person `i` of people.list(), as their window's name box does
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go

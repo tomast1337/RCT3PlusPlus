@@ -301,6 +301,10 @@ namespace rct3::scene
                     type = std::to_underlying(save::PersonType::AnimalKeeper);
                     sex = std::to_underlying(save::Sex::Male);
                 }
+                // Vendors, hired with stalls and ride entrances, wear their own; men's and women's share a folder.
+                const bool vendor = name == "VM";
+                if (vendor)
+                    type = std::to_underlying(save::PersonType::Vendor);
                 if (type == std::string_view::npos || sex == std::string_view::npos)
                     continue;
                 for (const auto& file : std::filesystem::directory_iterator(age.path(), error))
@@ -308,7 +312,10 @@ namespace rct3::scene
                     constexpr std::string_view kStub = "_Stub.common.ovl";
                     constexpr std::array<std::string_view, 3> kSections { "_Head", "_Body", "_Legs" };
                     const std::string file_name = file.path().filename().string();
-                    if ((vip == 0 && !keeper && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
+                    if ((vip == 0 && !keeper && !vendor && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
+                        continue;
+                    const auto worn_by = vendor && file_name.size() > 1 ? std::string_view("MF").find(file_name[1]) : sex;
+                    if (worn_by == std::string_view::npos)
                         continue;
                     const std::string_view symbol = std::string_view(file_name).substr(0, file_name.size() - kStub.size());
                     const auto section = std::ranges::find_if(kSections, [&](std::string_view s) { return symbol.ends_with(s); });
@@ -320,8 +327,8 @@ namespace rct3::scene
                     const auto known = std::ranges::find_if(scene.people.part_groups, same);
                     const save::PeopleObjectId id = known != scene.people.part_groups.end() ? known->id : next_id++;
                     if (known == scene.people.part_groups.end())
-                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section - kSections.begin()), .sex = static_cast<std::uint8_t>(sex), .type = static_cast<std::uint8_t>(type) });
-                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(sex), static_cast<std::uint8_t>(section - kSections.begin()), vip });
+                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section - kSections.begin()), .sex = static_cast<std::uint8_t>(worn_by), .type = static_cast<std::uint8_t>(type) });
+                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), static_cast<std::uint8_t>(section - kSections.begin()), vip });
                 }
             }
             library.close_files();

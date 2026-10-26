@@ -167,6 +167,7 @@ TEST_CASE("later tracked rides give their track rules and piece patterns")
     word(0x14C, at + list);
     word(0x17C, 3);
     word(0x180, 1);
+    word(0xEC, 4);
     word(list, 2);
     word(list + 4, at + entries);
     word(entries, 0x1000); // a piece of the group, the last of its track ...
@@ -181,6 +182,7 @@ TEST_CASE("later tracked rides give their track rules and piece patterns")
     CHECK(r.flags == 0x200);
     CHECK(r.min_pieces == 3u);
     CHECK(r.circuit_only);
+    CHECK(r.most_trains == 4u);
     CHECK(r.entrances == 2);
     CHECK(r.exits == 1);
     REQUIRE(r.patterns.size() == 1);

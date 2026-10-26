@@ -62,8 +62,9 @@ namespace rct3::ovl
     {
         /// Bits: 0x10 and 0x4000 the ride is never tested, 0x200 its track may be in several pieces.
         std::uint32_t flags = 0;
-        std::optional<std::uint32_t> min_pieces; ///< Fewest pieces it opens with
-        bool circuit_only = false;               ///< Opens only as a closed circuit
+        std::optional<std::uint32_t> min_pieces;  ///< Fewest pieces it opens with
+        bool circuit_only = false;                ///< Opens only as a closed circuit
+        std::optional<std::uint32_t> most_trains; ///< Most trains it may run at once; none when the file sets no limit
         /// How many entrances and exits it needs: 0 one per station, 1 any number, 2 exactly one, 3 at
         /// least one, 4 none.
         std::uint32_t entrances = 3;

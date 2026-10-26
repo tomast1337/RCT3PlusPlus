@@ -96,6 +96,8 @@ namespace rct3::ovl
             if (const std::int32_t least = r->i32(0x17C); least >= 0)
                 rules.min_pieces = static_cast<std::uint32_t>(least);
             rules.circuit_only = r->u32(0x180) != 0;
+            if (const std::int32_t most = r->i32(0xEC); most >= 0)
+                rules.most_trains = static_cast<std::uint32_t>(most);
             rules.car_rotation = r->u32(0xB0) != 0;
             if (const auto longer = ItemRecord::open(space, refs, address, 0x1A8))
                 rules.car_facing = longer->u32(0x1A4);

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park_setup.hpp"
 
+#include "core/maybe.hpp"
 #include "logging/log.hpp"
+#include "ovl/overlay.hpp"
+#include "ovl/texture.hpp"
+#include "ovl/texture_pixels.hpp"
 #include "park/asset_index.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
@@ -1037,6 +1041,7 @@ namespace rct3::scene
                                        std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
                                        std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } },
                                        std::pair { &scene.depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "depth-only objects" } }, std::pair { &scene.crossing_depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .colour_write = false, .label = "crossing depth-only objects" } },
+                                       std::pair { &scene.chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitChrome, .layout = ground_layout, .label = "chrome objects" } }, std::pair { &scene.crossing_chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingChrome, .layout = crossing_layout, .label = "crossing chrome objects" } },
                                        std::pair { &scene.waterfall_added_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfalls" } }, std::pair { &scene.waterfall_multiplied_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerMultiplied, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfall foam" } } })
         {
             auto made = device.create_pipeline(desc);
@@ -1050,6 +1055,25 @@ namespace rct3::scene
             if (!front)
                 return fail(front.error());
             scene.front_only[made->id] = *front;
+        }
+        // The surroundings chrome parts mirror, from the install's picture for chrome; without it they draw white.
+        if (const auto main = install.find(ui::game_skins::kMainOverlay))
+        {
+            if (auto overlay = ovl::Overlay::load(*main))
+            {
+                const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+                std::map<std::string, ovl::RgbaImage, std::less<>> chrome;
+                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                {
+                    if (!part)
+                        continue;
+                    for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+                        if (auto image = item.texture && item.name == "EnvMapChrome" ? pixels.first_frame(*item.texture) : std::nullopt)
+                            chrome.insert_or_assign(std::string(park::kChromePicture), std::move(*image));
+                }
+                if (auto uploaded = ui::upload_textures(device, chrome))
+                    scene.object_textures.merge(*uploaded);
+            }
         }
         profiling::section("ObjectBuffers", [&] {
             if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides)))
@@ -1345,7 +1369,7 @@ namespace rct3::scene
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.waterfall_added_pipeline, scene.waterfall_multiplied_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.chrome_pipeline, scene.crossing_chrome_pipeline, scene.waterfall_added_pipeline, scene.waterfall_multiplied_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

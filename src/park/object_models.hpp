@@ -212,6 +212,15 @@ namespace rct3::park
     /// name is in no file, so the look is ours.
     inline constexpr std::string_view kWaterPicture = "rct3pp:water";
 
+    /// Key of the picture given to chrome parts: their look is the surroundings mirrored in them, which the
+    /// scene draws from the install's chrome picture, whatever texture they name (most name none in any file).
+    inline constexpr std::string_view kChromePicture = "rct3pp:chrome";
+
+    /// Whether texture style `style` draws a mirror-like chrome surface whose own texture is not read
+    /// (SIOpaqueChrome). The kinds that read theirs, for holes (SIAlphaMaskChrome) or to multiply
+    /// (SIOpaqueChromeModulate), are not: they draw as that texture.
+    [[nodiscard]] bool chrome_style(std::string_view style);
+
     /// Keys given to parts painted like the ground they stand on, such as the terrain blocks: they name no
     /// picture of their own but these two, one for the land's surface and one for its cliffs. The object mesh
     /// gives them the pictures of the tile under the object (see object_mesh.hpp).

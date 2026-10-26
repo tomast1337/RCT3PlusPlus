@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // render::Shader::Lit, with the constant 1 LitCutout: pixels under half opacity are not drawn; 2 LitLayerAdded and
-// 3 LitLayerMultiplied: a second picture in place of the noise, added after the light or multiplied before it.
+// 3 LitLayerMultiplied: a second picture in place of the noise, added after the light or multiplied before it; 4
+// LitChrome: the texture is the surroundings, read where the eye's way bounces off the surface.
 // Positions and normals are in world space.
 import common;
 
@@ -276,7 +277,7 @@ float4 fragment_main(LitVaryings f) : SV_Target
         discard;
     // Layered, the scroll moves the first picture only: the second is read where the mesh puts it.
     float4 layer = float4(0.0);
-    if (kMode >= 2)
+    if (kMode == 2 || kMode == 3)
         layer = u_variation.Sample(u_sampler, f.uv - float2(0.0, frac(u_draw.sky.w)));
     // Lit as the normal says, from whichever side the surface is seen. Turning the normal to face the eye would
     // darken everything above the eye whose normal tilts up (roofs, the cards of trees, which are seen from below
@@ -309,8 +310,18 @@ float4 fragment_main(LitVaryings f) : SV_Target
     const float2 uv = framed ? lerp(f.uv, shifted(f, n, along_u, along_v), near) : f.uv;
     // Read with the unshifted coordinate's changes, so the shift does not change the mip level.
     float4 color = (detail >= 2 ? u_texture.SampleGrad(u_sampler, uv, duv1, duv2) : u_texture.Sample(u_sampler, f.uv)) * f.color;
-    if (kMode == 3)
-        color *= layer;
+    // Chrome: the way from the eye, bounced off the surface, read in a frame that faces the eye (x right, y up),
+    // picks the point of a picture of the surroundings, sky at the top: across it as the bounce turns left or
+    // right, up it as it turns up. Without perspective, the eye looks down at a park view's slant.
+    const float3 ahead = f.eye.w > 0.5 ? normalize(f.world - f.eye.xyz) : normalize(float3(0.0, -1.0, 1.0));
+    if (kMode == 4)
+    {
+        const float3 right = normalize(cross(float3(0.0, 1.0, 0.0), ahead) + float3(1e-6, 0.0, 0.0));
+        const float3 up = cross(ahead, right);
+        const float3 bounced = reflect(ahead, n);
+        const float2 at = float2(0.5 + 0.5 * dot(bounced, right), 0.5 - 0.5 * dot(bounced, up));
+        color = float4(u_texture.Sample(u_sampler, at).rgb, 1.0) * f.color;
+    }
     if (abs(f.cross.y) > 1.5)
         color.rgb = lerp(color.rgb, f.cross.y > 0.0 ? float3(1.0, 0.0, 0.0) : float3(0.0, 0.0, 1.0), 0.6);
     if (variation_given)
@@ -366,6 +377,10 @@ float4 fragment_main(LitVaryings f) : SV_Target
         const float3 half_way = normalize(u_draw.sun_direction.xyz + normalize(f.eye.xyz - f.world));
         shaded += u_draw.sun.rgb * kSheen * near * pow(max(dot(bumped, half_way), 0.0), kGlint) * sun_reaches * open;
     }
+    // Chrome's sharp glint of the sun.
+    static const float kChromeGlint = 20.0;
+    if (kMode == 4)
+        shaded += u_draw.sun.rgb * pow(max(dot(n, normalize(u_draw.sun_direction.xyz - ahead)), 0.0), kChromeGlint) * sun_reaches;
     if ((flags & 16u) != 0u)
         shaded += color.rgb * lamplight(f.world, n);
     // The added picture is lit too, so it does not glow at night, and held under full white.

@@ -62,3 +62,13 @@ TEST_CASE("a mesh of the depth filling style writes depth only, whatever its tra
     }
     CHECK(part_blend(2, "SIFillZed") == PartBlend::Blended);
 }
+
+TEST_CASE("only the chrome style that reads no texture of its own is drawn as chrome")
+{
+    CHECK(chrome_style("SIOpaqueChrome"));
+    CHECK(chrome_style("siopaquechrome"));
+    CHECK_FALSE(chrome_style("SIAlphaMaskChrome"));
+    CHECK_FALSE(chrome_style("SIOpaqueChromeModulate"));
+    CHECK_FALSE(chrome_style("SIOpaque"));
+    CHECK_FALSE(chrome_style(""));
+}

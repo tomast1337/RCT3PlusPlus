@@ -202,6 +202,13 @@ namespace rct3::render
         LitLayerAdded,
         /// LitLayerAdded, with the second picture multiplying the first, colour and alpha, before the light.
         LitLayerMultiplied,
+        /// Lit, for a mirror-like surface: `DrawCommand::texture` is a picture of the surroundings, sky at the top,
+        /// read where the way from the eye, bounced off the surface, points as the eye sees it (across for left
+        /// and right, up for up), in place of the texture coordinate; and the sun glints off it. Without
+        /// perspective, as if seen from above at the slant of a park view.
+        LitChrome,
+        /// LitCrossing, with LitChrome's look.
+        LitCrossingChrome,
         /// A water surface. Inputs as Lit, with location 1's alpha how see-through the water is and location 2's
         /// first value the depth of water under the point. `DrawCommand::texture` is a tiling picture of waves
         /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
@@ -239,7 +246,7 @@ namespace rct3::render
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.
     [[nodiscard]] constexpr bool lit_shader(Shader shader)
     {
-        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitLayerMultiplied;
+        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitLayerMultiplied || shader == Shader::LitChrome || shader == Shader::LitCrossingChrome;
     }
 
     enum class Topology : std::uint8_t

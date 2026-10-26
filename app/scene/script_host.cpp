@@ -7,6 +7,7 @@
 #include "park/camera.hpp"
 #include "park/water_fill.hpp"
 #include "park/waterfall_mesh.hpp"
+#include "platform/window.hpp"
 #include "random/generator.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
@@ -17,8 +18,11 @@
 #include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
+#include "ui/key_combo.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/edit_box.hpp"
+#include "ui/widgets/label.hpp"
 #include "ui/widgets/tickbox.hpp"
 
 #include <algorithm>
@@ -91,7 +95,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file, std::optional<std::filesystem::path> report)
+    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, platform::Window& window)
     {
         std::ifstream in(file, std::ios::binary);
         if (!in)
@@ -102,6 +106,7 @@ namespace rct3::scene
         std::ostringstream text;
         text << in.rdbuf();
         std::unique_ptr<ScriptHost> host(new ScriptHost());
+        host->window_ = &window;
         if (report)
         {
             std::error_code ec;
@@ -157,6 +162,38 @@ namespace rct3::scene
             control_ = !a.empty() && a[0].is_boolean() && a[0].get<bool>();
             return Json(nullptr);
         });
+        engine_.define("keys.press", [this](const Json& a) {
+            const std::string written = !a.empty() && a[0].is_string() ? a[0].get<std::string>() : std::string { };
+            auto combo = ui::parse_play_key_combo(written);
+            if (!combo)
+                combo = ui::parse_key_combo(written);
+            if (!combo)
+                throw std::invalid_argument("keys.press takes keys such as \"Ctrl+V\"");
+            // A letter with Control types nothing and comes as a shortcut, as from the window.
+            const ui::Key key = combo->key == ui::Key::Letter && combo->control ? ui::Key::Shortcut : combo->key;
+            keys_.push_back({ key, combo->shift, combo->control, combo->character, { }, combo->alt });
+            return Json(nullptr);
+        });
+        engine_.define("keys.type", [this](const Json& a) {
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("keys.type takes text");
+            const std::u16string text = strings::to_utf16(a[0].get<std::string>());
+            for (std::size_t i = 0; i < text.size(); ++i)
+            {
+                char32_t c = text[i];
+                if (strings::is_high_surrogate(c) && i + 1 < text.size())
+                    c = 0x10000 + ((c - 0xD800) << 10) + (text[++i] - 0xDC00);
+                keys_.push_back({ ui::Key::Character, false, false, c });
+            }
+            return Json(nullptr);
+        });
+        engine_.define("clipboard.get", [this](const Json&) -> Json { return strings::to_utf8(window_->clipboard()); });
+        engine_.define("clipboard.set", [this](const Json& a) {
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("clipboard.set takes text");
+            window_->set_clipboard(strings::to_utf16(a[0].get<std::string>()));
+            return Json(nullptr);
+        });
         engine_.define("ui.find", [this](const Json& a) -> Json {
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("ui.find takes a widget path");
@@ -176,6 +213,10 @@ namespace rct3::scene
                 found["on"] = b->on;
             if (const auto* t = dynamic_cast<const ui::Tickbox*>(as_pointer(w)); t != nullptr)
                 found["on"] = t->ticked;
+            if (const auto* e = dynamic_cast<const ui::EditBox*>(as_pointer(w)); e != nullptr)
+                found["text"] = strings::to_utf8(e->text);
+            if (const auto* l = dynamic_cast<const ui::Label*>(as_pointer(w)); l != nullptr)
+                found["text"] = strings::to_utf8(l->text);
             return found;
         });
         engine_.define("ui.children", [this](const Json& a) -> Json {

@@ -33,10 +33,23 @@ declare namespace pointer {
     function drag(from: [number, number], to: [number, number], count?: number, button?: "right"): Promise<void>;
 }
 
+declare namespace keys {
+    /** Presses the keys written as "Ctrl+V", "Shift+Left" or "Enter" for a frame, through the user's key bindings. */
+    function press(combo: string): void;
+    /** Types `text` for a frame. */
+    function type(text: string): void;
+}
+
+declare namespace clipboard {
+    /** The system clipboard's text, "" when it holds none. */
+    function get(): string;
+    function set(text: string): void;
+}
+
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box. */
-    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean } | undefined;
+     * `on` for a toggle button or a tick box, `text` for an edit box or a label. */
+    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */

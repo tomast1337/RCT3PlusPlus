@@ -12,8 +12,12 @@
 //   pointer.wheel(n)    turns the wheel `n` notches for one frame, positive away from the user
 //   pointer.shift(on)   holds Shift down with the pointer, or lets it go
 //   pointer.control(on) holds Control down with the pointer, or lets it go
-//   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch, or undefined
-//                       when it is not shown; the park's widgets while a park is open, else the front end's
+//   keys.press(combo)   presses the keys written as "Ctrl+V", "Shift+Left" or "Enter" for a frame, as the window
+//                       reports them, so the user's key bindings apply
+//   keys.type(text)     types `text` for a frame
+//   clipboard.get(), clipboard.set(text)  the system clipboard's text
+//   ui.find(path)       the middle of the widget at `path` ("tools/Land"), with `on` for a switch and `text` for
+//                       an edit box or a label, or undefined when it is not shown; the park's widgets while a park is open, else the front end's
 //   ui.click(path)      moves there, presses and lets go, a frame each
 //   ui.toggle(path, on) clicks the switch at `path` when it is not already `on`
 //   ui.children(path)   the names of the shown widgets in the one at `path`, in order, or undefined when it is
@@ -73,6 +77,7 @@
 
 #include "render/device.hpp"
 #include "scripting/script_engine.hpp"
+#include "ui/keyboard.hpp"
 #include "ui/widget.hpp"
 
 #include <filesystem>
@@ -81,6 +86,12 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
+
+namespace rct3::platform
+{
+    class Window;
+}
 
 namespace rct3::scene
 {
@@ -91,9 +102,9 @@ namespace rct3::scene
     class ScriptHost
     {
     public:
-        /// Reads and starts the script at `file`, reporting into the folder `report` when given; empty with the
-        /// reason logged when it cannot be read.
-        [[nodiscard]] static std::unique_ptr<ScriptHost> start(const std::filesystem::path& file, std::optional<std::filesystem::path> report);
+        /// Reads and starts the script at `file`, reporting into the folder `report` when given, with the clipboard
+        /// of `window`; empty with the reason logged when it cannot be read.
+        [[nodiscard]] static std::unique_ptr<ScriptHost> start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, platform::Window& window);
 
         /// Moves the script on a frame, seeing `park` (none while no park is open) and the front end `front`
         /// drawn by `device`.
@@ -117,6 +128,11 @@ namespace rct3::scene
         [[nodiscard]] std::optional<std::pair<int, std::size_t>> take_career();
         /// The park the script asked for, once: a path in the game's folder.
         [[nodiscard]] std::optional<std::string> take_park();
+        /// The keys the script pressed and typed since the last call, oldest first, as the window reports them.
+        [[nodiscard]] std::vector<ui::KeyPress> take_keys()
+        {
+            return std::exchange(keys_, { });
+        }
         /// Stops the script, as failed with `why`.
         void fail(const std::string& why);
         /// Once for each screenshot asked for: the file to write it to, or an empty path for the user's
@@ -144,6 +160,8 @@ namespace rct3::scene
         bool shift_ = false;
         float wheel_ = 0;
         bool control_ = false;
+        std::vector<ui::KeyPress> keys_;
+        platform::Window* window_ = nullptr; ///< Whose clipboard clipboard.get() and clipboard.set() use
         std::optional<std::filesystem::path> screenshot_;
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;

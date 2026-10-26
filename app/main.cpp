@@ -1008,7 +1008,7 @@ int main(int argc, char** argv)
     std::unique_ptr<rct3::scene::ScriptHost> script;
     if (script_file)
     {
-        script = rct3::scene::ScriptHost::start(*script_file, script_report);
+        script = rct3::scene::ScriptHost::start(*script_file, script_report, *window);
         if (!script)
             return 1;
     }
@@ -1108,6 +1108,8 @@ int main(int argc, char** argv)
                     // The keys as the commands they are bound to, unless the interface is waiting for keys
                     // to bind: it then gets them as pressed, and they do nothing else.
                     rct3::ui::KeyboardState keys = window->keyboard();
+                    if (script)
+                        std::ranges::move(script->take_keys(), std::back_inserter(keys.presses));
                     std::vector<rct3::ui::PlayCommand> play_commands;
                     const bool binding = (front && rct3::scene::front_end_waiting_for_keys(*front)) || (park && rct3::scene::park_waiting_for_keys(*park));
                     if (!binding)

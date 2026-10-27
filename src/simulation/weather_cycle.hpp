@@ -56,6 +56,10 @@ namespace rct3::simulation
     /// The temperature weather `type` brings in month `month` of `climate`.
     [[nodiscard]] float weather_temperature(std::int32_t climate, std::int32_t month, save::WeatherType type);
 
+    /// The climate the original game's career scenario `scenario` (by its id) is played in; none for any other
+    /// park, which keeps its file's.
+    [[nodiscard]] std::optional<std::int32_t> career_climate(std::string_view scenario);
+
     /// Moves the weather on by `units` of calendar time, rolling forecasts with `dice`. Nothing changes while
     /// `frozen` (the Disable weather option).
     void advance_weather(ParkState& state, float units, random::RandomState& dice, bool frozen);

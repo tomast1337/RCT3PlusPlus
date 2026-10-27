@@ -107,3 +107,11 @@ TEST_CASE("frozen weather stays as it is")
     CHECK(*s.temperature == 14);
     CHECK(s.wind == 0.5f);
 }
+
+TEST_CASE("career scenarios are given a climate from their setting")
+{
+    CHECK(career_climate("ValleyofKings") == static_cast<std::int32_t>(Climate::Desert));
+    CHECK(career_climate("IslandHopping") == static_cast<std::int32_t>(Climate::TropicalIsland));
+    CHECK_FALSE(career_climate("NoSuchPark"));
+    CHECK_FALSE(career_climate("Atlantis")); // An expansion's park names its own
+}

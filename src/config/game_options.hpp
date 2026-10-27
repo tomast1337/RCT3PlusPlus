@@ -45,6 +45,7 @@ namespace rct3::config
         CycleMenuMusic,         ///< A different menu track each start
         ShuffleBackgroundMusic, ///< The park's music when zoomed out is picked at random
         MenuTrack,              ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
+        DisableWeather,         ///< The park's weather stays as it is
 
         // Camera
         InvertRideCameraY,

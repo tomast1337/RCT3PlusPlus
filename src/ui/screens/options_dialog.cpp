@@ -213,6 +213,7 @@ namespace rct3::ui
         rows.choice(O::DistanceUnits, str(strings, "GameOptionsDialog_DistanceAndSpeed"), items(strings, { "GameOptionsDialog_Metric", "GameOptionsDialog_Imperial", "GameOptionsDialog_SI" }));
         rows.choice(O::TemperatureUnits, str(strings, "GameOptionsDialog_Temperature"), items(strings, { "GameOptionsDialog_Celcius", "GameOptionsDialog_Fahrenheit" }));
         rows.level(O::Brightness, str(strings, "GameOptionsDialog_Brightness"));
+        rows.tick(O::DisableWeather, str(strings, "Rct3pp_DisableWeather"), str(strings, "Rct3pp_DisableWeatherHelp"));
         rows.section();
         rows.level(O::GameVolume, str(strings, "GameOptionsDialog_SetVolumeGame"));
         rows.level(O::MusicVolume, str(strings, "GameOptionsDialog_SetVolumeMusic"));

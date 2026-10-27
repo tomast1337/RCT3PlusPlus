@@ -2460,7 +2460,7 @@ namespace rct3::scene
             simulation::advance(scene.day, game_seconds);
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::pass_time(scene.park, game_seconds);
-            simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, false);
+            simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (weeks > 0)
             {

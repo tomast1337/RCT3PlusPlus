@@ -34,11 +34,11 @@ namespace rct3::park
         Quarter = 4,       ///< In one quarter of the tile
         Half = 5,          ///< In the half of the tile its +X faces
         PathCentre = 6,
-        Corner = 7,
+        Corner = 7, ///< Round one corner of the tile: along the edge its +X faces and the next one round
         PathSideJoin = 8,
     };
 
-    /// How far from the tile's centre an edge item's model origin goes, along its own +X.
+    /// How far from the tile's centre an edge or corner item's model origin goes, along its own +X.
     inline constexpr float kEdgeOffset = 2.0f;
     /// Likewise for items against a path's side, and centres of quarter and half tiles from the tile centre.
     inline constexpr float kPathSideOffset = 1.6f;

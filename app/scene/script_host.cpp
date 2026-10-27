@@ -578,7 +578,7 @@ namespace rct3::scene
             for (const save::PlacedObject& o : park_->objects)
             {
                 if (!o.hidden)
-                    objects.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row } });
+                    objects.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row }, { "height", o.base_height ? Json(*o.base_height) : Json(nullptr) } });
             }
             return objects;
         });

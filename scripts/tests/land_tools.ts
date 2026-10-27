@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The land tools on the game's blank landscape: digs a pit with Shape ground, paints round it with Paint
-// ground, fills it with Water by clicking its wall and takes the lake away again.
+// ground, fills it with Water by clicking its wall and takes the lake away again, then raises the ground under
+// a tree planted there, which rises with it.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -186,3 +187,37 @@ const [px, py] = on_view(hill_at, row);
 await pointer.drag([px, py], [px + 0.01, py], 10);
 log("cliff:", cliff_before, "->", map.tile(hill_at, row)!.cliff);
 expect(map.tile(hill_at, row)!.cliff !== cliff_before, "the cliff face to change");
+
+// A tree does not lock its tile: the ground rises under it and the tree is seated on the new height.
+const tree_at = col + 4;
+const tree_row = row + 4;
+camera.look({ col: tree_at + 0.5, row: tree_row + 0.5 }, { col: tree_at - 3, row: tree_row - 6, up: 40 });
+await frames(2);
+await pick("Land_Brush_Paint"); // Put away
+const trees = map.objects().length;
+expect(build.pick("Style/Vanilla/Style", "Common_Linden_2"), "a tree in the scenery lists");
+await frames(2);
+const [tx, ty] = on_view(tree_at + 0.5, tree_row + 0.5);
+pointer.move(tx, ty);
+await frames(3);
+log("planting:", JSON.stringify(build.placing()));
+await pointer.click(tx, ty);
+await frames(2);
+const planted = map.objects().slice(trees).find((o) => o.symbol === "Common_Linden_2");
+expect(planted !== undefined, "the tree planted");
+const tree = planted!;
+const tree_ground = low(tree.col, tree.row);
+await pick("Land_Brush_Height");
+await until(() => ui.find("land_panel/Land_Vertex") !== undefined, 60, "the land panel's tile tab");
+await ui.click("land_panel/Land_Vertex");
+await until(() => ui.find("land_panel/body/Land_Vertex_Neighbour") !== undefined, 60, "the tile tools");
+await ui.click("land_panel/body/Land_Vertex_Neighbour");
+const [gx, gy] = on_view(tree.col + 0.5, tree.row + 0.5);
+await pointer.drag([gx, gy], [gx, gy - 0.1], 40);
+await pick("Land_Brush_Height"); // Put away, which ends the stroke
+await frames(2);
+const seated = map.objects().find((o) => o.symbol === "Common_Linden_2" && o.col === tree.col && o.row === tree.row);
+log("tree tile:", tree_ground, "->", low(tree.col, tree.row), "tree height", tree.height, "->", seated?.height);
+await screenshot("tree_raised");
+expect(low(tree.col, tree.row) > tree_ground, "the ground under the tree to rise");
+expect(seated !== undefined && seated.height !== null && seated.height >= Math.ceil(low(tree.col, tree.row)), "the tree seated on the raised ground");

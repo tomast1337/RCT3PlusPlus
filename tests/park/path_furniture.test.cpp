@@ -116,3 +116,37 @@ TEST_CASE("one item stands against each side of a tile, and one in its middle")
     objects[0].hidden = true;
     CHECK_FALSE(furniture_taken(objects, models, placed("Bench", 1), Positioning::PathSide));
 }
+
+TEST_CASE("on a sloped deck a level-only item keeps to the slope's ends, and nothing stands in its middle")
+{
+    const save::TerrainGrid grid = flat_grid(8, 8);
+    // A lone deck rising along the columns.
+    save::PathTile slope = ground(2, 1);
+    slope.kind = save::PathKind::Flying;
+    slope.direction = 1;
+    slope.elevation = save::PathElevation { };
+    slope.elevation->slope = 4;
+    slope.elevation->quantised_height = 2;
+    const std::vector<save::PathTile> paths { slope };
+    const glm::vec3 long_side = at(2.5f, 1.9f, 2.5f);
+
+    const auto bin = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0, false);
+    REQUIRE(bin);
+    CHECK_FALSE(bin->refused);
+    CHECK(faced_side(bin->turns) == 0); // The long side pointed at
+
+    const auto bench = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0, true);
+    REQUIRE(bench);
+    CHECK_FALSE(bench->refused);
+    CHECK(faced_side(bench->turns) % 2 == 1); // An end, along the columns
+
+    // A sign wants a joined side, and no path joins this slope's ends.
+    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathSideJoin, 0, true)->refused);
+    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathCentre, 0, false)->refused);
+
+    // Level, the same deck takes them all as before.
+    std::vector<save::PathTile> level = paths;
+    level[0].elevation->slope = 0;
+    CHECK(faced_side(furniture_spot(level, grid, long_side, Positioning::PathSide, 0, true)->turns) == 0);
+    CHECK_FALSE(furniture_spot(level, grid, long_side, Positioning::PathCentre, 0, false)->refused);
+}

@@ -510,7 +510,7 @@ namespace rct3::scene
             if (park::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns) : std::nullopt;
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns, model != scene.models.end() && model->second.level_paths_only) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();
@@ -523,7 +523,7 @@ namespace rct3::scene
                 p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, 0, scene.grid).height : spot->height;
                 p.absolute = spot->raised;
                 const save::PlacedObject o = *ghost_object(p);
-                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
+                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : spot->refused || park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
                 p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
                 show_ghost();
                 return;

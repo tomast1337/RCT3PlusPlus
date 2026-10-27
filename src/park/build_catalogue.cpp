@@ -45,6 +45,8 @@ namespace rct3::park
         constexpr std::string_view kEnclosureDeleteText = "EnclosureDeleteTool_TT";
         constexpr std::string_view kEnclosureDeleteIcon = "GUI2_DeleteSelection";
         constexpr std::string_view kPoolPanelText = "Pool_PoolPanel";
+        constexpr std::string_view kPoolExtraText = "Pool_ExtraPanel";
+        constexpr std::string_view kJacuzziIcon = "Icon_Default_Jacuzzi";
         /// The overlays of shelters, animal species and toys.
         constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
@@ -428,7 +430,7 @@ namespace rct3::park
                     continue;
                 // shortcut: the tools take the pool type's own icon, the delete tool the area delete's; the
                 // pool editor's buttons have pictures of their own, find them when the list becomes a panel.
-                const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) {
+                const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) -> BuildItem& {
                     BuildItem& item = items.emplace_back();
                     item.list = BuildList::Pools;
                     item.kind = BuildKind::PoolSquare;
@@ -440,11 +442,36 @@ namespace rct3::park
                     item.group_text = kPoolPanelText;
                     item.price = square ? static_cast<std::int32_t>(pool_build_cost(e.pool->prices, *square)) : 0;
                     item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
+                    return item;
                 };
                 for (std::int32_t depth = 1; depth <= 3; ++depth)
                     tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
                 tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
                 tool(kPoolDelete, std::nullopt);
+                // shortcut: of the extras laid as squares, only the spa pool; the high diving board stands on
+                // raised squares, add it with the surface height buttons.
+                BuildItem& jacuzzi = tool(kPoolJacuzzi, PoolSquare { .kind = PoolKind::Jacuzzi, .depth = 2 });
+                jacuzzi.icon = kJacuzziIcon;
+                jacuzzi.group_icon = kJacuzziIcon;
+                jacuzzi.group_text = kPoolExtraText;
+                // The extras are the scenery items of the pool type's overlay that say where in a pool they go.
+                for (const auto& [name, item] : placed)
+                {
+                    const auto words = std::ranges::find(item->parameters, std::string_view("PoolExtra"), &ovl::SceneryItemParameter::name);
+                    if (words == item->parameters.end() || item->icon.empty())
+                        continue;
+                    BuildItem& extra = items.emplace_back();
+                    extra.list = BuildList::Pools;
+                    extra.kind = BuildKind::PoolExtra;
+                    extra.symbol = name;
+                    extra.overlay = path;
+                    extra.name_text = item->name_text;
+                    extra.icon = item->icon;
+                    extra.group_icon = kJacuzziIcon;
+                    extra.group_text = kPoolExtraText;
+                    extra.price = item->cost;
+                    extra.pool_extra = words->value;
+                }
             }
             for (const auto& e : ovl::read_stalls(overlay, *part))
             {
@@ -642,6 +669,7 @@ namespace rct3::park
             case BuildKind::Shelter:
             case BuildKind::AnimalToy:
             case BuildKind::PoolSquare:
+            case BuildKind::PoolExtra:
                 return true; // parks list these without saying whether they may be built
             default:
             {

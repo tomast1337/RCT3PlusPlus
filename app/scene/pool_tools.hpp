@@ -5,8 +5,10 @@
 // there. The pool's surface is the ground's height where the drag began, or the surface of the pool begun
 // there; the ground under every square is dug down to the pool's floor. With the delete tool, letting go takes
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
-// not own outright, or that the park cannot pay for, shows its marks red and is refused. A right click, or
-// picking another tool, puts the tool away.
+// not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra picked,
+// the square under the pointer is marked along the side nearest the pointer, red where the extra does not fit
+// (park/pools.hpp) or cannot be paid for; a click puts it in there. A right click, or picking another tool,
+// puts the tool away.
 #pragma once
 
 #include "park/build_catalogue.hpp"

@@ -300,15 +300,18 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     CHECK(l.view<const Dung>().size() == 1);
 }
 
-TEST_CASE("a save keeps the pools")
+TEST_CASE("a save keeps the pools and their extras")
 {
     parkfile::SavedPark park = small_park();
-    park.pools = park::PoolMap { { { .col = 3, .row = 4, .kind = park::PoolKind::Jacuzzi, .surface = 6, .depth = 3 } } };
+    park.pools = park::PoolMap { { { .col = 3, .row = 4, .kind = park::PoolKind::Jacuzzi, .surface = 6, .depth = 3 } }, { { .symbol = "Lamp", .overlay = "Pools/Own", .col = 3, .row = 4, .turn = 2, .refund = -5, .fit = { .side = true, .step = 1 } } } };
     const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     REQUIRE(read->pools);
     REQUIRE(read->pools->squares.size() == 1);
     const park::PoolSquare& s = read->pools->squares[0];
     CHECK((s.col == 3 && s.row == 4 && s.kind == park::PoolKind::Jacuzzi && s.surface == 6 && s.depth == 3));
+    REQUIRE(read->pools->extras.size() == 1);
+    const park::PoolExtra& e = read->pools->extras[0];
+    CHECK((e.symbol == "Lamp" && e.overlay == "Pools/Own" && e.turn == 2 && e.refund == -5 && e.fit.side && e.fit.step == 1 && !e.fit.wall));
     CHECK_FALSE(parkfile::read_saved_park(parkfile::write_saved_park(small_park()))->pools);
 }

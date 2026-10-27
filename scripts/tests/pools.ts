@@ -77,6 +77,29 @@ camera.look({ col: c0 + 1.5, row: r0 + 1.5 }, { col: c0 + 4.5, row: r0 + 5, up: 
 await frames(10);
 await screenshot("pool_corner");
 
+// Extras: a lamp on a paved square, a ladder on the pool's wall, a second lamp refused where the first stands,
+// sun loungers taking a whole paved square, a shower refused beside them.
+const extras = () => pieces().filter((o) => !o.symbol.match(/^(Solid|Edge|Corner|End|Full|Base|Railing)/)).length;
+const put = async (symbol: string, col: number, row: number) => {
+    expect(build.pick(kPool, symbol), `${symbol} in the pool list`);
+    await pointer.click(...on_view(col, row));
+    await frames(3);
+};
+cash = park.cash()!;
+await put("PoolLamp", c0, r0 + 3);
+expect(extras() === 1 && park.cash()! < cash, "a lamp, paid for");
+await put("Ladder", c0 + 1.1, r0 + 3.5);
+expect(extras() === 2, "a ladder on the wall");
+await put("PoolLamp", c0, r0 + 3);
+expect(extras() === 2, "no second lamp where one stands");
+await put("SunLoungers", c0 + 3, r0);
+await put("PoolShower", c0 + 3, r0);
+expect(extras() === 3, `loungers alone on their square, not ${extras()} extras`);
+build.stop();
+camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 });
+await frames(10);
+await screenshot("pool_extras");
+
 // Below it, in tiles: a lone square, a strip three long, and a strip four long with a block under its first
 // two squares, an inner corner where they meet.
 expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");

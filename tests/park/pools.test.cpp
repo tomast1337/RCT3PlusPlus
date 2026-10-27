@@ -136,3 +136,58 @@ TEST_CASE("pools: laying over a square costs the new one and refunds the old")
     CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 3, 3 }) == -70);
     CHECK(map.squares.empty());
 }
+
+TEST_CASE("pools: an extra's words name what it takes of its square")
+{
+    const PoolExtraFit fit = pool_extra_fit(" side centralsolid WholeTile HeightStep 2 Shower");
+    CHECK(fit.side);
+    CHECK(fit.paved_middle);
+    CHECK(fit.whole);
+    CHECK(fit.step == 2);
+    CHECK_FALSE(fit.wall);
+    CHECK_FALSE(fit.water_middle);
+}
+
+TEST_CASE("pools: an extra fits where its square offers all it takes and no other extra has it")
+{
+    PoolMap map = ringed(3, 3);
+    const PoolExtraFit middle { .paved_middle = true };
+    const PoolExtraFit whole { .paved_middle = true, .whole = true };
+    const PoolExtraFit on_wall { .side = true, .wall = true };
+    const PoolExtraFit board { .water_middle = true, .side = true, .water_across = true };
+    // Paved squares take middle extras; water squares do not.
+    CHECK(pool_extra_fits(map, 0, 0, middle, 0));
+    CHECK_FALSE(pool_extra_fits(map, 2, 2, middle, 0));
+    // Wall extras go on a walled side of a water square only: (1, 2) is walled towards the column before.
+    CHECK(pool_extra_fits(map, 1, 2, on_wall, 3));
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, 1));
+    CHECK_FALSE(pool_extra_fits(map, 2, 2, on_wall, 3));
+    CHECK_FALSE(pool_extra_fits(map, 0, 2, on_wall, 3));
+    // A board needs water across from its wall.
+    CHECK(pool_extra_fits(map, 1, 2, board, 3));
+    // What one extra takes, another may not.
+    map.extras.push_back({ .col = 0, .row = 0, .turn = 0, .fit = middle });
+    CHECK_FALSE(pool_extra_fits(map, 0, 0, middle, 1));
+    CHECK_FALSE(pool_extra_fits(map, 0, 0, whole, 2));
+    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = on_wall });
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, 3));
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, board, 3));
+    CHECK_FALSE(pool_extra_fits(map, 9, 9, middle, 0));
+}
+
+TEST_CASE("pools: extras go with their square, refunded")
+{
+    PoolMap map = ringed(1, 1);
+    map.extras.push_back({ .col = 0, .row = 0, .refund = -30, .fit = { .paved_middle = true } });
+    map.extras.push_back({ .col = 2, .row = 2, .refund = -40, .fit = { .paved_middle = true } });
+    CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 0, 0 }) == -60 - 2 * 5 - 30);
+    REQUIRE(map.extras.size() == 1);
+    PoolSquare water { .col = 2, .row = 2, .kind = PoolKind::Water, .surface = 4, .depth = 2 };
+    CHECK(lay_pool(map, kPrices, std::array { water }) == 700 + (-60 - 2 * 5) - 40);
+    CHECK(map.extras.empty());
+    map.extras.push_back({ .symbol = "Lamp", .overlay = "Pools/Own", .col = 1, .row = 1, .turn = 3 });
+    const auto objects = pool_objects(map, "Pools/Own", 0);
+    CHECK(objects.back().symbol == "Lamp");
+    CHECK(objects.back().rotation == 3);
+    CHECK(objects.back().base_height == 4);
+}

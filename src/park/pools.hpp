@@ -9,6 +9,13 @@
 // piece at the bottom and, where a side or a corner meets no water, a wall turned to face it. A square of
 // the pool has a railing on each side that meets no square of the pool.
 //
+// Extras (sun loungers, lamps, ladders and the rest) are scenery items standing on a square, each against one
+// of its sides. Each takes parts of its square, named by the words of its pool extra setting: the middle of a
+// paved square or of a water square, the side it is against, the wall under that side, the water across from
+// it, or the whole square (its middle and all four sides). A paved square offers its middle and its sides; a
+// water square its middle, its walled sides with the walls under them, and water at its open sides. An extra
+// fits where its square offers all it takes and no other extra there has taken any of it.
+//
 // Turns are quarter turns as placed objects count them; a piece turned by 0 has its wall on the square's
 // side towards the next row, 1 towards the next column, 2 towards the row before, 3 towards the column
 // before.
@@ -20,6 +27,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -42,10 +50,38 @@ namespace rct3::park
         std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
     };
 
-    /// The pools the player has laid, a square to a tile.
+    /// What an extra takes of its square, from the words of its pool extra setting.
+    struct PoolExtraFit
+    {
+        bool paved_middle = false; ///< "CentralSolid"
+        bool water_middle = false; ///< "CentralWater"
+        bool side = false;         ///< "Side"
+        bool wall = false;         ///< "UnderWaterWall"
+        bool water_across = false; ///< "OppositeWater"
+        bool whole = false;        ///< "WholeTile"
+        std::int32_t step = 0;     ///< "HeightStep" and its number: a change of level at its side
+    };
+
+    /// The fit the words of a pool extra setting name, in any case; words it does not know are left out.
+    [[nodiscard]] PoolExtraFit pool_extra_fit(std::string_view words);
+
+    /// An extra the player has put in a pool.
+    struct PoolExtra
+    {
+        std::string symbol { };  ///< Its scenery item
+        std::string overlay { }; ///< The scenery item's overlay
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t turn = 0;   ///< The side it is against
+        std::int64_t refund = 0; ///< What taking it away costs, hundredths; below zero, money back
+        PoolExtraFit fit { };
+    };
+
+    /// The pools the player has laid, a square to a tile, and the extras in them.
     struct PoolMap
     {
         std::vector<PoolSquare> squares { };
+        std::vector<PoolExtra> extras { };
 
         [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row) const noexcept;
     };
@@ -98,7 +134,8 @@ namespace rct3::park
     [[nodiscard]] std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square);
 
     /// The pieces of every square of `map`, as placed objects of the pool type in `overlay`, each standing
-    /// on its square at its own height. New objects take ids after `last_id`.
+    /// on its square at its own height, then the extras, at their squares' surface. New objects take ids
+    /// after `last_id`.
     [[nodiscard]] std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id);
 
     /// The water of every water square, as the park's water mesh takes it.
@@ -109,12 +146,16 @@ namespace rct3::park
     /// What taking `square` up again costs: below zero, money back.
     [[nodiscard]] std::int64_t pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
 
+    /// Whether an extra that fits as `fit` may go in `map` on the square at (`col`, `row`), against its side
+    /// `turn`.
+    [[nodiscard]] bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, std::int32_t turn);
+
     /// Lays `squares` in `map`, each over whatever square was where it goes, and returns what that costs:
-    /// each new square's price and the refund of each it takes the place of. A square laid over one the same
-    /// costs nothing.
+    /// each new square's price and the refund of each it takes the place of, and of the extras on it. A square
+    /// laid over one the same costs nothing.
     std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
 
-    /// Takes up the squares of `map` from `a` to `b`; returns the refund, below zero.
+    /// Takes up the squares of `map` from `a` to `b` and the extras on them; returns the refund, below zero.
     std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b);
 
 } // namespace rct3::park

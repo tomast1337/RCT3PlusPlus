@@ -89,7 +89,7 @@ namespace rct3::scene
 
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks })
+        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks, &scene.pool_marks })
         {
             if (lines->count == 0)
                 continue;
@@ -112,6 +112,7 @@ namespace rct3::scene
         drop(device, scene.grid_lines);
         drop(device, scene.contour_lines);
         drop(device, scene.land_marks);
+        drop(device, scene.pool_marks);
     }
 
     glm::vec3 tile_point(const save::TerrainGrid& grid, save::Tile tile)

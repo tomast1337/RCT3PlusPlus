@@ -13,6 +13,9 @@
 // the item category for scenery. Scenery without an icon is never listed, and items flagged as billboards
 // go in the billboard list besides their own.
 //
+// The pool list comes from the pool type's overlay, "Pool/Default/Default_Stub": tools for laying its
+// squares, water at each depth and paved tiles, and for taking them up again.
+//
 // The enclosure and animal lists come from their own folders: "Enclosures" holds the kinds of enclosure
 // fence and the animal shelters, "WildAnimals" the species and the toys. Each species gives one item per
 // animal a park can buy: adult male and female, young male and female.
@@ -21,6 +24,7 @@
 #include "ovl/overlay.hpp"
 #include "save/model/park.hpp"
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -47,6 +51,7 @@ namespace rct3::park
         PoolRides,
         Enclosures, ///< Fences, shelters and toys for animal enclosures
         Animals,
+        Pools, ///< Swimming pools: the tools laying their squares
         // Shops
         FoodShops,
         DrinkShops,
@@ -88,7 +93,16 @@ namespace rct3::park
         Shelter,        ///< A scenery item placed inside an enclosure for its animals
         AnimalToy,      ///< Put inside an enclosure for the animals to play with
         Animal,         ///< One animal of a species, bought into an enclosure
+        PoolSquare,     ///< A tool laying squares of a pool, or taking them up (park/pools.hpp)
     };
+
+    /// The symbols of the pool list's tools: water at each depth, paved tiles, and taking squares up. They are
+    /// the keys of the texts that name them.
+    inline constexpr std::array<std::string_view, 3> kPoolWater { "Pool_DepthShallow", "Pool_DepthNormal", "Pool_DepthDeep" };
+    inline constexpr std::string_view kPoolTiles = "Pool_PlaceTiles";
+    inline constexpr std::string_view kPoolDelete = "Pool_DeleteArea";
+    /// The overlay of the pool type, whose pieces pools are built of.
+    inline constexpr std::string_view kPoolOverlay = "Pool/Default/Default_Stub";
 
     /// The symbol of the enclosure list's delete tool, listed first among the fences: it takes tiles out of
     /// enclosures as a fence puts them in.
@@ -155,6 +169,8 @@ namespace rct3::park
             std::int32_t price = 0;
         };
         std::vector<Goods> goods;
+        /// Pool tools: the pool type's price list (ovl::PoolType::prices), what their squares cost.
+        std::vector<std::int32_t> pool_prices { };
     };
 
     /// Names the theme of each item that has only its number, after another item of that number.
@@ -170,7 +186,8 @@ namespace rct3::park
     /// Which items a park lets the player build, by what it records of each: those it has made available
     /// and invented, and does not hide, and the animal species it has unlocked. A park that records nothing
     /// lets every item be built, and one that records no species every animal. Enclosure fences, shelters
-    /// and toys are always offered: parks list them without saying whether they may be built.
+    /// and toys are always offered: parks list them without saying whether they may be built. So are the
+    /// pool tools, which no park lists.
     class BuildOffer
     {
     public:

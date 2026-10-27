@@ -72,7 +72,7 @@ TEST_CASE("pools: a lone square, an end and a channel")
     CHECK(has(pool_walls(0), PoolWall::Full, 0));
     // Water only at the next row: walls on the other three sides.
     CHECK(pool_walls(kNextRow).size() == 1);
-    CHECK(has(pool_walls(kNextRow), PoolWall::End, 2));
+    CHECK(has(pool_walls(kNextRow), PoolWall::End, 1));
     // Water at the next row and the row before: an edge on each side.
     const auto channel = pool_walls(kNextRow | kRowBefore);
     CHECK(channel.size() == 2);

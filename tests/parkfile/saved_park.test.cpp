@@ -299,3 +299,16 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     CHECK(animals.get<const Pose>(animals.front()).position == glm::vec3 { 3, 0, 1 });
     CHECK(l.view<const Dung>().size() == 1);
 }
+
+TEST_CASE("a save keeps the pools")
+{
+    parkfile::SavedPark park = small_park();
+    park.pools = park::PoolMap { { { .col = 3, .row = 4, .kind = park::PoolKind::Jacuzzi, .surface = 6, .depth = 3 } } };
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->pools);
+    REQUIRE(read->pools->squares.size() == 1);
+    const park::PoolSquare& s = read->pools->squares[0];
+    CHECK((s.col == 3 && s.row == 4 && s.kind == park::PoolKind::Jacuzzi && s.surface == 6 && s.depth == 3));
+    CHECK_FALSE(parkfile::read_saved_park(parkfile::write_saved_park(small_park()))->pools);
+}

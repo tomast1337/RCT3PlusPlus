@@ -176,7 +176,8 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
-    /** The middle of a tile on the view, or with fractions that point of it; undefined when it is not in sight. */
+    /** The middle of a tile on the view (on a pool square, at its surface), or with fractions that point of it;
+     *  undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     /** The tiles with support columns standing on them, and how many pieces each has. */

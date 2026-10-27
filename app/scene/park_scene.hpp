@@ -30,6 +30,7 @@
 #include "park/object_mesh.hpp"
 #include "park/object_pick.hpp"
 #include "park/person_mesh.hpp"
+#include "park/pools.hpp"
 #include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
@@ -238,6 +239,15 @@ namespace rct3::scene
         std::optional<Marked> marked { };
     };
 
+    /// The pool list's tool out (scene/pool_tools.hpp): a drag lays squares of a pool, or takes them up.
+    struct PoolTool
+    {
+        std::optional<park::BuildItem> item;              ///< The tool picked; none while put away
+        std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
+        std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
+        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+    };
+
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
     struct FloatingMoney
     {
@@ -362,6 +372,9 @@ namespace rct3::scene
         std::vector<std::uint64_t> fence_panels;     ///< The objects of the fence round the park's land, as last built
         save::EnclosureMap enclosures;               ///< The animal enclosures' tiles and fences
         std::vector<std::uint64_t> enclosure_panels; ///< The objects of their fences, as last built
+        park::PoolMap pools;                         ///< The swimming pools the player laid
+        std::vector<std::uint64_t> pool_pieces;      ///< Their pieces' objects, as last built
+        std::size_t saved_pool_water = 0;            ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;            ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
@@ -626,6 +639,7 @@ namespace rct3::scene
         ViewLines contour_lines;                                    ///< Likewise the contours
         ViewLines delete_marks;                                     ///< The tiles the area delete tool marked
         ViewLines enclosure_marks;                                  ///< The tiles the enclosure tool marks
+        ViewLines pool_marks;                                       ///< The squares the pool tool marks
         ViewLines land_marks;                                       ///< What the land tool out would work on
         park::ParkCamera view_camera;                               ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                          ///< The round view is drawn into
@@ -685,6 +699,7 @@ namespace rct3::scene
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
         EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
+        PoolTool pooling;                                               ///< The pool list's tool out
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed

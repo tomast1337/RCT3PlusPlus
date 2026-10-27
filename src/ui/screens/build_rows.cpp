@@ -259,6 +259,8 @@ namespace rct3::ui
                 return BuildList::Enclosures;
             case ToolItem::Animals:
                 return BuildList::Animals;
+            case ToolItem::Pools:
+                return BuildList::Pools;
             case ToolItem::FoodShops:
                 return BuildList::FoodShops;
             case ToolItem::DrinkShops:
@@ -335,6 +337,9 @@ namespace rct3::ui
                     row.rank = static_cast<int>(item.strength * kStrengthRank);
                     break;
                 case park::BuildKind::AnimalToy:
+                    break;
+                case park::BuildKind::PoolSquare:
+                    row.rank = item.price; // Taking up first, then tiles, then water from the shallowest
                     break;
                 case park::BuildKind::Animal:
                     row.size = std::u16string(strings.get(kRarity)) + u' ' + std::u16string(strings.get(rarity_text(item.rarity)));

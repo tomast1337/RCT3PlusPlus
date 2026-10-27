@@ -6,12 +6,14 @@
 #include "ovl/animated_ride.hpp"
 #include "ovl/enclosure_fence.hpp"
 #include "ovl/integer_value.hpp"
+#include "ovl/piece_set.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
 #include "ovl/text.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/item_category.hpp"
+#include "park/pools.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 
@@ -42,6 +44,7 @@ namespace rct3::park
         constexpr std::string_view kFenceEnding = "_Stub";
         constexpr std::string_view kEnclosureDeleteText = "EnclosureDeleteTool_TT";
         constexpr std::string_view kEnclosureDeleteIcon = "GUI2_DeleteSelection";
+        constexpr std::string_view kPoolPanelText = "Pool_PoolPanel";
         /// The overlays of shelters, animal species and toys.
         constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
@@ -419,6 +422,30 @@ namespace rct3::park
                     items.push_back(attraction_item(*shop, BuildKind::Shop, e.name, path, info, placed_as(info.style, e.name)));
             }
             add_enclosure_items(overlay, *part, path, placed, items);
+            for (const auto& e : ovl::read_pool_types(overlay, *part))
+            {
+                if (!e.pool)
+                    continue;
+                // shortcut: the tools take the pool type's own icon, the delete tool the area delete's; the
+                // pool editor's buttons have pictures of their own, find them when the list becomes a panel.
+                const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) {
+                    BuildItem& item = items.emplace_back();
+                    item.list = BuildList::Pools;
+                    item.kind = BuildKind::PoolSquare;
+                    item.symbol = symbol;
+                    item.overlay = path;
+                    item.name_text = symbol;
+                    item.icon = square ? std::string(e.pool->icon) : std::string(kEnclosureDeleteIcon);
+                    item.group_icon = e.pool->icon;
+                    item.group_text = kPoolPanelText;
+                    item.price = square ? static_cast<std::int32_t>(pool_build_cost(e.pool->prices, *square)) : 0;
+                    item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
+                };
+                for (std::int32_t depth = 1; depth <= 3; ++depth)
+                    tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
+                tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
+                tool(kPoolDelete, std::nullopt);
+            }
             for (const auto& e : ovl::read_stalls(overlay, *part))
             {
                 if (!e.stall)
@@ -560,7 +587,7 @@ namespace rct3::park
                 del.strength = -1; // listed before the weakest fence
             }
         }
-        for (const std::string_view overlay : kAnimalOverlays)
+        for (const std::string_view overlay : { kAnimalOverlays[0], kAnimalOverlays[1], kAnimalOverlays[2], kPoolOverlay })
         {
             if (const auto file = find(root, std::string(overlay) + std::string(kCommonEnding)))
                 read_file(root, *file, items);
@@ -614,6 +641,7 @@ namespace rct3::park
             case BuildKind::EnclosureFence:
             case BuildKind::Shelter:
             case BuildKind::AnimalToy:
+            case BuildKind::PoolSquare:
                 return true; // parks list these without saying whether they may be built
             default:
             {

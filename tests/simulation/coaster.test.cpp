@@ -278,6 +278,29 @@ TEST_CASE("a train held at a block brake is braked to a stop where its room ends
     CHECK(c.at == doctest::Approx(end).epsilon(0.01));
 }
 
+TEST_CASE("a train coming into the station slows the nearer it gets to where it stops, and creeps in")
+{
+    Coaster c = hill();
+    c.running = true;
+    for (int i = 0; i < 2000 && c.travelled < 90; ++i)
+        drive(c, 0.05f);
+    drive(c, 0.05f);
+    REQUIRE(c.running);
+    const float in = c.speed; // As the front comes into the station, under 10 m from its stop
+    CHECK(in > c.station_speed);
+    CHECK(in < 8);
+    float last = in;
+    bool slowing = true;
+    for (int i = 0; i < 400 && c.running && c.travelled < 99.5f; ++i)
+    {
+        drive(c, 0.05f);
+        slowing = slowing && c.speed <= last + 0.01f;
+        last = c.speed;
+    }
+    CHECK(slowing);
+    CHECK(last < c.station_speed); // Creeping in for the last of the way
+}
+
 TEST_CASE("a launched train that rolls back into the station stops there and is not launched again")
 {
     // Too slow a launch for the 15 m hill: it rolls back down.

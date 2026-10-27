@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Starts a custom scenario from the first scenario to start from, as the Custom Scenario menu's New does, and
-// saves it: the save goes with the custom scenarios. Needs a park in the data folder's new_scenarios/, so run it
-// with RCT3PP_DATA set to a scratch folder holding one:
-//
-//   RCT3PP_DATA=build/cdata ./nob script scripts/tests/custom_scenario.ts
+// saves it: the save goes with the custom scenarios. Needs a park in the data folder's new_scenarios/, which
+// `./nob script` puts there.
 
 export {};
 

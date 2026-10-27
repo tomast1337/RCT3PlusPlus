@@ -120,7 +120,8 @@ system modules.
 go to the game. TypeScript is compiled with `tsc` first (`npm install -g typescript`); `.js` files run as
 they are. Each script's log and named screenshots land in `build/scripts/report/NAME/` for review. Each
 script runs with a fresh data folder of its own, `build/scripts/data/NAME/`, so what one script saves never
-reaches another or your own settings; when `RCT3PP_DATA` is set, each folder starts as a copy of it.
+reaches another or your own settings; when `RCT3PP_DATA` is set, each folder starts as a copy of it. A folder
+whose `new_scenarios/` is empty gets the install's Vanilla Hills park there, to start custom scenarios from.
 
 ## Reporting a bug or asking for a feature
 

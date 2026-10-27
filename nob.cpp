@@ -22,7 +22,9 @@
 // CLANGFORMAT and CLANGTIDY override the clang-format and clang-tidy binaries.
 #include "nob.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <format>
@@ -931,6 +933,20 @@ int main(int argc, char** argv)
             // starts as a copy of RCT3PP_DATA when that is set.
             const char* data_env = std::getenv("RCT3PP_DATA");
             const fs::path data_template = data_env ? fs::path(data_env) : fs::path();
+            // A park to start custom scenarios from, for folders whose new_scenarios/ is empty: the install's
+            // first campaign park, found without regard to case as the game's files are.
+            fs::path start_park;
+            if (const char* game = std::getenv("RCT3PP_GAME_PATH"); game && fs::is_directory(game))
+                for (const fs::directory_entry& entry : fs::recursive_directory_iterator(game, fs::directory_options::skip_permission_denied))
+                {
+                    std::string name = entry.path().filename().string();
+                    std::ranges::transform(name, name.begin(), [](unsigned char c) { return std::tolower(c); });
+                    if (name == "vanillahills.dat")
+                    {
+                        start_park = entry.path();
+                        break;
+                    }
+                }
             std::vector<std::string> failed;
             for (const fs::path& file : scripts)
             {
@@ -943,6 +959,11 @@ int main(int argc, char** argv)
                 fs::create_directories(data);
                 if (!data_template.empty() && fs::is_directory(data_template))
                     fs::copy(data_template, data, fs::copy_options::recursive);
+                if (!start_park.empty() && (!fs::is_directory(data / "new_scenarios") || fs::is_empty(data / "new_scenarios")))
+                {
+                    fs::create_directories(data / "new_scenarios");
+                    fs::copy_file(start_park, data / "new_scenarios" / start_park.filename());
+                }
                 setenv("RCT3PP_DATA", fs::absolute(data).c_str(), 1);
                 Cmd one;
                 // Headless: no window pops up, the frames still draw for the screenshots, and no vsync stops them

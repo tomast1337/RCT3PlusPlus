@@ -6,7 +6,8 @@
 // water bodies keep it.
 //
 // The water tool pours with a click: up to the height clicked, rounded up to a whole unit, taking in the lakes
-// the flood reaches. Clicking a lake takes it away, with the waterfalls pouring from or into it.
+// the flood reaches. Clicking a lake takes it away, with the waterfalls pouring from or into it. Shaping the
+// ground under or beside a lake takes it away, rather than leaving water the new ground cannot hold.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -32,6 +33,13 @@ namespace rct3::park
     /// Takes the lake holding `tile` out of `water`, and the `falls` pouring from or into it; whether there was one.
     bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, const save::TerrainGrid& grid, save::Tile tile);
 
+    /// After the ground moved from `was` to `grid`: takes out of `water` every lake on a tile that moved, or beside
+    /// one that now dips below its level, and out of `falls` every waterfall with an end on or beside a tile that
+    /// moved, with its lakes, and those pouring from or into a lake taken. Whether any went.
+    /// shortcut: the whole lake goes, where it could keep the water the new ground still holds (drying what rose
+    /// out of it, or sinking to the highest level that does not leak); upgrade when players miss lakes they
+    /// reshaped the banks of.
+    bool drain_moved(save::WaterLayer& water, std::vector<save::Waterfall>& falls, const save::TerrainGrid& was, const save::TerrainGrid& grid);
     /// Whether `body` holds water on tile `col`, `row`.
     [[nodiscard]] bool holds(const save::WaterBody& body, save::Tile tile);
 

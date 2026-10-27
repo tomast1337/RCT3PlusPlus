@@ -190,6 +190,9 @@ namespace rct3::scene
                     (*step)[0] = { std::min((*step)[0].col, c), std::min((*step)[0].row, r) };
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
+            // Water the new ground may not hold goes, as do the waterfalls beside it.
+            if (park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid))
+                show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
             rebuild_ground(device, scene, assets);
             if (!step)
                 return;

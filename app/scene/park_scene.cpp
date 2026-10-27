@@ -354,6 +354,12 @@ namespace rct3::scene
                 c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
             // Advanced turns round points above the ground too.
             scene.camera = free ? c : park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
+            // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
+            // while the pool tool shows its work there.
+            const save::TerrainGrid& g = scene.grid;
+            const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<int>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
+            if (pool)
+                scene.camera.target.y = std::max(scene.camera.target.y, static_cast<float>(pool->surface));
         }
 
         /// The sky and the light as the day clock shows them, with a look that is fading out over them.

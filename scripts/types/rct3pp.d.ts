@@ -240,6 +240,9 @@ declare namespace build {
     function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
+    /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
+     * and how many tiles it would take in or out; undefined otherwise. */
+    function enclosing(): { cost: number; tiles: number } | undefined;
     /** What is being placed, what keeps it from where the pointer is, and whether a stall's facing arrow shows;
      * undefined while nothing is. */
     function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure"; affordable: boolean; ghost: boolean; arrow: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;

@@ -52,6 +52,7 @@ await screenshot("laid_raised");
 await ui.click("placing/body/construction/demolish");
 await frames(10);
 expect(rides.list()[ride].pieces === 0, "the first piece demolished");
+await screenshot("demolished"); // Its price floats up, paid back
 pointer.move(0.35, 0.6);
 await frames(10);
 const free = build.construction()!.ghostAt!;

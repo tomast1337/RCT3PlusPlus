@@ -10,6 +10,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/asset_index.hpp"
 #include "park/build_arrows.hpp"
+#include "park/demolish_refund.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
 #include "park/relief_maps.hpp"
@@ -27,6 +28,7 @@
 #include "scene/park_particles.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
+#include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
@@ -249,6 +251,19 @@ namespace rct3::scene
             if (object == scene.objects.end() || !laid)
                 return std::nullopt;
             return BuiltPiece { static_cast<std::size_t>(object - scene.objects.begin()), *laid };
+        }
+
+        /// Pays back what piece `piece` of ride `ride`, standing as object `object`, cost to build, as pulling the
+        /// whole ride down would, floating it up from where the piece starts.
+        void refund_piece(ParkScene& scene, const park::PieceCatalogue& c, const save::Ride& ride, const save::TrackPiece& piece, const save::PlacedObject& object)
+        {
+            const auto shape = park::shape_named(c, piece.symbol);
+            if (!shape)
+                return;
+            const std::int64_t back = park::demolish_refund(shape->record.cost, (ride.base.flags & save::AttractionCommon::kNeverOpened) == 0);
+            if (scene.park.cash)
+                *scene.park.cash += back;
+            float_money(scene, park::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
         /// Hides the platform built beside a station piece, which goes with it.
@@ -891,9 +906,8 @@ namespace rct3::scene
                 scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
             if (over)
             {
-                // shortcut: the piece taken out is not paid back, as demolishing pays nothing back, upgrade when
-                // pieces are sold back.
                 save::TrackPiece& old = ride.track->pieces[*b.selected];
+                refund_piece(scene, *c, ride, old, scene.objects[over->object]);
                 hide_platform(scene, old); // A station's platform is built again if the new piece is one
                 old = piece;
                 scene.objects[over->object] = std::move(object);
@@ -1075,7 +1089,11 @@ namespace rct3::scene
             }
             const auto objects = object_indices(scene);
             if (const auto found = objects.find(last.scenery); found != objects.end())
+            {
+                if (c != nullptr)
+                    refund_piece(scene, *c, ride, last, scene.objects[found->second]);
                 scene.objects[found->second].hidden = true;
+            }
             hide_platform(scene, last);
             scene.attractions.erase(last.scenery);
             objects_changed(scene);

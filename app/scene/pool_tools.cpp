@@ -19,6 +19,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <span>
 #include <utility>
 
 namespace rct3::scene
@@ -131,7 +132,8 @@ namespace rct3::scene
 
         /// Where the pointer is on the grid, in tiles with fractions: on the top of a pool square where one is
         /// in the way, as the player sees it, else on the ground; the ground under the pools is dug down out of
-        /// sight.
+        /// sight. The squares from before the work shown count too, so taking up or laying the square under the
+        /// pointer does not move it.
         std::optional<glm::vec2> pointed_spot(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             if (size.x <= 0 || size.y <= 0)
@@ -139,14 +141,16 @@ namespace rct3::scene
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
             std::optional<float> nearest = park::ground_hit(ray, scene.grid);
             const save::TerrainGrid& g = scene.grid;
-            for (const park::PoolSquare& s : scene.pools.squares)
-            {
-                const float along = (static_cast<float>(s.surface) - ray.origin.y) / ray.direction.y;
-                const glm::vec3 hit = ray.origin + ray.direction * along;
-                const bool on = std::floor((hit.x - g.origin_x) / g.tile_size_x) == static_cast<float>(s.col) && std::floor((hit.z - g.origin_z) / g.tile_size_z) == static_cast<float>(s.row);
-                if (along > 0 && on && (!nearest || along < *nearest))
-                    nearest = along;
-            }
+            const auto before = scene.pooling.before ? std::span(scene.pooling.before->squares) : std::span<const park::PoolSquare> { };
+            for (const auto& squares : { std::span<const park::PoolSquare>(scene.pools.squares), before })
+                for (const park::PoolSquare& s : squares)
+                {
+                    const float along = (static_cast<float>(s.surface) - ray.origin.y) / ray.direction.y;
+                    const glm::vec3 hit = ray.origin + ray.direction * along;
+                    const bool on = std::floor((hit.x - g.origin_x) / g.tile_size_x) == static_cast<float>(s.col) && std::floor((hit.z - g.origin_z) / g.tile_size_z) == static_cast<float>(s.row);
+                    if (along > 0 && on && (!nearest || along < *nearest))
+                        nearest = along;
+                }
             if (!nearest)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *nearest;
@@ -251,13 +255,43 @@ namespace rct3::scene
                         return false;
             return !scene.park.cash || cost <= 0 || *scene.park.cash >= cost;
         }
+
+        /// Takes the work shown out of the pools again, and puts back the ground it dug. True when there was any.
+        bool put_back(ParkScene& scene)
+        {
+            PoolTool& t = scene.pooling;
+            if (!t.before)
+                return false;
+            scene.pools = std::move(*t.before);
+            t.before.reset();
+            for (const auto& [tile, corners] : t.dug)
+                scene.grid.at(tile.col, tile.row).corners = corners;
+            t.dug.clear();
+            return true;
+        }
+
+        /// Lays `map`, the pools with the work done, in their place, keeping what to put back.
+        void lay_work(ParkScene& scene, park::PoolMap map)
+        {
+            PoolTool& t = scene.pooling;
+            const auto area = marked(t.working->first, t.working->second);
+            for (std::int32_t row = area[1]; row <= area[3]; ++row)
+                for (std::int32_t col = area[0]; col <= area[2]; ++col)
+                    t.dug.emplace_back(save::Tile { col, row }, scene.grid.at(col, row).corners);
+            // The ground under squares taken up is left flat at their surface.
+            for (const park::PoolSquare& s : scene.pools.squares)
+                if (!map.at(s.col, s.row))
+                    scene.grid.at(s.col, s.row).corners.fill(static_cast<float>(s.surface));
+            t.before = std::exchange(scene.pools, std::move(map));
+        }
     } // namespace
 
     bool start_pooling(ParkScene& scene, const park::BuildItem& item)
     {
         if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
             return false;
-        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid };
+        const bool redraw = put_back(scene) || scene.pooling.redraw;
+        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .redraw = redraw };
         return true;
     }
 
@@ -265,7 +299,8 @@ namespace rct3::scene
     {
         if (auto panel = panel_of(scene))
             panel->hide();
-        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid }; // The marks go on the next frame
+        const bool redraw = put_back(scene) || scene.pooling.redraw;
+        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .redraw = redraw }; // The marks go on the next frame
     }
 
     void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
@@ -298,51 +333,71 @@ namespace rct3::scene
         if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
             return update_extra(device, scene, assets, spot, down);
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
-        if (t.item && down && (t.corner || tile))
+        if (std::exchange(t.redraw, false))
+            pools_changed(device, scene, assets);
+        const bool dragging = t.item && down && (t.corner || tile);
+        if (dragging)
         {
             if (!t.corner)
                 t.corner = tile;
             if (tile)
                 t.other = tile;
         }
-        else if (t.corner && t.other)
+        // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
+        // be seen, when it may be done; letting go keeps it.
+        // shortcut: only the delete tool shows its work; the others lay it when let go.
+        const bool live = t.item && t.item->symbol == park::kPoolDelete;
+        const auto working = t.corner && t.other ? std::optional(std::pair { *t.corner, *t.other }) : (t.item && tile ? std::optional(std::pair { *tile, *tile }) : std::nullopt);
+        if (working != t.working)
         {
-            // Let go: the squares are laid or taken up.
-            const auto [map, cost] = marked_pools(scene, *t.corner, *t.other);
-            if (allowed(scene, marked(*t.corner, *t.other), cost))
+            bool changed = put_back(scene);
+            t.working = working;
+            if (working)
             {
-                // The ground under squares taken up is left flat at their surface.
-                for (const park::PoolSquare& s : scene.pools.squares)
-                    if (!map.at(s.col, s.row))
-                        scene.grid.at(s.col, s.row).corners.fill(static_cast<float>(s.surface));
-                scene.pools = map;
-                if (scene.park.cash)
-                    *scene.park.cash -= cost;
-                if (cost != 0)
-                    float_money(scene, tile_point(scene.grid, *t.other), -cost);
+                auto [map, cost] = marked_pools(scene, working->first, working->second);
+                t.cost = cost;
+                t.ok = allowed(scene, marked(working->first, working->second), cost);
+                if (live && t.ok)
+                {
+                    lay_work(scene, std::move(map));
+                    changed = true;
+                }
+            }
+            if (changed)
                 pools_changed(device, scene, assets);
+        }
+        if (!dragging && t.corner && t.other)
+        {
+            // Let go: the work is kept and paid for.
+            if (!t.before && t.ok)
+            {
+                lay_work(scene, marked_pools(scene, *t.corner, *t.other).first);
+                pools_changed(device, scene, assets);
+            }
+            if (t.before)
+            {
+                if (scene.park.cash)
+                    *scene.park.cash -= t.cost;
+                if (t.cost != 0)
+                    float_money(scene, tile_point(scene.grid, *t.other), -t.cost);
+                t.before.reset();
+                t.dug.clear();
             }
             t.corner.reset();
             t.other.reset();
         }
-        std::optional<std::array<std::int32_t, 4>> marks;
-        bool ok = true;
-        if (t.corner && t.other)
-        {
-            marks = marked(*t.corner, *t.other);
-            ok = allowed(scene, *marks, marked_pools(scene, *t.corner, *t.other).second);
-        }
-        else if (tile)
-            marks = marked(*tile, *tile);
-        draw_marks(device, scene, marks, park::TilePart::Whole, ok);
+        const auto marks = working ? std::optional(marked(working->first, working->second)) : std::nullopt;
+        draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);
     }
 
     void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         wait_for_build(scene);
-        for (save::PlacedObject& o : scene.objects)
-            if (std::ranges::contains(scene.pool_pieces, o.id))
-                o.hidden = true;
+        // Taken out, not hidden: the work shown lays the pieces again at every move. The prop the info panel
+        // tells about is found again after, a changing room as the new piece of the same room.
+        const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
+        const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
+        std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(scene.pool_pieces, o.id); });
         scene.pool_pieces.clear();
         // The ground under every square is dug down to its floor.
         for (const park::PoolSquare& s : scene.pools.squares)
@@ -355,6 +410,12 @@ namespace rct3::scene
             piece.colours = scene.models.at(park::model_key(piece)).default_colours;
             scene.pool_pieces.push_back(piece.id);
             scene.objects.push_back(std::move(piece));
+        }
+        if (shown)
+        {
+            const auto same_piece = [&](const save::PlacedObject& o) { return shown_piece && o.col == shown->col && o.row == shown->row && o.symbol == shown->symbol && std::ranges::contains(scene.pool_pieces, o.id); };
+            const auto found = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return (!shown_piece && o.id == shown->id) || same_piece(o); });
+            scene.shown_prop = found != scene.objects.end() ? std::optional(static_cast<std::size_t>(found - scene.objects.begin())) : std::nullopt;
         }
         objects_changed(scene);
         std::vector<save::PoolWater>& water = scene.footpaths.pools;

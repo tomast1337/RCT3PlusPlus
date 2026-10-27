@@ -252,6 +252,14 @@ namespace rct3::scene
         std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
         std::optional<std::int32_t> height;               ///< Of the surface, when the pool panel does not snap it to the ground
         bool grid = false;                                ///< The pool panel's grid switch, as last seen
+        /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
+        std::optional<std::pair<save::Tile, save::Tile>> working;
+        std::int64_t cost = 0; ///< Of the work, below zero for money back
+        bool ok = false;       ///< Whether the work may be done
+        /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
+        std::optional<park::PoolMap> before;
+        std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
+        bool redraw = false; ///< The pools were put back away from the frame and are drawn on the next
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

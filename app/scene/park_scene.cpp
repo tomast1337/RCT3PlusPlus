@@ -3064,6 +3064,7 @@ namespace rct3::scene
                 stop_land_tools(scene);
                 stop_deleting(scene);
                 stop_structure_tools(scene);
+                stop_pooling(scene);
                 toggle_footpath_panel(device, scene, assets, options);
             }
             if (const auto item = tools->take_item())
@@ -3075,6 +3076,7 @@ namespace rct3::scene
                     close_footpath_panel(scene);
                     stop_deleting(scene);
                     stop_structure_tools(scene);
+                    stop_pooling(scene);
                     using enum LandTools::Tool;
                     toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? Shape : (*item == ui::ToolItem::PaintGround ? Paint : (*item == ui::ToolItem::Water ? Water : Waterfall)), assets);
                 }
@@ -3085,6 +3087,7 @@ namespace rct3::scene
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_structure_tools(scene);
+                    stop_pooling(scene);
                     const auto tool = *item == ui::ToolItem::DeleteOne ? DeleteTools::Tool::One : DeleteTools::Tool::Area;
                     const bool out = scene.deleting.tool == tool;
                     stop_deleting(scene);
@@ -3100,7 +3103,21 @@ namespace rct3::scene
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
+                    stop_pooling(scene);
                     toggle_structure_tool(scene, *item == ui::ToolItem::StructureGrab ? StructureTools::Tool::Grab : StructureTools::Tool::Place, assets);
+                }
+                else if (*item == ui::ToolItem::Pools)
+                {
+                    // The pools button opens the pool panel, as in the game, not a list.
+                    close_track_building(scene);
+                    stop_ride_placing(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                    stop_deleting(scene);
+                    stop_structure_tools(scene);
+                    stop_enclosing(scene);
+                    close_build_list(desktop.root());
+                    toggle_pool_panel(device, scene, assets);
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);

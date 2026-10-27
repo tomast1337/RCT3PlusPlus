@@ -430,8 +430,8 @@ namespace rct3::park
             {
                 if (!e.pool)
                     continue;
-                // shortcut: the tools take the pool type's own icon, the delete tool the area delete's; the
-                // pool editor's buttons have pictures of their own, find them when the list becomes a panel.
+                // The pool panel picks these by symbol and shows the editor's own pictures; the icons here are
+                // for scripts and lists that name them.
                 const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) -> BuildItem& {
                     BuildItem& item = items.emplace_back();
                     item.list = BuildList::Pools;

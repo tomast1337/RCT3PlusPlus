@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Swimming pools, in a park with money. A drag with the pool list's tiles paves a rectangle, paid for; a drag
+// Swimming pools, in a park with money. The pools button opens the pool panel; a drag with its tiles paves a rectangle, paid for; a drag
 // with its water inside it digs a pool there, walled round where it meets the tiles. A lone square, strips and
 // an inner corner show the other walls. Extras go in, and a changing room beside the pool opens the complex.
 // The delete tool takes a row up again, money back. Saved and loaded, the pools are back.
@@ -55,9 +55,32 @@ const count = (symbol: string) => pieces().filter((o) => o.symbol === symbol).le
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
 
-// Tiles eight by eight, then water six by six inside them.
+// The rides menu's pools button opens the pool panel on its editor, water out; its other tabs hold the extras
+// and the changing rooms.
+const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+await until(() => build.flatRides() !== undefined, 1200, "the build items");
+if (!ui.find("tools/Rides/Obj_Pools"))
+    await ui.click(rides);
+await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+await ui.click("tools/Rides/Obj_Pools");
+await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
+expect(ui.find("build_list") === undefined, "no build list for pools");
+await frames(3);
+await screenshot("pool_panel_editor");
+await ui.click("pool_panel/Pool_ExtraPanel");
+await until(() => ui.find("pool_panel/body/Icon_Default_Jacuzzi") !== undefined, 120, "the extras page");
+await screenshot("pool_panel_extras");
+await ui.click("pool_panel/Pool_ChangingRoomPanel");
+await frames(3);
+expect(ui.children("pool_panel/body")!.length > 1, `changing rooms on their page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+await screenshot("pool_panel_rooms");
+await ui.click("pool_panel/Pool_PoolPanel");
+await frames(2);
+
+// Tiles eight by eight, laid with the panel, then water six by six inside them.
 let cash = park.cash()!;
-expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");
+await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
+await frames(2);
 await pointer.drag(on_view(c0, r0), on_view(c0 + 7, r0 + 7), 8);
 await frames(3);
 expect(count("SolidTop") === 64, `64 paved squares, not ${count("SolidTop")}`);

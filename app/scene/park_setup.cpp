@@ -977,6 +977,8 @@ namespace rct3::scene
                 }
                 std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, largest_id());
                 ride_fences += pieces.size();
+                for (const save::PlacedObject& piece : pieces)
+                    scene.ride_fence_pieces[ride.base.id].push_back(piece.id);
                 built.insert(built.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
             }
             log.info("{} ride fences", ride_fences);

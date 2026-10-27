@@ -383,11 +383,13 @@ namespace rct3::scene
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
-        park::ModelPictures pictures;                ///< For painting the batches new levels bring
-        park::Leans leans;                           ///< Of the built pieces that follow a slope
-        park::Fitted fitted;                         ///< Of the built pieces placed off the tile grid
-        park::Broken broken_objects;                 ///< Path items vandals have broken, drawn so
-        std::vector<std::uint64_t> fence_panels;     ///< The objects of the fence round the park's land, as last built
+        park::ModelPictures pictures;            ///< For painting the batches new levels bring
+        park::Leans leans;                       ///< Of the built pieces that follow a slope
+        park::Fitted fitted;                     ///< Of the built pieces placed off the tile grid
+        park::Broken broken_objects;             ///< Path items vandals have broken, drawn so
+        std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
+        /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
+        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
         save::EnclosureMap enclosures;               ///< The animal enclosures' tiles and fences
         std::vector<std::uint64_t> enclosure_panels; ///< The objects of their fences, as last built
         park::PoolMap pools;                         ///< The swimming pools the player laid

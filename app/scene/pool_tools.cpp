@@ -359,7 +359,6 @@ namespace rct3::scene
         }
         // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
         // be seen, when it may be done; letting go keeps it.
-        // shortcut: a park saved with the tool out keeps the work shown; put it back first if saves ever can be.
         const auto working = t.corner && t.other ? std::optional(std::pair { *t.corner, *t.other }) : (t.item && tile ? std::optional(std::pair { *tile, *tile }) : std::nullopt);
         if (working != t.working)
         {

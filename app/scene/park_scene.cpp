@@ -3379,7 +3379,10 @@ namespace rct3::scene
         saved.summary.day = scene.park.date.week * 7 + 1;
         saved.summary.minutes = static_cast<std::int32_t>(scene.day.time * 24 * 60);
         saved.summary.guests = scene.park.guests;
+        // The pool tool's work shown is not built: the park is saved as it was before it.
         saved.grid = scene.grid;
+        for (const auto& [tile, corners] : scene.pooling.dug)
+            saved.grid.at(tile.col, tile.row).corners = corners;
         saved.paths = scene.footpaths.paths;
         saved.bins = scene.bins;
         saved.signs = scene.signs;
@@ -3400,8 +3403,8 @@ namespace rct3::scene
         saved.waterfalls = scene.footpaths.waterfalls;
         saved.day_mode = scene.day.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
-        if (!scene.pools.squares.empty())
-            saved.pools = scene.pools;
+        if (const park::PoolMap& pools = scene.pooling.before ? *scene.pooling.before : scene.pools; !pools.squares.empty())
+            saved.pools = pools;
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

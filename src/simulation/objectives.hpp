@@ -78,7 +78,7 @@ namespace rct3::simulation
         std::int64_t rides = 0, shops = 0;               ///< Last month's; 0 until a month has ended
     };
 
-    /// Moves `takings` on to calendar `time`, given all the park has taken on rides and in shops so far.
+    /// Moves `takings` on to calendar `time` (counted from the calendar's start), given all the park has taken on rides and in shops so far.
     void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far);
 
     /// Whether the simulation can tell if a goal of `kind` is met. Those it cannot are never met.

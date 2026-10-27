@@ -360,7 +360,13 @@ namespace rct3::scene
         // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
         // be seen, when it may be done; letting go keeps it.
         const auto working = t.corner && t.other ? std::optional(std::pair { *t.corner, *t.other }) : (t.item && tile ? std::optional(std::pair { *tile, *tile }) : std::nullopt);
-        if (working != t.working)
+        // A change waits while the objects are being built away from the frame, so the frame never waits on
+        // them; the latest work is shown once they are done, or at once when let go.
+        // shortcut: each change still rebuilds the whole park's ground and objects (~200 ms a change in the
+        // biggest parks); rebuild only the squares touched once the ground mesh is in chunks and objects can be
+        // added to the built ones.
+        const bool letting_go = !dragging && t.corner && t.other;
+        if (working != t.working && (letting_go || !scene.object_build.valid()))
         {
             bool changed = put_back(scene);
             t.working = working;
@@ -376,9 +382,14 @@ namespace rct3::scene
                 }
             }
             if (changed)
+            {
+                // Supports are made again only for work kept: nothing they hold up stands on pool squares.
+                const bool stale = scene.supports.stale;
                 pools_changed(device, scene, assets);
+                scene.supports.stale = stale;
+            }
         }
-        if (!dragging && t.corner && t.other)
+        if (letting_go)
         {
             // Let go: the work is kept and paid for. Work on the park's own land that it cannot pay for is
             // turned down with a message.
@@ -390,6 +401,7 @@ namespace rct3::scene
                     float_money(scene, tile_point(scene.grid, *t.other), -t.cost);
                 t.before.reset();
                 t.dug.clear();
+                scene.supports.stale = true;
             }
             else if (allowed(scene, marked(*t.corner, *t.other), 0))
                 simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });

@@ -118,7 +118,9 @@ system modules.
 
 `./nob script` runs every script in `scripts/tests/`; `./nob script FILE` runs one, and arguments after `--`
 go to the game. TypeScript is compiled with `tsc` first (`npm install -g typescript`); `.js` files run as
-they are. Each script's log and named screenshots land in `build/scripts/report/NAME/` for review.
+they are. Each script's log and named screenshots land in `build/scripts/report/NAME/` for review. Each
+script runs with a fresh data folder of its own, `build/scripts/data/NAME/`, so what one script saves never
+reaches another or your own settings; when `RCT3PP_DATA` is set, each folder starts as a copy of it.
 
 ## Reporting a bug or asking for a feature
 

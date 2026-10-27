@@ -926,7 +926,11 @@ int main(int argc, char** argv)
                 if (!run(tsc))
                     return 1;
             }
-            // Each script's log and screenshots go to build/scripts/report/NAME for review.
+            // Each script's log and screenshots go to build/scripts/report/NAME for review. Each also gets a data
+            // folder of its own, build/scripts/data/NAME, made fresh, so no script sees what another saved; it
+            // starts as a copy of RCT3PP_DATA when that is set.
+            const char* data_env = std::getenv("RCT3PP_DATA");
+            const fs::path data_template = data_env ? fs::path(data_env) : fs::path();
             std::vector<std::string> failed;
             for (const fs::path& file : scripts)
             {
@@ -934,6 +938,12 @@ int main(int argc, char** argv)
                 const fs::path folder = kBuildDir / "scripts" / "report" / file.stem();
                 std::error_code ec;
                 fs::remove_all(folder, ec);
+                const fs::path data = kBuildDir / "scripts" / "data" / file.stem();
+                fs::remove_all(data, ec);
+                fs::create_directories(data);
+                if (!data_template.empty() && fs::is_directory(data_template))
+                    fs::copy(data_template, data, fs::copy_options::recursive);
+                setenv("RCT3PP_DATA", fs::absolute(data).c_str(), 1);
                 Cmd one;
                 // Headless: no window pops up, the frames still draw for the screenshots, and no vsync stops them
                 // while the screen sleeps. Uncapped, so the script runs as fast as the machine draws.

@@ -193,8 +193,9 @@ namespace rct3::scene
     /// The path under the pointer at `at`, in interface units on a screen of `size`, by its id.
     [[nodiscard]] std::optional<std::uint64_t> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size);
 
-    /// Takes paths `ids` away, paying back what laying them cost, as selling them from the path panel does.
-    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids);
+    /// Takes paths `ids` away, paying back what laying them cost, as selling them from the path panel does. The
+    /// first one's floating sum takes in `also` (hundredths, above 0 for money in), paid for what stood on them.
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, std::int64_t also = 0);
 
     /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
     bool drop_footpath_trail(ParkScene& scene);

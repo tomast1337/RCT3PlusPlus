@@ -183,3 +183,11 @@ TEST_CASE("a group of items is refused whole by one off land the park owns; boug
     group[1].force_absolute_height = true;
     CHECK_FALSE(first_refused(group, models, { }, { }, g).has_value());
 }
+
+TEST_CASE("fences, enclosure fences included, never stand in anything's way")
+{
+    CHECK_FALSE(blocks_paths(std::to_underlying(ItemCategory::Fence)));
+    CHECK_FALSE(blocks_paths(std::to_underlying(ItemCategory::EnclosureFence)));
+    CHECK_FALSE(blocks_paths(std::to_underlying(ItemCategory::EnclosureView)));
+    CHECK(blocks_paths(std::to_underlying(ItemCategory::Stall)));
+}

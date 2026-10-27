@@ -41,7 +41,9 @@ namespace rct3::park
         Floor = 34,       ///< Building floors, which roof what is under them
         Roof = 35,
         WallCorner = 36,
-        Effect = 44, ///< Fire, mist and smoke
+        Effect = 44,         ///< Fire, mist and smoke
+        EnclosureFence = 45, ///< A piece of an animal enclosure's fence
+        EnclosureView = 46,  ///< A viewing window set in one
     };
 
     /// Whether guests stop to watch an item of `category`: animatronics, effects and path features.

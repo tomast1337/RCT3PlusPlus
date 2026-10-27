@@ -24,7 +24,7 @@ namespace rct3::park
     bool blocks_paths(std::uint32_t category) noexcept
     {
         const auto in = [&](ItemCategory low, ItemCategory high) { return category >= std::to_underlying(low) && category <= std::to_underlying(high); };
-        return category != std::to_underlying(ItemCategory::Fence) && !in(ItemCategory::SupportColumn, ItemCategory::SupportCap) && !in(ItemCategory::PathPiece, ItemCategory::GuestSpawn) && !in(ItemCategory::LitterBin, ItemCategory::PathFeature);
+        return category != std::to_underlying(ItemCategory::Fence) && !in(ItemCategory::EnclosureFence, ItemCategory::EnclosureView) && !in(ItemCategory::SupportColumn, ItemCategory::SupportCap) && !in(ItemCategory::PathPiece, ItemCategory::GuestSpawn) && !in(ItemCategory::LitterBin, ItemCategory::PathFeature);
     }
 
     SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)

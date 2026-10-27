@@ -119,6 +119,14 @@ TEST_CASE("an edge item goes to the edge its turn faces")
     CHECK(south.z == doctest::Approx(8));
 }
 
+TEST_CASE("a corner item's origin goes to the edge its turn faces, as an edge item's does")
+{
+    const save::TerrainGrid g = slope();
+    const glm::vec3 west = place(object_transform(at(0, 1, 0), Positioning::Corner, g), { });
+    CHECK(west.x == doctest::Approx(0));
+    CHECK(west.z == doctest::Approx(6));
+}
+
 TEST_CASE("an edge item snaps to the tile edge nearest the pointer")
 {
     CHECK(snapped_turns(Positioning::Edge, { 0.1f, 0.5f }) == 0);

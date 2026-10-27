@@ -1707,7 +1707,7 @@ namespace rct3::scene
         ui::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
-            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost };
+            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings };
         }
 
         /// The attraction whose saved id is `id`, as messages name their subject.
@@ -2429,7 +2429,7 @@ namespace rct3::scene
                 profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides, old); });
                 if (old >= kLitterWarning)
                     simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
-                // The scenario's goals, checked as each week begins.
+                // Last month's takings, for the scenario's goals on money.
                 std::int64_t rides_taken = 0;
                 std::int64_t shops_taken = 0;
                 for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
@@ -2466,50 +2466,6 @@ namespace rct3::scene
                             .profit = cash - began.cash,
                         });
                     began = { .intake = intake, .income = income, .cash = cash, .set = true };
-                }
-                std::vector<simulation::GoalRide> goal_rides;
-                for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
-                    if (!scene.rides.rides[i].base.demolished)
-                        goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
-                // shortcut: the park's value stays as saved, as the simulation does not value the park yet; work it out once it does.
-                const simulation::ParkFigures figures {
-                    .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
-                    .guests = scene.park.guests,
-                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
-                    .loan = scene.park.loan,
-                    .ride_income = scene.takings.rides,
-                    .shop_profit = scene.takings.shops,
-                    .rides = goal_rides,
-                };
-                if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time, scene.park.messages))
-                {
-                    for (const std::int32_t prize : *won)
-                    {
-                        if (prize == 0)
-                            continue;
-                        simulation::give_prize(scene.park, scene.park_model.finance, scene.grid, prize);
-                        scene.prizes.emplace_back(simulation::prize_message(prize));
-                        // A level won, every guest out on the paths jumps for joy.
-                        if (prize >= simulation::kApprenticePrize)
-                        {
-                            // In a career, the scenario is done at that level.
-                            if (!scene.game.career.empty())
-                            {
-                                const auto status = static_cast<career::ScenarioStatus>(static_cast<int>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
-                                const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                                if (auto changed = career::change_career(
-                                        scene.game.career,
-                                        [&](career::Career& c) {
-                                            if (const auto s = std::ranges::find(c.scenarios, scene.game.scenario, &career::ScenarioProgress::id); s != c.scenarios.end())
-                                                career::complete(c, static_cast<std::size_t>(s - c.scenarios.begin()), status, now);
-                                        });
-                                    !changed)
-                                    logging::logger("park").warning("careers: {}", changed.error());
-                            }
-                            for (const entt::entity guest : scene.sim.registry.view<simulation::Stride, simulation::Mood>())
-                                scene.sim.registry.emplace_or_replace<simulation::Gesture>(guest, simulation::GestureKind::Cheer, simulation::kTuning.gestures.shown);
-                        }
-                    }
                 }
                 // Awards, as each month begins, from the park as it runs. The month the park opens in is not judged.
                 const bool new_month = scene.awards_month >= 0 && scene.park.date.month != scene.awards_month;
@@ -2590,6 +2546,67 @@ namespace rct3::scene
                         if (scene.park.cash && slot < scene.park_model.awards.prize_money.size())
                             *scene.park.cash += scene.park_model.awards.prize_money[slot];
                         simulation::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
+                    }
+                }
+            }
+            // The scenario's goals, checked as each day begins.
+            if (const auto day = static_cast<std::int64_t>(std::floor(scene.park.time / (save::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
+            {
+                scene.goals_day = day;
+                std::vector<simulation::GoalRide> goal_rides;
+                for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
+                    if (!scene.rides.rides[i].base.demolished)
+                        goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
+                float health = 0;
+                std::int32_t animals = 0;
+                for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
+                {
+                    health += animal.health.value;
+                    ++animals;
+                }
+                // shortcut: the park's value stays as saved, as the simulation does not value the park yet; work it out once it does.
+                const simulation::ParkFigures figures {
+                    .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
+                    .guests = scene.park.guests,
+                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                    .loan = scene.park.loan,
+                    .ride_income = scene.takings.rides,
+                    .shop_profit = scene.takings.shops,
+                    .animal_health = animals > 0 ? static_cast<std::int32_t>(std::floor(health / static_cast<float>(animals) * 100)) : 0,
+                    .dung = static_cast<std::int32_t>(scene.sim.registry.view<const simulation::Dung>().size()),
+                    .rides = goal_rides,
+                };
+                scene.goal_readings.clear();
+                for (const save::Condition& c : scene.park_model.objectives.conditions)
+                    scene.goal_readings.push_back(simulation::read_goal(c, figures));
+                if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time, scene.park.messages))
+                {
+                    for (const std::int32_t prize : *won)
+                    {
+                        if (prize == 0)
+                            continue;
+                        simulation::give_prize(scene.park, scene.park_model.finance, scene.grid, prize);
+                        scene.prizes.emplace_back(simulation::prize_message(prize));
+                        // A level won, every guest out on the paths jumps for joy.
+                        if (prize >= simulation::kApprenticePrize)
+                        {
+                            // In a career, the scenario is done at that level.
+                            if (!scene.game.career.empty())
+                            {
+                                const auto status = static_cast<career::ScenarioStatus>(static_cast<int>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
+                                const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                                if (auto changed = career::change_career(
+                                        scene.game.career,
+                                        [&](career::Career& c) {
+                                            if (const auto s = std::ranges::find(c.scenarios, scene.game.scenario, &career::ScenarioProgress::id); s != c.scenarios.end())
+                                                career::complete(c, static_cast<std::size_t>(s - c.scenarios.begin()), status, now);
+                                        });
+                                    !changed)
+                                    logging::logger("park").warning("careers: {}", changed.error());
+                            }
+                            for (const entt::entity guest : scene.sim.registry.view<simulation::Stride, simulation::Mood>())
+                                scene.sim.registry.emplace_or_replace<simulation::Gesture>(guest, simulation::GestureKind::Cheer, simulation::kTuning.gestures.shown);
+                        }
                     }
                 }
             }

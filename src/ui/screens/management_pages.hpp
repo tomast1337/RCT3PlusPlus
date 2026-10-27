@@ -10,6 +10,7 @@
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "simulation/objectives.hpp"
 #include "simulation/park_state.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_window.hpp"
@@ -20,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -65,8 +67,9 @@ namespace rct3::ui
         const simulation::ParkState* state = nullptr;
         const save::PeopleModel* people = nullptr;
         const save::RideModel* rides = nullptr;
-        std::uint32_t broken_items = 0; ///< Path items vandals have broken
-        std::int64_t replace_cost = 0;  ///< To replace them all at once, hundredths
+        std::uint32_t broken_items = 0;                     ///< Path items vandals have broken
+        std::int64_t replace_cost = 0;                      ///< To replace them all at once, hundredths
+        std::span<const simulation::GoalReading> goals { }; ///< By place in the park's goals, as last checked
     };
 
     /// The park operations window's tab of the awards won and fines received.

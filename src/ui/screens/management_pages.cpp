@@ -98,6 +98,10 @@ namespace rct3::ui
         // Ours, from our translations.
         constexpr std::string_view kNotRead = "Rct3pp_ManagementNotRead";
         constexpr std::string_view kNotSimulated = "Rct3pp_GoalNotSimulated";
+        constexpr std::string_view kGoalNow = "Rct3pp_GoalNow";
+        constexpr std::string_view kGoalMet = "Rct3pp_GoalMetNow";
+        constexpr std::string_view kGoalNotMet = "Rct3pp_GoalNotMet";
+        constexpr std::string_view kGoalHeld = "Rct3pp_GoalHeldSoFar";
         constexpr std::string_view kFamiliesNote = "Rct3pp_ManagementFamiliesNote";
         constexpr std::string_view kLeader = "Rct3pp_ManagementLeader";
         constexpr std::string_view kMembers = "Rct3pp_ManagementMembers";
@@ -665,19 +669,20 @@ namespace rct3::ui
 
         // ----- objectives -----
 
-        std::u16string condition_target(const save::Condition& c, const InfoUnits& units)
+        /// Figure `v` of a goal like `c`, in the units its target is kept in.
+        std::u16string goal_figure(const save::Condition& c, std::int64_t v, const InfoUnits& units)
         {
-            if (!c.value || c.kind == save::ConditionKind::RepayLoan)
-                return std::u16string(kDash);
             switch (c.kind)
             {
+                case save::ConditionKind::RepayLoan:
                 case save::ConditionKind::ParkValue:
                 case save::ConditionKind::RideIncome:
                 case save::ConditionKind::ShopProfit:
                 case save::ConditionKind::PoolIncome:
                 case save::ConditionKind::AnimalSalesProfit:
                 case save::ConditionKind::GalleryIncome:
-                    return money(units, *c.value);
+                    return money(units, v);
+                case save::ConditionKind::Coaster:
                 case save::ConditionKind::ParkGuests:
                 case save::ConditionKind::ParkRating:
                 case save::ConditionKind::ItemsBought:
@@ -688,10 +693,15 @@ namespace rct3::ui
                 case save::ConditionKind::AnimalHealth:
                 case save::ConditionKind::Dung:
                 case save::ConditionKind::ViewingGalleries:
-                    return whole(*c.value);
+                    return whole(v);
                 default:
                     return std::u16string(kDash);
             }
+        }
+
+        std::u16string condition_target(const save::Condition& c, const InfoUnits& units)
+        {
+            return c.value && c.kind != save::ConditionKind::RepayLoan ? goal_figure(c, *c.value, units) : std::u16string(kDash);
         }
 
         std::u16string held_for(const save::Condition& c, const StringTable& strings)
@@ -736,12 +746,23 @@ namespace rct3::ui
                 const std::string_view key = simulation::condition_name(c->kind);
                 page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), condition_target(*c, units), false, std::string(key) });
                 // A goal the simulation cannot judge yet says so, rather than looking merely unmet.
+                const std::size_t place = static_cast<std::size_t>(c - set.conditions.data());
+                const std::optional<simulation::GoalReading> reading = place < f.goals.size() ? std::optional(f.goals[place]) : std::nullopt;
                 std::u16string met(kDash);
                 if (c->completed)
                     met = text(strings, "Objectives_Completed");
                 else if (!simulation::judged(c->kind))
                     met = text(strings, kNotSimulated);
+                else if (reading)
+                    met = text(strings, reading->met ? kGoalMet : kGoalNotMet);
                 page.lines.push_back({ held_for(*c, strings), met });
+                // Where the park stands on it now, and how long a goal that must hold has held so far.
+                if (c->completed || !reading)
+                    continue;
+                if (reading->now)
+                    page.lines.push_back({ text(strings, kGoalNow), goal_figure(*c, *reading->now, units) });
+                if (c->months_to_hold > 0 && f.state != nullptr && reading->met)
+                    page.lines.push_back({ text(strings, kGoalHeld), ascii(std::format("{:.1f}", simulation::months_held(*c, f.state->time))) });
             }
             if (const std::u16string goal = text(strings, f.park->park.objective_text); !goal.empty() && page.note.empty())
                 page.note = goal;

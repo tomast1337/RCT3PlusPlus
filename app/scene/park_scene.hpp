@@ -454,9 +454,11 @@ namespace rct3::scene
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
         std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
-        std::vector<simulation::RideGroup> ride_groups; ///< By ride, for the scenario's coaster goals and the awards
-        std::int32_t awards_month = -1;                 ///< The calendar month the awards were last looked at in
-        simulation::Takings takings;                    ///< Last month's, for the scenario's goals on money
+        std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
+        std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in
+        simulation::Takings takings;                        ///< Last month's, for the scenario's goals on money
+        std::int64_t goals_day = -1;                        ///< The calendar day the scenario's goals were last checked on
+        std::vector<simulation::GoalReading> goal_readings; ///< By place in the park's goals, as last checked
         /// The park's running totals as the week began, for its weekly graphs; unset until a week has ended.
         struct
         {

@@ -15,7 +15,6 @@
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
-#include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/sky_look.hpp"
 #include "park/tile_shaping.hpp"
@@ -974,9 +973,13 @@ namespace rct3::scene
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::RideKind::Tracked;
         const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
         const std::int64_t back = park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
-        // Its fence, which the park built round it, goes with it.
-        std::vector<save::PlacedObject> fence = ride ? park::ride_fences(scene.rides.rides[ref.index], model != scene.models.end() ? &model->second : nullptr, 0) : std::vector<save::PlacedObject> { };
         std::set<std::uint64_t> parts;
+        // Its fence, which the park built round it, goes with it.
+        if (const auto fence = scene.ride_fence_pieces.find(base->id); ride && fence != scene.ride_fence_pieces.end())
+        {
+            parts.insert(fence->second.begin(), fence->second.end());
+            scene.ride_fence_pieces.erase(fence);
+        }
         for (const auto& [id, owner] : scene.attractions)
             if (owner == ref)
                 parts.insert(id);
@@ -988,8 +991,7 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
             save::PlacedObject& o = scene.objects[i];
-            const bool fenced = o.fixture && std::ranges::any_of(fence, [&](const save::PlacedObject& f) { return o.symbol == f.symbol && o.overlay == f.overlay && o.col == f.col && o.row == f.row && o.rotation == f.rotation && o.base_height == f.base_height; });
-            if (o.hidden || !(parts.contains(o.id) || parts.contains(o.owner_ref) || fenced))
+            if (o.hidden || !(parts.contains(o.id) || parts.contains(o.owner_ref)))
                 continue;
             o.hidden = true;
             at = at.value_or(tile_point(scene.grid, { o.col, o.row }));
@@ -2939,35 +2941,24 @@ namespace rct3::scene
                     if (index >= scene.rides.rides.size())
                         continue;
                     save::Ride& ride = scene.rides.rides[index];
-                    const park::ObjectModel* item = nullptr;
-                    for (const save::PlacedObject& o : scene.objects)
-                    {
-                        if (ride.base.spot && o.id == ride.base.spot->object)
-                        {
-                            const auto found = scene.models.find(park::model_ref(o));
-                            item = found != scene.models.end() ? &found->second : nullptr;
-                        }
-                    }
-                    const std::vector<save::PlacedObject> before = park::ride_fences(ride, item, 0);
                     ride.override_fence_symbol = upkeep.broken ? kTapeFence : "";
                     ride.override_fence_overlay = upkeep.broken ? kTapeFenceOverlay : "";
+                    const save::PlacedObject look { .symbol = ride.override_fence_symbol.empty() ? ride.fence_symbol : ride.override_fence_symbol, .overlay = ride.override_fence_symbol.empty() ? ride.fence_overlay : ride.override_fence_overlay };
                     // shortcut: a ride with no fence of its own stays unfenced while broken; add panels for it if
                     // such rides turn up outside old saves.
-                    const std::vector<save::PlacedObject> after = park::ride_fences(ride, item, 0);
-                    if (before.empty() || (!after.empty() && (before.size() != after.size() || !load_object_model(scene, scene.placing.models, assets, after.front()))))
+                    const auto fence = scene.ride_fence_pieces.find(ride.base.id);
+                    if (fence == scene.ride_fence_pieces.end() || fence->second.empty() || (!look.symbol.empty() && !load_object_model(scene, scene.placing.models, assets, look)))
                         continue;
                     wait_for_build(scene);
-                    for (std::size_t i = 0; i < before.size(); ++i)
+                    for (save::PlacedObject& panel : scene.objects)
                     {
-                        const save::PlacedObject& was = before[i];
-                        const auto panel = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && o.symbol == was.symbol && o.overlay == was.overlay && o.col == was.col && o.row == was.row && o.rotation == was.rotation && o.base_height == was.base_height; });
-                        if (panel == scene.objects.end())
+                        if (!std::ranges::contains(fence->second, panel.id))
                             continue;
-                        panel->hidden = after.empty(); // Fixed, with no fence of its own
-                        if (after.empty())
+                        panel.hidden = look.symbol.empty(); // Fixed, with no fence of its own
+                        if (look.symbol.empty())
                             continue;
-                        panel->symbol = after[i].symbol;
-                        panel->overlay = after[i].overlay;
+                        panel.symbol = look.symbol;
+                        panel.overlay = look.overlay;
                     }
                     objects_changed(scene);
                 }

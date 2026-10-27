@@ -8,8 +8,9 @@
 // goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
-// A tracked ride's entrance or exit, asked for from its window, is placed the same way beside its station;
-// with both, it runs on the track built for it as the flat rides do.
+// A tracked ride's entrance or exit, asked for from its window or brought by a design, is placed the same way
+// beside its station, walled and paved as a flat ride's; with both, it runs on the track built for it as the
+// flat rides do. A new ride of either kind takes its theme's fence.
 //
 // Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
@@ -82,8 +83,7 @@ namespace rct3::scene
         std::optional<Lift> lift;
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
-        std::size_t ride = 0;             ///< Of the scene's rides, once placed
-        std::vector<std::uint64_t> fence; ///< Of that ride, its fence pieces, built again as each door goes in
+        std::size_t ride = 0; ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for

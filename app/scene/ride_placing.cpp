@@ -152,7 +152,7 @@ namespace rct3::scene
         /// the doors in the fence's colours.
         void fence_ride(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride)
         {
-            std::vector<std::uint64_t>& fence = scene.placing.fence;
+            std::vector<std::uint64_t>& fence = scene.ride_fence_pieces[ride.base.id];
             for (save::PlacedObject& o : scene.objects)
             {
                 if (std::ranges::contains(fence, o.id))
@@ -287,15 +287,6 @@ namespace rct3::scene
             const std::array squares { static_cast<std::int32_t>(item.width), static_cast<std::int32_t>(item.length) };
             p.site = park::RideSite { .col = spot.col, .row = spot.row, .turns = spot.direction & 3, .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
             p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turns, scene.grid).height;
-            p.fence.clear();
-            const auto model = std::ranges::find(scene.objects, spot.object, &save::PlacedObject::id);
-            const auto found = model != scene.objects.end() ? scene.models.find(park::model_ref(*model)) : scene.models.end();
-            for (const save::PlacedObject& was : park::ride_fences(r, found != scene.models.end() ? &found->second : nullptr, 0))
-            {
-                const auto panel = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && o.fixture && o.symbol == was.symbol && o.overlay == was.overlay && o.col == was.col && o.row == was.row && o.rotation == was.rotation && o.base_height == was.base_height; });
-                if (panel != scene.objects.end())
-                    p.fence.push_back(panel->id);
-            }
         }
         p.door.reset();
         p.ghost_mesh = { };
@@ -683,6 +674,8 @@ namespace rct3::scene
         (exit ? station.exit : station.entrance) = object;
         (exit ? station.exit_spot : station.entrance_spot) = save::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
         update_platforms(scene, ride, assets);
+        fence_ride(scene, assets, r);
+        refresh_pavings(scene);
         if (station.entrance != 0 && station.exit != 0 && !std::ranges::contains(p.unjoined, ride))
             p.unjoined.push_back(ride);
     }
@@ -809,7 +802,6 @@ namespace rct3::scene
                 *scene.park.cash -= p.item->price;
             float_money(scene, site_point(scene, *p.site), -p.item->price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-            p.fence.clear();
             take_fence(scene, assets, ride, *p.item);
             fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
@@ -833,7 +825,6 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };
-                refresh_pavings(scene);
                 rebuild_ground(device, scene, assets);
                 return true;
             }

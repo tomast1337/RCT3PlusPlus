@@ -66,6 +66,17 @@ namespace rct3::ovl
             return first != 0xFFFFFFFFu ? first : block->u32(0x1C);
         }
 
+        /// How riders sit on a ride, from the same block as its guests: its second word, numbered as ride cars
+        /// number their seatings (see RideCar::kind). Nothing when the block does not fit or the word is out of
+        /// that range.
+        [[nodiscard]] inline std::optional<std::uint8_t> read_ride_seating(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address)
+        {
+            const auto block = ItemRecord::open(space, refs, address, 0x20);
+            if (!block || block->u32(4) > 0xFF)
+                return std::nullopt;
+            return static_cast<std::uint8_t>(block->u32(4));
+        }
+
         [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, std::uint32_t version)
         {
             const auto word = [&](int offset) -> std::uint32_t { return offset < 0 ? 0 : record.u32(offset); };

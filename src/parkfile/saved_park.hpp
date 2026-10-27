@@ -77,7 +77,11 @@ namespace rct3::parkfile
         save::WeatherType weather = save::WeatherType::Unknown;
         std::optional<save::WeatherType> forecast;
         std::optional<float> temperature;
-        float day_time = 0; ///< The day clock's time
+        float day_time = 0;       ///< The day clock's time
+        std::int32_t climate = 0; ///< simulation::Climate
+        float weather_hold = 0;   ///< Calendar units before the forecast arrives
+        float wind = 0;
+        float wind_change = 0;
     };
 
     /// A guest in the park.

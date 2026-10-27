@@ -13,7 +13,7 @@
 //    corner heights except across a cliff, where they may differ.
 //  - A water triangle uses corners 0,1,2 of its tile (triangle 0) or 3,2,1 (triangle 1).
 //  - Object references are ids of objects in the same save; 0 or an id that is not found means "none".
-//  - Values whose meaning is not confirmed (slope ids, break flags, climate id, camera orientation) are kept
+//  - Values whose meaning is not confirmed (slope ids, break flags, camera orientation) are kept
 //    as the stored integers or floats.
 #pragma once
 
@@ -399,7 +399,7 @@ namespace rct3::save
         std::int32_t raw_type = 0;
         WeatherType forecast = WeatherType::Unknown;
         std::int32_t raw_forecast = 0;
-        std::int32_t climate = 0; ///< Opaque id, meaning not confirmed
+        std::int32_t climate = 0; ///< The scenario editor's climate, by its place in the editor's list
         float temperature = 0;    ///< Degrees Celsius
         float forecast_temperature = 0;
         float forecast_delay = 0;

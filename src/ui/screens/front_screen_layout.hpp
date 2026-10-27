@@ -76,9 +76,9 @@ namespace rct3::ui::front_screen
     inline constexpr Rect kBandBottom { 0, 512, 512, 768 };    ///< The left part of the bottom strip
     inline constexpr Rect kStripRight { 512, 512, 1024, 768 }; ///< The rest of the bottom strip
     inline constexpr Point kLogo { 0, 16 };
-    inline constexpr Rect kChildren { 0, 310, 384, 694 };      ///< The picture's own size, standing on the strip
-    inline constexpr Rect kHelpTitle { 262, 709, 788, 735 };   ///< The lozenge's upper half, above its rule
-    inline constexpr Rect kHelpText { 262, 739, 788, 757 };    ///< Its lower half
+    inline constexpr Rect kChildren { 0, 310, 384, 694 };    ///< The picture's own size, standing on the strip
+    inline constexpr Rect kHelpTitle { 262, 709, 788, 735 }; ///< The lozenge's upper half, above its rule
+    inline constexpr Rect kHelpText { 262, 739, 788, 757 };  ///< Its lower half
 
     /// A point on a circle round the buttons' centre: `angle` in radians, anticlockwise from the right.
     inline constexpr Point kRingCentre { 735.5f, 241.5f }; ///< The artwork's circles' centre, measured on its pictures

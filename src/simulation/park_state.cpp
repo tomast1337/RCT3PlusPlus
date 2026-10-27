@@ -2,6 +2,7 @@
 #include "simulation/park_state.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -73,7 +74,8 @@ namespace rct3::simulation
         in.guests = state.guests;
         const RatingParts parts = rate_park(in);
         state.rating_parts = parts;
-        state.rating = next_rating(state.rating, parts.total);
+        state.rating = next_rating(state.rating, parts.total + static_cast<std::int32_t>(state.rating_bonus));
+        state.rating_bonus = std::max(0.0f, state.rating_bonus - kTuning.prizes.rating_bonus_fade.value);
     }
 
     Weather guest_weather(const ParkState& state)

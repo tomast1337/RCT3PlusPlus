@@ -352,7 +352,8 @@ namespace rct3::simulation::tuning
     {
         Money large_cash { 1'500'000 };
         Money small_cash { 250'000 };
-        Share rating_bonus { 0.05f }; ///< Added to the park's rating
+        RatingPoints rating_bonus { 80 };     ///< Chosen by eye: added to the park's rating at once, and to each week's score
+        RatingPoints rating_bonus_fade { 4 }; ///< Chosen by eye: taken off that bonus each week, so it is gone in five months
     };
 
     /// Trains crashing off the end of their track.

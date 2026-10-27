@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <utility>
 
 using namespace rct3;
 using namespace rct3::ui;
@@ -41,6 +42,9 @@ namespace
         s.add("ObjectiveCondition_VIP", u"VIP");
         s.add("ObjectiveCondition_AtAnyTime", u"At any time.");
         s.add("Rct3pp_GoalNotSimulated", u"Not simulated yet");
+        s.add("Rct3pp_GoalNow", u"Now");
+        s.add("Rct3pp_GoalMetNow", u"Met now");
+        s.add("Rct3pp_GoalHeldSoFar", u"Held so far");
         s.add("ChallengeWindow_NoChallenge", u"None now.");
         return s;
     }
@@ -248,6 +252,26 @@ TEST_CASE("an objective's condition says how long it must hold")
     CHECK(value_of(page, u"Guests in park") == u"800");
     CHECK(value_of(page, u"Held for 5 months.") == u"-");
     CHECK(management_page(ManagementTopic::Objectives, 0, { .park = &park }, s, kUnits).lines.size() == 2);
+}
+
+TEST_CASE("an objective's condition shows where the park stands on it and how long it has held")
+{
+    const StringTable s = test_strings();
+    save::ParkModel park;
+    save::Condition c;
+    c.kind = save::ConditionKind::ParkGuests;
+    c.months_to_hold = 5;
+    c.value = 800;
+    c.start_time = 0;
+    c.consistency_flags = std::to_underlying(save::ConditionFlag::TimerRunning);
+    park.objectives.conditions = { c };
+    simulation::ParkState state;
+    state.time = 1.5f * save::GameClock::kUnitsPerMonth;
+    const std::array goals { simulation::GoalReading { .now = 900, .met = true } };
+    const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park, .state = &state, .goals = goals }, s, kUnits);
+    CHECK(value_of(page, u"Held for 5 months.") == u"Met now");
+    CHECK(value_of(page, u"Now") == u"900");
+    CHECK(value_of(page, u"Held so far") == u"1.5");
 }
 
 TEST_CASE("an objective's condition the simulation cannot judge says so")

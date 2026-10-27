@@ -61,6 +61,7 @@ namespace rct3::ui
         std::optional<PoolComplexFacts> pool { }; ///< When it is a changing room
         std::uint32_t colour_slots = 0;           ///< The colour slots its pictures take (bit k: slot k)
         std::array<std::int32_t, 3> colours { };  ///< The colour picked for each slot, of the 32
+        float zero_time = 0;                      ///< Where the park's calendar starts, for the dates shown
     };
 
     /// The colour slots the colour tab paints, in the order of its pots.

@@ -202,9 +202,9 @@ namespace rct3::ui
             {
                 // Nothing before the calendar began.
                 const float time = state->time - static_cast<float>(back + 1) * save::GameClock::kUnitsPerWeek;
-                if (time < 0)
+                if (time < state->zero_time)
                     break;
-                const save::CalendarDate date = save::GameClock::split(time);
+                const save::CalendarDate date = save::GameClock::date_at(time, state->zero_time);
                 if (date.week == 0)
                     page.graph_ticks.push_back({ static_cast<float>(back), short_month(strings, date.month) });
             }

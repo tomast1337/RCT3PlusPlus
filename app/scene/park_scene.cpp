@@ -564,6 +564,7 @@ namespace rct3::scene
             const save::PlacedObject& o = scene.objects[index];
             f.symbol = o.symbol;
             f.colours = o.colours;
+            f.zero_time = scene.park.zero_time;
             if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
                 f.colour_slots = park::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())

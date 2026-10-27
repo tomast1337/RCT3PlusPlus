@@ -271,7 +271,7 @@ TEST_CASE("park: a minimal park, economy and clock")
     CHECK(d.year == 1);
     CHECK(d.month == 2);
     CHECK(d.week == 3);
-    CHECK(d.into_week == doctest::Approx(10.0f));
+    CHECK(d.into_week == doctest::Approx(10.0f - 5.0f)); // Counted from the calendar's start
     REQUIRE(m.clock.day_night_phase.has_value());
     CHECK(*m.clock.day_night_phase == 0.25f);
     CHECK_FALSE(m.clock.day_night_mode.has_value());

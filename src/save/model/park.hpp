@@ -237,9 +237,14 @@ namespace rct3::save
 
         /// Splits a time in units into calendar parts. Negative and non-finite input is treated as zero.
         [[nodiscard]] static CalendarDate split(float units) noexcept;
+        /// The date at `when`: the calendar counts its weeks, months and years from `zero_time`.
+        [[nodiscard]] static CalendarDate date_at(float when, float zero_time) noexcept
+        {
+            return split(when - zero_time);
+        }
         [[nodiscard]] CalendarDate date() const noexcept
         {
-            return split(time);
+            return date_at(time, zero_time);
         }
     };
 

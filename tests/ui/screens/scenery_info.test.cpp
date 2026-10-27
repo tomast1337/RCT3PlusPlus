@@ -87,6 +87,11 @@ TEST_CASE("a bin tells how full it is and when it was emptied")
     bin.last_emptied = 2 * save::GameClock::kUnitsPerMonth + 10;
     page = scenery_page(SceneryTab::Bin, facts, s);
     CHECK(page.lines[1].value == u"Spring, Yr 1");
+
+    // The date is counted from where the park's calendar starts: the same time is a year and a month earlier.
+    const SceneryFacts later { .symbol = "StoneBin", .bin = &bin, .sign = nullptr, .zero_time = -(save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth) };
+    CHECK(scenery_page(SceneryTab::Bin, later, s).lines[1].value != u"Spring, Yr 1");
+    CHECK(scenery_page(SceneryTab::Bin, later, s).lines[1].value.ends_with(u"Yr 2"));
 }
 
 TEST_CASE("a sign shows its words, or that it forbids entry")

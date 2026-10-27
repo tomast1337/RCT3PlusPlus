@@ -95,7 +95,7 @@ namespace rct3::ui
             std::u16string emptied(strings.get(kNeverEmptied));
             if (bin.last_emptied)
             {
-                const save::CalendarDate date = save::GameClock::split(*bin.last_emptied);
+                const save::CalendarDate date = save::GameClock::date_at(*bin.last_emptied, facts.zero_time);
                 emptied = std::u16string(strings.get(std::format("{}{}", kMonth, date.month)));
                 emptied += u", ";
                 emptied += strings.get(kYear);

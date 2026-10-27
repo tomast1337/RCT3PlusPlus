@@ -10,13 +10,14 @@
 // tile under the pointer, where the pointer's place in it picks the whole tile, an edge or a corner; the second
 // on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
 // move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
-// on land the park owns outright, without a path and with nothing solid standing over it.
+// on land the park owns outright, and only as far as what stands on it lets it (park/ground_holds.hpp); a tile
+// refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it.
 //
 // Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
 // there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
 // (park/ground_shapes.hpp). The shape is as wide as the brush's number, centred where the pointer pressed;
-// a ridge runs across the view. Ground the park does not own outright, under paths or under things standing
-// on it stays, as do cliff edges. Each unit of ground moved is paid for, once.
+// a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays,
+// as do cliff edges. Each unit of ground moved is paid for, once.
 //
 // Smoothing: holding the button works the ground under the brush a little more every moment
 // (park/ground_smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
@@ -51,17 +52,19 @@
 // Every other change is paid for. A right click puts either tool away.
 #pragma once
 
+#include "park/ground_holds.hpp"
 #include "park/ground_shapes.hpp"
 #include "park/ground_smoothing.hpp"
 #include "park/ground_textures.hpp"
 #include "park/land_buying.hpp"
-#include "park/path_clearance.hpp"
 #include "park/tile_shaping.hpp"
 #include "render/device.hpp"
 #include "ui/widget.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
+#include <unordered_set>
 #include <vector>
 
 namespace rct3::ui
@@ -88,11 +91,13 @@ namespace rct3::scene
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
-        std::size_t tile_tool = 0;     ///< The tile tool chosen, by its place in its tab
-        park::TileStroke stroke;       ///< Of a tile tool
-        std::vector<glm::vec3> marked; ///< Where the marks on the ground were made, to make them again only on a change
-        park::SolidTiles solids;
-        std::vector<park::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
+        std::size_t tile_tool = 0;                        ///< The tile tool chosen, by its place in its tab
+        park::TileStroke stroke;                          ///< Of a tile tool
+        std::vector<glm::vec3> marked;                    ///< Where the marks on the ground were made, to make them again only on a change
+        park::GroundHolds holds;                          ///< Gathered as a stroke starts
+        std::unordered_set<std::uint32_t> refused;        ///< Tiles the stroke may not move, as GroundHolds keys them
+        std::optional<std::array<save::Tile, 2>> stirred; ///< The first and last tiles the stroke moved
+        std::vector<park::GroundSurface> surfaces;        ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0;                 ///< Chosen, of `surfaces`
         std::vector<park::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces

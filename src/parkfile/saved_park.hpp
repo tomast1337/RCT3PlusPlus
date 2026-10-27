@@ -32,11 +32,14 @@
 //              the original park's mode.
 //   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
 //              it; their enclosures are read again from the original park.
+//   "POOL" v1  park::PoolMap: the swimming pools the player laid; their pieces are built again on loading.
+//              Only when there are any.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
 
 #include "park/camera.hpp"
+#include "park/pools.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -173,6 +176,7 @@ namespace rct3::parkfile
         std::optional<std::vector<save::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
         std::optional<SavedAnimals> animals;                    ///< None in saves made before animals were kept
+        std::optional<park::PoolMap> pools;                     ///< The pools the player laid; none when they laid none
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.

@@ -256,7 +256,7 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 1, *park.people);
@@ -274,6 +274,8 @@ namespace rct3::parkfile
             put_chunk(w, "DAYM", 1, *park.day_mode);
         if (park.animals)
             put_chunk(w, "ANML", 1, *park.animals);
+        if (park.pools)
+            put_chunk(w, "POOL", 1, *park.pools);
         return w.take();
     }
 
@@ -337,6 +339,12 @@ namespace rct3::parkfile
                 if (park.animals || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.animals.emplace());
+            }
+            if (tag == "POOL")
+            {
+                if (park.pools || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.pools.emplace());
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

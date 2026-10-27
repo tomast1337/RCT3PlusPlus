@@ -13,6 +13,7 @@
 #include "scene/front_end_scene.hpp"
 #include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
+#include "scene/pool_tools.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park_messages.hpp"
@@ -452,7 +453,10 @@ namespace rct3::scene
                 return nullptr;
             const float x = g.world_x(0) + static_cast<float>(col) * g.tile_size_x;
             const float z = g.world_z(0) + static_cast<float>(row) * g.tile_size_z;
-            const glm::vec4 clip = park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, g.height_at(x, z).value_or(0), z, 1);
+            // On a pool square, its surface: the ground under it is dug out of sight.
+            const auto pool = park_->pools.at(static_cast<int>(std::floor(col)), static_cast<int>(std::floor(row)));
+            const float height = pool ? static_cast<float>(pool->surface) : g.height_at(x, z).value_or(0);
+            const glm::vec4 clip = park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, height, z, 1);
             if (clip.w <= 0)
                 return nullptr;
             const glm::vec2 share { (clip.x / clip.w + 1) / 2, (1 - clip.y / clip.w) / 2 };
@@ -634,6 +638,13 @@ namespace rct3::scene
                 park.build.asked_designs = a.size() > 2 && a[2] == "designs";
             }
             // One tool out at a time, as a pick from a list has it.
+            if (start_pooling(park, *found))
+            {
+                stop_enclosing(park);
+                stop_ride_placing(park);
+                return true;
+            }
+            stop_pooling(park);
             if (start_enclosing(park, *found))
             {
                 stop_ride_placing(park);
@@ -673,6 +684,7 @@ namespace rct3::scene
         engine_.define("build.stop", [this](const Json&) {
             stop_ride_placing(park_of(park_));
             stop_enclosing(park_of(park_));
+            stop_pooling(park_of(park_));
             return Json(nullptr);
         });
         engine_.define("rides.setState", [this](const Json& a) {

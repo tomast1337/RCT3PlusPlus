@@ -39,7 +39,7 @@ TEST_CASE("menu items open the list of their kind")
     CHECK(build_list(ToolItem::SceneryItems) == BuildList::Props);
     CHECK(build_list(ToolItem::Animals) == BuildList::Animals);
     CHECK(build_list(ToolItem::Enclosures) == BuildList::Enclosures);
-    CHECK_FALSE(build_list(ToolItem::Pools).has_value());
+    CHECK(build_list(ToolItem::Pools) == BuildList::Pools);
     CHECK_FALSE(build_list(ToolItem::SavedStructures).has_value());
     CHECK_FALSE(build_list(ToolItem::Staff).has_value());
 }

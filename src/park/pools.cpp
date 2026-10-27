@@ -61,10 +61,11 @@ namespace rct3::park
             return { { PoolWall::Full, 0 } };
         if (sides == 3)
         {
-            // Turned as its middle side, the one across from the water.
+            // The end piece leaves open the side a turn before the one it is turned to (seen by eye), so it
+            // is turned one on from the water.
             for (std::int32_t turn = 0; turn < 4; ++turn)
                 if (!open(turn))
-                    return { { PoolWall::End, (turn + 2) & 3 } };
+                    return { { PoolWall::End, (turn + 1) & 3 } };
         }
         for (std::int32_t turn = 0; turn < 4; ++turn)
         {

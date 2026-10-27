@@ -35,6 +35,7 @@
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/pool_tools.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
@@ -2031,6 +2032,7 @@ namespace rct3::scene
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;
@@ -2083,7 +2085,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
                     hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
-                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item)
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -2139,6 +2141,8 @@ namespace rct3::scene
                     stop_deleting(scene);
                 else if (scene.enclosing.item)
                     stop_enclosing(scene);
+                else if (scene.pooling.item)
+                    stop_pooling(scene);
                 else if (land_tool(scene))
                 {
                     if (!delete_waterfall(scene, pointer.position, { screen.width(), screen.height() }))
@@ -3105,8 +3109,19 @@ namespace rct3::scene
             if (const auto picked = update_build_menus(scene.build, desktop.root(), scene.park.cash))
             {
                 bool building = false;
-                if (start_enclosing(scene, *picked))
+                if (start_pooling(scene, *picked))
                 {
+                    stop_enclosing(scene);
+                    stop_ride_placing(scene);
+                    close_track_building(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                    stop_deleting(scene);
+                    stop_structure_tools(scene);
+                }
+                else if (start_enclosing(scene, *picked))
+                {
+                    stop_pooling(scene);
                     stop_ride_placing(scene);
                     close_track_building(scene);
                     close_footpath_panel(scene);
@@ -3117,6 +3132,7 @@ namespace rct3::scene
                 else if (start_ride_placing(scene, *picked))
                 {
                     stop_enclosing(scene);
+                    stop_pooling(scene);
                     close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
@@ -3127,6 +3143,7 @@ namespace rct3::scene
                 else if (new_tracked_ride(scene, *picked, assets))
                 {
                     stop_enclosing(scene);
+                    stop_pooling(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
@@ -3307,6 +3324,8 @@ namespace rct3::scene
         saved.waterfalls = scene.footpaths.waterfalls;
         saved.day_mode = scene.day.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
+        if (!scene.pools.squares.empty())
+            saved.pools = scene.pools;
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

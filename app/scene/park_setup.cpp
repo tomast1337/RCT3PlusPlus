@@ -738,6 +738,10 @@ namespace rct3::scene
         const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(world->paths, scene.grid);
         park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water, hollows); });
         park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
+        // The park's own pools, then those the player laid, which the park keeps as squares.
+        scene.pools = saved && saved->pools ? *saved->pools : park::PoolMap { };
+        scene.saved_pool_water = world->pool_water.size();
+        std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(world->pool_water));
         std::ranges::copy(park::pool_water(scene.grid, world->pool_water), std::back_inserter(mesh.water));
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
         park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
@@ -993,6 +997,11 @@ namespace rct3::scene
                 scene.enclosure_panels.push_back(panel.id);
             built.insert(built.end(), std::make_move_iterator(enclosed.pieces.begin()), std::make_move_iterator(enclosed.pieces.end()));
             scene.leans.merge(enclosed.leans);
+            for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, largest_id()))
+            {
+                scene.pool_pieces.push_back(piece.id);
+                built.push_back(std::move(piece));
+            }
             load_models(install, built, false, scene.models, scene.pictures);
             // The park names only the fences, so their panels take the fences' own colours.
             for (std::size_t i = first_panel; i < built.size(); ++i)

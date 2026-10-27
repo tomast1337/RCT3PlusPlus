@@ -206,6 +206,16 @@ namespace rct3::scene
         std::optional<save::Tile> other;  ///< And the opposite corner, where it is now or ended
         bool dragging = false;
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
+        /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
+        /// taken down pays back more than any put up), for the columns and rows marked.
+        struct Marked
+        {
+            std::array<std::int32_t, 4> area { };
+            save::EnclosureMap enclosures { };
+            std::int64_t cost = 0;
+        };
+        std::optional<Marked> marked { };
     };
 
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
@@ -216,6 +226,16 @@ namespace rct3::scene
         std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
         std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
+        /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
+        /// taken down pays back more than any put up), for the columns and rows marked.
+        struct Marked
+        {
+            std::array<std::int32_t, 4> area { };
+            save::EnclosureMap enclosures { };
+            std::int64_t cost = 0;
+        };
+        std::optional<Marked> marked { };
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

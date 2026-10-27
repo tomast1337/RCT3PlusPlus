@@ -150,6 +150,7 @@ namespace rct3::park
                 item.name_text = e.fence->name_text;
                 item.icon = e.fence->icon;
                 item.price = e.fence->fence_cost;
+                item.refund = e.fence->fence_refund;
                 item.strength = e.fence->strength;
                 items.push_back(std::move(item));
             }

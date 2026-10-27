@@ -11,7 +11,8 @@
 // on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
 // move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
 // on land the park owns outright, and only as far as what stands on it lets it (park/ground_holds.hpp); a tile
-// refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it.
+// refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it. A lake on
+// ground that moves, or beside ground that sinks under its level, goes, as does a waterfall beside it.
 //
 // Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
 // there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved

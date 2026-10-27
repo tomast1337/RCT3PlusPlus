@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The land tools on the game's blank landscape: digs a pit with Shape ground, paints round it with Paint
-// ground, fills it with Water by clicking its wall and takes the lake away again, then raises the ground under
-// a tree planted there, which rises with it.
+// ground, fills it with Water by clicking its wall and takes the lake away again, by clicking it and by digging
+// under it, then raises the ground under a tree planted there, which rises with it.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -115,6 +115,19 @@ await frames(2);
 log("lakes after clicking the lake:", map.water().length);
 await screenshot("water_removed");
 expect(map.water().length === lakes, "the lake taken away");
+
+// Digging under a lake takes it away too, rather than leaving water the new ground cannot hold.
+await pointer.click((foot.x + top.x) / 2, (foot.y + top.y) / 2);
+await frames(2);
+expect(map.water().length === lakes + 1, "the lake poured again");
+await pick("Land_Brush_Height");
+const [dx, dy] = on_view(col, row);
+await pointer.drag([dx, dy], [dx, dy + 0.05], 20);
+await frames(2);
+log("lakes after digging under one:", map.water().length, "floor", low(col, row));
+await screenshot("water_dug");
+expect(map.water().length === lakes, "the lake taken away by digging under it");
+await pick("Land_Brush_Height"); // Put away
 
 // Brushes: a hill raised beside the pit, then a crater sunk on the other side.
 function high(col: number, row: number): number {

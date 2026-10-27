@@ -132,3 +132,22 @@ TEST_CASE("riders brace against strong forces and cover their eyes going down a 
     CHECK(react(RideReaction::Calm, Felt { .slope = 0.2f }, true, false, { 0.5f }, 0.4f, shy, false, dice, 0.25f) != RideReaction::CoverEyes);
     CHECK(react(RideReaction::Calm, Felt { .slope = -0.8f }, true, false, { 0.5f }, 0, shy, false, dice, 0.25f) != RideReaction::CoverEyes);
 }
+
+TEST_CASE("flat ride riders wait while it stands and cover their eyes when it is too wild for them")
+{
+    auto dice = dice_rolls::seeded(dice_rolls::Seed { 8 });
+    CHECK(react_flat(RideReaction::HandsUp, false, { 1 }, 0, kKeen, dice, 1) == RideReaction::Waiting);
+    CHECK(react_flat(RideReaction::Calm, true, { 1 }, 0.5f, kKeen, dice, 1) == RideReaction::CoverEyes);
+}
+
+TEST_CASE("flat ride riders the ride suits throw their hands up and keep them up for the run")
+{
+    auto dice = dice_rolls::seeded(dice_rolls::Seed { 9 });
+    RideReaction now = RideReaction::Calm;
+    for (int i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
+        now = react_flat(now, true, { 0.5f }, 0, kKeen, dice, 0.25f);
+    CHECK(now == RideReaction::HandsUp);
+    CHECK(react_flat(now, true, { 0.1f }, -1, kKeen, dice, 0.25f) == RideReaction::HandsUp);
+    for (int i = 0; i < 400; ++i)
+        CHECK(react_flat(RideReaction::Calm, true, { 0.5f }, -0.8f, kKeen, dice, 0.25f) == RideReaction::Calm);
+}

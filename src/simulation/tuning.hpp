@@ -76,7 +76,7 @@ namespace rct3::simulation::tuning
         Factor bursting_pace { 1.1 };
     };
 
-    /// Riders on coasters reacting to the ride.
+    /// Riders reacting to the ride, on coasters and flat rides.
     struct Reactions
     {
         Share thrilled { 0.85f };                     ///< Happiness over which a rider throws their hands up
@@ -92,6 +92,7 @@ namespace rct3::simulation::tuning
         Share stoic { 0.3f };     ///< Of riders, the share who never brace or tense up
         Share too_wild { 0.15f }; ///< Ride intensity past what a rider likes that has them cover their eyes
         Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
+        Share suits { 0.25f };    ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
         float diving = -0.5f;     ///< Of the track's way, the drop under which a car heads down
         float still = 0.5f;       ///< m/s under which a train counts as standing, held at a brake or block
     };

@@ -1004,6 +1004,7 @@ namespace rct3::scene
             {
                 scene.ride_cars.erase(e);
                 scene.ride_seats.erase(e);
+                scene.ride_seatings.erase(e);
                 simulation::pull_down(scene.sim, e);
                 break;
             }

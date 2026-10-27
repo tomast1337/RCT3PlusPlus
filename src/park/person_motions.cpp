@@ -445,6 +445,7 @@ namespace rct3::park
         };
         constexpr std::array kSeatings = std::to_array<Names>({
             { 0, "ridestand", "ridestandwait", "handsupstandloop", "covereyesstandloop", "geforcestand" },
+            { 1, "ridesit", "", "", "", "" },
             { 2, "ridecar", "", "", "", "" },
             { 3, "ridelay", "ridelaywait", "handsuplayloop", "covereyeslayloop", "geforcelay" },
             { 4, "ridebike", "", "", "", "geforcebike" },
@@ -453,10 +454,17 @@ namespace rct3::park
             { 9, "ridesitvreel", "", "handsupvreelloop", "covereyesvreelloop", "geforcevreel" },
             { 10, "ridesitharnessloop", "ridesitharnesswait", "handsupharnessloop", "covereyesharnessloop", "geforceharness" },
             { 11, "ridesitbarloop", "ridesitbarwait", "handsupbarloop", "covereyesbarloop", "geforcebar" },
+            { 12, "idlestandard", "", "", "", "" },
             { 13, "ridesitharnessfeetdangleloop", "ridesitharnessfeetdanglewait", "handsupharnessfeetdangleloop", "covereyesharnessfeetdangleloop", "geforceharnessfeetdangle" },
             { 14, "ridehorsesteeple", "", "handsuphorsesteepleloop", "covereyeshorsesteepleloop", "geforcehorsesteeple" },
             { 18, "ridedinghyloop", "", "handsupdinghyloop", "", "geforcedinghy" },
             { 19, "ridelayfrontloop", "", "handsuplayfrontloop", "", "geforcelayfront" },
+            { 22, "ridehorsemerrygor", "", "", "", "" },
+            { 23, "ridehorsesteeple", "", "handsuphorsesteepleloop", "covereyeshorsesteepleloop", "geforcehorsesteeple" },
+            { 24, "bumbounce", "", "", "", "" },
+            { 25, "jump", "", "", "", "" },
+            { 26, "dance", "idlestandard", "", "", "" },
+            { 33, "sitbenchloop", "", "", "", "" },
         });
         const auto* names = std::ranges::find(kSeatings, seating, &Names::seating);
         if (names == kSeatings.end())

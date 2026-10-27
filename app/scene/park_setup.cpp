@@ -1208,6 +1208,9 @@ namespace rct3::scene
                 }
                 const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
                 scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
+                for (std::size_t i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
+                    if (const entt::entity e = scene.ride_entities[i++]; seating && e != entt::null)
+                        scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
                 for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
                     scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
                 simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies);

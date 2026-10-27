@@ -595,7 +595,7 @@ namespace rct3::simulation
         Strained,  ///< Pressed hard into their seat or sideways
     };
 
-    /// A guest seated on a coaster's train, and how they react to the ride now.
+    /// A guest seated on a ride, and how they react to it now.
     struct Thrill
     {
         RideReaction reaction = RideReaction::Waiting;

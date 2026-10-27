@@ -532,6 +532,8 @@ namespace rct3::scene
         std::map<std::size_t, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
+        /// How the riders of each simulated flat ride sit, where its item says (see park::rider_motions).
+        std::map<entt::entity, std::uint8_t> ride_seatings;
         /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the
         /// other objects, a piece per bone.
         struct BonedRide

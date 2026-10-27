@@ -219,16 +219,22 @@ namespace rct3::scene
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
                 pose.motion = kRideMotion;
-                // In a coaster's car they sit as the car seats them, reacting to the ride.
+                // They sit as their car seats them, or on a flat ride as the ride does, reacting to the ride.
+                std::optional<std::uint8_t> seating;
                 if (seat->first < scene.cars.size())
-                    if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end() && model->second.seating)
-                        if (const auto motions = park::rider_motions(*model->second.seating))
-                        {
-                            const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
-                            // In RideReaction's order.
-                            const std::array by_reaction { motions->wait, motions->ride, motions->hands_up, motions->cover_eyes, motions->strained };
-                            pose.motion = by_reaction[std::to_underlying(thrill != nullptr ? thrill->reaction : simulation::RideReaction::Calm)];
-                        }
+                {
+                    if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end())
+                        seating = model->second.seating;
+                }
+                else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
+                    seating = flat->second;
+                if (const auto motions = seating ? park::rider_motions(*seating) : std::nullopt)
+                {
+                    const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
+                    // In RideReaction's order.
+                    const std::array by_reaction { motions->wait, motions->ride, motions->hands_up, motions->cover_eyes, motions->strained };
+                    pose.motion = by_reaction[std::to_underlying(thrill != nullptr ? thrill->reaction : simulation::RideReaction::Calm)];
+                }
                 by_car[seat->first].push_back(pose);
             }
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {

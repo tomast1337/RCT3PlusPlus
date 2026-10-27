@@ -728,13 +728,18 @@ namespace rct3::scene
                 }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
-                // The settings the piece is built with. A brake's speed, in hundredths of the player's unit, is
-                // the ride's: the last one set.
+                // The settings the piece is built with. A brake's or block brake's speed is stored in whole m/s and
+                // shown in tenths of the player's unit, a step a metre a second; the ride's for its kind until set.
                 // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
                 // and turning cars.
                 using enum ui::PieceParam;
-                if (shape.record.role == kBrakesRole)
-                    v.params.at(std::to_underlying(Speed)) = ui::ParamBox { .value = static_cast<int>(std::lround(ride.options.brake_speed * ui::speed_scale(units) * 100)), .most = static_cast<int>(std::lround(kMostBrakeSpeed * ui::speed_scale(units) * 100)), .decimals = 2, .unit = std::u16string(ui::speed_unit(units)) };
+                if (shape.record.role == park::kRoleBrakes || shape.record.role == park::kRoleBlockBrake)
+                {
+                    const float ride_speed = shape.record.role == park::kRoleBrakes ? ride.options.brake_speed : ride.options.block_brake_off_speed;
+                    const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
+                    const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::speed_scale(units) * 10)); };
+                    v.params.at(std::to_underlying(Speed)) = ui::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed), .decimals = 1, .unit = std::u16string(ui::speed_unit(units)), .step = std::max(tenths(1), 1) };
+                }
                 if (shape.record.role == kHoldingRole)
                     v.params.at(std::to_underlying(HoldingTime)) = ui::ParamBox { .value = b.holding_time, .most = kMostHoldingTime };
                 if (rules.car_rotation)
@@ -892,10 +897,9 @@ namespace rct3::scene
             piece.height = object.base_height.value_or(0);
             piece.direction = static_cast<std::uint8_t>(object.rotation);
             piece.reversed = b.picked->reversed != b.backward;
-            // shortcut: brake speeds are stored in whole metres a second as the files do, upgrade if a finer
-            // speed matters once trains brake.
-            if (shape.record.role == kBrakesRole)
-                piece.brake_speed = static_cast<std::int32_t>(std::lround(ride.options.brake_speed));
+            // Brake speeds are stored in whole metres a second, as the files do; none until set, so the ride's.
+            if (shape.record.role == park::kRoleBrakes || shape.record.role == park::kRoleBlockBrake)
+                piece.brake_speed = b.brake_speed > 0 ? b.brake_speed : -1;
             if (shape.record.role == kHoldingRole)
                 piece.holding_time = b.holding_time;
             piece.car_turn = static_cast<float>(b.car_turn);
@@ -2147,7 +2151,7 @@ namespace rct3::scene
                             b.holding_time = event->value;
                             break;
                         case ui::PieceParam::Speed:
-                            scene.rides.rides.at(*b.ride).options.brake_speed = static_cast<float>(event->value) / 100 / ui::speed_scale(units);
+                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed));
                             break;
                     }
                     break;

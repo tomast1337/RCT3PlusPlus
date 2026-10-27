@@ -580,9 +580,11 @@ namespace rct3::simulation
         // shortcut: one brake force for every ride and a train built here weighs 500 kg a car, chosen by eye
         // from the saved ones, upgrade when the ride's and the cars' own files are read here.
         constexpr float kBrakeForce = 5000;
+        constexpr float kBoostForce = 10000; ///< A block brake's push on each car, as every ride file gives it
         constexpr float kCarMass = 500;
         const float mass = !ride.trains.empty() && ride.trains[0].mass > 0 ? ride.trains[0].mass : kCarMass * static_cast<float>(c.cars);
         c.brake_pull = kBrakeForce * static_cast<float>(c.cars) / mass;
+        c.boost_pull = kBoostForce * static_cast<float>(c.cars) / mass;
         return c;
     }
 

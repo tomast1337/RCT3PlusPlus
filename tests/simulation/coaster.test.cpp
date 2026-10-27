@@ -223,6 +223,61 @@ TEST_CASE("brakes never speed a train up, nor stop one when set to nothing")
     CHECK(c.speed > 11.5f);
 }
 
+TEST_CASE("a block brake slows a passing train to its speed with the block ahead clear")
+{
+    Coaster c = hill();
+    c.kinds[3] = Stretch::BlockBrake;
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    while (c.at < 99)
+        drive(c, 0.05f);
+    CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
+}
+
+TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.at = 80; // Standing on it, let go
+    c.speed = 0;
+    drive(c, 0.1f);
+    CHECK(c.speed > 0);
+    CHECK(c.speed < 4);
+    for (int i = 0; i < 20; ++i)
+        drive(c, 0.1f);
+    CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
+}
+
+TEST_CASE("a train held at a block brake is braked to a stop where its room ends, not stopped dead")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.at = 75;
+    c.speed = 4;
+    const float end = 85; // The room ends 10 m on
+    float last = c.speed;
+    bool smooth = true;
+    for (int i = 0; i < 400 && c.speed > 0; ++i)
+    {
+        drive(c, 0.05f, end - c.at);
+        smooth = smooth && last - c.speed < 1.5f; // No sudden stop: no harder than 30 m/s² a step
+        last = c.speed;
+    }
+    CHECK(smooth);
+    CHECK(c.speed == 0);
+    CHECK(c.at == doctest::Approx(end).epsilon(0.01));
+}
+
 TEST_CASE("a launched train that rolls back into the station stops there and is not launched again")
 {
     // Too slow a launch for the 15 m hill: it rolls back down.

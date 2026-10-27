@@ -36,6 +36,7 @@
 #include "park/terrain_mesh.hpp"
 #include "park/track_course.hpp"
 #include "park/track_rules.hpp"
+#include "park/weather_look.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
 #include "save/model/park.hpp"
@@ -50,6 +51,7 @@
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
 #include "scene/park_particles.hpp"
+#include "scene/park_rain.hpp"
 #include "scene/park_supports.hpp"
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
@@ -345,10 +347,14 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
-        ParkLens lens;             ///< Water on the camera's lens
-        ParkParticles particles;   ///< The effects scenery and rides show
-        bool bloom = false;        ///< The Bloom option: glow round bright parts
-        bool light_shafts = false; ///< The Light shafts option
+        ParkLens lens;                                          ///< Water on the camera's lens
+        ParkParticles particles;                                ///< The effects scenery and rides show
+        ParkRain rain;                                          ///< Rain falling round the camera
+        park::WeatherLook weather_look;                         ///< How the weather shows now
+        random::RandomState weather_dice = random::seeded({ }); ///< Looks only: when lightning strikes
+        bool thunder = false;                                   ///< A stroke's thunder is to be heard this frame
+        bool bloom = false;                                     ///< The Bloom option: glow round bright parts
+        bool light_shafts = false;                              ///< The Light shafts option
         ParkOcclusion occlusion;
         bool ambient_occlusion = false; ///< The Ambient occlusion option
         int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)

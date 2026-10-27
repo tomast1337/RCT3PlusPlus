@@ -50,6 +50,8 @@ namespace rct3::park
         float fade = 0;                  ///< How much of the fading look still shows, 0 for none
         float night = 0;                 ///< 0 by day, up to 1 when the stars show fully
         float time = 0;                  ///< Seconds, for the clouds' drift
+        glm::vec3 tint { 1.0f };         ///< Times the sky's colours, for the weather
+        float overcast = 0;              ///< 0 the usual clouds, up to 1 when they cover the sky dark and hide the stars
     };
 
     /// The sky seen from `view`, in drawing order: the coloured dome (opaque), the dome again in the fading

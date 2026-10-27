@@ -402,6 +402,11 @@ namespace rct3::scene
                 }
             throw std::invalid_argument("park.setWeather takes the name of a weather, such as \"light rain\"");
         });
+        engine_.define("park.weatherLook", [this](const Json&) {
+            const ParkScene& p = park_of(park_);
+            const park::WeatherLook& look = p.weather_look;
+            return Json { { "rain", look.rain }, { "gloom", look.gloom }, { "flash", look.flash }, { "forecast", p.park.forecast ? save::to_string(*p.park.forecast) : "" }, { "climate", p.park.climate }, { "temperature", p.park.temperature.value_or(0.0f) } };
+        });
         engine_.define("park.vipGoals", [this](const Json&) {
             Json out = Json::array();
             for (const save::Condition& c : park_of(park_).park_model.objectives.conditions)

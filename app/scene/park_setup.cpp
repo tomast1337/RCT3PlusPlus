@@ -1037,6 +1037,7 @@ namespace rct3::scene
         scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
         log.info("{} lamps", scene.lamps.size());
         load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
+        load_park_rain(device, scene.rain, install);
         // The tunes are the music files the install has, by name.
         std::error_code missing;
         for (const auto& file : std::filesystem::directory_iterator(install.root() / "Music", missing))
@@ -1374,6 +1375,7 @@ namespace rct3::scene
         destroy_park_glow(device, scene.glow);
         destroy_park_lens(device, scene.lens);
         destroy_park_particles(device, scene.particles);
+        destroy_park_rain(device, scene.rain);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);
         destroy_save_browser(device, scene.structures.browser);

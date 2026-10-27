@@ -131,6 +131,7 @@ namespace rct3::park
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
         bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
+        bool level_paths_only = false;                   ///< A path item kept off the sides of sloped paths
         std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
         /// whether it is inside the outline. Empty for every other item.

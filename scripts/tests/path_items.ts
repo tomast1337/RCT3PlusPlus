@@ -48,6 +48,40 @@ for (const [i, symbol] of symbols.entries()) {
     build.stop();
     await frames(1);
 }
+// A slope: two pieces climbing east off the road, past a level stretch so neither end of the first is free. A bin
+// still goes on it; a bench, kept to level paths, does not.
+const climb = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row)[symbols.length + 2];
+expect(climb !== undefined, "road left for the climb");
+camera.look({ col: climb.col + 2.5, row: climb.row + 0.5 }, { col: climb.col + 2.5, row: climb.row + 9.5, up: 25 });
+await frames(3);
+await ui.click("tools/Paths/Obj_Paths");
+await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
+await ui.toggle("footpaths/follow", false);
+await ui.toggle("footpaths/route", false);
+const laid = map.paths().length;
+const east = [map.screen(climb.col + 1, climb.row)!, map.screen(climb.col + 2, climb.row)!];
+await pointer.drag([east[0].x, east[0].y], [east[1].x, east[1].y], 10);
+await ui.click("footpaths/body/Path_UpwardSlope");
+await ui.click("footpaths/body/Path_Straight");
+await ui.click("footpaths/body/Path_Straight");
+await ui.click("footpaths/body/Path_NoSlope");
+await ui.click("footpaths/body/Path_Straight");
+build.stop();
+await frames(5);
+const sloped = map.paths().slice(laid).filter((p) => p.raised);
+log("climb", JSON.stringify(map.paths().slice(laid)));
+expect(sloped.length >= 2, `a raised climb, not ${sloped.length} raised pieces`);
+for (const [symbol, problem] of [["Bin", "none"], ["Bench", "blocked"]]) {
+    expect(build.pick("Style/Vanilla/Style", symbol), `${symbol} in the scenery lists`);
+    await frames(2);
+    const on = await hover(sloped[0].col, sloped[0].row);
+    log(symbol, "on the slope", on.problem);
+    expect(on.problem === problem, `${symbol} on the slope ${problem}, not ${on.problem}`);
+}
+await screenshot("path_items_slope");
+build.stop();
+await frames(1);
+
 // Through the interface now: the bench's row in the path extras list. A right drag moves the camera and keeps the
 // placing and its ghost; a still right click puts it away; its row picks it again, also once the tool row's
 // button has been pressed again while its menu is out.

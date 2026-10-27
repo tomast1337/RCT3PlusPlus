@@ -215,8 +215,8 @@ TEST_CASE("pool types")
     REQUIRE(p.piece_names.size() == 89);
     CHECK(p.piece_names[0] == "PieceA");
     CHECK(p.piece_names[88] == "PieceB");
-    CHECK(p.unknown_values[3] == 2000);
-    CHECK(p.unknown_values[5] == -2000);
+    CHECK(p.prices[3] == 2000);
+    CHECK(p.prices[5] == -2000);
     CHECK(p.unknown_floats[0] == 0.5f);
     REQUIRE(p.splines.size() == 36);
     CHECK(p.splines[0] == "Spl1");

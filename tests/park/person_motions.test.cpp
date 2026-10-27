@@ -58,3 +58,27 @@ TEST_CASE("carousel riders sit their horse without reacting, and dancers wait st
     CHECK(dance->ride == park::motion_number("dance"));
     CHECK(dance->wait == park::motion::kIdle);
 }
+
+TEST_CASE("riders behind a lap bar raise and lower their hands with motions of their own")
+{
+    const auto bar = park::rider_motions(11);
+    REQUIRE(bar);
+    CHECK(bar->hands_up_in == park::motion_number("handsupbarin"));
+    CHECK(bar->hands_up_out == park::motion_number("handsupbarout"));
+    CHECK(bar->cover_eyes_in == park::motion_number("covereyesbarin"));
+    CHECK_FALSE(park::motion_repeats(*bar->hands_up_in));
+    CHECK_FALSE(park::rider_motions(2)->hands_up_in.has_value());
+}
+
+TEST_CASE("clips play in turn, each once, and the last for good")
+{
+    const std::array<park::Clip, 3> clips { { { 1, 0.5f }, { 2, 1 }, { 3, 0 } } };
+    CHECK(park::clip_at(clips, 0.25f).motion == 1);
+    CHECK(park::clip_at(clips, 0.25f).seconds == doctest::Approx(0.25f));
+    CHECK(park::clip_at(clips, 1).motion == 2);
+    CHECK(park::clip_at(clips, 1).seconds == doctest::Approx(0.5f));
+    CHECK(park::clip_at(clips, 10).motion == 3);
+    CHECK(park::clip_at(clips, 10).seconds == doctest::Approx(8.5f));
+    const std::array<park::Clip, 1> loop { { { 4, 0 } } };
+    CHECK(park::clip_at(loop, 3).motion == 4);
+}

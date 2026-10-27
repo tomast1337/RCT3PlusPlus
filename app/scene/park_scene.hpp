@@ -59,6 +59,7 @@
 #include "scene/structure_tools.hpp"
 #include "scene/track_building.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park_graphs.hpp"
@@ -534,6 +535,15 @@ namespace rct3::scene
         std::map<entt::entity, std::size_t> ride_seats;
         /// How the riders of each simulated flat ride sit, where its item says (see park::rider_motions).
         std::map<entt::entity, std::uint8_t> ride_seatings;
+        /// A rider's last change of reaction as their pose shows it: from what to what, and scene.park_clock then.
+        struct RiderTurn
+        {
+            simulation::RideReaction was = simulation::RideReaction::Waiting;
+            simulation::RideReaction now = simulation::RideReaction::Waiting;
+            float since = 0;
+        };
+        /// Of the riders posed last, by guest.
+        std::map<entt::entity, RiderTurn> rider_turns;
         /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the
         /// other objects, a piece per bone.
         struct BonedRide

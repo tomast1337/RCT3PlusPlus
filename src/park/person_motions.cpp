@@ -469,11 +469,37 @@ namespace rct3::park
         const auto* names = std::ranges::find(kSeatings, seating, &Names::seating);
         if (names == kSeatings.end())
             return std::nullopt;
-        // shortcut: the loops only, raising hands and covering eyes in a blink; upgrade with their in and out
-        // motions played as a rider's reaction changes.
         const std::int32_t ride = motion_number(names->ride).value_or(motion::kIdle);
         const auto or_ride = [&](std::string_view name) { return name.empty() ? ride : motion_number(name).value_or(ride); };
-        return RiderMotions { .ride = ride, .wait = or_ride(names->wait), .hands_up = or_ride(names->hands_up), .cover_eyes = or_ride(names->cover_eyes), .strained = or_ride(names->strained) };
+        // A loop's motions in and out are named as it is, ending in "in" and "out" for "loop".
+        const auto beside = [](std::string_view loop, std::string_view end) -> std::optional<std::int32_t> {
+            if (!loop.ends_with("loop"))
+                return std::nullopt;
+            loop.remove_suffix(4);
+            return motion_number(std::string(loop) + std::string(end));
+        };
+        return RiderMotions {
+            .ride = ride,
+            .wait = or_ride(names->wait),
+            .hands_up = or_ride(names->hands_up),
+            .cover_eyes = or_ride(names->cover_eyes),
+            .strained = or_ride(names->strained),
+            .hands_up_in = beside(names->hands_up, "in"),
+            .hands_up_out = beside(names->hands_up, "out"),
+            .cover_eyes_in = beside(names->cover_eyes, "in"),
+            .cover_eyes_out = beside(names->cover_eyes, "out"),
+        };
+    }
+
+    Clip clip_at(std::span<const Clip> clips, float since)
+    {
+        for (const Clip& clip : clips.first(clips.size() - 1))
+        {
+            if (since < clip.seconds)
+                return { clip.motion, since };
+            since -= clip.seconds;
+        }
+        return { clips.back().motion, since };
     }
 
     bool motion_repeats(std::int32_t number)

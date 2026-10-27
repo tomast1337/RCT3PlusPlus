@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string_view>
 
 namespace rct3::park
@@ -36,7 +37,24 @@ namespace rct3::park
         std::int32_t hands_up = 0;
         std::int32_t cover_eyes = 0;
         std::int32_t strained = 0;
+        /// Played once on raising their hands or covering their eyes and on bringing them down; nothing where
+        /// the seating has none.
+        std::optional<std::int32_t> hands_up_in { };
+        std::optional<std::int32_t> hands_up_out { };
+        std::optional<std::int32_t> cover_eyes_in { };
+        std::optional<std::int32_t> cover_eyes_out { };
     };
+
+    /// A motion and a length of time: how long it plays, or how far into it.
+    struct Clip
+    {
+        std::int32_t motion = 0;
+        float seconds = 0;
+    };
+
+    /// Of `clips` played in turn, each for its time and the last for good, the one playing `since` seconds after
+    /// the first began and how far into it. `clips` must not be empty.
+    [[nodiscard]] Clip clip_at(std::span<const Clip> clips, float since);
 
     /// The motions of riders seated as `seating` says (a ride car's or a flat ride's seating number); nothing for a seating
     /// not known.

@@ -206,6 +206,7 @@ namespace rct3::scene
         std::future<RidersBuild> pose_riders(ParkScene& scene)
         {
             std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
+            std::map<entt::entity, ParkScene::RiderTurn> turns;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
@@ -230,13 +231,39 @@ namespace rct3::scene
                     seating = flat->second;
                 if (const auto motions = seating ? park::rider_motions(*seating) : std::nullopt)
                 {
+                    using simulation::RideReaction;
                     const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
+                    const RideReaction now = thrill != nullptr ? thrill->reaction : RideReaction::Calm;
+                    // Riders not posed last time show no change.
+                    const auto last = scene.rider_turns.find(shown.guest);
+                    auto& turn = turns[shown.guest] = last != scene.rider_turns.end() ? last->second : ParkScene::RiderTurn { now, now, -1e9f };
+                    if (turn.now != now)
+                        turn = { turn.now, now, scene.park_clock };
+                    // Bringing down their hands or their arms from their eyes, then raising them, then the loop.
+                    std::vector<park::Clip> clips;
+                    const auto add = [&](RideReaction reaction, const std::optional<std::int32_t>& hands, const std::optional<std::int32_t>& eyes) {
+                        if (const auto& once = reaction == RideReaction::HandsUp ? hands : reaction == RideReaction::CoverEyes ? eyes : std::nullopt; once && turn.was != turn.now)
+                        {
+                            pose.motion = *once;
+                            clips.push_back({ *once, park::motion_seconds(*scene.person_models, pose) });
+                        }
+                    };
+                    add(turn.was, motions->hands_up_out, motions->cover_eyes_out);
+                    add(turn.now, motions->hands_up_in, motions->cover_eyes_in);
                     // In RideReaction's order.
                     const std::array by_reaction { motions->wait, motions->ride, motions->hands_up, motions->cover_eyes, motions->strained };
-                    pose.motion = by_reaction[std::to_underlying(thrill != nullptr ? thrill->reaction : simulation::RideReaction::Calm)];
+                    clips.push_back({ by_reaction[std::to_underlying(now)], 0 });
+                    pose.motion = clips.back().motion;
+                    if (clips.size() > 1)
+                    {
+                        const park::Clip at = park::clip_at(clips, scene.park_clock - turn.since);
+                        pose.motion = at.motion;
+                        pose.time = at.seconds;
+                    }
                 }
                 by_car[seat->first].push_back(pose);
             }
+            scene.rider_turns = std::move(turns);
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {
                 std::vector<std::span<const park::PlacedPerson>> groups;
                 RidersBuild built;

@@ -59,6 +59,9 @@ namespace rct3::park
     /// Where the left hand of `person` is, in their own space; nothing when their body has no socket for it.
     [[nodiscard]] std::optional<glm::vec3> left_hand(const PersonLibrary& library, const PlacedPerson& person);
 
+    /// How long `person`'s motion lasts, played once through, seconds; 0 when their body has none.
+    [[nodiscard]] float motion_seconds(const PersonLibrary& library, const PlacedPerson& person);
+
     /// How fast the walk of `legs` (a legs piece), or its other way of going on foot `motion` (a run, a tired
     /// walk), carries a walker along, in park units for each second of the motion: the speed at which a foot
     /// on the ground slides back beneath them. Played at this pace the feet stay put. Nothing when the piece

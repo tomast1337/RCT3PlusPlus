@@ -81,7 +81,19 @@ await frames(2);
 let cash = park.cash()!;
 await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
 await frames(2);
-await pointer.drag(on_view(c0, r0), on_view(c0 + 7, r0 + 7), 8);
+// The square under the pointer is laid to be seen, and the drag's rectangle while it lasts, unpaid till let go.
+pointer.move(...on_view(c0 + 0.5, r0 + 0.5));
+await frames(3);
+expect(count("SolidTop") === 1, `the square under the pointer shown, not ${count("SolidTop")}`);
+pointer.press();
+await frames(2);
+// Aimed at the middle of the far square: its corners are dug with the squares shown beside it.
+pointer.move(...on_view(c0 + 7.5, r0 + 7.5));
+await frames(4);
+await screenshot("pool_laying");
+expect(count("SolidTop") === 64, `the rectangle shown while dragging, not ${count("SolidTop")}`);
+expect(park.cash()! >= cash - 100, "nothing paid before letting go");
+pointer.release();
 await frames(3);
 expect(count("SolidTop") === 64, `64 paved squares, not ${count("SolidTop")}`);
 expect(count("Railing") === 32, `a railing round them, not ${count("Railing")}`);
@@ -165,6 +177,9 @@ for (const [a, b] of [[[c0 + 1, r0 + 11], [c0 + 1, r0 + 11]], [[c0 + 3, r0 + 10]
     await pointer.drag(on_view(a[0], a[1]), on_view(b[0], b[1]), 6);
     await frames(3);
 }
+// Put away, so the square under the pointer is not shown laid as well.
+build.stop();
+await frames(2);
 await screenshot("pool_shapes");
 camera.look({ col: c0 + 4, row: r0 + 11.5 }, { col: c0 + 4, row: r0 + 17, up: 6 });
 await frames(10);
@@ -204,6 +219,19 @@ pointer.release();
 await frames(3);
 build.stop();
 expect(park.cash()! > during, "the tiles paid back when let go");
+
+// Tiles the park cannot pay for go back when let go, and a message says why.
+const before_broke = park.cash()!;
+park.setCash(1);
+expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");
+const unpaved = count("SolidTop");
+await pointer.drag(on_view(c0, r0 + 7), on_view(c0 + 3, r0 + 7), 6);
+await frames(3);
+build.stop();
+await frames(2);
+expect(count("SolidTop") === unpaved, `no tiles laid without the money, ${count("SolidTop")} not ${unpaved}`);
+expect(park.messages().some((m) => m.key === "PlaceObject_NotEnoughMoney"), "the not enough money message");
+park.setCash(before_broke);
 await frames(10);
 await screenshot("pool_cut");
 

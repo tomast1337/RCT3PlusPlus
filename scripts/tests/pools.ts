@@ -235,8 +235,12 @@ park.setCash(before_broke);
 await frames(10);
 await screenshot("pool_cut");
 
-// Saved and loaded again: the pools come back.
+// Saved and loaded again: the pools come back, without the square the tiles tool shows under the pointer.
 const kept = pieces().length;
+expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");
+pointer.move(...on_view(c0 + 1.5, r0 + 7.5));
+await frames(3);
+expect(pieces().length > kept, "the square under the pointer shown before saving");
 await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -250,7 +254,9 @@ const saved_row = "park_files/content/list/view/content/row0";
 await until(() => ui.find(saved_row) !== undefined, 120, "the save in the load window");
 await ui.click(saved_row);
 await ui.click("park_files/content/open");
-await until(() => pieces().length === kept, 1200, `${kept} pool pieces back after loading`);
+await until(() => park.loaded() && pieces().length > 0, 1200, "the pools back after loading");
+await frames(3);
+expect(pieces().length === kept, `${kept} pool pieces back after loading, not ${pieces().length}`);
 expect(room() !== undefined, "the changing room back after loading");
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);

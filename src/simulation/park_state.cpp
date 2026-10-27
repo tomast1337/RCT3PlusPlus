@@ -61,7 +61,7 @@ namespace rct3::simulation
             return 0;
         const std::int64_t before = week_of(state.time, state.zero_time);
         state.time += seconds / kSecondsPerHour * kCalendarUnitsPerHour;
-        state.date = save::GameClock::split(state.time);
+        state.date = save::GameClock::date_at(state.time, state.zero_time);
         return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
     }
 

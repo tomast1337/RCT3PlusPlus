@@ -233,23 +233,42 @@ namespace rct3::simulation
                     if (pace > c.station_speed)
                         c.slow = 0;
                 }
-                // Each car over a brake slows the train while it is faster than that brake's speed, down to it and
-                // no further, whichever way it goes. A brake set to nothing lets it through.
+                // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
+                // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
+                // slower. A brake set to nothing lets it through.
                 const int cars = std::max(c.cars, 1);
                 const float car = c.train_length / static_cast<float>(cars);
                 float pull = 0;
+                float push = 0;
                 float least = 0;
+                float most = 0;
+                bool blocked = false;
                 for (int k = 0; k < cars; ++k)
                 {
                     const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
-                    if (c.kinds[i] == Stretch::Brake && i < c.brake_speeds.size() && c.brake_speeds[i] > 0 && std::abs(c.speed) > c.brake_speeds[i])
+                    const bool block = c.kinds[i] == Stretch::BlockBrake;
+                    if ((!block && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
+                        continue;
+                    blocked = blocked || block;
+                    if (std::abs(c.speed) > c.brake_speeds[i])
                     {
                         pull += c.brake_pull / static_cast<float>(cars);
                         least = std::max(least, c.brake_speeds[i]);
                     }
+                    else if (block && !open)
+                    {
+                        push += c.boost_pull / static_cast<float>(cars);
+                        most = std::max(most, c.brake_speeds[i]);
+                    }
                 }
                 if (pull > 0)
                     c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
+                else if (push > 0)
+                    c.speed = std::min(c.speed + push * dt, most);
+                // Held on a block brake for the block ahead to clear, the brakes bring it to a stop where its room
+                // runs out.
+                if (blocked && std::isfinite(room))
+                    c.speed = std::min(c.speed, std::sqrt(2 * c.brake_pull * std::max(room, 0.0f)));
                 // A drop tower's train is held where its first climb tops out, then let fall.
                 if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held < kTopHold)
                 {

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools.hpp"
 
+#include "strings/ascii.hpp"
+
 #include <algorithm>
 #include <bit>
+#include <charconv>
 
 namespace rct3::park
 {
@@ -42,6 +45,64 @@ namespace rct3::park
             return a.kind == b.kind && a.depth == b.depth && a.surface == b.surface;
         }
 
+        /// The parts of a square, as bits: its middle, paved or water, then four bits each, by turn, for its
+        /// sides, the walls under them, water at them and changes of level at them.
+        constexpr std::uint32_t kPavedMiddle = 1u << 0;
+        constexpr std::uint32_t kWaterMiddle = 1u << 1;
+        constexpr std::uint32_t kSides = 2; // The first bit of each four
+        constexpr std::uint32_t kWalls = 6;
+        constexpr std::uint32_t kWaterAt = 10;
+        constexpr std::uint32_t kStepAt = 14;
+
+        std::uint32_t at_side(std::uint32_t first, std::int32_t turn) noexcept
+        {
+            return 1u << (first + (turn & 3));
+        }
+
+        /// The parts an extra that fits as `fit`, against side `turn`, takes.
+        std::uint32_t taken(const PoolExtraFit& fit, std::int32_t turn) noexcept
+        {
+            std::uint32_t parts = (fit.paved_middle ? kPavedMiddle : 0u) | (fit.water_middle ? kWaterMiddle : 0u);
+            if (fit.side)
+                parts |= at_side(kSides, turn) | (fit.step > 0 ? at_side(kStepAt, turn) : 0u);
+            if (fit.wall)
+                parts |= at_side(kWalls, turn);
+            if (fit.water_across)
+                parts |= at_side(kWaterAt, turn + 2);
+            if (fit.whole)
+                parts |= kPavedMiddle | (0xfu << kSides);
+            return parts;
+        }
+
+        /// The parts `square` offers extras.
+        std::uint32_t offered(const PoolMap& map, const PoolSquare& square) noexcept
+        {
+            if (square.kind == PoolKind::Tile)
+                // shortcut: a paved square offers no change of level; give it the sides that meet a square
+                // a level up or down once pools have levels.
+                return kPavedMiddle | (0xfu << kSides);
+            if (square.kind != PoolKind::Water)
+                return 0;
+            const std::uint8_t water = water_around(map, square);
+            std::uint32_t parts = kWaterMiddle;
+            for (std::int32_t turn = 0; turn < 4; ++turn)
+                parts |= (water & (1u << turn)) != 0 ? at_side(kWaterAt, turn) : at_side(kSides, turn) | at_side(kWalls, turn) | at_side(kStepAt, turn);
+            return parts;
+        }
+
+        /// Takes the extras on the square at (`col`, `row`) out of `map`; returns their refunds.
+        std::int64_t clear_extras(PoolMap& map, std::int32_t col, std::int32_t row)
+        {
+            std::int64_t cost = 0;
+            std::erase_if(map.extras, [&](const PoolExtra& e) {
+                if (e.col != col || e.row != row)
+                    return false;
+                cost += e.refund;
+                return true;
+            });
+            return cost;
+        }
+
     } // namespace
 
     std::optional<const PoolSquare&> PoolMap::at(std::int32_t col, std::int32_t row) const noexcept
@@ -50,6 +111,54 @@ namespace rct3::park
         if (found == squares.end())
             return std::nullopt;
         return *found;
+    }
+
+    PoolExtraFit pool_extra_fit(std::string_view words)
+    {
+        PoolExtraFit fit;
+        bool step_next = false;
+        for (std::size_t at = 0; at < words.size();)
+        {
+            const std::size_t start = words.find_first_not_of(' ', at);
+            if (start == std::string_view::npos)
+                break;
+            const std::size_t end = std::min(words.find(' ', start), words.size());
+            const std::string_view word = words.substr(start, end - start);
+            at = end;
+            if (step_next)
+            {
+                std::from_chars(word.data(), word.data() + word.size(), fit.step);
+                step_next = false;
+            }
+            else if (strings::equals_ignoring_case(word, "CentralSolid"))
+                fit.paved_middle = true;
+            else if (strings::equals_ignoring_case(word, "CentralWater"))
+                fit.water_middle = true;
+            else if (strings::equals_ignoring_case(word, "Side"))
+                fit.side = true;
+            else if (strings::equals_ignoring_case(word, "UnderWaterWall"))
+                fit.wall = true;
+            else if (strings::equals_ignoring_case(word, "OppositeWater"))
+                fit.water_across = true;
+            else if (strings::equals_ignoring_case(word, "WholeTile"))
+                fit.whole = true;
+            else if (strings::equals_ignoring_case(word, "HeightStep"))
+                step_next = true;
+        }
+        return fit;
+    }
+
+    bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, std::int32_t turn)
+    {
+        const auto square = map.at(col, row);
+        if (!square)
+            return false;
+        const std::uint32_t wants = taken(fit, turn);
+        std::uint32_t used = 0;
+        for (const PoolExtra& e : map.extras)
+            if (e.col == col && e.row == row)
+                used |= taken(e.fit, e.turn);
+        return (wants & ~offered(map, *square)) == 0 && (wants & used) == 0;
     }
 
     std::vector<PoolWallPiece> pool_walls(std::uint8_t water) noexcept
@@ -148,6 +257,21 @@ namespace rct3::park
                 o.force_absolute_height = true;
                 o.rotation = piece.turn;
             }
+        for (const PoolExtra& e : map.extras)
+        {
+            const auto square = map.at(e.col, e.row);
+            save::PlacedObject& o = out.emplace_back();
+            o.id = ++last_id;
+            o.owner_ref = o.id;
+            o.fixture = true;
+            o.symbol = e.symbol;
+            o.overlay = e.overlay;
+            o.col = e.col;
+            o.row = e.row;
+            o.base_height = square ? square->surface : 0;
+            o.force_absolute_height = true;
+            o.rotation = e.turn;
+        }
         return out;
     }
 
@@ -185,6 +309,7 @@ namespace rct3::park
             {
                 cost += pool_build_cost(prices, square) + pool_refund(prices, *was);
                 *was = square;
+                cost += clear_extras(map, square.col, square.row);
             }
         }
         return cost;
@@ -199,6 +324,12 @@ namespace rct3::park
             if (s.col < c0 || s.col > c1 || s.row < r0 || s.row > r1)
                 return false;
             cost += pool_refund(prices, s);
+            return true;
+        });
+        std::erase_if(map.extras, [&](const PoolExtra& e) {
+            if (e.col < c0 || e.col > c1 || e.row < r0 || e.row > r1)
+                return false;
+            cost += e.refund;
             return true;
         });
         return cost;

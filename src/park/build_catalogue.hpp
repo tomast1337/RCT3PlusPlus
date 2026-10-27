@@ -94,6 +94,7 @@ namespace rct3::park
         AnimalToy,      ///< Put inside an enclosure for the animals to play with
         Animal,         ///< One animal of a species, bought into an enclosure
         PoolSquare,     ///< A tool laying squares of a pool, or taking them up (park/pools.hpp)
+        PoolExtra,      ///< A scenery item put in a pool, against a side of one of its squares
     };
 
     /// The symbols of the pool list's tools: water at each depth, paved tiles, and taking squares up. They are
@@ -101,6 +102,8 @@ namespace rct3::park
     inline constexpr std::array<std::string_view, 3> kPoolWater { "Pool_DepthShallow", "Pool_DepthNormal", "Pool_DepthDeep" };
     inline constexpr std::string_view kPoolTiles = "Pool_PlaceTiles";
     inline constexpr std::string_view kPoolDelete = "Pool_DeleteArea";
+    /// The tool laying spa pools, listed with the extras.
+    inline constexpr std::string_view kPoolJacuzzi = "SceneryItem_Jacuzzi";
     /// The overlay of the pool type, whose pieces pools are built of.
     inline constexpr std::string_view kPoolOverlay = "Pool/Default/Default_Stub";
 
@@ -171,6 +174,7 @@ namespace rct3::park
         std::vector<Goods> goods;
         /// Pool tools: the pool type's price list (ovl::PoolType::prices), what their squares cost.
         std::vector<std::int32_t> pool_prices { };
+        std::string pool_extra { }; ///< Pool extras: the words of their setting, read by park::pool_extra_fit
     };
 
     /// Names the theme of each item that has only its number, after another item of that number.

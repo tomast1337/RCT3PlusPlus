@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -58,9 +59,10 @@ namespace rct3::scene
             return { std::move(map), cost };
         }
 
-        /// The square the pointer is on: the top of a pool square where one is in the way, as the player sees
-        /// it, else the ground; the ground under the pools is dug down out of sight.
-        std::optional<save::Tile> pointed_square(const ParkScene& scene, ui::Point at, ui::Point size)
+        /// Where the pointer is on the grid, in tiles with fractions: on the top of a pool square where one is
+        /// in the way, as the player sees it, else on the ground; the ground under the pools is dug down out of
+        /// sight.
+        std::optional<glm::vec2> pointed_spot(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             if (size.x <= 0 || size.y <= 0)
                 return std::nullopt;
@@ -78,8 +80,87 @@ namespace rct3::scene
             if (!nearest)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *nearest;
-            const save::Tile tile { static_cast<int>(std::floor((hit.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((hit.z - g.origin_z) / g.tile_size_z)) };
-            return g.contains(tile) ? std::optional(tile) : std::nullopt;
+            const glm::vec2 spot { (hit.x - g.origin_x) / g.tile_size_x, (hit.z - g.origin_z) / g.tile_size_z };
+            return g.contains(static_cast<int>(std::floor(spot.x)), static_cast<int>(std::floor(spot.y))) ? std::optional(spot) : std::nullopt;
+        }
+
+        /// The side of its square a spot is nearest, as a turn.
+        std::int32_t nearest_side(glm::vec2 spot)
+        {
+            const glm::vec2 off = spot - glm::floor(spot) - 0.5f;
+            if (std::abs(off.y) >= std::abs(off.x))
+                return off.y >= 0 ? 0 : 2;
+            return off.x >= 0 ? 1 : 3;
+        }
+
+        /// Draws the marks over the area, at the pools' surface where squares are, and remembers them.
+        void draw_marks(render::Device& device, ParkScene& scene, std::optional<std::array<std::int32_t, 4>> marks, park::TilePart part, bool ok)
+        {
+            const std::int32_t look = std::to_underlying(part) * 2 + (ok ? 1 : 0);
+            if (marks == scene.pooling.drawn && look == scene.pooling.drawn_look)
+                return;
+            park::TerrainMesh mesh;
+            if (marks)
+            {
+                // The ground under the squares is dug out of sight: the marks are drawn as on their surface.
+                std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
+                for (const park::PoolSquare& s : scene.pools.squares)
+                    if (s.col >= (*marks)[0] && s.col <= (*marks)[2] && s.row >= (*marks)[1] && s.row <= (*marks)[3])
+                    {
+                        auto& corners = scene.grid.at(s.col, s.row).corners;
+                        dug.emplace_back(save::Tile { s.col, s.row }, corners);
+                        corners.fill(static_cast<float>(s.surface));
+                    }
+                park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], part, ok ? kMarkColour : kRefusedColour);
+                for (const auto& [tile, corners] : dug)
+                    scene.grid.at(tile.col, tile.row).corners = corners;
+            }
+            set_view_lines(device, scene.pool_marks, mesh);
+            scene.pooling.drawn = marks;
+            scene.pooling.drawn_look = look;
+        }
+
+        /// Puts the extra out with the pool tool where the pointer is, when it fits and can be paid for.
+        void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
+        {
+            PoolTool& t = scene.pooling;
+            const park::BuildItem& item = *t.item;
+            const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+            const std::int32_t turn = spot ? nearest_side(*spot) : 0;
+            const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
+            const bool ok = tile && park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn) && (!scene.park.cash || *scene.park.cash >= item.price);
+            if (down && tile)
+                t.corner = tile;
+            else if (t.corner && !down)
+            {
+                // Let go: the extra goes in where the pointer is now.
+                t.corner.reset();
+                if (ok)
+                {
+                    save::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
+                    const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
+                    scene.pools.extras.push_back(
+                        {
+                            .symbol = item.symbol,
+                            .overlay = item.overlay,
+                            .col = tile->col,
+                            .row = tile->row,
+                            .turn = turn,
+                            .refund = loaded ? scene.models.at(park::model_key(model)).removal_cost : 0,
+                            .fit = fit,
+                        });
+                    if (scene.park.cash)
+                        *scene.park.cash -= item.price;
+                    if (item.price != 0)
+                        float_money(scene, tile_point(scene.grid, *tile), -item.price);
+                    pools_changed(device, scene, assets);
+                }
+            }
+            constexpr std::array kSideParts { park::TilePart::Far, park::TilePart::Right, park::TilePart::Near, park::TilePart::Left };
+            const auto marks = tile ? std::optional(marked(*tile, *tile)) : std::nullopt;
+            // shortcut: the side is shown by a mark, not by the extra itself; show it standing there once
+            // placing tools draw what they hold.
+            draw_marks(device, scene, marks, kSideParts[static_cast<std::size_t>(turn)], ok);
         }
 
         /// Whether the area may be worked on: all of it land the park owns outright, and paid for.
@@ -96,21 +177,24 @@ namespace rct3::scene
 
     bool start_pooling(ParkScene& scene, const park::BuildItem& item)
     {
-        if (item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18)
+        if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra)
             return false;
-        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn };
+        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look };
         return true;
     }
 
     void stop_pooling(ParkScene& scene)
     {
-        scene.pooling = PoolTool { .drawn = scene.pooling.drawn }; // The marks go on the next frame
+        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look }; // The marks go on the next frame
     }
 
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
     {
         PoolTool& t = scene.pooling;
-        const auto tile = t.item && !over ? pointed_square(scene, at, size) : std::nullopt;
+        const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
+        if (t.item && t.item->kind == park::BuildKind::PoolExtra)
+            return update_extra(device, scene, assets, spot, down);
+        const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         if (t.item && down && (t.corner || tile))
         {
             if (!t.corner)
@@ -147,14 +231,7 @@ namespace rct3::scene
         }
         else if (tile)
             marks = marked(*tile, *tile);
-        if (marks != t.drawn)
-        {
-            park::TerrainMesh mesh;
-            if (marks)
-                park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], park::TilePart::Whole, ok ? kMarkColour : kRefusedColour);
-            set_view_lines(device, scene.pool_marks, mesh);
-            t.drawn = marks;
-        }
+        draw_marks(device, scene, marks, park::TilePart::Whole, ok);
     }
 
     void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)

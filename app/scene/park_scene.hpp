@@ -239,13 +239,15 @@ namespace rct3::scene
         std::optional<Marked> marked { };
     };
 
-    /// The pool list's tool out (scene/pool_tools.hpp): a drag lays squares of a pool, or takes them up.
+    /// The pool list's tool out (scene/pool_tools.hpp): a drag lays squares of a pool, or takes them up; a
+    /// click puts an extra in.
     struct PoolTool
     {
         std::optional<park::BuildItem> item;              ///< The tool picked; none while put away
         std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
         std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

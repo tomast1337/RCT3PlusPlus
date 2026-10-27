@@ -43,6 +43,12 @@ namespace
         return m;
     }
 
+    /// Every object's model is `model`.
+    ModelOf only(const ObjectModel* model)
+    {
+        return [model](std::uint64_t) { return model; };
+    }
+
     using Edge = std::tuple<int, int, int>; // Column, row and turn of a piece
 
     std::set<Edge> edges(const std::vector<save::PlacedObject>& pieces)
@@ -66,11 +72,11 @@ TEST_CASE("a ride without a fence has none, and a stand-in fence replaces its ow
     save::Ride r = flat_ride(spot(10, 20, 0, 0));
     const ObjectModel item = footprint(2, 2);
     r.fence_symbol.clear();
-    CHECK(ride_fences(r, &item, 0).empty());
+    CHECK(ride_fences(r, only(&item), 0).empty());
 
     r.override_fence_symbol = "Tape";
     r.override_fence_overlay = "Fences/Tape";
-    const auto pieces = ride_fences(r, &item, 0);
+    const auto pieces = ride_fences(r, only(&item), 0);
     REQUIRE(pieces.size() == 8);
     CHECK(pieces[0].symbol == "Tape");
     CHECK(pieces[0].fixture);
@@ -78,7 +84,7 @@ TEST_CASE("a ride without a fence has none, and a stand-in fence replaces its ow
 
     save::Ride facility = flat_ride(spot(10, 20, 0, 0));
     facility.kind = save::RideKind::Special;
-    CHECK(ride_fences(facility, &item, 0).empty());
+    CHECK(ride_fences(facility, only(&item), 0).empty());
 }
 
 TEST_CASE("an entrance and an exit are walled on the two sides beside the way they face")
@@ -90,7 +96,7 @@ TEST_CASE("an entrance and an exit are walled on the two sides beside the way th
     s.exit_spot = spot(5, 6, 2, 3);
     r.stations = { s };
     const ObjectModel item = footprint(2, 2); // A tracked ride is not fenced round
-    const auto pieces = ride_fences(r, &item, 50);
+    const auto pieces = ride_fences(r, only(&item), 50);
     CHECK(edges(pieces) == std::set<Edge> { { 3, 4, 3 }, { 3, 4, 1 }, { 5, 6, 2 }, { 5, 6, 0 } });
     for (const save::PlacedObject& p : pieces)
     {
@@ -107,7 +113,7 @@ TEST_CASE("a flat ride is fenced round the rim of its footprint, at its height")
 {
     const save::Ride r = flat_ride(spot(10, 20, 4, 0));
     const ObjectModel item = footprint(3, 2);
-    const auto pieces = ride_fences(r, &item, 0);
+    const auto pieces = ride_fences(r, only(&item), 0);
     CHECK(pieces.size() == 10);
     const std::set<Edge> fenced = edges(pieces);
     CHECK(fenced.size() == pieces.size());
@@ -134,7 +140,7 @@ TEST_CASE("a turned flat ride's footprint lies across, and its doors leave gaps"
     second.entrance_spot = spot(9, 20, 0, 2); // Only the first station opens a gap
     r.stations = { s, second };
     const ObjectModel item = footprint(3, 2);
-    const std::set<Edge> fenced = edges(ride_fences(r, &item, 0));
+    const std::set<Edge> fenced = edges(ride_fences(r, only(&item), 0));
 
     std::set<Edge> ring;
     for (const Edge& e : fenced)
@@ -153,16 +159,38 @@ TEST_CASE("a turned flat ride's footprint lies across, and its doors leave gaps"
     CHECK(ring.contains({ 10, 20, 0 })); // Shut across the second station's entrance
 }
 
+TEST_CASE("a tracked ride's base is fenced round as a flat ride is, and its other pieces are not")
+{
+    save::Ride r = flat_ride(spot(0, 0, 0, 0));
+    r.kind = save::RideKind::Tracked;
+    r.base.spot.reset();
+    save::Track& track = r.track.emplace();
+    track.pieces.push_back({ .scenery = 20, .tile_x = 10, .tile_z = 20, .height = 3 }); // The base
+    track.pieces.push_back({ .scenery = 21, .tile_x = 10, .tile_z = 20, .height = 9 }); // A section above it
+    save::Station s;
+    s.entrance_spot = spot(12, 20, 3, 0); // Beside the base's +x side
+    r.stations = { s };
+    ObjectModel base = footprint(2, 2);
+    base.fenced_round = true;
+    const ObjectModel section = footprint(2, 2);
+    const auto pieces = ride_fences(r, [&](std::uint64_t object) { return object == 20 ? &base : &section; }, 0);
+    const std::set<Edge> fenced = edges(pieces);
+    CHECK(fenced.size() == 9); // Eight round the rim, less the door, and two beside the door
+    CHECK_FALSE(fenced.contains({ 11, 20, 2 }));
+    CHECK(fenced.contains({ 12, 20, 1 }));
+    CHECK(std::ranges::all_of(pieces, [](const save::PlacedObject& p) { return p.base_height == 3; }));
+}
+
 TEST_CASE("a ride on water is not fenced round, and one a square across is closed on both sides")
 {
     save::Ride r = flat_ride(spot(0, 0, 0, 0));
     ObjectModel pool = footprint(2, 2);
     pool.water_only = true;
-    CHECK(ride_fences(r, &pool, 0).empty());
-    CHECK(ride_fences(r, nullptr, 0).empty());
+    CHECK(ride_fences(r, only(&pool), 0).empty());
+    CHECK(ride_fences(r, only(nullptr), 0).empty());
 
     const ObjectModel strip = footprint(1, 3);
-    CHECK(ride_fences(r, &strip, 0).size() == 8);
+    CHECK(ride_fences(r, only(&strip), 0).size() == 8);
 }
 
 TEST_CASE("a ride fenced round an outline leaves out the squares outside it")
@@ -171,7 +199,7 @@ TEST_CASE("a ride fenced round an outline leaves out the squares outside it")
     const save::Ride r = flat_ride(spot(0, 0, 0, 0));
     ObjectModel item = footprint(2, 2);
     item.fence_outline = { true, true, true, false };
-    const std::set<Edge> fenced = edges(ride_fences(r, &item, 0));
+    const std::set<Edge> fenced = edges(ride_fences(r, only(&item), 0));
     CHECK(fenced.size() == 8);
     CHECK(fenced.contains({ 1, 0, 1 })); // Facing the missing square
     CHECK(fenced.contains({ 0, 1, 2 }));

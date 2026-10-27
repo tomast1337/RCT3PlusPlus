@@ -555,6 +555,13 @@ namespace rct3::scene
             }
             return paths;
         });
+        engine_.define("map.pavings", [this](const Json&) {
+            Json tiles = Json::array();
+            for (const park::Paving& p : park_of(park_).footpaths.pavings)
+                for (const save::Tile t : p.tiles)
+                    tiles.push_back({ { "col", t.col }, { "row", t.row }, { "height", p.height } });
+            return tiles;
+        });
         engine_.define("map.supports", [this](const Json&) {
             grid_of(park_);
             std::map<std::pair<int, int>, int> pieces;

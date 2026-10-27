@@ -182,6 +182,8 @@ declare namespace map {
      *  undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
+    /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls. */
+    function pavings(): { col: number; row: number; height: number }[];
     /** The tiles with support columns standing on them, and how many pieces each has. */
     function supports(): { col: number; row: number; pieces: number }[];
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest. */

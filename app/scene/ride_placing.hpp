@@ -103,6 +103,8 @@ namespace rct3::scene
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
         std::vector<save::TrackPiece> stations;
+        /// Of those, a base standing on ground of its own (a tower's): the ground it covers, which the door goes round
+        std::optional<park::RideSite> base;
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.

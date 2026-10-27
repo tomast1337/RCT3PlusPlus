@@ -10,6 +10,7 @@
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
+#include "park/object_placement.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/path_decks.hpp"
 #include "park/path_furniture.hpp"
@@ -30,6 +31,7 @@
 #include <cmath>
 #include <format>
 #include <numbers>
+#include <unordered_map>
 
 namespace rct3::scene
 {
@@ -159,16 +161,17 @@ namespace rct3::scene
                     o.hidden = true;
             }
             fence.clear();
-            const park::ObjectModel* item = nullptr;
+            std::unordered_map<std::uint64_t, const save::PlacedObject*> placed;
             for (const save::PlacedObject& o : scene.objects)
-            {
-                if (ride.base.spot && o.id == ride.base.spot->object)
-                {
-                    const auto found = scene.models.find(park::model_ref(o));
-                    item = found != scene.models.end() ? &found->second : nullptr;
-                }
-            }
-            std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, last_id(scene));
+                placed.emplace(o.id, &o);
+            std::vector<save::PlacedObject> pieces = park::ride_fences(
+                ride,
+                [&](std::uint64_t object) -> const park::ObjectModel* {
+                    const auto o = placed.find(object);
+                    const auto found = o != placed.end() ? scene.models.find(park::model_ref(*o->second)) : scene.models.end();
+                    return found != scene.models.end() ? &found->second : nullptr;
+                },
+                last_id(scene));
             if (pieces.empty() || !load_object_model(scene, scene.placing.models, assets, pieces.front()))
                 return;
             const std::array<std::int32_t, 3> colours { ride.fence_colours[0], ride.fence_colours[1], ride.fence_colours[2] };
@@ -287,6 +290,23 @@ namespace rct3::scene
             const std::array squares { static_cast<std::int32_t>(item.width), static_cast<std::int32_t>(item.length) };
             p.site = park::RideSite { .col = spot.col, .row = spot.row, .turns = spot.direction & 3, .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
             p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turns, scene.grid).height;
+        }
+        // A station standing on a base of its own (a tower's) takes its doors round the ground the base covers.
+        p.base.reset();
+        for (const save::TrackPiece& piece : stations)
+        {
+            const auto o = std::ranges::find(scene.objects, piece.scenery, &save::PlacedObject::id);
+            const auto model = piece.scenery != 0 && o != scene.objects.end() ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            if (model == scene.models.end() || model->second.squares == std::array { 1, 1 })
+                continue;
+            save::PlacedObject at;
+            at.col = piece.tile_x;
+            at.row = piece.tile_z;
+            at.rotation = piece.direction;
+            const save::Tile a = park::square_tile(at, model->second.squares, 0, 0);
+            const save::Tile b = park::square_tile(at, model->second.squares, model->second.squares[0] - 1, model->second.squares[1] - 1);
+            p.base = park::RideSite { .col = std::min(a.col, b.col), .row = std::min(a.row, b.row), .height = piece.height, .span = { std::abs(a.col - b.col) + 1, std::abs(a.row - b.row) + 1 } };
+            break;
         }
         p.door.reset();
         p.ghost_mesh = { };
@@ -617,7 +637,8 @@ namespace rct3::scene
         {
             if (!p.stations.empty())
             {
-                p.door = park::station_door_spot(p.stations, { tile->col, tile->row });
+                p.door = p.base ? park::door_spot(*p.base, { tile->col, tile->row }) : park::station_door_spot(p.stations, { tile->col, tile->row });
+                p.door->height = p.base ? p.base->height : p.door->height;
                 p.ground = park::ride_site({ p.door->col, p.door->row }, { 1, 1 }, 0, scene.grid).height;
                 p.site = park::RideSite { p.door->col, p.door->row, 0, p.door->height, { 1, 1 } };
             }

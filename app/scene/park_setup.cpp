@@ -967,15 +967,13 @@ namespace rct3::scene
                     object_models.emplace(o.id, &found->second);
             }
             std::size_t ride_fences = 0;
+            const auto model_of = [&](std::uint64_t object) {
+                const auto found = object_models.find(object);
+                return found != object_models.end() ? found->second : nullptr;
+            };
             for (const save::Ride& ride : scene.rides.rides)
             {
-                const park::ObjectModel* item = nullptr;
-                if (ride.base.spot)
-                {
-                    if (const auto found = object_models.find(ride.base.spot->object); found != object_models.end())
-                        item = found->second;
-                }
-                std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, largest_id());
+                std::vector<save::PlacedObject> pieces = park::ride_fences(ride, model_of, largest_id());
                 ride_fences += pieces.size();
                 for (const save::PlacedObject& piece : pieces)
                     scene.ride_fence_pieces[ride.base.id].push_back(piece.id);

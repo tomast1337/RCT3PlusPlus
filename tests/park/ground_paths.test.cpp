@@ -190,6 +190,11 @@ namespace
     {
         return { { spot.col, spot.row }, { spot.col + 1, spot.row } };
     }
+
+    std::vector<save::Tile> nothing(const save::PlacementSpot&)
+    {
+        return { };
+    }
 } // namespace
 
 TEST_CASE("a door paves its tile, opening onto the ride in front and the path behind")
@@ -200,7 +205,7 @@ TEST_CASE("a door paves its tile, opening onto the ride in front and the path be
     save::Station& station = coaster.stations.emplace_back();
     station.entrance_spot = save::PlacementSpot { 8, 3, 3, 2, 0 }; // Facing -X
     station.exit_spot = save::PlacementSpot { 9, 5, 5, 0, 1 };     // Facing +Z
-    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 2);
     CHECK(pavings[0].tiles == std::vector { save::Tile { 3, 3 } });
     CHECK(pavings[0].height == 2);
@@ -211,7 +216,7 @@ TEST_CASE("a door paves its tile, opening onto the ride in front and the path be
     CHECK(pavings[1].source == save::Tile { 5, 4 });
 
     coaster.base.demolished = true;
-    CHECK(ride_pavings(rides, two_wide).empty());
+    CHECK(ride_pavings(rides, two_wide, nothing).empty());
 }
 
 TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking like the path past its exit")
@@ -221,7 +226,7 @@ TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking l
     save::Station& station = ride.stations.emplace_back();
     station.entrance_spot = save::PlacementSpot { 8, 1, 2, 0, 2 }; // Facing +X, into the ride
     station.exit_spot = save::PlacementSpot { 9, 2, 3, 0, 3 };     // Facing -Z
-    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 3);
     const Paving& floor = pavings[2];
     CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
@@ -229,7 +234,29 @@ TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking l
     CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
 
     // Nothing when the footprint is unknown.
-    CHECK(ride_pavings(rides, [](const save::PlacementSpot&) { return std::vector<save::Tile> { }; }).size() == 2);
+    CHECK(ride_pavings(rides, nothing, nothing).size() == 2);
+}
+
+TEST_CASE("a tracked ride's base paves its floor, opening onto its doors, and its other pieces pave nothing")
+{
+    save::RideModel rides;
+    save::Ride& tower = rides.rides.emplace_back();
+    tower.kind = save::RideKind::Tracked;
+    save::Track& track = tower.track.emplace();
+    track.pieces.push_back({ .scenery = 20, .tile_x = 2, .tile_z = 2, .height = 1 });  // The base
+    track.pieces.push_back({ .scenery = 21, .tile_x = 2, .tile_z = 2, .height = 10 }); // A section above it
+    track.pieces.push_back({ .tile_x = 2, .tile_z = 2, .height = 20 });                // No object of its own
+    save::Station& station = tower.stations.emplace_back();
+    station.entrance_spot = save::PlacementSpot { 8, 1, 2, 1, 2 }; // Facing +X, into the base
+    station.exit_spot = save::PlacementSpot { 9, 2, 3, 1, 3 };     // Facing -Z
+    const auto base_only = [](const save::PlacementSpot& spot) { return spot.object == 20 ? two_wide(spot) : std::vector<save::Tile> { }; };
+    const std::vector<Paving> pavings = ride_pavings(rides, nothing, base_only);
+    REQUIRE(pavings.size() == 3);
+    const Paving& floor = pavings[2];
+    CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
+    CHECK(floor.height == 1);
+    CHECK(floor.source == save::Tile { 2, 4 });
+    CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
 }
 
 TEST_CASE("a stall paves its footprint and opens onto the side it faces")
@@ -240,7 +267,7 @@ TEST_CASE("a stall paves its footprint and opens onto the side it faces")
     for (const auto& [facing, front] : { std::pair { 0, std::vector { save::Tile { 4, 3 }, save::Tile { 5, 3 } } }, { 1, { save::Tile { 3, 4 } } }, { 2, { save::Tile { 4, 5 }, save::Tile { 5, 5 } } }, { 3, { save::Tile { 6, 4 } } } })
     {
         stall.base.facing = static_cast<std::uint8_t>(facing);
-        const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+        const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
         REQUIRE(pavings.size() == 1);
         CHECK(pavings[0].tiles.size() == 2);
         CHECK(pavings[0].links == front);
@@ -254,7 +281,7 @@ TEST_CASE("a facility without doors paves its footprint, open on every side, in 
     save::Ride& toilet = rides.rides.emplace_back();
     toilet.kind = save::RideKind::Special;
     toilet.base.spot = save::PlacementSpot { 7, 4, 4, 0, 0 };
-    const std::vector<Paving> pavings = ride_pavings(rides, two_wide);
+    const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 1);
     CHECK_FALSE(pavings[0].source);
     CHECK(pavings[0].links.size() == 6);

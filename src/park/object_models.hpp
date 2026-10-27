@@ -127,6 +127,8 @@ namespace rct3::park
         std::string support_group;                       ///< The set of supports it stands on, or the set a support belongs to
         std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
         bool water_only = false;                         ///< A ride that stands only on water
+        bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
+        bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
         bool photo_spot = false;                         ///< A path item guests stop at to have their photo taken
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there

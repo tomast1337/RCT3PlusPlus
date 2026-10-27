@@ -12,11 +12,13 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <format>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <tuple>
 
 namespace rct3::render::vulkan
@@ -375,9 +377,13 @@ namespace rct3::render::vulkan
         if (caps.maxImageCount > 0)
             image_count = std::min(image_count, caps.maxImageCount);
 
-        // FIFO is always available. Without vsync prefer MAILBOX (no tearing), then IMMEDIATE.
+        // FIFO is always available. Without vsync prefer MAILBOX (no tearing), then IMMEDIATE. On Wayland FIFO waits
+        // for the compositor's frame callbacks, which stop while the window is hidden (on another workspace), and the
+        // whole loop stops with them, events and the clipboard text other programs paste included. There vsync takes
+        // MAILBOX and the frames are paced to the screen here instead.
         VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-        if (!config_.vsync)
+        const bool wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+        if (!config_.vsync || wayland)
         {
             std::uint32_t mode_count = 0;
             vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_, surface_, &mode_count, nullptr);
@@ -385,12 +391,25 @@ namespace rct3::render::vulkan
             vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_, surface_, &mode_count, modes.data());
             for (VkPresentModeKHR wanted : { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR })
             {
-                if (std::ranges::contains(modes, wanted))
+                if (std::ranges::contains(modes, wanted) && (!config_.vsync || wanted == VK_PRESENT_MODE_MAILBOX_KHR))
                 {
                     present_mode = wanted;
                     break;
                 }
             }
+        }
+        // Wayland does not say which screen the window is on, so the frames keep up with the fastest; MAILBOX drops
+        // what a slower one has no time for.
+        frame_pace_ = 0;
+        if (config_.vsync && present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            int count = 0;
+            GLFWmonitor** monitors = glfwGetMonitors(&count);
+            int fastest = 60;
+            for (int i = 0; i < count; ++i)
+                if (const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]))
+                    fastest = std::max(fastest, mode->refreshRate);
+            frame_pace_ = 1.0 / fastest;
         }
 
         VkSwapchainKHR old = swapchain_;
@@ -1249,6 +1268,14 @@ namespace rct3::render::vulkan
         present.swapchainCount = 1;
         present.pSwapchains = &swapchain_;
         present.pImageIndices = &image_index_;
+        if (frame_pace_ > 0)
+        {
+            // Wait out what is left of the frame; a late frame starts the pace again from now.
+            const double due = last_present_ + frame_pace_;
+            if (const double wait = due - glfwGetTime(); wait > 0)
+                std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+            last_present_ = std::max(due, glfwGetTime());
+        }
         const VkResult result = vkQueuePresentKHR(queue_, &present);
 
         frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());

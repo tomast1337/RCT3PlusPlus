@@ -211,6 +211,8 @@ namespace rct3::render::vulkan
         VkSwapchainKHR swapchain_ = VK_NULL_HANDLE;
         VkFormat color_format_ = VK_FORMAT_UNDEFINED;
         VkExtent2D extent_ { };
+        double frame_pace_ = 0;   ///< Seconds between presents when the device paces frames itself, else 0
+        double last_present_ = 0; ///< When the last paced frame was presented, in GLFW's time
         std::vector<VkImage> images_;
         std::vector<VkImageView> views_;
         std::vector<VkSemaphore> render_finished_; // One per swapchain image

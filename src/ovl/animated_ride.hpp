@@ -24,6 +24,7 @@ namespace rct3::ovl
         std::array<std::string_view, 4> splines;
         /// Guests the ride makes room for in the park while it is open and working.
         std::optional<std::uint32_t> guests;
+        std::optional<std::uint8_t> seating; ///< How its riders sit; nothing when the item does not say
     };
 
     struct AnimatedRideItem

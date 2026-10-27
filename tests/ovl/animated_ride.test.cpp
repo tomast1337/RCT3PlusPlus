@@ -24,6 +24,7 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
     w[0x90 / 4] = 4960;
     w[0x2C / 4] = 0xFFFFFFFF; // The guests: the default, which follows
     w[0x48 / 4] = 55;
+    w[0x30 / 4] = 11; // How riders sit
     std::vector<std::byte> bytes;
     for (auto v : w)
         append_u32(bytes, v);
@@ -44,6 +45,7 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
     CHECK(r.splines[0] == "Path");
     CHECK(r.splines[3] == "Path");
     CHECK(r.guests == 55u);
+    CHECK(r.seating == 11);
 }
 
 TEST_CASE("version 1 animated rides keep their guests in whichever of two places is marked")
@@ -57,6 +59,7 @@ TEST_CASE("version 1 animated rides keep their guests in whichever of two places
         w[at / 4] = 30;
         w[(at + 0x0C) / 4] = 1;
         w[(at + 0x10) / 4] = 0xFFFFFFFF;
+        w[(at + 4) / 4] = 22;
         std::vector<std::byte> bytes;
         for (auto v : w)
             append_u32(bytes, v);
@@ -64,6 +67,7 @@ TEST_CASE("version 1 animated rides keep their guests in whichever of two places
         const auto items = read_animated_rides(overlay, overlay.common());
         REQUIRE(items[0].ride.has_value());
         CHECK(items[0].ride->guests == 30u);
+        CHECK(items[0].ride->seating == 22);
     }
 }
 
@@ -88,4 +92,21 @@ TEST_CASE("an animated ride too short for its fields is unreadable")
     const auto items = read_animated_rides(overlay, overlay.common());
     REQUIRE(items.size() == 1);
     CHECK_FALSE(items[0].ride.has_value());
+}
+
+TEST_CASE("an animated ride whose seating word is out of range has no seating")
+{
+    Pool pool;
+    pool.add("Carousel:anr");
+    std::vector<std::uint32_t> w(0xC4 / 4 + 2, 0);
+    w[0x2C / 4] = 40;
+    w[0x30 / 4] = 300;
+    std::vector<std::byte> bytes;
+    for (auto v : w)
+        append_u32(bytes, v);
+    const auto overlay = make_record_overlay(5, pool, "Carousel:anr", bytes);
+    const auto items = read_animated_rides(overlay, overlay.common());
+    REQUIRE(items[0].ride.has_value());
+    CHECK(items[0].ride->guests == 40u);
+    CHECK_FALSE(items[0].ride->seating.has_value());
 }

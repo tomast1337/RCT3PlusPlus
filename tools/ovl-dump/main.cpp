@@ -631,7 +631,7 @@ namespace
                     continue;
                 }
                 const auto& i = item.ride->info;
-                out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                out.info("  {:<32} type {:d} text {} icon {} sid {} seating {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str(), item.ride->seating ? std::format("{}", *item.ride->seating) : "-");
             }
         }
         if (opt.sta)

@@ -61,7 +61,10 @@ namespace rct3::ovl
                     }
                 }
                 if (version != 1)
+                {
                     ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x2C);
+                    ride.seating = detail::read_ride_seating(space, refs, symbol.data + 0x2C);
+                }
                 else
                 {
                     // Version 1 items hold the block 0x30 or 0x38 bytes in: the one whose words at 0x0C and 0x10
@@ -72,6 +75,7 @@ namespace rct3::ovl
                         if (block && block->u32(0x0C) == 1 && block->u32(0x10) == 0xFFFFFFFFu)
                         {
                             ride.guests = detail::read_ride_guests(space, refs, symbol.data + at);
+                            ride.seating = detail::read_ride_seating(space, refs, symbol.data + at);
                             break;
                         }
                     }

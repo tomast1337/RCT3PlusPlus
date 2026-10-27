@@ -31,6 +31,9 @@ namespace
         park.progress.date.year = 2;
         park.progress.forecast = save::WeatherType::Unknown;
         park.progress.day_time = 0.25f;
+        park.progress.climate = 6;
+        park.progress.weather_hold = 33;
+        park.progress.wind_change = -0.1f;
         park.camera.target = { 1, 2, 3 };
         return park;
     }
@@ -57,6 +60,9 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->progress.cash == 123456);
     CHECK(read->progress.date.year == 2);
     CHECK(read->progress.day_time == 0.25f);
+    CHECK(read->progress.climate == 6); // The weather goes on where it was
+    CHECK(read->progress.weather_hold == 33);
+    CHECK(read->progress.wind_change == -0.1f);
     CHECK(read->camera.target == glm::vec3 { 1, 2, 3 });
     CHECK_FALSE(read->people); // As in saves made before people were kept
     CHECK(read->no_queue_signs.empty());

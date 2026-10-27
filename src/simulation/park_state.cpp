@@ -43,6 +43,10 @@ namespace rct3::simulation
             s.forecast = world.weather->forecast;
             s.temperature = world.weather->temperature;
             s.wind = std::clamp(world.weather->wind_speed, 0.0f, 1.0f);
+            s.climate = world.weather->climate;
+            // The file's time until the next change is in calendar units as ours is.
+            s.weather_hold = std::max(world.weather->forecast_delay, 0.0f);
+            s.wind_change = std::isfinite(world.weather->wind_acceleration) ? std::clamp(world.weather->wind_acceleration, -1.0f, 1.0f) : 0.0f;
         }
         return s;
     }

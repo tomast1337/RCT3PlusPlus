@@ -45,6 +45,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
+#include "simulation/weather_cycle.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/extra_skins.hpp"
@@ -2457,8 +2458,11 @@ namespace rct3::scene
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
             const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
             simulation::advance(scene.day, game_seconds);
+            const float before = scene.park.time;
+            const std::int32_t weeks = simulation::pass_time(scene.park, game_seconds);
+            simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, false);
             // Each new week rates the park again; weeks run through in one frame are rated once.
-            if (simulation::pass_time(scene.park, game_seconds) > 0)
+            if (weeks > 0)
             {
                 // While the park runs, its own litter counts, and much of it is told to the player.
                 const std::optional<std::int32_t> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
@@ -3340,7 +3344,7 @@ namespace rct3::scene
         saved.bins = scene.bins;
         saved.signs = scene.signs;
         const simulation::ParkState& park = scene.park;
-        saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time };
+        saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time, .climate = park.climate, .weather_hold = park.weather_hold, .wind = park.wind, .wind_change = park.wind_change };
         saved.camera = scene.camera;
         std::unordered_map<entt::entity, std::int32_t> looks;
         for (const ShownPerson& p : scene.shown_people)

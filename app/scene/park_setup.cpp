@@ -1116,6 +1116,10 @@ namespace rct3::scene
                 scene.park.weather = p.weather;
                 scene.park.forecast = p.forecast;
                 scene.park.temperature = p.temperature;
+                scene.park.climate = p.climate;
+                scene.park.weather_hold = p.weather_hold;
+                scene.park.wind = p.wind;
+                scene.park.wind_change = p.wind_change;
             }
         }
         // Under everything else, as part of the park.

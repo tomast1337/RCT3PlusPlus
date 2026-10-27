@@ -159,11 +159,6 @@ namespace rct3::scene
                     o.hidden = true;
             }
             fence.clear();
-            if (scene.placing.item)
-            {
-                ride.fence_symbol = scene.placing.item->fence;
-                ride.fence_overlay = scene.placing.item->fence_overlay;
-            }
             const park::ObjectModel* item = nullptr;
             for (const save::PlacedObject& o : scene.objects)
             {
@@ -176,9 +171,7 @@ namespace rct3::scene
             std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, last_id(scene));
             if (pieces.empty() || !load_object_model(scene, scene.placing.models, assets, pieces.front()))
                 return;
-            const auto& colours = scene.models.at(park::model_key(pieces.front())).default_colours;
-            for (std::size_t i = 0; i < ride.fence_colours.size(); ++i)
-                ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
+            const std::array<std::int32_t, 3> colours { ride.fence_colours[0], ride.fence_colours[1], ride.fence_colours[2] };
             // The doors are painted as the fence is.
             for (save::PlacedObject& o : scene.objects)
             {
@@ -652,6 +645,18 @@ namespace rct3::scene
         show_ghost();
     }
 
+    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const park::BuildItem& item)
+    {
+        ride.fence_symbol = item.fence;
+        ride.fence_overlay = item.fence_overlay;
+        const save::PlacedObject panel { .symbol = item.fence, .overlay = item.fence_overlay };
+        if (item.fence.empty() || !load_object_model(scene, scene.placing.models, assets, panel))
+            return;
+        const auto& colours = scene.models.at(park::model_key(panel)).default_colours;
+        for (std::size_t i = 0; i < ride.fence_colours.size(); ++i)
+            ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
+    }
+
     void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station_index, const save::PlacedObject& door, std::int32_t height, bool exit)
     {
         RidePlacing& p = scene.placing;
@@ -805,6 +810,7 @@ namespace rct3::scene
             float_money(scene, site_point(scene, *p.site), -p.item->price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             p.fence.clear();
+            take_fence(scene, assets, ride, *p.item);
             fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
             // Its window opens at once, on the tab last used, while its doors are placed.

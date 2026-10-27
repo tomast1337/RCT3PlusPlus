@@ -1538,6 +1538,7 @@ namespace rct3::scene
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.base.flags = save::AttractionCommon::kNeverOpened;
+        take_fence(scene, assets, ride, item);
         ride.track.emplace().segments.resize(1);
         // One train of the first the ride's file lists, seated as its car models are; its window changes them
         // until it opens.

@@ -125,6 +125,8 @@ namespace rct3::scene
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
     bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
+    /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
+    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);

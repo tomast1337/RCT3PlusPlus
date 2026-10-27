@@ -275,6 +275,7 @@ namespace rct3::ui
             s.minimum = box->least;
             s.maximum = box->most;
             s.decimals = box->decimals;
+            s.step = box->step;
             s.unit = box->unit.empty() ? std::u16string { } : u" " + box->unit;
             // Set only when it moved, so a number being typed is not written over.
             if (box->value != s.value())

@@ -90,6 +90,7 @@ namespace rct3::scene
         /// Settings the next piece is built with, where it has them.
         int holding_time = 5; ///< Seconds
         int car_turn = 0;     ///< Degrees
+        int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
         std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.

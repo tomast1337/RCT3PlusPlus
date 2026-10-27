@@ -299,14 +299,14 @@ TEST_CASE("named pieces with a picture stand as picture buttons, out of the list
     CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Build, 0 });
 }
 
-TEST_CASE("a setting shows only for a piece that has it, a step is heard, and the boxes end at the price's row's end")
+TEST_CASE("a setting shows only for a piece that has it, a step of its size is heard, and the boxes end at the price's row's end")
 {
     Fixture f;
     ConstructionView v = straight();
     f.panel->show(v);
     Spinner& speed = f.panel->param_spinner(PieceParam::Speed);
     CHECK_FALSE(speed.visible);
-    v.params.at(std::to_underlying(PieceParam::Speed)) = ParamBox { .value = 400, .most = 3000, .decimals = 2, .unit = u"m/s" };
+    v.params.at(std::to_underlying(PieceParam::Speed)) = ParamBox { .value = 400, .most = 3000, .decimals = 2, .unit = u"m/s", .step = 100 };
     f.panel->show(v);
     f.desktop.update({ });
     CHECK(speed.visible);
@@ -319,7 +319,7 @@ TEST_CASE("a setting shows only for a piece that has it, a step is heard, and th
     const Point p { (up.x0 + up.x1) / 2, (up.y0 + up.y1) / 2 };
     f.desktop.update({ p, true });
     f.desktop.update({ p, false });
-    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Param, std::to_underlying(PieceParam::Speed), 401 });
+    CHECK(f.panel->take_event() == ConstructionEvent { ConstructionAction::Param, std::to_underlying(PieceParam::Speed), 500 }); // A step at a time
     // A car turn goes before it and may go below nothing; the price's label stops short of both.
     v.params.at(std::to_underlying(PieceParam::CarTurn)) = ParamBox { .value = -90, .least = -720, .most = 720 };
     f.panel->show(v);

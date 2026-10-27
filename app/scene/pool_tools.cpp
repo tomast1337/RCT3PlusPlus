@@ -120,7 +120,8 @@ namespace rct3::scene
             scene.pooling.drawn_look = look;
         }
 
-        /// Puts the extra out with the pool tool where the pointer is, when it fits and can be paid for.
+        /// Puts the extra or changing room out with the pool tool where the pointer is, when it fits and can be
+        /// paid for. A changing room goes on the land the park owns.
         void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
         {
             PoolTool& t = scene.pooling;
@@ -128,14 +129,21 @@ namespace rct3::scene
             const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
             const std::int32_t turn = spot ? nearest_side(*spot) : 0;
             const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
-            const bool ok = tile && park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn) && (!scene.park.cash || *scene.park.cash >= item.price);
+            const bool room = item.kind == park::BuildKind::PoolRoom;
+            const bool fits = tile && (room ? park::pool_room_fits(scene.pools, tile->col, tile->row, turn) && park::owned_outright(scene.grid.at(tile->col, tile->row)) : park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn));
+            const bool ok = fits && (!scene.park.cash || *scene.park.cash >= item.price);
             if (down && tile)
                 t.corner = tile;
             else if (t.corner && !down)
             {
                 // Let go: the extra goes in where the pointer is now.
                 t.corner.reset();
-                if (ok)
+                if (ok && room)
+                {
+                    scene.pools.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .turn = turn });
+                    pools_changed(device, scene, assets);
+                }
+                else if (ok)
                 {
                     save::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
                     const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
@@ -177,7 +185,7 @@ namespace rct3::scene
 
     bool start_pooling(ParkScene& scene, const park::BuildItem& item)
     {
-        if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra)
+        if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
             return false;
         scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look };
         return true;
@@ -192,7 +200,7 @@ namespace rct3::scene
     {
         PoolTool& t = scene.pooling;
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
-        if (t.item && t.item->kind == park::BuildKind::PoolExtra)
+        if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
             return update_extra(device, scene, assets, spot, down);
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         if (t.item && down && (t.corner || tile))

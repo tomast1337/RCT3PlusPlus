@@ -191,3 +191,38 @@ TEST_CASE("pools: extras go with their square, refunded")
     CHECK(objects.back().rotation == 3);
     CHECK(objects.back().base_height == 4);
 }
+
+TEST_CASE("pools: a changing room stands off the pool, opening on a paved square, and leaves its railing open")
+{
+    PoolMap map = ringed(2, 2);
+    CHECK(pool_room_fits(map, -1, 1, 1));
+    CHECK_FALSE(pool_room_fits(map, -1, 1, 3));
+    CHECK_FALSE(pool_room_fits(map, 0, 1, 1));
+    CHECK(pool_room_fits(map, 1, -1, 0));
+    const auto railings = [&] { return std::ranges::count(pool_pieces(map, *map.at(0, 1)), std::string_view("Railing"), &PoolPiece::symbol); };
+    CHECK(railings() == 1);
+    map.rooms.push_back({ .col = -1, .row = 1, .turn = 1 });
+    CHECK(railings() == 0);
+    CHECK_FALSE(pool_room_fits(map, -1, 1, 1));
+    const auto objects = pool_objects(map, "Pools/Own", 0);
+    CHECK(objects.back().col == -1);
+    CHECK(objects.back().rotation == 2);
+    CHECK(objects.back().base_height == 4);
+}
+
+TEST_CASE("pools: the changing rooms of a complex are those on squares that meet side to side")
+{
+    PoolMap map = ringed(2, 2);
+    // Another pool, apart from the first.
+    map.squares.push_back({ .col = 10, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 });
+    map.rooms.push_back({ .col = -1, .row = 1, .turn = 1 });
+    map.rooms.push_back({ .col = 9, .row = 0, .turn = 1 });
+    map.rooms.push_back({ .col = 1, .row = 4, .turn = 2 });
+    CHECK(pool_complex_rooms(map, 0) == std::vector<std::size_t> { 0, 2 });
+    CHECK(pool_complex_rooms(map, 1) == std::vector<std::size_t> { 1 });
+    // A room goes with the square it opens on.
+    (void)take_up_pool(map, kPrices, { 10, 0 }, { 10, 0 });
+    CHECK(map.rooms.size() == 2);
+    (void)lay_pool(map, kPrices, std::array { PoolSquare { .col = 0, .row = 1, .kind = PoolKind::Water, .surface = 4, .depth = 2 } });
+    CHECK(map.rooms.size() == 1);
+}

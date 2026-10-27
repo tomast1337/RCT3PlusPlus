@@ -16,6 +16,10 @@
 // water square its middle, its walled sides with the walls under them, and water at its open sides. An extra
 // fits where its square offers all it takes and no other extra there has taken any of it.
 //
+// Guests come into a pool through a changing room: a building standing on the ground beside a paved square
+// of the pool, which leaves that square's railing open towards it. Squares that meet side to side make one
+// pool complex; its changing rooms share its ticket price and are opened and closed together.
+//
 // Turns are quarter turns as placed objects count them; a piece turned by 0 has its wall on the square's
 // side towards the next row, 1 towards the next column, 2 towards the row before, 3 towards the column
 // before.
@@ -77,11 +81,27 @@ namespace rct3::park
         PoolExtraFit fit { };
     };
 
-    /// The pools the player has laid, a square to a tile, and the extras in them.
+    /// A new pool complex's ticket price, hundredths: what parks saved with a pool just built show.
+    inline constexpr std::int64_t kPoolTicket = 100;
+
+    /// A changing room the player has built beside a pool.
+    struct PoolRoom
+    {
+        std::string symbol { };  ///< Its scenery item
+        std::string overlay { }; ///< The scenery item's overlay
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t turn = 0; ///< The side towards the paved square it opens on
+        std::int64_t ticket = kPoolTicket;
+        bool open = false;
+    };
+
+    /// The pools the player has laid, a square to a tile, the extras in them and their changing rooms.
     struct PoolMap
     {
         std::vector<PoolSquare> squares { };
         std::vector<PoolExtra> extras { };
+        std::vector<PoolRoom> rooms { };
 
         [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row) const noexcept;
     };
@@ -134,7 +154,8 @@ namespace rct3::park
     [[nodiscard]] std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square);
 
     /// The pieces of every square of `map`, as placed objects of the pool type in `overlay`, each standing
-    /// on its square at its own height, then the extras, at their squares' surface. New objects take ids
+    /// on its square at its own height, then the extras, at their squares' surface, then the changing rooms,
+    /// at the surface of the square they open on. New objects take ids
     /// after `last_id`.
     [[nodiscard]] std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id);
 
@@ -150,12 +171,21 @@ namespace rct3::park
     /// `turn`.
     [[nodiscard]] bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, std::int32_t turn);
 
+    /// Whether a changing room may stand at (`col`, `row`), off the pool, opening on the paved square at its
+    /// side `turn`, where no other room opens.
+    [[nodiscard]] bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn);
+
+    /// The changing rooms of the complex the room `room` (of map.rooms) opens on, itself among them.
+    [[nodiscard]] std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room);
+
     /// Lays `squares` in `map`, each over whatever square was where it goes, and returns what that costs:
     /// each new square's price and the refund of each it takes the place of, and of the extras on it. A square
-    /// laid over one the same costs nothing.
+    /// laid over one the same costs nothing. Changing rooms whose square is no longer paved, or that now stand
+    /// in the pool, go.
     std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
 
-    /// Takes up the squares of `map` from `a` to `b` and the extras on them; returns the refund, below zero.
+    /// Takes up the squares of `map` from `a` to `b`, the extras on them and the changing rooms opening on
+    /// them; returns the refund, below zero.
     std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b);
 
 } // namespace rct3::park

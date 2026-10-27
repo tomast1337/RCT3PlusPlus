@@ -103,6 +103,22 @@ namespace rct3::park
             return cost;
         }
 
+        /// The square at side `turn` of (`col`, `row`).
+        std::optional<const PoolSquare&> beside(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn)
+        {
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+            return map.at(col + dc, row + dr);
+        }
+
+        /// Takes out the changing rooms that no longer open on a paved square or that stand in the pool.
+        void drop_loose_rooms(PoolMap& map)
+        {
+            std::erase_if(map.rooms, [&](const PoolRoom& r) {
+                const auto square = beside(map, r.col, r.row, r.turn);
+                return map.at(r.col, r.row) || !square || square->kind != PoolKind::Tile;
+            });
+        }
+
     } // namespace
 
     std::optional<const PoolSquare&> PoolMap::at(std::int32_t col, std::int32_t row) const noexcept
@@ -233,7 +249,8 @@ namespace rct3::park
         for (std::int32_t turn = 0; turn < 4; ++turn)
         {
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn)];
-            if (const auto next = map.at(square.col + dc, square.row + dr); !next || next->surface != square.surface)
+            const bool room = std::ranges::any_of(map.rooms, [&](const PoolRoom& r) { return r.col == square.col + dc && r.row == square.row + dr && ((r.turn + 2) & 3) == turn; });
+            if (const auto next = map.at(square.col + dc, square.row + dr); !room && (!next || next->surface != square.surface))
                 out.push_back({ "Railing", square.surface, turn });
         }
         return out;
@@ -272,6 +289,22 @@ namespace rct3::park
             o.force_absolute_height = true;
             o.rotation = e.turn;
         }
+        for (const PoolRoom& r : map.rooms)
+        {
+            const auto square = beside(map, r.col, r.row, r.turn);
+            save::PlacedObject& o = out.emplace_back();
+            o.id = ++last_id;
+            o.owner_ref = o.id;
+            o.fixture = true;
+            o.symbol = r.symbol;
+            o.overlay = r.overlay;
+            o.col = r.col;
+            o.row = r.row;
+            o.base_height = square ? square->surface : 0;
+            o.force_absolute_height = true;
+            // Its door is a turn on from the side it opens on, as parks saved with changing rooms show.
+            o.rotation = (r.turn + 1) & 3;
+        }
         return out;
     }
 
@@ -294,6 +327,35 @@ namespace rct3::park
         return price(prices, square, kRefund);
     }
 
+    bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn)
+    {
+        const auto square = beside(map, col, row, turn);
+        const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+        const bool taken = std::ranges::any_of(map.rooms, [&](const PoolRoom& r) {
+            const auto [rc, rr] = kSideStep[static_cast<std::size_t>(r.turn & 3)];
+            return (r.col == col && r.row == row) || (r.col + rc == col + dc && r.row + rr == row + dr);
+        });
+        return !map.at(col, row) && square && square->kind == PoolKind::Tile && !taken;
+    }
+
+    std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room)
+    {
+        std::vector<save::Tile> complex;
+        if (room >= map.rooms.size())
+            return { };
+        if (const auto first = beside(map, map.rooms[room].col, map.rooms[room].row, map.rooms[room].turn))
+            complex.push_back({ first->col, first->row });
+        for (std::size_t i = 0; i < complex.size(); ++i)
+            for (std::int32_t turn = 0; turn < 4; ++turn)
+                if (const auto next = beside(map, complex[i].col, complex[i].row, turn); next && !std::ranges::contains(complex, save::Tile { next->col, next->row }))
+                    complex.push_back({ next->col, next->row });
+        std::vector<std::size_t> out;
+        for (std::size_t i = 0; i < map.rooms.size(); ++i)
+            if (const auto square = beside(map, map.rooms[i].col, map.rooms[i].row, map.rooms[i].turn); square && std::ranges::contains(complex, save::Tile { square->col, square->row }))
+                out.push_back(i);
+        return out;
+    }
+
     std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares)
     {
         std::int64_t cost = 0;
@@ -312,6 +374,7 @@ namespace rct3::park
                 cost += clear_extras(map, square.col, square.row);
             }
         }
+        drop_loose_rooms(map);
         return cost;
     }
 
@@ -332,6 +395,7 @@ namespace rct3::park
             cost += e.refund;
             return true;
         });
+        drop_loose_rooms(map);
         return cost;
     }
 

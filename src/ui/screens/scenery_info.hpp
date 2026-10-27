@@ -2,8 +2,8 @@
 //
 // What the info panel shows about a prop placed in the park: a tab that pulls it down at once, one that picks
 // its colours when it takes any, and tabs for what some props do, such as a litter bin's state or a sign's
-// words. A plain prop has no page open; the
-// strip then only names it.
+// words, or the pool complex a changing room lets guests into. A plain prop has no page open; the strip then
+// only names it.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -27,6 +27,19 @@ namespace rct3::ui
         Colour,  ///< Picks the colours of the parts that take them
         Bin,     ///< How full a litter bin is and when it was emptied
         Sign,    ///< What a sign says
+        Pool,    ///< A changing room's: its pool complex opened or closed, and the ticket price
+    };
+
+    /// The ids of the pool tab's controls.
+    inline constexpr int kPoolStateControl = 1;  ///< A choice: 0 open, 1 closed
+    inline constexpr int kPoolTicketControl = 2; ///< The ticket price, hundredths
+    inline constexpr int kMostPoolTicket = 2000;
+
+    /// The pool complex a changing room lets guests into.
+    struct PoolComplexFacts
+    {
+        std::int64_t ticket = 0; ///< Hundredths
+        bool open = false;
     };
 
     struct SceneryTabInfo
@@ -42,11 +55,12 @@ namespace rct3::ui
     /// The prop a page is written about: the asset it is made from and what it does, when it is a bin or a sign.
     struct SceneryFacts
     {
-        std::string_view symbol;
+        std::string_view symbol { };
         const save::BinState* bin = nullptr;
         const save::SignState* sign = nullptr;
-        std::uint32_t colour_slots = 0;          ///< The colour slots its pictures take (bit k: slot k)
-        std::array<std::int32_t, 3> colours { }; ///< The colour picked for each slot, of the 32
+        std::optional<PoolComplexFacts> pool { }; ///< When it is a changing room
+        std::uint32_t colour_slots = 0;           ///< The colour slots its pictures take (bit k: slot k)
+        std::array<std::int32_t, 3> colours { };  ///< The colour picked for each slot, of the 32
     };
 
     /// The colour slots the colour tab paints, in the order of its pots.

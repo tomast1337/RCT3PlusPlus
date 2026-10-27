@@ -340,6 +340,7 @@ namespace rct3::ui
                     break;
                 case park::BuildKind::PoolSquare:
                 case park::BuildKind::PoolExtra:
+                case park::BuildKind::PoolRoom:
                     row.rank = item.price; // Taking up first, then tiles, then water from the shallowest
                     break;
                 case park::BuildKind::Animal:

@@ -95,6 +95,7 @@ namespace rct3::park
         Animal,         ///< One animal of a species, bought into an enclosure
         PoolSquare,     ///< A tool laying squares of a pool, or taking them up (park/pools.hpp)
         PoolExtra,      ///< A scenery item put in a pool, against a side of one of its squares
+        PoolRoom,       ///< A changing room, built beside a paved square of a pool
     };
 
     /// The symbols of the pool list's tools: water at each depth, paved tiles, and taking squares up. They are

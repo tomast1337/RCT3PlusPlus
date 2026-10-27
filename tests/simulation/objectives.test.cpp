@@ -154,3 +154,52 @@ TEST_CASE("a dated goal warns a month and a week before, is judged on its date, 
     CHECK(simulation::check_goals(set, f, 6 * kMonth + kYear, messages));
     CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_MetCondition" }); // No warnings once the date has come
 }
+
+TEST_CASE("a goal on last month's takings holds for one month less, as that month already counts")
+{
+    save::ObjectiveSet set;
+    set.objectives = { { .difficulty = 0 } };
+    set.conditions = { goal(0, save::ConditionKind::RideIncome, 1000, 2) };
+    const simulation::ParkFigures f { .ride_income = 1500 };
+    CHECK_FALSE(simulation::check_goals(set, f, 0));
+    CHECK(simulation::months_held(set.conditions[0], 0.5f * kMonth) == doctest::Approx(0.5f));
+    CHECK_FALSE(simulation::check_goals(set, f, 0.9f * kMonth));
+    CHECK(simulation::check_goals(set, f, kMonth));
+}
+
+TEST_CASE("a goal reads where the park stands on it and whether that meets it")
+{
+    const simulation::ParkFigures f { .guests = 250, .loan = 500, .animal_health = 49, .dung = 12 };
+    const simulation::GoalReading guests = simulation::read_goal(goal(0, save::ConditionKind::ParkGuests, 200), f);
+    CHECK(guests.now == 250);
+    CHECK(guests.met);
+    CHECK_FALSE(simulation::read_goal(goal(0, save::ConditionKind::AnimalHealth, 50), f).met);
+    save::Condition dung = goal(0, save::ConditionKind::Dung, 30);
+    dung.greater_than = false; // At most
+    CHECK(simulation::read_goal(dung, f).met);
+    const simulation::GoalReading loan = simulation::read_goal({ .kind = save::ConditionKind::RepayLoan }, f);
+    CHECK(loan.now == 500);
+    CHECK_FALSE(loan.met);
+    const simulation::GoalReading pool = simulation::read_goal(goal(0, save::ConditionKind::PoolGuests, 0), f);
+    CHECK_FALSE(pool.now);
+    CHECK_FALSE(pool.met);
+    CHECK(simulation::judged(save::ConditionKind::AnimalHealth));
+    CHECK_FALSE(simulation::judged(save::ConditionKind::AnimalsOfSpecies));
+}
+
+TEST_CASE("the rating prize lifts the rating at once and each week's score while it fades")
+{
+    simulation::ParkState park;
+    park.rating = 0.5f;
+    save::Finance finance;
+    save::TerrainGrid land;
+    simulation::give_prize(park, finance, land, 4);
+    CHECK(park.rating > 0.5f);
+    const float bonus = park.rating_bonus;
+    REQUIRE(bonus > 0);
+    simulation::rate_week(park, { }, { });
+    CHECK(park.rating_bonus < bonus);
+    for (int week = 0; week < 100 && park.rating_bonus > 0; ++week)
+        simulation::rate_week(park, { }, { });
+    CHECK(park.rating_bonus == 0);
+}

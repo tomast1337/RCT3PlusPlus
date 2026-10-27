@@ -28,9 +28,12 @@ namespace rct3::simulation
         std::optional<float> rating;             ///< 0 to 1; none before the park has one
         std::optional<RatingParts> rating_parts; ///< How the rating was made up; none until a week has been rated
         bool harder_rating = false;              ///< The scenario asks for a harder rating
-        float time = 0;                          ///< Calendar units since the park's calendar began, as the park file keeps them
-        float zero_time = 0;                     ///< Where the calendar's weeks are counted from
-        save::CalendarDate date;                 ///< The calendar's date at `time`
+        /// Points a prize adds to each week's score, out of 1000, fading week by week.
+        /// shortcut: not kept in the park file, so a park saved and opened again loses what is left of it.
+        float rating_bonus = 0;
+        float time = 0;          ///< Calendar units since the park's calendar began, as the park file keeps them
+        float zero_time = 0;     ///< Where the calendar's weeks are counted from
+        save::CalendarDate date; ///< The calendar's date at `time`
         save::WeatherType weather = save::WeatherType::Unknown;
         std::optional<save::WeatherType> forecast; ///< The weather on its way
         std::optional<float> temperature;          ///< Degrees Celsius

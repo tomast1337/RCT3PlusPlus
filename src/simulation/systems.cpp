@@ -547,6 +547,19 @@ namespace rct3::simulation
         return hands ? RideReaction::HandsUp : RideReaction::Calm;
     }
 
+    RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
+    {
+        const auto& k = kTuning.reactions;
+        if (!running)
+            return RideReaction::Waiting;
+        if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value)
+            return RideReaction::CoverEyes;
+        if (now == RideReaction::HandsUp)
+            return now;
+        const bool thrilled = happiness.value > k.thrilled.value || over > -k.suits.value;
+        return thrilled && leanings.hands >= k.timid.value && random::chance(dice, k.hands_up.value * dt) ? RideReaction::HandsUp : RideReaction::Calm;
+    }
+
     Pose between_steps(const Pose& pose, float along)
     {
         const float turn = std::remainder(pose.heading.value - pose.was_heading.value, 2 * glm::pi<float>());
@@ -2666,6 +2679,20 @@ namespace rct3::simulation
                 const RidePhase was = ride.phase;
                 if (advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders, 0);
+                // Its riders react to the ride while it runs.
+                for (const entt::entity guest : ride.riders)
+                    if (const auto* mood = r.valid(guest) && !r.all_of<RideWalk>(guest) ? r.try_get<Mood>(guest) : nullptr)
+                    {
+                        enum : std::uint64_t
+                        {
+                            Hands = 21,
+                            Eyes = 23
+                        };
+                        const auto* taste = r.try_get<Taste>(guest);
+                        const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
+                        auto& thrill = r.get_or_emplace<Thrill>(guest);
+                        thrill.reaction = react_flat(thrill.reaction, ride.phase == RidePhase::Running, mood->happiness, over, Leanings { .hands = fixed_share(guest, Hands), .eyes = fixed_share(guest, Eyes) }, r.get<Dice>(guest).state, dt);
+                    }
                 if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
                     // shortcut: every boat casts off at once from one spot, empty ones too, and a transport boat's
                     // riders stay on past its other docks back to the one they boarded at; upgrade when each boat

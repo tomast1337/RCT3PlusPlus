@@ -175,6 +175,9 @@ namespace rct3::simulation
     [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_guests(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
     /// The attraction kind of each ride of `rides`, found as `ride_guests` finds its guests.
     [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_kinds(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+    /// How the riders of each flat ride of `rides` sit (numbered as ride cars number their seatings), found as
+    /// `ride_guests` finds its guests; nothing for tracked rides, whose cars say.
+    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_seatings(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
 
     /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
     /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in

@@ -38,7 +38,7 @@ namespace rct3::park
         std::int32_t strained = 0;
     };
 
-    /// The motions of riders seated as `seating` says (a ride car's seating number); nothing for a seating
+    /// The motions of riders seated as `seating` says (a ride car's or a flat ride's seating number); nothing for a seating
     /// not known.
     [[nodiscard]] std::optional<RiderMotions> rider_motions(std::uint8_t seating);
 

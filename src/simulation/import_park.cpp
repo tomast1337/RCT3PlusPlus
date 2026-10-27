@@ -335,6 +335,15 @@ namespace rct3::simulation
         return from_ride_items(rides, find, [](const auto& ride) { return std::optional(ride.info.type_id); });
     }
 
+    std::vector<std::optional<std::uint32_t>> ride_seatings(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find)
+    {
+        return from_ride_items(rides, find, [](const auto& ride) -> std::optional<std::uint32_t> {
+            if constexpr (requires { ride.seating; })
+                return ride.seating;
+            return std::nullopt;
+        });
+    }
+
     std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead)
     {
         PathNetwork& paths = world.paths;

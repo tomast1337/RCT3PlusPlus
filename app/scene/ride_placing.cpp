@@ -225,6 +225,8 @@ namespace rct3::scene
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);
                 scene.ride_entities[i] = added.front();
+                if (const auto seating = assets.install ? simulation::ride_seatings(one, [&](std::string_view path) { return assets.install->find(path); }).front() : std::nullopt)
+                    scene.ride_seatings[added.front()] = static_cast<std::uint8_t>(*seating);
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::RideShow::ride); show != scene.shows.end())
                     stage_show(scene, *show);
                 seat_flat_ride(device, scene, i);

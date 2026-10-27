@@ -46,3 +46,15 @@ TEST_CASE("riders in a plain car only ride, and an unknown seating has no motion
     CHECK(car->wait == car->ride);
     CHECK_FALSE(park::rider_motions(200).has_value());
 }
+
+TEST_CASE("carousel riders sit their horse without reacting, and dancers wait standing")
+{
+    const auto horse = park::rider_motions(22);
+    REQUIRE(horse);
+    CHECK(horse->ride == park::motion_number("ridehorsemerrygor"));
+    CHECK(horse->hands_up == horse->ride);
+    const auto dance = park::rider_motions(26);
+    REQUIRE(dance);
+    CHECK(dance->ride == park::motion_number("dance"));
+    CHECK(dance->wait == park::motion::kIdle);
+}

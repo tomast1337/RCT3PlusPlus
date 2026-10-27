@@ -221,15 +221,7 @@ namespace rct3::simulation
                     if (!open)
                         c.speed = c.station_speed;
                 }
-                else if (under == Stretch::Brake)
-                {
-                    // shortcut: brakes take the speed down at once, upgrade if a train should slow along them.
-                    const std::size_t at = point_at(c, c.at);
-                    // A brake set to nothing would stop the train for good; it lets it through.
-                    if (at < c.brake_speeds.size() && c.brake_speeds[at] > 0)
-                        c.speed = std::min(c.speed, c.brake_speeds[at]);
-                }
-                else
+                else if (under != Stretch::Brake)
                 {
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
                     // valleys should roll it back for good.
@@ -241,6 +233,23 @@ namespace rct3::simulation
                     if (pace > c.station_speed)
                         c.slow = 0;
                 }
+                // Each car over a brake slows the train while it is faster than that brake's speed, down to it and
+                // no further, whichever way it goes. A brake set to nothing lets it through.
+                const int cars = std::max(c.cars, 1);
+                const float car = c.train_length / static_cast<float>(cars);
+                float pull = 0;
+                float least = 0;
+                for (int k = 0; k < cars; ++k)
+                {
+                    const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
+                    if (c.kinds[i] == Stretch::Brake && i < c.brake_speeds.size() && c.brake_speeds[i] > 0 && std::abs(c.speed) > c.brake_speeds[i])
+                    {
+                        pull += c.brake_pull / static_cast<float>(cars);
+                        least = std::max(least, c.brake_speeds[i]);
+                    }
+                }
+                if (pull > 0)
+                    c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
                 // A drop tower's train is held where its first climb tops out, then let fall.
                 if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held < kTopHold)
                 {

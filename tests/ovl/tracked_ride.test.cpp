@@ -115,7 +115,9 @@ TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in
         real(0x5C, 12.5f);
         real(0x64, 3.5f);
         real(0x6C, 2.5f);
+        real(0x70, 4000);
         real(0x74, 1.5f);
+        real(0x78, 9000);
         real(0x7C, -1);
         real(0xF0, 1);
         real(0xF4, 6);
@@ -132,7 +134,9 @@ TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in
         CHECK(d.launch_speed == 12.5f);
         CHECK(d.lift_speed == 3.5f);
         CHECK(d.brake_speed == 2.5f);
+        CHECK(d.brake_force == 4000);
         CHECK(d.block_brake_speed == 1.5f);
+        CHECK(d.block_brake_force == 9000);
         CHECK_FALSE(d.fixed_speed);
         CHECK(d.lift_min == 1);
         CHECK(d.lift_max == 6);

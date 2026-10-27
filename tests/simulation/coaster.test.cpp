@@ -159,16 +159,68 @@ TEST_CASE("a test run finds the coaster's speed, time and drops")
     CHECK(test->average_speed == doctest::Approx(100 / test->ride_time));
 }
 
-TEST_CASE("brakes slow a train down to their speed and no further")
+TEST_CASE("brakes slow a train down along them to their speed and no further")
 {
+    // Down the drop at about 17 m/s onto 30 m of brakes set to 4.
     Coaster c = hill();
     c.kinds[3] = Stretch::Brake;
     c.brake_speeds = { -1, -1, -1, 4, -1 };
     c.running = true;
     while (c.at < 71)
-        drive(c, 0.1f);
-    CHECK(c.speed <= 4.01f);
-    CHECK(c.speed > 3);
+        drive(c, 0.05f);
+    CHECK(c.speed > 10); // Not cut at once
+    float slowest = c.speed;
+    while (c.at < 99)
+    {
+        drive(c, 0.05f);
+        slowest = std::min(slowest, c.speed);
+    }
+    CHECK(slowest == doctest::Approx(4).epsilon(0.05));
+    CHECK(c.speed < 4.5f);
+}
+
+TEST_CASE("brakes slow a train less the fewer of its cars are over them")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Brake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.cars = 4;
+    c.train_length = 8;
+    c.running = true;
+    c.launched = true; // Long gone from its platform
+    c.travelled = 20;
+    c.at = 71; // One car on the brakes
+    c.speed = 15;
+    drive(c, 0.1f);
+    const float one = 15 - c.speed;
+    c.at = 79; // Every car on them
+    c.speed = 15;
+    drive(c, 0.1f);
+    const float all = 15 - c.speed;
+    CHECK(one > 0);
+    CHECK(all == doctest::Approx(4 * one).epsilon(0.1));
+}
+
+TEST_CASE("brakes never speed a train up, nor stop one when set to nothing")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Brake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 6, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.at = 80;
+    c.speed = 3;
+    drive(c, 0.5f);
+    CHECK(c.speed <= 3);
+    CHECK(c.speed > 2.5f);
+    c.brake_speeds[3] = 0;
+    c.at = 80;
+    c.speed = 12;
+    drive(c, 0.5f);
+    CHECK(c.speed > 11.5f);
 }
 
 TEST_CASE("a launched train that rolls back into the station stops there and is not launched again")

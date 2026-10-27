@@ -549,9 +549,9 @@ namespace rct3::simulation
             using enum park::CourseKind;
             c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : Stretch::Plain);
         }
-        // A brake with no speed of its own slows to the ride's.
+        // A brake with no speed of its own, under 1 m/s, slows to the ride's.
         for (const float speed : course.brake_speeds)
-            c.brake_speeds.push_back(speed >= 0 ? speed : ride.options.brake_speed);
+            c.brake_speeds.push_back(speed >= 1 ? speed : ride.options.brake_speed);
         // Trains set off from where a station stretch ends.
         for (std::size_t i = 0; i + 1 < c.kinds.size(); ++i)
             if (c.kinds[i] == Stretch::Station && c.kinds[i + 1] != Stretch::Station)
@@ -571,6 +571,14 @@ namespace rct3::simulation
             c.train_length = ride.trains[0].length;
         if (!ride.trains.empty() && !ride.trains[0].cars.empty())
             c.cars = static_cast<int>(ride.trains[0].cars.size());
+        // Brakes hold each car over them back with the force the ride's file gives (every tracked ride the game
+        // ships sets 5000 N), against the whole train's mass as the park keeps it.
+        // shortcut: one brake force for every ride and a train built here weighs 500 kg a car, chosen by eye
+        // from the saved ones, upgrade when the ride's and the cars' own files are read here.
+        constexpr float kBrakeForce = 5000;
+        constexpr float kCarMass = 500;
+        const float mass = !ride.trains.empty() && ride.trains[0].mass > 0 ? ride.trains[0].mass : kCarMass * static_cast<float>(c.cars);
+        c.brake_pull = kBrakeForce * static_cast<float>(c.cars) / mass;
         return c;
     }
 

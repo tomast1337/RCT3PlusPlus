@@ -38,7 +38,9 @@ namespace rct3::ovl
             d.launch_speed = r->real(0x5C);
             d.lift_speed = r->real(0x64);
             d.brake_speed = r->real(0x6C);
+            d.brake_force = r->real(0x70);
             d.block_brake_speed = r->real(0x74);
+            d.block_brake_force = r->real(0x78);
             if (const float fixed = r->real(0x7C); fixed > 0)
                 d.fixed_speed = fixed;
             d.lift_min = r->real(0xF0);

@@ -887,10 +887,10 @@ namespace rct3::scene
             scene.deleting = DeleteTools { .drawn = scene.deleting.drawn }; // The marks go on the next frame
         }
 
-        /// Pulls props `indices` of the objects down with the delete tools, paying what their kinds say pulling one
-        /// down costs (or gets back). The park entrance stays, and nothing goes when the park cannot pay; either
-        /// is told in a box.
-        void delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices)
+        /// Pulls props `indices` of the objects down with the delete tools or a prop's panel, paying what their kinds
+        /// say pulling one down costs (or gets back), floated up even when nothing. The park entrance stays, and
+        /// nothing goes when the park cannot pay; either is told in a box. Whether any went.
+        bool delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices)
         {
             std::vector<std::size_t> going;
             std::int64_t cost = 0;
@@ -909,19 +909,19 @@ namespace rct3::scene
             if (entrance)
                 scene.prizes.emplace_back(kEntranceStays);
             if (going.empty())
-                return;
+                return false;
             if (cost > 0 && scene.park.cash && *scene.park.cash < cost)
             {
                 scene.prizes.emplace_back(kNoMoney);
-                return;
+                return false;
             }
             const save::PlacedObject& first = scene.objects[going.front()];
             if (scene.park.cash)
                 *scene.park.cash -= cost;
-            if (cost != 0)
-                float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost);
+            float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
             for (const std::size_t i : going)
                 destroy_prop(device, scene, assets, i);
+            return true;
         }
 
         /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles.
@@ -2185,16 +2185,21 @@ namespace rct3::scene
             const auto action = info->take_action();
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {
-                // Pulled down at once, as in the game; the panel goes with it. A changing room goes from the pools.
+                // Pulled down at once and paid for, as in the game; the panel goes with it. A changing room goes
+                // from the pools.
+                bool gone = true;
                 if (const auto room = pool_room(scene, scene.objects[*scene.shown_prop]))
                 {
                     scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
                     pools_changed(device, scene, assets);
                 }
                 else
-                    destroy_prop(device, scene, assets, *scene.shown_prop);
-                scene.shown_prop.reset();
-                info->hide();
+                    gone = delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1));
+                if (gone)
+                {
+                    scene.shown_prop.reset();
+                    info->hide();
+                }
             }
             if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::PersonTab::Party)
                 open_party(scene, *info, *scene.shown_person, assets, options);

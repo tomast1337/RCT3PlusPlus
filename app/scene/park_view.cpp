@@ -122,9 +122,9 @@ namespace rct3::scene
         return { x, grid.height_at(x, z).value_or(0), z };
     }
 
-    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount)
+    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount, bool zero)
     {
-        if (!scene.show_money || amount == 0)
+        if (!scene.show_money || (amount == 0 && !zero))
             return;
         const auto near = std::ranges::find_if(scene.money, [&](const FloatingMoney& m) { return m.age < kMoneyMerge && (m.amount > 0) == (amount > 0) && glm::distance(m.at, at) <= kMoneyReach; });
         if (near != scene.money.end())

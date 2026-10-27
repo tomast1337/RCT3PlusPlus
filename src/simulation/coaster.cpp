@@ -13,14 +13,16 @@ namespace rct3::simulation
     {
         constexpr float kGravity = 9.81f;
         // Our model's losses, picked so the laps of saved parks' tested coasters come out near their test times.
-        constexpr float kRolling = 0.003f;   ///< Of the train's weight
-        constexpr float kAir = 0.0004f;      ///< Times speed squared, per metre of the train's mass
-        constexpr float kStep = 0.05f;       ///< Seconds per part step, short enough for the steepest drops
-        constexpr float kStuck = 4;          ///< Seconds all but stopped before the track's tyres take over
-        constexpr float kLaunchLeast = 0.5f; ///< Metres of platform left that a launch is still sized over
-        constexpr float kBuildUp = 3;        ///< Passes a swinging train's pushes take to build up to full, and to die down
-        constexpr float kBounce = 0.8f;      ///< Each push back up a tower is this much of the one before
-        constexpr float kTopHold = 3;        ///< Seconds a drop tower's train is held at the top
+        constexpr float kRolling = 0.003f;    ///< Of the train's weight
+        constexpr float kAir = 0.0004f;       ///< Times speed squared, per metre of the train's mass
+        constexpr float kStep = 0.05f;        ///< Seconds per part step, short enough for the steepest drops
+        constexpr float kStuck = 4;           ///< Seconds all but stopped before the track's tyres take over
+        constexpr float kLaunchLeast = 0.5f;  ///< Metres of platform left that a launch is still sized over
+        constexpr float kBuildUp = 3;         ///< Passes a swinging train's pushes take to build up to full, and to die down
+        constexpr float kBounce = 0.8f;       ///< Each push back up a tower is this much of the one before
+        constexpr float kTopHold = 3;         ///< Seconds a drop tower's train is held at the top
+        constexpr float kStationBrake = 3;    ///< m/s² a station's brakes slow an arriving train by. Chosen by eye
+        constexpr float kStationCreep = 0.5f; ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -217,9 +219,14 @@ namespace rct3::simulation
                     c.speed = std::copysign(c.station_speed, c.start - c.at);
                 else if (under == Stretch::Station)
                 {
-                    // A shuttle's train rolls through the station on its passes before the last.
+                    // A shuttle's train rolls through the station on its passes before the last. Others are carried
+                    // through by its tyres and, coming in, slowed with the room left to where they stop.
                     if (!open)
-                        c.speed = c.station_speed;
+                    {
+                        const float stop = c.next_stop < c.stops.size() ? c.stops[c.next_stop] : c.length();
+                        const float most = std::max(std::sqrt(2 * kStationBrake * std::max(stop - c.travelled, 0.0f)), kStationCreep);
+                        c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
+                    }
                 }
                 else if (under != Stretch::Brake)
                 {

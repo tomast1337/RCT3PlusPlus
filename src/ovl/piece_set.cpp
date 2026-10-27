@@ -160,7 +160,7 @@ namespace rct3::ovl
             p.icon = ctx.reference(address + 8, kIconTag);
             read_names(ctx, *raw, address, 0xc, kPoolNames, p.piece_names);
             std::size_t at = 0xc + kPoolNames * 4;
-            for (auto& v : p.unknown_values)
+            for (auto& v : p.prices)
                 v = fields::i32(*raw, at), at += 4;
             for (auto& v : p.unknown_floats)
                 v = fields::f32(*raw, at), at += 4;

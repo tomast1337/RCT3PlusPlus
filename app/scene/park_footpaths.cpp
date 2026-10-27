@@ -293,13 +293,14 @@ namespace rct3::scene
         std::unordered_map<std::uint64_t, const save::PlacedObject*> placed;
         for (const save::PlacedObject& o : scene.objects)
             placed.emplace(o.id, &o);
-        scene.footpaths.pavings = park::ride_pavings(scene.rides, [&](const save::PlacementSpot& spot) {
+        // A track piece's footprint is paved only under a base that asks for it.
+        const auto footprint_of = [&](const save::PlacementSpot& spot, bool piece) {
             std::vector<save::Tile> tiles;
             const auto o = placed.find(spot.object);
             if (o == placed.end())
                 return tiles;
             const auto model = scene.models.find(park::model_ref(*o->second));
-            if (model == scene.models.end())
+            if (model == scene.models.end() || (piece && !model->second.paved_under))
                 return tiles;
             const park::ObjectModel& item = model->second;
             save::PlacedObject at;
@@ -317,7 +318,8 @@ namespace rct3::scene
                 }
             }
             return tiles;
-        });
+        };
+        scene.footpaths.pavings = park::ride_pavings(scene.rides, [&](const save::PlacementSpot& spot) { return footprint_of(spot, false); }, [&](const save::PlacementSpot& spot) { return footprint_of(spot, true); });
         scene.footpaths.pavings_stale = true;
     }
 

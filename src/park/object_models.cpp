@@ -775,6 +775,8 @@ namespace rct3::park
         // shortcut: marked parts of pieces that are no lift stay still; upgrade if such a piece is seen moving its
         // picture in the game.
         const bool lift = section != nullptr && (section->flags[0] & kPieceChain) != 0;
+        model.fenced_round = section != nullptr && (section->ground & ovl::TrackSection::kFencedRound) != 0;
+        model.paved_under = section != nullptr && (section->ground & ovl::TrackSection::kPavedUnder) != 0;
         for (ModelLevel& level : model.levels)
             for (ModelPart& part : level.parts)
                 part.chain = part.chain && lift;

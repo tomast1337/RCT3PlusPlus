@@ -125,10 +125,10 @@ namespace rct3::park
     using FootprintOf = std::function<std::vector<save::Tile>(const save::PlacementSpot& spot)>;
 
     /// What the attractions of `rides` pave: every door, every stall's and facility's footprint, every flat ride's
-    /// floor.
+    /// floor and the floor of every tracked ride's base (a tower's or a house's).
     /// `footprint_of` gives the tiles a ride or stall stands on, only the squares it really fills; nothing when
-    /// unknown.
-    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of);
+    /// unknown. `floor_of` gives the tiles a track piece paves under it: a base's footprint, nothing for the rest.
+    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of);
 
     /// One tile of paving laid as a path, and the paving it belongs to.
     struct PavedTile

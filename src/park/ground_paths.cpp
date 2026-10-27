@@ -110,7 +110,7 @@ namespace rct3::park
         return map;
     }
 
-    std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of)
+    std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of)
     {
         const auto step = [](save::Tile tile, glm::vec2 way) { return save::Tile { tile.col + static_cast<int>(std::lround(way.x)), tile.row + static_cast<int>(std::lround(way.y)) }; };
         std::vector<Paving> out;
@@ -147,25 +147,36 @@ namespace rct3::park
                     out.push_back(std::move(under));
                 continue;
             }
-            if (ride.kind != save::RideKind::Flat || !ride.base.spot)
-                continue;
-            // A flat ride's floor opens onto its first station's doors and looks like the path its exit lets out onto.
-            Paving floor { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height };
-            if (floor.tiles.empty())
-                continue;
-            if (!ride.stations.empty())
-            {
-                const save::Station& first = ride.stations.front();
-                for (const auto& door : { first.exit_spot, first.entrance_spot })
+            // A flat ride's floor, or a tracked ride's base's, opens onto its first station's doors and looks like
+            // the path its exit lets out onto.
+            const auto pave = [&](std::vector<save::Tile> tiles, std::int32_t height) {
+                Paving floor { .tiles = std::move(tiles), .height = height };
+                if (floor.tiles.empty())
+                    return;
+                if (!ride.stations.empty())
                 {
-                    if (!door)
-                        continue;
-                    if (!floor.source)
-                        floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
-                    floor.links.push_back({ door->col, door->row });
+                    const save::Station& first = ride.stations.front();
+                    for (const auto& door : { first.exit_spot, first.entrance_spot })
+                    {
+                        if (!door)
+                            continue;
+                        if (!floor.source)
+                            floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
+                        floor.links.push_back({ door->col, door->row });
+                    }
+                }
+                out.push_back(std::move(floor));
+            };
+            if (ride.kind == save::RideKind::Flat && ride.base.spot)
+                pave(footprint_of(*ride.base.spot), ride.base.spot->height);
+            if (ride.track)
+            {
+                for (const save::TrackPiece& piece : ride.track->pieces)
+                {
+                    if (piece.scenery != 0)
+                        pave(floor_of({ piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }), piece.height);
                 }
             }
-            out.push_back(std::move(floor));
         }
         for (const save::Stall& stall : rides.stalls)
         {

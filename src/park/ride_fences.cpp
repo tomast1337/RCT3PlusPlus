@@ -73,7 +73,7 @@ namespace rct3::park
             std::vector<save::PlacedObject> pieces_;
         };
 
-        /// The panels round a flat ride's footprint. Squares count along the model's own X and Z; `gaps` are the
+        /// The panels round a flat ride's or a ride's base's footprint. Squares count along the model's own X and Z; `gaps` are the
         /// tiles a panel must not shut off.
         void fence_footprint(Builder& out, const save::PlacementSpot& spot, const ObjectModel& item, std::array<std::optional<Tile>, 2> gaps)
         {
@@ -122,7 +122,7 @@ namespace rct3::park
 
     } // namespace
 
-    std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ObjectModel* item, std::uint64_t last_id)
+    std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ModelOf& model_of, std::uint64_t last_id)
     {
         if (ride.kind == save::RideKind::Special)
             return { };
@@ -142,19 +142,28 @@ namespace rct3::park
         look.colours = { ride.fence_colours[0], ride.fence_colours[1], ride.fence_colours[2] };
 
         Builder out(look, last_id);
-        if (ride.kind == save::RideKind::Flat && ride.base.spot && item && !item->water_only)
+        // Only the first station's entrance and exit open a gap in the ring.
+        std::array<std::optional<Tile>, 2> gaps;
+        if (!ride.stations.empty())
         {
-            // Only the first station's entrance and exit open a gap in the ring.
-            std::array<std::optional<Tile>, 2> gaps;
-            if (!ride.stations.empty())
+            const save::Station& first = ride.stations.front();
+            if (first.entrance_spot)
+                gaps[0] = tile_of(*first.entrance_spot);
+            if (first.exit_spot)
+                gaps[1] = tile_of(*first.exit_spot);
+        }
+        if (ride.kind == save::RideKind::Flat && ride.base.spot)
+        {
+            if (const ObjectModel* item = model_of(ride.base.spot->object); item && !item->water_only)
+                fence_footprint(out, *ride.base.spot, *item, gaps);
+        }
+        if (ride.track)
+        {
+            for (const save::TrackPiece& piece : ride.track->pieces)
             {
-                const save::Station& first = ride.stations.front();
-                if (first.entrance_spot)
-                    gaps[0] = tile_of(*first.entrance_spot);
-                if (first.exit_spot)
-                    gaps[1] = tile_of(*first.exit_spot);
+                if (const ObjectModel* item = piece.scenery != 0 ? model_of(piece.scenery) : nullptr; item && item->fenced_round)
+                    fence_footprint(out, { piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }, *item, gaps);
             }
-            fence_footprint(out, *ride.base.spot, *item, gaps);
         }
         for (const save::Station& station : ride.stations)
         {

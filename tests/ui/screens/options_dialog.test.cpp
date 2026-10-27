@@ -157,6 +157,24 @@ TEST_CASE("controls change the options at once")
     CHECK_FALSE(f.dialog->take_change());
 }
 
+TEST_CASE("the general page's first tick box freezes the weather")
+{
+    Fixture f;
+    auto page = f.dialog->find("content/GameOptionsDialog_GameSettingsTabHelp");
+    REQUIRE(page);
+    Tickbox* first = nullptr;
+    for (const auto& c : page->children())
+    {
+        if (first == nullptr)
+            first = dynamic_cast<Tickbox*>(c.get());
+    }
+    REQUIRE(first != nullptr);
+    CHECK_FALSE(f.options.flag(O::DisableWeather)); // The weather changes unless told not to
+    first->on_key({ Key::Space });
+    f.desktop.update({ });
+    CHECK(f.options.flag(O::DisableWeather));
+}
+
 namespace
 {
     std::vector<KeyBox*> key_boxes(const Fixture& f)

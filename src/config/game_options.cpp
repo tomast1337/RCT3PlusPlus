@@ -32,6 +32,7 @@ namespace rct3::config
             { O::CycleMenuMusic, "cycle_menu_music", 0, 1, 1, 1 },
             { O::ShuffleBackgroundMusic, "shuffle_background_music", 0, 1, 1, 0 },
             { O::MenuTrack, "menu_track", 0, 50, 1, 0 },
+            { O::DisableWeather, "disable_weather", 0, 1, 1, 0 },
 
             { O::InvertRideCameraY, "invert_ride_camera_y", 0, 1, 1, 0 },
             { O::AllPhotos, "all_photos", 0, 1, 1, 1 },

@@ -103,6 +103,37 @@ namespace rct3::simulation
         return shape(climate).warmth[month_index(month)] + kKindWarmth[kind_index(type)];
     }
 
+    std::optional<std::int32_t> career_climate(std::string_view scenario)
+    {
+        // The original game's career park files all name the same climate, whatever their setting; each gets
+        // one chosen by eye from its setting instead. The expansions' files name fitting climates of their own.
+        using enum Climate;
+        constexpr std::array<std::pair<std::string_view, Climate>, 18> kCareer { {
+            { "VanillaHills", Temperate },
+            { "GoKarts", Plains },
+            { "NationalTreasure", Temperate },
+            { "MovieBacklot", Desert },
+            { "BroomLake", Spooky },
+            { "CliffCanyon", Martian },
+            { "FrightNight", Spooky },
+            { "GhostTown", Desert },
+            { "Goldrush", MountainRange },
+            { "WaterTemple", Jungle },
+            { "OkCorral", Desert },
+            { "IslandHopping", TropicalIsland },
+            { "LaLaLand", Temperate },
+            { "MountainRange", AlpineForest },
+            { "Transylvania", Spooky },
+            { "ParadiseIsland", TropicalIsland },
+            { "TheMoneyPit", Plains },
+            { "ValleyofKings", Desert },
+        } };
+        const auto found = std::ranges::find(kCareer, scenario, &std::pair<std::string_view, Climate>::first);
+        if (found == kCareer.end())
+            return std::nullopt;
+        return static_cast<std::int32_t>(found->second);
+    }
+
     void advance_weather(ParkState& state, float units, random::RandomState& dice, bool frozen)
     {
         if (frozen || !(units > 0))

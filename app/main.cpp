@@ -60,6 +60,7 @@
 #include "scene/widget_demo.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/weather_cycle.hpp"
 #include "strings/unicode.hpp"
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
@@ -987,6 +988,9 @@ int main(int argc, char** argv)
                 park->saves.game_saves = front->saves.game_saves;
             }
             park->game = park_game;
+            // A career scenario's weather follows its setting.
+            if (!park_game.career.empty())
+                park->park.climate = rct3::simulation::career_climate(park_game.scenario).value_or(park->park.climate);
             // Outside a sandbox the day keeps the park's hours, whatever mode the file asks for.
             if (!park_game.sandbox && park->day.mode != rct3::simulation::DayMode::ParkHours)
             {

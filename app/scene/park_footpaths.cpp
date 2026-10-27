@@ -600,8 +600,9 @@ namespace rct3::scene
             }
         }
 
-        /// Pays back what laying `path` cost, floating it up from there.
-        void refund(ParkScene& scene, const save::PathTile& path)
+        /// Pays back what laying `path` cost, floating it up from there with `also` (hundredths, above 0 for money
+        /// in) paid elsewhere for what stood on it, so the two show as one sum.
+        void refund(ParkScene& scene, const save::PathTile& path, std::int64_t also = 0)
         {
             const park::PathStyle* style = style_named(scene.footpaths, path);
             const std::int64_t back = style != nullptr ? park::laid_price(path, scene.grid, style->piece_cost) : 0;
@@ -610,7 +611,7 @@ namespace rct3::scene
             glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
             if (path.elevation && !park::is_ground_queue(path))
                 at.y = static_cast<float>(path.elevation->quantised_height);
-            float_money(scene, at, back);
+            float_money(scene, at, back + also);
         }
 
         /// The paths the remove tab would take away, red over themselves: those a press went over and the one
@@ -1026,11 +1027,11 @@ namespace rct3::scene
                 rebuild_ground(device, scene, assets);
         }
 
-        /// Takes away what draws and holds up `removed`, just taken out of the paths.
-        void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& removed)
+        /// Takes away what draws and holds up `removed`, just taken out of the paths; `also` as refund takes it.
+        void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::PathTile& removed, std::int64_t also = 0)
         {
             ParkFootpaths& f = scene.footpaths;
-            refund(scene, removed);
+            refund(scene, removed, also);
             wait_for_build(scene);
             std::vector<std::uint64_t> gone = std::move(f.railings[removed.id]);
             f.railings.erase(removed.id);
@@ -1064,7 +1065,7 @@ namespace rct3::scene
         }
 
         /// Takes paths `ids` away, the trail backing up over its own (park::remove_paths).
-        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
+        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, std::int64_t also = 0)
         {
             ParkFootpaths& f = scene.footpaths;
             // Indices into the paths may point at what is gone, and the last stroke or route may be part of it.
@@ -1074,7 +1075,7 @@ namespace rct3::scene
             f.route_laid = 0;
             // shortcut: builds the ground again for each path taken; once per drag if long drags are slow.
             for (const save::PathTile& gone : park::remove_paths(f.builder, f.paths, ids))
-                take_away(device, scene, assets, gone);
+                take_away(device, scene, assets, gone, std::exchange(also, 0));
         }
 
         std::u16string problem_text(const ui::InterfaceAssets& assets, park::LayProblem problem)
@@ -1710,12 +1711,12 @@ namespace rct3::scene
         return under ? std::optional(scene.footpaths.paths[under->path].id) : std::nullopt;
     }
 
-    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, std::int64_t also)
     {
         if (ids.empty())
             return;
         read_styles(scene.footpaths, assets);
-        take_paths(device, scene, assets, ids);
+        take_paths(device, scene, assets, ids, also);
         scene.footpaths.dirty = true;
     }
 

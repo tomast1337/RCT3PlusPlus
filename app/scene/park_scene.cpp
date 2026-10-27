@@ -888,9 +888,10 @@ namespace rct3::scene
         }
 
         /// Pulls props `indices` of the objects down with the delete tools or a prop's panel, paying what their kinds
-        /// say pulling one down costs (or gets back), floated up even when nothing. The park entrance stays, and
-        /// nothing goes when the park cannot pay; either is told in a box. Whether any went.
-        bool delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices)
+        /// say pulling one down costs (or gets back), floated up even when nothing unless not `floated`. The park
+        /// entrance stays, and nothing goes when the park cannot pay; either is told in a box. What was paid, when
+        /// any went.
+        std::optional<std::int64_t> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated = true)
         {
             std::vector<std::size_t> going;
             std::int64_t cost = 0;
@@ -909,22 +910,24 @@ namespace rct3::scene
             if (entrance)
                 scene.prizes.emplace_back(kEntranceStays);
             if (going.empty())
-                return false;
+                return std::nullopt;
             if (cost > 0 && scene.park.cash && *scene.park.cash < cost)
             {
                 scene.prizes.emplace_back(kNoMoney);
-                return false;
+                return std::nullopt;
             }
             const save::PlacedObject& first = scene.objects[going.front()];
             if (scene.park.cash)
                 *scene.park.cash -= cost;
-            float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
+            if (floated)
+                float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
             for (const std::size_t i : going)
                 destroy_prop(device, scene, assets, i);
-            return true;
+            return cost;
         }
 
-        /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles.
+        /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles, the
+        /// money for both floating up as one sum.
         void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
         {
             std::vector<std::pair<std::int32_t, std::int32_t>> tiles;
@@ -942,8 +945,8 @@ namespace rct3::scene
                 if (model != scene.models.end() && model->second.category >= std::to_underlying(park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(park::ItemCategory::PathFeature))
                     extras.push_back(i);
             }
-            delete_props(device, scene, assets, extras);
-            remove_footpaths(device, scene, assets, ids);
+            const std::int64_t paid = delete_props(device, scene, assets, extras, false).value_or(0);
+            remove_footpaths(device, scene, assets, ids, -paid);
         }
 
     } // namespace
@@ -2194,7 +2197,7 @@ namespace rct3::scene
                     pools_changed(device, scene, assets);
                 }
                 else
-                    gone = delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1));
+                    gone = delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1)).has_value();
                 if (gone)
                 {
                     scene.shown_prop.reset();

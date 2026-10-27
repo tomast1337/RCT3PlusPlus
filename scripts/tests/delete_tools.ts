@@ -91,6 +91,7 @@ expect(!map.paths().some((p) => p.col === bare.col && p.row === bare.row), "no r
 await click(binned.col, binned.row, 0, -0.01);
 expect(map.paths().length === pieces - 2, "the road under the bin gone");
 expect(park.pathItems().length === items - 2, `the bin gone with it, not left standing (${park.pathItems().length} left)`);
+await screenshot("delete_binned_road"); // One sum floats up for the road and its bin together
 
 // Picking the tool again puts it away; a click on the road then leaves it be.
 if (!ui.find("tools/Delete/GUI2_DeleteSingleItem"))

@@ -80,7 +80,9 @@ namespace rct3::park
                     kind = CourseKind::Launch;
                 else if (kind == CourseKind::Plain && role == kRoleBrakes)
                     kind = CourseKind::Brake;
-                const auto brake_speed = static_cast<float>(kind == CourseKind::Brake ? piece.brake_speed : -1);
+                // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces.
+                const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
+                const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : -1.0f;
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
                 std::vector<glm::vec3> path = shape->line.path;
                 std::vector<glm::vec3> ups = shape->line.ups;

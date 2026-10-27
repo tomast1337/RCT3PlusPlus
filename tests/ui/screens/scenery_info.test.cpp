@@ -103,6 +103,25 @@ TEST_CASE("a sign shows its words, or that it forbids entry")
     CHECK(scenery_page(SceneryTab::Sign, facts, s).lines[0].label == u"Keep out");
 }
 
+TEST_CASE("a changing room opens and closes its pool complex and sets its ticket price")
+{
+    StringTable s = table();
+    s.add("AttractionStatusOpen", u"Open");
+    s.add("AttractionStatusClosed", u"Closed");
+    const SceneryFacts facts { .pool = PoolComplexFacts { .ticket = 150, .open = true } };
+    const auto tabs = scenery_tabs(facts);
+    REQUIRE(tabs.size() == 2);
+    CHECK(tabs[1].tab == SceneryTab::Pool);
+    const InfoPage page = scenery_page(SceneryTab::Pool, facts, s);
+    REQUIRE(page.controls.size() == 2);
+    CHECK(page.controls[0].id == kPoolStateControl);
+    CHECK(page.controls[0].value == 0);
+    CHECK(page.controls[0].label == u"Open");
+    CHECK(page.controls[1].id == kPoolTicketControl);
+    CHECK(page.controls[1].value == 150);
+    CHECK(page.controls[1].decimals == 2);
+}
+
 TEST_CASE("paths, rides, supports and what lies about are not props")
 {
     using enum park::ItemCategory;

@@ -7,6 +7,7 @@
 #include "ovl/enclosure_fence.hpp"
 #include "ovl/integer_value.hpp"
 #include "ovl/piece_set.hpp"
+#include "ovl/room_type.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
@@ -45,6 +46,7 @@ namespace rct3::park
         constexpr std::string_view kEnclosureDeleteText = "EnclosureDeleteTool_TT";
         constexpr std::string_view kEnclosureDeleteIcon = "GUI2_DeleteSelection";
         constexpr std::string_view kPoolPanelText = "Pool_PoolPanel";
+        constexpr std::string_view kPoolRoomText = "Pool_ChangingRoomPanel";
         constexpr std::string_view kPoolExtraText = "Pool_ExtraPanel";
         constexpr std::string_view kJacuzziIcon = "Icon_Default_Jacuzzi";
         /// The overlays of shelters, animal species and toys.
@@ -473,6 +475,23 @@ namespace rct3::park
                     extra.pool_extra = words->value;
                 }
             }
+            // Changing rooms are placed as the scenery item they name, and show its icon.
+            // shortcut: built free; the room's own price is not read yet, take it once its field is known.
+            for (const auto& e : ovl::read_changing_rooms(overlay, *part))
+            {
+                const ovl::SceneryItem* room = e.room ? placed_as(e.room->scenery_item, e.name) : nullptr;
+                if (room == nullptr || room->icon.empty())
+                    continue;
+                BuildItem& item = items.emplace_back();
+                item.list = BuildList::Pools;
+                item.kind = BuildKind::PoolRoom;
+                item.symbol = e.room->scenery_item.empty() ? e.name : e.room->scenery_item;
+                item.overlay = path;
+                item.name_text = e.room->name_text.empty() ? room->name_text : e.room->name_text;
+                item.icon = room->icon;
+                item.group_icon = room->icon;
+                item.group_text = kPoolRoomText;
+            }
             for (const auto& e : ovl::read_stalls(overlay, *part))
             {
                 if (!e.stall)
@@ -670,6 +689,7 @@ namespace rct3::park
             case BuildKind::AnimalToy:
             case BuildKind::PoolSquare:
             case BuildKind::PoolExtra:
+            case BuildKind::PoolRoom:
                 return true; // parks list these without saying whether they may be built
             default:
             {

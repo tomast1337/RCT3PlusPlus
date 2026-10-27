@@ -2,8 +2,8 @@
 //
 // Swimming pools, in a park with money. A drag with the pool list's tiles paves a rectangle, paid for; a drag
 // with its water inside it digs a pool there, walled round where it meets the tiles. A lone square, strips and
-// an inner corner show the other walls. The delete tool takes a row up again, money back. Saved and loaded, the
-// pools are back.
+// an inner corner show the other walls. Extras go in, and a changing room beside the pool opens the complex.
+// The delete tool takes a row up again, money back. Saved and loaded, the pools are back.
 //
 //   ./nob script scripts/tests/pools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -100,6 +100,35 @@ camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 
 await frames(10);
 await screenshot("pool_extras");
 
+// A changing room on the ground beside the paved ring, opening on it: the railing there opens. Its panel opens
+// the pool complex and sets the ticket price.
+const kRooms = "Style/Vanilla/CapeTyphoon/Style";
+const room = () => map.objects().find((o) => o.symbol === "CRoomGeneric" && o.col === c0 - 1 && o.row === r0 + 4);
+const railings = count("Railing");
+expect(build.pick(kRooms, "CRoomGeneric"), "the changing room in the pool list");
+await pointer.click(...on_view(c0 - 1.1, r0 + 4.5));
+await frames(3);
+expect(room() === undefined, "no changing room opening away from the pool");
+await pointer.click(...on_view(c0 - 0.15, r0 + 4.5));
+await frames(3);
+expect(room() !== undefined, "a changing room beside the pool");
+expect(count("Railing") === railings - 1, `the railing open towards it, not ${railings - count("Railing")} fewer`);
+build.stop();
+camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
+await frames(10);
+await screenshot("pool_changing_room");
+await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
+await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
+await ui.click("info/Attraction_General_Closed");
+await frames(3);
+// Dragged from the choice down onto its first row, Open.
+const choice = ui.find("info/body/AttractionStatusOpen")!;
+await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
+await frames(3);
+expect(ui.find("info/Attraction_General_Open") !== undefined, `the pool complex open, tabs ${JSON.stringify(ui.children("info"))}`);
+await screenshot("pool_complex_open");
+await ui.click("info/close");
+
 // Below it, in tiles: a lone square, a strip three long, and a strip four long with a block under its first
 // two squares, an inner corner where they meet.
 expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");
@@ -152,6 +181,7 @@ await until(() => ui.find(saved_row) !== undefined, 120, "the save in the load w
 await ui.click(saved_row);
 await ui.click("park_files/content/open");
 await until(() => pieces().length === kept, 1200, `${kept} pool pieces back after loading`);
+expect(room() !== undefined, "the changing room back after loading");
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
 await screenshot("pool_loaded");

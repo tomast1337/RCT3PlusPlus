@@ -7,8 +7,9 @@
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
 // not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra picked,
 // the square under the pointer is marked along the side nearest the pointer, red where the extra does not fit
-// (park/pools.hpp) or cannot be paid for; a click puts it in there. A right click, or picking another tool,
-// puts the tool away.
+// (park/pools.hpp) or cannot be paid for; a click puts it in there. With a changing room picked, the tile under
+// the pointer is marked along the side nearest it, which must meet a paved square of a pool; a click builds
+// it there, opening on that square. A right click, or picking another tool, puts the tool away.
 #pragma once
 
 #include "park/build_catalogue.hpp"

@@ -5,6 +5,7 @@
 #include "strings/unicode.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <format>
 #include <string>
@@ -23,6 +24,10 @@ namespace rct3::ui
         constexpr std::string_view kNeverEmptied = "Bin_NeverEmptied";
         constexpr std::string_view kSignOptions = "Sign_Options";
         constexpr std::string_view kNoEntry = "Sign_NoEntry";
+        constexpr std::string_view kPoolHeading = "Pool_ChangingRoomPanel";
+        constexpr std::string_view kTicket = "AttractionFinancesDialogLabel_AdmissionPrice";
+        constexpr std::array<std::string_view, 2> kPoolStates { "AttractionStatusOpen", "AttractionStatusClosed" }; // By kPoolStateControl's value
+        constexpr int kTicketStep = 10;
         constexpr float kPercent = 100;
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
         constexpr int kColourSlot = 1;
@@ -66,6 +71,8 @@ namespace rct3::ui
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
             tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false, { } });
+        if (facts.pool)
+            tabs.push_back({ SceneryTab::Pool, slot++, facts.pool->open ? "Attraction_General_Open" : "Attraction_General_Closed", "AttractionDetails_StateChooserHelp", false, { } });
         return tabs;
     }
 
@@ -101,6 +108,26 @@ namespace rct3::ui
             page.heading = strings.get(kSignOptions);
             const std::u16string words = facts.sign->kind == 1 ? std::u16string(strings.get(kNoEntry)) : strings::to_utf16(facts.sign->text);
             page.lines.push_back({ words, { }, false });
+        }
+        else if (tab == SceneryTab::Pool && facts.pool)
+        {
+            page.heading = strings.get(kPoolHeading);
+            InfoControl& state = page.controls.emplace_back();
+            state.id = kPoolStateControl;
+            state.name = kPoolStates[0];
+            state.kind = InfoControlKind::Choice;
+            state.label = strings.get(kPoolStates[facts.pool->open ? 0 : 1]);
+            for (const std::string_view s : kPoolStates)
+                state.items.emplace_back(strings.get(s));
+            state.value = facts.pool->open ? 0 : 1;
+            InfoControl& ticket = page.controls.emplace_back();
+            ticket.id = kPoolTicketControl;
+            ticket.name = kTicket;
+            ticket.label = strings.get(kTicket);
+            ticket.value = static_cast<int>(std::clamp<std::int64_t>(facts.pool->ticket, 0, kMostPoolTicket));
+            ticket.maximum = kMostPoolTicket;
+            ticket.step = kTicketStep;
+            ticket.decimals = 2;
         }
         return page;
     }

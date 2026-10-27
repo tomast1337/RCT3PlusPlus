@@ -32,8 +32,8 @@
 //              the original park's mode.
 //   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
 //              it; their enclosures are read again from the original park.
-//   "POOL" v1  park::PoolMap: the swimming pools the player laid; their pieces are built again on loading.
-//              Only when there are any.
+//   "POOL" v2  park::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
+//              pieces are built again on loading. Only when there are any.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once

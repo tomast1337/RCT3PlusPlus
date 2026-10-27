@@ -549,9 +549,13 @@ namespace rct3::simulation
             using enum park::CourseKind;
             c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : Stretch::Plain);
         }
-        // A brake with no speed of its own, under 1 m/s, slows to the ride's.
-        for (const float speed : course.brake_speeds)
-            c.brake_speeds.push_back(speed >= 1 ? speed : ride.options.brake_speed);
+        // A brake or block brake with no speed of its own, under 1 m/s, slows to the ride's for its kind.
+        for (std::size_t i = 0; i < course.brake_speeds.size(); ++i)
+        {
+            const float speed = course.brake_speeds[i];
+            const float ride_speed = i < c.kinds.size() && c.kinds[i] == Stretch::BlockBrake ? ride.options.block_brake_off_speed : ride.options.brake_speed;
+            c.brake_speeds.push_back(speed < 0 ? -1.0f : speed >= 1 ? speed : ride_speed);
+        }
         // Trains set off from where a station stretch ends.
         for (std::size_t i = 0; i + 1 < c.kinds.size(); ++i)
             if (c.kinds[i] == Stretch::Station && c.kinds[i + 1] != Stretch::Station)

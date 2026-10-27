@@ -255,3 +255,50 @@ TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked p
     CHECK(kind_of(1) == park::CourseKind::BlockBrake);
     CHECK(kind_of(2) == park::CourseKind::Plain);
 }
+
+TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, and other pieces none at all")
+{
+    save::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::PieceShape plain;
+    plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
+    park::PieceShape brakes = plain;
+    brakes.record.role = park::kRoleBrakes;
+    park::PieceShape block = plain;
+    block.record.role = park::kRoleBlockBrake;
+    park::PieceShape holds = plain;
+    holds.record.flags = park::kPieceHolds;
+    save::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::PlacedObject> objects;
+    const std::array<std::string, 4> symbols { "Brakes", "Block", "Holds", "Plain" };
+    const std::array<std::int32_t, 4> speeds { 6, -1, -1, 9 };
+    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    {
+        save::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.col = static_cast<int>(i);
+        o.force_absolute_height = true;
+        save::TrackPiece& piece = track.pieces.emplace_back();
+        piece.symbol = symbols[i];
+        piece.scenery = o.id;
+        piece.brake_speed = speeds[i];
+    }
+    track.segments = { { .first_piece = 0, .piece_count = 4 } };
+    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::PieceShape&> { return p.symbol == "Brakes" ? brakes : p.symbol == "Block" ? block : p.symbol == "Holds" ? holds : plain; };
+    const auto course = park::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(course);
+    REQUIRE(course->piece_starts.size() == 4);
+    const auto speed_of = [&](std::size_t piece) {
+        const auto after = std::ranges::upper_bound(course->distance, course->piece_starts[piece] + 0.01f);
+        return course->brake_speeds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
+    };
+    CHECK(speed_of(0) == 6);
+    CHECK(speed_of(1) == 0);
+    CHECK(speed_of(2) < 0);
+    CHECK(speed_of(3) < 0);
+}

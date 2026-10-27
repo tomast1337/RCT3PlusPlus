@@ -606,6 +606,11 @@ namespace rct3::scene
             scene.occlusion.before = false;
         if (scene.show_scenery)
             profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
+        if (scene.weather_look.rain > 0 && !scene.water.eye_in)
+        {
+            const float lit = std::max({ scene.light.sky.r, scene.light.sky.g, scene.light.sky.b });
+            profiling::section("Rain", [&] { draw_park_rain(device, scene.rain, { .view_projection = view_projection, .eye = eye, .amount = scene.weather_look.rain, .wind = scene.park.wind, .seconds = scene.clock, .light = lit }); });
+        }
         LightShafts shafts;
         if (scene.light_shafts)
         {

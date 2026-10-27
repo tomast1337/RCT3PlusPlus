@@ -90,6 +90,19 @@ TEST_CASE("stars show only at night, and clouds drift in two layers")
     CHECK(day.vertices[day.indices[day.batches[2].first + 1]].uv.y == doctest::Approx(2));
 }
 
+TEST_CASE("an overcast sky is darker, its clouds thicker, and it hides the stars")
+{
+    const ObjectMesh clear = sky_mesh(sky(), { .radius = 1 });
+    const ObjectMesh grey = sky_mesh(sky(), { .radius = 1, .tint = glm::vec3(0.5f), .overcast = 1 });
+    CHECK(grey.vertices[grey.indices[grey.batches[0].first]].colour.r == doctest::Approx(0.5f));
+    const auto cloud = [](const ObjectMesh& m) { return m.vertices[m.indices[m.batches[1].first]].colour; };
+    CHECK(cloud(grey).r < cloud(clear).r);
+    CHECK(cloud(grey).a > cloud(clear).a);
+    // At night the stars are there but do not show through.
+    const ObjectMesh night = sky_mesh(sky(), { .radius = 1, .night = 1, .overcast = 1 });
+    CHECK(night.batches.size() == 3);
+}
+
 TEST_CASE("an empty sky draws nothing")
 {
     CHECK(sky_mesh({ }, { .radius = 1 }).batches.empty());

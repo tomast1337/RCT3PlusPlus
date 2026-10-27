@@ -63,16 +63,19 @@ namespace rct3::park
         const float scale = view.radius / reach;
         const float night = std::clamp(view.night, 0.0f, 1.0f);
 
-        add(mesh, sky.dome, PartBlend::Opaque, view.eye, scale, glm::vec4(1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
-        const glm::vec4 fading { 1.0f, 1.0f, 1.0f, std::clamp(view.fade, 0.0f, 1.0f) };
+        const float overcast = std::clamp(view.overcast, 0.0f, 1.0f);
+        add(mesh, sky.dome, PartBlend::Opaque, view.eye, scale, glm::vec4(view.tint, 1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
+        const glm::vec4 fading { view.tint, std::clamp(view.fade, 0.0f, 1.0f) };
         add(mesh, sky.dome, PartBlend::Blended, view.eye, scale, fading, [&](glm::vec2 uv) { return glm::vec2(view.faded_day, uv.y); });
-        const glm::vec4 starlight { 1.0f, 1.0f, 1.0f, night };
+        const glm::vec4 starlight { 1.0f, 1.0f, 1.0f, night * (1 - overcast) };
         const auto same = [](glm::vec2 uv) { return uv; };
         add(mesh, sky.stars, PartBlend::Blended, view.eye, scale, starlight, same);
         add(mesh, sky.milky_way, PartBlend::Blended, view.eye, scale, starlight, same);
 
-        const float shade = 1 - kNightClouds * night;
-        const glm::vec4 cloud { shade, shade, shade, kCloudCover };
+        // Rain clouds are darker than fair ones, and thicker. Chosen by eye.
+        constexpr float kRainCloudShade = 0.45f;
+        const float shade = (1 - kNightClouds * night) * (1 - kRainCloudShade * overcast);
+        const glm::vec4 cloud { view.tint * shade, glm::mix(kCloudCover, 1.0f, overcast) };
         const float low = wrapped(view.time * kCloudDrift);
         const float high = wrapped(view.time * kHighCloudDrift);
         add(mesh, sky.clouds, PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });

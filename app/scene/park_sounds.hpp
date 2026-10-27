@@ -64,7 +64,10 @@ namespace rct3::scene
         std::vector<audio::SoundBuffer> burning;                                  ///< Loops of their fires
         /// Of each wreck, by ride, train and car: its landings and state when last heard.
         std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
-        std::map<entt::entity, audio::VoiceHandle> fires; ///< By ride: the loop of its burning wrecks
+        std::map<entt::entity, audio::VoiceHandle> fires;      ///< By ride: the loop of its burning wrecks
+        std::array<std::optional<audio::SoundBuffer>, 3> rain; ///< Loops of light rain, heavy rain and a storm
+        std::array<audio::VoiceHandle, 3> rain_voices;
+        std::vector<audio::SoundBuffer> thunder;
         std::minstd_rand random;
     };
 

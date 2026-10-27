@@ -366,15 +366,23 @@ namespace rct3::scene
             const float faded = park::sky_column(day.faded);
             const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
-            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock });
+            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
             if (!scene.horizon_band.empty())
             {
                 const glm::vec4 c = glm::mix(park::band_colour(scene.horizon_band, column), park::band_colour(scene.horizon_band, faded), day.fade);
                 scene.horizon = { c.r, c.g, c.b, c.a };
             }
-            // Far land fades into the horizon's colour.
-            scene.light.haze = { scene.horizon.r, scene.horizon.g, scene.horizon.b };
-            scene.light.haze_rate = scene.haze_rate;
+            // Clouds hide the sun most and grey the sky; a stroke lights everything up.
+            const park::WeatherLook& weather = scene.weather_look;
+            scene.light.sun = park::weathered(scene.light.sun, weather, 1);
+            scene.light.sky = park::weathered(scene.light.sky, weather, 0.5f);
+            scene.light.ground = park::weathered(scene.light.ground, weather, 0.5f);
+            const glm::vec3 horizon = park::weathered({ scene.horizon.r, scene.horizon.g, scene.horizon.b }, weather, 0.5f);
+            scene.horizon = { horizon.r, horizon.g, horizon.b, scene.horizon.a };
+            // Far land fades into the horizon's colour, sooner in rain. Chosen by eye.
+            constexpr float kRainHaze = 2.5f;
+            scene.light.haze = horizon;
+            scene.light.haze_rate = scene.haze_rate * (1 + kRainHaze * weather.rain);
             scene.light.surface_detail = scene.surface_detail;
         }
 
@@ -2461,6 +2469,7 @@ namespace rct3::scene
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
+            scene.thunder = park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (weeks > 0)
             {

@@ -790,6 +790,16 @@ namespace rct3::scene
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;
         });
+        engine_.define("build.enclosing", [this](const Json&) -> Json {
+            const ParkScene& scene = park_of(park_);
+            const auto& m = scene.enclosing.marked;
+            if (!scene.enclosing.corner || !m)
+                return nullptr;
+            std::int64_t tiles = 0;
+            for (std::size_t i = 0; i < m->enclosures.tiles.size(); ++i)
+                tiles += (m->enclosures.tiles[i] >= 0) != (i < scene.enclosures.tiles.size() && scene.enclosures.tiles[i] >= 0) ? 1 : 0;
+            return Json { { "cost", m->cost }, { "tiles", tiles } };
+        });
         engine_.define("structures.placing", [this](const Json&) -> Json {
             const StructureTools& t = park_of(park_).structures;
             if (t.tool != StructureTools::Tool::Place || !t.structure)

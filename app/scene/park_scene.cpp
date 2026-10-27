@@ -2483,7 +2483,7 @@ namespace rct3::scene
                 std::int64_t shops_taken = 0;
                 for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
                     (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income.value;
-                simulation::count_takings(scene.takings, scene.park.time, rides_taken, shops_taken);
+                simulation::count_takings(scene.takings, scene.park.time - scene.park.zero_time, rides_taken, shops_taken);
                 {
                     // The week's figures for the park's graphs.
                     std::array<std::int32_t, 3> ages { };

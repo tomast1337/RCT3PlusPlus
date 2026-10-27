@@ -169,6 +169,9 @@ namespace rct3::scene
         // What letting go of an enclosure drag would cost stands at the pointer's end of it, still, until then.
         if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != 0)
             show({ tile_point(scene.grid, *t.other), -t.marked->cost, 0 });
+        // So does what the pool tool's work costs, or pays back.
+        if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != 0)
+            show({ tile_point(scene.grid, t.working->second), -t.cost, 0 });
         return shown;
     }
 

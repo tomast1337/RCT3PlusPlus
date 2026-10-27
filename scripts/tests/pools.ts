@@ -176,15 +176,34 @@ expect(count("FullTop") === 1, `a lone square walled all round, not ${count("Ful
 expect(count("EndTop") === 3, `the strip's two ends and the long strip's far end, not ${count("EndTop")}`);
 expect(count("Corner3Top") === 1, `the inner corner, not ${count("Corner3Top")}`);
 
-// The delete tool takes the last row of the first pool's tiles up again, paid back.
+// The panel's delete tool takes the last row of the first pool's tiles up again: they go while the drag lasts,
+// the money back showing at the pointer, and are paid back when it is let go.
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
 cash = park.cash()!;
-expect(build.pick(kPool, "Pool_DeleteArea"), "the pool delete tool");
-await pointer.drag(on_view(c0, r0 + 7), on_view(c0 + 7, r0 + 7), 6);
+const paved = count("SolidTop");
+build.stop();
+if (!ui.find("tools/Rides/Obj_Pools"))
+    await ui.click(rides);
+await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+await ui.click("tools/Rides/Obj_Pools");
+await until(() => ui.find("pool_panel/body/editor/Pool_DeleteArea") !== undefined, 120, "the pool panel again");
+expect(ui.find("pool_panel/body/editor/Pool_PlaceTiles") !== undefined, "the editor as it was left");
+await ui.click("pool_panel/body/editor/Pool_DeleteArea");
+await frames(2);
+pointer.move(...on_view(c0, r0 + 7));
+await frames(2);
+pointer.press();
+await frames(2);
+pointer.move(...on_view(c0 + 7, r0 + 7));
+await frames(4);
+expect(count("SolidTop") < paved, `the row gone while dragging, ${count("SolidTop")} of ${paved} left`);
+const during = park.cash()!;
+await screenshot("pool_deleting");
+pointer.release();
 await frames(3);
 build.stop();
-expect(park.cash()! > cash, "the tiles paid back");
+expect(park.cash()! > during, "the tiles paid back when let go");
 await frames(10);
 await screenshot("pool_cut");
 

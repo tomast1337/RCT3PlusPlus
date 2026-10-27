@@ -11,9 +11,13 @@
 #include "scene/park_view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
+#include "ui/extra_skins.hpp"
+#include "ui/game_style.hpp"
+#include "ui/screens/pool_panel.hpp"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <utility>
 
@@ -24,6 +28,71 @@ namespace rct3::scene
     {
         constexpr glm::vec4 kMarkColour { 0.3f, 0.75f, 1.0f, 0.9f };
         constexpr glm::vec4 kRefusedColour { 1.0f, 0.35f, 0.3f, 0.9f };
+        constexpr std::string_view kPanelName = "pool_panel";
+
+        std::optional<ui::PoolPanel&> panel_of(const ParkScene& scene)
+        {
+            return scene.desktop->root().find_as<ui::PoolPanel>(kPanelName);
+        }
+
+        /// The extras and the changing rooms the pool panel offers, in its order: the pool type's extras, its
+        /// spa pool last, and every changing room. None while the build items are still being read.
+        std::pair<std::vector<const park::BuildItem*>, std::vector<const park::BuildItem*>> offered(const ParkScene& scene)
+        {
+            std::pair<std::vector<const park::BuildItem*>, std::vector<const park::BuildItem*>> out;
+            const auto& items = scene.build.items;
+            if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return out;
+            const park::BuildItem* spa = nullptr;
+            for (const park::BuildItem& i : items.get())
+            {
+                if (i.list != park::BuildList::Pools)
+                    continue;
+                // shortcut: the default pool type only; offer the others once the panel can choose a type.
+                if (i.kind == park::BuildKind::PoolRoom)
+                    out.second.push_back(&i);
+                else if (i.overlay == park::kPoolOverlay && i.kind == park::BuildKind::PoolExtra)
+                    out.first.push_back(&i);
+                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolJacuzzi)
+                    spa = &i;
+            }
+            if (spa != nullptr)
+                out.first.push_back(spa);
+            return out;
+        }
+
+        /// Follows the pool panel: what the player chose there goes out as the tool.
+        void follow_panel(ParkScene& scene)
+        {
+            auto panel = panel_of(scene);
+            if (!panel)
+                return;
+            if (panel->take_closed())
+                return stop_pooling(scene);
+            if (!panel->showing())
+                return;
+            const ui::PoolEditor& e = panel->editor();
+            scene.pooling.height = e.snap ? std::nullopt : std::optional(e.height);
+            if (e.grid != scene.pooling.grid)
+                scene.show_grid = scene.pooling.grid = e.grid;
+            if (!panel->take_change())
+                return;
+            const auto [extras, rooms] = offered(scene);
+            const park::BuildItem* item = nullptr;
+            if (const auto p = panel->placing())
+            {
+                const auto& from = p->first == ui::PoolPage::Extras ? extras : rooms;
+                item = p->second < from.size() ? from[p->second] : nullptr;
+            }
+            else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+            {
+                const std::string_view symbol = e.mode == ui::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : (e.mode == ui::PoolMode::Tiles ? park::kPoolTiles : park::kPoolDelete);
+                const auto found = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.list == park::BuildList::Pools && i.overlay == park::kPoolOverlay && i.symbol == symbol; });
+                item = found != items.get().end() ? &*found : nullptr;
+            }
+            if (item != nullptr)
+                (void)start_pooling(scene, *item);
+        }
 
         /// The area marked, as its least and greatest column and row.
         std::array<std::int32_t, 4> marked(save::Tile a, save::Tile b)
@@ -42,10 +111,11 @@ namespace rct3::scene
                 const std::int64_t cost = park::take_up_pool(map, prices, a, b);
                 return { std::move(map), cost };
             }
-            // shortcut: the surface snaps to the ground; add the editor's surface height buttons when pools
-            // can be raised on supports.
+            // Snapped to the ground, the surface is the ground's where the drag began, or the surface of the pool
+            // begun there; else the height the pool panel sets.
+            // shortcut: a surface above the ground stands on nothing; add supports when pools can be raised.
             const auto begun = scene.pools.at(a.col, a.row);
-            const std::int32_t surface = begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height()));
+            const std::int32_t surface = scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height())));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
             const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : park::PoolKind::Tile;
             // Paved squares take the normal depth, the one the pool type prices them at.
@@ -187,17 +257,42 @@ namespace rct3::scene
     {
         if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
             return false;
-        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look };
+        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid };
         return true;
     }
 
     void stop_pooling(ParkScene& scene)
     {
-        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look }; // The marks go on the next frame
+        if (auto panel = panel_of(scene))
+            panel->hide();
+        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid }; // The marks go on the next frame
+    }
+
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
+    {
+        auto panel = panel_of(scene);
+        if (panel && panel->showing())
+            return stop_pooling(scene);
+        if (!panel)
+        {
+            // The extras' pictures live in an overlay of their own.
+            constexpr std::array<std::string_view, 1> kIconFiles { "Pool/PoolIcons.common.ovl" };
+            (void)ui::add_extra_skins(device, assets, kIconFiles);
+            panel = scene.desktop->root().add<ui::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
+        }
+        const auto [extras, rooms] = offered(scene);
+        const auto choices = [&](const std::vector<const park::BuildItem*>& items) {
+            std::vector<ui::PoolChoice> out;
+            for (const park::BuildItem* i : items)
+                out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) });
+            return out;
+        };
+        panel->show(choices(extras), choices(rooms));
     }
 
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
     {
+        follow_panel(scene);
         PoolTool& t = scene.pooling;
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
         if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))

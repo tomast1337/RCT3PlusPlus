@@ -250,6 +250,8 @@ namespace rct3::scene
         std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
         std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
+        std::optional<std::int32_t> height;               ///< Of the surface, when the pool panel does not snap it to the ground
+        bool grid = false;                                ///< The pool panel's grid switch, as last seen
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

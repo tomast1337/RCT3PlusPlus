@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The pool list's tools (park/pools.hpp). With water or tiles picked, pressing the ground and dragging marks a
+// The pool tools (park/pools.hpp), picked in the pool panel the rides menu's pools button opens, as it remembers
+// them; scripts may still pick them from the build items. With water or tiles picked, pressing the ground and dragging marks a
 // rectangle of squares; letting go lays them, joining any pool they touch, and lays over the squares already
 // there. The pool's surface is the ground's height where the drag began, or the surface of the pool begun
-// there; the ground under every square is dug down to the pool's floor. With the delete tool, letting go takes
+// there, or the height the panel sets when it does not snap to the ground; the ground under every square is
+// dug down to the pool's floor. With the delete tool, letting go takes
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
 // not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra picked,
 // the square under the pointer is marked along the side nearest the pointer, red where the extra does not fit
@@ -25,8 +27,11 @@ namespace rct3::scene
     /// Takes out the pool tool for `item` when it is one; false otherwise.
     bool start_pooling(ParkScene& scene, const park::BuildItem& item);
 
-    /// Puts the pool tool away.
+    /// Puts the pool tool away, and the pool panel.
     void stop_pooling(ParkScene& scene);
+
+    /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it.
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
 
     /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);

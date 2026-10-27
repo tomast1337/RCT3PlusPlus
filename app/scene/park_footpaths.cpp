@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
+#include "park/enclosures.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
@@ -415,14 +416,14 @@ namespace rct3::scene
             objects_changed(scene);
         f.pavings_stale = false;
         // The fences round the park and the enclosures lean with the ground as it is now.
-        std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
-        panels.insert(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
+        const std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
+        const std::set<std::uint64_t> pieces(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
         std::vector<std::pair<std::uint64_t, glm::vec2>> leaning;
         for (const save::PlacedObject& o : scene.objects)
         {
-            if (!panels.contains(o.id))
+            if (!panels.contains(o.id) && !pieces.contains(o.id))
                 continue;
-            const glm::vec2 lean = park::panel_lean(scene.grid, o);
+            const glm::vec2 lean = pieces.contains(o.id) ? park::fence_piece_lean(scene.grid, o) : park::panel_lean(scene.grid, o);
             const auto was = scene.leans.find(o.id);
             if (lean != (was != scene.leans.end() ? was->second : glm::vec2(0.0f)))
                 leaning.emplace_back(o.id, lean);

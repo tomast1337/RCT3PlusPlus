@@ -148,21 +148,26 @@ namespace rct3::scene
         for (FloatingMoney& m : scene.money)
             m.age += elapsed;
         std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::kMoneyFloatLife; });
-        if (!scene.show_money || size.x <= 0 || size.y <= 0)
+        if (size.x <= 0 || size.y <= 0)
             return { };
         const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
         std::vector<ui::MoneyFloat> shown;
-        for (const FloatingMoney& m : scene.money)
-        {
+        const auto show = [&](const FloatingMoney& m) {
             // Off the screen it waits unseen, as a label would.
             const glm::vec4 clip = view * glm::vec4(m.at.x, m.at.y + kLabelLift, m.at.z, 1.0f);
             if (clip.w <= 0)
-                continue;
+                return;
             const glm::vec2 ndc = glm::vec2(clip) / clip.w;
             if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
-                continue;
+                return;
             shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, std::abs(m.amount)), m.amount > 0, m.age });
-        }
+        };
+        if (scene.show_money)
+            for (const FloatingMoney& m : scene.money)
+                show(m);
+        // What letting go of an enclosure drag would cost stands at the pointer's end of it, still, until then.
+        if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != 0)
+            show({ tile_point(scene.grid, *t.other), -t.marked->cost, 0 });
         return shown;
     }
 

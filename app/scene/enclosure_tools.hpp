@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The enclosure list's fence tools, and putting down animals. With a fence picked, pressing the ground and dragging marks a rectangle of
-// tiles; letting go makes it an enclosure fenced with that fence, or adds it to the enclosures it takes in or
-// touches (park/enclosures.hpp). With the list's delete tool, letting go takes the tiles out of enclosures.
-// Every new length of fence is paid for at the fence's price; an area with land the park does not own
-// outright, or that the park cannot pay for, shows its marks red and is refused. A right click, or picking
-// another tool, puts the tool away.
+// The enclosure list's fence tools, and putting down animals. With a fence picked, pressing the ground and
+// dragging marks a rectangle of tiles; letting go makes the tiles in it that are in no enclosure yet an
+// enclosure fenced with that fence, joined with those of the same fence it touches (park/enclosures.hpp).
+// Tiles the park does not own outright, paths, and tiles under rides, shops, park entrances and buildings
+// are left out. With the list's delete tool, letting go takes the tiles out of their enclosures, all but
+// those under animal houses, animals, rides, shops, park entrances and buildings. While dragging, the tiles
+// that would go in or out are marked and what it costs is shown at the pointer: each length of fence put up
+// at the fence's price, less the refund of each length taken down. Marks the park cannot pay for show red,
+// and letting go of them does nothing. A right click, or picking another tool, puts the tool away.
 #pragma once
 
 #include "park/build_catalogue.hpp"

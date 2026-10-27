@@ -120,6 +120,7 @@ namespace rct3::park
         std::string description_text; ///< String key; empty when there is none
         std::string icon;             ///< Skin
         std::int32_t price = 0;       ///< Hundredths of the currency unit; 0 for rides with a track
+        std::int32_t refund = 0;      ///< Enclosure fences: what taking a length down pays back, in hundredths; below 0
         /// Scenery shown together under one heading, such as the pieces of a building set; empty otherwise.
         std::string group_icon;
         std::string group_text;

@@ -50,6 +50,7 @@ namespace rct3::park
         constexpr std::string_view kPoolExtraText = "Pool_ExtraPanel";
         constexpr std::string_view kJacuzziIcon = "Icon_Default_Jacuzzi";
         constexpr std::string_view kHighDiveIcon = "Icon_Default_HighDive";
+        constexpr std::string_view kStairsIcon = "Icon_Default_SpiralStairs";
         /// The overlays of shelters, animal species and toys.
         constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
@@ -451,7 +452,8 @@ namespace rct3::park
                     tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
                 tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
                 tool(kPoolDelete, std::nullopt);
-                // The extras laid as squares, one at a time: the spa pool and the high diving board.
+                // The extras laid as squares, one at a time: the spa pool, the high diving board and the spiral
+                // staircase.
                 BuildItem& jacuzzi = tool(kPoolJacuzzi, PoolSquare { .kind = PoolKind::Jacuzzi, .depth = 2 });
                 jacuzzi.icon = kJacuzziIcon;
                 jacuzzi.group_icon = kJacuzziIcon;
@@ -460,6 +462,10 @@ namespace rct3::park
                 dive.icon = kHighDiveIcon;
                 dive.group_icon = kJacuzziIcon;
                 dive.group_text = kPoolExtraText;
+                BuildItem& stairs = tool(kPoolStairs, PoolSquare { .kind = PoolKind::Stairs, .depth = 2, .board = kLowestStairs });
+                stairs.icon = kStairsIcon;
+                stairs.group_icon = kJacuzziIcon;
+                stairs.group_text = kPoolExtraText;
                 // The extras are the scenery items of the pool type's overlay that say where in a pool they go.
                 for (const auto& [name, item] : placed)
                 {

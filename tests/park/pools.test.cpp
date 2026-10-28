@@ -11,7 +11,7 @@ namespace
 {
 
     /// An invented price list, shaped like a pool type's.
-    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 0, 0, 900, -800, 0, 0, 40, -30 };
+    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 0, 0, 900, -800, 25, -15, 40, -30 };
 
     /// A pool of `cols` by `rows` water squares, ringed by paved squares, its corner at (0, 0).
     PoolMap ringed(std::int32_t cols, std::int32_t rows)
@@ -212,6 +212,32 @@ TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a b
     // Its climb is paid by the unit, in whole levels.
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == 70 + 2 * 10 + 9 * 40);
     CHECK(pool_refund(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == -60 - 2 * 5 - 9 * 30);
+}
+
+TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at its top where no square meets it")
+{
+    // Its foot at the next column, a paved square at the top level at the row before.
+    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .turn = 0 }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 } } };
+    std::vector<std::pair<std::string_view, std::int32_t>> steps;
+    std::vector<std::int32_t> turns;
+    std::vector<std::int32_t> top_rails;
+    for (const PoolPiece& p : pool_pieces(map, map.squares[0]))
+    {
+        if (p.symbol.starts_with("Stairs") || p.symbol == "SolidTop")
+        {
+            steps.emplace_back(p.symbol, p.height);
+            turns.push_back(p.turn);
+        }
+        if (p.symbol == "Railing" && p.height == 9)
+            top_rails.push_back(p.turn);
+    }
+    using Piece = std::pair<std::string_view, std::int32_t>;
+    CHECK(steps == std::vector<Piece> { { "StairsBase", 4 }, { "StairsMid", 5 }, { "StairsMid", 6 }, { "StairsMid", 7 }, { "StairsTop", 8 } });
+    CHECK(turns == std::vector<std::int32_t> { 0, 3, 2, 1, 0 });
+    CHECK(top_rails == std::vector<std::int32_t> { 0, 1, 3 });
+    // Its climb is paid by the unit.
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }) == 70 + 2 * 10 + 5 * 25);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }) == -60 - 2 * 5 - 5 * 15);
 }
 
 TEST_CASE("pools: each square costs its kind's price and its depth's")

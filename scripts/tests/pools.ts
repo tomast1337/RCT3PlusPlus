@@ -383,3 +383,37 @@ await frames(3);
 expect(first() === 0 && room() === undefined, `the complex gone, not ${first()} pieces`);
 expect(pieces().length === below, "the pool below kept");
 expect(park.cash()! > cash, "money back for the complex");
+
+// Where the complex stood, paved squares raised three units off the ground, the land under them raised to their
+// floor, and a spiral staircase climbing to them from a paved square on the ground beside.
+const level = Math.round(map.tile(c0 - 1, r0 - 1)!.corners[0]);
+camera.look({ col: c0 + 3, row: r0 + 2.5 }, { col: c0 + 7, row: r0 + 9, up: 7 });
+await frames(10);
+await open_editor();
+await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
+await pointer.drag(on_view(c0 + 4.5, r0 + 2.5), on_view(c0 + 5.5, r0 + 2.5), 6);
+await frames(3);
+await ui.click("pool_panel/body/editor/Pool_Height");
+await ui.click("pool_panel/body/editor/height/field");
+keys.press("Ctrl+A");
+keys.type(`${level + 3}`);
+keys.press("Enter");
+await frames(2);
+cash = park.cash()!;
+await pointer.drag(on_view(c0 + 1.5, r0 + 1.5), on_view(c0 + 3.5, r0 + 3.5), 6);
+await frames(3);
+const raised = pieces().filter((o) => o.symbol === "SolidTop" && o.row < r0 + 8 && o.height === level + 3).length;
+expect(raised === 9 && park.cash()! < cash, `nine raised squares, paid for, not ${raised}`);
+expect(map.tile(c0 + 2, r0 + 2)!.corners.every((h) => Math.abs(h - (level + 1)) < 0.01), `the land raised to their floor, not ${map.tile(c0 + 2, r0 + 2)!.corners}`);
+await ui.click("pool_panel/body/editor/Pool_Height");
+await ui.click("pool_panel/Pool_ExtraPanel");
+await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the extras page");
+await ui.click("pool_panel/body/Icon_Default_SpiralStairs");
+await frames(2);
+cash = park.cash()!;
+await pointer.click(...on_view(c0 + 4.5, r0 + 2.5));
+await frames(3);
+expect(count("StairsBase") === 1 && count("StairsTop") === 1 && park.cash()! < cash, `a staircase, paid for, not ${count("StairsBase")}`);
+build.stop();
+await frames(5);
+await screenshot("pool_raised_stairs");

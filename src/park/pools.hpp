@@ -51,6 +51,7 @@ namespace rct3::park
         Tile,     ///< Paved
         Jacuzzi,  ///< A spa pool, on a paved square
         HighDive, ///< A high diving board, on a paved square, facing the water at its side `turn`
+        Stairs,   ///< A spiral staircase, on a paved square, climbing `board` units from its foot at side `turn`
     };
 
     /// How a square's walls go round its corners, as the pool tool's edge buttons set it.
@@ -69,13 +70,15 @@ namespace rct3::park
         PoolKind kind = PoolKind::Water;
         std::int32_t surface = 0; ///< Whole units, as placed objects' heights
         std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
-        std::int32_t board = 0;   ///< A high diving board's height over the surface, whole units
-        std::int32_t turn = 0;    ///< The side a high diving board faces
+        std::int32_t board = 0;   ///< A high diving board's or a staircase's height over the surface, whole units
+        std::int32_t turn = 0;    ///< The side a high diving board faces, or a staircase's foot
         PoolEdge edge = PoolEdge::Straight;
     };
 
     /// A high diving board climbs in levels of this many units: a stretch of ladder and a board at each.
     inline constexpr std::int32_t kBoardLevel = 3;
+    /// A spiral staircase climbs at least this many units: its foot, its top, and a turn between.
+    inline constexpr std::int32_t kLowestStairs = 3;
 
     /// What an extra takes of its square, from the words of its pool extra setting.
     struct PoolExtraFit

@@ -4,8 +4,11 @@
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, and screams from
 // the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
 // the roar of each waterfall.
+// Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
+// track, scenery, structure or pool work), at most one in a short while; paths, fences and taking things away are
+// silent.
 // The sounds come from the game's overlays by name; whatever it
-// does not have stays quiet. All follow the game volume and hush while the park is paused, and are heard muffled while the eye is under water.
+// does not have stays quiet. All follow the game volume and, but for building's, hush while the park is paused, and are heard muffled while the eye is under water.
 #pragma once
 
 #include "audio/audio.hpp"
@@ -68,6 +71,9 @@ namespace rct3::scene
         std::array<std::optional<audio::SoundBuffer>, 3> rain; ///< Loops of light rain, heavy rain and a storm
         std::array<audio::VoiceHandle, 3> rain_voices;
         std::vector<audio::SoundBuffer> thunder;
+        std::vector<audio::SoundBuffer> thumps; ///< Of something put down
+        std::uint32_t built_heard = 0;          ///< ParkScene::built when last looked at
+        float since_thump = 1;                  ///< Seconds
         std::minstd_rand random;
     };
 

@@ -835,6 +835,7 @@ namespace rct3::scene
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;
         });
+        engine_.define("build.sounds", [this](const Json&) -> Json { return Json { { "thumps", park_of(park_).built } }; });
         engine_.define("build.enclosing", [this](const Json&) -> Json {
             const ParkScene& scene = park_of(park_);
             const auto& m = scene.enclosing.marked;

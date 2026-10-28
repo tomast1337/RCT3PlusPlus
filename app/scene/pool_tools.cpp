@@ -255,6 +255,7 @@ namespace rct3::scene
                 if (ok && room)
                 {
                     scene.pools.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .turn = turn });
+                    ++scene.built;
                     pools_changed(device, scene, assets);
                     // It opens on a paved square, so it is in a complex: its window opens in place of the panel.
                     const std::size_t placed = scene.pools.rooms.size() - 1;
@@ -276,6 +277,7 @@ namespace rct3::scene
                             .refund = loaded ? scene.models.at(park::model_key(model)).removal_cost : 0,
                             .fit = fit,
                         });
+                    ++scene.built;
                     if (scene.park.cash)
                         *scene.park.cash -= item.price;
                     if (item.price != 0)
@@ -512,6 +514,7 @@ namespace rct3::scene
             // turned down with a message.
             if (t.before)
             {
+                ++scene.built;
                 if (scene.park.cash)
                     *scene.park.cash -= t.cost;
                 if (t.cost != 0)

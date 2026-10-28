@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
-// tab to face the road in from the park's entrance, refused on the road itself, then placed on the grass beside
-// it. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
+// tab to face the road in from the park's entrance, refused on the road itself (a click there builds nothing and is
+// silent), then placed on the grass beside it, with a thump. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
 // the park must run it, as it faces the road. Its window then takes items off its menu and puts them back.
 // A drink stall, whose model has a motion, then plays it as soon as it stands, closed.
 //
@@ -43,6 +43,10 @@ await frames(2);
 await ui.click("placing/IconAttractionEditorRotate");
 const onRoad = await hover(road!.col, road!.row);
 expect(onRoad.problem === "path", `the stall refused on the road, not ${onRoad.problem}`);
+const thumps = build.sounds().thumps;
+await pointer.click(onRoad.x, onRoad.y);
+await frames(2);
+expect(build.sounds().thumps === thumps && build.placing() !== undefined, "a click on the road building nothing, silent");
 const grass = await hover(road!.col + 1, road!.row);
 expect(grass.problem === "none", `the stall placeable beside the road, not ${grass.problem}`);
 expect(build.placing()?.arrow === true, "an arrow on the side the stall serves from");
@@ -50,6 +54,7 @@ await screenshot("stall_arrow");
 await pointer.click(grass.x, grass.y);
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the stall stands");
+expect(build.sounds().thumps === thumps + 1, `a thump as the stall went down (${build.sounds().thumps - thumps})`);
 const placed = stalls.list().filter((s) => s.symbol === `${kind.symbol}:sta`);
 expect(placed.length === 1, `one ${kind.symbol} in the park, not ${placed.length}`);
 const stall = placed[0];

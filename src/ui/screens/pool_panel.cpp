@@ -331,7 +331,7 @@ namespace rct3::ui
         list.shape(rim);
         const Rect back { d.x0 + c.rim, d.y0 + c.rim, d.x1 - c.rim, d.y1 - c.rim };
         plain(back, round_corners(back.width() / 2), c.view_back);
-        if (view_ != 0 && placing_)
+        if (view_ != 0 && (placing_ || editor_.mode != PoolMode::Delete))
         {
             const float inset = (info_panel::kDisc - info_panel::kView) / 2;
             list.disc_image({ d.x0 + inset, d.y0 + inset, d.x1 - inset, d.y1 - inset }, view_, { 0, 0, 1, 1 });

@@ -196,6 +196,27 @@ namespace rct3::scene
             scene.pooling.drawn_look = look;
         }
 
+        /// The object `symbol` of `overlay` alone, slowly turning, for the panel's disc; none for an empty symbol.
+        void turn_preview(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::string_view symbol, std::string_view overlay)
+        {
+            PoolTool& t = scene.pooling;
+            if (symbol.empty())
+            {
+                t.preview_of.clear();
+                t.preview = { };
+                return;
+            }
+            save::PlacedObject alone { .symbol = std::string(symbol), .overlay = std::string(overlay), .force_absolute_height = true };
+            if (t.preview_of != symbol && load_object_model(scene, scene.placing.models, assets, alone))
+            {
+                t.preview_of = symbol;
+                t.preview = park::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
+                ghost_textures(device, scene, t.preview);
+            }
+            if (t.preview_of == symbol)
+                t.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+        }
+
         /// Puts the extra or changing room out with the pool tool where the pointer is, when it fits and can be
         /// paid for. A changing room goes on the land the park owns.
         void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
@@ -249,16 +270,7 @@ namespace rct3::scene
                     simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
             }
             draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, park::TilePart::Whole, ok);
-            // The item alone, slowly turning, for the panel's disc.
-            save::PlacedObject alone { .symbol = item.symbol, .overlay = item.overlay, .force_absolute_height = true };
-            if (t.preview_of != item.symbol && load_object_model(scene, scene.placing.models, assets, alone))
-            {
-                t.preview_of = item.symbol;
-                t.preview = park::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
-                ghost_textures(device, scene, t.preview);
-            }
-            if (t.preview_of == item.symbol)
-                t.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            turn_preview(device, scene, assets, item.symbol, item.overlay);
             // The ghost: the extra or room as it would stand there, on its square's surface, else on the ground.
             std::optional<save::PlacedObject> ghost;
             if (tile)
@@ -395,6 +407,14 @@ namespace rct3::scene
         }
         if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
             return update_extra(device, scene, assets, spot, down);
+        // The disc shows the piece the tool lays: the floor of a water square, the paving, or the extra laid as
+        // a square; nothing while taking squares up.
+        if (t.item)
+        {
+            const std::string_view s = t.item->symbol;
+            const std::string_view piece = s == park::kPoolDelete ? "" : s == park::kPoolTiles ? "SolidTop" : s == park::kPoolJacuzzi ? "Jacuzzi" : s == park::kPoolHighDive ? "DBTopBoard" : s == park::kPoolStairs ? "StairsBase" : "Base";
+            turn_preview(device, scene, assets, piece, park::kPoolOverlay);
+        }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);

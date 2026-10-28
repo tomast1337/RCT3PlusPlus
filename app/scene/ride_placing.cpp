@@ -488,10 +488,7 @@ namespace rct3::scene
             {
                 ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (scene.pick_boxes_of != scene.objects.size())
-                {
-                    scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                    scene.pick_boxes_of = scene.objects.size();
-                }
+                    place_objects(scene);
                 auto object = park::pick_object(*ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return scene.show_scenery && !scene.objects[i].hidden; });
                 if (object)
                 {

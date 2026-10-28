@@ -125,3 +125,46 @@ TEST_CASE("the nearest person on the line is picked, unless the ground is in fro
     hill.cells[0].corners = { 10, 10, 10, 10 };
     CHECK_FALSE(pick_person({ { -10, 1.5f, 2 }, { 1, 0, 0 } }, people, hill));
 }
+
+TEST_CASE("kept places and boxes are worked out again only for the objects that changed")
+{
+    save::TerrainGrid g = flat(0);
+    ObjectModels models;
+    models.emplace("Things/Things|Cube", cube());
+    save::PlacedObject rock = object(3, 2);
+    rock.symbol = "Rock";
+    std::vector<save::PlacedObject> objects { object(1, 0), object(2, 1), rock };
+    ObjectPlaces places;
+    std::vector<PickBox> boxes;
+    const auto update = [&] {
+        const std::vector<std::size_t> changed = update_places(places, objects, models, g, { });
+        update_pick_boxes(boxes, places, changed);
+        return changed;
+    };
+    CHECK(update() == std::vector<std::size_t> { 0, 1, 2 });
+    CHECK(boxes.size() == 2); // The rock has no model
+    CHECK(update().empty());
+
+    objects[1].col = 3;
+    CHECK(update() == std::vector<std::size_t> { 1 });
+    const auto wanted = [](std::size_t) { return true; };
+    CHECK(index_of(pick_object(down_at(14, 2), boxes, g, wanted)) == 1u);
+    CHECK_FALSE(pick_object(down_at(6, 2), boxes, g, wanted));
+
+    // A model loaded later is found for the object that had none.
+    models.emplace("Things/Things|Rock", cube());
+    CHECK(update() == std::vector<std::size_t> { 2 });
+    CHECK(boxes.size() == 3);
+
+    // The ground under an object moves it.
+    g.cells[0].corners = { 1, 1, 1, 1 };
+    CHECK(update() == std::vector<std::size_t> { 0 });
+    CHECK(places.transforms[0][3].y == doctest::Approx(1));
+
+    // Taking one out moves the rest down a place: what now stands there is worked out again.
+    objects.erase(objects.begin());
+    CHECK(update() == std::vector<std::size_t> { 0, 1 });
+    REQUIRE(boxes.size() == 2);
+    CHECK(boxes[1].index == 1);
+    CHECK(index_of(pick_object(down_at(14, 2), boxes, g, wanted)) == 0u);
+}

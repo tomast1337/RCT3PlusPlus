@@ -435,9 +435,11 @@ namespace rct3::scene
         render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
         std::uint32_t lamp_rows = 0;        ///< Of that texture
         float lamp_strength = -1;           ///< The strength it was packed with
-        /// The boxes the objects are clicked in, worked out again when objects are added.
+        /// Where the objects stand, and the boxes they are clicked in, brought up to date (place_objects) after a
+        /// change or when objects are added.
+        mutable park::ObjectPlaces places;
         mutable std::vector<park::PickBox> pick_boxes;
-        mutable std::size_t pick_boxes_of = 0; ///< How many objects they were worked out for
+        mutable std::size_t pick_boxes_of = 0; ///< How many objects they were brought up to date for
         park::LevelPlan levels;                ///< Those the object buffers hold
         /// Of a level's distance, how far before its edge objects start blending into the next; 0 jumps. Set
         /// from the options each frame, and handed to each build.

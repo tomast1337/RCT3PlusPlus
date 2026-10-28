@@ -1018,8 +1018,9 @@ namespace rct3::scene
                                         });
         scene.blend_band = options.get(config::GameOption::DetailBlendBand);
         scene.level_scales = level_scales(options);
-        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
-        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
+        place_objects(scene);
+        std::ranges::transform(scene.places.transforms, std::back_inserter(scene.anchors), [](const glm::mat4& m) { return glm::vec3(m[3]); });
+        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models);
         log.info("{} lamps", scene.lamps.size());
         load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
         load_park_rain(device, scene.rain, install);
@@ -1029,7 +1030,7 @@ namespace rct3::scene
             if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
                 scene.tunes.push_back(file.path().stem().u16string());
         std::ranges::sort(scene.tunes);
-        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
+        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
         show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
         const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
         for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },

@@ -221,10 +221,7 @@ namespace rct3::scene
                 if (!options.flag(config::GameOption::CameraIgnoresScenery) && scene.show_scenery)
                 {
                     if (scene.pick_boxes_of != scene.objects.size())
-                    {
-                        scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                        scene.pick_boxes_of = scene.objects.size();
-                    }
+                        place_objects(scene);
                     if (const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
                         hit = object->distance;
                 }
@@ -1814,11 +1811,7 @@ namespace rct3::scene
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
             // What is hidden cannot be clicked.
             if (scene.pick_boxes_of != scene.objects.size())
-            {
-                const profiling::Scope zone("PickBoxes");
-                scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                scene.pick_boxes_of = scene.objects.size();
-            }
+                place_objects(scene);
             const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
                 const save::PlacedObject& o = scene.objects[i];
                 return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
@@ -2744,10 +2737,7 @@ namespace rct3::scene
                         .struck =
                             [&scene](glm::vec3 p) {
                                 if (scene.pick_boxes_of != scene.objects.size())
-                                {
-                                    scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                                    scene.pick_boxes_of = scene.objects.size();
-                                }
+                                    place_objects(scene);
                                 return std::ranges::any_of(scene.pick_boxes, [&](const park::PickBox& box) {
                                     if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
                                         return false;

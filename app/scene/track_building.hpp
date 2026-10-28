@@ -254,6 +254,9 @@ namespace rct3::scene
     /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
     void objects_changed(ParkScene& scene);
 
+    /// Brings the objects' places and pick boxes up to date, working out again only the objects that changed.
+    void place_objects(const ParkScene& scene);
+
     /// Waits for a mesh build that is reading the objects, before they change.
     void wait_for_build(ParkScene& scene);
 

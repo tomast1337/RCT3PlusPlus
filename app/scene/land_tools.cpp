@@ -26,6 +26,7 @@
 #include <array>
 #include <cmath>
 #include <format>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -191,9 +192,14 @@ namespace rct3::scene
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
             // Water the new ground may not hold goes, as do the waterfalls beside it.
-            if (drain && park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid))
+            const bool drained = drain && park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
+            if (drained)
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
-            rebuild_ground(device, scene, assets);
+            // A drained lake may reach far from the step; a moved corner shades the tiles beside those round it.
+            std::optional<park::TileRect> touched;
+            if (step && !drained)
+                touched = park::TileRect { (*step)[0].col, (*step)[0].row, (*step)[1].col + 1, (*step)[1].row + 1 }.grown(1);
+            rebuild_ground(device, scene, assets, touched);
             if (!step)
                 return;
             if (!l.stirred)
@@ -398,7 +404,7 @@ namespace rct3::scene
                 return;
             l.tile = tile;
             const std::uint8_t surface = l.cliff ? l.cliffs[*l.cliff].index : l.surfaces[l.surface].index;
-            bool painted = false;
+            std::optional<park::TileRect> painted;
             for (const save::Tile t : park::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
             {
                 save::TerrainCell& cell = scene.grid.at(t.col, t.row);
@@ -407,10 +413,11 @@ namespace rct3::scene
                     continue;
                 face = surface;
                 pay(scene, kPaintCost, *tile); // From the brush's middle, so a dab floats up as one sum
-                painted = true;
+                const park::TileRect one { t.col, t.row, t.col + 1, t.row + 1 };
+                painted = !painted ? one : park::TileRect { std::min(painted->col, one.col), std::min(painted->row, one.row), std::max(painted->end_col, one.end_col), std::max(painted->end_row, one.end_row) };
             }
             if (painted)
-                rebuild_ground(device, scene, assets);
+                rebuild_ground(device, scene, assets, painted);
         }
 
         void say(ParkScene& scene, std::string_view key)
